@@ -8,26 +8,33 @@ import net.cassite.vproxy.util.RingBuffer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
+import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 // this example shows how to create a echo server with classes defined in `selector` package
 public class SelectorEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
-        // create a event loop object
-        SelectorEventLoop eventLoop = new SelectorEventLoop();
-        // create a server socket
-        ServerSocketChannel server = ServerSocketChannel.open();
-        // bind it to local address
-        server.bind(new InetSocketAddress(18080));
-        // add it to event loop
-        eventLoop.add(server, SelectionKey.OP_ACCEPT, null, new ServerHandler());
+        SelectorEventLoop eventLoop = createServer(18080);
         // start loop in another thread
         new Thread(eventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
         EchoClient.runBlock(18080);
-        eventLoop.close();
+        eventLoop.selector.close();
+    }
+
+    static SelectorEventLoop createServer(int port) throws IOException {
+        // create a event loop object
+        SelectorEventLoop eventLoop = new SelectorEventLoop(Selector.open());
+        // create a server socket
+        ServerSocketChannel server = ServerSocketChannel.open();
+        // bind it to local address
+        server.bind(new InetSocketAddress(port));
+        // add it to event loop
+        eventLoop.add(server, SelectionKey.OP_ACCEPT, null, new ServerHandler());
+
+        return eventLoop;
     }
 }
 

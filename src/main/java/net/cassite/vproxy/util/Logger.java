@@ -4,6 +4,7 @@ public class Logger {
     private Logger() {
     }
 
+    // some message for debugging this project
     public static void lowLevelDebug(String msg) {
         System.out.println(msg);
     }
@@ -19,6 +20,26 @@ public class Logger {
 
     public static void stderr(String err) {
         privateStderr(err);
+    }
+
+    // unexpected errors, or situation should happen
+    public static void fatal(LogType logType, String err) {
+        privateStderr(logType + " - " + err);
+    }
+
+    // expected errors, but not normal condition
+    public static void error(LogType logType, String err) {
+        privateStderr(logType + " - " + err);
+    }
+
+    // expected errors, and we can recover
+    public static void warn(LogType logType, String err) {
+        System.err.println(logType + " - " + err);
+    }
+
+    // expected condition
+    public static void info(LogType logType, String msg) {
+        System.out.println(logType + " - " + msg);
     }
 
     public static void shouldNotHappen(String msg) {

@@ -15,11 +15,11 @@ public class SelectorEventLoop {
         Object att;
     }
 
-    final Selector selector;
+    public final Selector selector;
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
 
-    public SelectorEventLoop() throws IOException {
-        this.selector = Selector.open();
+    public SelectorEventLoop(Selector selector) {
+        this.selector = selector;
     }
 
     private int calculateWaitTimeout() {
@@ -119,9 +119,5 @@ public class SelectorEventLoop {
 
     public void remove(SelectableChannel channel) {
         channel.keyFor(selector).cancel();
-    }
-
-    public void close() throws IOException {
-        selector.close();
     }
 }

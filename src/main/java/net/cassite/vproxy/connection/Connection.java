@@ -21,7 +21,7 @@ public class Connection {
         public void writableET() {
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
-                Logger.lowLevelDebug("in buffer is writable, add READ for channel");
+                Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
                 eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
             }
         }
@@ -33,7 +33,7 @@ public class Connection {
         public void readableET() {
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
-                Logger.lowLevelDebug("out buffer is readable, add WRITE for channel");
+                Logger.lowLevelDebug("out buffer is readable, add WRITE for channel " + channel);
                 eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_WRITE);
             }
         }
@@ -46,8 +46,14 @@ public class Connection {
 
     public final String host;
     public final int port;
-    final SocketChannel channel;
+    public final SocketChannel channel;
+    /**
+     * bytes will be read from channel into this buffer
+     */
     public final RingBuffer inBuffer;
+    /**
+     * bytes in this buffer will be wrote to channel
+     */
     public final RingBuffer outBuffer;
     private final InBufferETHandler inBufferETHandler;
     private final OutBufferETHandler outBufferETHandler;
@@ -77,6 +83,9 @@ public class Connection {
     }
 
     public void close() {
+        if (closed)
+            return; // do not close again if already closed
+
         closed = true;
 
         inBuffer.removeHandler(inBufferETHandler);

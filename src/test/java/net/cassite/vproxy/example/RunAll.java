@@ -16,5 +16,10 @@ public class RunAll {
         System.out.println("   net event loop split buffers echo server");
         System.out.println("==============================================");
         NetEventLoopSplitBuffersEchoServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("            proxy an echo server");
+        System.out.println("==============================================");
+        ProxyEchoServer.main(new String[0]);
     }
 }

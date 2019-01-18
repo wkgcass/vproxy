@@ -33,6 +33,7 @@ public class RingBuffer {
     private int sPos; // start pos
     private int cap;
     private boolean ePosIsAfterSPos = true; // true then end is limit, otherwise start is limit
+    private boolean closed = false;
 
     private boolean operating = false;
     private Set<RingBufferETHandler> handler = new HashSet<>();
@@ -72,6 +73,9 @@ public class RingBuffer {
      * @return may return -1 for EOF
      */
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+        if (closed)
+            return -1; // handle nothing because it's already closed
+
         operating = true;
 
         boolean triggerReadable = false;
@@ -79,7 +83,7 @@ public class RingBuffer {
 
             // is for triggering readable event
             final int usedSpace = used();
-            triggerReadable = usedSpace == 0 && !handler.isEmpty();
+            boolean triggerReadablePre = usedSpace == 0 && !handler.isEmpty();
 
             int lim = storeLimit();
             if (lim == 0)
@@ -90,7 +94,7 @@ public class RingBuffer {
                 return read; // some error occurred, maybe EOF
             ePos += read;
 
-            triggerReadable = triggerReadable && read > 0;
+            triggerReadable = triggerReadablePre && read > 0;
 
             if (ePos == cap) {
                 ePos = 0;
@@ -129,6 +133,9 @@ public class RingBuffer {
     }
 
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+        if (closed)
+            return 0; // handle nothing because it's closed
+
         operating = true;
         boolean triggerWritable = false;
 
@@ -136,7 +143,7 @@ public class RingBuffer {
 
             // is for triggering writable event
             final int freeSpace = free();
-            triggerWritable = freeSpace == 0 && !handler.isEmpty();
+            boolean triggerWritablePre = freeSpace == 0 && !handler.isEmpty();
 
             int lim = retrieveLimit();
             if (lim == 0)
@@ -146,7 +153,7 @@ public class RingBuffer {
             int write = channel.write(buffer);
             sPos += write;
 
-            triggerWritable = triggerWritable && write > 0;
+            triggerWritable = triggerWritablePre && write > 0;
 
             if (sPos == cap) {
                 sPos = 0;
@@ -235,6 +242,10 @@ public class RingBuffer {
         } else {
             handler.remove(h);
         }
+    }
+
+    public void close() {
+        closed = true;
     }
 
     /**

@@ -3,6 +3,7 @@ package net.cassite.vproxy.connection;
 import net.cassite.vproxy.selector.Handler;
 import net.cassite.vproxy.selector.HandlerContext;
 import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
 import java.io.IOException;
@@ -29,26 +30,41 @@ public class NetEventLoop {
     }
 
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
-        int opts = SelectionKey.OP_READ;
+        int ops = SelectionKey.OP_READ;
         if (connection.outBuffer.used() > 0) {
-            opts |= SelectionKey.OP_WRITE;
+            ops |= SelectionKey.OP_WRITE;
         }
         connection.eventLoop = this;
-        selectorEventLoop.add(connection.channel, opts,
+        selectorEventLoop.add(connection.channel, ops,
             new ConnectionHandlerContext(this, connection, attachment, handler),
             handlerForConnection);
     }
 
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
-        int opts = SelectionKey.OP_CONNECT;
-        connection.eventLoop = this;
-        selectorEventLoop.add(connection.channel, opts,
-            new ClientConnectionHandlerContext(this, connection, attachment, handler),
-            handlerForClientConnection);
-    }
+        boolean fireConnected = false; // whether to fire `connected` event after registering
+        // the connection might already be connected
+        // so fire the event to let handler know
 
-    public void loop() {
-        selectorEventLoop.loop();
+        int ops;
+        if (connection.channel.isConnected()) {
+            fireConnected = true;
+
+            ops = SelectionKey.OP_READ;
+            if (connection.outBuffer.used() != 0)
+                ops |= SelectionKey.OP_WRITE;
+        } else {
+            ops = SelectionKey.OP_CONNECT;
+        }
+        connection.eventLoop = this;
+        ClientConnectionHandlerContext ctx = new ClientConnectionHandlerContext(this, connection, attachment, handler);
+        try { // only use try-finally for firing connected event
+            selectorEventLoop.add(connection.channel, ops, ctx,
+                handlerForClientConnection);
+        } finally {
+            if (fireConnected) {
+                handler.connected(ctx);
+            }
+        }
     }
 }
 
@@ -124,6 +140,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         if (read < 0) {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;
+            Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
             // remove read event add write event (maybe more bytes to write)
             ctx.modify(SelectionKey.OP_WRITE);
             // the connection will be closed after write
@@ -136,7 +153,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
         if (cctx.connection.inBuffer.free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
-            Logger.lowLevelDebug("the inBuffer is full now, remove READ event");
+            Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_READ);
         }
     }
@@ -150,7 +167,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
                 cctx.connection.close();
                 cctx.handler.closed(cctx);
             } else {
-                Logger.shouldNotHappen("the connection has nothing to write");
+                Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
             }
             return;
         }
@@ -169,7 +186,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.outBuffer.used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event
-            Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event");
+            Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_WRITE);
         }
     }
@@ -179,12 +196,24 @@ class HandlerForClientConnection extends HandlerForConnection {
     @Override
     public void connected(HandlerContext<SocketChannel> ctx) {
         ClientConnectionHandlerContext cctx = (ClientConnectionHandlerContext) ctx.getAttachment();
-
-        int opts = SelectionKey.OP_READ;
-        if (cctx.connection.outBuffer.used() > 0) {
-            opts |= SelectionKey.OP_WRITE;
+        SocketChannel channel = ctx.getChannel();
+        boolean connected;
+        try {
+            connected = channel.finishConnect();
+        } catch (IOException e) {
+            // exception when connecting
+            cctx.handler.exception(cctx, e);
+            return;
         }
-        ctx.modify(opts);
+        if (!connected) {
+            Logger.fatal(LogType.UNEXPECTED, "the connection is not connected, should not fire the event");
+        }
+
+        int ops = SelectionKey.OP_READ;
+        if (cctx.connection.outBuffer.used() > 0) {
+            ops |= SelectionKey.OP_WRITE;
+        }
+        ctx.modify(ops);
         cctx.handler.connected(cctx);
     }
 }
