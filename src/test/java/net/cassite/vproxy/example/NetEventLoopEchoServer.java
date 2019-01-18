@@ -7,14 +7,13 @@ import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 public class NetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         // create the event loop for network operations
-        SelectorEventLoop selectorEventLoop = new SelectorEventLoop(Selector.open());
+        SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server socket channel and bind
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -28,7 +27,7 @@ public class NetEventLoopEchoServer {
 
         Thread.sleep(500);
         EchoClient.runBlock(18081);
-        selectorEventLoop.selector.close();
+        selectorEventLoop.close();
     }
 }
 
@@ -63,6 +62,11 @@ class MyServerHandler implements ServerHandler {
         }
         return null; // the lib accepts null, and it will not invoke the `connection` callback
     }
+
+    @Override
+    public void removed(ServerHandlerContext ctx) {
+        ctx.server.close();
+    }
 }
 
 class MyConnectionHandler implements ConnectionHandler {
@@ -91,5 +95,12 @@ class MyConnectionHandler implements ConnectionHandler {
         // the event loop and channel handling is done by the lib
         // we only do log here
         System.err.println("connection closed " + ctx.connection);
+    }
+
+    @Override
+    public void removed(ConnectionHandlerContext ctx) {
+        ctx.connection.close();
+        // it's ok if the connection is already closed
+        // the close method will check first then do real close
     }
 }

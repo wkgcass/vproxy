@@ -3,6 +3,7 @@ package net.cassite.vproxy.example;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.connection.Server;
 import net.cassite.vproxy.proxy.Proxy;
+import net.cassite.vproxy.proxy.ProxyEventHandler;
 import net.cassite.vproxy.proxy.ProxyNetConfig;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
@@ -39,12 +40,19 @@ public class ProxyEchoServer {
             .setInBufferSize(8) // make it small to see how it acts when read buffer is full
             .setOutBufferSize(4); // make it even smaller to see how it acts when write buffer is full
         // create proxy and start
-        Proxy proxy = new Proxy(config);
+        Proxy proxy = new Proxy(config, new MyProxyEventHandler());
         proxy.handle();
         new Thread(selectorEventLoop::loop).start();
 
         Thread.sleep(500);
         EchoClient.runBlock(18083);
-        selectorEventLoop.selector.close();
+        selectorEventLoop.close();
+    }
+}
+
+class MyProxyEventHandler implements ProxyEventHandler {
+    @Override
+    public void serverRemoved(Server server) {
+        server.close();
     }
 }

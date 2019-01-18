@@ -10,4 +10,6 @@ public interface ConnectionHandler {
     void exception(ConnectionHandlerContext ctx, IOException err);
 
     void closed(ConnectionHandlerContext ctx);
+
+    void removed(ConnectionHandlerContext ctx);
 }

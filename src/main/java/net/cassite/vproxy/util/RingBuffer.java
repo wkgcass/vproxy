@@ -248,11 +248,16 @@ public class RingBuffer {
         closed = true;
     }
 
+    private boolean cleaned = false;
+
     /**
      * release the direct memory<br>
      * PLEASE BE VERY CAREFUL
      */
     public void clean() {
+        if (cleaned)
+            return;
+        cleaned = true;
         if (buffer instanceof DirectBuffer) {
             // the api is undocumented
             // i don't know what will happen in future java versions

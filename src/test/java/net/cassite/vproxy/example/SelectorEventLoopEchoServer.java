@@ -1,14 +1,13 @@
 package net.cassite.vproxy.example;
 
-import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.Handler;
 import net.cassite.vproxy.selector.HandlerContext;
+import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -21,12 +20,12 @@ public class SelectorEventLoopEchoServer {
 
         Thread.sleep(500);
         EchoClient.runBlock(18080);
-        eventLoop.selector.close();
+        eventLoop.close();
     }
 
     static SelectorEventLoop createServer(int port) throws IOException {
         // create a event loop object
-        SelectorEventLoop eventLoop = new SelectorEventLoop(Selector.open());
+        SelectorEventLoop eventLoop = SelectorEventLoop.open();
         // create a server socket
         ServerSocketChannel server = ServerSocketChannel.open();
         // bind it to local address
@@ -75,6 +74,17 @@ class ServerHandler implements Handler<ServerSocketChannel> {
     @Override
     public void writable(HandlerContext<ServerSocketChannel> ctx) {
         // should not fire
+    }
+
+    @Override
+    public void removed(HandlerContext<ServerSocketChannel> ctx) {
+        // removed from loop, let's close it
+        ServerSocketChannel svr = ctx.getChannel();
+        try {
+            svr.close();
+        } catch (IOException e) {
+            // we can do nothing about it
+        }
     }
 }
 
@@ -170,5 +180,10 @@ class ClientHandler implements Handler<SocketChannel> {
         if (oldOps != ops) {
             ctx.modify(ops);
         }
+    }
+
+    @Override
+    public void removed(HandlerContext<SocketChannel> ctx) {
+        // we ignore this, for that the connection will be already closed
     }
 }

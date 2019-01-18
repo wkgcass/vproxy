@@ -8,7 +8,6 @@ import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
@@ -18,7 +17,7 @@ import java.nio.channels.SocketChannel;
 public class NetEventLoopSplitBuffersEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         // create the event loop for network operations
-        SelectorEventLoop selectorEventLoop = new SelectorEventLoop(Selector.open());
+        SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server socket channel and bind
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
@@ -32,7 +31,7 @@ public class NetEventLoopSplitBuffersEchoServer {
 
         Thread.sleep(500);
         EchoClient.runBlock(18082);
-        selectorEventLoop.selector.close();
+        selectorEventLoop.close();
     }
 }
 

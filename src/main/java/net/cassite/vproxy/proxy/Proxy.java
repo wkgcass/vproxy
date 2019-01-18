@@ -36,8 +36,8 @@ public class Proxy {
 
     private static void utilCloseConnectionAndReleaseBuffers(Connection connection) {
         utilCloseConnection(connection);
-        connection.inBuffer.free();
-        connection.outBuffer.free();
+        connection.inBuffer.clean();
+        connection.outBuffer.clean();
     }
 
     private static void utilCloseSessionAndReleaseBuffers(Session session) {
@@ -127,6 +127,11 @@ public class Proxy {
                 return null; // return null, which means the accept failed
             }
         }
+
+        @Override
+        public void removed(ServerHandlerContext ctx) {
+            handler.serverRemoved(ctx.server);
+        }
     }
 
     class SessionConnectionHandler implements ConnectionHandler {
@@ -178,6 +183,11 @@ public class Proxy {
                 // the passive can still read from the active conn's in-buffer if still got some bytes
                 session.passive.inBuffer.close();
             }
+        }
+
+        @Override
+        public void removed(ConnectionHandlerContext ctx) {
+            utilCloseSessionAndReleaseBuffers(session);
         }
     }
 
@@ -245,11 +255,18 @@ public class Proxy {
                 session.active.inBuffer.close();
             }
         }
+
+        @Override
+        public void removed(ConnectionHandlerContext ctx) {
+            utilCloseSessionAndReleaseBuffers(session);
+        }
     }
 
     private final ProxyNetConfig config;
+    private final ProxyEventHandler handler;
 
-    public Proxy(ProxyNetConfig config) {
+    public Proxy(ProxyNetConfig config, ProxyEventHandler handler) {
+        this.handler = handler;
         utilValidate(config);
         this.config = config;
     }

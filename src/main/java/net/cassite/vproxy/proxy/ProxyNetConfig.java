@@ -9,6 +9,7 @@ public class ProxyNetConfig {
     NetEventLoopProvider handleLoopProvider;
     ConnectionGen connGen;
 
+
     int inBufferSize = 128;
     int outBufferSize = 128;
 

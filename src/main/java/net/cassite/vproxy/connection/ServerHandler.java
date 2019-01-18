@@ -9,4 +9,6 @@ public interface ServerHandler {
     void connection(ServerHandlerContext ctx, Connection connection);
 
     Connection getConnection(SocketChannel channel);
+
+    void removed(ServerHandlerContext ctx);
 }

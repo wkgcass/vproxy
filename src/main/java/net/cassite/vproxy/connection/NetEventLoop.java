@@ -29,6 +29,11 @@ public class NetEventLoop {
             handlerForServer);
     }
 
+    public void removeServer(Server server) {
+        // event loop in server object will be set to null in remove event
+        selectorEventLoop.remove(server.channel);
+    }
+
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
         int ops = SelectionKey.OP_READ;
         if (connection.outBuffer.used() > 0) {
@@ -38,6 +43,12 @@ public class NetEventLoop {
         selectorEventLoop.add(connection.channel, ops,
             new ConnectionHandlerContext(this, connection, attachment, handler),
             handlerForConnection);
+    }
+
+    // this method is for both server connection and client connection
+    public void removeConnection(Connection connection) {
+        // event loop in connection object will be set to null in remove event
+        selectorEventLoop.remove(connection.channel);
     }
 
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
@@ -107,6 +118,13 @@ class HandlerForServer implements Handler<ServerSocketChannel> {
     public void writable(HandlerContext<ServerSocketChannel> ctx) {
         // will not fire
         Logger.shouldNotHappen("server should not fire writable");
+    }
+
+    @Override
+    public void removed(HandlerContext<ServerSocketChannel> ctx) {
+        ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
+        sctx.server.eventLoop = null;
+        sctx.handler.removed(sctx);
     }
 }
 
@@ -189,6 +207,13 @@ class HandlerForConnection implements Handler<SocketChannel> {
             Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_WRITE);
         }
+    }
+
+    @Override
+    public void removed(HandlerContext<SocketChannel> ctx) {
+        ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
+        cctx.connection.eventLoop = null;
+        cctx.handler.removed(cctx);
     }
 }
 
