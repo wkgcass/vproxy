@@ -5,6 +5,7 @@ import net.cassite.vproxy.selector.HandlerContext;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.ThreadSafe;
 
 import java.io.IOException;
 import java.nio.channels.SelectionKey;
@@ -16,12 +17,13 @@ public class NetEventLoop {
     private static final HandlerForConnection handlerForConnection = new HandlerForClientConnection();
     private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
 
-    final SelectorEventLoop selectorEventLoop;
+    public final SelectorEventLoop selectorEventLoop;
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
     }
 
+    @ThreadSafe
     public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
         server.eventLoop = this;
         selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
@@ -29,11 +31,13 @@ public class NetEventLoop {
             handlerForServer);
     }
 
+    @ThreadSafe
     public void removeServer(Server server) {
         // event loop in server object will be set to null in remove event
         selectorEventLoop.remove(server.channel);
     }
 
+    @ThreadSafe
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
         int ops = SelectionKey.OP_READ;
         if (connection.outBuffer.used() > 0) {
@@ -46,11 +50,13 @@ public class NetEventLoop {
     }
 
     // this method is for both server connection and client connection
+    @ThreadSafe
     public void removeConnection(Connection connection) {
         // event loop in connection object will be set to null in remove event
         selectorEventLoop.remove(connection.channel);
     }
 
+    @ThreadSafe
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
         boolean fireConnected = false; // whether to fire `connected` event after registering
         // the connection might already be connected

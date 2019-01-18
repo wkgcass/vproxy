@@ -8,6 +8,10 @@ import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class EchoClient {
+    public static void main(String[] args) throws IOException, InterruptedException {
+        runBlock(19083);
+    }
+
     public static void runBlock(int port) throws IOException, InterruptedException {
         Socket socket = new Socket();
         socket.connect(new InetSocketAddress("127.0.0.1", port));

@@ -49,6 +49,10 @@ public class RingBuffer {
         return new RingBuffer(ByteBuffer.allocateDirect(cap));
     }
 
+    public static RingBuffer allocate(int cap) {
+        return new RingBuffer(ByteBuffer.allocate(cap));
+    }
+
     private int storeLimit() {
         if (ePosIsAfterSPos) {
             return cap - ePos; // we can store until capacity

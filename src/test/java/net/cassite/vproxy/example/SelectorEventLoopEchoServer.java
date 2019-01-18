@@ -85,6 +85,7 @@ class ServerHandler implements Handler<ServerSocketChannel> {
         } catch (IOException e) {
             // we can do nothing about it
         }
+        System.err.println("echo server closed");
     }
 }
 

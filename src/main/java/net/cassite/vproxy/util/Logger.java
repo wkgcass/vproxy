@@ -6,7 +6,8 @@ public class Logger {
 
     // some message for debugging this project
     public static void lowLevelDebug(String msg) {
-        System.out.println(msg);
+        StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
+        System.out.println(elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
     }
 
     public static void stdout(String msg) {

@@ -41,9 +41,6 @@ public class HandlerContext<CHANNEL extends SelectableChannel> {
     }
 
     public int getOps() {
-        SelectionKey key = channel.keyFor(eventLoop.selector);
-        if (key == null)
-            return 0; // it is not registered
-        return key.interestOps();
+        return eventLoop.getOps(channel);
     }
 }

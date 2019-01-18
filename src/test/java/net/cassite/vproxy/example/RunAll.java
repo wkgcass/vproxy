@@ -21,5 +21,10 @@ public class RunAll {
         System.out.println("            proxy an echo server");
         System.out.println("==============================================");
         ProxyEchoServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("             health check client");
+        System.out.println("==============================================");
+        HealthCheckClientExample.main(new String[0]);
     }
 }
