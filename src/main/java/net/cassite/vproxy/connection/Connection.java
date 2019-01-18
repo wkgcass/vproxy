@@ -21,7 +21,7 @@ public class Connection {
         public void writableET() {
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
-                Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
+                assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
                 eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
             }
         }
@@ -33,7 +33,7 @@ public class Connection {
         public void readableET() {
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
-                Logger.lowLevelDebug("out buffer is readable, add WRITE for channel " + channel);
+                assert Logger.lowLevelDebug("out buffer is readable, add WRITE for channel " + channel);
                 eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_WRITE);
             }
         }

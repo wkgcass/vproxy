@@ -15,7 +15,7 @@ public class TCPHealthCheckClient {
             if (currentDown > 0) {
                 // decrease down count if it's not zero
                 --currentDown;
-                Logger.lowLevelDebug("DOWN: " + currentDown + "/" + down);
+                assert Logger.lowLevelDebug("DOWN: " + currentDown + "/" + down);
             } else {
                 if (nowIsUp) {
                     // now is up, so no need to increase the up counter
@@ -30,7 +30,7 @@ public class TCPHealthCheckClient {
                 }
                 // increase the up counter
                 ++currentUp;
-                Logger.lowLevelDebug("TO-UP: " + currentUp + "/" + up);
+                assert Logger.lowLevelDebug("TO-UP: " + currentUp + "/" + up);
             }
         }
 
@@ -39,7 +39,7 @@ public class TCPHealthCheckClient {
             if (currentUp > 0) {
                 // decrease up count if it's not zero
                 --currentUp;
-                Logger.lowLevelDebug("UP: " + currentUp + "/" + up);
+                assert Logger.lowLevelDebug("UP: " + currentUp + "/" + up);
             } else {
                 if (!nowIsUp) {
                     // now is down, so no need to increase the currentDown counter
@@ -54,7 +54,7 @@ public class TCPHealthCheckClient {
                 }
                 // increase the down counter
                 ++currentDown;
-                Logger.lowLevelDebug("TO-DOWN: " + currentDown + "/" + down);
+                assert Logger.lowLevelDebug("TO-DOWN: " + currentDown + "/" + down);
             }
         }
     }

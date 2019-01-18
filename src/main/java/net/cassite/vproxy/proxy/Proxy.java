@@ -30,7 +30,7 @@ public class Proxy {
     }
 
     private static void utilCloseConnection(Connection connection) {
-        Logger.lowLevelDebug("close connection " + connection);
+        assert Logger.lowLevelDebug("close connection " + connection);
         connection.close();
     }
 
@@ -166,17 +166,17 @@ public class Proxy {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
-            Logger.lowLevelDebug("now the connection is closed, we should close the session");
+            assert Logger.lowLevelDebug("now the connection is closed, we should close the session");
             // now the active connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
                 return;
             if (session.passive.outBuffer.used() == 0) {
                 // nothing to write anymore
                 // close the passive connection
-                Logger.lowLevelDebug("nothing to write for passive connection, do close");
+                assert Logger.lowLevelDebug("nothing to write for passive connection, do close");
                 utilCloseConnectionAndReleaseBuffers(session.passive);
             } else {
-                Logger.lowLevelDebug("we should close the passive connection after everything wrote");
+                assert Logger.lowLevelDebug("we should close the passive connection after everything wrote");
                 // and we close the active conn's output buffer, i.e. passive's input buffer
                 // then the passive will not be able to write anything to active
 
@@ -200,7 +200,7 @@ public class Proxy {
 
         @Override
         public void connected(ClientConnectionHandlerContext ctx) {
-            Logger.lowLevelDebug("passive connection established: " + ctx.connection);
+            assert Logger.lowLevelDebug("passive connection established: " + ctx.connection);
 
             // now we can add active connection into event loop
             // use event loop from context
@@ -211,7 +211,7 @@ public class Proxy {
                 Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "register active connection into event loop failed, conn = " + session.active + ", err = " + e);
                 // add into event loop failed
                 // close session
-                Logger.lowLevelDebug("nothing to write for active connection, do close");
+                assert Logger.lowLevelDebug("nothing to write for active connection, do close");
                 utilCloseSessionAndReleaseBuffers(session);
             }
         }
@@ -238,7 +238,7 @@ public class Proxy {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
-            Logger.lowLevelDebug("now the passive connection is closed, we should close the session");
+            assert Logger.lowLevelDebug("now the passive connection is closed, we should close the session");
             // now the passive connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
                 return;
@@ -247,7 +247,7 @@ public class Proxy {
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(session.active);
             } else {
-                Logger.lowLevelDebug("we should close the active connection after everything wrote");
+                assert Logger.lowLevelDebug("we should close the active connection after everything wrote");
                 // and we close the passive conn's output buffer, i.e. active's input buffer
                 // then the active will not be able to write anything to passive
 

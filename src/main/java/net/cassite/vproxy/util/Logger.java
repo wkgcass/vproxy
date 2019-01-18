@@ -5,9 +5,12 @@ public class Logger {
     }
 
     // some message for debugging this project
-    public static void lowLevelDebug(String msg) {
+    // use assert to print this log
+    // e.g. assert Logger.lowLevelDebug("i will not be here in production environment")
+    public static boolean lowLevelDebug(String msg) {
         StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
         System.out.println(elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
+        return true;
     }
 
     public static void stdout(String msg) {

@@ -164,7 +164,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         if (read < 0) {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;
-            Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
+            assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
             // remove read event add write event (maybe more bytes to write)
             ctx.modify(SelectionKey.OP_WRITE);
             // the connection will be closed after write
@@ -177,7 +177,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
         if (cctx.connection.inBuffer.free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
-            Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
+            assert Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_READ);
         }
     }
@@ -210,7 +210,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.outBuffer.used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event
-            Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
+            assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_WRITE);
         }
     }
