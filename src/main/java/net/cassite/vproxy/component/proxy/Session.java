@@ -1,4 +1,4 @@
-package net.cassite.vproxy.proxy;
+package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.Connection;
 

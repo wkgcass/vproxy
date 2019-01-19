@@ -2,9 +2,9 @@ package net.cassite.vproxy.example;
 
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.connection.Server;
-import net.cassite.vproxy.proxy.Proxy;
-import net.cassite.vproxy.proxy.ProxyEventHandler;
-import net.cassite.vproxy.proxy.ProxyNetConfig;
+import net.cassite.vproxy.component.proxy.Proxy;
+import net.cassite.vproxy.component.proxy.ProxyEventHandler;
+import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
