@@ -23,9 +23,13 @@ public class TimeQueue<T> {
             if (e.triggerTime > event.triggerTime) {
                 ite.previous();
                 ite.add(event);
-                break;
+                return event;
             }
         }
+        // reach here means the event not added
+        // and the timestamp is greater than any
+        // add to the tail
+        list.add(event);
         return event;
     }
 

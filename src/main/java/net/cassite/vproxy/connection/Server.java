@@ -1,14 +1,15 @@
 package net.cassite.vproxy.connection;
 
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 
 public class Server {
-    public final String localHost;
-    public final int localPort;
+    public final InetSocketAddress bind;
+    private final String _id;
     final ServerSocketChannel channel;
 
     NetEventLoop eventLoop = null;
@@ -17,9 +18,8 @@ public class Server {
 
     public Server(ServerSocketChannel channel) throws IOException {
         this.channel = channel;
-        InetSocketAddress addr = (InetSocketAddress) channel.getLocalAddress();
-        localHost = addr.getHostString();
-        localPort = addr.getPort();
+        bind = (InetSocketAddress) channel.getLocalAddress();
+        _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
     }
 
     public boolean isClosed() {
@@ -27,6 +27,10 @@ public class Server {
     }
 
     public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
         if (eventLoop != null) {
             eventLoop.selectorEventLoop.remove(channel);
         }
@@ -37,5 +41,14 @@ public class Server {
             // we can do nothing about it
             Logger.stderr("got error when closing server channel " + e);
         }
+    }
+
+    public String id() {
+        return _id;
+    }
+
+    @Override
+    public String toString() {
+        return "Server(" + id() + ")[" + (closed ? "closed" : "open") + "]";
     }
 }

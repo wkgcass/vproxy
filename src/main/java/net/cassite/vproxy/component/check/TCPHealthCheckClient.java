@@ -76,15 +76,13 @@ public class TCPHealthCheckClient {
 
     public TCPHealthCheckClient(NetEventLoop eventLoop,
                                 SocketAddress remote,
-                                int timeout,
-                                int period,
-                                int up, int down,
+                                HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,
                                 HealthCheckHandler handler) {
-        this.connectClient = new ConnectClient(eventLoop, remote, timeout);
-        this.period = period;
-        this.up = up;
-        this.down = down;
+        this.connectClient = new ConnectClient(eventLoop, remote, healthCheckConfig.timeout);
+        this.period = healthCheckConfig.period;
+        this.up = healthCheckConfig.up;
+        this.down = healthCheckConfig.down;
         nowIsUp = initialIsUp;
         this.handler = handler;
     }
@@ -136,6 +134,7 @@ public class TCPHealthCheckClient {
         if (periodTimer != null) {
             periodTimer.cancel();
         }
+        connectClient.stop();
         periodTimer = null;
     }
 }

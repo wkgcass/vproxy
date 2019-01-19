@@ -17,7 +17,7 @@ public class NetEventLoopEchoServer {
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server socket channel and bind
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(18081));
+        serverSocketChannel.bind(new InetSocketAddress(18080));
         // create server wrapper object
         Server server = new Server(serverSocketChannel);
         // register the server into event loop
@@ -26,7 +26,7 @@ public class NetEventLoopEchoServer {
         new Thread(selectorEventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
-        EchoClient.runBlock(18081);
+        EchoClient.runBlock(18080);
         selectorEventLoop.close();
     }
 }
@@ -65,6 +65,7 @@ class MyServerHandler implements ServerHandler {
 
     @Override
     public void removed(ServerHandlerContext ctx) {
+        System.err.println("echo server closed");
         ctx.server.close();
     }
 }

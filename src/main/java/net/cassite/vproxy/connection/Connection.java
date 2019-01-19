@@ -3,6 +3,7 @@ package net.cassite.vproxy.connection;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.RingBufferETHandler;
+import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -44,8 +45,9 @@ public class Connection {
         }
     }
 
-    public final String host;
-    public final int port;
+    protected final InetSocketAddress remote;
+    protected final InetSocketAddress local;
+    private final String _id;
     public final SocketChannel channel;
     /**
      * bytes will be read from channel into this buffer
@@ -67,9 +69,15 @@ public class Connection {
         this.channel = channel;
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
-        InetSocketAddress addr = ((InetSocketAddress) channel.getRemoteAddress());
-        host = addr.getHostString();
-        port = addr.getPort();
+        remote = ((InetSocketAddress) channel.getRemoteAddress());
+        local = (InetSocketAddress) channel.getLocalAddress();
+        _id = Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
+            + "/"
+            + (local == null ? "0.0.0.0:0" :
+            (
+                Utils.ipStr(local.getAddress().getAddress()) + ":" + local.getPort()
+            )
+        );
 
         inBufferETHandler = new InBufferETHandler();
         outBufferETHandler = new OutBufferETHandler();
@@ -102,8 +110,12 @@ public class Connection {
         }
     }
 
+    public String id() {
+        return _id;
+    }
+
     @Override
     public String toString() {
-        return "Connection(" + host + ":" + port + ")[" + (closed ? "closed" : "open") + "]";
+        return "Connection(" + id() + ")[" + (closed ? "closed" : "open") + "]";
     }
 }

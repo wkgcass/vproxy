@@ -8,8 +8,9 @@ public class Logger {
     // use assert to print this log
     // e.g. assert Logger.lowLevelDebug("i will not be here in production environment")
     public static boolean lowLevelDebug(String msg) {
+        String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
-        System.out.println(elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
+        System.out.println(threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
         return true;
     }
 
@@ -18,8 +19,9 @@ public class Logger {
     }
 
     private static void privateStderr(String err) {
+        String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[3];
-        System.err.println(elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + err);
+        System.err.println(threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + err);
     }
 
     public static void stderr(String err) {
@@ -34,6 +36,11 @@ public class Logger {
     // expected errors, but not normal condition
     public static void error(LogType logType, String err) {
         privateStderr(logType + " - " + err);
+    }
+
+    public static void error(LogType logType, String err, Throwable ex) {
+        privateStderr(logType + " - " + err);
+        ex.printStackTrace(System.err);
     }
 
     // expected errors, and we can recover

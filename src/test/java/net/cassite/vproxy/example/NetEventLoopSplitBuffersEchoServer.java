@@ -21,7 +21,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server socket channel and bind
         ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(18082));
+        serverSocketChannel.bind(new InetSocketAddress(18080));
         // create server wrapper object
         Server server = new Server(serverSocketChannel);
         // register the server into event loop
@@ -30,7 +30,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         new Thread(selectorEventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
-        EchoClient.runBlock(18082);
+        EchoClient.runBlock(18080);
         selectorEventLoop.close();
     }
 }

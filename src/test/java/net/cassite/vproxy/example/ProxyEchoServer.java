@@ -17,13 +17,13 @@ import java.nio.channels.SocketChannel;
 public class ProxyEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         // start echo server
-        SelectorEventLoop selectorEventLoop = SelectorEventLoopEchoServer.createServer(19083);
+        SelectorEventLoop selectorEventLoop = SelectorEventLoopEchoServer.createServer(19080);
 
         // create event loop (just use the returned event loop)
         NetEventLoop netEventLoop = new NetEventLoop(selectorEventLoop);
         // create server
         ServerSocketChannel channel = ServerSocketChannel.open();
-        channel.bind(new InetSocketAddress(18083));
+        channel.bind(new InetSocketAddress(18080));
         Server server = new Server(channel);
         // init config
         ProxyNetConfig config = new ProxyNetConfig()
@@ -32,7 +32,7 @@ public class ProxyEchoServer {
                 // connect to localhost 18084
                 SocketChannel s = SocketChannel.open();
                 s.configureBlocking(false);
-                s.connect(new InetSocketAddress("127.0.0.1", 19083));
+                s.connect(new InetSocketAddress("127.0.0.1", 19080));
                 return s;
             })
             .setHandleLoopProvider(() -> netEventLoop) // use same event loop as the acceptor for demonstration
@@ -45,7 +45,7 @@ public class ProxyEchoServer {
         new Thread(selectorEventLoop::loop).start();
 
         Thread.sleep(500);
-        EchoClient.runBlock(18083);
+        EchoClient.runBlock(18080);
         selectorEventLoop.close();
     }
 }

@@ -26,5 +26,10 @@ public class RunAll {
         System.out.println("             health check client");
         System.out.println("==============================================");
         HealthCheckClientExample.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("                server group");
+        System.out.println("==============================================");
+        ServerGroupExample.main(new String[0]);
     }
 }

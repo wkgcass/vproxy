@@ -1,20 +1,14 @@
 package net.cassite.vproxy.selector;
 
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
-import net.cassite.vproxy.util.TimeQueue;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
+import java.nio.channels.*;
+import java.util.ArrayList;
 import java.util.Iterator;
-import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentLinkedQueue;
-import java.util.concurrent.ConcurrentMap;
 
 public class SelectorEventLoop {
     static class RegisterData {
@@ -23,10 +17,14 @@ public class SelectorEventLoop {
     }
 
     private final Selector selector;
-    private final ConcurrentMap<SelectableChannel, RegisterData> registered = new ConcurrentHashMap<>();
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
+
+    // a lock little tricky, though it's safe
+    // see comments in loop() and close()
+    private final Object CLOSE_LOCK = new Object();
+    private List<Tuple<SelectableChannel, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
     private SelectorEventLoop() throws IOException {
         this.selector = Selector.open();
@@ -41,19 +39,23 @@ public class SelectorEventLoop {
             r.run();
         } catch (Throwable t) {
             // we cannot throw the error, just log
-            Logger.error(LogType.IMPROPER_USE, "exception thrown in nextTick event " + t);
+            Logger.error(LogType.IMPROPER_USE, "exception thrown in nextTick event ", t);
         }
     }
 
-    private void doAfterHandlingEvents() {
-        // handle runOnLoopEvents
-        {
-            Runnable r;
-            while ((r = runOnLoopEvents.poll()) != null) {
-                tryRunnable(r);
-            }
+    private void handleNonSelectEvents() {
+        handleRunOnLoopEvents();
+        handleTimeEvents();
+    }
+
+    private void handleRunOnLoopEvents() {
+        Runnable r;
+        while ((r = runOnLoopEvents.poll()) != null) {
+            tryRunnable(r);
         }
-        // handle timers
+    }
+
+    private void handleTimeEvents() {
         timeQueue.setCurrent(System.currentTimeMillis());
         while (timeQueue.nextTime() == 0) {
             Runnable r = timeQueue.pop();
@@ -96,9 +98,31 @@ public class SelectorEventLoop {
         }
     }
 
+    private void release() {
+        for (Tuple<SelectableChannel, RegisterData> tuple : THE_KEY_SET_BEFORE_SELECTOR_CLOSE) {
+            SelectableChannel channel = tuple.a;
+            RegisterData att = tuple.b;
+            triggerRemovedCallback(channel, att);
+        }
+    }
+
     public void loop() {
         while (selector.isOpen()) {
-            timeQueue.setCurrent(System.currentTimeMillis());
+            synchronized (CLOSE_LOCK) {
+                // yes, we lock the whole while body (except the select part)
+                // it's ok because we won't close the loop from inside the loop
+                // and it's also ok to let the operator wait for some time
+                // since closing the loop is considered as expansive and dangerous
+
+                if (!selector.isOpen())
+                    break; // break if it's closed
+
+                // handle some non select events
+                timeQueue.setCurrent(System.currentTimeMillis());
+                handleNonSelectEvents();
+            }
+            // here we do not lock select()
+            // let close() have chance to run
 
             final int selectedSize;
             try {
@@ -109,22 +133,27 @@ public class SelectorEventLoop {
                 }
             } catch (IOException e) {
                 // let's ignore this exception and continue
+                // if it's closed, the next loop will not run
                 continue;
             }
-            if (selectedSize > 0) {
-                Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
-                doHandling(keys);
-            }
-            doAfterHandlingEvents();
-        }
-        // remove all still registered keys
-        Iterator<Map.Entry<SelectableChannel, RegisterData>> ite = registered.entrySet().iterator();
-        while (ite.hasNext()) {
-            Map.Entry<SelectableChannel, RegisterData> entry = ite.next();
-            ite.remove();
 
-            triggerRemovedCallback(entry.getKey(), entry.getValue());
+            // here we lock again
+            // because we need to handle something
+            // and at this time the selector might be closed
+            synchronized (CLOSE_LOCK) {
+
+                if (!selector.isOpen())
+                    break; // break if it's closed
+
+                if (selectedSize > 0) {
+                    Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+                    doHandling(keys);
+                }
+            }
+            // while-loop ends here
         }
+        // do the final release
+        release();
     }
 
     @ThreadSafe
@@ -150,7 +179,6 @@ public class SelectorEventLoop {
         registerData.att = attachment;
         registerData.handler = handler;
         channel.register(selector, ops, registerData);
-        registered.put(channel, registerData);
     }
 
     @ThreadSafe
@@ -173,8 +201,10 @@ public class SelectorEventLoop {
 
     @ThreadSafe
     public void remove(SelectableChannel channel) {
-        channel.keyFor(selector).cancel();
-        triggerRemovedCallback(channel, registered.remove(channel));
+        SelectionKey key = channel.keyFor(selector);
+        RegisterData att = (RegisterData) key.attachment();
+        key.cancel();
+        triggerRemovedCallback(channel, att);
     }
 
     @ThreadSafe
@@ -203,8 +233,16 @@ public class SelectorEventLoop {
         return !selector.isOpen();
     }
 
+    @Blocking
     @ThreadSafe
     public void close() throws IOException {
-        selector.close();
+        synchronized (CLOSE_LOCK) {
+            Set<SelectionKey> keys = selector.keys();
+            THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
+            for (SelectionKey key : keys) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.channel(), (RegisterData) key.attachment()));
+            }
+            selector.close();
+        }
     }
 }

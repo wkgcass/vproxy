@@ -72,14 +72,20 @@ public class NetEventLoop {
         } else {
             ops = SelectionKey.OP_CONNECT;
         }
-        connection.eventLoop = this;
+        boolean gotExceptionWhenAdd = false;
         ClientConnectionHandlerContext ctx = new ClientConnectionHandlerContext(this, connection, attachment, handler);
         try { // only use try-finally for firing connected event
             selectorEventLoop.add(connection.channel, ops, ctx,
                 handlerForClientConnection);
+        } catch (IOException e) {
+            gotExceptionWhenAdd = true;
+            throw e;
         } finally {
-            if (fireConnected) {
-                handler.connected(ctx);
+            if (!gotExceptionWhenAdd) {
+                connection.eventLoop = this;
+                if (fireConnected) {
+                    handler.connected(ctx);
+                }
             }
         }
     }
