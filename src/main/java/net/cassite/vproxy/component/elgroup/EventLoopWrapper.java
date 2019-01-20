@@ -95,6 +95,7 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     public final String alias;
+    private final SelectorEventLoop selectorEventLoop;
     private final ConcurrentHashMap<Server, Object> servers = new ConcurrentHashMap<>();
     private final ConcurrentMap<Connection, Object> connections = new ConcurrentHashMap<>();
     private static final Object _VALUE_ = new Object();
@@ -104,24 +105,40 @@ public class EventLoopWrapper extends NetEventLoop {
     public EventLoopWrapper(String alias, SelectorEventLoop selectorEventLoop) {
         super(selectorEventLoop);
         this.alias = alias;
+        this.selectorEventLoop = selectorEventLoop;
     }
 
     @Override
     public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
-        super.addServer(server, attachment, new ServerHandlerWrapper(handler));
-        servers.put(server, _VALUE_);
+        servers.put(server, _VALUE_); // make sure the server recorded
+        try {
+            super.addServer(server, attachment, new ServerHandlerWrapper(handler));
+        } catch (IOException e) {
+            servers.remove(server); // remove the recorded server if got error
+            throw e;
+        }
     }
 
     @Override
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
-        super.addConnection(connection, attachment, new ConnectionHandlerWrapper(handler));
-        connections.put(connection, _VALUE_);
+        connections.put(connection, _VALUE_); // make sure the connection recorded
+        try {
+            super.addConnection(connection, attachment, new ConnectionHandlerWrapper(handler));
+        } catch (IOException e) {
+            connections.remove(connection); // remove the recorded connection if got error
+            throw e;
+        }
     }
 
     @Override
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
-        super.addClientConnection(connection, attachment, new ClientConnectionHandlerWrapper(handler));
-        connections.put(connection, _VALUE_);
+        connections.put(connection, _VALUE_); // make sure the connection recorded
+        try {
+            super.addClientConnection(connection, attachment, new ClientConnectionHandlerWrapper(handler));
+        } catch (IOException e) {
+            connections.remove(connection); // remove the recorded connection if got error
+            throw e;
+        }
     }
 
     @ThreadSafe

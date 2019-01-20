@@ -4,10 +4,7 @@ import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.nio.channels.*;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class SelectorEventLoop {
@@ -21,10 +18,12 @@ public class SelectorEventLoop {
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
 
-    // a lock little tricky, though it's safe
+    // these locks are a little tricky
     // see comments in loop() and close()
     private final Object CLOSE_LOCK = new Object();
     private List<Tuple<SelectableChannel, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
+    // see comments in add() and loop()
+    private final Object REG_LOCK = new Object();
 
     private SelectorEventLoop() throws IOException {
         this.selector = Selector.open();
@@ -50,15 +49,22 @@ public class SelectorEventLoop {
 
     private void handleRunOnLoopEvents() {
         Runnable r;
+        List<Runnable> toRun = new LinkedList<>();
         while ((r = runOnLoopEvents.poll()) != null) {
-            tryRunnable(r);
+            toRun.add(r);
+        }
+        for (Runnable rr : toRun) {
+            tryRunnable(rr);
         }
     }
 
     private void handleTimeEvents() {
-        timeQueue.setCurrent(System.currentTimeMillis());
+        List<Runnable> toRun = new LinkedList<>();
         while (timeQueue.nextTime() == 0) {
             Runnable r = timeQueue.pop();
+            toRun.add(r);
+        }
+        for (Runnable r : toRun) {
             tryRunnable(r);
         }
     }
@@ -153,6 +159,12 @@ public class SelectorEventLoop {
                 continue;
             }
 
+            // we lock the REG_LOCK
+            // to make sure the add() is finished
+            // and the selectionKeys will be working in the next loop
+            synchronized (REG_LOCK) { // do nothing, just wait for lock to release
+            }
+
             // here we lock again
             // because we need to handle something
             // and at this time the selector might be closed
@@ -194,7 +206,10 @@ public class SelectorEventLoop {
         RegisterData registerData = new RegisterData();
         registerData.att = attachment;
         registerData.handler = handler;
-        channel.register(selector, ops, registerData);
+        synchronized (REG_LOCK) { // lock it to make sure register is done
+            selector.wakeup();
+            channel.register(selector, ops, registerData);
+        }
     }
 
     @ThreadSafe

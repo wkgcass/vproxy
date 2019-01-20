@@ -7,6 +7,7 @@ import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ThreadSafe;
+import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -18,7 +19,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class EventLoopGroup {
-    private ArrayList<EventLoopWrapper> eventLoops = new ArrayList<>(0); // use array list to make code look better,
+    private ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> eventLoops = new ArrayList<>(0); // use array list to make code look better,
     // it's the same if you use array
     private boolean preClose = false; // if true, then all MODIFY operations are disabled or return default value
     private boolean closed = false; // if true, then all operations are disabled or return default value
@@ -39,18 +40,18 @@ public class EventLoopGroup {
         if (closed) {
             return Collections.emptyList();
         }
-        return eventLoops.stream().map(el -> el.alias).collect(Collectors.toList());
+        return eventLoops.stream().map(el -> el.a.alias).collect(Collectors.toList());
     }
 
     @ThreadSafe
-    public EventLoopWrapper get(String alias) throws NotFoundException {
+    public Tuple<EventLoopWrapper, SelectorEventLoop> get(String alias) throws NotFoundException {
         if (closed) {
             throw new NotFoundException();
         }
-        ArrayList<EventLoopWrapper> ls = eventLoops;
-        for (EventLoopWrapper w : ls) {
-            if (w.alias.equals(alias))
-                return w;
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
+            if (t.a.alias.equals(alias))
+                return t;
         }
         throw new NotFoundException();
     }
@@ -60,15 +61,16 @@ public class EventLoopGroup {
         if (preClose) {
             throw new ClosedException();
         }
-        ArrayList<EventLoopWrapper> ls = eventLoops;
-        for (EventLoopWrapper w : ls) {
-            if (w.alias.equals(alias))
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
+            if (t.a.alias.equals(alias))
                 throw new AlreadyExistException();
         }
-        EventLoopWrapper el = new EventLoopWrapper(alias, SelectorEventLoop.open());
-        ArrayList<EventLoopWrapper> newLs = new ArrayList<>(ls.size() + 1);
+        SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
+        EventLoopWrapper el = new EventLoopWrapper(alias, selectorEventLoop);
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
-        newLs.add(el);
+        newLs.add(new Tuple<>(el, selectorEventLoop));
         eventLoops = newLs;
         el.loop();
 
@@ -77,9 +79,9 @@ public class EventLoopGroup {
         invokeResourcesOnAdd();
     }
 
-    private void tryCloseLoop(EventLoopWrapper wrapper) {
+    private void tryCloseLoop(SelectorEventLoop selectorEventLoop) {
         try {
-            wrapper.selectorEventLoop.close();
+            selectorEventLoop.close();
         } catch (IOException e) {
             Logger.fatal(LogType.EVENT_LOOP_CLOSE_FAIL, "close event loop failed, err = " + e);
         }
@@ -90,15 +92,15 @@ public class EventLoopGroup {
         if (preClose) {
             return;
         }
-        ArrayList<EventLoopWrapper> ls = eventLoops;
-        ArrayList<EventLoopWrapper> newLs = new ArrayList<>(ls.size() - 1);
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> newLs = new ArrayList<>(ls.size() - 1);
         boolean found = false;
-        for (EventLoopWrapper w : ls) {
-            if (w.alias.equals(alias)) {
+        for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
+            if (t.a.alias.equals(alias)) {
                 found = true;
-                tryCloseLoop(w);
+                tryCloseLoop(t.b);
             } else {
-                newLs.add(w);
+                newLs.add(t);
             }
         }
         if (!found)
@@ -187,12 +189,12 @@ public class EventLoopGroup {
     }
 
     @ThreadSafe
-    public EventLoopWrapper next() {
+    public Tuple<EventLoopWrapper, SelectorEventLoop> next() {
         if (preClose)
             return null;
 
-        ArrayList<EventLoopWrapper> ls = eventLoops;
-        EventLoopWrapper result;
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        Tuple<EventLoopWrapper, SelectorEventLoop> result;
 
         int idx = cursor.getAndIncrement();
         if (ls.size() > idx) {
@@ -203,7 +205,7 @@ public class EventLoopGroup {
             cursor.set(1);
             result = ls.get(0);
         }
-        if (result.selectorEventLoop.isClosed()) {
+        if (result.b.isClosed()) {
             // maybe the map is operated in another thread
             // skip this element and return the next element
             return next();
@@ -218,9 +220,9 @@ public class EventLoopGroup {
         preClose = true;
         closed = true;
         // no modification should be made to eventLoops now
-        ArrayList<EventLoopWrapper> ls = eventLoops;
-        for (EventLoopWrapper w : ls) {
-            tryCloseLoop(w);
+        ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
+            tryCloseLoop(t.b);
         }
         eventLoops.clear();
         removeResources();

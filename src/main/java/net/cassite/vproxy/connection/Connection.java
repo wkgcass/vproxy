@@ -20,6 +20,7 @@ public class Connection {
 
         @Override
         public void writableET() {
+            NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
                 assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
@@ -32,6 +33,7 @@ public class Connection {
     class OutBufferETHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
+            NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
                 assert Logger.lowLevelDebug("out buffer is readable, add WRITE for channel " + channel);
@@ -61,7 +63,7 @@ public class Connection {
     private final OutBufferETHandler outBufferETHandler;
     boolean remoteClosed = false;
 
-    NetEventLoop eventLoop = null;
+    NetEventLoop _eventLoop = null;
 
     private boolean closed = false;
 
@@ -104,10 +106,11 @@ public class Connection {
         inBuffer.removeHandler(inBufferETHandler);
         outBuffer.removeHandler(outBufferETHandler);
 
+        NetEventLoop eventLoop = _eventLoop;
         if (eventLoop != null) {
-            eventLoop.selectorEventLoop.remove(channel);
+            eventLoop.removeConnection(this);
         }
-        eventLoop = null;
+        _eventLoop = null;
         try {
             channel.close();
         } catch (IOException e) {

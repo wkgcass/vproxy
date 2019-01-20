@@ -12,7 +12,7 @@ public class Server {
     private final String _id;
     final ServerSocketChannel channel;
 
-    NetEventLoop eventLoop = null;
+    NetEventLoop _eventLoop = null;
 
     private boolean closed;
 
@@ -26,15 +26,17 @@ public class Server {
         return closed;
     }
 
-    public void close() {
+    // make it synchronized to prevent fields being inconsistent
+    public synchronized void close() {
         if (closed) {
             return;
         }
         closed = true;
+        NetEventLoop eventLoop = _eventLoop;
         if (eventLoop != null) {
-            eventLoop.selectorEventLoop.remove(channel);
+            eventLoop.removeServer(this);
         }
-        eventLoop = null;
+        _eventLoop = null;
         try {
             channel.close();
         } catch (IOException e) {

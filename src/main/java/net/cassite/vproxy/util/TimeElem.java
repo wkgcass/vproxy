@@ -11,6 +11,7 @@ public class TimeElem<T> {
         this.queue = queue;
     }
 
+    // this method should always be called on the event loop
     public void removeSelf() {
         queue.list.remove(this);
     }

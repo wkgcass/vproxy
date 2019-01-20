@@ -18,7 +18,7 @@ public class NetEventLoop {
     private static final HandlerForConnection handlerForConnection = new HandlerForClientConnection();
     private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
 
-    public final SelectorEventLoop selectorEventLoop;
+    final SelectorEventLoop selectorEventLoop;
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
@@ -26,16 +26,46 @@ public class NetEventLoop {
 
     @ThreadSafe
     public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
-        server.eventLoop = this;
-        selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
-            new ServerHandlerContext(this, server, attachment, handler),
-            handlerForServer);
+        // synchronize in case the fields being inconsistent
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (server) {
+            if (server.isClosed())
+                throw new ClosedChannelException();
+            if (server._eventLoop != null)
+                throw new IOException("bindServer already registered to a event loop");
+            server._eventLoop = this;
+            selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
+                new ServerHandlerContext(this, server, attachment, handler),
+                handlerForServer);
+        }
     }
 
     @ThreadSafe
     public void removeServer(Server server) {
         // event loop in server object will be set to null in remove event
         selectorEventLoop.remove(server.channel);
+    }
+
+    private void doAddConnection(Connection connection, int ops, Object att, Handler<SocketChannel> handler) throws IOException {
+        // synchronize connection
+        // to prevent inner fields being inconsistent
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (connection) {
+            if (connection.isClosed())
+                throw new ClosedChannelException();
+            // then, the connection will not be closed until added into the event loop
+            if (connection._eventLoop != null)
+                throw new IOException("connection " + connection + " already registered to a event loop");
+
+            connection._eventLoop = this;
+            try {
+                selectorEventLoop.add(connection.channel, ops, att, handler);
+            } catch (IOException e) {
+                // remove the eventLoop ref if adding failed
+                connection._eventLoop = null;
+                throw e;
+            }
+        }
     }
 
     @ThreadSafe
@@ -48,25 +78,9 @@ public class NetEventLoop {
             ops |= SelectionKey.OP_WRITE;
         }
 
-        // synchronize connection
-        // to prevent inner fields being inconsistent
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (connection) {
-            if (connection.isClosed())
-                throw new ClosedChannelException();
-            // then, the connection will not be closed until added into the event loop
-
-            connection.eventLoop = this;
-            try {
-                selectorEventLoop.add(connection.channel, ops,
-                    new ConnectionHandlerContext(this, connection, attachment, handler),
-                    handlerForConnection);
-            } catch (IOException e) {
-                // remove the eventLoop ref if adding failed
-                connection.eventLoop = null;
-                throw e;
-            }
-        }
+        doAddConnection(connection, ops,
+            new ConnectionHandlerContext(this, connection, attachment, handler),
+            handlerForConnection);
     }
 
     // this method is for both server connection and client connection
@@ -97,24 +111,7 @@ public class NetEventLoop {
 
         ClientConnectionHandlerContext ctx = new ClientConnectionHandlerContext(this, connection, attachment, handler);
 
-        // synchronize connection
-        // to prevent inner fields being inconsistent
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
-        synchronized (connection) {
-            if (connection.isClosed())
-                throw new ClosedChannelException();
-            // then, the connection will not be closed until added into the event loop
-
-            connection.eventLoop = this;
-            try {
-                selectorEventLoop.add(connection.channel, ops, ctx,
-                    handlerForClientConnection);
-            } catch (IOException e) {
-                // remove the event loop ref if adding failed
-                connection.eventLoop = null;
-                throw e;
-            }
-        }
+        doAddConnection(connection, ops, ctx, handlerForClientConnection);
 
         if (fireConnected) {
             try {
@@ -170,7 +167,7 @@ class HandlerForServer implements Handler<ServerSocketChannel> {
     @Override
     public void removed(HandlerContext<ServerSocketChannel> ctx) {
         ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
-        sctx.server.eventLoop = null;
+        sctx.server._eventLoop = null;
         sctx.handler.removed(sctx);
     }
 }
@@ -259,7 +256,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
     @Override
     public void removed(HandlerContext<SocketChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
-        cctx.connection.eventLoop = null;
+        cctx.connection._eventLoop = null;
         cctx.handler.removed(cctx);
     }
 }
