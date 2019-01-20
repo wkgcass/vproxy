@@ -17,13 +17,14 @@ public class SelectorEventLoop {
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
+    private Thread runningThread;
 
     // these locks are a little tricky
     // see comments in loop() and close()
     private final Object CLOSE_LOCK = new Object();
     private List<Tuple<SelectableChannel, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
-    // see comments in add() and loop()
-    private final Object REG_LOCK = new Object();
+    // see comments in add()/modify()/remove() and loop()
+    private final Object OPERATE_SELECTOR_LOCK = new Object();
 
     private SelectorEventLoop() throws IOException {
         this.selector = Selector.open();
@@ -129,6 +130,7 @@ public class SelectorEventLoop {
     }
 
     public void loop() {
+        runningThread = Thread.currentThread();
         while (selector.isOpen()) {
             synchronized (CLOSE_LOCK) {
                 // yes, we lock the whole while body (except the select part)
@@ -148,10 +150,17 @@ public class SelectorEventLoop {
 
             final int selectedSize;
             try {
-                if (timeQueue.isEmpty()) {
-                    selectedSize = selector.select(); // always sleep
+                if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
+                    selectedSize = selector.select(); // let it sleep
+                } else if (!runOnLoopEvents.isEmpty()) {
+                    selectedSize = selector.selectNow(); // immediately return
                 } else {
-                    selectedSize = selector.select(timeQueue.nextTime());
+                    int time = timeQueue.nextTime();
+                    if (time == 0) {
+                        selectedSize = selector.selectNow(); // immediately return
+                    } else {
+                        selectedSize = selector.select(time); // wait until the nearest timer
+                    }
                 }
             } catch (IOException e) {
                 // let's ignore this exception and continue
@@ -159,10 +168,10 @@ public class SelectorEventLoop {
                 continue;
             }
 
-            // we lock the REG_LOCK
+            // we lock the OPERATE_SELECTOR_LOCK
             // to make sure the add() is finished
             // and the selectionKeys will be working in the next loop
-            synchronized (REG_LOCK) { // do nothing, just wait for lock to release
+            synchronized (OPERATE_SELECTOR_LOCK) { // do nothing, just wait for lock to release
             }
 
             // here we lock again
@@ -180,13 +189,20 @@ public class SelectorEventLoop {
             }
             // while-loop ends here
         }
+        runningThread = null; // it's not running now, set to null
         // do the final release
         release();
+    }
+
+    private boolean needLockAndWake() {
+        return runningThread != null && Thread.currentThread() == runningThread;
     }
 
     @ThreadSafe
     public void nextTick(Runnable r) {
         runOnLoopEvents.add(r);
+        if (runningThread == null || Thread.currentThread() == runningThread)
+            return; // we do not need to wakeup because it's not started or is already waken up
         selector.wakeup(); // wake the selector because new event is added
     }
 
@@ -206,28 +222,46 @@ public class SelectorEventLoop {
         RegisterData registerData = new RegisterData();
         registerData.att = attachment;
         registerData.handler = handler;
-        synchronized (REG_LOCK) { // lock it to make sure register is done
-            selector.wakeup();
+        if (needLockAndWake()) {
+            synchronized (OPERATE_SELECTOR_LOCK) { // lock it to make sure register is done
+                selector.wakeup();
+                channel.register(selector, ops, registerData);
+            }
+        } else {
             channel.register(selector, ops, registerData);
+        }
+    }
+
+    private void doModify(SelectionKey key, int ops) {
+        // the document says whether interestOps() blocks or not
+        // is implementation dependent
+        // so we consider a lock and wake
+        if (needLockAndWake()) {
+            synchronized (OPERATE_SELECTOR_LOCK) {
+                selector.wakeup();
+                key.interestOps(ops);
+            }
+        } else {
+            key.interestOps(ops);
         }
     }
 
     @ThreadSafe
     public void modify(SelectableChannel channel, int ops) {
         SelectionKey key = getKeyCheckNull(channel);
-        key.interestOps(ops);
+        doModify(key, ops);
     }
 
     @ThreadSafe
     public void addOps(SelectableChannel channel, int ops) {
         SelectionKey key = getKeyCheckNull(channel);
-        key.interestOps(key.interestOps() | ops);
+        doModify(key, key.interestOps() | ops);
     }
 
     @ThreadSafe
     public void rmOps(SelectableChannel channel, int ops) {
         SelectionKey key = getKeyCheckNull(channel);
-        key.interestOps(key.interestOps() & ~ops);
+        doModify(key, key.interestOps() & ~ops);
     }
 
     @ThreadSafe
@@ -242,7 +276,14 @@ public class SelectorEventLoop {
                 return;
         }
         RegisterData att = (RegisterData) key.attachment();
-        key.cancel();
+        if (needLockAndWake()) {
+            synchronized (OPERATE_SELECTOR_LOCK) { // lock it to make sure cancel is done
+                selector.wakeup();
+                key.cancel();
+            }
+        } else {
+            key.cancel();
+        }
         triggerRemovedCallback(channel, att);
     }
 
