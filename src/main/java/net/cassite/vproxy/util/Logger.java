@@ -43,7 +43,7 @@ public class Logger {
         ex.printStackTrace(System.err);
     }
 
-    // expected errors, and we can recover
+    // expected errors, maybe user misuse, and we can recover
     public static void warn(LogType logType, String err) {
         System.err.println(logType + " - " + err);
     }

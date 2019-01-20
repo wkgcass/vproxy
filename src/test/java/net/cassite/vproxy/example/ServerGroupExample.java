@@ -24,7 +24,7 @@ public class ServerGroupExample {
         int portA = 18080;
         int portB = 18081;
 
-        EventLoopGroup eventLoopGroup = new EventLoopGroup();
+        EventLoopGroup eventLoopGroup = new EventLoopGroup("my group");
         ServerGroup serverGroup = new ServerGroup("server group", eventLoopGroup,
             new HealthCheckConfig(200, 800, 4, 5));
         serverGroup.add(new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"));

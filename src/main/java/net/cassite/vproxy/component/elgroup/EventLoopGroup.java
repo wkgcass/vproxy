@@ -4,10 +4,7 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
-import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -19,6 +16,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
 public class EventLoopGroup {
+    public final String alias;
     private ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> eventLoops = new ArrayList<>(0); // use array list to make code look better,
     // it's the same if you use array
     private boolean preClose = false; // if true, then all MODIFY operations are disabled or return default value
@@ -26,7 +24,8 @@ public class EventLoopGroup {
     private final AtomicInteger cursor = new AtomicInteger(0); // current cursor of the eventLoops
     private final ConcurrentMap<String, EventLoopGroupAttach> attaches = new ConcurrentHashMap<>();
 
-    public EventLoopGroup() {
+    public EventLoopGroup(String alias) {
+        this.alias = alias;
     }
 
     /*
@@ -79,6 +78,7 @@ public class EventLoopGroup {
         invokeResourcesOnAdd();
     }
 
+    @Blocking
     private void tryCloseLoop(SelectorEventLoop selectorEventLoop) {
         try {
             selectorEventLoop.close();
@@ -87,6 +87,8 @@ public class EventLoopGroup {
         }
     }
 
+    @Blocking
+    // closing selectorEventLoop is blocking, so this is blocking as well
     @ThreadSafe
     public synchronized void remove(String alias) throws NotFoundException {
         if (preClose) {
@@ -194,6 +196,14 @@ public class EventLoopGroup {
             return null;
 
         ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
+        return next(ls, 0);
+    }
+
+    private Tuple<EventLoopWrapper, SelectorEventLoop> next(ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls, int recursion) {
+        if (recursion > ls.size())
+            return null;
+        ++recursion;
+
         Tuple<EventLoopWrapper, SelectorEventLoop> result;
 
         int idx = cursor.getAndIncrement();
@@ -206,13 +216,15 @@ public class EventLoopGroup {
             result = ls.get(0);
         }
         if (result.b.isClosed()) {
-            // maybe the map is operated in another thread
+            // maybe the list is operated in another thread
             // skip this element and return the next element
-            return next();
+            return next(ls, recursion);
         }
         return result;
     }
 
+    @Blocking
+    // closing selectorEventLoop is blocking, so this is blocking as well
     @ThreadSafe
     public synchronized void close() {
         if (closed)

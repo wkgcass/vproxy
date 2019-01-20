@@ -31,5 +31,10 @@ public class RunAll {
         System.out.println("                server group");
         System.out.println("==============================================");
         ServerGroupExample.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("             lb for echo servers");
+        System.out.println("==============================================");
+        LBForEchoServers.main(new String[0]);
     }
 }

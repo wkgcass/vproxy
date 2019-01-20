@@ -19,7 +19,7 @@ public class SelectorEventLoopEchoServer {
         new Thread(eventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
-        EchoClient.runBlock(18080);
+        AlphabetBlockingClient.runBlock(18080, 10, false);
         eventLoop.close();
     }
 
@@ -185,6 +185,12 @@ class ClientHandler implements Handler<SocketChannel> {
 
     @Override
     public void removed(HandlerContext<SocketChannel> ctx) {
-        // we ignore this, for that the connection will be already closed
+        // close the connection here
+        try {
+            ctx.getChannel().close();
+        } catch (IOException e) {
+            // we can do nothing about it
+            e.printStackTrace();
+        }
     }
 }

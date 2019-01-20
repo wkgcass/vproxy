@@ -30,7 +30,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         new Thread(selectorEventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
-        EchoClient.runBlock(18080);
+        AlphabetBlockingClient.runBlock(18080, 10, false);
         selectorEventLoop.close();
     }
 }

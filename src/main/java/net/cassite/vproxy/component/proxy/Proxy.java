@@ -104,8 +104,15 @@ public class Proxy {
             // and we only register the passive connection here
             // the active connection will be registered
             // when the passive connection is successfully established
+            NetEventLoop loop = config.handleLoopProvider.get();
+            if (loop == null) {
+                // the loop not exist
+                utilCloseSessionAndReleaseBuffers(session);
+                Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for client connection " + clientConnection);
+                return;
+            }
             try {
-                config.handleLoopProvider.get().addClientConnection(clientConnection, null, handler);
+                loop.addClientConnection(clientConnection, null, handler);
             } catch (IOException e) {
                 Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "register passive connection into event loop failed, passive conn = " + clientConnection + ", err = " + e);
                 // should not happen
@@ -267,11 +274,15 @@ public class Proxy {
 
     public Proxy(ProxyNetConfig config, ProxyEventHandler handler) {
         this.handler = handler;
-        utilValidate(config);
         this.config = config;
     }
 
     public void handle() throws IOException {
+        utilValidate(config);
         config.acceptLoop.addServer(config.server, null, new SessionServerHandler());
+    }
+
+    public void stop() {
+        config.acceptLoop.removeServer(config.server);
     }
 }

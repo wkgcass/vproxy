@@ -17,7 +17,7 @@ public class SelectorEventLoop {
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
-    private Thread runningThread;
+    public Thread runningThread;
 
     // these locks are a little tricky
     // see comments in loop() and close()
@@ -195,7 +195,7 @@ public class SelectorEventLoop {
     }
 
     private boolean needLockAndWake() {
-        return runningThread != null && Thread.currentThread() == runningThread;
+        return runningThread != null && Thread.currentThread() != runningThread;
     }
 
     @ThreadSafe
@@ -318,8 +318,14 @@ public class SelectorEventLoop {
     }
 
     @Blocking
+    // wait until it's actually closed if closing on a non event loop thread
     @ThreadSafe
     public void close() throws IOException {
+        Thread runningThread = this.runningThread; // get the thread, which will be joined later
+        // we don't check whether the thread exists (i.e. we don't check whether the loop is running)
+        // just shut down all keys and close the selector
+        // the nio lib will raise error if it's already closed
+
         synchronized (CLOSE_LOCK) {
             Set<SelectionKey> keys = selector.keys();
             THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
@@ -327,6 +333,16 @@ public class SelectorEventLoop {
                 THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.channel(), (RegisterData) key.attachment()));
             }
             selector.close();
+        }
+        // selector.wakeup();
+        // we don not need to wakeup manually, the selector.close does this for us
+
+        if (runningThread != null && runningThread != Thread.currentThread()) {
+            try {
+                runningThread.join();
+            } catch (InterruptedException ignore) {
+                // ignore, we don't care
+            }
         }
     }
 }

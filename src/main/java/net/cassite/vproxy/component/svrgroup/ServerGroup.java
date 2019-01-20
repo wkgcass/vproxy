@@ -132,7 +132,7 @@ public class ServerGroup {
     class Attach implements EventLoopGroupAttach {
         @Override
         public String id() {
-            return alias;
+            return "ServerGroup:" + alias;
         }
 
         @Override
@@ -248,6 +248,8 @@ public class ServerGroup {
 
     public synchronized void remove(InetSocketAddress server) throws NotFoundException {
         ArrayList<ServerHealthHandle> ls = servers;
+        if (ls.isEmpty())
+            throw new NotFoundException();
         ArrayList<ServerHealthHandle> newLs = new ArrayList<>(servers.size() - 1);
         boolean found = false;
         for (ServerHealthHandle c : ls) {
