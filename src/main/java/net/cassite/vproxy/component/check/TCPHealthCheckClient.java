@@ -6,6 +6,7 @@ import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.SocketAddress;
 
 public class TCPHealthCheckClient {
@@ -76,10 +77,11 @@ public class TCPHealthCheckClient {
 
     public TCPHealthCheckClient(NetEventLoop eventLoop,
                                 SocketAddress remote,
+                                InetAddress local,
                                 HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,
                                 HealthCheckHandler handler) {
-        this.connectClient = new ConnectClient(eventLoop, remote, healthCheckConfig.timeout);
+        this.connectClient = new ConnectClient(eventLoop, remote, local, healthCheckConfig.timeout);
         this.period = healthCheckConfig.period;
         this.up = healthCheckConfig.up;
         this.down = healthCheckConfig.down;

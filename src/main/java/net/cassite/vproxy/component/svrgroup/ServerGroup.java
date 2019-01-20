@@ -11,6 +11,7 @@ import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.ArrayList;
@@ -46,12 +47,14 @@ public class ServerGroup {
 
         private final ServerHealthCheckHandler handler = new ServerHealthCheckHandler();
         final InetSocketAddress server;
+        final InetAddress local;
         EventLoopWrapper el;
         boolean healthy = false; // considered to be unhealthy when firstly created
         TCPHealthCheckClient healthCheckClient;
 
-        ServerHealthHandle(InetSocketAddress server) {
+        ServerHealthHandle(InetSocketAddress server, InetAddress local) {
             this.server = server;
+            this.local = local;
         }
 
         void start() {
@@ -68,7 +71,7 @@ public class ServerGroup {
                 assert Logger.lowLevelDebug("cannot get event loop, give up for now. we will start again when there're available event loops");
                 return;
             }
-            healthCheckClient = new TCPHealthCheckClient(el, server, healthCheckConfig, healthy, handler);
+            healthCheckClient = new TCPHealthCheckClient(el, server, local, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
@@ -169,7 +172,7 @@ public class ServerGroup {
     /**
      * @return null if not found any healthy
      */
-    public InetSocketAddress next() {
+    public Connector next() {
         if (method == Method.rr) {
             return rrNext();
         } else {
@@ -179,12 +182,12 @@ public class ServerGroup {
         }
     }
 
-    private InetSocketAddress rrNext() {
+    private Connector rrNext() {
         ArrayList<ServerHealthHandle> ls = servers;
         return rrNext(ls, 0);
     }
 
-    private InetSocketAddress rrNext(ArrayList<ServerHealthHandle> ls, int recursion) {
+    private Connector rrNext(ArrayList<ServerHealthHandle> ls, int recursion) {
         if (recursion > ls.size())
             return null; // traveled through the whole list but not found, we can return `null` now
         ++recursion;
@@ -193,7 +196,7 @@ public class ServerGroup {
         if (ls.size() > idx) {
             ServerHealthHandle handle = ls.get(idx);
             if (handle.healthy)
-                return handle.server;
+                return new Connector(handle.server, handle.local);
         } else {
             rrCursor.set(0);
         }
@@ -222,9 +225,9 @@ public class ServerGroup {
         }
     }
 
-    public synchronized void add(InetSocketAddress server) throws AlreadyExistException {
+    public synchronized void add(InetSocketAddress server, InetAddress local) throws AlreadyExistException {
         ArrayList<ServerHealthHandle> ls = servers;
-        ServerHealthHandle handle = new ServerHealthHandle(server);
+        ServerHealthHandle handle = new ServerHealthHandle(server, local);
         handle.start();
         for (ServerHealthHandle c : ls) {
             if (c.server.equals(server))

@@ -1,15 +1,22 @@
 package net.cassite.vproxy.example;
 
 import net.cassite.vproxy.component.check.HealthCheckConfig;
+import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
+import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.connection.Server;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.ArrayList;
+import java.util.List;
 
 public class ServerGroupExample {
     public static void main(String[] args) throws AlreadyExistException, IOException, ClosedException, InterruptedException, NotFoundException {
@@ -19,12 +26,12 @@ public class ServerGroupExample {
         EventLoopGroup eventLoopGroup = new EventLoopGroup();
         ServerGroup serverGroup = new ServerGroup("server group", eventLoopGroup,
             new HealthCheckConfig(200, 800, 4, 5));
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portA));
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portB));
+        serverGroup.add(new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"));
+        serverGroup.add(new InetSocketAddress("127.0.0.1", portB), InetAddress.getByName("127.0.0.1"));
 
-        // create a event loop only for checking the active server
+        // create a event loop only for checking
         SelectorEventLoop eventLoop = SelectorEventLoop.open();
-        runTimer(eventLoop, serverGroup);
+        runTimer(eventLoop, eventLoopGroup, serverGroup);
         new Thread(eventLoop::loop).start();
 
         eventLoopGroup.add("my loop 1"); // re-dispatch to all threads (currently 1 thread ),
@@ -50,7 +57,7 @@ public class ServerGroupExample {
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m-------------------------------------------------------------------------------------------------let's add serverA back--------------\033[0m");
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portA)); // now cursor = 2 use = 1
+        serverGroup.add(new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1")); // now cursor = 2 use = 1
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------------remove event loop 1----------------\033[0m");
@@ -71,11 +78,26 @@ public class ServerGroupExample {
         eventLoop.close();
     }
 
-    private static void runTimer(SelectorEventLoop eventLoop, ServerGroup grp) {
+    private static void runTimer(SelectorEventLoop eventLoop, EventLoopGroup eventLoopGroup, ServerGroup grp) {
         eventLoop.delay(500, () -> {
-            InetSocketAddress addr = grp.next();
-            System.out.println("current active server is: \033[0;36m" + addr + "\033[0m");
-            runTimer(eventLoop, grp);
+            Connector c = grp.next();
+            System.out.println("current active server is: \033[0;36m" + c + "\033[0m");
+            List<String> names = eventLoopGroup.names();
+            for (String name : names) {
+                EventLoopWrapper el;
+                try {
+                    el = eventLoopGroup.get(name);
+                } catch (NotFoundException e) {
+                    // won't happen
+                    continue;
+                }
+                List<Server> bindServers = new ArrayList<>();
+                el.copyServers(bindServers);
+                List<Connection> connections = new ArrayList<>();
+                el.copyConnections(connections);
+                System.out.println("event loop \033[0;36m" + el.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
+            }
+            runTimer(eventLoop, eventLoopGroup, grp);
         });
     }
 }

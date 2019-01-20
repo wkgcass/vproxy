@@ -7,6 +7,7 @@ import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 
@@ -16,6 +17,7 @@ public class HealthCheckClientExample {
         NetEventLoop eventLoop = new NetEventLoop(loop);
         TCPHealthCheckClient client = new TCPHealthCheckClient(eventLoop,
             new InetSocketAddress("127.0.0.1", 18080),
+            InetAddress.getByName("127.0.0.1"),
             new HealthCheckConfig(200, 800, 4, 5),
             true, new HealthCheckHandler() {
             @Override

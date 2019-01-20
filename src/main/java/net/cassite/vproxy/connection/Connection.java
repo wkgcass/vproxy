@@ -46,8 +46,8 @@ public class Connection {
     }
 
     protected final InetSocketAddress remote;
-    protected final InetSocketAddress local;
-    private final String _id;
+    protected InetSocketAddress local;
+    protected final String _id;
     public final SocketChannel channel;
     /**
      * bytes will be read from channel into this buffer
@@ -71,13 +71,7 @@ public class Connection {
         this.outBuffer = outBuffer;
         remote = ((InetSocketAddress) channel.getRemoteAddress());
         local = (InetSocketAddress) channel.getLocalAddress();
-        _id = Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
-            + "/"
-            + (local == null ? "0.0.0.0:0" :
-            (
-                Utils.ipStr(local.getAddress().getAddress()) + ":" + local.getPort()
-            )
-        );
+        _id = genId();
 
         inBufferETHandler = new InBufferETHandler();
         outBufferETHandler = new OutBufferETHandler();
@@ -86,11 +80,22 @@ public class Connection {
         this.outBuffer.addHandler(outBufferETHandler);
     }
 
+    protected String genId() {
+        return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
+            + "/"
+            + (local == null ? "[unbound]" :
+            (
+                Utils.ipStr(local.getAddress().getAddress()) + ":" + local.getPort()
+            )
+        );
+    }
+
     public boolean isClosed() {
         return closed;
     }
 
-    public void close() {
+    // make it synchronized to prevent inside fields inconsistent
+    public synchronized void close() {
         if (closed)
             return; // do not close again if already closed
 

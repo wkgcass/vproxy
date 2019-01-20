@@ -8,6 +8,7 @@ import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -32,6 +33,7 @@ public class ProxyEchoServer {
                 // connect to localhost 18084
                 SocketChannel s = SocketChannel.open();
                 s.configureBlocking(false);
+                s.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
                 s.connect(new InetSocketAddress("127.0.0.1", 19080));
                 return s;
             })

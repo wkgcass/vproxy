@@ -42,7 +42,7 @@ public class EventLoopWrapper extends NetEventLoop {
         @Override
         public void removed(ServerHandlerContext ctx) {
             handler.removed(ctx);
-            servers.remove(ctx.server.id());
+            servers.remove(ctx.server);
         }
     }
 
@@ -76,7 +76,7 @@ public class EventLoopWrapper extends NetEventLoop {
         @Override
         public void removed(ConnectionHandlerContext ctx) {
             handler.removed(ctx);
-            connections.remove(ctx.connection.id());
+            connections.remove(ctx.connection);
         }
     }
 
@@ -95,8 +95,9 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     public final String alias;
-    private final ConcurrentMap<String, Server> servers = new ConcurrentHashMap<>();
-    private final ConcurrentMap<String, Connection> connections = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<Server, Object> servers = new ConcurrentHashMap<>();
+    private final ConcurrentMap<Connection, Object> connections = new ConcurrentHashMap<>();
+    private static final Object _VALUE_ = new Object();
     private final ConcurrentMap<String, EventLoopAttach> attaches = new ConcurrentHashMap<>();
     private Thread thread;
 
@@ -108,19 +109,19 @@ public class EventLoopWrapper extends NetEventLoop {
     @Override
     public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
         super.addServer(server, attachment, new ServerHandlerWrapper(handler));
-        servers.put(server.id(), server);
+        servers.put(server, _VALUE_);
     }
 
     @Override
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
         super.addConnection(connection, attachment, new ConnectionHandlerWrapper(handler));
-        connections.put(connection.id(), connection);
+        connections.put(connection, _VALUE_);
     }
 
     @Override
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
         super.addClientConnection(connection, attachment, new ClientConnectionHandlerWrapper(handler));
-        connections.put(connection.id(), connection);
+        connections.put(connection, _VALUE_);
     }
 
     @ThreadSafe
@@ -162,7 +163,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     // this is a very expansive operation
     public void copyServers(Collection<? super Server> servers) {
-        servers.addAll(this.servers.values());
+        servers.addAll(this.servers.keySet());
     }
 
     public int serverCount() {
@@ -171,7 +172,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     // this is a very expansive operation
     public void copyConnections(Collection<? super Connection> connections) {
-        connections.addAll(this.connections.values());
+        connections.addAll(this.connections.keySet());
     }
 
     public int connectionCount() {

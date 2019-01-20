@@ -8,6 +8,7 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ThreadSafe;
 
 import java.io.IOException;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -39,14 +40,33 @@ public class NetEventLoop {
 
     @ThreadSafe
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
-        int ops = SelectionKey.OP_READ;
+        int ops = 0;
+        if (connection.inBuffer.free() > 0) {
+            ops |= SelectionKey.OP_READ;
+        }
         if (connection.outBuffer.used() > 0) {
             ops |= SelectionKey.OP_WRITE;
         }
-        connection.eventLoop = this;
-        selectorEventLoop.add(connection.channel, ops,
-            new ConnectionHandlerContext(this, connection, attachment, handler),
-            handlerForConnection);
+
+        // synchronize connection
+        // to prevent inner fields being inconsistent
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (connection) {
+            if (connection.isClosed())
+                throw new ClosedChannelException();
+            // then, the connection will not be closed until added into the event loop
+
+            connection.eventLoop = this;
+            try {
+                selectorEventLoop.add(connection.channel, ops,
+                    new ConnectionHandlerContext(this, connection, attachment, handler),
+                    handlerForConnection);
+            } catch (IOException e) {
+                // remove the eventLoop ref if adding failed
+                connection.eventLoop = null;
+                throw e;
+            }
+        }
     }
 
     // this method is for both server connection and client connection
@@ -66,26 +86,41 @@ public class NetEventLoop {
         if (connection.channel.isConnected()) {
             fireConnected = true;
 
-            ops = SelectionKey.OP_READ;
-            if (connection.outBuffer.used() != 0)
+            ops = 0;
+            if (connection.inBuffer.free() > 0)
+                ops |= SelectionKey.OP_READ;
+            if (connection.outBuffer.used() > 0)
                 ops |= SelectionKey.OP_WRITE;
         } else {
             ops = SelectionKey.OP_CONNECT;
         }
-        boolean gotExceptionWhenAdd = false;
+
         ClientConnectionHandlerContext ctx = new ClientConnectionHandlerContext(this, connection, attachment, handler);
-        try { // only use try-finally for firing connected event
-            selectorEventLoop.add(connection.channel, ops, ctx,
-                handlerForClientConnection);
-        } catch (IOException e) {
-            gotExceptionWhenAdd = true;
-            throw e;
-        } finally {
-            if (!gotExceptionWhenAdd) {
-                connection.eventLoop = this;
-                if (fireConnected) {
-                    handler.connected(ctx);
-                }
+
+        // synchronize connection
+        // to prevent inner fields being inconsistent
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (connection) {
+            if (connection.isClosed())
+                throw new ClosedChannelException();
+            // then, the connection will not be closed until added into the event loop
+
+            connection.eventLoop = this;
+            try {
+                selectorEventLoop.add(connection.channel, ops, ctx,
+                    handlerForClientConnection);
+            } catch (IOException e) {
+                // remove the event loop ref if adding failed
+                connection.eventLoop = null;
+                throw e;
+            }
+        }
+
+        if (fireConnected) {
+            try {
+                handler.connected(ctx);
+            } catch (Throwable t) {
+                Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
             }
         }
     }

@@ -8,6 +8,8 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.nio.channels.SocketChannel;
@@ -28,11 +30,9 @@ public class ConnectClient {
         @Override
         public void connected(ClientConnectionHandlerContext ctx) {
             timerEvent.cancel(); // cancel timer if possible
-
-            if (callback.isCalled()) // already called by timer
-                return;
-            if (!stopped) callback.succeeded(null);
             ctx.connection.close(); // close the connection
+
+            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
         }
 
         @Override
@@ -49,13 +49,11 @@ public class ConnectClient {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             timerEvent.cancel(); // cancel timer if possible
+            ctx.connection.close(); // close the connection
 
             assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
 
-            if (callback.isCalled()) // already called by timer
-                return;
-            if (!stopped) callback.failed(err);
-            ctx.connection.close(); // close the connection
+            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.failed(err);
         }
 
         @Override
@@ -71,12 +69,14 @@ public class ConnectClient {
 
     public final NetEventLoop eventLoop;
     public final SocketAddress remote;
+    public final InetAddress local;
     public final int timeout;
     private boolean stopped = false;
 
-    public ConnectClient(NetEventLoop eventLoop, SocketAddress remote, int timeout) {
+    public ConnectClient(NetEventLoop eventLoop, SocketAddress remote, InetAddress local, int timeout) {
         this.eventLoop = eventLoop;
         this.remote = remote;
+        this.local = local;
         this.timeout = timeout;
     }
 
@@ -94,6 +94,7 @@ public class ConnectClient {
         ClientConnection conn;
         try {
             channel.configureBlocking(false);
+            channel.bind(new InetSocketAddress(local, 0));
             channel.connect(remote);
             conn = new ClientConnection(channel,
                 // i/o buffer is not useful at all here
@@ -106,7 +107,7 @@ public class ConnectClient {
         TimerEvent timer = eventLoop.selectorEventLoop.delay(timeout, () -> {
             assert Logger.lowLevelDebug("timeout when doing health check " + conn);
             conn.close();
-            if (!stopped) cb.failed(new InterruptedByTimeoutException());
+            if (!cb.isCalled() /*called by connection*/ && !stopped) cb.failed(new InterruptedByTimeoutException());
         });
         try {
             eventLoop.addClientConnection(conn, null, new ConnectClientConnectionHandler(cb, timer));

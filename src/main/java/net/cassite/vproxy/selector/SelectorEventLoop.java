@@ -85,14 +85,30 @@ public class SelectorEventLoop {
             } else {
                 int readyOps = key.readyOps();
                 if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                    handler.connected(ctx);
+                    try {
+                        handler.connected(ctx);
+                    } catch (Throwable t) {
+                        Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
+                    }
                 } else if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
-                    handler.accept(ctx);
+                    try {
+                        handler.accept(ctx);
+                    } catch (Throwable t) {
+                        Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
+                    }
                 } else if ((readyOps & SelectionKey.OP_READ) != 0) {
-                    handler.readable(ctx);
+                    try {
+                        handler.readable(ctx);
+                    } catch (Throwable t) {
+                        Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
+                    }
                 } else {
                     assert (readyOps & SelectionKey.OP_WRITE) != 0;
-                    handler.writable(ctx);
+                    try {
+                        handler.writable(ctx);
+                    } catch (Throwable t) {
+                        Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                    }
                 }
             }
         }
@@ -201,7 +217,15 @@ public class SelectorEventLoop {
 
     @ThreadSafe
     public void remove(SelectableChannel channel) {
-        SelectionKey key = channel.keyFor(selector);
+        SelectionKey key;
+        // synchronize the channel
+        // to prevent it being canceled from multiple threads
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (channel) {
+            key = channel.keyFor(selector);
+            if (key == null)
+                return;
+        }
         RegisterData att = (RegisterData) key.attachment();
         key.cancel();
         triggerRemovedCallback(channel, att);
@@ -225,7 +249,11 @@ public class SelectorEventLoop {
         assert registerData != null;
         ctx.channel = channel;
         ctx.attachment = registerData.att;
-        registerData.handler.removed(ctx);
+        try {
+            registerData.handler.removed(ctx);
+        } catch (Throwable t) {
+            Logger.error(LogType.IMPROPER_USE, "the removed callback got exception", t);
+        }
     }
 
     @ThreadSafe
