@@ -1,7 +1,7 @@
 package net.cassite.vproxy.component.proxy;
 
-import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.NetEventLoop;
 
 public class ProxyNetConfig {
     NetEventLoop acceptLoop;

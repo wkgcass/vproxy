@@ -1,9 +1,9 @@
 package net.cassite.vproxy.example;
 
 import net.cassite.vproxy.component.check.HealthCheckConfig;
+import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
-import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.Connector;

@@ -1,7 +1,6 @@
 package net.cassite.vproxy.selector;
 
 import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
 
 public class HandlerContext<CHANNEL extends SelectableChannel> {
     private final SelectorEventLoop eventLoop;
