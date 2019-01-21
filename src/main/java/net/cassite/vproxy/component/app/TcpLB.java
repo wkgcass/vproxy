@@ -19,7 +19,7 @@ import net.cassite.vproxy.util.Tuple;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-public class LB {
+public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
         @Override
         public void serverRemoved(BindServer server) {
@@ -45,7 +45,7 @@ public class LB {
     class LBAttach implements EventLoopGroupAttach {
         @Override
         public String id() {
-            return "LB:" + alias;
+            return "TcpLB:" + alias;
         }
 
         @Override
@@ -86,13 +86,13 @@ public class LB {
     private final ProxyNetConfig proxyNetConfig = new ProxyNetConfig();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
 
-    public LB(String alias,
-              EventLoopGroup acceptorGroup,
-              EventLoopGroup workerGroup,
-              InetSocketAddress bindAddress,
-              ServerGroups backends,
-              int inBufferSize,
-              int outBufferSize) throws IOException, AlreadyExistException, ClosedException {
+    public TcpLB(String alias,
+                 EventLoopGroup acceptorGroup,
+                 EventLoopGroup workerGroup,
+                 InetSocketAddress bindAddress,
+                 ServerGroups backends,
+                 int inBufferSize,
+                 int outBufferSize) throws IOException, AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;

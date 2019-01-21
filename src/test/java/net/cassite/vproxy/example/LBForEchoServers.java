@@ -1,6 +1,6 @@
 package net.cassite.vproxy.example;
 
-import net.cassite.vproxy.component.app.LB;
+import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
@@ -25,7 +25,7 @@ public class LBForEchoServers {
             new HealthCheckConfig(200, 800, 4, 5));
         serverGroups.add(grp1);
         serverGroups.add(grp2);
-        LB lb = new LB("myLb",
+        TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
             8, 4 // make buffers small to demonstrate what happen when buffer is full
