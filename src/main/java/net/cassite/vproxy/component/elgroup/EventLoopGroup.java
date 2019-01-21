@@ -39,7 +39,7 @@ public class EventLoopGroup {
         if (closed) {
             return Collections.emptyList();
         }
-        return eventLoops.stream().map(el -> el.a.alias).collect(Collectors.toList());
+        return eventLoops.stream().map(el -> el.left.alias).collect(Collectors.toList());
     }
 
     @ThreadSafe
@@ -49,7 +49,7 @@ public class EventLoopGroup {
         }
         ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
         for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
-            if (t.a.alias.equals(alias))
+            if (t.left.alias.equals(alias))
                 return t;
         }
         throw new NotFoundException();
@@ -62,7 +62,7 @@ public class EventLoopGroup {
         }
         ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
         for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
-            if (t.a.alias.equals(alias))
+            if (t.left.alias.equals(alias))
                 throw new AlreadyExistException();
         }
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
@@ -98,9 +98,9 @@ public class EventLoopGroup {
         ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> newLs = new ArrayList<>(ls.size() - 1);
         boolean found = false;
         for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
-            if (t.a.alias.equals(alias)) {
+            if (t.left.alias.equals(alias)) {
                 found = true;
-                tryCloseLoop(t.b);
+                tryCloseLoop(t.right);
             } else {
                 newLs.add(t);
             }
@@ -215,7 +215,7 @@ public class EventLoopGroup {
             cursor.set(1);
             result = ls.get(0);
         }
-        if (result.b.isClosed()) {
+        if (result.right.isClosed()) {
             // maybe the list is operated in another thread
             // skip this element and return the next element
             return next(ls, recursion);
@@ -234,7 +234,7 @@ public class EventLoopGroup {
         // no modification should be made to eventLoops now
         ArrayList<Tuple<EventLoopWrapper, SelectorEventLoop>> ls = eventLoops;
         for (Tuple<EventLoopWrapper, SelectorEventLoop> t : ls) {
-            tryCloseLoop(t.b);
+            tryCloseLoop(t.right);
         }
         eventLoops.clear();
         removeResources();

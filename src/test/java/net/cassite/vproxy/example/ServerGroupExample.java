@@ -8,8 +8,8 @@ import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
+import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
-import net.cassite.vproxy.connection.Server;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.Tuple;
 
@@ -92,11 +92,11 @@ public class ServerGroupExample {
                     // won't happen
                     continue;
                 }
-                List<Server> bindServers = new ArrayList<>();
-                tuple.a.copyServers(bindServers);
+                List<BindServer> bindServers = new ArrayList<>();
+                tuple.left.copyServers(bindServers);
                 List<Connection> connections = new ArrayList<>();
-                tuple.a.copyConnections(connections);
-                System.out.println("event loop \033[0;36m" + tuple.a.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
+                tuple.left.copyConnections(connections);
+                System.out.println("event loop \033[0;36m" + tuple.left.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
             }
             runTimer(eventLoop, eventLoopGroup, grp);
         });

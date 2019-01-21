@@ -67,7 +67,7 @@ public class Connection {
 
     private boolean closed = false;
 
-    public Connection(SocketChannel channel, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+    Connection(SocketChannel channel, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         this.channel = channel;
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;

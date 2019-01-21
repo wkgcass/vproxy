@@ -1,10 +1,11 @@
 package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.util.Tuple;
 
-import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.net.InetSocketAddress;
 
 public interface ConnectionGen {
-    SocketChannel gen(Connection accepted) throws IOException;
+    // <remote, local>
+    Tuple<InetSocketAddress, InetSocketAddress> genRemoteLocal(Connection accepted);
 }

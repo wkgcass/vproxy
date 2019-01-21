@@ -1,5 +1,8 @@
 package net.cassite.vproxy.connection;
 
+import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
+
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
 
@@ -8,7 +11,8 @@ public interface ServerHandler {
 
     void connection(ServerHandlerContext ctx, Connection connection);
 
-    Connection getConnection(SocketChannel channel);
+    // <in buffer, out buffer>
+    Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel);
 
     void removed(ServerHandlerContext ctx);
 }

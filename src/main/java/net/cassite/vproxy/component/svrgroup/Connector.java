@@ -1,25 +1,29 @@
 package net.cassite.vproxy.component.svrgroup;
 
+import net.cassite.vproxy.connection.ClientConnection;
+import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
 
-public class Connector {
+public class Connector extends Tuple<InetSocketAddress, InetSocketAddress> {
     public final InetSocketAddress remote;
-    public final InetAddress local;
+    public final InetSocketAddress local;
 
-    public Connector(InetSocketAddress remote, InetAddress local) {
+    public Connector(InetSocketAddress remote, InetSocketAddress local) {
+        super(remote, local);
         this.remote = remote;
         this.local = local;
     }
 
-    public SocketChannel connect() throws IOException {
-        SocketChannel channel = SocketChannel.open();
-        channel.configureBlocking(false);
-        channel.bind(new InetSocketAddress(local, 0));
-        channel.connect(remote);
-        return channel;
+    public Connector(InetSocketAddress remote, InetAddress local) {
+        this(remote, new InetSocketAddress(local, 0));
+    }
+
+    public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
+        return ClientConnection.create(remote, local, in, out);
     }
 
     @Override

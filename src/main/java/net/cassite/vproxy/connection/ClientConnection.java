@@ -4,10 +4,31 @@ import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
-    public ClientConnection(SocketChannel channel, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+    public static ClientConnection create(InetSocketAddress remote, InetAddress local,
+                                          RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        return create(remote, new InetSocketAddress(local, 0), inBuffer, outBuffer);
+    }
+
+    public static ClientConnection create(InetSocketAddress remote, InetSocketAddress local,
+                                          RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        SocketChannel channel = SocketChannel.open();
+        channel.configureBlocking(false);
+        channel.bind(local);
+        channel.connect(remote);
+        try {
+            return new ClientConnection(channel, inBuffer, outBuffer);
+        } catch (IOException e) {
+            channel.close(); // close the channel if create ClientConnection failed
+            throw e;
+        }
+    }
+
+    private ClientConnection(SocketChannel channel, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         super(channel, inBuffer, outBuffer);
     }
 

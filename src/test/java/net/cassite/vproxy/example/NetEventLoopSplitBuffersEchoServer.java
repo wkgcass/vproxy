@@ -5,6 +5,7 @@ import net.cassite.vproxy.connection.ServerHandler;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -19,11 +20,8 @@ public class NetEventLoopSplitBuffersEchoServer {
         // create the event loop for network operations
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
-        // create server socket channel and bind
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(18080));
         // create server wrapper object
-        Server server = new Server(serverSocketChannel);
+        BindServer server = BindServer.create(new InetSocketAddress(18080));
         // register the server into event loop
         eventLoop.addServer(server, null, new My2ServerHandler());
         // start loop in another thread
@@ -47,17 +45,11 @@ class My2ServerHandler extends MyServerHandler implements ServerHandler {
     }
 
     @Override
-    public Connection getConnection(SocketChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
         // make the buffer small to demonstrate what will be done when buffer is full
         RingBuffer inBuffer = RingBuffer.allocateDirect(8);
         RingBuffer outBuffer = RingBuffer.allocateDirect(4);
-        try {
-            return new Connection(channel, inBuffer, outBuffer);
-        } catch (IOException e) {
-            // should not happen, only print exception log here
-            e.printStackTrace();
-        }
-        return null; // the lib accepts null, and it will not invoke the `connection` callback
+        return new Tuple<>(inBuffer, outBuffer);
     }
 }
 

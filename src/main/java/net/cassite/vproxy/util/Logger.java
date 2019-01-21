@@ -54,6 +54,6 @@ public class Logger {
     }
 
     public static void shouldNotHappen(String msg) {
-        privateStderr("should not happen - " + msg);
+        fatal(LogType.UNEXPECTED, "should not happen - " + msg);
     }
 }

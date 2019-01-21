@@ -1,17 +1,17 @@
 package net.cassite.vproxy.example;
 
-import net.cassite.vproxy.connection.NetEventLoop;
-import net.cassite.vproxy.connection.Server;
 import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
+import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
+import java.net.UnknownHostException;
 
 // create an echo server, and create a proxy
 // client requests proxy, proxy requests echo server
@@ -23,19 +23,18 @@ public class ProxyEchoServer {
         // create event loop (just use the returned event loop)
         NetEventLoop netEventLoop = new NetEventLoop(selectorEventLoop);
         // create server
-        ServerSocketChannel channel = ServerSocketChannel.open();
-        channel.bind(new InetSocketAddress(18080));
-        Server server = new Server(channel);
+        BindServer server = BindServer.create(new InetSocketAddress(18080));
         // init config
         ProxyNetConfig config = new ProxyNetConfig()
             .setAcceptLoop(netEventLoop)
             .setConnGen(conn -> {
-                // connect to localhost 18084
-                SocketChannel s = SocketChannel.open();
-                s.configureBlocking(false);
-                s.bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
-                s.connect(new InetSocketAddress("127.0.0.1", 19080));
-                return s;
+                // connect to localhost 19080
+                try {
+                    return new Tuple<>(new InetSocketAddress("127.0.0.1", 19080),
+                        new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
+                } catch (UnknownHostException e) {
+                    return null;
+                }
             })
             .setHandleLoopProvider(() -> netEventLoop) // use same event loop as the acceptor for demonstration
             .setServer(server)
@@ -54,7 +53,7 @@ public class ProxyEchoServer {
 
 class MyProxyEventHandler implements ProxyEventHandler {
     @Override
-    public void serverRemoved(Server server) {
+    public void serverRemoved(BindServer server) {
         server.close();
     }
 }

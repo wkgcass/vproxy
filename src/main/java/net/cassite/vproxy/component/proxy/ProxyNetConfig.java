@@ -1,11 +1,11 @@
 package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.NetEventLoop;
-import net.cassite.vproxy.connection.Server;
+import net.cassite.vproxy.connection.BindServer;
 
 public class ProxyNetConfig {
     NetEventLoop acceptLoop;
-    Server server;
+    BindServer server;
     NetEventLoopProvider handleLoopProvider;
     ConnectionGen connGen;
 
@@ -18,7 +18,7 @@ public class ProxyNetConfig {
         return this;
     }
 
-    public ProxyNetConfig setServer(Server server) {
+    public ProxyNetConfig setServer(BindServer server) {
         this.server = server;
         return this;
     }

@@ -8,7 +8,7 @@ import net.cassite.vproxy.util.Logger;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.SocketAddress;
+import java.net.InetSocketAddress;
 
 public class TCPHealthCheckClient {
     class ConnectResultHandler {
@@ -78,7 +78,7 @@ public class TCPHealthCheckClient {
 
     public TCPHealthCheckClient(NetEventLoop eventLoop,
                                 SelectorEventLoop timerEventLoop,
-                                SocketAddress remote,
+                                InetSocketAddress remote,
                                 InetAddress local,
                                 HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,

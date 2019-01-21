@@ -4,8 +4,10 @@ import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 
 /**
@@ -54,23 +56,14 @@ public class Proxy {
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
             // make connection to another end point
-            SocketChannel channel;
-            try {
-                channel = config.connGen.gen(connection);
-            } catch (IOException e) {
-                Logger.error(LogType.CLIENT_CONNECT_FAIL, "connect backend failed, front conn = " + connection + ", err = " + e);
-                // we cannot proxy this connection
-                // we should close it
-                utilCloseConnectionAndReleaseBuffers(connection);
-                return;
-            }
+            Tuple<InetSocketAddress, InetSocketAddress> remoteLocal = config.connGen.genRemoteLocal(connection);
 
-            // check whether channel is null
+            // check whether address tuple is null
             // null means the user code fail to provide a new connection
             // maybe user think that the backend is not working, or the source ip is forbidden
             // any way, the user refuse to provide a new connection
-            if (channel == null) {
-                Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide active connection");
+            if (remoteLocal == null) {
+                Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(connection);
                 return;
@@ -78,19 +71,15 @@ public class Proxy {
 
             ClientConnection clientConnection;
             try {
-                clientConnection = new ClientConnection(channel, connection.outBuffer, connection.inBuffer);
+                clientConnection = ClientConnection.create(remoteLocal.left, remoteLocal.right,
+                    // switch the two buffers to make a PROXY
+                    connection.outBuffer, connection.inBuffer);
             } catch (IOException e) {
-                Logger.fatal(LogType.UNEXPECTED, "create passive connection object failed, which should never happen: " + e);
-                // it should not happen
+                Logger.fatal(LogType.CONN_ERROR, "create passive connection object failed, maybe provided endpoint info is invalid: " + e);
+                // it should not happen if user provided endpoint is valid
                 // but if it happens, we close both sides
 
                 utilCloseConnectionAndReleaseBuffers(connection);
-                try {
-                    channel.close();
-                } catch (IOException e1) {
-                    // we can do nothing about it
-                    Logger.fatal(LogType.UNEXPECTED, "close passive connection channel failed: " + e1);
-                }
                 return;
             }
 
@@ -122,17 +111,10 @@ public class Proxy {
         }
 
         @Override
-        public Connection getConnection(SocketChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
             RingBuffer inBuffer = RingBuffer.allocateDirect(config.inBufferSize);
             RingBuffer outBuffer = RingBuffer.allocateDirect(config.outBufferSize);
-            try {
-                return new Connection(channel, inBuffer, outBuffer);
-            } catch (IOException e) {
-                Logger.fatal(LogType.UNEXPECTED, "create connection object failed, which should never happen: " + e);
-                inBuffer.free();
-                outBuffer.free();
-                return null; // return null, which means the accept failed
-            }
+            return new Tuple<>(inBuffer, outBuffer);
         }
 
         @Override

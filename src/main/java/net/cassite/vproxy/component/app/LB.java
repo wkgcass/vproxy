@@ -10,7 +10,7 @@ import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
-import net.cassite.vproxy.connection.Server;
+import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
@@ -18,12 +18,11 @@ import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.ServerSocketChannel;
 
 public class LB {
     class LBProxyEventHandler implements ProxyEventHandler {
         @Override
-        public void serverRemoved(Server server) {
+        public void serverRemoved(BindServer server) {
             if (stopped) {
                 assert Logger.lowLevelDebug("the proxy server removed, " +
                     "but we do not create a new one because lb is stopped");
@@ -83,7 +82,7 @@ public class LB {
     // we will try our best to make it start
     private Proxy proxy = null;
 
-    private final Server server;
+    private final BindServer server;
     private final ProxyNetConfig proxyNetConfig = new ProxyNetConfig();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
 
@@ -100,11 +99,8 @@ public class LB {
         this.bindAddress = bindAddress;
         this.backends = backends;
 
-        // create server channel
-        ServerSocketChannel channel = ServerSocketChannel.open();
-        channel.configureBlocking(false);
-        channel.bind(bindAddress);
-        this.server = new Server(channel);
+        // create server
+        this.server = BindServer.create(bindAddress);
 
         // init proxyNetConfig
         // acceptEventLoop will be assigned in start() method
@@ -115,15 +111,15 @@ public class LB {
                 if (connector == null)
                     return null; // return null if cannot get any
                 assert Logger.lowLevelDebug("got a backend: " + connector);
-                return connector.connect();
+                return connector;
             })
             .setHandleLoopProvider(() -> {
                 // get a event loop from group
                 Tuple<EventLoopWrapper, SelectorEventLoop> tuple = workerGroup.next();
                 if (tuple == null)
                     return null; // return null if cannot get any
-                assert Logger.lowLevelDebug("use event loop: " + tuple.a.alias);
-                return tuple.a;
+                assert Logger.lowLevelDebug("use event loop: " + tuple.left.alias);
+                return tuple.left;
             })
             .setInBufferSize(inBufferSize)
             .setOutBufferSize(outBufferSize)
@@ -149,7 +145,7 @@ public class LB {
             return;
         }
         assert Logger.lowLevelDebug("got a event loop, do re-dispatch");
-        proxyNetConfig.setAcceptLoop(tuple.a);
+        proxyNetConfig.setAcceptLoop(tuple.left);
         proxy.handle();
     }
 
@@ -173,7 +169,7 @@ public class LB {
                 assert Logger.lowLevelDebug("cannot start because event loop not retrieved, will start later");
                 return;
             }
-            proxyNetConfig.setAcceptLoop(tuple.a);
+            proxyNetConfig.setAcceptLoop(tuple.left);
 
             proxy = new Proxy(proxyNetConfig, proxyEventHandler);
 

@@ -5,9 +5,7 @@ import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -35,8 +33,8 @@ public class EventLoopWrapper extends NetEventLoop {
         }
 
         @Override
-        public Connection getConnection(SocketChannel channel) {
-            return handler.getConnection(channel);
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
+            return handler.getIOBuffers(channel);
         }
 
         @Override
@@ -96,7 +94,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     public final String alias;
     private final SelectorEventLoop selectorEventLoop;
-    private final ConcurrentHashMap<Server, Object> servers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<BindServer, Object> servers = new ConcurrentHashMap<>();
     private final ConcurrentMap<Connection, Object> connections = new ConcurrentHashMap<>();
     private static final Object _VALUE_ = new Object();
     private final ConcurrentMap<String, EventLoopAttach> attaches = new ConcurrentHashMap<>();
@@ -109,7 +107,7 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     @Override
-    public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
+    public void addServer(BindServer server, Object attachment, ServerHandler handler) throws IOException {
         servers.put(server, _VALUE_); // make sure the server recorded
         try {
             super.addServer(server, attachment, new ServerHandlerWrapper(handler));
@@ -179,7 +177,7 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     // this is a very expansive operation
-    public void copyServers(Collection<? super Server> servers) {
+    public void copyServers(Collection<? super BindServer> servers) {
         servers.addAll(this.servers.keySet());
     }
 

@@ -123,8 +123,8 @@ public class SelectorEventLoop {
 
     private void release() {
         for (Tuple<SelectableChannel, RegisterData> tuple : THE_KEY_SET_BEFORE_SELECTOR_CLOSE) {
-            SelectableChannel channel = tuple.a;
-            RegisterData att = tuple.b;
+            SelectableChannel channel = tuple.left;
+            RegisterData att = tuple.right;
             triggerRemovedCallback(channel, att);
         }
     }

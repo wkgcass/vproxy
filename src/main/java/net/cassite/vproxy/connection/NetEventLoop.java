@@ -3,9 +3,7 @@ package net.cassite.vproxy.connection;
 import net.cassite.vproxy.selector.Handler;
 import net.cassite.vproxy.selector.HandlerContext;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -25,7 +23,7 @@ public class NetEventLoop {
     }
 
     @ThreadSafe
-    public void addServer(Server server, Object attachment, ServerHandler handler) throws IOException {
+    public void addServer(BindServer server, Object attachment, ServerHandler handler) throws IOException {
         // synchronize in case the fields being inconsistent
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (server) {
@@ -41,7 +39,7 @@ public class NetEventLoop {
     }
 
     @ThreadSafe
-    public void removeServer(Server server) {
+    public void removeServer(BindServer server) {
         // event loop in server object will be set to null in remove event
         selectorEventLoop.remove(server.channel);
     }
@@ -137,13 +135,28 @@ class HandlerForServer implements Handler<ServerSocketChannel> {
             return;
         }
         if (sock == null) {
-            Logger.shouldNotHappen("no socket yet, ignore this event");
+            assert Logger.lowLevelDebug("no socket yet, ignore this event");
             return;
         }
-        Connection conn = sctx.handler.getConnection(sock);
-        if (conn != null) { // the user code may return null if got error
+        Tuple<RingBuffer, RingBuffer> ioBuffers = sctx.handler.getIOBuffers(sock);
+        if (ioBuffers == null) { // the user code may return null if refuse to accept
+            try {
+                sock.close(); // let's close the connection
+            } catch (IOException e) {
+                Logger.shouldNotHappen("close the unaccepted connection failed: " + e);
+            }
+        } else {
+            Connection conn;
+            try {
+                conn = new Connection(sock, ioBuffers.left, ioBuffers.right);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("Connection object create failed: " + e);
+                return;
+            }
             sctx.handler.connection(sctx, conn);
         }
+        // then, we try to accept again, in case there are pending connections
+        accept(ctx);
     }
 
     @Override

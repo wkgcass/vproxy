@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
 
-public class Server {
+public class BindServer {
     public final InetSocketAddress bind;
     private final String _id;
     final ServerSocketChannel channel;
@@ -16,7 +16,19 @@ public class Server {
 
     private boolean closed;
 
-    public Server(ServerSocketChannel channel) throws IOException {
+    public static BindServer create(InetSocketAddress bindAddress) throws IOException {
+        ServerSocketChannel channel = ServerSocketChannel.open();
+        channel.configureBlocking(false);
+        channel.bind(bindAddress);
+        try {
+            return new BindServer(channel);
+        } catch (IOException e) {
+            channel.close(); // close the channel if create BindServer failed
+            throw e;
+        }
+    }
+
+    private BindServer(ServerSocketChannel channel) throws IOException {
         this.channel = channel;
         bind = (InetSocketAddress) channel.getLocalAddress();
         _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
@@ -51,6 +63,6 @@ public class Server {
 
     @Override
     public String toString() {
-        return "Server(" + id() + ")[" + (closed ? "closed" : "open") + "]";
+        return "BindServer(" + id() + ")[" + (closed ? "closed" : "open") + "]";
     }
 }

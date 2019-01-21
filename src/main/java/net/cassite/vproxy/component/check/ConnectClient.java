@@ -4,16 +4,13 @@ import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.Callback;
-import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.channels.InterruptedByTimeoutException;
-import java.nio.channels.SocketChannel;
 
 // connect to target address then close the connection
 // it's useful when running health check
@@ -70,14 +67,14 @@ public class ConnectClient {
 
     public final NetEventLoop eventLoop;
     public final SelectorEventLoop timerEventLoop;
-    public final SocketAddress remote;
+    public final InetSocketAddress remote;
     public final InetAddress local;
     public final int timeout;
     private boolean stopped = false;
 
     public ConnectClient(NetEventLoop eventLoop,
                          SelectorEventLoop timerEventLoop,
-                         SocketAddress remote,
+                         InetSocketAddress remote,
                          InetAddress local,
                          int timeout) {
         this.eventLoop = eventLoop;
@@ -88,22 +85,10 @@ public class ConnectClient {
     }
 
     public void handle(Callback<Void, IOException> cb) {
-        SocketChannel channel;
-        try {
-            channel = SocketChannel.open();
-        } catch (IOException e) {
-            // create channel failed, maybe reaches os fd limit, it's an unexpected condition
-            Logger.fatal(LogType.UNEXPECTED, "create socket channel failed " + e);
-            if (!stopped) cb.failed(e);
-            return;
-        }
         // connect to remote
         ClientConnection conn;
         try {
-            channel.configureBlocking(false);
-            channel.bind(new InetSocketAddress(local, 0));
-            channel.connect(remote);
-            conn = new ClientConnection(channel,
+            conn = ClientConnection.create(remote, local,
                 // i/o buffer is not useful at all here
                 RingBuffer.allocate(0), RingBuffer.allocate(0));
         } catch (IOException e) {

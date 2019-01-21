@@ -74,8 +74,8 @@ public class ServerGroup {
                 assert Logger.lowLevelDebug("cannot get event loop, give up for now. we will start again when there're available event loops");
                 return;
             }
-            el = tuple.a;
-            sel = tuple.b;
+            el = tuple.left;
+            sel = tuple.right;
             healthCheckClient = new TCPHealthCheckClient(el, sel, server, local, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);

@@ -4,10 +4,10 @@ import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.connection.ServerHandler;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 public class NetEventLoopEchoServer {
@@ -15,11 +15,8 @@ public class NetEventLoopEchoServer {
         // create the event loop for network operations
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
-        // create server socket channel and bind
-        ServerSocketChannel serverSocketChannel = ServerSocketChannel.open();
-        serverSocketChannel.bind(new InetSocketAddress(18080));
         // create server wrapper object
-        Server server = new Server(serverSocketChannel);
+        BindServer server = BindServer.create(new InetSocketAddress(18080));
         // register the server into event loop
         eventLoop.addServer(server, null, new MyServerHandler());
         // start loop in another thread
@@ -49,18 +46,10 @@ class MyServerHandler implements ServerHandler {
     }
 
     @Override
-    public Connection getConnection(SocketChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
         // make the buffer small to demonstrate what will be done when buffer is full
         RingBuffer buffer = RingBuffer.allocateDirect(8);
-        try {
-            return new Connection(channel,
-                buffer, buffer // use the same buffer for input and output
-            );
-        } catch (IOException e) {
-            // should not happen, only print exception log here
-            e.printStackTrace();
-        }
-        return null; // the lib accepts null, and it will not invoke the `connection` callback
+        return new Tuple<>(buffer, buffer); // use the same buffer for input and output
     }
 
     @Override

@@ -3,22 +3,22 @@ package net.cassite.vproxy.util;
 import java.util.Map;
 
 public class Tuple<A, B> implements Map.Entry<A, B> {
-    public final A a;
-    public final B b;
+    public final A left;
+    public final B right;
 
-    public Tuple(A a, B b) {
-        this.a = a;
-        this.b = b;
+    public Tuple(A left, B right) {
+        this.left = left;
+        this.right = right;
     }
 
     @Override
     public A getKey() {
-        return a;
+        return left;
     }
 
     @Override
     public B getValue() {
-        return b;
+        return right;
     }
 
     @Override
