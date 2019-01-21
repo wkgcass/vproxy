@@ -288,7 +288,7 @@ class HandlerForClientConnection extends HandlerForConnection {
             return;
         }
         if (!connected) {
-            Logger.fatal(LogType.UNEXPECTED, "the connection is not connected, should not fire the event");
+            Logger.shouldNotHappen("the connection is not connected, should not fire the event");
         }
 
         int ops = SelectionKey.OP_READ;

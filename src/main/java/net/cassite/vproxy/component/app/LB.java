@@ -37,7 +37,7 @@ public class LB {
                 else
                     redispatch(); // proxy exists, should run re-dispatch (assign the server channel to another selector)
             } catch (IOException e) {
-                Logger.fatal(LogType.UNEXPECTED, "the proxy start failed " + e);
+                Logger.shouldNotHappen("the proxy start failed " + e);
             }
         }
     }
@@ -55,7 +55,7 @@ public class LB {
             try {
                 start(); // we call start(). whether already started will be determined in start() method
             } catch (IOException e) {
-                Logger.fatal(LogType.UNEXPECTED, "the proxy start failed " + e);
+                Logger.shouldNotHappen("the proxy start failed " + e);
             }
         }
 

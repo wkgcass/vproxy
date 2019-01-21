@@ -83,12 +83,12 @@ public class ServerGroup {
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
-                Logger.fatal(LogType.UNEXPECTED, "this resource should not have attached, this is an unrecoverable bug!!!");
+                Logger.shouldNotHappen("this resource should not have attached, this is an unrecoverable bug!!!");
             } catch (ClosedException e) {
                 // the selected event loop is closed, let's restart again
                 // however it's not expected to happen
                 // we log an error
-                Logger.error(LogType.UNEXPECTED, "the retrieved event loop should not be closed");
+                Logger.shouldNotHappen("the retrieved event loop should not be closed");
                 restart();
                 return;
             }
@@ -117,7 +117,7 @@ public class ServerGroup {
                 // it's ok if it's not found
                 // but it's unexpected
                 // we log an error
-                Logger.error(LogType.UNEXPECTED, "the resource should be attached to the event loop");
+                Logger.shouldNotHappen("the resource should be attached to the event loop");
             }
             el = null;
             if (healthCheckClient != null) {
@@ -184,7 +184,7 @@ public class ServerGroup {
         if (method == Method.rr) {
             return rrNext();
         } else {
-            Logger.fatal(LogType.UNEXPECTED, "unsupported method " + method);
+            Logger.shouldNotHappen("unsupported method " + method);
             // use rr instead
             return rrNext();
         }
