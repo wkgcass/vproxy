@@ -36,5 +36,10 @@ public class RunAll {
         System.out.println("             lb for echo servers");
         System.out.println("==============================================");
         LBForEchoServers.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("                parse commands");
+        System.out.println("==============================================");
+        CommandParser.main(new String[0]);
     }
 }

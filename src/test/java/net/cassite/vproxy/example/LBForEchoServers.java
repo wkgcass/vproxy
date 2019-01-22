@@ -5,6 +5,7 @@ import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
+import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.selector.SelectorEventLoop;
@@ -20,9 +21,11 @@ public class LBForEchoServers {
         EventLoopGroup eventLoopGroup = new EventLoopGroup("eventLoopGroup");
         ServerGroups serverGroups = new ServerGroups("serverGroups");
         ServerGroup grp1 = new ServerGroup("grp1", eventLoopGroup,
-            new HealthCheckConfig(200, 800, 4, 5));
+            new HealthCheckConfig(200, 800, 4, 5),
+            Method.wrr);
         ServerGroup grp2 = new ServerGroup("grp2", eventLoopGroup,
-            new HealthCheckConfig(200, 800, 4, 5));
+            new HealthCheckConfig(200, 800, 4, 5),
+            Method.wrr);
         serverGroups.add(grp1);
         serverGroups.add(grp2);
         TcpLB lb = new TcpLB("myLb",
@@ -32,8 +35,8 @@ public class LBForEchoServers {
         );
         lb.start();
         // add each group one server
-        grp1.add(new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"));
-        grp2.add(new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"));
+        grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"), 10);
+        grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"), 10);
 
         // start client in another thread
         new Thread(() -> {

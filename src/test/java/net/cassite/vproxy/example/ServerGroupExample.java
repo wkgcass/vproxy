@@ -7,6 +7,7 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.Connector;
+import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
@@ -26,9 +27,10 @@ public class ServerGroupExample {
 
         EventLoopGroup eventLoopGroup = new EventLoopGroup("my group");
         ServerGroup serverGroup = new ServerGroup("server group", eventLoopGroup,
-            new HealthCheckConfig(200, 800, 4, 5));
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"));
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portB), InetAddress.getByName("127.0.0.1"));
+            new HealthCheckConfig(200, 800, 4, 5),
+            Method.wrr);
+        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"), 5);
+        serverGroup.add("s2", new InetSocketAddress("127.0.0.1", portB), InetAddress.getByName("127.0.0.1"), 10);
 
         // create a event loop only for checking
         SelectorEventLoop eventLoop = SelectorEventLoop.open();
@@ -40,7 +42,7 @@ public class ServerGroupExample {
         eventLoopGroup.add("my loop 2"); // re-dispatch to all threads (currently 2 threads),
         // for serverA cursor = 2 use = 1, for serverB cursor = 1 use = 0
 
-        System.out.println("\033[1;30m--------------------------------------------------------------------------------------------------server group created---------------\033[0m");
+        System.out.println("\033[1;30m---------------------------------------------------------------------------------------server group created (s1 5, s2 10)------------\033[0m");
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------create serverA on " + portA + "----------\033[0m");
@@ -52,15 +54,15 @@ public class ServerGroupExample {
         SelectorEventLoop serverB = SelectorEventLoopEchoServer.createServer(portB);
         new Thread(serverB::loop, "serverB Event Loop Thread").start();
 
-        Thread.sleep(5000);
+        Thread.sleep(10000);
         System.out.println("\033[1;30m---------------------------------------------------------------------------------------------let's remove serverA from group---------\033[0m");
-        serverGroup.remove(new InetSocketAddress("127.0.0.1", portA));
+        serverGroup.remove("s1");
 
         Thread.sleep(5000);
-        System.out.println("\033[1;30m-------------------------------------------------------------------------------------------------let's add serverA back--------------\033[0m");
-        serverGroup.add(new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1")); // now cursor = 2 use = 1
+        System.out.println("\033[1;30m--------------------------------------------------------------------------------------------let's add serverA back with 10-----------\033[0m");
+        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"), 10); // now cursor = 2 use = 1
 
-        Thread.sleep(5000);
+        Thread.sleep(10000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------------remove event loop 1----------------\033[0m");
         eventLoopGroup.remove("my loop 1"); // now re-dispatches the health check clients, they all one loop 2 (cursor = 1 use = 0)
         System.out.println("\033[1;30m------------------------------------------------------------------------------------------------remove event loop 1 done-------------\033[0m");

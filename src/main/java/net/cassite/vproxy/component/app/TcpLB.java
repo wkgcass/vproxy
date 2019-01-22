@@ -8,6 +8,7 @@ import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
+import net.cassite.vproxy.component.proxy.Session;
 import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.BindServer;
@@ -18,6 +19,7 @@ import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Collection;
 
 public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
@@ -70,6 +72,8 @@ public class TcpLB {
     public final EventLoopGroup workerGroup;
     public final InetSocketAddress bindAddress;
     public final ServerGroups backends;
+    public final int inBufferSize;
+    public final int outBufferSize;
 
     // true means the lb is stopped, but it can still re-start.
     // false means we WANT the lb to start,
@@ -98,6 +102,8 @@ public class TcpLB {
         this.workerGroup = workerGroup;
         this.bindAddress = bindAddress;
         this.backends = backends;
+        this.inBufferSize = inBufferSize;
+        this.outBufferSize = outBufferSize;
 
         // create server
         this.server = BindServer.create(bindAddress);
@@ -209,5 +215,21 @@ public class TcpLB {
             destroyed = true;
         }
         server.close();
+    }
+
+    public int sessionCount() {
+        Proxy p = proxy;
+        if (p == null) {
+            return 0;
+        }
+        return p.sessionCount();
+    }
+
+    public void copySessions(Collection<? super Session> coll) {
+        Proxy p = proxy;
+        if (p == null) {
+            return;
+        }
+        p.copySessions(coll);
     }
 }
