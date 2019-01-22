@@ -62,7 +62,7 @@ public class Command {
             "\n    Usages:" +
             "\n        add event-loop-group elg0                  // creates a new event loop group named elg0" +
             "\n        add event-loop el00 to elg0                // creates a new event loop named el00 in elg0" +
-            "\n        add server-group g0 timeout 500 period 800 up 4 down 5 method wrr    // creates a server group named g0 with these arguments" +
+            "\n        add server-group g0 timeout 500 period 800 up 4 down 5 method wrr elg elg0     // creates a server group named g0 with these arguments" +
             "\n        list-detail tcp-lb                         // list detailed info about all tcp lbs" +
             ""
             ;
@@ -80,7 +80,7 @@ public class Command {
         int state;
         // 0 --> initial state, expecting Action (->1)
         // 1 --> action found, expecting resource type (->2)
-        // 2 --> resource type found, expecting resource name (->3) or `in`(->10)
+        // 2 --> resource type found, expecting resource name (->3) or `in`(->10) or end
         // 3 --> resource name found, expecting preposition(->4) or flags(->7) or params(->8) or `in`(->10) or end
         // 4 --> preposition found, expecting resource type(-> 5)
         // 5 --> resource type found after preposition, expecting resource name(->6)
@@ -124,7 +124,9 @@ public class Command {
                     } catch (IllegalArgumentException e) {
                         throw new Exception(c + " is not a valid resource type");
                     }
-                    notEnd(next);
+                    if (next == null) { // end
+                        break loop;
+                    }
                     if (next.equals("in")) {
                         state = 10;
                         break;
@@ -309,7 +311,7 @@ public class Command {
                     throw new Exception("invalid syntax near " + c + " " + next);
             }
         }
-        if (state != 3 && state != 6 && state != 7 && state != 9 && state != 12 && state != 15) {
+        if (state != 2 && state != 3 && state != 6 && state != 7 && state != 9 && state != 12 && state != 15) {
             throw new Exception("the parser has a bug and did not detect invalidity of this input");
         }
 
@@ -424,10 +426,10 @@ public class Command {
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
 
-                        if (cmd.resource.type == ResourceType.sess
+                        if ((cmd.resource.type == ResourceType.sess || cmd.resource.type == ResourceType.conn)
                             && targetResource.type == ResourceType.tl) {
 
-                            // only sess can be found in tcp lb
+                            // sess can only be found in tcp lb
                             TcpLBHandle.checkTcpLB(targetResource);
 
                         } else if (cmd.resource.type != ResourceType.sess
@@ -642,9 +644,8 @@ public class Command {
             case elg: // top level
                 switch (action) {
                     case l:
-                        return utilJoinList(EventLoopGroupHandle.names());
                     case L:
-                        return utilJoinList(EventLoopGroupHandle.details());
+                        return utilJoinList(EventLoopGroupHandle.names());
                     case a:
                         EventLoopGroupHandle.add(this);
                         return "";

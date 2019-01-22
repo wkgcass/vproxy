@@ -31,15 +31,6 @@ public class EventLoopGroupHandle {
         return Application.get().eventLoopGroupHolder.names();
     }
 
-    public static List<EventLoopGroupRef> details() throws Exception {
-        List<EventLoopGroupRef> result = new LinkedList<>();
-        for (String name : names()) {
-            EventLoopGroup elg = Application.get().eventLoopGroupHolder.get(name);
-            result.add(new EventLoopGroupRef(elg));
-        }
-        return result;
-    }
-
     public static void add(Command cmd) throws Exception {
         Application.get().eventLoopGroupHolder.add(cmd.resource.alias);
     }

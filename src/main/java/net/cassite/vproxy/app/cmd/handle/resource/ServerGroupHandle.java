@@ -94,11 +94,16 @@ public class ServerGroupHandle {
 
     public static void add(Command cmd) throws Exception {
         if (cmd.prepositionResource == null) {
+            // add on top level
             String alias = cmd.resource.alias;
             String eventLoopGroupName = cmd.args.get(Param.elg);
             EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);
             HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
-            ServerGroup g = Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd));
+            Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd));
+        } else {
+            // add into serverGroups
+            Application.get().serverGroupsHolder.get(cmd.prepositionResource.alias)
+                .add(Application.get().serverGroupHolder.get(cmd.resource.alias));
         }
     }
 
