@@ -3,6 +3,8 @@ package net.cassite.vproxy.app.cmd;
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.LogType;
+import net.cassite.vproxy.util.Logger;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -23,6 +25,7 @@ public class Command {
             "\n        help                 | h                   show this message" +
             "\n        System call: help                          show this message" +
             "\n        System call: shutdown                      shutdown the vproxy process" +
+            "\n        System call: load                          load config commands from a file" +
             "\n    Operate a resource:" +
             "\n        list                 | l                   list resources' names" +
             "\n        list-detail          | L                   list detailed info about resources" +
@@ -74,6 +77,18 @@ public class Command {
     }
 
     public static Command parseStrCmd(List<String> _cmd) throws Exception {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (String c : _cmd) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append(" ");
+            }
+            sb.append(c);
+        }
+        Logger.info(LogType.BEFORE_PARSING_CMD, sb.toString());
+
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
 
@@ -316,6 +331,7 @@ public class Command {
         }
 
         semantic(cmd);
+        Logger.info(LogType.AFTER_PARSING_CMD, cmd.toString());
         return cmd;
     }
 

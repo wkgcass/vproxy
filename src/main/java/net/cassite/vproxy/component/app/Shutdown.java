@@ -1,6 +1,16 @@
 package net.cassite.vproxy.component.app;
 
+import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.util.Blocking;
+import net.cassite.vproxy.util.Callback;
 import sun.misc.Signal;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.InputStreamReader;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Shutdown {
     private Shutdown() {
@@ -56,5 +66,47 @@ public class Shutdown {
 
     public static void save(String filepath) {
         // TODO
+    }
+
+    @Blocking // the reading file process is blocking
+    public static void load(String filepath, Callback<String, Throwable> cb) throws Exception {
+        if (filepath == null)
+            throw new Exception("filepath not specified");
+        if (filepath.startsWith("~")) {
+            filepath = System.getProperty("user.home") + filepath.substring("~".length());
+        }
+        File f = new File(filepath);
+        FileInputStream fis = new FileInputStream(f);
+        BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+        List<String> lines = new ArrayList<>();
+        String l;
+        while ((l = br.readLine()) != null) {
+            lines.add(l);
+        }
+        List<Command> commands = new ArrayList<>();
+        for (String line : lines) {
+            commands.add(Command.parseStrCmd(line));
+        }
+        runCommandsOnLoading(commands, 0, cb);
+    }
+
+    private static void runCommandsOnLoading(List<Command> commands, int idx, Callback<String, Throwable> cb) {
+        if (idx >= commands.size()) {
+            // done
+            cb.succeeded("");
+            return;
+        }
+        Command cmd = commands.get(idx);
+        cmd.run(new Callback<String, Throwable>() {
+            @Override
+            protected void onSucceeded(String value) {
+                runCommandsOnLoading(commands, idx + 1, cb);
+            }
+
+            @Override
+            protected void onFailed(Throwable err) {
+                cb.failed(err);
+            }
+        });
     }
 }

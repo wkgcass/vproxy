@@ -6,59 +6,111 @@ import net.cassite.vproxy.util.Callback;
 import java.util.Scanner;
 
 public class StdIOController {
+    private static final String STARTER = "> ";
+
     @SuppressWarnings("InfiniteLoopStatement")
     public void start() {
         while (true) {
             Scanner scanner = new Scanner(System.in);
-            System.out.print("> ");
+            System.out.print(STARTER);
             String line = scanner.nextLine().trim();
             if (line.isEmpty())
                 continue;
             if (line.equals("h") || line.equals("help")) {
-                System.out.println(Command.helpString());
+                stdout(Command.helpString());
                 continue;
             }
             if (line.startsWith("System call:")) {
-                String cmd = line.substring("System call:".length()).trim();
-                switch (cmd) {
-                    case "help":
-                        System.out.println(Command.helpString());
-                        break;
-                    case "shutdown":
-                        Shutdown.shutdown();
-                        break;
-                    default:
-                        System.err.println("unknown system call `" + cmd + "`");
-                        continue;
-                }
-                continue;
+                handleSystemCall(line);
+            } else {
+                handleCommand(line);
             }
-            Command c;
-            try {
-                c = Command.parseStrCmd(line);
-            } catch (Exception e) {
-                System.err.println("parse cmd failed! " + e.getMessage() + "... type `help` to show the help message");
-                continue;
-            }
-            c.run(new Callback<String, Throwable>() {
-                @Override
-                protected void onSucceeded(String resp) {
-                    if (!resp.trim().isEmpty()) {
-                        System.out.println(resp.trim());
-                    }
-                }
+        }
+    }
 
-                @Override
-                protected void onFailed(Throwable err) {
-                    String msg = "command `" + line + "` failed! ";
-                    if (err.getMessage() != null && !err.getMessage().trim().isEmpty()) {
-                        msg += err.getMessage().trim();
-                    } else {
-                        msg += err.toString();
+    private static void stdout(String msg) {
+        System.out.println(msg);
+        System.out.print(STARTER);
+    }
+
+    private static void stderr(String err) {
+        System.err.println(err);
+        System.err.println(STARTER);
+    }
+
+    private static void handleSystemCall(String line) {
+        String cmd = line.substring("System call:".length()).trim();
+        switch (cmd) {
+            case "help":
+                stdout(Command.helpString());
+                break;
+            case "shutdown":
+                Shutdown.shutdown();
+                break;
+            default:
+                if (cmd.startsWith("load")) {
+                    String[] split = cmd.split(" ");
+                    if (split.length <= 1) {
+                        stderr("invalid system call for `load`: should specify a file name to load");
+                        break;
                     }
-                    System.err.println(msg);
+                    StringBuilder filename = new StringBuilder();
+                    for (int i = 1; i < split.length; ++i) {
+                        if (i != 1) {
+                            filename.append(" ");
+                        }
+                        filename.append(split[i]);
+                    }
+                    try {
+                        Shutdown.load(filename.toString(), new ResultCallback(line));
+                    } catch (Exception e) {
+                        stderr("got exception when do pre-loading: " + formatErr(e));
+                    }
+                    break;
                 }
-            });
+                stderr("unknown system call `" + cmd + "`");
+        }
+    }
+
+    private static void handleCommand(String line) {
+        Command c;
+        try {
+            c = Command.parseStrCmd(line);
+        } catch (Exception e) {
+            stderr("parse cmd failed! " + formatErr(e) + " ... type `help` to show the help message");
+            return;
+        }
+        c.run(new ResultCallback(line));
+    }
+
+    private static String formatErr(Throwable err) {
+        if (err.getMessage() != null && !err.getMessage().trim().isEmpty()) {
+            return err.getMessage().trim();
+        } else {
+            return err.toString();
+        }
+    }
+
+    private static class ResultCallback extends Callback<String, Throwable> {
+        private final String line;
+
+        private ResultCallback(String line) {
+            this.line = line;
+        }
+
+        @Override
+        protected void onSucceeded(String resp) {
+            if (!resp.trim().isEmpty()) {
+                stdout(resp.trim());
+            } else {
+                stdout("(done)");
+            }
+        }
+
+        @Override
+        protected void onFailed(Throwable err) {
+            String msg = "command `" + line + "` failed! " + formatErr(err);
+            stderr(msg);
         }
     }
 }

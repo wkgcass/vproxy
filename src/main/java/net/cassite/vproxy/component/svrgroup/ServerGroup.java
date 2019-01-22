@@ -203,6 +203,7 @@ public class ServerGroup {
         this.healthCheckConfig = healthCheckConfig;
         this.method = method;
 
+        resetMethodRelatedFields();
         eventLoopGroup.attachResource(new Attach());
     }
 
