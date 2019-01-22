@@ -54,7 +54,7 @@ public class ServerGroupExample {
         SelectorEventLoop serverB = SelectorEventLoopEchoServer.createServer(portB);
         new Thread(serverB::loop, "serverB Event Loop Thread").start();
 
-        Thread.sleep(10000);
+        Thread.sleep(20000);
         System.out.println("\033[1;30m---------------------------------------------------------------------------------------------let's remove serverA from group---------\033[0m");
         serverGroup.remove("s1");
 
@@ -62,7 +62,7 @@ public class ServerGroupExample {
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------let's add serverA back with 10-----------\033[0m");
         serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"), 10); // now cursor = 2 use = 1
 
-        Thread.sleep(10000);
+        Thread.sleep(20000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------------remove event loop 1----------------\033[0m");
         eventLoopGroup.remove("my loop 1"); // now re-dispatches the health check clients, they all one loop 2 (cursor = 1 use = 0)
         System.out.println("\033[1;30m------------------------------------------------------------------------------------------------remove event loop 1 done-------------\033[0m");

@@ -19,8 +19,7 @@ import net.cassite.vproxy.util.Utils;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class ServerGroup {
@@ -182,9 +181,17 @@ public class ServerGroup {
     private ArrayList<ServerHealthHandle> servers = new ArrayList<>(0);
 
     // START fields for WRR
-    private final AtomicInteger wrrCursor = new AtomicInteger();
-    private int[][] wrrElementRange = new int[0][/*2*/]; // (servers.size)[ (2)[minCursorValueInclusive, maxCursorValueExclusive] ]
-    private int wrrRangeMax = 0;
+    static class WRR {
+        private int[] seq;
+        private final AtomicInteger wrrCursor = new AtomicInteger(0);
+        private final ArrayList<ServerHealthHandle> servers; // = servers;
+
+        WRR(ArrayList<ServerHealthHandle> servers) {
+            this.servers = servers;
+        }
+    }
+
+    private WRR _wrr;
     // END fields for WRR
 
     public ServerGroup(String alias,
@@ -213,71 +220,26 @@ public class ServerGroup {
     }
 
     private Connector wrrNext() {
-        ArrayList<ServerHealthHandle> ls = servers;
-        int[][] range = wrrElementRange;
-        return wrrNext(ls, range, 0);
+        return wrrNext(this._wrr, 0);
     }
 
-    private Connector wrrNext(ArrayList<ServerHealthHandle> ls, int[][] range, int recursion) {
-        if (recursion > range.length) {
+    private Connector wrrNext(WRR wrr, int recursion) {
+        if (recursion > wrr.seq.length)
             return null;
-        }
-        ++recursion;
+        if (wrr.seq.length == 0)
+            return null; // return null if no elements
 
-        if (range.length == 0) {
-            return null; // no range recorded, means no servers, just return null
+        int idx = wrr.wrrCursor.getAndIncrement();
+        if (idx >= wrr.seq.length) {
+            idx = idx % wrr.seq.length;
+            wrr.wrrCursor.set(idx + 1);
         }
-
-        int idx = wrrCursor.getAndIncrement();
-        // we do not check range max here,
-        // if the it is recalculating,
-        // and the first server is down
-        // it will have no chance to retrieve any server
-        // delay it after loop, which will travel through the list first
-        // then it's safe to set cursor back to 0
-
-        for (int i = 0; i < range.length; i++) {
-            int[] r = range[i];
-            if (r[0] <= idx && idx < r[1]) {
-                // we are inside the correct range
-                // (also means that this range is valid)
-                // do handle
-                if (i < ls.size()) {
-                    // list is ok
-                    ServerHealthHandle h = ls.get(i);
-                    if (h.healthy) {
-                        return new Connector(h.server, h.local);
-                    } else {
-                        // not healthy
-                        // skip to the next range's minValue
-                        wrrCursor.set(r[1]); // this value is valid regardless whether it's actually valid
-                        // and re-run
-                        return wrrNext(ls, range, recursion);
-                    }
-                } else {
-                    // range not correspond to the list
-                    // may be a concurrency
-                    if (range != this.wrrElementRange) {
-                        return next(); // this time, the server, method all might be changed, so let's re-run
-                    }
-                    // same, this is a bug
-                    Logger.shouldNotHappen("maybe a bug in wrr range calculation");
-                    // it should not happen, but if happens, we don't want it totally not working
-                    // it might result in infinite loop if just call `next()`
-                    // so we recalculate and call wrrNext(...)
-                    wrrElementRange = buildRange(servers);
-                    return wrrNext(servers, wrrElementRange, recursion);
-                }
-            }
-        }
-        // only reach here when idx is too large, or all servers down
-        // set cursor
-        if (idx >= wrrRangeMax) {
-            wrrCursor.set(0);
-            return wrrNext(ls, range, recursion);
-        } else {
-            return null; // all servers down, just return
-        }
+        int realIdx = wrr.seq[idx];
+        ServerHealthHandle h = wrr.servers.get(realIdx);
+        if (h.healthy)
+            return new Connector(h.server, h.local);
+        else
+            return wrrNext(wrr, recursion + 1);
     }
 
     private void resetMethodRelatedFields() {
@@ -285,50 +247,83 @@ public class ServerGroup {
     }
 
     private void wrrReset() {
-        this.wrrCursor.set(0);
-        // it's safe to be smaller than actual range max value
-        // so set this to zero in case some concurrency happen during range calculation
-        this.wrrRangeMax = 0;
-        this.wrrElementRange = buildRange(this.servers);
-    }
-
-    private int gcd(int a, int b) {
-        if (a == b) return a;
-        if (a > b) return gcd(a - b, b);
-        return gcd(a, b - a);
-    }
-
-    private int gcd(List<ServerHealthHandle> ls) {
-        int r = ls.get(0).weight;
-        for (int i = 1; i < ls.size(); ++i) {
-            r = gcd(r, ls.get(i).weight);
-        }
-        return r;
-    }
-
-    private int[][] buildRange(List<ServerHealthHandle> ls) {
-        if (ls.isEmpty()) {
-            this.wrrRangeMax = 0;
-            return new int[0][/*2*/];
-        }
-        int gcd = gcd(ls);
-        int[][] range = new int[ls.size()][2];
-        int lastIdx = 0;
-        for (int i = 0; i < ls.size(); i++) {
-            ServerHealthHandle h = ls.get(i);
-            int weightDivideGcd = h.weight / gcd;
-            if (h.weight == 0) {
-                // set to invalid numbers
-                range[i][0] = -1;
-                range[i][1] = -1;
-            } else {
-                range[i][0] = lastIdx;
-                range[i][1] = lastIdx + weightDivideGcd; // exclusive
+        WRR wrr = new WRR(this.servers);
+        if (wrr.servers.isEmpty()) {
+            wrr.seq = new int[0];
+        } else {
+            // calculate the seq
+            List<Integer> listSeq = new LinkedList<>();
+            int[] weights = new int[wrr.servers.size()];
+            int[] original = new int[wrr.servers.size()];
+            // run calculation
+            int sum = 0;
+            for (int i = 0; i < wrr.servers.size(); i++) {
+                ServerHealthHandle h = wrr.servers.get(i);
+                weights[i] = h.weight;
+                original[i] = h.weight;
+                sum += h.weight;
             }
-            lastIdx += weightDivideGcd;
+            while (true) {
+                int idx = maxIndex(weights);
+                listSeq.add(idx);
+                weights[idx] -= sum;
+                if (calculationEnd(weights)) {
+                    break;
+                }
+                for (int i = 0; i < weights.length; ++i) {
+                    weights[i] += original[i];
+                }
+                sum = sum(weights); // recalculate sum
+            }
+            int[] seq = new int[listSeq.size()];
+
+            // random is for this concern:
+            // if you deploy multiple instances of vproxy
+            // with exactly the same configuration
+            // behind a (w)rr LVS or other proxy servers
+            // without the `randStart`, first few connections
+            // will always be made to the same server
+            // which may cause some failure
+            int randStart = new Random().nextInt(seq.length);
+            // the random wll only run when updating config
+            Iterator<Integer> ite = listSeq.iterator();
+            int idx = 0;
+            while (ite.hasNext()) {
+                seq[(idx + randStart) % seq.length] = ite.next();
+                ++idx;
+            }
+            wrr.seq = seq;
         }
-        this.wrrRangeMax = lastIdx;
-        return range;
+
+        this._wrr = wrr;
+    }
+
+    private int sum(int[] weights) {
+        int s = 0;
+        for (int w : weights) {
+            s += w;
+        }
+        return s;
+    }
+
+    private boolean calculationEnd(int[] weights) {
+        for (int w : weights) {
+            if (w != 0)
+                return false;
+        }
+        return true;
+    }
+
+    private int maxIndex(int[] weights) {
+        int maxIdx = 0;
+        int maxVal = weights[0];
+        for (int i = 1; i < weights.length; ++i) {
+            if (weights[i] > maxVal) {
+                maxVal = weights[i];
+                maxIdx = i;
+            }
+        }
+        return maxIdx;
     }
 
     public void setMethod(Method method) {
