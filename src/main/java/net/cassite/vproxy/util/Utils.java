@@ -36,4 +36,12 @@ public class Utils {
             throw new IllegalArgumentException("unknown ip " + Arrays.toString(ip));
         }
     }
+
+    public static String formatErr(Throwable err) {
+        if (err.getMessage() != null && !err.getMessage().trim().isEmpty()) {
+            return err.getMessage().trim();
+        } else {
+            return err.toString();
+        }
+    }
 }

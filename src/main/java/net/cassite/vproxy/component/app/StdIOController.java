@@ -2,6 +2,7 @@ package net.cassite.vproxy.component.app;
 
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Utils;
 
 import java.util.Scanner;
 
@@ -64,7 +65,7 @@ public class StdIOController {
                     try {
                         Shutdown.load(filename.toString(), new ResultCallback(line));
                     } catch (Exception e) {
-                        stderr("got exception when do pre-loading: " + formatErr(e));
+                        stderr("got exception when do pre-loading: " + Utils.formatErr(e));
                     }
                     break;
                 }
@@ -77,18 +78,10 @@ public class StdIOController {
         try {
             c = Command.parseStrCmd(line);
         } catch (Exception e) {
-            stderr("parse cmd failed! " + formatErr(e) + " ... type `help` to show the help message");
+            stderr("parse cmd failed! " + Utils.formatErr(e) + " ... type `help` to show the help message");
             return;
         }
         c.run(new ResultCallback(line));
-    }
-
-    private static String formatErr(Throwable err) {
-        if (err.getMessage() != null && !err.getMessage().trim().isEmpty()) {
-            return err.getMessage().trim();
-        } else {
-            return err.toString();
-        }
     }
 
     private static class ResultCallback extends Callback<String, Throwable> {
@@ -109,7 +102,7 @@ public class StdIOController {
 
         @Override
         protected void onFailed(Throwable err) {
-            String msg = "command `" + line + "` failed! " + formatErr(err);
+            String msg = "command `" + line + "` failed! " + Utils.formatErr(err);
             stderr(msg);
         }
     }
