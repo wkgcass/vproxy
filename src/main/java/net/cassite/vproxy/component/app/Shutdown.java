@@ -3,6 +3,8 @@ package net.cassite.vproxy.component.app;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.util.Blocking;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.LogType;
+import net.cassite.vproxy.util.Logger;
 import sun.misc.Signal;
 
 import java.io.BufferedReader;
@@ -85,7 +87,16 @@ public class Shutdown {
         }
         List<Command> commands = new ArrayList<>();
         for (String line : lines) {
-            commands.add(Command.parseStrCmd(line));
+            Logger.info(LogType.BEFORE_PARSING_CMD, line);
+            Command cmd;
+            try {
+                cmd = Command.parseStrCmd(line);
+            } catch (Exception e) {
+                Logger.warn(LogType.AFTER_PARSING_CMD, "parse command `" + line + "` failed");
+                throw e;
+            }
+            Logger.info(LogType.AFTER_PARSING_CMD, cmd.toString());
+            commands.add(cmd);
         }
         runCommandsOnLoading(commands, 0, cb);
     }

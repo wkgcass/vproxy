@@ -28,25 +28,27 @@ public class ServerGroup {
             @Override
             public void up(SocketAddress remote) {
                 healthy = true;
-                Logger.info(LogType.HEALTH_CHECK_CHANGE, "server " + server + " status changed to UP");
+                Logger.info(LogType.HEALTH_CHECK_CHANGE,
+                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to UP");
             }
 
             @Override
             public void down(SocketAddress remote) {
                 healthy = false;
-                Logger.info(LogType.HEALTH_CHECK_CHANGE, "server " + server + " status changed to DOWN");
+                Logger.info(LogType.HEALTH_CHECK_CHANGE,
+                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to DOWN");
             }
 
             @Override
             public void upOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("up once for " + server);
+                assert Logger.lowLevelDebug("up once for " + ServerHealthHandle.this.alias + "(" + server + ")");
             }
 
             @Override
             public void downOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("down once for " + server);
+                assert Logger.lowLevelDebug("down once for " + ServerHealthHandle.this.alias + "(" + server + ")");
             }
         }
 
@@ -110,17 +112,24 @@ public class ServerGroup {
                 return;
             }
             healthCheckClient.start();
-            Logger.lowLevelDebug("health check for " + server + " is started on loop " + el.alias);
+            Logger.lowLevelDebug("health check for " +
+                ServerHealthHandle.this.alias + "(" + server + ") " +
+                "is started on loop " + el.alias);
         }
 
         @Override
         public String id() {
-            return "HealthCheck(" + Utils.ipStr(server.getAddress().getAddress()) + ":" + server.getPort() + ")";
+            return "HealthCheck(" +
+                ServerGroup.this.alias + "/" +
+                ServerHealthHandle.this.alias +
+                "(" + Utils.ipStr(server.getAddress().getAddress()) + ":" + server.getPort() + ")" +
+                ")";
         }
 
         @Override
         public void onClose() {
-            Logger.lowLevelDebug("event loop closed, health check for " + server + " is trying to restart");
+            Logger.lowLevelDebug("event loop closed, health check for " +
+                ServerHealthHandle.this.alias + "(" + server + ") is trying to restart");
             restart(); // try to restart
         }
 
@@ -128,7 +137,7 @@ public class ServerGroup {
         public void stop() {
             if (el == null)
                 return;
-            Logger.lowLevelDebug("stop health check for " + server);
+            Logger.lowLevelDebug("stop health check for " + ServerHealthHandle.this.alias + "(" + server + ")");
             try {
                 el.detachResource(this);
             } catch (NotFoundException e) {
@@ -358,7 +367,7 @@ public class ServerGroup {
         servers = newLs;
         resetMethodRelatedFields();
 
-        assert Logger.lowLevelDebug("server added: " + alias + " - " + server);
+        assert Logger.lowLevelDebug("server added: " + alias + "(" + server + ") to " + this.alias);
     }
 
     public synchronized void remove(String alias) throws NotFoundException {

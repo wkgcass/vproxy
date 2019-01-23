@@ -87,7 +87,7 @@ public class Command {
             }
             sb.append(c);
         }
-        Logger.info(LogType.BEFORE_PARSING_CMD, sb.toString());
+        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
 
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
@@ -331,7 +331,7 @@ public class Command {
         }
 
         semantic(cmd);
-        Logger.info(LogType.AFTER_PARSING_CMD, cmd.toString());
+        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
         return cmd;
     }
 
