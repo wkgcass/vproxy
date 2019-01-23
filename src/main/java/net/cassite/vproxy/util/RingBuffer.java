@@ -132,6 +132,12 @@ public class RingBuffer {
         }
     }
 
+    private void resetCursors() {
+        sPos = 0;
+        ePos = 0;
+        ePosIsAfterSPos = true;
+    }
+
     public int writeTo(WritableByteChannel channel) throws IOException {
         return writeTo(channel, Integer.MAX_VALUE);
     }
@@ -166,13 +172,20 @@ public class RingBuffer {
             if (write == lim && write < maxBytesToWrite) {
                 // maybe have more bytes to write
                 lim = retrieveLimit();
-                if (lim == 0)
-                    return write; // buffer is empty now
+                if (lim == 0) {
+                    // buffer is empty now
+                    resetCursors();
+                    return write;
+                }
                 realWrite = Math.min(lim, maxBytesToWrite - write/* the bytes left to write */);
                 buffer.limit(sPos + realWrite).position(sPos);
                 int write2 = channel.write(buffer);
                 sPos += write2;
-                // this time, ePos will not reach cap
+                // this time, sPos will not reach cap
+                // but let's check whether is empty for resetting cursor
+                if (retrieveLimit() == 0) {
+                    resetCursors();
+                }
                 return write + write2;
             } else {
                 return write;

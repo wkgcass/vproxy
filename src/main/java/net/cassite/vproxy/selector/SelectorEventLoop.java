@@ -94,7 +94,14 @@ public class SelectorEventLoop {
                 Logger.stderr("channel is closed but still firing");
             } else {
                 int readyOps = key.readyOps();
-                if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
+                // handle read first because it's most likely to happen
+                if ((readyOps & SelectionKey.OP_READ) != 0) {
+                    try {
+                        handler.readable(ctx);
+                    } catch (Throwable t) {
+                        Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
+                    }
+                } else if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
                     try {
                         handler.connected(ctx);
                     } catch (Throwable t) {
@@ -106,14 +113,9 @@ public class SelectorEventLoop {
                     } catch (Throwable t) {
                         Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
                     }
-                } else if ((readyOps & SelectionKey.OP_READ) != 0) {
-                    try {
-                        handler.readable(ctx);
-                    } catch (Throwable t) {
-                        Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
-                    }
-                } else {
-                    assert (readyOps & SelectionKey.OP_WRITE) != 0;
+                }
+                // read and write may happen in the same loop round
+                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
                     try {
                         handler.writable(ctx);
                     } catch (Throwable t) {

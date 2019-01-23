@@ -23,8 +23,29 @@ public class Connection {
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
-                assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
-                eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
+                assert Logger.lowLevelDebug("in buffer is writable, do READ for channel " + channel);
+                // let's directly read the data if possible
+                // we do not need lock here,
+                // all operations about the
+                // buffer should be handled in
+                // the same thread
+                boolean addReadOnLoop = true;
+                try {
+                    inBuffer.storeBytesFrom(channel);
+                    if (inBuffer.free() != 0) {
+                        // still have free space,
+                        // which means all data
+                        // already read from channel
+                        // so we do not add OP_READ
+                        addReadOnLoop = false;
+                    }
+                } catch (IOException ignore) {
+                    // we ignore the exception
+                    // it should be handled in NetEventLoop
+                }
+                if (addReadOnLoop) {
+                    eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
+                }
             }
         }
     }
@@ -36,8 +57,26 @@ public class Connection {
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
-                assert Logger.lowLevelDebug("out buffer is readable, add WRITE for channel " + channel);
-                eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_WRITE);
+                assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
+                // let's directly write the data if possible
+                // we do not need lock here,
+                // all operations about the
+                // buffer should be handled in
+                // the same thread
+                boolean addWriteOnLoop = true;
+                try {
+                    outBuffer.writeTo(channel);
+                    if (outBuffer.used() == 0) {
+                        // have nothing to write now
+                        addWriteOnLoop = false;
+                    }
+                } catch (IOException ignore) {
+                    // we ignore the exception
+                    // it should be handled in NetEventLoop
+                }
+                if (addWriteOnLoop) {
+                    eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_WRITE);
+                }
             }
         }
 
