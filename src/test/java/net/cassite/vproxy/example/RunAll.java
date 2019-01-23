@@ -41,5 +41,10 @@ public class RunAll {
         System.out.println("                parse commands");
         System.out.println("==============================================");
         CommandParser.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("                 parse resp");
+        System.out.println("==============================================");
+        TestRESPParser.main(new String[0]);
     }
 }

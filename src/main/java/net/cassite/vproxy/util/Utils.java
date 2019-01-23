@@ -6,7 +6,7 @@ public class Utils {
     private Utils() {
     }
 
-    private static int positive(byte b) {
+    public static int positive(byte b) {
         if (b < 0) return 256 + b;
         return b;
     }

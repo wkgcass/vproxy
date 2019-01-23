@@ -10,17 +10,23 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     private int writeLen; // free space left for writing into arr
     private int readOff; // the current read offset
 
+    private final int initialOff;
+    private final int initialLen;
+    private final int initialReadOff;
+
     public ByteArrayChannel(byte[] arr) {
-        this(arr, 0, arr.length);
+        this(arr, 0, 0, arr.length);
     }
 
-    public ByteArrayChannel(byte[] arr, int writeOff, int writeLen) {
+    public ByteArrayChannel(byte[] arr, int readOff, int writeOff, int writeLen) {
         this.arr = arr;
-        if (writeOff > arr.length - 1 || writeOff + writeLen > arr.length)
+        if (writeOff > arr.length || writeOff + writeLen > arr.length)
             throw new IllegalArgumentException();
-        this.writeOff = writeOff;
-        this.writeLen = writeLen;
-        this.readOff = writeOff;
+        this.initialOff = writeOff;
+        this.initialLen = writeLen;
+        this.initialReadOff = readOff;
+
+        reset();
     }
 
     @Override
@@ -57,5 +63,11 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
 
     public int used() {
         return writeOff - readOff;
+    }
+
+    public void reset() {
+        this.writeOff = initialOff;
+        this.writeLen = initialLen;
+        this.readOff = initialReadOff;
     }
 }
