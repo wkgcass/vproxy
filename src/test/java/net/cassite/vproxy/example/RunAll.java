@@ -46,5 +46,10 @@ public class RunAll {
         System.out.println("                 parse resp");
         System.out.println("==============================================");
         TestRESPParser.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("            echo protocol server");
+        System.out.println("==============================================");
+        EchoProtocolServer.main(new String[0]);
     }
 }

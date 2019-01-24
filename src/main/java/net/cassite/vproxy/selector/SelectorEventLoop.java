@@ -212,6 +212,15 @@ public class SelectorEventLoop {
     }
 
     @ThreadSafe
+    public void runOnLoop(Runnable r) {
+        if (runningThread == null || Thread.currentThread() == runningThread) {
+            tryRunnable(r); // directly run if is already on the loop thread
+        } else {
+            nextTick(r); // otherwise push into queue
+        }
+    }
+
+    @ThreadSafe
     public TimerEvent delay(int timeout, Runnable r) {
         TimerEvent e = new TimerEvent(this);
         // timeQueue is not thread safe
