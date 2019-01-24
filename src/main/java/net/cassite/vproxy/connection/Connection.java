@@ -1,9 +1,6 @@
 package net.cassite.vproxy.connection;
 
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.RingBuffer;
-import net.cassite.vproxy.util.RingBufferETHandler;
-import net.cassite.vproxy.util.Utils;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -23,34 +20,25 @@ public class Connection {
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
-                assert Logger.lowLevelDebug("in buffer is writable, do READ for channel " + channel);
-                // let's directly read the data if possible
-                // we do not need lock here,
-                // all operations about the
-                // buffer should be handled in
-                // the same thread
-                boolean addReadOnLoop = true;
-                try {
-                    inBuffer.storeBytesFrom(channel);
-                    if (inBuffer.free() != 0) {
-                        // still have free space,
-                        // which means all data
-                        // already read from channel
-                        // so we do not add OP_READ
-                        addReadOnLoop = false;
-                    }
-                } catch (IOException ignore) {
-                    // we ignore the exception
-                    // it should be handled in NetEventLoop
-                }
-                if (addReadOnLoop) {
-                    eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
-                }
+                assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
+                eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
+                // we do not directly read here
+                // the reading process requires a corresponding handler
+                // the handler may not be a part of this connection lib
+                // so we leave it to NetEventLoop to handle the reading
+
+                // for output, there are no handlers attached
+                // so it can just write as soon as possible
             }
         }
     }
 
     // the outBuffer might be empty, and we need to handle readable event
+    // we implement a `Quick Write` mechanism
+    // when outBuffer is readable,
+    // data is directly sent to channel
+    // reduce the chance of setting OP_WRITE
+    // and may gain some performance
     class OutBufferETHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
@@ -63,12 +51,33 @@ public class Connection {
                 // all operations about the
                 // buffer should be handled in
                 // the same thread
+
+                if (outBuffer.free() != 0) {
+                    // try to flush buffer in user code
+                    // (we assume user code preserves a buffer to write)
+                    // (since ringBuffer will not extend)
+                    // (which is unnecessary for an lb)
+                    _cctx.handler.writable(_cctx);
+                }
+
                 boolean addWriteOnLoop = true;
                 try {
                     outBuffer.writeTo(channel);
                     if (outBuffer.used() == 0) {
                         // have nothing to write now
-                        addWriteOnLoop = false;
+
+                        // at this time, we let user write again
+                        // in case there are still some bytes in
+                        // user buffer
+                        _cctx.handler.writable(_cctx);
+
+                        if (outBuffer.used() == 0) {
+                            // outBuffer still empty
+                            // do not add OP_WRITE
+                            addWriteOnLoop = false;
+                        }
+                        // we do not write again if got any bytes
+                        // let the NetEventLoop handle
                     }
                 } catch (IOException ignore) {
                     // we ignore the exception
@@ -102,7 +111,8 @@ public class Connection {
     private final OutBufferETHandler outBufferETHandler;
     boolean remoteClosed = false;
 
-    NetEventLoop _eventLoop = null;
+    private NetEventLoop _eventLoop = null;
+    private ConnectionHandlerContext _cctx = null;
 
     private boolean closed = false;
 
@@ -149,12 +159,26 @@ public class Connection {
         if (eventLoop != null) {
             eventLoop.removeConnection(this);
         }
-        _eventLoop = null;
+        releaseEventLoopRelatedFields();
         try {
             channel.close();
         } catch (IOException e) {
             // we can do nothing about it
         }
+    }
+
+    void releaseEventLoopRelatedFields() {
+        _eventLoop = null;
+        _cctx = null;
+    }
+
+    void setEventLoopRelatedFields(NetEventLoop eventLoop, ConnectionHandlerContext cctx) {
+        _eventLoop = eventLoop;
+        _cctx = cctx;
+    }
+
+    NetEventLoop getEventLoop() {
+        return _eventLoop;
     }
 
     public String id() {

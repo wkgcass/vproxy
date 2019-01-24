@@ -84,7 +84,7 @@ public class Parser {
     // call getErrorMessage() to check whether is error
     public int feed(RingBuffer buffer) {
         byte[] nextByte = new byte[1];
-        ByteArrayChannel chnl = new ByteArrayChannel(nextByte);
+        ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(nextByte);
         while (true) {
             chnl.reset();
             // an integer field that does multiple things, no particular name for it

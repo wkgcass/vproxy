@@ -298,6 +298,12 @@ public class SelectorEventLoop {
         return key.interestOps();
     }
 
+    @ThreadSafe
+    public Object getAtt(SelectableChannel channel) {
+        SelectionKey key = getKeyCheckNull(channel);
+        return key.attachment();
+    }
+
     private SelectionKey getKeyCheckNull(SelectableChannel channel) {
         SelectionKey key = channel.keyFor(selector);
         if (key == null)

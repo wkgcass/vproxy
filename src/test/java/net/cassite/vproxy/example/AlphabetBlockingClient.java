@@ -44,6 +44,7 @@ public class AlphabetBlockingClient {
                 runBlock(port, times - i, closeEveryTime);
                 return;
             }
+            StringBuilder recv = new StringBuilder();
             //noinspection ResultOfMethodCallIgnored
             int total = 0;
             while (total < strLen) {
@@ -64,8 +65,13 @@ public class AlphabetBlockingClient {
                     runBlock(port, times - i, closeEveryTime);
                     return;
                 }
-                System.out.println("client receive: \033[1;36m" + new String(buffer, 0, l, StandardCharsets.UTF_8) + "\033[0m");
+                String recv0 = new String(buffer, 0, l, StandardCharsets.UTF_8);
+                System.out.println("client receive: \033[1;36m" + recv0 + "\033[0m");
                 total += l;
+                recv.append(recv0);
+            }
+            if (!recv.toString().equals(toSend)) {
+                throw new RuntimeException("sending " + toSend + " but receive " + recv + ", mismatch");
             }
 
             Thread.sleep(1000);

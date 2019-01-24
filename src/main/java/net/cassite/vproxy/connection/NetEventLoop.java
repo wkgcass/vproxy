@@ -44,7 +44,7 @@ public class NetEventLoop {
         selectorEventLoop.remove(server.channel);
     }
 
-    private void doAddConnection(Connection connection, int ops, Object att, Handler<SocketChannel> handler) throws IOException {
+    private void doAddConnection(Connection connection, int ops, ConnectionHandlerContext att, Handler<SocketChannel> handler) throws IOException {
         // synchronize connection
         // to prevent inner fields being inconsistent
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -52,15 +52,15 @@ public class NetEventLoop {
             if (connection.isClosed())
                 throw new ClosedChannelException();
             // then, the connection will not be closed until added into the event loop
-            if (connection._eventLoop != null)
+            if (connection.getEventLoop() != null)
                 throw new IOException("connection " + connection + " already registered to a event loop");
 
-            connection._eventLoop = this;
+            connection.setEventLoopRelatedFields(this, att);
             try {
                 selectorEventLoop.add(connection.channel, ops, att, handler);
             } catch (IOException e) {
                 // remove the eventLoop ref if adding failed
-                connection._eventLoop = null;
+                connection.releaseEventLoopRelatedFields();
                 throw e;
             }
         }
@@ -269,7 +269,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
     @Override
     public void removed(HandlerContext<SocketChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
-        cctx.connection._eventLoop = null;
+        cctx.connection.releaseEventLoopRelatedFields();
         cctx.handler.removed(cctx);
     }
 }
