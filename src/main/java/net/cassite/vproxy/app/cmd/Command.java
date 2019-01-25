@@ -2,6 +2,12 @@ package net.cassite.vproxy.app.cmd;
 
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
+import net.cassite.vproxy.component.exception.AlreadyExistException;
+import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.exception.XException;
+import net.cassite.vproxy.component.proxy.Session;
+import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
@@ -589,11 +595,17 @@ public class Command {
         }
     }
 
-    public void run(Callback<String, Throwable> cb) {
+    public void run(Callback<CmdResult, Throwable> cb) {
         Application.get().controlEventLoop.getSelectorEventLoop().nextTick(() -> {
-            String res;
+            CmdResult res;
             try {
-                res = runTry();
+                res = runThrow();
+            } catch (AlreadyExistException e) {
+                cb.failed(new XException("the resource already exists"));
+                return;
+            } catch (NotFoundException e) {
+                cb.failed(new XException("the resource could not be found"));
+                return;
             } catch (Throwable t) {
                 cb.failed(t);
                 return;
@@ -616,114 +628,133 @@ public class Command {
         return sb.toString();
     }
 
-    private String runTry() throws Exception {
+    private CmdResult runThrow() throws Exception {
         Resource targetResource = resource.parentResource == null ? prepositionResource : resource.parentResource;
         switch (resource.type) {
             case conn: // can be retrieved from tl or el
                 switch (action) {
                     case l:
-                        return "" + ConnectionHandle.count(targetResource);
+                        int connCount = ConnectionHandle.count(targetResource);
+                        return new CmdResult(connCount, connCount, "" + connCount);
                     case L:
-                        return utilJoinList(ConnectionHandle.list(targetResource));
+                        List<Connection> connList = ConnectionHandle.list(targetResource);
+                        List<String> connStrList = connList.stream().map(Connection::id).collect(Collectors.toList());
+                        return new CmdResult(connStrList, connStrList, utilJoinList(connList));
                 }
             case sess: // can only be retrieve from tl
                 switch (action) {
                     case l:
-                        return "" + SessionHandle.count(targetResource);
+                        int sessCount = SessionHandle.count(targetResource);
+                        return new CmdResult(sessCount, sessCount, "" + sessCount);
                     case L:
-                        return utilJoinList(SessionHandle.list(targetResource));
+                        List<Session> sessList = SessionHandle.list(targetResource);
+                        List<List<String>> sessTupleList = sessList.stream().map(sess -> Arrays.asList(sess.active.id(), sess.passive.id())).collect(Collectors.toList());
+                        return new CmdResult(sessList, sessTupleList, utilJoinList(sessList));
                 }
             case bs: // can only be retrieved from el
                 switch (action) {
                     case l:
-                        return "" + BindServerHandle.count(targetResource);
+                        int bsCount = BindServerHandle.count(targetResource);
+                        return new CmdResult(bsCount, bsCount, "" + bsCount);
                     case L:
-                        return utilJoinList(BindServerHandle.list(targetResource));
+                        List<BindServer> bsList = BindServerHandle.list(targetResource);
+                        List<String> bsStrList = bsList.stream().map(BindServer::id).collect(Collectors.toList());
+                        return new CmdResult(bsList, bsStrList, utilJoinList(bsList));
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {
                     case l:
-                        return utilJoinList(ServerHandle.names(targetResource));
+                        List<String> serverNames = ServerHandle.names(targetResource);
+                        return new CmdResult(serverNames, serverNames, utilJoinList(serverNames));
                     case L:
-                        return utilJoinList(ServerHandle.detail(targetResource));
+                        List<ServerHandle.ServerRef> svrRefList = ServerHandle.detail(targetResource);
+                        List<String> svrRefStrList = svrRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(svrRefList, svrRefStrList, utilJoinList(svrRefList));
                     case a:
                         ServerHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         ServerHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                     case u:
                         ServerHandle.update(this);
-                        return "";
+                        return new CmdResult();
                 }
             case sgs: // top level
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(ServerGroupsHandle.names());
+                        List<String> sgsNames = ServerGroupsHandle.names();
+                        return new CmdResult(sgsNames, sgsNames, utilJoinList(sgsNames));
                     case a:
                         ServerGroupsHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         ServerGroupsHandle.preCheck(this);
                     case R:
                         ServerGroupsHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                 }
             case elg: // top level
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(EventLoopGroupHandle.names());
+                        List<String> elgNames = EventLoopGroupHandle.names();
+                        return new CmdResult(elgNames, elgNames, utilJoinList(elgNames));
                     case a:
                         EventLoopGroupHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         EventLoopGroupHandle.preCheck(this);
                     case R:
                         EventLoopGroupHandle.forceRemvoe(this);
-                        return "";
+                        return new CmdResult();
                 }
             case el: // can only be retrieved from event loop group
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(EventLoopHandle.names(targetResource));
+                        List<String> elNames = EventLoopHandle.names(targetResource);
+                        return new CmdResult(elNames, elNames, utilJoinList(elNames));
                     case a:
                         EventLoopHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         EventLoopHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                 }
             case sg: // top level or retrieved from serverGroups
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(ServerGroupHandle.names(targetResource));
+                        List<String> sgNames = ServerGroupHandle.names(targetResource);
+                        return new CmdResult(sgNames, sgNames, utilJoinList(sgNames));
                     case a:
                         ServerGroupHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         ServerGroupHandle.preCheck(this);
                     case R:
                         ServerGroupHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                     case u:
                         ServerGroupHandle.update(this);
-                        return "";
+                        return new CmdResult();
                 }
-            case tl: // top level
+            case tl: // tcp loadbalancer on top level
                 switch (action) {
                     case l:
-                        return utilJoinList(TcpLBHandle.names());
+                        List<String> tlNames = TcpLBHandle.names();
+                        return new CmdResult(tlNames, tlNames, utilJoinList(tlNames));
                     case L:
-                        return utilJoinList(TcpLBHandle.details());
+                        List<TcpLBHandle.TcpLBRef> tlRefList = TcpLBHandle.details();
+                        List<String> tlRefStrList = tlRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(tlRefList, tlRefStrList, utilJoinList(tlRefList));
                     case a:
                         TcpLBHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         TcpLBHandle.forceRemove(this);

@@ -1,6 +1,8 @@
 package net.cassite.vproxy.component.app;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.cmd.Action;
+import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.component.exception.XException;
 import net.cassite.vproxy.connection.BindServer;
@@ -97,13 +99,17 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             cb.failed(e); // callback failed
             return;
         }
-        cmd.run(new Callback<String, Throwable>() {
+        cmd.run(new Callback<CmdResult, Throwable>() {
             @Override
-            protected void onSucceeded(String value) {
-                if (value.trim().isEmpty()) {
-                    cb.succeeded("OK"); // redis usually returns OK response when something is done
+            protected void onSucceeded(CmdResult value) {
+                if (value.processedResult == null) {
+                    if (cmd.action != Action.l && cmd.action != Action.L) {
+                        cb.succeeded("OK"); // redis usually returns OK response when something is done
+                    } else {
+                        cb.succeeded(null); // for list operations just return list, maybe the command wants to return so
+                    }
                 } else {
-                    cb.succeeded(value.split("\n")); // separate lines into a list for redis-cli to print
+                    cb.succeeded(value.processedResult);
                 }
             }
 

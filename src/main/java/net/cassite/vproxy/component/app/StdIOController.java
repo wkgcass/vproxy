@@ -1,6 +1,7 @@
 package net.cassite.vproxy.component.app;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
@@ -22,7 +23,7 @@ public class StdIOController {
     public void start() {
         while (true) {
             Scanner scanner = new Scanner(System.in);
-            System.out.print(STARTER);
+            printStarter();
             String line = scanner.nextLine().trim();
             if (line.isEmpty())
                 continue;
@@ -38,14 +39,18 @@ public class StdIOController {
         }
     }
 
+    private static void printStarter() {
+        System.out.print(STARTER);
+    }
+
     private static void stdout(String msg) {
         System.out.println(msg);
-        System.out.print(STARTER);
+        printStarter();
     }
 
     private static void stderr(String err) {
         System.err.println(err);
-        System.err.println(STARTER);
+        printStarter();
     }
 
     private static void handleSystemCall(String line) {
@@ -73,7 +78,7 @@ public class StdIOController {
                         filename.append(split[i]);
                     }
                     try {
-                        Shutdown.load(filename.toString(), new ResultCallback(line));
+                        Shutdown.load(filename.toString(), new StrResultCallback(line));
                     } catch (Exception e) {
                         stderr("got exception when do pre-loading: " + Utils.formatErr(e));
                     }
@@ -190,10 +195,33 @@ public class StdIOController {
         c.run(new ResultCallback(line));
     }
 
-    private static class ResultCallback extends Callback<String, Throwable> {
+    private static class ResultCallback extends Callback<CmdResult, Throwable> {
         private final String line;
 
         private ResultCallback(String line) {
+            this.line = line;
+        }
+
+        @Override
+        protected void onSucceeded(CmdResult resp) {
+            if (!resp.strResult.trim().isEmpty()) {
+                stdout(resp.strResult.trim());
+            } else {
+                stdout("(done)");
+            }
+        }
+
+        @Override
+        protected void onFailed(Throwable err) {
+            String msg = "command `" + line + "` failed! " + Utils.formatErr(err);
+            stderr(msg);
+        }
+    }
+
+    private static class StrResultCallback extends Callback<String, Throwable> {
+        private final String line;
+
+        private StrResultCallback(String line) {
             this.line = line;
         }
 
