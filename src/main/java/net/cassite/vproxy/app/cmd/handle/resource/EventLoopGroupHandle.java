@@ -7,7 +7,6 @@ import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 
-import java.util.LinkedList;
 import java.util.List;
 
 public class EventLoopGroupHandle {

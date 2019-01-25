@@ -16,10 +16,14 @@ public class NetEventLoop {
     private static final HandlerForConnection handlerForConnection = new HandlerForClientConnection();
     private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
 
-    final SelectorEventLoop selectorEventLoop;
+    private final SelectorEventLoop selectorEventLoop;
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
+    }
+
+    public SelectorEventLoop getSelectorEventLoop() {
+        return selectorEventLoop;
     }
 
     @ThreadSafe

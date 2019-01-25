@@ -1,6 +1,9 @@
 package net.cassite.vproxy.connection;
 
-import net.cassite.vproxy.util.*;
+import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.RingBufferETHandler;
+import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -21,7 +24,7 @@ public class Connection {
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
                 assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
-                eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_READ);
+                eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_READ);
                 // we do not directly read here
                 // the reading process requires a corresponding handler
                 // the handler may not be a part of this connection lib
@@ -84,7 +87,7 @@ public class Connection {
                     // it should be handled in NetEventLoop
                 }
                 if (addWriteOnLoop) {
-                    eventLoop.selectorEventLoop.addOps(channel, SelectionKey.OP_WRITE);
+                    eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_WRITE);
                 }
             }
         }

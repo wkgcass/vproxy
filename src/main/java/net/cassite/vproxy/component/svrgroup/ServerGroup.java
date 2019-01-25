@@ -10,10 +10,8 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
-import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.Utils;
 
 import java.net.InetAddress;
@@ -58,7 +56,6 @@ public class ServerGroup {
         public final InetAddress local;
         private int weight;
         EventLoopWrapper el;
-        SelectorEventLoop sel;
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
         TCPHealthCheckClient healthCheckClient;
@@ -91,14 +88,13 @@ public class ServerGroup {
         void restart() {
             if (el != null)
                 stop(); // event loop exists, so we stop first, then start (which makes it a `restart`)
-            Tuple<EventLoopWrapper, SelectorEventLoop> tuple = eventLoopGroup.next();
-            if (tuple == null) {
+            EventLoopWrapper w = eventLoopGroup.next();
+            if (w == null) {
                 assert Logger.lowLevelDebug("cannot get event loop, give up for now. we will start again when there're available event loops");
                 return;
             }
-            el = tuple.left;
-            sel = tuple.right;
-            healthCheckClient = new TCPHealthCheckClient(el, sel, server, local, healthCheckConfig, healthy, handler);
+            el = w;
+            healthCheckClient = new TCPHealthCheckClient(el, server, local, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {

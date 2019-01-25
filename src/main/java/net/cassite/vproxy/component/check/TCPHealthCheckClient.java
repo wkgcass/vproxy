@@ -1,7 +1,6 @@
 package net.cassite.vproxy.component.check;
 
 import net.cassite.vproxy.connection.NetEventLoop;
-import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
@@ -77,13 +76,12 @@ public class TCPHealthCheckClient {
     private boolean stopped = true;
 
     public TCPHealthCheckClient(NetEventLoop eventLoop,
-                                SelectorEventLoop timerEventLoop,
                                 InetSocketAddress remote,
                                 InetAddress local,
                                 HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,
                                 HealthCheckHandler handler) {
-        this.connectClient = new ConnectClient(eventLoop, timerEventLoop, remote, local, healthCheckConfig.timeout);
+        this.connectClient = new ConnectClient(eventLoop, remote, local, healthCheckConfig.timeout);
         this.period = healthCheckConfig.period;
         this.up = healthCheckConfig.up;
         this.down = healthCheckConfig.down;
@@ -124,7 +122,7 @@ public class TCPHealthCheckClient {
     }
 
     private void periodic() {
-        periodTimer = connectClient.timerEventLoop.delay(period, () -> doCheck(this::periodic));
+        periodTimer = connectClient.eventLoop.getSelectorEventLoop().delay(period, () -> doCheck(this::periodic));
     }
 
     public void stop() {

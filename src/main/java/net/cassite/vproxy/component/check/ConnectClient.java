@@ -1,7 +1,6 @@
 package net.cassite.vproxy.component.check;
 
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
@@ -66,19 +65,16 @@ public class ConnectClient {
     }
 
     public final NetEventLoop eventLoop;
-    public final SelectorEventLoop timerEventLoop;
     public final InetSocketAddress remote;
     public final InetAddress local;
     public final int timeout;
     private boolean stopped = false;
 
     public ConnectClient(NetEventLoop eventLoop,
-                         SelectorEventLoop timerEventLoop,
                          InetSocketAddress remote,
                          InetAddress local,
                          int timeout) {
         this.eventLoop = eventLoop;
-        this.timerEventLoop = timerEventLoop;
         this.remote = remote;
         this.local = local;
         this.timeout = timeout;
@@ -96,7 +92,7 @@ public class ConnectClient {
             return;
         }
         // create a timer handling the connecting timeout
-        TimerEvent timer = timerEventLoop.delay(timeout, () -> {
+        TimerEvent timer = eventLoop.getSelectorEventLoop().delay(timeout, () -> {
             assert Logger.lowLevelDebug("timeout when doing health check " + conn);
             conn.close();
             if (!cb.isCalled() /*called by connection*/ && !stopped) cb.failed(new InterruptedByTimeoutException());

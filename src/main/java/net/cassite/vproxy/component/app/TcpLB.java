@@ -12,10 +12,8 @@ import net.cassite.vproxy.component.proxy.Session;
 import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.BindServer;
-import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -121,11 +119,11 @@ public class TcpLB {
             })
             .setHandleLoopProvider(() -> {
                 // get a event loop from group
-                Tuple<EventLoopWrapper, SelectorEventLoop> tuple = workerGroup.next();
-                if (tuple == null)
+                EventLoopWrapper w = workerGroup.next();
+                if (w == null)
                     return null; // return null if cannot get any
-                assert Logger.lowLevelDebug("use event loop: " + tuple.left.alias);
-                return tuple.left;
+                assert Logger.lowLevelDebug("use event loop: " + w.alias);
+                return w;
             })
             .setInBufferSize(inBufferSize)
             .setOutBufferSize(outBufferSize)
@@ -142,16 +140,16 @@ public class TcpLB {
     // but we should dispatch server to another event loop
     private void redispatch() throws IOException {
         assert Logger.lowLevelDebug("redispatch() called on lb " + alias);
-        Tuple<EventLoopWrapper, SelectorEventLoop> tuple = acceptorGroup.next();
-        if (tuple == null) {
-            // event loop tuple not returned
+        EventLoopWrapper w = acceptorGroup.next();
+        if (w == null) {
+            // event loop not returned
             // we should remove the proxy object
             proxy = null;
             Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop when trying to re-dispatch the proxy server");
             return;
         }
         assert Logger.lowLevelDebug("got a event loop, do re-dispatch");
-        proxyNetConfig.setAcceptLoop(tuple.left);
+        proxyNetConfig.setAcceptLoop(w);
         proxy.handle();
     }
 
@@ -170,12 +168,12 @@ public class TcpLB {
 
             stopped = false;
 
-            Tuple<EventLoopWrapper, SelectorEventLoop> tuple = acceptorGroup.next();
-            if (tuple == null) {
+            EventLoopWrapper w = acceptorGroup.next();
+            if (w == null) {
                 assert Logger.lowLevelDebug("cannot start because event loop not retrieved, will start later");
                 return;
             }
-            proxyNetConfig.setAcceptLoop(tuple.left);
+            proxyNetConfig.setAcceptLoop(w);
 
             proxy = new Proxy(proxyNetConfig, proxyEventHandler);
 
