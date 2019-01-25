@@ -1,9 +1,18 @@
 package net.cassite.vproxy.component.app;
 
+import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.cmd.Param;
+import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
+import net.cassite.vproxy.component.exception.AlreadyExistException;
+import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Utils;
 
+import java.io.IOException;
+import java.net.InetSocketAddress;
+import java.util.Arrays;
+import java.util.List;
 import java.util.Scanner;
 
 public class StdIOController {
@@ -17,7 +26,7 @@ public class StdIOController {
             String line = scanner.nextLine().trim();
             if (line.isEmpty())
                 continue;
-            if (line.equals("h") || line.equals("help")) {
+            if (line.equals("h") || line.equals("help") || line.equals("man")) {
                 stdout(Command.helpString());
                 continue;
             }
@@ -41,6 +50,7 @@ public class StdIOController {
 
     private static void handleSystemCall(String line) {
         String cmd = line.substring("System call:".length()).trim();
+        outswitch:
         switch (cmd) {
             case "help":
                 stdout(Command.helpString());
@@ -68,9 +78,105 @@ public class StdIOController {
                         stderr("got exception when do pre-loading: " + Utils.formatErr(e));
                     }
                     break;
+                } else if (cmd.startsWith("add ")) {
+                    String[] arr = cmd.split(" ");
+                    if (arr.length < 2) {
+                        stderr("invalid add command");
+                        break;
+                    }
+                    switch (arr[1]) {
+                        case "resp-controller":
+                            if (arr.length == 7) {
+                                handleAddRespController(arr);
+                                break outswitch;
+                            }
+                    }
+                } else if (cmd.startsWith("remove ")) {
+                    String[] arr = cmd.split(" ");
+                    if (arr.length < 2) {
+                        stderr("invalid remove command");
+                    }
+                    switch (arr[1]) {
+                        case "resp-controller":
+                            if (arr.length == 3) {
+                                handleRemoveController(arr);
+                                break outswitch;
+                            }
+                    }
+                } else if (cmd.startsWith("list ")) {
+                    String[] arr = cmd.split(" ");
+                    if (arr.length < 2) {
+                        stderr("invalid list command");
+                        break;
+                    }
+                    switch (arr[1]) {
+                        case "resp-controller":
+                            if (arr.length == 2) {
+                                handleListController();
+                                break outswitch;
+                            }
+                    }
                 }
-                stderr("unknown system call `" + cmd + "`");
+                stderr("unknown or invalid system call `" + cmd + "`");
         }
+    }
+
+    private static void handleAddRespController(String[] arr) {
+        Command cmd;
+        try {
+            cmd = Command.statm(Arrays.asList(arr));
+        } catch (Exception e) {
+            stderr("invalid system call: " + Utils.formatErr(e));
+            return;
+        }
+        if (!cmd.args.containsKey(Param.addr)) {
+            stderr("missing address");
+            return;
+        }
+        if (!cmd.args.containsKey(Param.pass)) {
+            stderr("missing password");
+            return;
+        }
+        try {
+            AddrHandle.check(cmd);
+        } catch (Exception e) {
+            stderr("invalid");
+            return;
+        }
+
+        InetSocketAddress addr = AddrHandle.get(cmd);
+        byte[] pass = cmd.args.get(Param.pass).getBytes();
+
+        // start
+        try {
+            Application.get().respControllerHolder.add(cmd.resource.alias, addr, pass);
+        } catch (AlreadyExistException e) {
+            stderr("the RESPController is already started");
+        } catch (IOException e) {
+            stderr("got exception when starting RESPController: " + Utils.formatErr(e));
+        }
+        stdout("(done)");
+    }
+
+    private static void handleRemoveController(String[] arr) {
+        try {
+            Application.get().respControllerHolder.removeAndStop(arr[2]);
+        } catch (NotFoundException e) {
+            stderr("not found");
+        }
+        stdout("(done)");
+    }
+
+    private static void handleListController() {
+        List<String> names = Application.get().respControllerHolder.names();
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (String name : names) {
+            if (isFirst) isFirst = false;
+            else sb.append("\n");
+            sb.append(name);
+        }
+        stdout(sb.toString());
     }
 
     private static void handleCommand(String line) {

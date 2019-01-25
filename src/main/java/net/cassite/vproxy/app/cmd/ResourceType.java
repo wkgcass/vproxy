@@ -10,6 +10,8 @@ public enum ResourceType {
     bs("bind-server"),
     conn("connection"),
     sess("session"),
+
+    respcontroller("resp-controller"),
     ;
     public final String fullname;
 

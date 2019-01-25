@@ -14,6 +14,8 @@ public enum Param {
     outbuffersize("out-buffer-size"),
     meth("method"),
     w("weight"),
+
+    pass("password"),
     ;
     public final String fullname;
 

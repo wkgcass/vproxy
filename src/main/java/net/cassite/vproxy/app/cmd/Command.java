@@ -21,17 +21,25 @@ public class Command {
     public static String helpString() {
         return "" +
             "vproxy:" +
+            "\n    help                     | h                   show this message" +
+            "\n    man                                            show this message" +
             "\n    System commands:" +
-            "\n        help                 | h                   show this message" +
             "\n        System call: help                          show this message" +
             "\n        System call: shutdown                      shutdown the vproxy process" +
-            "\n        System call: load                          load config commands from a file" +
+            "\n        System call: load ${filepath}              load config commands from a file" +
+            "\n        System call: add resp-controller           start resp controller" +
+            "\n                               ${alias}" +
+            "\n                               address  ${bind addr}" +
+            "\n                               password ${password}" +
+            "\n        System call: remove resp-controller        stop resp controller" +
+            "\n        System call: list   resp-controller        check resp controller" +
+            "\n    (System commands can only be executed via StdIOController)" +
             "\n    Operate a resource:" +
             "\n        list                 | l                   list resources' names" +
             "\n        list-detail          | L                   list detailed info about resources" +
             "\n        add                  | a                   create a resource" +
             "\n        add . to .           | a . to .            add a resource into another one" +
-            "\b        update               | u                   update a resource" +
+            "\n        update               | u                   update a resource" +
             "\n        remove               | r                   remove and release a resource" +
             "\n        force-remove         | R                   force remove and release a resource" +
             "\n        remove . from .      | r . from .          detach a resource from another one, the detached resource is not released" +
@@ -87,8 +95,16 @@ public class Command {
             }
             sb.append(c);
         }
-        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
 
+        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
+        Command cmd = statm(_cmd);
+        semantic(cmd);
+        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
+
+        return cmd;
+    }
+
+    public static Command statm(List<String> _cmd) throws Exception {
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
 
@@ -330,8 +346,6 @@ public class Command {
             throw new Exception("the parser has a bug and did not detect invalidity of this input");
         }
 
-        semantic(cmd);
-        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
         return cmd;
     }
 
@@ -576,7 +590,7 @@ public class Command {
     }
 
     public void run(Callback<String, Throwable> cb) {
-        Application.get()._controlEventLoop.nextTick(() -> {
+        Application.get().controlEventLoop.getSelectorEventLoop().nextTick(() -> {
             String res;
             try {
                 res = runTry();

@@ -2,6 +2,7 @@ package net.cassite.vproxy.redis.application;
 
 import net.cassite.vproxy.redis.RESPHandler;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Logger;
 
 import java.util.*;
 
@@ -17,7 +18,9 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
 
     @Override
     public RESPApplicationContext attachment() {
-        return app.context();
+        RESPApplicationContext ctx = app.context();
+        ctx.noAuth = (config.password != null); // if password is set, then it's currently NOAUTH
+        return ctx;
     }
 
     // false for auth fail or not auth
@@ -28,32 +31,42 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
         if (input instanceof List) {
             List ls = (List) input;
             if (ls.size() != 2) {
+                assert Logger.lowLevelDebug("input ls length is not 2, ignore auth");
                 return false; // should be AUTH xxx, so size != 2 we ignore
             }
             Object arg0 = ls.get(0);
             Object arg1 = ls.get(1);
             // both should be String
             if (!(arg0 instanceof String) || !(arg1 instanceof String)) {
+                assert Logger.lowLevelDebug("arg0 " + arg0 + " or arg1 " + arg1 + " not string, ignore auth");
                 return false;
             }
             if (!arg0.equals("AUTH") && !arg0.equals("auth")) {
+                assert Logger.lowLevelDebug("arg0 " + arg0 + " is not AUTH or auth");
                 return false; // command is not AUTH
             }
             pass = (String) arg1;
         } else if (input instanceof String) {
             String[] inStr = ((String) input).split(" ");
-            if (inStr.length != 2)
+            if (inStr.length != 2) {
+                assert Logger.lowLevelDebug("input strs length is not 2, ignore auth");
                 return false; // should be AUTH xxx, so size != 2 we ignore
-            if (!inStr[0].equals("AUTH") && inStr[0].equals("auth"))
+            }
+            if (!inStr[0].equals("AUTH") && inStr[0].equals("auth")) {
+                assert Logger.lowLevelDebug("strs[0] " + inStr[0] + " is not AUTH or auth");
                 return false; // command is not AUTH
+            }
             pass = inStr[1];
         } else {
             // otherwise is not AUTH
             return false;
         }
+
+        assert Logger.lowLevelDebug("it's auth, input password is " + pass);
         // it's definitely auth operation when reaches here
         byte[] hash = RESPApplicationConfig.hashCrypto.apply(pass.getBytes());
         // compare two arrays
+        assert Logger.lowLevelDebug("matching result is " + Arrays.equals(hash, config.password));
         return Arrays.equals(hash, config.password);
     }
 
@@ -224,6 +237,8 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
     public void handle(Object input, RESPApplicationContext ctx, Callback<Object, Throwable> cb) {
         if (handleAuth(input)) {
             ctx.noAuth = false;
+            cb.succeeded("OK");
+            return;
         } else {
             // not auth, or auth failed
             if (ctx.noAuth) {
@@ -254,6 +269,7 @@ public class RESPApplicationHandler implements RESPHandler<RESPApplicationContex
         }
 
         // run into user code
+        // we don't touch anything the user returns
         app.handle(input, ctx, cb);
     }
 }
