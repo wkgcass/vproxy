@@ -51,5 +51,15 @@ public class RunAll {
         System.out.println("            echo protocol server");
         System.out.println("==============================================");
         EchoProtocolServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("            resp ping pong server");
+        System.out.println("==============================================");
+        RESPPingPongServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("               resp app server");
+        System.out.println("==============================================");
+        RESPApplicationServer.main(new String[0]);
     }
 }

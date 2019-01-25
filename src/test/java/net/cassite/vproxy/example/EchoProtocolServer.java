@@ -20,8 +20,8 @@ public class EchoProtocolServer {
 
         // make the buffers small to demonstrate what will be done when buffer is full
         ProtocolServerConfig config = new ProtocolServerConfig();
-        config.inBufferSize = 8;
-        config.outBufferSize = 4;
+        config.setInBufferSize(8);
+        config.setOutBufferSize(4);
 
         ProtocolServerHandler.apply(
             netEventLoop, BindServer.create(new InetSocketAddress("127.0.0.1", 18080)), config,

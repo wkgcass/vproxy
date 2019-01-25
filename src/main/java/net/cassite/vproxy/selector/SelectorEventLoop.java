@@ -134,6 +134,7 @@ public class SelectorEventLoop {
         }
     }
 
+    @Blocking
     public void loop() {
         runningThread = Thread.currentThread();
         while (selector.isOpen()) {

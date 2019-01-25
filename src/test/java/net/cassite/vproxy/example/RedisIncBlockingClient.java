@@ -1,13 +1,16 @@
 package net.cassite.vproxy.example;
 
+import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.util.ByteArrayChannel;
+import net.cassite.vproxy.util.RingBuffer;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.InetSocketAddress;
 import java.net.Socket;
-import java.nio.charset.StandardCharsets;
 
-public class AlphabetBlockingClient {
+public class RedisIncBlockingClient {
     public static void main(String[] args) throws IOException, InterruptedException {
         runBlock(19080, 10, false);
     }
@@ -26,15 +29,27 @@ public class AlphabetBlockingClient {
         }
         OutputStream output = socket.getOutputStream();
         InputStream input = socket.getInputStream();
-        byte[] buffer = new byte[32];
+
+        String key = "the-key";
+        RingBuffer rb = RingBuffer.allocate(64);
+        byte[] buffer = new byte[64];
         for (int i = 0; i < times; ++i) { // demonstrate for 10 times
-            int strLen = (int) (Math.random() * 23) + 3;
-            StringBuilder sb = new StringBuilder();
-            for (int c = 0; c < strLen; ++c) {
-                char cc = (char) ('A' + c);
-                sb.append(cc);
+            Parser parser = new Parser(64);
+            double rand = Math.random();
+            String toSend;
+            if (rand < 0.25) {
+                // use array, standard redis-cli request format
+                toSend = "*2\r\n$4\r\nINCR\r\n$" + key.length() + "\r\n" + key + "\r\n";
+            } else if (rand < 0.5) {
+                // use bulk str
+                toSend = "$" + (5 + key.length()) + "\r\nINCR " + key + "\r\n";
+            } else if (rand < 0.75) {
+                // use inline
+                toSend = "INCR " + key + "\r\n";
+            } else {
+                // use simple
+                toSend = "+INCR " + key + "\r\n";
             }
-            String toSend = sb.toString();
             System.out.println("client send: \033[1;35m" + toSend + "\033[0m");
             try {
                 output.write(toSend.getBytes());
@@ -45,9 +60,7 @@ public class AlphabetBlockingClient {
                 runBlock(port, times - i, closeEveryTime);
                 return;
             }
-            StringBuilder recv = new StringBuilder();
-            int total = 0;
-            while (total < strLen) {
+            while (true) {
                 int l;
                 try {
                     l = input.read(buffer);
@@ -65,16 +78,28 @@ public class AlphabetBlockingClient {
                     runBlock(port, times - i, closeEveryTime);
                     return;
                 }
-                String recv0 = new String(buffer, 0, l, StandardCharsets.UTF_8);
-                System.out.println("client receive: \033[1;36m" + recv0 + "\033[0m");
-                total += l;
-                recv.append(recv0);
-            }
-            if (!recv.toString().equals(toSend)) {
-                throw new RuntimeException("sending " + toSend + " but receive " + recv + ", mismatch");
+                if (l == 0)
+                    continue;
+                byte[] buf = new byte[l];
+                System.arraycopy(buffer, 0, buf, 0, l);
+                ByteArrayChannel chnl = ByteArrayChannel.fromFull(buf);
+                rb.storeBytesFrom(chnl);
+                int r = parser.feed(rb);
+                String recv;
+                if (r == 0) {
+                    recv = (String) parser.getResult().getJavaObject();
+                } else {
+                    String errMsg = parser.getErrorMessage();
+                    if (errMsg != null)
+                        throw new RuntimeException("parse failed " + errMsg);
+                    continue;
+                }
+
+                System.out.println("client receive: \033[1;36m" + recv + "\033[0m");
+                break;
             }
 
-            Thread.sleep(1000);
+            Thread.sleep(500);
 
             if (closeEveryTime) {
                 socket.close();

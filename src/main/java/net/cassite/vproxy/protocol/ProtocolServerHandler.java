@@ -33,10 +33,11 @@ public class ProtocolServerHandler implements ServerHandler {
         Logger.error(LogType.SERVER_ACCEPT_FAIL, "server accept new connection failed", err);
     }
 
+    @SuppressWarnings("unchecked")
     @Override
     public void connection(ServerHandlerContext ctx, Connection connection) {
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection, eventLoop.getSelectorEventLoop(), handler);
+        ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, eventLoop.getSelectorEventLoop(), handler);
         handler.init(pctx);
         try {
             eventLoop.addConnection(connection, handler, new ProtocolConnectionHandler(pctx));

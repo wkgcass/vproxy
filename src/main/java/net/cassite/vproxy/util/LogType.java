@@ -12,4 +12,5 @@ public enum LogType {
     NO_EVENT_LOOP,
     BEFORE_PARSING_CMD,
     AFTER_PARSING_CMD,
+    USER_HANDLE_FAIL,
 }

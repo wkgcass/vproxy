@@ -5,6 +5,7 @@ import net.cassite.vproxy.connection.ConnectionHandlerContext;
 
 import java.io.IOException;
 
+@SuppressWarnings("unchecked")
 class ProtocolConnectionHandler implements ConnectionHandler {
     private final ProtocolHandlerContext pctx;
 

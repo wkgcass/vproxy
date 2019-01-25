@@ -284,4 +284,22 @@ public class RingBuffer {
             }
         }
     }
+
+    // clear the buffer
+    public void clear() {
+        byte[] b = new byte[capacity()];
+        ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
+
+        // use a while loop because data may be read into buffer
+        // on callback
+        while (used() != 0) {
+            try {
+                writeTo(chnl);
+            } catch (IOException e) {
+                // it's memory operation
+                // should not happen
+            }
+            chnl.reset();
+        }
+    }
 }

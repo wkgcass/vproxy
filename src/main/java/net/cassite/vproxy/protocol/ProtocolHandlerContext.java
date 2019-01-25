@@ -9,9 +9,10 @@ import net.cassite.vproxy.util.RingBuffer;
 import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-public class ProtocolHandlerContext {
+public class ProtocolHandlerContext<T> {
     private final ConcurrentLinkedQueue<byte[]> bytesSeq = new ConcurrentLinkedQueue<>();
     private ByteArrayChannel chnl = null; // the helper channel to write into out buffer
+    public final String connectionId;
     // make inBuffer public for user code to read
     public final RingBuffer inBuffer;
     // make outBuffer private and handle the writings inside the lib
@@ -20,7 +21,11 @@ public class ProtocolHandlerContext {
     private final SelectorEventLoop loop;
     private final ProtocolHandler handler;
 
-    ProtocolHandlerContext(Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
+    // a field for user code to set data
+    public T data;
+
+    ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
+        this.connectionId = connectionId;
         this.inBuffer = connection.inBuffer;
         this.outBuffer = connection.outBuffer;
         this.loop = loop;
@@ -83,6 +88,7 @@ public class ProtocolHandlerContext {
         loop.runOnLoop(this::doWrite); // run write in loop thread
     }
 
+    @SuppressWarnings("unchecked")
     public void readable() {
         loop.runOnLoop(() -> {
             if (inBuffer.used() == 0)
