@@ -7,6 +7,7 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Utils;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
@@ -38,6 +39,7 @@ public class Main {
         // every other thing should start after the loop
 
         // load config if specified in args
+        boolean loaded = false;
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
@@ -48,6 +50,9 @@ public class Main {
                     System.exit(0);
                     return;
                 case "load":
+                    loaded = true;
+                    // if error occurred, the program will exit
+                    // so set loaded flag here is ok
                     if (next == null) {
                         System.err.println("invalid system call for `load`: should specify a file name to load");
                         System.exit(1);
@@ -95,6 +100,19 @@ public class Main {
                     System.err.println("unknown argument `" + arg + "`");
                     System.exit(1);
                     return;
+            }
+        }
+        if (!loaded) {
+            File f = new File(Shutdown.defaultFilePath());
+            if (f.exists()) {
+                // load last config
+                System.out.println("trying to load from last saved config " + f.getAbsolutePath());
+                System.out.println("if the process fails to start, remove " + f.getAbsolutePath() + " and start from scratch");
+                try {
+                    Shutdown.load(null, new CallbackInMain());
+                } catch (Exception e) {
+                    System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
+                }
             }
         }
 

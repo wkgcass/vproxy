@@ -29,7 +29,7 @@ public class StdIOController {
             if (line.isEmpty())
                 continue;
             if (line.equals("h") || line.equals("help") || line.equals("man")) {
-                stdout(Command.helpString());
+                stdoutSync(Command.helpString());
                 continue;
             }
             if (line.startsWith("System call:")) {
@@ -44,12 +44,30 @@ public class StdIOController {
         System.out.print(STARTER);
     }
 
-    private static void stdout(String msg) {
+    private static void doneSync() {
+        stdoutSync("(done)");
+    }
+
+    private static void stdoutSync(String msg) {
         System.out.println(msg);
     }
 
-    private static void stderr(String err) {
-        System.err.println(err);
+    private static void doneAsync() {
+        stdoutAsync("(done)");
+    }
+
+    private static void stdoutAsync(String msg) {
+        stdoutSync(msg);
+        printStarter();
+    }
+
+    private static void stderrSync(String err) {
+        System.out.println("\033[0;31m" + err + "\033[0m");
+    }
+
+    private static void stderrAsync(String err) {
+        stderrSync(err);
+        printStarter();
     }
 
     private static void handleSystemCall(String line) {
@@ -57,16 +75,16 @@ public class StdIOController {
         outswitch:
         switch (cmd) {
             case "help":
-                stdout(Command.helpString());
+                stdoutSync(Command.helpString());
                 break;
             case "shutdown":
                 Shutdown.shutdown();
                 break;
             default:
-                if (cmd.startsWith("load")) {
+                if (cmd.startsWith("load ")) {
                     String[] split = cmd.split(" ");
                     if (split.length <= 1) {
-                        stderr("invalid system call for `load`: should specify a file name to load");
+                        stderrSync("invalid system call for `load`: should specify a file name to load");
                         break;
                     }
                     StringBuilder filename = new StringBuilder();
@@ -79,13 +97,32 @@ public class StdIOController {
                     try {
                         Shutdown.load(filename.toString(), new StrResultCallback(line));
                     } catch (Exception e) {
-                        stderr("got exception when do pre-loading: " + Utils.formatErr(e));
+                        stderrSync("got exception when do pre-loading: " + Utils.formatErr(e));
+                    }
+                    break;
+                } else if (cmd.startsWith("save ")) {
+                    String[] split = cmd.split(" ");
+                    if (split.length <= 1) {
+                        stderrSync("invalid system call for `save`: should specify a file name to save");
+                        break;
+                    }
+                    StringBuilder filename = new StringBuilder();
+                    for (int i = 1; i < split.length; ++i) {
+                        if (i != 1) {
+                            filename.append(" ");
+                        }
+                        filename.append(split[i]);
+                    }
+                    try {
+                        Shutdown.save(filename.toString());
+                    } catch (Exception e) {
+                        stderrSync("got exception when saving: " + Utils.formatErr(e));
                     }
                     break;
                 } else if (cmd.startsWith("add ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        stderr("invalid add command");
+                        stderrSync("invalid add command");
                         break;
                     }
                     switch (arr[1]) {
@@ -98,7 +135,7 @@ public class StdIOController {
                 } else if (cmd.startsWith("remove ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        stderr("invalid remove command");
+                        stderrSync("invalid remove command");
                     }
                     switch (arr[1]) {
                         case "resp-controller":
@@ -110,7 +147,7 @@ public class StdIOController {
                 } else if (cmd.startsWith("list ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        stderr("invalid list command");
+                        stderrSync("invalid list command");
                         break;
                     }
                     switch (arr[1]) {
@@ -119,11 +156,16 @@ public class StdIOController {
                                 handleListController(false);
                                 break outswitch;
                             }
+                        case "config":
+                            if (arr.length == 2) {
+                                handleListConfig();
+                                break outswitch;
+                            }
                     }
                 } else if (cmd.startsWith("list-detail ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        stderr("invalid list-detail command");
+                        stderrSync("invalid list-detail command");
                         break;
                     }
                     switch (arr[1]) {
@@ -134,8 +176,12 @@ public class StdIOController {
                             }
                     }
                 }
-                stderr("unknown or invalid system call `" + cmd + "`");
+                stderrSync("unknown or invalid system call `" + cmd + "`");
         }
+    }
+
+    private static void handleListConfig() {
+        stdoutSync(Shutdown.currentConfig());
     }
 
     private static void handleAddRespController(String[] arr) {
@@ -143,21 +189,21 @@ public class StdIOController {
         try {
             cmd = Command.statm(Arrays.asList(arr));
         } catch (Exception e) {
-            stderr("invalid system call: " + Utils.formatErr(e));
+            stderrSync("invalid system call: " + Utils.formatErr(e));
             return;
         }
         if (!cmd.args.containsKey(Param.addr)) {
-            stderr("missing address");
+            stderrSync("missing address");
             return;
         }
         if (!cmd.args.containsKey(Param.pass)) {
-            stderr("missing password");
+            stderrSync("missing password");
             return;
         }
         try {
             AddrHandle.check(cmd);
         } catch (Exception e) {
-            stderr("invalid");
+            stderrSync("invalid");
             return;
         }
 
@@ -168,20 +214,20 @@ public class StdIOController {
         try {
             Application.get().respControllerHolder.add(cmd.resource.alias, addr, pass);
         } catch (AlreadyExistException e) {
-            stderr("the RESPController is already started");
+            stderrSync("the RESPController is already started");
         } catch (IOException e) {
-            stderr("got exception when starting RESPController: " + Utils.formatErr(e));
+            stderrSync("got exception when starting RESPController: " + Utils.formatErr(e));
         }
-        stdout("(done)");
+        doneSync();
     }
 
     private static void handleRemoveController(String[] arr) {
         try {
             Application.get().respControllerHolder.removeAndStop(arr[2]);
         } catch (NotFoundException e) {
-            stderr("not found");
+            stderrSync("not found");
         }
-        stdout("(done)");
+        doneSync();
     }
 
     private static void handleListController(boolean detail) {
@@ -204,7 +250,7 @@ public class StdIOController {
                 sb.append("\t").append(c.server.id());
             }
         }
-        stdout(sb.toString());
+        stdoutSync(sb.toString());
     }
 
     private static void handleCommand(String line) {
@@ -212,7 +258,7 @@ public class StdIOController {
         try {
             c = Command.parseStrCmd(line);
         } catch (Exception e) {
-            stderr("parse cmd failed! " + Utils.formatErr(e) + " ... type `help` to show the help message");
+            stderrSync("parse cmd failed! " + Utils.formatErr(e) + " ... type `help` to show the help message");
             return;
         }
         c.run(new ResultCallback(line));
@@ -228,16 +274,16 @@ public class StdIOController {
         @Override
         protected void onSucceeded(CmdResult resp) {
             if (!resp.strResult.trim().isEmpty()) {
-                stdout(resp.strResult.trim());
+                stdoutAsync(resp.strResult.trim());
             } else {
-                stdout("(done)");
+                doneAsync();
             }
         }
 
         @Override
         protected void onFailed(Throwable err) {
             String msg = "command `" + line + "` failed! " + Utils.formatErr(err);
-            stderr(msg);
+            stderrAsync(msg);
         }
     }
 
@@ -251,16 +297,16 @@ public class StdIOController {
         @Override
         protected void onSucceeded(String resp) {
             if (!resp.trim().isEmpty()) {
-                stdout(resp.trim());
+                stdoutAsync(resp.trim());
             } else {
-                stdout("(done)");
+                doneAsync();
             }
         }
 
         @Override
         protected void onFailed(Throwable err) {
             String msg = "command `" + line + "` failed! " + Utils.formatErr(err);
-            stderr(msg);
+            stderrAsync(msg);
         }
     }
 }
