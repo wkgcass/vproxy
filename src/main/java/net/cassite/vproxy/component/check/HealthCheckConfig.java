@@ -13,6 +13,10 @@ public class HealthCheckConfig {
         this.down = down;
     }
 
+    public HealthCheckConfig(HealthCheckConfig c) {
+        this(c.timeout, c.period, c.up, c.down);
+    }
+
     @Override
     public String toString() {
         return "HealthCheckConfig{" +

@@ -42,6 +42,6 @@ public class ServerGroupHolder {
         ServerGroup g = map.remove(alias);
         if (g == null)
             throw new NotFoundException();
-        g.clear();
+        g.destroy();
     }
 }

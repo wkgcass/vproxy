@@ -41,8 +41,16 @@ public class TcpLBHandle {
             throw new Exception("missing argument " + Param.outbuffersize.fullname);
 
         AddrHandle.check(cmd);
-        InBufferSizeHandle.check(cmd);
-        OutBufferSizeHandle.check(cmd);
+
+        if (cmd.args.containsKey(Param.inbuffersize))
+            InBufferSizeHandle.check(cmd);
+        else
+            cmd.args.put(Param.inbuffersize, "16384");
+
+        if (cmd.args.containsKey(Param.outbuffersize))
+            OutBufferSizeHandle.check(cmd);
+        else
+            cmd.args.put(Param.outbuffersize, "16384");
     }
 
     public static TcpLB get(Resource tcplb) throws NotFoundException {

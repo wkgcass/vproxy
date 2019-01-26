@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.ServerGroupHolder;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
@@ -13,6 +14,7 @@ import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 
+import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -94,6 +96,21 @@ public class ServerGroupHandle {
         }
     }
 
+    public static List<ServerGroupRef> details(Resource targetResource) throws Exception {
+        if (targetResource == null) {
+            ServerGroupHolder holder = Application.get().serverGroupHolder;
+            List<String> names = holder.names();
+            List<ServerGroupRef> list = new LinkedList<>();
+            for (String name : names) {
+                list.add(new ServerGroupRef(holder.get(name)));
+            }
+            return list;
+        } else {
+            return ServerGroupsHandle.get(targetResource).getServerGroups()
+                .stream().map(ServerGroupRef::new).collect(Collectors.toList());
+        }
+    }
+
     public static void add(Command cmd) throws Exception {
         if (cmd.prepositionResource == null) {
             // add on top level
@@ -142,6 +159,22 @@ public class ServerGroupHandle {
         }
         if (cmd.args.containsKey(Param.meth)) {
             g.setMethod(MethHandle.get(cmd));
+        }
+    }
+
+    public static class ServerGroupRef {
+        private final ServerGroup g;
+
+        public ServerGroupRef(ServerGroup g) {
+            this.g = g;
+        }
+
+        @Override
+        public String toString() {
+            HealthCheckConfig c = g.getHealthCheckConfig();
+            return g.alias + " -> timeout " + c.timeout + " period " + c.period +
+                " up " + c.up + " down " + c.down + " method " + g.getMethod() +
+                " event-loop-group " + g.eventLoopGroup.alias;
         }
     }
 }

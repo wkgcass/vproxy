@@ -571,6 +571,7 @@ public class Command {
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
                         ServerHandle.checkUpdateServer(cmd);
+                        break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
@@ -794,9 +795,12 @@ public class Command {
             case sg: // top level or retrieved from serverGroups
                 switch (action) {
                     case l:
-                    case L:
                         List<String> sgNames = ServerGroupHandle.names(targetResource);
                         return new CmdResult(sgNames, sgNames, utilJoinList(sgNames));
+                    case L:
+                        List<ServerGroupHandle.ServerGroupRef> refs = ServerGroupHandle.details(targetResource);
+                        List<String> refStrList = refs.stream().map(ServerGroupHandle.ServerGroupRef::toString).collect(Collectors.toList());
+                        return new CmdResult(refs, refStrList, utilJoinList(refStrList));
                     case a:
                         ServerGroupHandle.add(this);
                         return new CmdResult();
@@ -824,6 +828,7 @@ public class Command {
                     case r:
                     case R:
                         TcpLBHandle.forceRemove(this);
+                        return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
             default:

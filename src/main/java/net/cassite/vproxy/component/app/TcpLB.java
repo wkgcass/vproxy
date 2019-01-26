@@ -5,6 +5,7 @@ import net.cassite.vproxy.component.elgroup.EventLoopGroupAttach;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
+import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
@@ -84,6 +85,8 @@ public class TcpLB {
     // we will try our best to make it start
     private Proxy proxy = null;
 
+    private final LBAttach attach;
+
     public final BindServer server;
     private final ProxyNetConfig proxyNetConfig = new ProxyNetConfig();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
@@ -133,7 +136,13 @@ public class TcpLB {
         // so create it in start() method
 
         // attach to acceptorGroup
-        acceptorGroup.attachResource(new LBAttach());
+        this.attach = new LBAttach();
+        try {
+            acceptorGroup.attachResource(attach);
+        } catch (AlreadyExistException e) {
+            this.server.close(); // close the socket if attach failed
+            throw e;
+        }
     }
 
     // the proxy still exist
@@ -211,6 +220,12 @@ public class TcpLB {
             if (destroyed)
                 return;
             destroyed = true;
+        }
+
+        try {
+            acceptorGroup.detachResource(attach);
+        } catch (NotFoundException e) {
+            // ignore
         }
         server.close();
     }

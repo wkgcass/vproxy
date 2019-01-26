@@ -16,6 +16,11 @@ Clone it, javac it, then everything is ready for running.
 
 ## How to use
 
+### Doc
+
+* [how-to-use.md](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) How to use config file and controllers.
+* [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): Detailed command document.
+
 ### Quick Start
 
 Create a file, input the following:

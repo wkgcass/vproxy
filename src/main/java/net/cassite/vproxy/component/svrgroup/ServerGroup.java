@@ -237,6 +237,7 @@ public class ServerGroup {
     public final EventLoopGroup eventLoopGroup;
     private HealthCheckConfig healthCheckConfig;
     private Method method;
+    private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
 
     // START fields for WRR
@@ -273,9 +274,10 @@ public class ServerGroup {
         this.eventLoopGroup = eventLoopGroup;
         this.healthCheckConfig = healthCheckConfig;
         this.method = method;
+        this.attach = new Attach();
 
         resetMethodRelatedFields();
-        eventLoopGroup.attachResource(new Attach());
+        eventLoopGroup.attachResource(attach);
     }
 
     /**
@@ -483,6 +485,10 @@ public class ServerGroup {
         }
     }
 
+    public Method getMethod() {
+        return method;
+    }
+
     public void setHealthCheckConfig(HealthCheckConfig healthCheckConfig) {
         assert Logger.lowLevelDebug("set new health check config " + healthCheckConfig);
         this.healthCheckConfig = healthCheckConfig;
@@ -490,6 +496,10 @@ public class ServerGroup {
         for (ServerHandle handle : ls) {
             handle.restart(); // restart all health check clients
         }
+    }
+
+    public HealthCheckConfig getHealthCheckConfig() {
+        return new HealthCheckConfig(healthCheckConfig);
     }
 
     public synchronized void add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
@@ -541,6 +551,15 @@ public class ServerGroup {
         for (ServerHandle s : ls) {
             s.stop();
             assert Logger.lowLevelDebug("server removed " + s.alias + " from " + this.alias);
+        }
+    }
+
+    public void destroy() {
+        clear();
+        try {
+            eventLoopGroup.detachResource(attach);
+        } catch (NotFoundException e) {
+            // ignore exception
         }
     }
 

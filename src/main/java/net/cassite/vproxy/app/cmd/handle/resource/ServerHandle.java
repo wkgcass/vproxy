@@ -67,7 +67,7 @@ public class ServerHandle {
     }
 
     public static void update(Command cmd) throws Exception {
-        for (ServerGroup.ServerHandle h : ServerGroupHandle.get(cmd.prepositionResource).getServerHandles()) {
+        for (ServerGroup.ServerHandle h : ServerGroupHandle.get(cmd.resource.parentResource).getServerHandles()) {
             if (h.alias.equals(cmd.resource.alias)) {
                 h.setWeight(WeightHandle.get(cmd));
                 return;
