@@ -9,8 +9,10 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 
-public class Connection {
+public class Connection implements NetFlowRecorder {
     // the inBuffer might be full, and we need to handle writable event
     class InBufferETHandler implements RingBufferETHandler {
         @Override
@@ -65,7 +67,11 @@ public class Connection {
 
                 boolean addWriteOnLoop = true;
                 try {
-                    outBuffer.writeTo(channel);
+                    int write = outBuffer.writeTo(channel);
+                    if (write > 0) {
+                        incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
+                        // NOTE: should also record in NetEventLoop writable event
+                    }
                     if (outBuffer.used() == 0) {
                         // have nothing to write now
 
@@ -102,6 +108,14 @@ public class Connection {
     protected InetSocketAddress local;
     protected final String _id;
     public final SocketChannel channel;
+
+    // statistics fields
+    // the connection is handled in a single thread, so no need to synchronize
+    private long toRemoteBytes = 0; // out bytes
+    private long fromRemoteBytes = 0; // in bytes
+    // since it seldom (in most cases: never) changes, so let's just use a copy on write list
+    private final List<NetFlowRecorder> netFlowRecorders = new CopyOnWriteArrayList<>();
+
     /**
      * bytes will be read from channel into this buffer
      */
@@ -134,6 +148,35 @@ public class Connection {
         this.outBuffer.addHandler(outBufferETHandler);
     }
 
+    // --- START statistics ---
+    public long getFromRemoteBytes() {
+        return fromRemoteBytes;
+    }
+
+    public long getToRemoteBytes() {
+        return toRemoteBytes;
+    }
+
+    public void incFromRemoteBytes(long bytes) {
+        fromRemoteBytes += bytes;
+        for (NetFlowRecorder nfr : netFlowRecorders) {
+            nfr.incFromRemoteBytes(bytes);
+        }
+    }
+
+    public void incToRemoteBytes(long bytes) {
+        toRemoteBytes += bytes;
+        for (NetFlowRecorder nfr : netFlowRecorders) {
+            nfr.incToRemoteBytes(bytes);
+        }
+    }
+    // --- END statistics ---
+
+    // NOTE: this is not thread safe
+    public void addNetFlowRecorder(NetFlowRecorder nfr) {
+        netFlowRecorders.add(nfr);
+    }
+
     protected String genId() {
         return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
             + "/"
@@ -154,6 +197,12 @@ public class Connection {
             return; // do not close again if already closed
 
         closed = true;
+
+        // actually there's no need to clear the NetFlowRecorders
+        // because the connection should not be traced in gc root after it's closed
+        // (if you correctly handled all events)
+        // but here we clear it since it doesn't hurt
+        netFlowRecorders.clear();
 
         inBuffer.removeHandler(inBufferETHandler);
         outBuffer.removeHandler(outBufferETHandler);

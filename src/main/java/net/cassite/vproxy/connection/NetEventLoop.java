@@ -157,8 +157,11 @@ class HandlerForServer implements Handler<ServerSocketChannel> {
                 Logger.shouldNotHappen("Connection object create failed: " + e);
                 return;
             }
+            conn.addNetFlowRecorder(sctx.server);
             sctx.handler.connection(sctx, conn);
         }
+        // accept succeeded
+        sctx.server.incHistoryAcceptedConnectionCount();
         // then, we try to accept again, in case there are pending connections
         accept(ctx);
     }
@@ -229,6 +232,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
             Logger.shouldNotHappen("read nothing, the event should not be fired");
             return;
         }
+        cctx.connection.incFromRemoteBytes(read); // record net flow, it's reading, so is "from remote"
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
         if (cctx.connection.inBuffer.free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
@@ -262,6 +266,8 @@ class HandlerForConnection implements Handler<SocketChannel> {
             // we ignore it for now
             return;
         }
+        cctx.connection.incFromRemoteBytes(write); // record net flow, it's writing, so is "to remote"
+        // NOTE: should also record in Quick Write impl in Connection.java
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.outBuffer.used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event

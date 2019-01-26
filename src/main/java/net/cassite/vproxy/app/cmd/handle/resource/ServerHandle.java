@@ -32,7 +32,7 @@ public class ServerHandle {
 
     public static List<ServerRef> detail(Resource parent) throws Exception {
         return ServerGroupHandle.get(parent)
-            .getServerHealthHandles()
+            .getServerHandles()
             .stream().map(ServerRef::new)
             .collect(Collectors.toList());
     }
@@ -50,7 +50,7 @@ public class ServerHandle {
     }
 
     public static void update(Command cmd) throws Exception {
-        for (ServerGroup.ServerHealthHandle h : ServerGroupHandle.get(cmd.prepositionResource).getServerHealthHandles()) {
+        for (ServerGroup.ServerHandle h : ServerGroupHandle.get(cmd.prepositionResource).getServerHandles()) {
             if (h.alias.equals(cmd.resource.alias)) {
                 h.setWeight(WeightHandle.get(cmd));
                 return;
@@ -60,9 +60,9 @@ public class ServerHandle {
     }
 
     public static class ServerRef {
-        public final ServerGroup.ServerHealthHandle h;
+        public final ServerGroup.ServerHandle h;
 
-        public ServerRef(ServerGroup.ServerHealthHandle h) {
+        public ServerRef(ServerGroup.ServerHandle h) {
             this.h = h;
         }
 

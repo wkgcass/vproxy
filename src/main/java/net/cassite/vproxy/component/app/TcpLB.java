@@ -9,9 +9,9 @@ import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.component.proxy.Session;
-import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
@@ -84,7 +84,7 @@ public class TcpLB {
     // we will try our best to make it start
     private Proxy proxy = null;
 
-    private final BindServer server;
+    public final BindServer server;
     private final ProxyNetConfig proxyNetConfig = new ProxyNetConfig();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
 

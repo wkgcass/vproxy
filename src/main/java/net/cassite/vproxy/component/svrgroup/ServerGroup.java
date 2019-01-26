@@ -10,6 +10,8 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.NetFlowRecorder;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
@@ -19,34 +21,35 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
 
 public class ServerGroup {
-    public class ServerHealthHandle implements EventLoopAttach {
+    public class ServerHandle implements EventLoopAttach, NetFlowRecorder {
         class ServerHealthCheckHandler implements HealthCheckHandler {
             @Override
             public void up(SocketAddress remote) {
                 healthy = true;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
-                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to UP");
+                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to UP");
             }
 
             @Override
             public void down(SocketAddress remote) {
                 healthy = false;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
-                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to DOWN");
+                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN");
             }
 
             @Override
             public void upOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("up once for " + ServerHealthHandle.this.alias + "(" + server + ")");
+                assert Logger.lowLevelDebug("up once for " + ServerHandle.this.alias + "(" + server + ")");
             }
 
             @Override
             public void downOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("down once for " + ServerHealthHandle.this.alias + "(" + server + ")");
+                assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + ")");
             }
         }
 
@@ -60,11 +63,34 @@ public class ServerGroup {
         public boolean healthy = false; // considered to be unhealthy when firstly created
         TCPHealthCheckClient healthCheckClient;
 
-        ServerHealthHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
+        private final LongAdder fromRemoteBytes = new LongAdder();
+        private final LongAdder toRemoteBytes = new LongAdder();
+
+        ServerHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
             this.alias = alias;
             this.server = server;
             this.local = local;
             this.weight = initialWeight;
+        }
+
+        @Override
+        public void incToRemoteBytes(long bytes) {
+            toRemoteBytes.add(bytes);
+        }
+
+        @Override
+        public void incFromRemoteBytes(long bytes) {
+            fromRemoteBytes.add(bytes);
+        }
+
+        @Override
+        public long getToRemoteBytes() {
+            return toRemoteBytes.longValue();
+        }
+
+        @Override
+        public long getFromRemoteBytes() {
+            return fromRemoteBytes.longValue();
         }
 
         public void setWeight(int weight) {
@@ -109,7 +135,7 @@ public class ServerGroup {
             }
             healthCheckClient.start();
             Logger.lowLevelDebug("health check for " +
-                ServerHealthHandle.this.alias + "(" + server + ") " +
+                ServerHandle.this.alias + "(" + server + ") " +
                 "is started on loop " + el.alias);
         }
 
@@ -117,7 +143,7 @@ public class ServerGroup {
         public String id() {
             return "HealthCheck(" +
                 ServerGroup.this.alias + "/" +
-                ServerHealthHandle.this.alias +
+                ServerHandle.this.alias +
                 "(" + Utils.ipStr(server.getAddress().getAddress()) + ":" + server.getPort() + ")" +
                 ")";
         }
@@ -125,7 +151,7 @@ public class ServerGroup {
         @Override
         public void onClose() {
             Logger.lowLevelDebug("event loop closed, health check for " +
-                ServerHealthHandle.this.alias + "(" + server + ") is trying to restart");
+                ServerHandle.this.alias + "(" + server + ") is trying to restart");
             restart(); // try to restart
         }
 
@@ -133,7 +159,7 @@ public class ServerGroup {
         public void stop() {
             if (el == null)
                 return;
-            Logger.lowLevelDebug("stop health check for " + ServerHealthHandle.this.alias + "(" + server + ")");
+            Logger.lowLevelDebug("stop health check for " + ServerHandle.this.alias + "(" + server + ")");
             try {
                 el.detachResource(this);
             } catch (NotFoundException e) {
@@ -167,8 +193,8 @@ public class ServerGroup {
             // restart all the health checks
             // it will let the health check clients separate on all event loops
             assert Logger.lowLevelDebug("onEventLoopAdd called, restart health checks");
-            ArrayList<ServerHealthHandle> ls = servers;
-            for (ServerHealthHandle handle : ls) {
+            ArrayList<ServerHandle> ls = servers;
+            for (ServerHandle handle : ls) {
                 handle.restart();
             }
         }
@@ -183,15 +209,15 @@ public class ServerGroup {
     public final EventLoopGroup eventLoopGroup;
     private HealthCheckConfig healthCheckConfig;
     private Method method;
-    private ArrayList<ServerHealthHandle> servers = new ArrayList<>(0);
+    private ArrayList<ServerHandle> servers = new ArrayList<>(0);
 
     // START fields for WRR
     static class WRR {
         private int[] seq;
         private final AtomicInteger wrrCursor = new AtomicInteger(0);
-        private final ArrayList<ServerHealthHandle> servers; // = servers;
+        private final ArrayList<ServerHandle> servers; // = servers;
 
-        WRR(ArrayList<ServerHealthHandle> servers) {
+        WRR(ArrayList<ServerHandle> servers) {
             this.servers = servers;
         }
     }
@@ -241,9 +267,9 @@ public class ServerGroup {
             wrr.wrrCursor.set(idx + 1);
         }
         int realIdx = wrr.seq[idx];
-        ServerHealthHandle h = wrr.servers.get(realIdx);
+        ServerHandle h = wrr.servers.get(realIdx);
         if (h.healthy)
-            return new Connector(h.server, h.local);
+            return new SvrHandleConnector(h);
         else
             return wrrNext(wrr, recursion + 1);
     }
@@ -264,7 +290,7 @@ public class ServerGroup {
             // run calculation
             int sum = 0;
             for (int i = 0; i < wrr.servers.size(); i++) {
-                ServerHealthHandle h = wrr.servers.get(i);
+                ServerHandle h = wrr.servers.get(i);
                 weights[i] = h.weight;
                 original[i] = h.weight;
                 sum += h.weight;
@@ -343,21 +369,21 @@ public class ServerGroup {
     public void setHealthCheckConfig(HealthCheckConfig healthCheckConfig) {
         assert Logger.lowLevelDebug("set new health check config " + healthCheckConfig);
         this.healthCheckConfig = healthCheckConfig;
-        ArrayList<ServerHealthHandle> ls = servers;
-        for (ServerHealthHandle handle : ls) {
+        ArrayList<ServerHandle> ls = servers;
+        for (ServerHandle handle : ls) {
             handle.restart(); // restart all health check clients
         }
     }
 
     public synchronized void add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        ArrayList<ServerHealthHandle> ls = servers;
-        for (ServerHealthHandle c : ls) {
+        ArrayList<ServerHandle> ls = servers;
+        for (ServerHandle c : ls) {
             if (c.alias.equals(alias))
                 throw new AlreadyExistException();
         }
-        ServerHealthHandle handle = new ServerHealthHandle(alias, server, local, weight);
+        ServerHandle handle = new ServerHandle(alias, server, local, weight);
         handle.start();
-        ArrayList<ServerHealthHandle> newLs = new ArrayList<>(ls.size() + 1);
+        ArrayList<ServerHandle> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
         newLs.add(handle);
         servers = newLs;
@@ -367,12 +393,12 @@ public class ServerGroup {
     }
 
     public synchronized void remove(String alias) throws NotFoundException {
-        ArrayList<ServerHealthHandle> ls = servers;
+        ArrayList<ServerHandle> ls = servers;
         if (ls.isEmpty())
             throw new NotFoundException();
-        ArrayList<ServerHealthHandle> newLs = new ArrayList<>(servers.size() - 1);
+        ArrayList<ServerHandle> newLs = new ArrayList<>(servers.size() - 1);
         boolean found = false;
-        for (ServerHealthHandle c : ls) {
+        for (ServerHandle c : ls) {
             if (c.alias.equals(alias)) {
                 found = true;
                 c.stop();
@@ -389,19 +415,19 @@ public class ServerGroup {
     }
 
     public void clear() {
-        ArrayList<ServerHealthHandle> ls;
+        ArrayList<ServerHandle> ls;
         synchronized (this) {
             ls = servers;
             servers = new ArrayList<>(0);
             resetMethodRelatedFields();
         }
-        for (ServerHealthHandle s : ls) {
+        for (ServerHandle s : ls) {
             s.stop();
             assert Logger.lowLevelDebug("server removed " + s.alias + " from " + this.alias);
         }
     }
 
-    public List<ServerHealthHandle> getServerHealthHandles() {
+    public List<ServerHandle> getServerHandles() {
         return new ArrayList<>(servers);
     }
 }

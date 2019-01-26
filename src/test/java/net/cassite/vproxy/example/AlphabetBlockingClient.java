@@ -74,7 +74,7 @@ public class AlphabetBlockingClient {
                 throw new RuntimeException("sending " + toSend + " but receive " + recv + ", mismatch");
             }
 
-            Thread.sleep(1000);
+            Thread.sleep(500);
 
             if (closeEveryTime) {
                 socket.close();

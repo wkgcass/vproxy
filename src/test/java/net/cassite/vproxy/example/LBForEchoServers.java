@@ -13,6 +13,7 @@ import net.cassite.vproxy.selector.SelectorEventLoop;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Arrays;
 
 public class LBForEchoServers {
     private static volatile boolean doContinue = true;
@@ -38,10 +39,15 @@ public class LBForEchoServers {
         grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"), 10);
         grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"), 10);
 
+        // print
+        SelectorEventLoop delayPrintLoop = SelectorEventLoop.open();
+        runTimer(delayPrintLoop, lb, grp1, grp2);
+        new Thread(delayPrintLoop::loop).start();
+
         // start client in another thread
         new Thread(() -> {
             try {
-                AlphabetBlockingClient.runBlock(18080, 20, true);
+                AlphabetBlockingClient.runBlock(18080, 60, true);
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -74,5 +80,25 @@ public class LBForEchoServers {
         eventLoopGroup.close();
         // close echo2
         echo2.close();
+        // close print loop
+        delayPrintLoop.close();
+    }
+
+    private static void runTimer(SelectorEventLoop eventLoop, TcpLB lb, ServerGroup grp1, ServerGroup grp2) {
+        eventLoop.delay(1000, () -> {
+            long serverTo = lb.server.getToRemoteBytes();
+            long serverFrom = lb.server.getFromRemoteBytes();
+            long accepted = lb.server.getHistoryAcceptedConnectionCount();
+            System.out.println("server:\t\twrite to remote = \033[0;36m" + serverTo + "\033[0m\tread from remote: \033[0;36m" + serverFrom + "\033[0m\taccepted: \033[0;36m" + accepted + "\033[0m");
+
+            for (ServerGroup g : Arrays.asList(grp1, grp2)) {
+                for (ServerGroup.ServerHandle h : g.getServerHandles()) {
+                    long hTo = h.getToRemoteBytes();
+                    long hFrom = h.getFromRemoteBytes();
+                    System.out.println(g.alias + "" + "." + h.alias + ":\twrite to remote = \033[0;36m" + hTo + "\033[0m\tread from remote: \033[0;36m" + hFrom + "\033[0m");
+                }
+            }
+            runTimer(eventLoop, lb, grp1, grp2);
+        });
     }
 }

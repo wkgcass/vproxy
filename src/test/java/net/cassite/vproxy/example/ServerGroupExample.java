@@ -6,11 +6,11 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
-import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;

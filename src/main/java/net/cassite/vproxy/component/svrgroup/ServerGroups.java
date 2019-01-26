@@ -2,6 +2,7 @@ package net.cassite.vproxy.component.svrgroup;
 
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.connection.Connector;
 
 import java.util.ArrayList;
 import java.util.List;
