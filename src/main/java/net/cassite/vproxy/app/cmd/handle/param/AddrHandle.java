@@ -11,6 +11,10 @@ public class AddrHandle {
 
     public static InetSocketAddress get(Command cmd) {
         String addrStr = cmd.args.get(Param.addr);
+        return get(addrStr);
+    }
+
+    public static InetSocketAddress get(String addrStr) {
         int idx = addrStr.lastIndexOf(":");
         String addrIp = addrStr.substring(0, idx);
         int addrPort = Integer.parseInt(addrStr.substring(idx + 1));

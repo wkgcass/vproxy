@@ -1,13 +1,26 @@
 package net.cassite.vproxy.app;
 
+import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.component.app.Shutdown;
 import net.cassite.vproxy.component.app.StdIOController;
+import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 
 public class Main {
+    private static final String _HELP_STR_ = "" +
+        "vproxy: usage java " + Main.class.getName() + " \\" +
+        "\n\t\thelp                                         show this message" +
+        "\n" +
+        "\n\t\tload ${filename}                             load configuration from file" +
+        "\n" +
+        "\n\t\tresp-controller ${address} ${password}       start the resp-controller, will" +
+        "\n\t\t                                             be named as `resp-controller`" +
+        "";
+
     public static void main(String[] args) {
         try {
             Application.create();
@@ -28,7 +41,12 @@ public class Main {
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
+            String next2 = i + 2 < args.length ? args[i + 2] : null;
             switch (arg) {
+                case "help":
+                    System.out.println(_HELP_STR_);
+                    System.exit(0);
+                    return;
                 case "load":
                     if (next == null) {
                         System.err.println("invalid system call for `load`: should specify a file name to load");
@@ -41,6 +59,34 @@ public class Main {
                         Shutdown.load(next, new CallbackInMain());
                     } catch (Exception e) {
                         System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
+                        System.exit(1);
+                        return;
+                    }
+                    break;
+                case "resp-controller":
+                    if (next == null || next2 == null) {
+                        System.err.println("invalid system call for `resp-controller`: should specify an address and a password");
+                        System.exit(1);
+                        return;
+                    }
+                    // handle resp-controller, so increase the cursor
+                    i += 2;
+                    InetSocketAddress respCtrlAddr;
+                    try {
+                        respCtrlAddr = AddrHandle.get(next);
+                    } catch (Exception e) {
+                        System.err.println("invalid address: " + next);
+                        System.exit(1);
+                        return;
+                    }
+                    byte[] pass = next2.getBytes();
+                    try {
+                        Application.get().respControllerHolder.add("resp-controller", respCtrlAddr, pass);
+                    } catch (AlreadyExistException e) {
+                        // should not happen
+                        throw new RuntimeException(e);
+                    } catch (IOException e) {
+                        System.err.println("start resp-controller failed");
                         System.exit(1);
                         return;
                     }
