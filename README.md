@@ -40,12 +40,32 @@ java net.cassite.vproxy.app.Main load ~/vproxy.conf
 
 Then everything is done.
 
-### Detailed Phases via StdIO
+### Use redis-cli
+
+You can create a `RESPController` via stdIO, then all commands will be available in your `redis-cli` client.
+
+Input the following command in your vproxy application via standard input:
+
+```
+System call: add resp-controller r0 addr 0.0.0.0:16379 pass 123456
+```
+
+which creates a `RESPController` instance named `r0` listens on `0.0.0.0:16379` and has password `123456`.
+
+Then from any endpoint who has access, you can run this to operate on the vproxy:
+
+```
+redis-cli -p 16379 -h $THE_VPROXY_HOST_IP_ADDRESS -a 123456 [$YOU_CAN_ALSO_DIRECTLY_RUN_COMMANDS_HERE]
+```
+
+You should know that the `help` is trapped by `redis-cli` (which will return redis-cli's help message), so we give a NEW command named `man`, it will return the same message as using `help` in stdIO.
+
+### Detailed Phases via stdio or redis-cli, Step by Step
 
 To create a tcp loadbalancer, you can:
 
 1. start the application via `net.cassite.vproxy.app.Main`
-2. type in the following commands:
+2. type in the following commands or run from the redis-cli:
 3. `add event-loop-group elg0`  
     which creates a event loop group named `elg0`, you can change the name if you want
 4. `add server-groups sgs0`  
@@ -158,11 +178,15 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 VProxy will create a event loop named `ControlEventLoop` for controlling operations. All quick operations will be operated on this event loop, some operations that might take a very long time will be operated on new threads.
 
-VProxy provides you with multiple ways of configuring the vproxy instance: (for now, only `StdIOController` is provided, will add more in the future).
+VProxy provides you with multiple ways of configuring the vproxy instance.
 
 #### StdIOController
 
 `StdIOController` provides the way of controlling the vproxy process via standard input and output. It simply starts a `Scanner` to watch your commands on a new thread. Results, errors or logs will be printed to the stdout or stderr.
+
+#### RESPController
+
+`RESPController` listens on a port and uses the REdis Serialization Protocol for transporting commands and results. You can use `redis-cli` to manage the vproxy instance.
 
 ## The End
 

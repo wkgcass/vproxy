@@ -6,11 +6,17 @@ import net.cassite.vproxy.util.Utils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.nio.channels.ServerSocketChannel;
+import java.util.concurrent.atomic.LongAdder;
 
-public class BindServer {
+public class BindServer implements NetFlowRecorder {
     public final InetSocketAddress bind;
     private final String _id;
     final ServerSocketChannel channel;
+
+    // statistics
+    private final LongAdder fromRemoteBytes = new LongAdder();
+    private final LongAdder toRemoteBytes = new LongAdder();
+    private long historyAcceptedConnectionCount = 0; // no concurrency when accepting connections
 
     NetEventLoop _eventLoop = null;
 
@@ -33,6 +39,32 @@ public class BindServer {
         bind = (InetSocketAddress) channel.getLocalAddress();
         _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
     }
+
+    // --- START statistics ---
+    public long getFromRemoteBytes() {
+        return fromRemoteBytes.longValue();
+    }
+
+    public long getToRemoteBytes() {
+        return toRemoteBytes.longValue();
+    }
+
+    public void incFromRemoteBytes(long bytes) {
+        fromRemoteBytes.add(bytes);
+    }
+
+    public void incToRemoteBytes(long bytes) {
+        toRemoteBytes.add(bytes);
+    }
+
+    public void incHistoryAcceptedConnectionCount() {
+        ++historyAcceptedConnectionCount;
+    }
+
+    public long getHistoryAcceptedConnectionCount() {
+        return historyAcceptedConnectionCount;
+    }
+    // --- END statistics ---
 
     public boolean isClosed() {
         return closed;

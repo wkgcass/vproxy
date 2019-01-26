@@ -6,13 +6,12 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
-import net.cassite.vproxy.component.svrgroup.Connector;
 import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -87,18 +86,18 @@ public class ServerGroupExample {
             System.out.println("current active server is: \033[0;36m" + c + "\033[0m");
             List<String> names = eventLoopGroup.names();
             for (String name : names) {
-                Tuple<EventLoopWrapper, SelectorEventLoop> tuple;
+                EventLoopWrapper w;
                 try {
-                    tuple = eventLoopGroup.get(name);
+                    w = eventLoopGroup.get(name);
                 } catch (NotFoundException e) {
                     // won't happen
                     continue;
                 }
                 List<BindServer> bindServers = new ArrayList<>();
-                tuple.left.copyServers(bindServers);
+                w.copyServers(bindServers);
                 List<Connection> connections = new ArrayList<>();
-                tuple.left.copyConnections(connections);
-                System.out.println("event loop \033[0;36m" + tuple.left.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
+                w.copyConnections(connections);
+                System.out.println("event loop \033[0;36m" + w.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
             }
             runTimer(eventLoop, eventLoopGroup, grp);
         });

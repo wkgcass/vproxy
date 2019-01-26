@@ -2,6 +2,12 @@ package net.cassite.vproxy.app.cmd;
 
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
+import net.cassite.vproxy.component.exception.AlreadyExistException;
+import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.exception.XException;
+import net.cassite.vproxy.component.proxy.Session;
+import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
@@ -21,17 +27,26 @@ public class Command {
     public static String helpString() {
         return "" +
             "vproxy:" +
+            "\n    help                     | h                   show this message" +
+            "\n    man                                            show this message" +
             "\n    System commands:" +
-            "\n        help                 | h                   show this message" +
             "\n        System call: help                          show this message" +
             "\n        System call: shutdown                      shutdown the vproxy process" +
-            "\n        System call: load                          load config commands from a file" +
+            "\n        System call: load ${filepath}              load config commands from a file" +
+            "\n        System call: add resp-controller           start resp controller" +
+            "\n                               ${alias}" +
+            "\n                               address  ${bind addr}" +
+            "\n                               password ${password}" +
+            "\n        System call: remove resp-controller        stop resp controller" +
+            "\n                               ${name}" +
+            "\n        System call: list-detail resp-controller   check resp controller" +
+            "\n    (System commands can only be executed via StdIOController)" +
             "\n    Operate a resource:" +
             "\n        list                 | l                   list resources' names" +
             "\n        list-detail          | L                   list detailed info about resources" +
             "\n        add                  | a                   create a resource" +
             "\n        add . to .           | a . to .            add a resource into another one" +
-            "\b        update               | u                   update a resource" +
+            "\n        update               | u                   update a resource" +
             "\n        remove               | r                   remove and release a resource" +
             "\n        force-remove         | R                   force remove and release a resource" +
             "\n        remove . from .      | r . from .          detach a resource from another one, the detached resource is not released" +
@@ -45,9 +60,12 @@ public class Command {
             "\n            server-group     | sg                  server group" +
             "\n            event-loop       | el                  event loop, is inside event loop group" +
             "\n            server           | svr                 server, is inside server group" +
-            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event loop and loadbalancer" +
-            "\n            connection       | conn                connection record, is inside event loop" +
-            "\n            session          | sess                a proxy session, is inside loadbalancer" +
+            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb" +
+            "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|server" +
+            "\n            session          | sess                a proxy session, is inside tcp-lb" +
+            "\n            bytes-in         | bin                 input bytes (net flow from remote to local), is inside bind-server|connection|server" +
+            "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
+            "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
             "\n    Parameters:" +
             "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
             "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
@@ -58,7 +76,7 @@ public class Command {
             "\n        event-loop-group     | elg                 event loop group         , required when (creating server group) or (creating tcp-lb as the worker group)" +
             "\n        acceptor-elg         | aelg                acceptor event loop group, required when (creating tcp-lb)" +
             "\n        address              | addr                ip address or ip:port    , required when (creating tcp-lb) or (adding server into server group)" +
-            "\n        ip                                         ip address               , required when (adding server into server group as the local ip)" +
+            "\n        ip                   | via                 ip address               , required when (adding server into server group as the local ip)" +
             "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb)" +
             "\n        in-buffer-size                             in buffer size           , required when (creating tcp-lb)" +
             "\n        out-buffer-size                            out buffer size          , required when (creating tcp-lb)" +
@@ -87,8 +105,16 @@ public class Command {
             }
             sb.append(c);
         }
-        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
 
+        assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
+        Command cmd = statm(_cmd);
+        semantic(cmd);
+        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
+
+        return cmd;
+    }
+
+    public static Command statm(List<String> _cmd) throws Exception {
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
 
@@ -330,8 +356,6 @@ public class Command {
             throw new Exception("the parser has a bug and did not detect invalidity of this input");
         }
 
-        semantic(cmd);
-        assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
         return cmd;
     }
 
@@ -426,10 +450,11 @@ public class Command {
             case bs: // bindServer
             case conn: // connection
             case sess: // session
-                // these three resources are related to a channel
+                // these resources are related to a channel
                 // the handles are similar
                 // so put them together
                 // though there're still some logic branches
+                chnlsw:
                 switch (cmd.action) {
                     case a:
                     case r:
@@ -438,25 +463,65 @@ public class Command {
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case L:
                     case l:
-                        // should have a parent resource
+                        switch (cmd.resource.type) {
+                            case bs:
+                                BindServerHandle.checkBindServer(cmd.resource);
+                                break chnlsw;
+                            case conn:
+                                ConnectionHandle.checkConnection(cmd.resource);
+                                break chnlsw;
+                            case sess:
+                                SessionHandle.checkSession(cmd.resource);
+                                break chnlsw;
+                            // no need to add default here
+                        }
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
+            case bin: // bytes-in
+            case bout: // bytes-out
+                bsw:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        // modification not supported for accepted-connections count resources
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-
-                        if ((cmd.resource.type == ResourceType.sess || cmd.resource.type == ResourceType.conn)
-                            && targetResource.type == ResourceType.tl) {
-
-                            // sess can only be found in tcp lb
-                            TcpLBHandle.checkTcpLB(targetResource);
-
-                        } else if (cmd.resource.type != ResourceType.sess
-                            && targetResource.type == ResourceType.el) {
-
-                            // bs and conn can be found in event loop
-                            EventLoopHandle.checkEventLoop(targetResource);
-
-                        } else {
-                            throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
+                        switch (targetResource.type) {
+                            case bs:
+                                BindServerHandle.checkBindServer(targetResource);
+                                break bsw;
+                            case conn:
+                                ConnectionHandle.checkConnection(targetResource);
+                                break bsw;
+                            case svr:
+                                ServerHandle.checkServer(targetResource);
+                                break bsw;
+                            default:
+                                throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
                         }
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
+            case acceptedconncount: // accepted-connections
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        // modification not supported for accepted-connections count resources
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        // can be found in bind-server
+                        if (targetResource == null)
+                            throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
+                        BindServerHandle.checkBindServer(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -575,11 +640,17 @@ public class Command {
         }
     }
 
-    public void run(Callback<String, Throwable> cb) {
-        Application.get()._controlEventLoop.nextTick(() -> {
-            String res;
+    public void run(Callback<CmdResult, Throwable> cb) {
+        Application.get().controlEventLoop.getSelectorEventLoop().nextTick(() -> {
+            CmdResult res;
             try {
-                res = runTry();
+                res = runThrow();
+            } catch (AlreadyExistException e) {
+                cb.failed(new XException("the resource already exists"));
+                return;
+            } catch (NotFoundException e) {
+                cb.failed(new XException("the resource could not be found"));
+                return;
             } catch (Throwable t) {
                 cb.failed(t);
                 return;
@@ -602,114 +673,154 @@ public class Command {
         return sb.toString();
     }
 
-    private String runTry() throws Exception {
+    private CmdResult runThrow() throws Exception {
         Resource targetResource = resource.parentResource == null ? prepositionResource : resource.parentResource;
         switch (resource.type) {
             case conn: // can be retrieved from tl or el
                 switch (action) {
                     case l:
-                        return "" + ConnectionHandle.count(targetResource);
+                        int connCount = ConnectionHandle.count(targetResource);
+                        return new CmdResult(connCount, connCount, "" + connCount);
                     case L:
-                        return utilJoinList(ConnectionHandle.list(targetResource));
+                        List<Connection> connList = ConnectionHandle.list(targetResource);
+                        List<String> connStrList = connList.stream().map(Connection::id).collect(Collectors.toList());
+                        return new CmdResult(connStrList, connStrList, utilJoinList(connList));
                 }
             case sess: // can only be retrieve from tl
                 switch (action) {
                     case l:
-                        return "" + SessionHandle.count(targetResource);
+                        int sessCount = SessionHandle.count(targetResource);
+                        return new CmdResult(sessCount, sessCount, "" + sessCount);
                     case L:
-                        return utilJoinList(SessionHandle.list(targetResource));
+                        List<Session> sessList = SessionHandle.list(targetResource);
+                        List<List<String>> sessTupleList = sessList.stream().map(sess -> Arrays.asList(sess.active.id(), sess.passive.id())).collect(Collectors.toList());
+                        return new CmdResult(sessList, sessTupleList, utilJoinList(sessList));
                 }
             case bs: // can only be retrieved from el
                 switch (action) {
                     case l:
-                        return "" + BindServerHandle.count(targetResource);
+                        int bsCount = BindServerHandle.count(targetResource);
+                        return new CmdResult(bsCount, bsCount, "" + bsCount);
                     case L:
-                        return utilJoinList(BindServerHandle.list(targetResource));
+                        List<BindServer> bsList = BindServerHandle.list(targetResource);
+                        List<String> bsStrList = bsList.stream().map(BindServer::id).collect(Collectors.toList());
+                        return new CmdResult(bsList, bsStrList, utilJoinList(bsList));
+                }
+            case bin:
+                switch (action) {
+                    case l:
+                    case L:
+                        long binRes = StatisticHandle.bytesIn(targetResource);
+                        return new CmdResult(binRes, binRes, "" + binRes);
+                }
+            case bout:
+                switch (action) {
+                    case l:
+                    case L:
+                        long boutRes = StatisticHandle.bytesOut(targetResource);
+                        return new CmdResult(boutRes, boutRes, "" + boutRes);
+                }
+            case acceptedconncount:
+                switch (action) {
+                    case l:
+                    case L:
+                        long acc = StatisticHandle.acceptedConnCount(targetResource);
+                        return new CmdResult(acc, acc, "" + acc);
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {
                     case l:
-                        return utilJoinList(ServerHandle.names(targetResource));
+                        List<String> serverNames = ServerHandle.names(targetResource);
+                        return new CmdResult(serverNames, serverNames, utilJoinList(serverNames));
                     case L:
-                        return utilJoinList(ServerHandle.detail(targetResource));
+                        List<ServerHandle.ServerRef> svrRefList = ServerHandle.detail(targetResource);
+                        List<String> svrRefStrList = svrRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(svrRefList, svrRefStrList, utilJoinList(svrRefList));
                     case a:
                         ServerHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         ServerHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                     case u:
                         ServerHandle.update(this);
-                        return "";
+                        return new CmdResult();
                 }
             case sgs: // top level
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(ServerGroupsHandle.names());
+                        List<String> sgsNames = ServerGroupsHandle.names();
+                        return new CmdResult(sgsNames, sgsNames, utilJoinList(sgsNames));
                     case a:
                         ServerGroupsHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         ServerGroupsHandle.preCheck(this);
                     case R:
                         ServerGroupsHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                 }
             case elg: // top level
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(EventLoopGroupHandle.names());
+                        List<String> elgNames = EventLoopGroupHandle.names();
+                        return new CmdResult(elgNames, elgNames, utilJoinList(elgNames));
                     case a:
                         EventLoopGroupHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         EventLoopGroupHandle.preCheck(this);
                     case R:
                         EventLoopGroupHandle.forceRemvoe(this);
-                        return "";
+                        return new CmdResult();
                 }
             case el: // can only be retrieved from event loop group
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(EventLoopHandle.names(targetResource));
+                        List<String> elNames = EventLoopHandle.names(targetResource);
+                        return new CmdResult(elNames, elNames, utilJoinList(elNames));
                     case a:
                         EventLoopHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         EventLoopHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                 }
             case sg: // top level or retrieved from serverGroups
                 switch (action) {
                     case l:
                     case L:
-                        return utilJoinList(ServerGroupHandle.names(targetResource));
+                        List<String> sgNames = ServerGroupHandle.names(targetResource);
+                        return new CmdResult(sgNames, sgNames, utilJoinList(sgNames));
                     case a:
                         ServerGroupHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                         ServerGroupHandle.preCheck(this);
                     case R:
                         ServerGroupHandle.forceRemove(this);
-                        return "";
+                        return new CmdResult();
                     case u:
                         ServerGroupHandle.update(this);
-                        return "";
+                        return new CmdResult();
                 }
-            case tl: // top level
+            case tl: // tcp loadbalancer on top level
                 switch (action) {
                     case l:
-                        return utilJoinList(TcpLBHandle.names());
+                        List<String> tlNames = TcpLBHandle.names();
+                        return new CmdResult(tlNames, tlNames, utilJoinList(tlNames));
                     case L:
-                        return utilJoinList(TcpLBHandle.details());
+                        List<TcpLBHandle.TcpLBRef> tlRefList = TcpLBHandle.details();
+                        List<String> tlRefStrList = tlRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(tlRefList, tlRefStrList, utilJoinList(tlRefList));
                     case a:
                         TcpLBHandle.add(this);
-                        return "";
+                        return new CmdResult();
                     case r:
                     case R:
                         TcpLBHandle.forceRemove(this);

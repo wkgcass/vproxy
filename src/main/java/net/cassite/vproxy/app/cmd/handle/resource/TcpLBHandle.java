@@ -9,6 +9,7 @@ import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
 import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
+import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.util.Utils;
 
@@ -38,6 +39,14 @@ public class TcpLBHandle {
             throw new Exception("missing argument " + Param.inbuffersize.fullname);
         if (!cmd.args.containsKey(Param.outbuffersize))
             throw new Exception("missing argument " + Param.outbuffersize.fullname);
+
+        AddrHandle.check(cmd);
+        InBufferSizeHandle.check(cmd);
+        OutBufferSizeHandle.check(cmd);
+    }
+
+    public static TcpLB get(Resource tcplb) throws NotFoundException {
+        return Application.get().tcpLBHolder.get(tcplb.alias);
     }
 
     public static List<String> names() {

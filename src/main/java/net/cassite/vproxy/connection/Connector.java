@@ -1,19 +1,16 @@
-package net.cassite.vproxy.component.svrgroup;
+package net.cassite.vproxy.connection;
 
-import net.cassite.vproxy.connection.ClientConnection;
 import net.cassite.vproxy.util.RingBuffer;
-import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
-public class Connector extends Tuple<InetSocketAddress, InetSocketAddress> {
-    public final InetSocketAddress remote;
-    public final InetSocketAddress local;
+public class Connector {
+    private final InetSocketAddress remote;
+    private final InetSocketAddress local;
 
     public Connector(InetSocketAddress remote, InetSocketAddress local) {
-        super(remote, local);
         this.remote = remote;
         this.local = local;
     }

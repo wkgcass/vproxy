@@ -7,7 +7,6 @@ import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.SocketChannel;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -59,13 +58,13 @@ public class Proxy {
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
             // make connection to another end point
-            Tuple<InetSocketAddress, InetSocketAddress> remoteLocal = config.connGen.genRemoteLocal(connection);
+            Connector connector = config.connGen.genConnector(connection);
 
             // check whether address tuple is null
             // null means the user code fail to provide a new connection
             // maybe user think that the backend is not working, or the source ip is forbidden
             // any way, the user refuse to provide a new connection
-            if (remoteLocal == null) {
+            if (connector == null) {
                 Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(connection);
@@ -74,11 +73,9 @@ public class Proxy {
 
             ClientConnection clientConnection;
             try {
-                clientConnection = ClientConnection.create(remoteLocal.left, remoteLocal.right,
-                    // switch the two buffers to make a PROXY
-                    connection.outBuffer, connection.inBuffer);
+                clientConnection = connector.connect(/*switch the two buffers to make a PROXY*/connection.outBuffer, connection.inBuffer);
             } catch (IOException e) {
-                Logger.fatal(LogType.CONN_ERROR, "create passive connection object failed, maybe provided endpoint info is invalid: " + e);
+                Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid: " + e);
                 // it should not happen if user provided endpoint is valid
                 // but if it happens, we close both sides
 

@@ -134,6 +134,7 @@ public class SelectorEventLoop {
         }
     }
 
+    @Blocking
     public void loop() {
         runningThread = Thread.currentThread();
         while (selector.isOpen()) {
@@ -209,6 +210,15 @@ public class SelectorEventLoop {
         if (runningThread == null || Thread.currentThread() == runningThread)
             return; // we do not need to wakeup because it's not started or is already waken up
         selector.wakeup(); // wake the selector because new event is added
+    }
+
+    @ThreadSafe
+    public void runOnLoop(Runnable r) {
+        if (runningThread == null || Thread.currentThread() == runningThread) {
+            tryRunnable(r); // directly run if is already on the loop thread
+        } else {
+            nextTick(r); // otherwise push into queue
+        }
     }
 
     @ThreadSafe
@@ -296,6 +306,12 @@ public class SelectorEventLoop {
     public int getOps(SelectableChannel channel) {
         SelectionKey key = getKeyCheckNull(channel);
         return key.interestOps();
+    }
+
+    @ThreadSafe
+    public Object getAtt(SelectableChannel channel) {
+        SelectionKey key = getKeyCheckNull(channel);
+        return key.attachment();
     }
 
     private SelectionKey getKeyCheckNull(SelectableChannel channel) {

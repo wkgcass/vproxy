@@ -4,9 +4,9 @@ import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -30,7 +30,7 @@ public class ProxyEchoServer {
             .setConnGen(conn -> {
                 // connect to localhost 19080
                 try {
-                    return new Tuple<>(new InetSocketAddress("127.0.0.1", 19080),
+                    return new Connector(new InetSocketAddress("127.0.0.1", 19080),
                         new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
                 } catch (UnknownHostException e) {
                     return null;

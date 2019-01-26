@@ -1,5 +1,7 @@
 package net.cassite.vproxy.redis.entity;
 
+import net.cassite.vproxy.component.exception.XException;
+
 public class RESPError extends RESP {
     public final StringBuilder error = new StringBuilder();
 
@@ -10,6 +12,6 @@ public class RESPError extends RESP {
 
     @Override
     public Object getJavaObject() {
-        return error.toString();
+        return new XException(error.toString());
     }
 }

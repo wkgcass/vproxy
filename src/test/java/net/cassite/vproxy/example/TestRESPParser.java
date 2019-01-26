@@ -114,7 +114,7 @@ public class TestRESPParser {
         Parser parser = new Parser(16384);
         byte[] bytes = str.getBytes();
         RingBuffer rb = RingBuffer.allocate(bytes.length);
-        ByteArrayChannel ch = new ByteArrayChannel(bytes, 0, bytes.length, 0);
+        ByteArrayChannel ch = ByteArrayChannel.fromFull(bytes);
         try {
             rb.storeBytesFrom(ch);
         } catch (IOException e) {

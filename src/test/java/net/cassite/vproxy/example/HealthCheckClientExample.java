@@ -15,7 +15,7 @@ public class HealthCheckClientExample {
     public static void main(String[] args) throws IOException, InterruptedException {
         SelectorEventLoop loop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(loop);
-        TCPHealthCheckClient client = new TCPHealthCheckClient(eventLoop, loop,
+        TCPHealthCheckClient client = new TCPHealthCheckClient(eventLoop,
             new InetSocketAddress("127.0.0.1", 18080),
             InetAddress.getByName("127.0.0.1"),
             new HealthCheckConfig(200, 800, 4, 5),

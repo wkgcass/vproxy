@@ -8,12 +8,14 @@ public enum Param {
     elg("event-loop-group"),
     aelg("acceptor-elg"),
     addr("address"),
-    ip("ip"),
+    ip("via"),
     sgs("server-groups"),
     inbuffersize("in-buffer-size"),
     outbuffersize("out-buffer-size"),
     meth("method"),
     w("weight"),
+
+    pass("password"),
     ;
     public final String fullname;
 

@@ -16,10 +16,14 @@ public class NetEventLoop {
     private static final HandlerForConnection handlerForConnection = new HandlerForClientConnection();
     private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
 
-    final SelectorEventLoop selectorEventLoop;
+    private final SelectorEventLoop selectorEventLoop;
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
+    }
+
+    public SelectorEventLoop getSelectorEventLoop() {
+        return selectorEventLoop;
     }
 
     @ThreadSafe
@@ -44,7 +48,7 @@ public class NetEventLoop {
         selectorEventLoop.remove(server.channel);
     }
 
-    private void doAddConnection(Connection connection, int ops, Object att, Handler<SocketChannel> handler) throws IOException {
+    private void doAddConnection(Connection connection, int ops, ConnectionHandlerContext att, Handler<SocketChannel> handler) throws IOException {
         // synchronize connection
         // to prevent inner fields being inconsistent
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -52,15 +56,15 @@ public class NetEventLoop {
             if (connection.isClosed())
                 throw new ClosedChannelException();
             // then, the connection will not be closed until added into the event loop
-            if (connection._eventLoop != null)
+            if (connection.getEventLoop() != null)
                 throw new IOException("connection " + connection + " already registered to a event loop");
 
-            connection._eventLoop = this;
+            connection.setEventLoopRelatedFields(this, att);
             try {
                 selectorEventLoop.add(connection.channel, ops, att, handler);
             } catch (IOException e) {
                 // remove the eventLoop ref if adding failed
-                connection._eventLoop = null;
+                connection.releaseEventLoopRelatedFields();
                 throw e;
             }
         }
@@ -153,8 +157,11 @@ class HandlerForServer implements Handler<ServerSocketChannel> {
                 Logger.shouldNotHappen("Connection object create failed: " + e);
                 return;
             }
+            conn.addNetFlowRecorder(sctx.server);
             sctx.handler.connection(sctx, conn);
         }
+        // accept succeeded
+        sctx.server.incHistoryAcceptedConnectionCount();
         // then, we try to accept again, in case there are pending connections
         accept(ctx);
     }
@@ -225,6 +232,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
             Logger.shouldNotHappen("read nothing, the event should not be fired");
             return;
         }
+        cctx.connection.incFromRemoteBytes(read); // record net flow, it's reading, so is "from remote"
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
         if (cctx.connection.inBuffer.free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
@@ -258,6 +266,8 @@ class HandlerForConnection implements Handler<SocketChannel> {
             // we ignore it for now
             return;
         }
+        cctx.connection.incFromRemoteBytes(write); // record net flow, it's writing, so is "to remote"
+        // NOTE: should also record in Quick Write impl in Connection.java
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.outBuffer.used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event
@@ -269,7 +279,7 @@ class HandlerForConnection implements Handler<SocketChannel> {
     @Override
     public void removed(HandlerContext<SocketChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
-        cctx.connection._eventLoop = null;
+        cctx.connection.releaseEventLoopRelatedFields();
         cctx.handler.removed(cctx);
     }
 }

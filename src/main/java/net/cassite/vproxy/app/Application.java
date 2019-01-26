@@ -18,8 +18,8 @@ public class Application {
     public final ServerGroupHolder serverGroupHolder;
     public final ServerGroupsHolder serverGroupsHolder;
     public final TcpLBHolder tcpLBHolder;
-    public final SelectorEventLoop _controlEventLoop;
     public final EventLoopWrapper controlEventLoop;
+    public final RESPControllerHolder respControllerHolder;
     public final String appVersion;
 
     private Application() throws IOException {
@@ -27,8 +27,9 @@ public class Application {
         this.serverGroupHolder = new ServerGroupHolder();
         this.serverGroupsHolder = new ServerGroupsHolder();
         this.tcpLBHolder = new TcpLBHolder();
-        this._controlEventLoop = SelectorEventLoop.open();
-        this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", this._controlEventLoop);
+        SelectorEventLoop _controlEventLoop = SelectorEventLoop.open();
+        this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
+        this.respControllerHolder = new RESPControllerHolder();
         this.appVersion = getVersion();
     }
 

@@ -1,5 +1,6 @@
 package net.cassite.vproxy.component.app;
 
+import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.util.Blocking;
 import net.cassite.vproxy.util.Callback;
@@ -108,9 +109,9 @@ public class Shutdown {
             return;
         }
         Command cmd = commands.get(idx);
-        cmd.run(new Callback<String, Throwable>() {
+        cmd.run(new Callback<CmdResult, Throwable>() {
             @Override
-            protected void onSucceeded(String value) {
+            protected void onSucceeded(CmdResult value) {
                 runCommandsOnLoading(commands, idx + 1, cb);
             }
 

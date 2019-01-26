@@ -10,45 +10,53 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
-import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.connection.ConnCloseHandler;
+import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.NetFlowRecorder;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 
 public class ServerGroup {
-    public class ServerHealthHandle implements EventLoopAttach {
+    private static final Object _VALUE_ = new Object(); // value for Map in ServerHandle
+
+    public class ServerHandle implements EventLoopAttach, NetFlowRecorder, ConnCloseHandler {
         class ServerHealthCheckHandler implements HealthCheckHandler {
             @Override
             public void up(SocketAddress remote) {
                 healthy = true;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
-                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to UP");
+                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to UP");
             }
 
             @Override
             public void down(SocketAddress remote) {
                 healthy = false;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
-                    "server " + ServerHealthHandle.this.alias + "(" + server + ") status changed to DOWN");
+                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN");
             }
 
             @Override
             public void upOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("up once for " + ServerHealthHandle.this.alias + "(" + server + ")");
+                assert Logger.lowLevelDebug("up once for " + ServerHandle.this.alias + "(" + server + ")");
             }
 
             @Override
             public void downOnce(SocketAddress remote) {
                 // do nothing but debug log
-                assert Logger.lowLevelDebug("down once for " + ServerHealthHandle.this.alias + "(" + server + ")");
+                assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + ")");
             }
         }
 
@@ -58,16 +66,59 @@ public class ServerGroup {
         public final InetAddress local;
         private int weight;
         EventLoopWrapper el;
-        SelectorEventLoop sel;
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
         TCPHealthCheckClient healthCheckClient;
 
-        ServerHealthHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
+        private final LongAdder fromRemoteBytes = new LongAdder();
+        private final LongAdder toRemoteBytes = new LongAdder();
+
+        private ConcurrentMap<Connection, Object> connMap = new ConcurrentHashMap<>();
+
+        ServerHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
             this.alias = alias;
             this.server = server;
             this.local = local;
             this.weight = initialWeight;
+        }
+
+        // --- START statistics ---
+        @Override
+        public void incToRemoteBytes(long bytes) {
+            toRemoteBytes.add(bytes);
+        }
+
+        @Override
+        public void incFromRemoteBytes(long bytes) {
+            fromRemoteBytes.add(bytes);
+        }
+
+        @Override
+        public long getToRemoteBytes() {
+            return toRemoteBytes.longValue();
+        }
+
+        @Override
+        public long getFromRemoteBytes() {
+            return fromRemoteBytes.longValue();
+        }
+        // --- END statistics ---
+
+        @Override
+        public void onConnClose(Connection conn) {
+            connMap.remove(conn);
+        }
+
+        void attachConnection(Connection conn) {
+            connMap.put(conn, _VALUE_);
+        }
+
+        public int connectionCount() {
+            return connMap.size();
+        }
+
+        public void copyConnections(Collection<? super Connection> c) {
+            c.addAll(connMap.keySet());
         }
 
         public void setWeight(int weight) {
@@ -91,14 +142,13 @@ public class ServerGroup {
         void restart() {
             if (el != null)
                 stop(); // event loop exists, so we stop first, then start (which makes it a `restart`)
-            Tuple<EventLoopWrapper, SelectorEventLoop> tuple = eventLoopGroup.next();
-            if (tuple == null) {
+            EventLoopWrapper w = eventLoopGroup.next();
+            if (w == null) {
                 assert Logger.lowLevelDebug("cannot get event loop, give up for now. we will start again when there're available event loops");
                 return;
             }
-            el = tuple.left;
-            sel = tuple.right;
-            healthCheckClient = new TCPHealthCheckClient(el, sel, server, local, healthCheckConfig, healthy, handler);
+            el = w;
+            healthCheckClient = new TCPHealthCheckClient(el, server, local, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
@@ -113,7 +163,7 @@ public class ServerGroup {
             }
             healthCheckClient.start();
             Logger.lowLevelDebug("health check for " +
-                ServerHealthHandle.this.alias + "(" + server + ") " +
+                ServerHandle.this.alias + "(" + server + ") " +
                 "is started on loop " + el.alias);
         }
 
@@ -121,7 +171,7 @@ public class ServerGroup {
         public String id() {
             return "HealthCheck(" +
                 ServerGroup.this.alias + "/" +
-                ServerHealthHandle.this.alias +
+                ServerHandle.this.alias +
                 "(" + Utils.ipStr(server.getAddress().getAddress()) + ":" + server.getPort() + ")" +
                 ")";
         }
@@ -129,7 +179,7 @@ public class ServerGroup {
         @Override
         public void onClose() {
             Logger.lowLevelDebug("event loop closed, health check for " +
-                ServerHealthHandle.this.alias + "(" + server + ") is trying to restart");
+                ServerHandle.this.alias + "(" + server + ") is trying to restart");
             restart(); // try to restart
         }
 
@@ -137,7 +187,7 @@ public class ServerGroup {
         public void stop() {
             if (el == null)
                 return;
-            Logger.lowLevelDebug("stop health check for " + ServerHealthHandle.this.alias + "(" + server + ")");
+            Logger.lowLevelDebug("stop health check for " + ServerHandle.this.alias + "(" + server + ")");
             try {
                 el.detachResource(this);
             } catch (NotFoundException e) {
@@ -171,8 +221,8 @@ public class ServerGroup {
             // restart all the health checks
             // it will let the health check clients separate on all event loops
             assert Logger.lowLevelDebug("onEventLoopAdd called, restart health checks");
-            ArrayList<ServerHealthHandle> ls = servers;
-            for (ServerHealthHandle handle : ls) {
+            ArrayList<ServerHandle> ls = servers;
+            for (ServerHandle handle : ls) {
                 handle.restart();
             }
         }
@@ -187,21 +237,33 @@ public class ServerGroup {
     public final EventLoopGroup eventLoopGroup;
     private HealthCheckConfig healthCheckConfig;
     private Method method;
-    private ArrayList<ServerHealthHandle> servers = new ArrayList<>(0);
+    private ArrayList<ServerHandle> servers = new ArrayList<>(0);
 
     // START fields for WRR
     static class WRR {
-        private int[] seq;
-        private final AtomicInteger wrrCursor = new AtomicInteger(0);
-        private final ArrayList<ServerHealthHandle> servers; // = servers;
+        int[] seq;
+        final AtomicInteger wrrCursor = new AtomicInteger(0);
+        final ArrayList<ServerHandle> servers; // = servers;
 
-        WRR(ArrayList<ServerHealthHandle> servers) {
-            this.servers = servers;
+        WRR(List<ServerHandle> servers) {
+            this.servers = new ArrayList<>(servers);
         }
     }
 
     private WRR _wrr;
     // END fields for WRR
+
+    // START fields for WLC
+    static class WLC {
+        final ArrayList<ServerHandle> servers;
+
+        WLC(List<ServerHandle> servers) {
+            this.servers = new ArrayList<>(servers);
+        }
+    }
+
+    private WLC _wlc;
+    // END fields for WLC
 
     public ServerGroup(String alias,
                        EventLoopGroup eventLoopGroup,
@@ -222,11 +284,81 @@ public class ServerGroup {
     public Connector next() {
         if (method == Method.wrr) {
             return wrrNext();
+        } else if (method == Method.wlc) {
+            return wlcNext();
         } else {
             Logger.shouldNotHappen("unsupported method " + method);
             // use wrr instead
             return wrrNext();
         }
+    }
+
+    /*
+     * WLC algorithm:
+     * copied from http://kb.linuxvirtualserver.org/wiki/Weighted_Least-Connection_Scheduling
+     *
+     * Supposing there is a server set S = {S0, S1, ..., Sn-1},
+     * W(Si) is the weight of server Si;
+     * C(Si) is the current connection number of server Si;
+     * CSUM = ΣC(Si) (i=0, 1, .. , n-1) is the sum of current connection numbers;
+     *
+     * The new connection is assigned to the server j, in which
+     *   (C(Sm) / CSUM)/ W(Sm) = min { (C(Si) / CSUM) / W(Si)}  (i=0, 1, . , n-1),
+     *   where W(Si) isn't zero
+     * Since the CSUM is a constant in this lookup, there is no need to divide by CSUM,
+     * the condition can be optimized as
+     *   C(Sm) / W(Sm) = min { C(Si) / W(Si)}  (i=0, 1, . , n-1), where W(Si) isn't zero
+     *
+     * Since division operation eats much more CPU cycles than multiply operation, and Linux
+     * does not allow float mode inside the kernel, the condition C(Sm)/W(Sm) > C(Si)/W(Si)
+     * can be optimized as C(Sm)*W(Si) > C(Si)*W(Sm). The scheduling should guarantee
+     * that a server will not be scheduled when its weight is zero. Therefore, the pseudo
+     * code of weighted least-connection scheduling algorithm is
+     *
+     * for (m = 0; m < n; m++) {
+     *     if (W(Sm) > 0) {
+     *         for (i = m+1; i < n; i++) {
+     *             if (C(Sm)*W(Si) > C(Si)*W(Sm))
+     *                 m = i;
+     *         }
+     *         return Sm;
+     *     }
+     * }
+     * return NULL;
+     */
+
+    private Connector wlcNext() {
+        WLC wlc = _wlc;
+        if (wlc.servers.isEmpty())
+            return null;
+        int m, n, WSm, CSm, WSi, CSi;
+        ServerHandle Sm;
+        m = 0;
+        n = wlc.servers.size();
+        // for (m = 0; m < n; ++m) {
+        { // --------- START ---------
+            Sm = wlc.servers.get(m);
+            WSm = Sm.weight;
+            CSm = Sm.connectionCount();
+        } // --------- END ---------
+        // if (WSm > 0) {
+        for (int i = m + 1; i < n; ++i) {
+            ServerHandle Si = wlc.servers.get(i);
+            WSi = Si.weight;
+            CSi = Si.connectionCount();
+            if (CSm * WSi > CSi * WSm) {
+                m = i;
+                { // --------- START ---------
+                    Sm = wlc.servers.get(m);
+                    WSm = Sm.weight;
+                    CSm = Sm.connectionCount();
+                } // --------- END ---------
+            }
+        }
+        return new SvrHandleConnector(Sm);
+        // }
+        // }
+        // return null;
     }
 
     private Connector wrrNext() {
@@ -245,19 +377,26 @@ public class ServerGroup {
             wrr.wrrCursor.set(idx + 1);
         }
         int realIdx = wrr.seq[idx];
-        ServerHealthHandle h = wrr.servers.get(realIdx);
+        ServerHandle h = wrr.servers.get(realIdx);
         if (h.healthy)
-            return new Connector(h.server, h.local);
+            return new SvrHandleConnector(h);
         else
             return wrrNext(wrr, recursion + 1);
     }
 
     private void resetMethodRelatedFields() {
         wrrReset();
+        wlcReset();
+    }
+
+    private void wlcReset() {
+        this._wlc = new WLC(this.servers.stream().filter(s -> s.weight > 0).collect(Collectors.toList()));
     }
 
     private void wrrReset() {
-        WRR wrr = new WRR(this.servers);
+        WRR wrr = new WRR(this.servers.stream()
+            .filter(s -> s.weight > 0) // only consider those weight > 0
+            .collect(Collectors.toList()));
         if (wrr.servers.isEmpty()) {
             wrr.seq = new int[0];
         } else {
@@ -268,7 +407,7 @@ public class ServerGroup {
             // run calculation
             int sum = 0;
             for (int i = 0; i < wrr.servers.size(); i++) {
-                ServerHealthHandle h = wrr.servers.get(i);
+                ServerHandle h = wrr.servers.get(i);
                 weights[i] = h.weight;
                 original[i] = h.weight;
                 sum += h.weight;
@@ -347,21 +486,21 @@ public class ServerGroup {
     public void setHealthCheckConfig(HealthCheckConfig healthCheckConfig) {
         assert Logger.lowLevelDebug("set new health check config " + healthCheckConfig);
         this.healthCheckConfig = healthCheckConfig;
-        ArrayList<ServerHealthHandle> ls = servers;
-        for (ServerHealthHandle handle : ls) {
+        ArrayList<ServerHandle> ls = servers;
+        for (ServerHandle handle : ls) {
             handle.restart(); // restart all health check clients
         }
     }
 
     public synchronized void add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        ArrayList<ServerHealthHandle> ls = servers;
-        for (ServerHealthHandle c : ls) {
+        ArrayList<ServerHandle> ls = servers;
+        for (ServerHandle c : ls) {
             if (c.alias.equals(alias))
                 throw new AlreadyExistException();
         }
-        ServerHealthHandle handle = new ServerHealthHandle(alias, server, local, weight);
+        ServerHandle handle = new ServerHandle(alias, server, local, weight);
         handle.start();
-        ArrayList<ServerHealthHandle> newLs = new ArrayList<>(ls.size() + 1);
+        ArrayList<ServerHandle> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
         newLs.add(handle);
         servers = newLs;
@@ -371,12 +510,12 @@ public class ServerGroup {
     }
 
     public synchronized void remove(String alias) throws NotFoundException {
-        ArrayList<ServerHealthHandle> ls = servers;
+        ArrayList<ServerHandle> ls = servers;
         if (ls.isEmpty())
             throw new NotFoundException();
-        ArrayList<ServerHealthHandle> newLs = new ArrayList<>(servers.size() - 1);
+        ArrayList<ServerHandle> newLs = new ArrayList<>(servers.size() - 1);
         boolean found = false;
-        for (ServerHealthHandle c : ls) {
+        for (ServerHandle c : ls) {
             if (c.alias.equals(alias)) {
                 found = true;
                 c.stop();
@@ -393,19 +532,19 @@ public class ServerGroup {
     }
 
     public void clear() {
-        ArrayList<ServerHealthHandle> ls;
+        ArrayList<ServerHandle> ls;
         synchronized (this) {
             ls = servers;
             servers = new ArrayList<>(0);
             resetMethodRelatedFields();
         }
-        for (ServerHealthHandle s : ls) {
+        for (ServerHandle s : ls) {
             s.stop();
             assert Logger.lowLevelDebug("server removed " + s.alias + " from " + this.alias);
         }
     }
 
-    public List<ServerHealthHandle> getServerHealthHandles() {
+    public List<ServerHandle> getServerHandles() {
         return new ArrayList<>(servers);
     }
 }

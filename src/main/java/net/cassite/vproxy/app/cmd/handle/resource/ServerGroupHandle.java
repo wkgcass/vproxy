@@ -55,6 +55,8 @@ public class ServerGroupHandle {
             } catch (Exception e) {
                 throw new Exception("invalid method");
             }
+        } else {
+            cmd.args.put(Param.meth, "wrr");
         }
     }
 

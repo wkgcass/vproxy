@@ -15,7 +15,7 @@ public class EventLoopHandle {
 
     public static EventLoopWrapper get(Resource resource) throws Exception {
         String groupName = resource.parentResource.alias;
-        return Application.get().eventLoopGroupHolder.get(groupName).get(resource.alias).left;
+        return Application.get().eventLoopGroupHolder.get(groupName).get(resource.alias);
     }
 
     public static void checkEventLoop(Resource eventLoop) throws Exception {

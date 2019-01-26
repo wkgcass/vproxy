@@ -56,4 +56,9 @@ public class Logger {
     public static void shouldNotHappen(String msg) {
         fatal(LogType.UNEXPECTED, "should not happen - " + msg);
     }
+
+    public static boolean printStackTrace(Throwable t) {
+        t.printStackTrace();
+        return true;
+    }
 }

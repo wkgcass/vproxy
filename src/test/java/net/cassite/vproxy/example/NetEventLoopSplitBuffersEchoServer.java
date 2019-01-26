@@ -54,13 +54,10 @@ class My2ServerHandler extends MyServerHandler implements ServerHandler {
 
 class My2ConnectionHandler extends MyConnectionHandler implements ConnectionHandler {
     private final byte[] buffer = new byte[6]; // make it smaller than in-buffer and greater than out-buffer
-    private ByteArrayChannel byteArrayChannel;
+    private ByteArrayChannel byteArrayChannel = ByteArrayChannel.fromEmpty(buffer);
 
     @Override
     public void readable(ConnectionHandlerContext ctx) {
-        if (byteArrayChannel == null) {
-            byteArrayChannel = new ByteArrayChannel(buffer);
-        }
         int writeBytes;
         try {
             writeBytes = ctx.connection.inBuffer.writeTo(byteArrayChannel);
@@ -79,19 +76,17 @@ class My2ConnectionHandler extends MyConnectionHandler implements ConnectionHand
 
     @Override
     public void writable(ConnectionHandlerContext ctx) {
-        if (byteArrayChannel != null) {
-            try {
-                ctx.connection.outBuffer.storeBytesFrom(byteArrayChannel);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-                e.printStackTrace();
-                return;
-            }
-            if (byteArrayChannel.used() == 0) {
-                System.out.println("everything wrote in writable callback, remove the ByteArrayChannel wrapper");
-                byteArrayChannel = null;
-                readable(ctx); // try to read
-            }
+        try {
+            ctx.connection.outBuffer.storeBytesFrom(byteArrayChannel);
+        } catch (IOException e) {
+            // should not happen, it's memory operation
+            e.printStackTrace();
+            return;
+        }
+        if (byteArrayChannel.used() == 0) {
+            System.out.println("everything wrote in writable callback, reset the ByteArrayChannel wrapper");
+            byteArrayChannel.reset();
+            readable(ctx); // try to read
         }
     }
 }

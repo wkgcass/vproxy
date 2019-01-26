@@ -14,19 +14,33 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     private final int initialLen;
     private final int initialReadOff;
 
-    public ByteArrayChannel(byte[] arr) {
-        this(arr, 0, 0, arr.length);
-    }
-
-    public ByteArrayChannel(byte[] arr, int readOff, int writeOff, int writeLen) {
+    private ByteArrayChannel(byte[] arr, int readOff, int writeOff, int writeLen) {
         this.arr = arr;
-        if (writeOff > arr.length || writeOff + writeLen > arr.length)
+        if (arr.length == 0 ||
+            readOff >= arr.length ||
+            readOff < 0 ||
+            writeOff < 0 ||
+            writeOff > arr.length ||
+            writeLen < 0 ||
+            writeOff + writeLen > arr.length)
             throw new IllegalArgumentException();
         this.initialOff = writeOff;
         this.initialLen = writeLen;
         this.initialReadOff = readOff;
 
         reset();
+    }
+
+    public static ByteArrayChannel fromEmpty(byte[] arr) {
+        return new ByteArrayChannel(arr, 0, 0, arr.length);
+    }
+
+    public static ByteArrayChannel fromFull(byte[] arr) {
+        return new ByteArrayChannel(arr, 0, arr.length, 0);
+    }
+
+    public static ByteArrayChannel from(byte[] arr, int readOff, int writeOff, int writeLen) {
+        return new ByteArrayChannel(arr, readOff, writeOff, writeLen);
     }
 
     @Override

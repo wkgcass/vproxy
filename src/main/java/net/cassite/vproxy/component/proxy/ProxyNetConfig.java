@@ -7,7 +7,7 @@ public class ProxyNetConfig {
     NetEventLoop acceptLoop;
     BindServer server;
     NetEventLoopProvider handleLoopProvider;
-    ConnectionGen connGen;
+    ConnectorGen connGen;
 
 
     int inBufferSize = 128;
@@ -28,7 +28,7 @@ public class ProxyNetConfig {
         return this;
     }
 
-    public ProxyNetConfig setConnGen(ConnectionGen connGen) {
+    public ProxyNetConfig setConnGen(ConnectorGen connGen) {
         this.connGen = connGen;
         return this;
     }
