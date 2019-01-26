@@ -4,7 +4,6 @@ plugins {
 
 jar {
     manifest.attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
-    from configuration.compile.collect { zipTree it}
 }
 
 group 'net.cassite'
