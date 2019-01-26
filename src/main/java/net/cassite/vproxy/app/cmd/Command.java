@@ -480,6 +480,7 @@ public class Command {
                 break;
             case bin: // bytes-in
             case bout: // bytes-out
+                bsw:
                 switch (cmd.action) {
                     case a:
                     case r:
@@ -493,19 +494,20 @@ public class Command {
                         switch (targetResource.type) {
                             case bs:
                                 BindServerHandle.checkBindServer(targetResource);
-                                break;
+                                break bsw;
                             case conn:
                                 ConnectionHandle.checkConnection(targetResource);
-                                break;
+                                break bsw;
                             case svr:
                                 ServerHandle.checkServer(targetResource);
-                                break;
+                                break bsw;
                             default:
                                 throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
                         }
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
+                break;
             case acceptedconncount: // accepted-connections
                 switch (cmd.action) {
                     case a:
@@ -518,11 +520,12 @@ public class Command {
                         // can be found in bind-server
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-                        ServerHandle.checkServer(targetResource);
+                        BindServerHandle.checkBindServer(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
+                break;
             case el: // event loop
                 switch (cmd.action) {
                     case a:
@@ -706,21 +709,21 @@ public class Command {
                 switch (action) {
                     case l:
                     case L:
-                        long binRes = StatisticHandle.bytesIn(resource);
+                        long binRes = StatisticHandle.bytesIn(targetResource);
                         return new CmdResult(binRes, binRes, "" + binRes);
                 }
             case bout:
                 switch (action) {
                     case l:
                     case L:
-                        long boutRes = StatisticHandle.bytesOut(resource);
+                        long boutRes = StatisticHandle.bytesOut(targetResource);
                         return new CmdResult(boutRes, boutRes, "" + boutRes);
                 }
             case acceptedconncount:
                 switch (action) {
                     case l:
                     case L:
-                        long acc = StatisticHandle.acceptedConnCount(resource);
+                        long acc = StatisticHandle.acceptedConnCount(targetResource);
                         return new CmdResult(acc, acc, "" + acc);
                 }
             case svr: // can only be retrieved from server group

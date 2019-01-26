@@ -4,5 +4,5 @@ import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 
 public interface ConnectorGen {
-    Connector genRemoteLocal(Connection accepted);
+    Connector genConnector(Connection accepted);
 }

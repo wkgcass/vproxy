@@ -60,7 +60,10 @@ public class RESPProtocolHandler implements ProtocolHandler<RESPContext> {
 
                 @Override
                 protected void onFailed(Throwable err) {
-                    Logger.info(LogType.USER_HANDLE_FAIL, "user handling failed in RESPProtocolHandler in conn: " + ctx.connectionId + " - " + Utils.formatErr(err));
+                    Logger.info(LogType.USER_HANDLE_FAIL, "user handling failed in RESPProtocolHandler in conn: " + ctx.connectionId +
+                        " - " + err.getClass().getSimpleName() +
+                        " - " + Utils.formatErr(err));
+                    assert Logger.printStackTrace(err);
                     String errStr = Utils.formatErr(err);
                     ctx.write(Serializer.fromErrorString(errStr));
                 }

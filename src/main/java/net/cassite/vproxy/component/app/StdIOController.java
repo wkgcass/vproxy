@@ -45,12 +45,10 @@ public class StdIOController {
 
     private static void stdout(String msg) {
         System.out.println(msg);
-        printStarter();
     }
 
     private static void stderr(String err) {
         System.err.println(err);
-        printStarter();
     }
 
     private static void handleSystemCall(String line) {

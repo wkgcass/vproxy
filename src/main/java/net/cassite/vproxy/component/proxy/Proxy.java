@@ -58,7 +58,7 @@ public class Proxy {
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
             // make connection to another end point
-            Connector connector = config.connGen.genRemoteLocal(connection);
+            Connector connector = config.connGen.genConnector(connection);
 
             // check whether address tuple is null
             // null means the user code fail to provide a new connection

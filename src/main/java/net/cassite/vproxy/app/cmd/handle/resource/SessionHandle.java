@@ -16,7 +16,7 @@ public class SessionHandle {
     public static void checkSession(Resource session) throws Exception {
         if (session.parentResource == null)
             throw new Exception("cannot find " + session.type.fullname + " on top level");
-        if (session.parentResource.type == ResourceType.tl)
+        if (session.parentResource.type != ResourceType.tl)
             throw new Exception(session.parentResource.type.fullname + " does not contain " + session.type.fullname);
         TcpLBHandle.checkTcpLB(session.parentResource);
     }
