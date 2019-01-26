@@ -26,6 +26,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.stream.Collectors;
 
 public class ServerGroup {
     private static final Object _VALUE_ = new Object(); // value for Map in ServerHandle
@@ -240,17 +241,29 @@ public class ServerGroup {
 
     // START fields for WRR
     static class WRR {
-        private int[] seq;
-        private final AtomicInteger wrrCursor = new AtomicInteger(0);
-        private final ArrayList<ServerHandle> servers; // = servers;
+        int[] seq;
+        final AtomicInteger wrrCursor = new AtomicInteger(0);
+        final ArrayList<ServerHandle> servers; // = servers;
 
-        WRR(ArrayList<ServerHandle> servers) {
-            this.servers = servers;
+        WRR(List<ServerHandle> servers) {
+            this.servers = new ArrayList<>(servers);
         }
     }
 
     private WRR _wrr;
     // END fields for WRR
+
+    // START fields for WLC
+    static class WLC {
+        final ArrayList<ServerHandle> servers;
+
+        WLC(List<ServerHandle> servers) {
+            this.servers = new ArrayList<>(servers);
+        }
+    }
+
+    private WLC _wlc;
+    // END fields for WLC
 
     public ServerGroup(String alias,
                        EventLoopGroup eventLoopGroup,
@@ -271,11 +284,81 @@ public class ServerGroup {
     public Connector next() {
         if (method == Method.wrr) {
             return wrrNext();
+        } else if (method == Method.wlc) {
+            return wlcNext();
         } else {
             Logger.shouldNotHappen("unsupported method " + method);
             // use wrr instead
             return wrrNext();
         }
+    }
+
+    /*
+     * WLC algorithm:
+     * copied from http://kb.linuxvirtualserver.org/wiki/Weighted_Least-Connection_Scheduling
+     *
+     * Supposing there is a server set S = {S0, S1, ..., Sn-1},
+     * W(Si) is the weight of server Si;
+     * C(Si) is the current connection number of server Si;
+     * CSUM = ΣC(Si) (i=0, 1, .. , n-1) is the sum of current connection numbers;
+     *
+     * The new connection is assigned to the server j, in which
+     *   (C(Sm) / CSUM)/ W(Sm) = min { (C(Si) / CSUM) / W(Si)}  (i=0, 1, . , n-1),
+     *   where W(Si) isn't zero
+     * Since the CSUM is a constant in this lookup, there is no need to divide by CSUM,
+     * the condition can be optimized as
+     *   C(Sm) / W(Sm) = min { C(Si) / W(Si)}  (i=0, 1, . , n-1), where W(Si) isn't zero
+     *
+     * Since division operation eats much more CPU cycles than multiply operation, and Linux
+     * does not allow float mode inside the kernel, the condition C(Sm)/W(Sm) > C(Si)/W(Si)
+     * can be optimized as C(Sm)*W(Si) > C(Si)*W(Sm). The scheduling should guarantee
+     * that a server will not be scheduled when its weight is zero. Therefore, the pseudo
+     * code of weighted least-connection scheduling algorithm is
+     *
+     * for (m = 0; m < n; m++) {
+     *     if (W(Sm) > 0) {
+     *         for (i = m+1; i < n; i++) {
+     *             if (C(Sm)*W(Si) > C(Si)*W(Sm))
+     *                 m = i;
+     *         }
+     *         return Sm;
+     *     }
+     * }
+     * return NULL;
+     */
+
+    private Connector wlcNext() {
+        WLC wlc = _wlc;
+        if (wlc.servers.isEmpty())
+            return null;
+        int m, n, WSm, CSm, WSi, CSi;
+        ServerHandle Sm;
+        m = 0;
+        n = wlc.servers.size();
+        // for (m = 0; m < n; ++m) {
+        { // --------- START ---------
+            Sm = wlc.servers.get(m);
+            WSm = Sm.weight;
+            CSm = Sm.connectionCount();
+        } // --------- END ---------
+        // if (WSm > 0) {
+        for (int i = m + 1; i < n; ++i) {
+            ServerHandle Si = wlc.servers.get(i);
+            WSi = Si.weight;
+            CSi = Si.connectionCount();
+            if (CSm * WSi > CSi * WSm) {
+                m = i;
+                { // --------- START ---------
+                    Sm = wlc.servers.get(m);
+                    WSm = Sm.weight;
+                    CSm = Sm.connectionCount();
+                } // --------- END ---------
+            }
+        }
+        return new SvrHandleConnector(Sm);
+        // }
+        // }
+        // return null;
     }
 
     private Connector wrrNext() {
@@ -303,10 +386,17 @@ public class ServerGroup {
 
     private void resetMethodRelatedFields() {
         wrrReset();
+        wlcReset();
+    }
+
+    private void wlcReset() {
+        this._wlc = new WLC(this.servers.stream().filter(s -> s.weight > 0).collect(Collectors.toList()));
     }
 
     private void wrrReset() {
-        WRR wrr = new WRR(this.servers);
+        WRR wrr = new WRR(this.servers.stream()
+            .filter(s -> s.weight > 0) // only consider those weight > 0
+            .collect(Collectors.toList()));
         if (wrr.servers.isEmpty()) {
             wrr.seq = new int[0];
         } else {
