@@ -1,6 +1,7 @@
 package net.cassite.vproxy.component.app;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.RESPControllerHolder;
 import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Param;
@@ -115,7 +116,20 @@ public class StdIOController {
                     switch (arr[1]) {
                         case "resp-controller":
                             if (arr.length == 2) {
-                                handleListController();
+                                handleListController(false);
+                                break outswitch;
+                            }
+                    }
+                } else if (cmd.startsWith("list-detail ")) {
+                    String[] arr = cmd.split(" ");
+                    if (arr.length < 2) {
+                        stderr("invalid list-detail command");
+                        break;
+                    }
+                    switch (arr[1]) {
+                        case "resp-controller":
+                            if (arr.length == 2) {
+                                handleListController(true);
                                 break outswitch;
                             }
                     }
@@ -170,14 +184,25 @@ public class StdIOController {
         stdout("(done)");
     }
 
-    private static void handleListController() {
-        List<String> names = Application.get().respControllerHolder.names();
+    private static void handleListController(boolean detail) {
+        RESPControllerHolder h = Application.get().respControllerHolder;
+        List<String> names = h.names();
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
         for (String name : names) {
             if (isFirst) isFirst = false;
             else sb.append("\n");
-            sb.append(name);
+            RESPController c;
+            try {
+                c = h.get(name);
+            } catch (NotFoundException e) {
+                // should not happen if no concurrency. just ignore
+                continue;
+            }
+            sb.append(c.alias);
+            if (detail) {
+                sb.append("\t").append(c.server.id());
+            }
         }
         stdout(sb.toString());
     }

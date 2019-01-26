@@ -38,7 +38,8 @@ public class Command {
             "\n                               address  ${bind addr}" +
             "\n                               password ${password}" +
             "\n        System call: remove resp-controller        stop resp controller" +
-            "\n        System call: list   resp-controller        check resp controller" +
+            "\n                               ${name}" +
+            "\n        System call: list-detail resp-controller   check resp controller" +
             "\n    (System commands can only be executed via StdIOController)" +
             "\n    Operate a resource:" +
             "\n        list                 | l                   list resources' names" +
