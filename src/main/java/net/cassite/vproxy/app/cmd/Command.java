@@ -59,9 +59,12 @@ public class Command {
             "\n            server-group     | sg                  server group" +
             "\n            event-loop       | el                  event loop, is inside event loop group" +
             "\n            server           | svr                 server, is inside server group" +
-            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event loop and loadbalancer" +
-            "\n            connection       | conn                connection record, is inside event loop" +
-            "\n            session          | sess                a proxy session, is inside loadbalancer" +
+            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb" +
+            "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|server" +
+            "\n            session          | sess                a proxy session, is inside tcp-lb" +
+            "\n            bytes-in         | bin                 input bytes (net flow from remote to local), is inside bind-server|connection|server" +
+            "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
+            "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
             "\n    Parameters:" +
             "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
             "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
@@ -72,7 +75,7 @@ public class Command {
             "\n        event-loop-group     | elg                 event loop group         , required when (creating server group) or (creating tcp-lb as the worker group)" +
             "\n        acceptor-elg         | aelg                acceptor event loop group, required when (creating tcp-lb)" +
             "\n        address              | addr                ip address or ip:port    , required when (creating tcp-lb) or (adding server into server group)" +
-            "\n        ip                                         ip address               , required when (adding server into server group as the local ip)" +
+            "\n        ip                   | via                 ip address               , required when (adding server into server group as the local ip)" +
             "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb)" +
             "\n        in-buffer-size                             in buffer size           , required when (creating tcp-lb)" +
             "\n        out-buffer-size                            out buffer size          , required when (creating tcp-lb)" +
@@ -446,10 +449,11 @@ public class Command {
             case bs: // bindServer
             case conn: // connection
             case sess: // session
-                // these three resources are related to a channel
+                // these resources are related to a channel
                 // the handles are similar
                 // so put them together
                 // though there're still some logic branches
+                chnlsw:
                 switch (cmd.action) {
                     case a:
                     case r:
@@ -458,30 +462,67 @@ public class Command {
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case L:
                     case l:
-                        // should have a parent resource
-                        if (targetResource == null)
-                            throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-
-                        if ((cmd.resource.type == ResourceType.sess || cmd.resource.type == ResourceType.conn)
-                            && targetResource.type == ResourceType.tl) {
-
-                            // sess can only be found in tcp lb
-                            TcpLBHandle.checkTcpLB(targetResource);
-
-                        } else if (cmd.resource.type != ResourceType.sess
-                            && targetResource.type == ResourceType.el) {
-
-                            // bs and conn can be found in event loop
-                            EventLoopHandle.checkEventLoop(targetResource);
-
-                        } else {
-                            throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
+                        switch (cmd.resource.type) {
+                            case bs:
+                                BindServerHandle.checkBindServer(cmd.resource);
+                                break chnlsw;
+                            case conn:
+                                ConnectionHandle.checkConnection(cmd.resource);
+                                break chnlsw;
+                            case sess:
+                                SessionHandle.checkSession(cmd.resource);
+                                break chnlsw;
+                            // no need to add default here
                         }
-                        break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case bin: // bytes-in
+            case bout: // bytes-out
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        // modification not supported for accepted-connections count resources
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        if (targetResource == null)
+                            throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
+                        switch (targetResource.type) {
+                            case bs:
+                                BindServerHandle.checkBindServer(targetResource);
+                                break;
+                            case conn:
+                                ConnectionHandle.checkConnection(targetResource);
+                                break;
+                            case svr:
+                                ServerHandle.checkServer(targetResource);
+                                break;
+                            default:
+                                throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
+                        }
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+            case acceptedconncount: // accepted-connections
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        // modification not supported for accepted-connections count resources
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        // can be found in bind-server
+                        if (targetResource == null)
+                            throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
+                        ServerHandle.checkServer(targetResource);
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
             case el: // event loop
                 switch (cmd.action) {
                     case a:
@@ -660,6 +701,27 @@ public class Command {
                         List<BindServer> bsList = BindServerHandle.list(targetResource);
                         List<String> bsStrList = bsList.stream().map(BindServer::id).collect(Collectors.toList());
                         return new CmdResult(bsList, bsStrList, utilJoinList(bsList));
+                }
+            case bin:
+                switch (action) {
+                    case l:
+                    case L:
+                        long binRes = StatisticHandle.bytesIn(resource);
+                        return new CmdResult(binRes, binRes, "" + binRes);
+                }
+            case bout:
+                switch (action) {
+                    case l:
+                    case L:
+                        long boutRes = StatisticHandle.bytesOut(resource);
+                        return new CmdResult(boutRes, boutRes, "" + boutRes);
+                }
+            case acceptedconncount:
+                switch (action) {
+                    case l:
+                    case L:
+                        long acc = StatisticHandle.acceptedConnCount(resource);
+                        return new CmdResult(acc, acc, "" + acc);
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {

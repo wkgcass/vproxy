@@ -26,6 +26,14 @@ public class Serializer {
         return ":" + i + "\r\n";
     }
 
+    private static byte[] fromLong(long l) {
+        return fromLongToString(l).getBytes();
+    }
+
+    private static String fromLongToString(long l) {
+        return ":" + l + "\r\n";
+    }
+
     public static byte[] fromString(String s) {
         return fromStringToString(s).getBytes();
     }
@@ -67,6 +75,8 @@ public class Serializer {
             return fromNullToString();
         if (o instanceof Integer)
             return fromIntegerToString((Integer) o);
+        if (o instanceof Long)
+            return fromLongToString((Long) o);
         if (o instanceof String)
             return fromStringToString((String) o);
         if (o instanceof Object[])

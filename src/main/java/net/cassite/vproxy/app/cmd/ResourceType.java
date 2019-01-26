@@ -10,6 +10,9 @@ public enum ResourceType {
     bs("bind-server"),
     conn("connection"),
     sess("session"),
+    bin("bytes-in"),
+    bout("bytes-out"),
+    acceptedconncount("accepted-conn-count"),
 
     respcontroller("resp-controller"),
     ;

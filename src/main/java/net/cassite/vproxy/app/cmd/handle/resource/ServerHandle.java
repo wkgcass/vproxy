@@ -2,6 +2,7 @@ package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Resource;
+import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.app.cmd.handle.param.IpHandle;
 import net.cassite.vproxy.app.cmd.handle.param.WeightHandle;
@@ -10,10 +11,19 @@ import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.util.Utils;
 
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 public class ServerHandle {
     private ServerHandle() {
+    }
+
+    public static void checkServer(Resource server) throws Exception {
+        if (server.parentResource == null)
+            throw new Exception("cannot find " + server.type.fullname + " on top level");
+        if (server.parentResource.type != ResourceType.sg)
+            throw new Exception(server.parentResource.type.fullname + " does not contain " + server.type.fullname);
+        ServerGroupHandle.checkServerGroup(server.parentResource);
     }
 
     public static void checkCreateServer(Command cmd) throws Exception {
@@ -24,6 +34,13 @@ public class ServerHandle {
 
     public static void checkUpdateServer(Command cmd) throws Exception {
         WeightHandle.check(cmd);
+    }
+
+    public static ServerGroup.ServerHandle get(Resource server) throws Exception {
+        String alias = server.alias;
+        ServerGroup grp = ServerGroupHandle.get(server.parentResource);
+        Optional<ServerGroup.ServerHandle> opt = grp.getServerHandles().stream().filter(s -> s.alias.equals(alias)).findFirst();
+        return opt.orElseThrow(NotFoundException::new);
     }
 
     public static List<String> names(Resource parent) throws Exception {
