@@ -1,12 +1,15 @@
 plugins {
     id 'java'
 }
+version '0.0.1-SNAPSHOT'
 
 jar {
-    manifest.attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
+    manifest{
+        attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
+        attributes 'version': version
+    }
 }
 
 group 'net.cassite'
-version '0.0.1-SNAPSHOT'
 
 sourceCompatibility = 1.8
