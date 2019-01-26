@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 class SvrHandleConnector extends Connector {
-    private final ServerGroup.ServerHandle serverHandle; // nullable
+    private final ServerGroup.ServerHandle serverHandle;
 
     SvrHandleConnector(ServerGroup.ServerHandle h) {
         super(h.server, new InetSocketAddress(h.local, 0));
@@ -18,9 +18,9 @@ class SvrHandleConnector extends Connector {
     @Override
     public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
         ClientConnection conn = super.connect(in, out);
-        if (serverHandle != null) {
-            conn.addNetFlowRecorder(serverHandle);
-        }
+        conn.addNetFlowRecorder(serverHandle);
+        serverHandle.attachConnection(conn);
+        conn.addConnCloseHandler(serverHandle);
         return conn;
     }
 }

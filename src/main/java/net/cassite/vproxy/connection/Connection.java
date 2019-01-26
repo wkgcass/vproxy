@@ -115,6 +115,7 @@ public class Connection implements NetFlowRecorder {
     private long fromRemoteBytes = 0; // in bytes
     // since it seldom (in most cases: never) changes, so let's just use a copy on write list
     private final List<NetFlowRecorder> netFlowRecorders = new CopyOnWriteArrayList<>();
+    private final List<ConnCloseHandler> connCloseHandlers = new CopyOnWriteArrayList<>();
 
     /**
      * bytes will be read from channel into this buffer
@@ -177,6 +178,11 @@ public class Connection implements NetFlowRecorder {
         netFlowRecorders.add(nfr);
     }
 
+    // NOTE: this is not thread safe
+    public void addConnCloseHandler(ConnCloseHandler cch) {
+        connCloseHandlers.add(cch);
+    }
+
     protected String genId() {
         return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
             + "/"
@@ -203,6 +209,11 @@ public class Connection implements NetFlowRecorder {
         // (if you correctly handled all events)
         // but here we clear it since it doesn't hurt
         netFlowRecorders.clear();
+
+        // clear close handler here
+        for (ConnCloseHandler h : connCloseHandlers)
+            h.onConnClose(this);
+        connCloseHandlers.clear();
 
         inBuffer.removeHandler(inBufferETHandler);
         outBuffer.removeHandler(outBufferETHandler);

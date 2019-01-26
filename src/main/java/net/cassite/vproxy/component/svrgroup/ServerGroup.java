@@ -10,6 +10,8 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.connection.ConnCloseHandler;
+import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetFlowRecorder;
 import net.cassite.vproxy.util.LogType;
@@ -20,11 +22,15 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.LongAdder;
 
 public class ServerGroup {
-    public class ServerHandle implements EventLoopAttach, NetFlowRecorder {
+    private static final Object _VALUE_ = new Object(); // value for Map in ServerHandle
+
+    public class ServerHandle implements EventLoopAttach, NetFlowRecorder, ConnCloseHandler {
         class ServerHealthCheckHandler implements HealthCheckHandler {
             @Override
             public void up(SocketAddress remote) {
@@ -66,6 +72,8 @@ public class ServerGroup {
         private final LongAdder fromRemoteBytes = new LongAdder();
         private final LongAdder toRemoteBytes = new LongAdder();
 
+        private ConcurrentMap<Connection, Object> connMap = new ConcurrentHashMap<>();
+
         ServerHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
             this.alias = alias;
             this.server = server;
@@ -73,6 +81,7 @@ public class ServerGroup {
             this.weight = initialWeight;
         }
 
+        // --- START statistics ---
         @Override
         public void incToRemoteBytes(long bytes) {
             toRemoteBytes.add(bytes);
@@ -91,6 +100,24 @@ public class ServerGroup {
         @Override
         public long getFromRemoteBytes() {
             return fromRemoteBytes.longValue();
+        }
+        // --- END statistics ---
+
+        @Override
+        public void onConnClose(Connection conn) {
+            connMap.remove(conn);
+        }
+
+        void attachConnection(Connection conn) {
+            connMap.put(conn, _VALUE_);
+        }
+
+        public int connectionCount() {
+            return connMap.size();
+        }
+
+        public void copyConnections(Collection<? super Connection> c) {
+            c.addAll(connMap.keySet());
         }
 
         public void setWeight(int weight) {
