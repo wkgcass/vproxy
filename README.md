@@ -20,6 +20,7 @@ Clone it, javac it, then everything is ready for running.
 
 * [how-to-use.md](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) How to use config file and controllers.
 * [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): Detailed command document.
+* [lb-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/lb-example.md): An example about running a loadbalancer.
 
 ### Quick Start
 
