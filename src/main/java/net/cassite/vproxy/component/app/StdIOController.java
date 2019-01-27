@@ -44,8 +44,10 @@ public class StdIOController {
         System.out.print(STARTER);
     }
 
+    private static final String DONE_STR = "(done)";
+
     private static void doneSync() {
-        stdoutSync("(done)");
+        stdoutSync(DONE_STR);
     }
 
     private static void stdoutSync(String msg) {
@@ -53,7 +55,7 @@ public class StdIOController {
     }
 
     private static void doneAsync() {
-        stdoutAsync("(done)");
+        stdoutAsync(DONE_STR);
     }
 
     private static void stdoutAsync(String msg) {
@@ -289,24 +291,42 @@ public class StdIOController {
 
     private static class StrResultCallback extends Callback<String, Throwable> {
         private final String line;
+        // we record the thread where the callback object is created
+        // then we compare it with the thread when
+        // onSucceeded or onFailed is called
+        // which will tell whether it is an async call
+        private final Thread startThread;
 
         private StrResultCallback(String line) {
             this.line = line;
+            this.startThread = Thread.currentThread();
         }
 
         @Override
         protected void onSucceeded(String resp) {
+            boolean isAsync = Thread.currentThread() != startThread;
+            String msg;
             if (!resp.trim().isEmpty()) {
-                stdoutAsync(resp.trim());
+                msg = resp.trim();
             } else {
-                doneAsync();
+                msg = DONE_STR;
+            }
+            if (isAsync) {
+                stdoutAsync(msg);
+            } else {
+                stdoutSync(msg);
             }
         }
 
         @Override
         protected void onFailed(Throwable err) {
+            boolean isAsync = Thread.currentThread() != startThread;
             String msg = "command `" + line + "` failed! " + Utils.formatErr(err);
-            stderrAsync(msg);
+            if (isAsync) {
+                stderrAsync(msg);
+            } else {
+                stderrSync(msg);
+            }
         }
     }
 }
