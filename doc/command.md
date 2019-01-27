@@ -42,8 +42,11 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 |        |
 |        +---+ server-group (sg)
 +---+ server-group (sg)
+|        |
+|        +---+ server (svr)
++---+ security-group (secg)
          |
-         +---+ server (svr)
+         +---+ security-group-rule (secgr)
 
    bind-server (bs) --+
   connection (conn)   +-- /* channel */
@@ -379,6 +382,99 @@ Remove a server from a server group.
 
 ```
 remove server svr0 from server-group sg0
+"OK"
+```
+
+## Resource: security-group (secg)
+
+A white/black list, see `security-group-rule` for more info.
+
+#### add
+
+Create a security group.
+
+* default: enum {allow, deny}  
+    if set to allow, then will allow connection if all rules not match  
+    if set to deny, then will deny connection if all rules not match
+
+```
+add security-group secg0 default allow
+"OK"
+```
+
+#### list
+
+Retrieve names of all security groups.
+
+```
+list security-group
+1) "secg0"
+```
+
+#### list-detail
+
+Retrieve detailed info of all security groups.
+
+```
+list-detail security-group
+1) "secg0 -> default allow"
+```
+
+#### remove
+
+Remove a security group.
+
+```
+remove security-group secg0
+"OK"
+```
+
+## Resource: security-group-rule
+
+A rule containing protocol, source network, dest port range and whether to deny.
+
+#### add
+
+Create a rule in the security group.
+
+* network (net): a cidr string for checking client ip
+* protocol: enum {TCP, UDP}
+* port-range: a tuple of integer for vproxy port, 0 <= first <= second <= 65535
+* default: enum {allow, deny}  
+    if set to allow, then will allow the connection if matches  
+    if set to deny, then will deny the connection if matches
+
+> NOTE: network is for client (source ip), and port-range is for vproxy (destination port).
+
+```
+add security-group-rule secgr0 to security-group secg0 network 10.127.0.0/16 protocol TCP port-range 22,22 default allow
+"OK"
+```
+
+#### list
+
+Retrieve names of all rules in a security group.
+
+```
+list security-group-rule in security-group secg0
+1) "secgr0"
+```
+
+#### list-detail
+
+Retrieve detailed info of all rules in a security group.
+
+```
+list-detail security-group-rule in security-group secg0
+1) "secgr0 -> allow 10.127.0.0/16 protocol TCP port [22,33]"
+```
+
+#### remove
+
+Remove a rule from a security group.
+
+```
+remove security-group-rule secgr0 from security-group secg0
 "OK"
 ```
 
