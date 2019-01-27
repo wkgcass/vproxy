@@ -72,11 +72,11 @@ public class Utils {
     }
 
     public static boolean validNetwork(byte[] addr, byte[] mask) {
-        if (addr.length != mask.length)
+        if (addr.length < mask.length)
             return false;
-        for (int i = 0; i < addr.length; ++i) {
-            byte a = addr[i];
-            byte m = mask[i];
+        for (int i = 1; i <= mask.length; ++i) {
+            byte a = addr[addr.length - i];
+            byte m = mask[mask.length - i];
             if ((a & m) != a)
                 return false;
         }
@@ -90,7 +90,7 @@ public class Utils {
         if (mask.length < minLen)
             minLen = mask.length;
 
-        for (int i = minLen - 1; i >= 0; ++i) {
+        for (int i = minLen - 1; i >= 0; --i) {
             byte inputB = input[i];
             byte ruleB = rule[i];
             byte maskB = mask[i];

@@ -3,6 +3,7 @@ package net.cassite.vproxy.component.secure;
 import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.util.Utils;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 
@@ -28,9 +29,8 @@ public class SecurityGroupRule {
         this.allow = allow;
     }
 
-    public boolean match(InetSocketAddress address) {
-        int port = address.getPort();
-        return Utils.maskMatch(address.getAddress().getAddress(), ip, mask) && minPort <= port && port <= maxPort;
+    public boolean match(InetAddress address, int port) {
+        return Utils.maskMatch(address.getAddress(), ip, mask) && minPort <= port && port <= maxPort;
     }
 
     public boolean ipMaskMatch(SecurityGroupRule rule) {

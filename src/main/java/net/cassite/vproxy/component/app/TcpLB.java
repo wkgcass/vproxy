@@ -119,7 +119,7 @@ public class TcpLB {
             .setConnGen(clientConn -> {
                 // check whitelist
                 InetSocketAddress remote = clientConn.remote;
-                if (!securityGroup.allow(Protocol.TCP, remote))
+                if (!securityGroup.allow(Protocol.TCP, remote.getAddress(), bindAddress.getPort()))
                     return null; // terminated by securityGroup
                 // get a server from backends
                 Connector connector = backends.next();

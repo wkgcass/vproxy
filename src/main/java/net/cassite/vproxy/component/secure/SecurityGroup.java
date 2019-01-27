@@ -4,6 +4,7 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.connection.Protocol;
 
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -27,7 +28,7 @@ public class SecurityGroup {
         return new SecurityGroup(defaultName, true);
     }
 
-    public boolean allow(Protocol protocol, InetSocketAddress address) {
+    public boolean allow(Protocol protocol, InetAddress address, int port) {
         LinkedList<SecurityGroupRule> rules;
         if (protocol == Protocol.TCP) {
             rules = tcpRules;
@@ -38,7 +39,7 @@ public class SecurityGroup {
         if (rules.isEmpty())
             return defaultAllow;
         for (SecurityGroupRule rule : rules) {
-            if (rule.match(address))
+            if (rule.match(address, port))
                 return rule.allow;
         }
         return defaultAllow;
