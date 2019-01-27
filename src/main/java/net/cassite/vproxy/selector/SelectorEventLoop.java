@@ -231,6 +231,13 @@ public class SelectorEventLoop {
     }
 
     @ThreadSafe
+    public PeriodicEvent period(int timeout, Runnable r) {
+        PeriodicEvent pe = new PeriodicEvent(r, this, timeout);
+        pe.start();
+        return pe;
+    }
+
+    @ThreadSafe
     @SuppressWarnings("DuplicateThrows")
     public <CHANNEL extends SelectableChannel> void add(CHANNEL channel, int ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
         channel.configureBlocking(false);

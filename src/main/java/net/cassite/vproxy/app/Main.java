@@ -5,6 +5,7 @@ import net.cassite.vproxy.component.app.Shutdown;
 import net.cassite.vproxy.component.app.StdIOController;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.File;
@@ -121,6 +122,17 @@ public class Main {
         // start stdioController
         StdIOController controller = new StdIOController();
         new Thread(controller::start, "StdIOControllerThread").start();
+
+        // start scheduled saving task
+        Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
+    }
+
+    private static void saveConfig() {
+        try {
+            Shutdown.save(null);
+        } catch (Exception e) {
+            Logger.shouldNotHappen("failed to save config", e);
+        }
     }
 
     private static class CallbackInMain extends Callback<String, Throwable> {
