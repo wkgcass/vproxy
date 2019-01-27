@@ -14,6 +14,11 @@ public enum Param {
     outbuffersize("out-buffer-size"),
     meth("method"),
     w("weight"),
+    secg("security-group"),
+    secgrdefault("default"),
+    net("network"),
+    protocol("protocol"),
+    portrange("port-range"),
 
     pass("password"),
     ;

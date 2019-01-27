@@ -10,9 +10,11 @@ import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyEventHandler;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.component.proxy.Session;
+import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
@@ -73,6 +75,7 @@ public class TcpLB {
     public final ServerGroups backends;
     public final int inBufferSize;
     public final int outBufferSize;
+    public final SecurityGroup securityGroup;
 
     // true means the lb is stopped, but it can still re-start.
     // false means we WANT the lb to start,
@@ -96,8 +99,8 @@ public class TcpLB {
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
                  ServerGroups backends,
-                 int inBufferSize,
-                 int outBufferSize) throws IOException, AlreadyExistException, ClosedException {
+                 int inBufferSize, int outBufferSize,
+                 SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;
@@ -105,6 +108,7 @@ public class TcpLB {
         this.backends = backends;
         this.inBufferSize = inBufferSize;
         this.outBufferSize = outBufferSize;
+        this.securityGroup = securityGroup;
 
         // create server
         this.server = BindServer.create(bindAddress);
@@ -113,6 +117,10 @@ public class TcpLB {
         // acceptEventLoop will be assigned in start() method
         this.proxyNetConfig
             .setConnGen(clientConn -> {
+                // check whitelist
+                InetSocketAddress remote = clientConn.remote;
+                if (!securityGroup.allow(Protocol.TCP, remote))
+                    return null; // terminated by securityGroup
                 // get a server from backends
                 Connector connector = backends.next();
                 if (connector == null)

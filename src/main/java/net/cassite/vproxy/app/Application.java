@@ -16,6 +16,7 @@ public class Application {
     public final ServerGroupHolder serverGroupHolder;
     public final ServerGroupsHolder serverGroupsHolder;
     public final TcpLBHolder tcpLBHolder;
+    public final SecurityGroupHolder securityGroupHolder;
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
 
@@ -24,6 +25,7 @@ public class Application {
         this.serverGroupHolder = new ServerGroupHolder();
         this.serverGroupsHolder = new ServerGroupsHolder();
         this.tcpLBHolder = new TcpLBHolder();
+        this.securityGroupHolder = new SecurityGroupHolder();
         SelectorEventLoop _controlEventLoop = SelectorEventLoop.open();
         this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
         this.respControllerHolder = new RESPControllerHolder();

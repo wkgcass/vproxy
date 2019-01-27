@@ -42,7 +42,7 @@ public class EventLoopGroupHandle {
         for (String name : Application.get().tcpLBHolder.names()) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(name);
             if (tcpLB.acceptorGroup.equals(g) || tcpLB.workerGroup.equals(g))
-                throw new Exception(ResourceType.elg + " " + toRemoveName + " is used by " + ResourceType.tl + " " + tcpLB.alias);
+                throw new Exception(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
         }
     }
 

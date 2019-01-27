@@ -5,6 +5,7 @@ import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
+import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
@@ -32,7 +33,8 @@ public class LBForEchoServers {
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
-            8, 4 // make buffers small to demonstrate what happen when buffer is full
+            8, 4, // make buffers small to demonstrate what happen when buffer is full
+            SecurityGroup.allowAll()
         );
         lb.start();
         // add each group one server

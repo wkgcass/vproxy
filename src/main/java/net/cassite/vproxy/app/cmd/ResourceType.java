@@ -13,6 +13,8 @@ public enum ResourceType {
     bin("bytes-in"),
     bout("bytes-out"),
     acceptedconncount("accepted-conn-count"),
+    secg("security-group"),
+    secgr("security-group-rule"),
 
     respcontroller("resp-controller"),
     ;

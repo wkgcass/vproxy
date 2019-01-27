@@ -104,7 +104,7 @@ public class Connection implements NetFlowRecorder {
         }
     }
 
-    protected final InetSocketAddress remote;
+    public final InetSocketAddress remote;
     protected InetSocketAddress local;
     protected final String _id;
     public final SocketChannel channel;

@@ -7,6 +7,8 @@ import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.secure.SecurityGroup;
+import net.cassite.vproxy.component.secure.SecurityGroupRule;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.util.*;
@@ -117,6 +119,9 @@ public class Shutdown {
 
         List<ServerGroups> serverGroupss = new LinkedList<>();
         Set<String> serverGroupsNames = new HashSet<>();
+
+        List<SecurityGroup> securityGroups = new LinkedList<>();
+        Set<String> securityGroupNames = new HashSet<>();
 
         {
             // create event-loop-group
@@ -229,6 +234,36 @@ public class Shutdown {
             }
         }
         {
+            // create security group
+            List<String> names = app.securityGroupHolder.names();
+            for (String name : names) {
+                SecurityGroup securityGroup;
+                try {
+                    securityGroup = app.securityGroupHolder.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("secg not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                securityGroupNames.add(securityGroup.alias);
+                securityGroups.add(securityGroup);
+                commands.add("add security-group " + securityGroup.alias +
+                    " default " + (securityGroup.defaultAllow ? "allow" : "deny"));
+            }
+        }
+        {
+            // create security group rule
+            for (SecurityGroup g : securityGroups) {
+                for (SecurityGroupRule r : g.getRules()) {
+                    commands.add("add security-group-rule " + r.alias + " to security-group " + g.alias +
+                        " network " + Utils.ipStr(r.ip) + "/" + Utils.maskInt(r.mask) +
+                        " protocol " + r.protocol +
+                        " port-range " + r.minPort + "," + r.maxPort +
+                        " default " + (r.allow ? "allow" : "deny"));
+                }
+            }
+        }
+        {
             // create tcp-lb
             TcpLBHolder tlh = app.tcpLBHolder;
             List<String> names = tlh.names();
@@ -253,10 +288,17 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the sgs " + tl.backends.alias + " already removed");
                     continue;
                 }
+                if (!securityGroupNames.contains(tl.securityGroup.alias) && !tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the secg " + tl.securityGroup.alias + " already removed");
+                    continue;
+                }
                 String cmd = "add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + tl.server.id() + " server-groups " + tl.backends.alias +
                     " in-buffer-size " + tl.inBufferSize + " out-buffer-size " + tl.outBufferSize;
+                if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
+                    cmd += " security-group " + tl.securityGroup.alias;
+                }
                 commands.add(cmd);
             }
         }

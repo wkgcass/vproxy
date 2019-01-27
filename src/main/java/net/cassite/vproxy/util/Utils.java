@@ -1,5 +1,7 @@
 package net.cassite.vproxy.util;
 
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 
 public class Utils {
@@ -42,6 +44,111 @@ public class Utils {
             return err.getMessage().trim();
         } else {
             return err.toString();
+        }
+    }
+
+    public static int maskInt(byte[] mask) {
+        // run from end to start and check how many zeros
+        int m = 0;
+        for (int i = mask.length - 1; i >= 0; --i) {
+            int cnt = zeros(mask[i]);
+            if (cnt == 0)
+                break;
+            m += cnt;
+        }
+        return mask.length * 8 - m;
+    }
+
+    private static int zeros(byte b) {
+        if ((b & /*-------*/0b1) == /*-------*/0b1) return 0;
+        if ((b & /*------*/0b10) == /*------*/0b10) return 1;
+        if ((b & /*-----*/0b100) == /*-----*/0b100) return 2;
+        if ((b & /*----*/0b1000) == /*----*/0b1000) return 3;
+        if ((b & /*---*/0b10000) == /*---*/0b10000) return 4;
+        if ((b & /*--*/0b100000) == /*--*/0b100000) return 5;
+        if ((b & /*-*/0b1000000) == /*-*/0b1000000) return 6;
+        if ((b & /**/0b10000000) == /**/0b10000000) return 7;
+        return 8;
+    }
+
+    public static boolean validNetwork(byte[] addr, byte[] mask) {
+        if (addr.length != mask.length)
+            return false;
+        for (int i = 0; i < addr.length; ++i) {
+            byte a = addr[i];
+            byte m = mask[i];
+            if ((a & m) != a)
+                return false;
+        }
+        return true;
+    }
+
+    public static boolean maskMatch(byte[] input, byte[] rule, byte[] mask) {
+        int minLen = input.length;
+        if (rule.length < minLen)
+            minLen = rule.length;
+        if (mask.length < minLen)
+            minLen = mask.length;
+
+        for (int i = minLen - 1; i >= 0; ++i) {
+            byte inputB = input[i];
+            byte ruleB = rule[i];
+            byte maskB = mask[i];
+
+            if ((inputB & maskB) != ruleB)
+                return false;
+        }
+        return true;
+    }
+
+    public static byte[] parseAddress(String address) {
+        try {
+            return InetAddress.getByName(address).getAddress();
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("unknown ip " + address);
+        }
+    }
+
+    public static byte[] parseMask(int mask) {
+        if (mask > 128) {
+            throw new IllegalArgumentException("unknown mask " + mask);
+        } else if (mask > 32) {
+            // ipv6
+            return getMask(new byte[16], mask);
+        } else {
+            // ipv4
+            return getMask(new byte[4], mask);
+        }
+    }
+
+    private static byte[] getMask(byte[] masks, int mask) {
+        for (int i = 0; i < 4; ++i) {
+            masks[i] = getByte(mask > 8 ? 8 : mask);
+            mask -= 8;
+        }
+        return masks;
+    }
+
+    private static byte getByte(int ones) {
+        switch (ones) {
+            case 8:
+                return (byte) 0b11111111;
+            case 7:
+                return (byte) 0b11111110;
+            case 6:
+                return (byte) 0b11111100;
+            case 5:
+                return (byte) 0b11111000;
+            case 4:
+                return (byte) 0b11110000;
+            case 3:
+                return (byte) 0b11100000;
+            case 2:
+                return (byte) 0b11000000;
+            case 1:
+                return (byte) 0b10000000;
+            default:
+                return 0;
         }
     }
 }

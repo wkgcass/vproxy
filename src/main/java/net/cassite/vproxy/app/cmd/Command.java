@@ -6,6 +6,8 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.exception.XException;
 import net.cassite.vproxy.component.proxy.Session;
+import net.cassite.vproxy.component.secure.SecurityGroup;
+import net.cassite.vproxy.component.secure.SecurityGroupRule;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.util.Callback;
@@ -60,8 +62,10 @@ public class Command {
             "\n            event-loop-group | elg                 event loop group" +
             "\n            server-groups    | sgs                 server groups" +
             "\n            server-group     | sg                  server group" +
+            "\n            security-group   | secg                security group" +
             "\n            event-loop       | el                  event loop, is inside event loop group" +
             "\n            server           | svr                 server, is inside server group" +
+            "\n            security-group-rule | secgr            security group rule, is inside security group" +
             "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb" +
             "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|server" +
             "\n            session          | sess                a proxy session, is inside tcp-lb" +
@@ -82,6 +86,11 @@ public class Command {
             "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb)" +
             "\n        in-buffer-size                             in buffer size           , required when (creating tcp-lb)" +
             "\n        out-buffer-size                            out buffer size          , required when (creating tcp-lb)" +
+            "\n        security-group       | secg                security group           , required when (creating tcp-lb)" +
+            "\n        default                                    enum: allow or deny      , required when (creating security-group-rule) or (creating security-group)" +
+            "\n        network              | net                 network: network/mask    , required when (creating security-group-rule)" +
+            "\n        protocol                                   enum: tcp or udp         , required when (creating security-group-rule)" +
+            "\n        port-range                                 an integer tuple $i,$j   , required when (creating security-group-rule)" +
             "\n    Usages:" +
             "\n        add event-loop-group elg0                  // creates a new event loop group named elg0" +
             "\n        add event-loop el00 to elg0                // creates a new event loop named el00 in elg0" +
@@ -613,10 +622,32 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case secgr: // security group rule
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                    case L:
+                    case l:
+                        // security group rule is in security group
+                        if (targetResource == null)
+                            throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
+                        if (targetResource.type != ResourceType.secg)
+                            throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
+                        SecurityGroupHandle.checkSecurityGroup(targetResource);
+                        if (cmd.action == Action.a) {
+                            SecurityGroupRuleHandle.checkCreateSecurityGroupRule(cmd);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             case sgs: // server groups
             case tl: // tcp lb
             case elg: // event loog group
-                // these three are only exist on top level
+            case secg: // security group
+                // these four are only exist on top level
                 // so bring them together
                 switch (cmd.action) {
                     case a:
@@ -626,11 +657,13 @@ public class Command {
                     case l:
                         if (targetResource != null)
                             throw new Exception(cmd.resource.type.fullname + " is on top level");
-                        // only check creation for tcp lb
+                        // only check creation for tcp lb and secg
                         // the other two does not have creation param
                         if (cmd.action == Action.a) {
                             if (cmd.resource.type == ResourceType.tl) {
                                 TcpLBHandle.checkCreateTcpLB(cmd);
+                            } else if (cmd.resource.type == ResourceType.secg) {
+                                SecurityGroupHandle.checkCreateSecurityGroup(cmd);
                             } // the other two does not need check
                         }
                         break;
@@ -833,6 +866,41 @@ public class Command {
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
+            case secg:
+                switch (action) {
+                    case l:
+                        List<String> sgNames = SecurityGroupHandle.names();
+                        return new CmdResult(sgNames, sgNames, utilJoinList(sgNames));
+                    case L:
+                        List<SecurityGroup> secg = SecurityGroupHandle.detail();
+                        List<String> secgStrList = secg.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(secgStrList, secgStrList, utilJoinList(secg));
+                    case a:
+                        SecurityGroupHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                        SecurityGroupHandle.preCheck(this);
+                    case R:
+                        SecurityGroupHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case secgr:
+                switch (action) {
+                    case l:
+                        List<String> ruleNames = SecurityGroupRuleHandle.names(targetResource);
+                        return new CmdResult(ruleNames, ruleNames, utilJoinList(ruleNames));
+                    case L:
+                        List<SecurityGroupRule> rules = SecurityGroupRuleHandle.detail(targetResource);
+                        List<String> ruleStrList = rules.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(rules, ruleStrList, utilJoinList(rules));
+                    case a:
+                        SecurityGroupRuleHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        SecurityGroupRuleHandle.forceRemove(this);
+                        return new CmdResult();
+                }
             default:
                 throw new Exception("unknown resource type " + resource.type.fullname);
         }

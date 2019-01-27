@@ -10,6 +10,7 @@ import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.util.Utils;
 
@@ -35,10 +36,6 @@ public class TcpLBHandle {
             throw new Exception("missing argument " + Param.addr.fullname);
         if (!cmd.args.containsKey(Param.sgs))
             throw new Exception("missing argument " + Param.sgs.fullname);
-        if (!cmd.args.containsKey(Param.inbuffersize))
-            throw new Exception("missing argument " + Param.inbuffersize.fullname);
-        if (!cmd.args.containsKey(Param.outbuffersize))
-            throw new Exception("missing argument " + Param.outbuffersize.fullname);
 
         AddrHandle.check(cmd);
 
@@ -79,8 +76,14 @@ public class TcpLBHandle {
         ServerGroups backend = Application.get().serverGroupsHolder.get(cmd.args.get(Param.sgs));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
+        SecurityGroup secg;
+        if (cmd.args.containsKey(Param.secg)) {
+            secg = SecurityGroupHandle.get(cmd.args.get(Param.secg));
+        } else {
+            secg = SecurityGroup.allowAll();
+        }
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize
+            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg
         );
     }
 
@@ -100,7 +103,8 @@ public class TcpLBHandle {
             return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
                 + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
                 + " backends " + tcpLB.backends.alias
-                + " in buffer size " + tcpLB.inBufferSize + " out buffer size " + tcpLB.outBufferSize;
+                + " in buffer size " + tcpLB.inBufferSize + " out buffer size " + tcpLB.outBufferSize
+                + " security-group " + tcpLB.securityGroup.alias;
         }
     }
 }

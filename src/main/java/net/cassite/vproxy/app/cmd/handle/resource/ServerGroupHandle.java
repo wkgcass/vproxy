@@ -136,7 +136,7 @@ public class ServerGroupHandle {
         for (String groupsName : Application.get().serverGroupsHolder.names()) {
             ServerGroups groups = Application.get().serverGroupsHolder.get(groupsName);
             if (groups.getServerGroups().contains(serverGroup)) {
-                throw new Exception(ResourceType.sg + " " + serverGroup.alias + " is used by " + ResourceType.sgs + " " + groups.alias);
+                throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgs.fullname + " " + groups.alias);
             }
         }
     }

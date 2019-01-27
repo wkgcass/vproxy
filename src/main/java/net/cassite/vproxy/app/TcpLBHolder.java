@@ -5,6 +5,7 @@ import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 
 import java.io.IOException;
@@ -27,10 +28,11 @@ public class TcpLBHolder {
                     InetSocketAddress bindAddress,
                     ServerGroups backends,
                     int inBufferSize,
-                    int outBufferSize) throws AlreadyExistException, IOException, ClosedException {
+                    int outBufferSize,
+                    SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException();
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, inBufferSize, outBufferSize);
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, inBufferSize, outBufferSize, securityGroup);
         map.put(alias, tcpLB);
         tcpLB.start();
     }
