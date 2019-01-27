@@ -61,5 +61,15 @@ public class RunAll {
         System.out.println("               resp app server");
         System.out.println("==============================================");
         RESPApplicationServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("              forbid lb server");
+        System.out.println("==============================================");
+        ForbidLBForEchoServers.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("               calculate mask");
+        System.out.println("==============================================");
+        CalculateMask.main(new String[0]);
     }
 }

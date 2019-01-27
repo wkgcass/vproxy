@@ -73,27 +73,96 @@ public class Utils {
 
     public static boolean validNetwork(byte[] addr, byte[] mask) {
         if (addr.length < mask.length)
-            return false;
-        for (int i = 1; i <= mask.length; ++i) {
-            byte a = addr[addr.length - i];
-            byte m = mask[mask.length - i];
+            return false; // ipv4 and mask > 32, absolutely wrong
+        // only check first few bytes in the loop
+        for (int i = 0; i < mask.length; ++i) {
+            byte a = addr[i];
+            byte m = mask[i];
             if ((a & m) != a)
+                return false;
+        }
+        // check whether last few bytes are all zero
+        // because mask is zero
+        for (int i = mask.length; i < addr.length; ++i) {
+            byte a = addr[i];
+            if (a != 0)
                 return false;
         }
         return true;
     }
 
     public static boolean maskMatch(byte[] input, byte[] rule, byte[] mask) {
+        // the mask and rule length might not match each other
+        // see comments in parseMask()
+        // and input length might not be the same as the rule
+        // because we might apply an ipv4 rule to an ipv6 lb
+
+        // let's consider all situations:
+        // 1) input.length == rule.length > mask.length
+        //    which means ipv6 input and ipv6 rule and mask <= 32
+        //    so we check the first 4 bytes in the sequence
+        // 2) input.length < rule.length > mask.length
+        //    which means ipv4 input and ipv6 rule and mask <= 32
+        //    in this case, all lowest 32 bits of real mask are 0
+        //    and the requester's ip address cannot be 0.0.0.0
+        //    so returning `not matching` would be ok
+        // 3) input.length < rule.length == mask.length
+        //    which means ipv4 input and ipv6 rule and mask > 32
+        //    the high bits are 0 for ipv4
+        //    so if rule high bits all zero, then check low bits
+        //    otherwise directly returning `not matching` would be ok
+        // 4) input.length > rule.length == mask.length
+        //    which means ipv6 input and ipv4 rule
+        //    so let's assume all high 96 bits of v6 mask are 0
+        //    and only compare the last 32 bits
+        // 5) input.length == rule.length == mask.length
+        //    which means ipv4 input and ipv4 rule and mask <= 32
+        //    or ipv6 input and ipv6 input and mask > 32
+        //    do normal check, but the algorithm can be the same as (4)
+        //    see implementation for detail
+
+        if (input.length == rule.length && rule.length > mask.length) {
+            // 1
+            for (int i = 0; i < mask.length; ++i) {
+                byte inputB = input[i];
+                byte ruleB = rule[i];
+                byte maskB = mask[i];
+                if ((inputB & maskB) != ruleB)
+                    return false;
+            }
+            return true;
+        } else if (input.length < rule.length && rule.length > mask.length) {
+            // 2
+            return false;
+        } else if (input.length < rule.length && rule.length == mask.length) {
+            // 3
+            for (int i = 0; i < rule.length - input.length; ++i) {
+                byte r = rule[i];
+                if (r != 0)
+                    return false;
+            }
+            for (int i = 0; i < input.length; ++i) {
+                byte inputB = input[i];
+                byte ruleB = rule[i + rule.length - input.length];
+                byte maskB = mask[i + rule.length - input.length];
+                if ((inputB & maskB) != ruleB)
+                    return false;
+            }
+            return true;
+        }
+        // else:
+        // use the same algorithm for (4) and (5)
+
         int minLen = input.length;
         if (rule.length < minLen)
             minLen = rule.length;
         if (mask.length < minLen)
             minLen = mask.length;
 
-        for (int i = minLen - 1; i >= 0; --i) {
-            byte inputB = input[i];
-            byte ruleB = rule[i];
-            byte maskB = mask[i];
+        for (int i = 0; i < minLen; ++i) {
+            byte inputB = input[input.length - i - 1];
+            byte ruleB = rule[rule.length - i - 1];
+            byte maskB = mask[mask.length - i - 1];
 
             if ((inputB & maskB) != ruleB)
                 return false;
@@ -102,6 +171,7 @@ public class Utils {
     }
 
     public static byte[] parseAddress(String address) {
+        // use jdk lib to parse the address
         try {
             return InetAddress.getByName(address).getAddress();
         } catch (UnknownHostException e) {
@@ -110,7 +180,7 @@ public class Utils {
     }
 
     public static byte[] parseMask(int mask) {
-        if (mask > 128) {
+        if (mask > 128) { // mask should not greater than 128
             throw new IllegalArgumentException("unknown mask " + mask);
         } else if (mask > 32) {
             // ipv6
@@ -119,16 +189,31 @@ public class Utils {
             // ipv4
             return getMask(new byte[4], mask);
         }
+        // maybe the mask <= 32 but is for ipv6
+        // in this case, we handle it as an ipv4 mask
+        // and do some additional work when
+        // checking and comparing
     }
 
+    // fill bytes into the `masks` array
     private static byte[] getMask(byte[] masks, int mask) {
-        for (int i = 0; i < 4; ++i) {
-            masks[i] = getByte(mask > 8 ? 8 : mask);
+        // because java always fill the byte with 0
+        // so we only need to set 1 into the bit sequence
+        // start from the first bit
+        for (int i = 0; i < masks.length; ++i) {
+            masks[i] = getByte(mask > 8
+                ? 8 // a byte can contain maximum 8 bits
+                : mask // it's ok if mask < 0, see comment in getByte()
+            );
+            // the `to-do` bit sequence moves 8 bits forward each round
+            // so subtract 8 from the integer represented mask
             mask -= 8;
         }
         return masks;
     }
 
+    // specify the number of 1 in the head of bit sequence
+    // and return a byte
     private static byte getByte(int ones) {
         switch (ones) {
             case 8:
@@ -148,6 +233,8 @@ public class Utils {
             case 1:
                 return (byte) 0b10000000;
             default:
+                // if <= 0, return 0
+                // the `getMask()` method can be more simple
                 return 0;
         }
     }
