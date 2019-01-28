@@ -7,6 +7,7 @@ import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
 import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
+import net.cassite.vproxy.app.cmd.handle.param.PersistHandle;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -48,6 +49,11 @@ public class TcpLBHandle {
             OutBufferSizeHandle.check(cmd);
         else
             cmd.args.put(Param.outbuffersize, "16384");
+
+        if (cmd.args.containsKey(Param.persist))
+            PersistHandle.check(cmd);
+        else
+            cmd.args.put(Param.persist, "0");
     }
 
     public static TcpLB get(Resource tcplb) throws NotFoundException {
@@ -82,8 +88,9 @@ public class TcpLBHandle {
         } else {
             secg = SecurityGroup.allowAll();
         }
+        int persist = PersistHandle.get(cmd);
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg
+            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg, persist
         );
     }
 
@@ -104,6 +111,7 @@ public class TcpLBHandle {
                 + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
                 + " backends " + tcpLB.backends.alias
                 + " in buffer size " + tcpLB.inBufferSize + " out buffer size " + tcpLB.outBufferSize
+                + " persist " + tcpLB.persistTimeout
                 + " security-group " + tcpLB.securityGroup.alias;
         }
     }

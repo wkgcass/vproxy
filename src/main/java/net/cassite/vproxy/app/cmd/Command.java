@@ -13,6 +13,7 @@ import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.Utils;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -72,6 +73,7 @@ public class Command {
             "\n            bytes-in         | bin                 input bytes (net flow from remote to local), is inside bind-server|connection|server" +
             "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
             "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
+            "\n            persist                                persisted connector, is inside tcp-lb" +
             "\n    Parameters:" +
             "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
             "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
@@ -87,11 +89,12 @@ public class Command {
             "\n        in-buffer-size                             in buffer size           , required when (creating tcp-lb)" +
             "\n        out-buffer-size                            out buffer size          , required when (creating tcp-lb)" +
             "\n        security-group       | secg                security group           , required when (creating tcp-lb)" +
+            "\n        persist                                    connector persist timeout, required when (creating tcp-lb)" +
             "\n        default                                    enum: allow or deny      , required when (creating security-group-rule) or (creating security-group)" +
             "\n        network              | net                 network: network/mask    , required when (creating security-group-rule)" +
             "\n        protocol                                   enum: tcp or udp         , required when (creating security-group-rule)" +
             "\n        port-range                                 an integer tuple $i,$j   , required when (creating security-group-rule)" +
-            "\n    Usages:" +
+            "\n    Usages Example:" +
             "\n        add event-loop-group elg0                  // creates a new event loop group named elg0" +
             "\n        add event-loop el00 to elg0                // creates a new event loop named el00 in elg0" +
             "\n        add server-group g0 timeout 500 period 800 up 4 down 5 method wrr elg elg0     // creates a server group named g0 with these arguments" +
@@ -538,6 +541,21 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case persist:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        // modification not supported for persist resources
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        PersistResourceHandle.checkPersistParent(targetResource);
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             case el: // event loop
                 switch (cmd.action) {
                     case a:
@@ -762,6 +780,22 @@ public class Command {
                     case L:
                         long acc = StatisticHandle.acceptedConnCount(targetResource);
                         return new CmdResult(acc, acc, "" + acc);
+                }
+            case persist:
+                switch (action) {
+                    case l:
+                        int persistCnt = PersistResourceHandle.count(targetResource);
+                        return new CmdResult(persistCnt, persistCnt, "" + persistCnt);
+                    case L:
+                        List<PersistResourceHandle.PersistRef> persistRefs = PersistResourceHandle.detail(targetResource);
+                        List<List<String>> persistStrList = persistRefs.stream().map(ref ->
+                            Arrays.asList(
+                                "client: " + Utils.ipStr(ref.persist.clientAddress.getAddress()),
+                                "server: " + Utils.ipStr(ref.persist.connector.remote.getAddress().getAddress()) + ":" + ref.persist.connector.remote.getPort(),
+                                "   via: " + Utils.ipStr(ref.persist.connector.local.getAddress().getAddress()) + ":" + ref.persist.connector.local.getPort()
+                            ))
+                            .collect(Collectors.toList());
+                        return new CmdResult(persistRefs, persistStrList, utilJoinList(persistRefs));
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {

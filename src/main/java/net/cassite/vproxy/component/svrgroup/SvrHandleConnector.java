@@ -23,4 +23,9 @@ class SvrHandleConnector extends Connector {
         conn.addConnCloseHandler(serverHandle);
         return conn;
     }
+
+    @Override
+    public boolean isValid() {
+        return serverHandle.valid;
+    }
 }

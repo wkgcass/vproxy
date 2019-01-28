@@ -19,6 +19,7 @@ public enum Param {
     net("network"),
     protocol("protocol"),
     portrange("port-range"),
+    persist("persist"),
 
     pass("password"),
     ;

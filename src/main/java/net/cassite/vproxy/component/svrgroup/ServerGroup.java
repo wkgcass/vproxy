@@ -66,6 +66,7 @@ public class ServerGroup {
         public final InetAddress local;
         private int weight;
         EventLoopWrapper el;
+        boolean valid = true;
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
         TCPHealthCheckClient healthCheckClient;
@@ -197,6 +198,7 @@ public class ServerGroup {
                 Logger.shouldNotHappen("the resource should be attached to the event loop");
             }
             el = null;
+            valid = false; // it's invalid when stopped
             if (healthCheckClient != null) {
                 healthCheckClient.stop();
             }

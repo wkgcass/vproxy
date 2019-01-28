@@ -29,10 +29,11 @@ public class TcpLBHolder {
                     ServerGroups backends,
                     int inBufferSize,
                     int outBufferSize,
-                    SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
+                    SecurityGroup securityGroup,
+                    int persist) throws AlreadyExistException, IOException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException();
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, inBufferSize, outBufferSize, securityGroup);
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, inBufferSize, outBufferSize, securityGroup, persist);
         map.put(alias, tcpLB);
         tcpLB.start();
     }

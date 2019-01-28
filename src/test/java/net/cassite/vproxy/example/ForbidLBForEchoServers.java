@@ -39,7 +39,8 @@ public class ForbidLBForEchoServers {
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
             8, 4, // make buffers small to demonstrate what happen when buffer is full
-            secg
+            secg,
+            0
         );
         lb.start();
         // add each group one server

@@ -7,8 +7,8 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class Connector {
-    private final InetSocketAddress remote;
-    private final InetSocketAddress local;
+    public final InetSocketAddress remote;
+    public final InetSocketAddress local;
 
     public Connector(InetSocketAddress remote, InetSocketAddress local) {
         this.remote = remote;
@@ -21,6 +21,10 @@ public class Connector {
 
     public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
         return ClientConnection.create(remote, local, in, out);
+    }
+
+    public boolean isValid() {
+        return true; // it's always valid for a manually created Connector
     }
 
     @Override

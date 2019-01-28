@@ -42,4 +42,28 @@ public class ProxyNetConfig {
         this.outBufferSize = outBufferSize;
         return this;
     }
+
+    public NetEventLoop getAcceptLoop() {
+        return acceptLoop;
+    }
+
+    public BindServer getServer() {
+        return server;
+    }
+
+    public NetEventLoopProvider getHandleLoopProvider() {
+        return handleLoopProvider;
+    }
+
+    public ConnectorGen getConnGen() {
+        return connGen;
+    }
+
+    public int getInBufferSize() {
+        return inBufferSize;
+    }
+
+    public int getOutBufferSize() {
+        return outBufferSize;
+    }
 }
