@@ -211,14 +211,18 @@ public class TcpLB {
         // check persist
         Persist persist = persistMap.get(remoteAddress);
         if (persist != null) {
-            if (persist.connector.isValid()) {
-                if (persistTimeout != 0)
-                    persist.refresh();
-                return persist.connector;
-            } else {
-                // the backend is not valid now
-                // remove the persist record
+            if (persistTimeout == 0) {
                 persist.remove();
+            } else {
+                if (persist.connector.isValid()) {
+                    if (persistTimeout != 0)
+                        persist.refresh();
+                    return persist.connector;
+                } else {
+                    // the backend is not valid now
+                    // remove the persist record
+                    persist.remove();
+                }
             }
         }
         // then we get a new connector

@@ -388,9 +388,6 @@ public class TestTcpLB {
         clients.add(client);
         recv = client.sendAndRecv("anything", 1);
         assertEquals("it's 1 because svr0 has 10 connections but svr1 has 0", "1", recv);
-        // set persistTimeout to 0 then no more persist records will be generated
-        // and it will not refresh again
-        lb0.persistTimeout = 0;
         // let's connect 5 times
         for (int i = 0; i < 9/*total 10 connections*/; ++i) {
             client = new Client(lbPort);
@@ -404,7 +401,11 @@ public class TestTcpLB {
         // we do not check this time
         // we are sure it's ok since it does exactly the same thing but change the target to svr1
 
+        // stop persist
+        lb0.persistTimeout = 0;
         Thread.sleep(2500); // the timeout is 2000, so we sleep for 2500 to make sure it's definitely timed-out
+        // timed-out
+        assertEquals("there should be no persist record now", 0, lb0.persistMap.size());
 
         // the connections should spread on each server
         int zero = 0;
