@@ -41,18 +41,34 @@ public class CalculateMask {
         }
         System.out.println("------------ip net/mask------------");
         for (Tuple<String, String> tuple : Arrays.asList(
-            new Tuple<>("10.144.0.1", "10.144.0.0/12"), // true:  input v4, rule v4, mask v4
-            new Tuple<>("10.144.0.1", "10.144.0.0/13"), // true:  input v4, rule v4, mask v4
-            new Tuple<>("10.152.0.1", "10.144.0.0/12"), // true:  input v4, rule v4, mask v4
-            new Tuple<>("127.0.0.1", "[0000:0000:0000:0000:0000:0000:7F00:0000]/112"), // true: input v4, rule v6, mask v6
-            new Tuple<>("[0000:0000:0000:0000:0000:0000:7F00:0001]", "127.0.0.1/32"), // true: input v6, rule v4, mask v4
-            new Tuple<>("[1111:0000:1000:0000:0000:0000:7F00:0001]", "127.0.0.1/32"), // true: input v6, rule v4, mask v4
-            new Tuple<>("10.152.0.1", "10.144.0.0/13"), // false: input v4, rule v4, mask v4
-            new Tuple<>("255.255.255.255", "[0000:0010:0000:0000:0000:0000:0000:0000]/28"), // false: input v4, rule v6, mask v4
-            new Tuple<>("127.0.0.1", "[0000:0010:0000:0000:0000:0000:0000:0000]/28"), // false: input v4, rule v6, mask v4
-            new Tuple<>("255.255.255.255", "[0000:0010:0000:0000:1000:0000:0000:0000]/68"), // false: input v4, rule v6, mask v4
-            new Tuple<>("127.0.0.1", "[0000:0010:0000:0000:1000:0000:0000:0000]/68"), // false: input v4, rule v6, mask v6
-            new Tuple<>("[1111:0000:1000:0000:0000:0000:7F00:0002]", "127.0.0.1/32") // false: input v6, rule v4, mask v4
+            // true:  input v4, rule v4, mask v4
+            new Tuple<>("10.144.0.1", "10.144.0.0/12"),
+            // true:  input v4, rule v4, mask v4
+            new Tuple<>("10.144.0.1", "10.144.0.0/13"),
+            // true:  input v4, rule v4, mask v4
+            new Tuple<>("10.152.0.1", "10.144.0.0/12"),
+            // true: input v4, rule v6, mask v6, for IPv4-Compatible IPv6 address
+            new Tuple<>("127.0.0.1", "[0000:0000:0000:0000:0000:0000:7F00:0000]/112"),
+            // true: input v4, rule v6, mask v6, for IPv4-Mapped IPv6 address
+            new Tuple<>("127.0.0.1", "[0000:0000:0000:0000:0000:ffff:7F00:0000]/112"),
+            // true: input v6, rule v4, mask v4, for IPv4-Compatible IPv6 address
+            new Tuple<>("[0000:0000:0000:0000:0000:0000:7F00:0001]", "127.0.0.1/32"),
+            // true: input v6, rule v4, mask v4, for IPv4-Mapped IPv6 address
+            new Tuple<>("[0000:0000:0000:0000:0000:FFFF:7F00:0001]", "127.0.0.1/32"),
+            // false: input v4, rule v4, mask v4
+            new Tuple<>("10.152.0.1", "10.144.0.0/13"),
+            // false: input v4, rule v6, mask v4
+            new Tuple<>("255.255.255.255", "[0000:0010:0000:0000:0000:0000:0000:0000]/28"),
+            // false: input v4, rule v6, mask v4
+            new Tuple<>("127.0.0.1", "[0000:0010:0000:0000:0000:0000:0000:0000]/28"),
+            // false: input v4, rule v6, mask v6, for not match
+            new Tuple<>("128.0.0.1", "[0000:0000:0000:0000:0000:0000:7F00:0000]/112"),
+            // false: input v4, rule v6, mask v6, for IPv4-Mapped IPv6 address
+            new Tuple<>("128.0.0.1", "[0000:0000:0000:0000:0000:ffff:7F00:0000]/112"),
+            // false: input v6, rule v4, mask v4, for not Compatible nor Mapped
+            new Tuple<>("[0000:0000:0000:0000:0000:1234:7F00:0001]", "127.0.0.1/32"),
+            // false: input v6, rule v4, mask v4, for not match
+            new Tuple<>("[0000:0000:0000:0000:0000:FFFF:7F00:0002]", "127.0.0.1/32")
         )) {
             String ipStr = tuple.left;
             String[] arr = tuple.right.split("/");

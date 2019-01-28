@@ -103,22 +103,30 @@ public class Utils {
         //    so we check the first 4 bytes in the sequence
         // 2) input.length < rule.length > mask.length
         //    which means ipv4 input and ipv6 rule and mask <= 32
-        //    in this case, all lowest 32 bits of real mask are 0
+        //    in this case, all highest 32 bits of real mask are 0
         //    and the requester's ip address cannot be 0.0.0.0
         //    so returning `not matching` would be ok
         // 3) input.length < rule.length == mask.length
         //    which means ipv4 input and ipv6 rule and mask > 32
-        //    the high bits are 0 for ipv4
-        //    so if rule high bits all zero, then check low bits
+        //    the low bits are 0 for ipv4
+        //    so if rule low bits [all 0] or [all 0][ffff], then check high bits
         //    otherwise directly returning `not matching` would be ok
         // 4) input.length > rule.length == mask.length
         //    which means ipv6 input and ipv4 rule
-        //    so let's assume all high 96 bits of v6 mask are 0
-        //    and only compare the last 32 bits
+        //    so let's only compare the last 32 bits
+        //    additionally:
+        //    there might be deprecated `IPv4-Compatible IPv6 address` e.g.:
+        //                                  127.0.0.1
+        //    0000:0000:0000:0000:0000:0000:7f00:0001
+        //    and there might be `IPv4-Mapped IPv6 address` e.g.:
+        //                                  127.0.0.1
+        //    0000:0000:0000:0000:0000:ffff:7f00:0001
+        //    so let's then check whether the first few bits
+        //    like this [all 0][ffff]
         // 5) input.length == rule.length == mask.length
         //    which means ipv4 input and ipv4 rule and mask <= 32
         //    or ipv6 input and ipv6 input and mask > 32
-        //    do normal check, but the algorithm can be the same as (4)
+        //    just do normal check
         //    see implementation for detail
 
         if (input.length == rule.length && rule.length > mask.length) {
@@ -136,11 +144,11 @@ public class Utils {
             return false;
         } else if (input.length < rule.length && rule.length == mask.length) {
             // 3
-            for (int i = 0; i < rule.length - input.length; ++i) {
-                byte r = rule[i];
-                if (r != 0)
-                    return false;
-            }
+            // input =            [.......]
+            //  rule = [..................]
+            int lastLowIdx = rule.length - input.length - 1;
+            int secondLastLowIdx = lastLowIdx - 1;
+            // high part
             for (int i = 0; i < input.length; ++i) {
                 byte inputB = input[i];
                 byte ruleB = rule[i + rule.length - input.length];
@@ -148,10 +156,10 @@ public class Utils {
                 if ((inputB & maskB) != ruleB)
                     return false;
             }
-            return true;
+            return lowBitsV6V4(rule, lastLowIdx, secondLastLowIdx);
         }
         // else:
-        // use the same algorithm for (4) and (5)
+        // for (4) and (5)
 
         int minLen = input.length;
         if (rule.length < minLen)
@@ -167,7 +175,30 @@ public class Utils {
             if ((inputB & maskB) != ruleB)
                 return false;
         }
+
+        // then check for additional rules in (4)
+        if (input.length > rule.length) {
+            // input = [..................]
+            //  rule =            [.......]
+            int lastLowIdx = input.length - rule.length - 1;
+            int secondLastLowIdx = lastLowIdx - 1;
+            return lowBitsV6V4(input, lastLowIdx, secondLastLowIdx);
+        }
+
         return true;
+    }
+
+    private static boolean lowBitsV6V4(byte[] ip, int lastLowIdx, int secondLastLowIdx) {
+        for (int i = 0; i < secondLastLowIdx; ++i) {
+            if (ip[i] != 0)
+                return false;
+        }
+        if (ip[lastLowIdx] == 0) {
+            return ip[secondLastLowIdx] == 0;
+        } else if (ip[lastLowIdx] == ((byte) 0b11111111)) {
+            return ip[secondLastLowIdx] == ((byte) 0b11111111);
+        } else
+            return false;
     }
 
     public static byte[] parseAddress(String address) {

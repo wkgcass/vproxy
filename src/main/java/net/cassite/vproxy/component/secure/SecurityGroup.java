@@ -5,7 +5,6 @@ import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.connection.Protocol;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;

@@ -4,7 +4,6 @@ import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.util.Utils;
 
 import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 public class SecurityGroupRule {
