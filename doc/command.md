@@ -52,6 +52,8 @@ There are many kinds of `$resource-type`s, as shown in this figure:
   connection (conn)   +-- /* channel */
      session (sess) --+
 
+            persist --+-- /* state */
+
      bytes-in (bin) --+
    bytes-out (bout)   +-- /* statistics */
 accepted-conn-count --+
@@ -124,8 +126,10 @@ Create a loadbalancer.
 * event-loop-group (elg): choose an event loop group as the worker event loop group. can be the same as acceptor event loop group
 * address (addr): the bind address of the loadbalancer
 * server-groups (sgs): used as the backend servers
-* in-buffer-size: input buffer size. *optional*, default 16384
-* out-buffer-size: output buffer size. *optional*, default 16384
+* in-buffer-size: input buffer size. *optional*, default 16384 (bytes)
+* out-buffer-size: output buffer size. *optional*, default 16384 (bytes)
+* persist: an integer representing the timeout (ms) of how long to persist a connector for a client ip. *optional*, default 0, means do not persist
+* security-group (secg): specify a security group for the lb. *optional*, default allow any
 
 ```
 add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 server-groups sgs0 in-buffer-size 16384 out-buffer-size 16384
@@ -476,6 +480,31 @@ Remove a rule from a security group.
 ```
 remove security-group-rule secgr0 from security-group secg0
 "OK"
+```
+
+## Resource: persist
+
+Represents a persisted connector, which contains client source ip, which server to use and request server with which local ip.  
+The resource only exist in `tcp-lb`.
+
+#### list
+
+Count persisted connectors.
+
+```
+list persist in tl lb0
+(integer) 1
+```
+
+#### list-detail
+
+Retrieve detailed info of all persisted connectors.
+
+```
+list-detail persist in tl lb0
+1) 1) "client: 127.0.0.1"
+   2) "server: 127.0.0.1:16666"
+   3) "   via: 127.0.0.1:0"
 ```
 
 ## Resource: bind-server (bs)
