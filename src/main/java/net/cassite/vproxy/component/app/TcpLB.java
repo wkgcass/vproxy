@@ -12,7 +12,10 @@ import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.component.proxy.Session;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
-import net.cassite.vproxy.connection.*;
+import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.LogType;
@@ -23,8 +26,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -211,7 +212,8 @@ public class TcpLB {
         Persist persist = persistMap.get(remoteAddress);
         if (persist != null) {
             if (persist.connector.isValid()) {
-                persist.refresh();
+                if (persistTimeout != 0)
+                    persist.refresh();
                 return persist.connector;
             } else {
                 // the backend is not valid now

@@ -1,7 +1,6 @@
 package net.cassite.vproxy.example;
 
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.connection.ServerHandler;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;

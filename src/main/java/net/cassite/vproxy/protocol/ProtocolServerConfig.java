@@ -1,8 +1,8 @@
 package net.cassite.vproxy.protocol;
 
 public class ProtocolServerConfig {
-    int inBufferSize;
-    int outBufferSize;
+    int inBufferSize = 16384;
+    int outBufferSize = 16384;
 
     public ProtocolServerConfig setInBufferSize(int inBufferSize) {
         this.inBufferSize = inBufferSize;

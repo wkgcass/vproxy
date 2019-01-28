@@ -356,9 +356,23 @@ public class SelectorEventLoop {
 
         synchronized (CLOSE_LOCK) {
             Set<SelectionKey> keys = selector.keys();
-            THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
-            for (SelectionKey key : keys) {
-                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.channel(), (RegisterData) key.attachment()));
+            while (true) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
+                try {
+                    for (SelectionKey key : keys) {
+                        THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.channel(), (RegisterData) key.attachment()));
+                    }
+                } catch (ConcurrentModificationException ignore) {
+                    // there might be adding and removing occur when closing the selector
+                    // but we do not lock them for performance concern
+                    // we simply catch the exception and re-try
+                    continue;
+                }
+                // i believe there's no need to set a `closed` flag
+                // because the copy is very fast
+                // and usually we don't close a event loop
+                // re-try would be just fine
+                break;
             }
             selector.close();
         }

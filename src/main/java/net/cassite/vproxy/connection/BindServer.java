@@ -49,10 +49,12 @@ public class BindServer implements NetFlowRecorder {
         return toRemoteBytes.longValue();
     }
 
+    @Override
     public void incFromRemoteBytes(long bytes) {
         fromRemoteBytes.add(bytes);
     }
 
+    @Override
     public void incToRemoteBytes(long bytes) {
         toRemoteBytes.add(bytes);
     }

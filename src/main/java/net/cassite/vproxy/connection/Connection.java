@@ -158,6 +158,7 @@ public class Connection implements NetFlowRecorder {
         return toRemoteBytes;
     }
 
+    @Override
     public void incFromRemoteBytes(long bytes) {
         fromRemoteBytes += bytes;
         for (NetFlowRecorder nfr : netFlowRecorders) {
@@ -165,6 +166,7 @@ public class Connection implements NetFlowRecorder {
         }
     }
 
+    @Override
     public void incToRemoteBytes(long bytes) {
         toRemoteBytes += bytes;
         for (NetFlowRecorder nfr : netFlowRecorders) {

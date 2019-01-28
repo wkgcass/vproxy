@@ -94,12 +94,10 @@ public class ServerGroup {
             fromRemoteBytes.add(bytes);
         }
 
-        @Override
         public long getToRemoteBytes() {
             return toRemoteBytes.longValue();
         }
 
-        @Override
         public long getFromRemoteBytes() {
             return fromRemoteBytes.longValue();
         }
@@ -332,12 +330,18 @@ public class ServerGroup {
      */
 
     private Connector wlcNext() {
-        WLC wlc = _wlc;
+        return wlcNext(_wlc, 0);
+    }
+
+    private Connector wlcNext(WLC wlc, int mStart) {
+        if (mStart >= wlc.servers.size())
+            return null;
+
         if (wlc.servers.isEmpty())
             return null;
         int m, n, WSm, CSm, WSi, CSi;
         ServerHandle Sm;
-        m = 0;
+        m = mStart;
         n = wlc.servers.size();
         // for (m = 0; m < n; ++m) {
         { // --------- START ---------
@@ -345,12 +349,15 @@ public class ServerGroup {
             WSm = Sm.weight;
             CSm = Sm.connectionCount();
         } // --------- END ---------
+        if (!Sm.healthy) {
+            return wlcNext(wlc, mStart + 1);
+        }
         // if (WSm > 0) {
         for (int i = m + 1; i < n; ++i) {
             ServerHandle Si = wlc.servers.get(i);
             WSi = Si.weight;
             CSi = Si.connectionCount();
-            if (CSm * WSi > CSi * WSm) {
+            if (CSm * WSi > CSi * WSm && Si.healthy) {
                 m = i;
                 { // --------- START ---------
                     Sm = wlc.servers.get(m);

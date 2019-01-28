@@ -25,4 +25,9 @@ public class Tuple<A, B> implements Map.Entry<A, B> {
     public B setValue(B value) {
         throw new UnsupportedOperationException();
     }
+
+    @Override
+    public String toString() {
+        return "Tuple(" + left + ", " + right + ")";
+    }
 }
