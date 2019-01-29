@@ -16,6 +16,8 @@ public enum ResourceType {
     secg("security-group"),
     secgr("security-group-rule"),
     persist("persist"),
+    resolver("resolver"),
+    dnscache("dns-cache"),
 
     respcontroller("resp-controller"),
     ;

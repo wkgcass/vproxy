@@ -10,6 +10,7 @@ import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.secure.SecurityGroupRule;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
+import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
@@ -67,6 +68,7 @@ public class Command {
             "\n            event-loop       | el                  event loop, is inside event loop group" +
             "\n            server           | svr                 server, is inside server group" +
             "\n            security-group-rule | secgr            security group rule, is inside security group" +
+            "\n            resolver                               the dns resolver" +
             "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb" +
             "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|server" +
             "\n            session          | sess                a proxy session, is inside tcp-lb" +
@@ -74,6 +76,7 @@ public class Command {
             "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
             "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
             "\n            persist                                persisted connector, is inside tcp-lb" +
+            "\n            dns-cache                              dns cache, is inside resolver" +
             "\n    Parameters:" +
             "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
             "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
@@ -661,6 +664,20 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case dnscache:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        DnsCacheHandle.checkDnsCache(cmd.resource);
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             case sgs: // server groups
             case tl: // tcp lb
             case elg: // event loog group
@@ -689,6 +706,9 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case resolver:
+                // disallow all operations on resolver
+                throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
             default:
                 throw new Exception("unknown resource type " + cmd.resource.type.fullname);
         }
@@ -934,6 +954,20 @@ public class Command {
                     case R:
                         SecurityGroupRuleHandle.forceRemove(this);
                         return new CmdResult();
+                }
+            case dnscache:
+                switch (action) {
+                    case l:
+                        int cacheCnt = ResolverHandle.count();
+                        return new CmdResult(cacheCnt, cacheCnt, "" + cacheCnt);
+                    case L:
+                        List<Resolver.Cache> caches = ResolverHandle.detail();
+                        List<Object> cacheStrList = caches.stream().map(c -> Arrays.asList(
+                            c.host,
+                            c.ipv4.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList()),
+                            c.ipv6.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList())
+                        )).collect(Collectors.toList());
+                        return new CmdResult(caches, cacheStrList, utilJoinList(caches));
                 }
             default:
                 throw new Exception("unknown resource type " + resource.type.fullname);

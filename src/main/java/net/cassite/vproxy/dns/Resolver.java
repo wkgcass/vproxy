@@ -6,6 +6,7 @@ import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.Blocking;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -71,6 +72,26 @@ public class Resolver implements IResolver {
                 te.cancel();
             }
             cacheMap.remove(host);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append(host).append(" -> ipv4 [");
+            boolean isFirst = true;
+            for (Inet4Address i : ipv4) {
+                if (isFirst) isFirst = false;
+                else sb.append(",");
+                sb.append(Utils.ipStr(i.getAddress()));
+            }
+            sb.append("] ipv6 [");
+            isFirst = true;
+            for (Inet6Address i : ipv6) {
+                if (isFirst) isFirst = false;
+                else sb.append(",");
+                sb.append(Utils.ipStr(i.getAddress()));
+            }
+            return sb.toString();
         }
     }
 
