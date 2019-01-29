@@ -22,7 +22,7 @@ public class NetworkHandle {
         String[] arr = net.split("/");
         if (arr.length > 2)
             throw new IllegalArgumentException();
-        byte[] addr = Utils.parseAddress(arr[0]);
+        byte[] addr = Utils.blockParseAddress(arr[0]);
         byte[] mask = Utils.parseMask(Integer.parseInt(arr[1]));
         if (!Utils.validNetwork(addr, mask))
             throw new IllegalArgumentException();

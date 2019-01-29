@@ -1,5 +1,7 @@
 package net.cassite.vproxy.util;
 
+import net.cassite.vproxy.dns.Resolver;
+
 import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
@@ -13,15 +15,26 @@ public class Utils {
         return b;
     }
 
+    private static String addTo(@SuppressWarnings("SameParameterValue") int len, String s) {
+        if (s.length() >= len)
+            return s;
+        StringBuilder sb = new StringBuilder();
+        for (int i = s.length(); i < len; ++i) {
+            sb.append("0");
+        }
+        sb.append(s);
+        return sb.toString();
+    }
+
     private static String ipv6Str(byte[] ip) {
-        return "[" + Integer.toHexString(positive(ip[0]) << 8 + positive(ip[1]))
-            + ":" + Integer.toHexString(positive(ip[2]) << 8 + positive(ip[3]))
-            + ":" + Integer.toHexString(positive(ip[4]) << 8 + positive(ip[5]))
-            + ":" + Integer.toHexString(positive(ip[6]) << 8 + positive(ip[7]))
-            + ":" + Integer.toHexString(positive(ip[8]) << 8 + positive(ip[9]))
-            + ":" + Integer.toHexString(positive(ip[10]) << 8 + positive(ip[11]))
-            + ":" + Integer.toHexString(positive(ip[12]) << 8 + positive(ip[13]))
-            + ":" + Integer.toHexString(positive(ip[14]) << 8 + positive(ip[15]))
+        return "[" + addTo(4, Integer.toHexString((ip[0] << 8) | ip[1]))
+            + ":" + addTo(4, Integer.toHexString((ip[2] << 8) | ip[3]))
+            + ":" + addTo(4, Integer.toHexString((ip[4] << 8) | ip[5]))
+            + ":" + addTo(4, Integer.toHexString((ip[6] << 8) | ip[7]))
+            + ":" + addTo(4, Integer.toHexString((ip[8] << 8) | ip[9]))
+            + ":" + addTo(4, Integer.toHexString((ip[10] << 8) | ip[11]))
+            + ":" + addTo(4, Integer.toHexString((ip[12] << 8) | ip[13]))
+            + ":" + addTo(4, Integer.toHexString((ip[14] << 8) | ip[15]))
             + "]";
     }
 
@@ -201,13 +214,24 @@ public class Utils {
             return false;
     }
 
-    public static byte[] parseAddress(String address) {
-        // use jdk lib to parse the address
-        try {
-            return InetAddress.getByName(address).getAddress();
-        } catch (UnknownHostException e) {
-            throw new IllegalArgumentException("unknown ip " + address);
-        }
+    public static void parseAddress(String address, Callback<byte[], IllegalArgumentException> cb) {
+        Resolver.getDefault().resolve(address, new Callback<InetAddress, UnknownHostException>() {
+            @Override
+            protected void onSucceeded(InetAddress value) {
+                cb.succeeded(value.getAddress());
+            }
+
+            @Override
+            protected void onFailed(UnknownHostException err) {
+                cb.failed(new IllegalArgumentException("unknown ip " + address));
+            }
+        });
+    }
+
+    public static byte[] blockParseAddress(String address) throws IllegalArgumentException {
+        BlockCallback<byte[], IllegalArgumentException> cb = new BlockCallback<>();
+        parseAddress(address, cb);
+        return cb.block();
     }
 
     public static byte[] parseMask(int mask) {

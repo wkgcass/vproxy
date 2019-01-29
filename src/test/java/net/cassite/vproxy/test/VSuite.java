@@ -1,16 +1,19 @@
 package net.cassite.vproxy.test;
 
-import net.cassite.vproxy.test.cases.TestNetMask;
-import net.cassite.vproxy.test.cases.TestTcpLB;
-import net.cassite.vproxy.test.cases.TestTimer;
+import net.cassite.vproxy.test.cases.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 
 @RunWith(Suite.class)
 @Suite.SuiteClasses({
+    BeforeAll.class,
+
     TestTcpLB.class,
     TestNetMask.class,
     TestTimer.class,
+    TestResolver.class,
+
+    AfterAll.class
 })
 public class VSuite {
 }

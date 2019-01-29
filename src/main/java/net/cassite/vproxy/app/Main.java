@@ -4,6 +4,7 @@ import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.component.app.Shutdown;
 import net.cassite.vproxy.component.app.StdIOController;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
+import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
@@ -11,6 +12,7 @@ import net.cassite.vproxy.util.Utils;
 import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.Security;
 
 public class Main {
     private static final String _HELP_STR_ = "" +
@@ -23,7 +25,14 @@ public class Main {
         "\n\t\t                                             be named as `resp-controller`" +
         "";
 
+    private static void beforeStart() {
+        Security.setProperty("networkaddress.cache.ttl", "0");
+        Resolver.getDefault();
+    }
+
     public static void main(String[] args) {
+        beforeStart();
+
         try {
             Application.create();
         } catch (IOException e) {

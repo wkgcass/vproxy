@@ -61,7 +61,7 @@ public class TestNetMask {
             boolean b = tup.left;
             String addr = tup.right.left;
             int mask = tup.right.right;
-            byte[] bip = Utils.parseAddress(addr);
+            byte[] bip = Utils.blockParseAddress(addr);
             byte[] bmask = Utils.parseMask(mask);
             assertEquals("check for " + tup, b, Utils.validNetwork(bip, bmask));
         }
@@ -103,8 +103,8 @@ public class TestNetMask {
             boolean b = tup.left;
             String input = tup.right.left;
             String net = tup.right.right;
-            byte[] binput = Utils.parseAddress(input);
-            byte[] baddr = Utils.parseAddress(net.split("/")[0]);
+            byte[] binput = Utils.blockParseAddress(input);
+            byte[] baddr = Utils.blockParseAddress(net.split("/")[0]);
             byte[] bmask = Utils.parseMask(Integer.parseInt(net.split("/")[1]));
             assertEquals("match for " + tup, b, Utils.maskMatch(binput, baddr, bmask));
         }

@@ -72,7 +72,7 @@ public class ForbidLBForEchoServers {
         Thread.sleep(10000);
         System.out.println("\033[1;30m---------------------allow port 18080 now------------------\033[0m");
         SecurityGroupRule rule = new SecurityGroupRule("allow18080",
-            Utils.parseAddress("127.0.0.1"), Utils.parseMask(32),
+            Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32),
             Protocol.TCP, 18080, 18080, true);
         secg.addRule(rule);
         Thread.sleep(10000);

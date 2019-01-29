@@ -670,7 +670,7 @@ public class TestTcpLB {
 
         // deny lbPort
         SecurityGroupRule secgr0 = new SecurityGroupRule(
-            "secgr0", Utils.parseAddress("127.0.0.1"), Utils.parseMask(32), Protocol.TCP, lbPort, lbPort, false
+            "secgr0", Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32), Protocol.TCP, lbPort, lbPort, false
         );
         secg0.addRule(secgr0);
 
