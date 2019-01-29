@@ -7,6 +7,7 @@ import net.cassite.vproxy.util.Blocking;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
+import sun.net.util.IPAddressUtil;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -203,11 +204,50 @@ public class Resolver implements IResolver {
         return null;
     }
 
+    private boolean isIpv4(String s) {
+        return IPAddressUtil.isIPv4LiteralAddress(s);
+    }
+
+    private boolean isIpv6(String s) {
+        return IPAddressUtil.isIPv6LiteralAddress(s);
+    }
+
     @SuppressWarnings("unchecked")
     private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
-        // we could check whether the host is an ip
-        // but it's not necessary because the java library will check it for us
-        // and since openjdk is licensed under GPL CE, i cannot copy openjdk source code into this MIT licensed project
+        // check whether it's ipv4 or ipv6
+        if (isIpv4(host)) {
+            if (ipv4) {
+                Inet4Address addr;
+                try {
+                    addr = (Inet4Address) InetAddress.getByName(host);
+                } catch (UnknownHostException e) {
+                    // should not happen
+                    Logger.shouldNotHappen("resolving an ipv4 address string should success");
+                    cb.failed(e);
+                    return;
+                }
+                cb.succeeded(addr);
+            } else {
+                cb.failed(new UnknownHostException(host));
+            }
+            return;
+        } else if (isIpv6(host)) {
+            if (ipv6) {
+                Inet6Address addr;
+                try {
+                    addr = (Inet6Address) InetAddress.getByName(host);
+                } catch (UnknownHostException e) {
+                    // should not happen
+                    Logger.shouldNotHappen("resolving an ipv6 address string should success");
+                    cb.failed(e);
+                    return;
+                }
+                cb.succeeded(addr);
+            } else {
+                cb.failed(new UnknownHostException(host));
+            }
+            return;
+        }
 
         Cache r = cacheMap.get(host);
         if (r == null) {
