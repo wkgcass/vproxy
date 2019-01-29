@@ -9,6 +9,7 @@ import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
@@ -205,11 +206,18 @@ public class StdIOController {
         try {
             AddrHandle.check(cmd);
         } catch (Exception e) {
-            stderrSync("invalid");
+            stderrSync("invalid system call");
             return;
         }
 
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        InetSocketAddress addr;
+        try {
+            addr = AddrHandle.get(cmd);
+        } catch (Exception e) {
+            Logger.shouldNotHappen("it should have already been checked but still failed", e);
+            stderrSync("invalid system call");
+            return;
+        }
         byte[] pass = cmd.args.get(Param.pass).getBytes();
 
         // start

@@ -3,7 +3,9 @@ package net.cassite.vproxy.dns;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
+import net.cassite.vproxy.util.Blocking;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Logger;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -18,7 +20,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 
-public class Resolver {
+public class Resolver implements IResolver {
     static class ResolveTask {
         final String host;
         final Callback<InetAddress, UnknownHostException> cb;
@@ -72,54 +74,59 @@ public class Resolver {
         }
     }
 
-    private static volatile SelectorEventLoop defaultLoop;
     private static volatile Resolver defaultResolver;
 
-    public static Resolver getDefault() {
+    public static IResolver getDefault() {
         if (defaultResolver != null)
             return defaultResolver;
         synchronized (Resolver.class) {
             if (defaultResolver != null)
                 return defaultResolver;
-            NetEventLoop loop;
             try {
-                defaultLoop = SelectorEventLoop.open();
+                defaultResolver = new Resolver("Resolver");
             } catch (IOException e) {
-                throw new RuntimeException("open selector failed");
+                throw new RuntimeException("create resolver failed");
             }
-            loop = new NetEventLoop(defaultLoop);
-            defaultResolver = new Resolver(loop);
-            new Thread(loop.getSelectorEventLoop()::loop, "Resolver").start();
+            defaultResolver.start();
+
+            return defaultResolver;
         }
-        return defaultResolver;
     }
 
     public static void stopDefault() {
-        Resolver resolver = defaultResolver;
-        SelectorEventLoop loop = defaultLoop;
-        defaultResolver = null;
-        defaultLoop = null;
-        if (resolver != null)
-            resolver.clearCache();
+        Resolver r;
+        synchronized (Resolver.class) {
+            r = defaultResolver;
+            defaultResolver = null;
+        }
+        if (r == null)
+            return;
         try {
-            loop.close();
+            r.stop();
         } catch (IOException e) {
-            // we can do nothing about it
+            // we can do nothing about it, just log
+            Logger.shouldNotHappen("close resolver failed", e);
         }
     }
 
+    private final String alias;
     private final NetEventLoop loop;
     public int ttl = 60000;
     private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
 
-    public Resolver(NetEventLoop loop) {
+    public Resolver(String alias) throws IOException {
         // currently we only use java standard lib to resolve the address
         // so this loop is only used for handling events for now
-        this.loop = loop;
+        this.alias = alias;
+        this.loop = new NetEventLoop(SelectorEventLoop.open());
         // java resolve process will block the thread
         // so we start a new thread only for resolving
         // it will make a callback when resolve completed
         // let's just handle it in the loop since it is created for resolving
+    }
+
+    public void start() {
+        new Thread(loop.getSelectorEventLoop()::loop, alias).start();
     }
 
     private void doResolve(ResolveTask task) {
@@ -176,7 +183,7 @@ public class Resolver {
     }
 
     @SuppressWarnings("unchecked")
-    private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? extends InetAddress, ? super UnknownHostException> cb) {
+    private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
         // we could check whether the host is an ip
         // but it's not necessary because the java library will check it for us
         // and since openjdk is licensed under GPL CE, i cannot copy openjdk source code into this MIT licensed project
@@ -221,22 +228,29 @@ public class Resolver {
         cb.failed(new UnknownHostException(host));
     }
 
-    public void resolve(String host, Callback<InetAddress, ? super UnknownHostException> cb) {
+    @Override
+    public void resolve(String host, Callback<? super InetAddress, ? super UnknownHostException> cb) {
         resolveN(host, true, true, cb);
     }
 
-    public void resolveV6(String host, Callback<Inet6Address, ? super UnknownHostException> cb) {
-        resolveN(host, false, true, cb);
+    @SuppressWarnings("unchecked")
+    @Override
+    public void resolveV6(String host, Callback<? super Inet6Address, ? super UnknownHostException> cb) {
+        resolveN(host, false, true, (Callback) cb);
     }
 
-    public void resolveV4(String host, Callback<Inet4Address, ? super UnknownHostException> cb) {
-        resolveN(host, true, false, cb);
+    @SuppressWarnings("unchecked")
+    @Override
+    public void resolveV4(String host, Callback<? super Inet4Address, ? super UnknownHostException> cb) {
+        resolveN(host, true, false, (Callback) cb);
     }
 
+    @Override
     public int cacheCount() {
         return cacheMap.size();
     }
 
+    @Override
     public void copyCache(Collection<? super Cache> cacheList) {
         cacheList.addAll(this.cacheMap.values());
     }
@@ -245,5 +259,11 @@ public class Resolver {
         for (Cache c : cacheMap.values()) {
             c.remove();
         }
+    }
+
+    @Blocking
+    public void stop() throws IOException {
+        loop.getSelectorEventLoop().close();
+        clearCache();
     }
 }

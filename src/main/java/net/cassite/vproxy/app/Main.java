@@ -88,7 +88,7 @@ public class Main {
                     i += 2;
                     InetSocketAddress respCtrlAddr;
                     try {
-                        respCtrlAddr = AddrHandle.get(next);
+                        respCtrlAddr = AddrHandle.get(next, true, true);
                     } catch (Exception e) {
                         System.err.println("invalid address: " + next);
                         System.exit(1);

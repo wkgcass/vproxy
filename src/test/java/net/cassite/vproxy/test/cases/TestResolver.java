@@ -1,6 +1,5 @@
 package net.cassite.vproxy.test.cases;
 
-import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.BlockCallback;
@@ -25,13 +24,13 @@ public class TestResolver {
     @Before
     public void setUp() throws IOException {
         loop = SelectorEventLoop.open();
-        resolver = new Resolver(new NetEventLoop(loop));
-        new Thread(loop::loop).start();
+        resolver = new Resolver("TestResolver" + ((int) (Math.random() * 10000)));
+        resolver.start();
     }
 
     @After
     public void tearDown() throws IOException {
-        resolver.clearCache();
+        resolver.stop();
         loop.close();
     }
 

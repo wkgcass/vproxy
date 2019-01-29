@@ -1,7 +1,8 @@
 package net.cassite.vproxy.app.cmd;
 
 public enum Flag {
-    // not used for now
+    noipv4("no-ipv4"),
+    noipv6("no-ipv6"),
     ;
     public final String fullname;
 
