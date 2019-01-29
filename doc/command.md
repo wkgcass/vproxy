@@ -53,6 +53,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
      session (sess) --+
 
             persist --+-- /* state */
+          dns-cache --+
 
      bytes-in (bin) --+
    bytes-out (bout)   +-- /* statistics */
@@ -505,6 +506,37 @@ list-detail persist in tl lb0
 1) 1) "client: 127.0.0.1"
    2) "server: 127.0.0.1:16666"
    3) "   via: 127.0.0.1:0"
+```
+
+## Resource: dns-cache
+
+The dns record cache. It's a `host -> ipv4List, ipv6List` map.  
+It can only be accessed from the `(default)` dns resolver.
+
+#### list
+
+Count current cache
+
+```
+list dns-cache in resolver (default)
+(integer) 1
+```
+
+#### list-detail
+
+List detailed info of dns cache.
+
+The return values are:
+
+* host
+* ipv4 ip list
+* ipv6 ip list
+
+```
+list-detail dns-cache in resolver (default)
+1) 1) "localhost"
+   2) 1) "127.0.0.1"
+   3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
 ```
 
 ## Resource: bind-server (bs)
