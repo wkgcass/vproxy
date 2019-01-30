@@ -550,9 +550,8 @@ public class Command {
                 switch (cmd.action) {
                     case a:
                     case r:
-                    case R:
-                        // modification not supported for persist resources
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case R:
                     case L:
                     case l:
                         PersistResourceHandle.checkPersistParent(targetResource);
@@ -666,11 +665,11 @@ public class Command {
                 switch (cmd.action) {
                     case a:
                     case r:
-                    case R:
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case R:
                     case L:
                     case l:
-                        DnsCacheHandle.checkDnsCache(cmd.resource);
+                        DnsCacheHandle.checkDnsCache(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -820,6 +819,9 @@ public class Command {
                             ))
                             .collect(Collectors.toList());
                         return new CmdResult(persistRefs, persistStrList, utilJoinList(persistRefs));
+                    case R:
+                        PersistResourceHandle.remove(this);
+                        return new CmdResult();
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {
@@ -962,16 +964,19 @@ public class Command {
             case dnscache:
                 switch (action) {
                     case l:
-                        int cacheCnt = ResolverHandle.count();
+                        int cacheCnt = DnsCacheHandle.count();
                         return new CmdResult(cacheCnt, cacheCnt, "" + cacheCnt);
                     case L:
-                        List<Resolver.Cache> caches = ResolverHandle.detail();
+                        List<Resolver.Cache> caches = DnsCacheHandle.detail();
                         List<Object> cacheStrList = caches.stream().map(c -> Arrays.asList(
                             c.host,
                             c.ipv4.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList()),
                             c.ipv6.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList())
                         )).collect(Collectors.toList());
                         return new CmdResult(caches, cacheStrList, utilJoinList(caches));
+                    case R:
+                        DnsCacheHandle.remove(this);
+                        return new CmdResult();
                 }
             default:
                 throw new Exception("unknown resource type " + resource.type.fullname);

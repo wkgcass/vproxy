@@ -1,9 +1,11 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
+import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.exception.NotFoundException;
+import net.cassite.vproxy.util.Utils;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -33,6 +35,17 @@ public class PersistResourceHandle {
             refs.add(new PersistRef(p));
         }
         return refs;
+    }
+
+    public static void remove(Command cmd) throws Exception {
+        List<PersistRef> refs = detail(cmd.prepositionResource);
+        String source = cmd.resource.alias;
+        for (PersistRef ref : refs) {
+            if (Utils.ipStr(ref.persist.clientAddress.getAddress()).equals(source)) {
+                ref.persist.remove();
+                break;
+            }
+        }
     }
 
     public static class PersistRef {

@@ -524,6 +524,15 @@ list-detail persist in tl lb0
    3) "   via: 127.0.0.1:0"
 ```
 
+#### force-remove
+
+Specify the source (client) address string and remove the persist record.
+
+```
+force-remove persist 127.0.0.1 from tcp-lb lb0
+"OK"
+```
+
 ## Resource: dns-cache
 
 The dns record cache. It's a `host -> ipv4List, ipv6List` map.  
@@ -553,6 +562,15 @@ list-detail dns-cache in resolver (default)
 1) 1) "localhost"
    2) 1) "127.0.0.1"
    3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
+```
+
+#### force-remove
+
+Specify the host and remove the dns cache.
+
+```
+force-remove dns-cache localhost from resolver (default)
+"OK"
 ```
 
 ## Resource: bind-server (bs)
