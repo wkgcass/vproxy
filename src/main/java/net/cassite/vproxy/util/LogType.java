@@ -14,4 +14,5 @@ public enum LogType {
     AFTER_PARSING_CMD,
     USER_HANDLE_FAIL,
     INVALID_EXTERNAL_DATA,
+    RESOLVE_REPLACE,
 }

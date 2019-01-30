@@ -28,6 +28,7 @@ public class Main {
     private static void beforeStart() {
         Security.setProperty("networkaddress.cache.ttl", "0");
         Resolver.getDefault();
+        ServerAddressUpdater.init();
     }
 
     public static void main(String[] args) {

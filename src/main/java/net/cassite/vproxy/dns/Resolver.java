@@ -3,10 +3,7 @@ package net.cassite.vproxy.dns;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
-import net.cassite.vproxy.util.Blocking;
-import net.cassite.vproxy.util.Callback;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Utils;
+import net.cassite.vproxy.util.*;
 import sun.net.util.IPAddressUtil;
 
 import java.io.IOException;
@@ -20,6 +17,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class Resolver implements IResolver {
@@ -42,9 +40,10 @@ public class Resolver implements IResolver {
         public final String host;
         public final List<Inet4Address> ipv4;
         public final List<Inet6Address> ipv6;
-        final AtomicInteger idxIpv4 = new AtomicInteger(0);
-        final AtomicInteger idxIpv6 = new AtomicInteger(0);
+        private final AtomicInteger idxIpv4 = new AtomicInteger(0);
+        private final AtomicInteger idxIpv6 = new AtomicInteger(0);
         final TimerEvent te;
+        public final long timestamp;
 
         Cache(String host, InetAddress[] addresses) {
             this.host = host;
@@ -62,17 +61,52 @@ public class Resolver implements IResolver {
 
             if (ttl > 0) {
                 // start a timer to clear the record
-                te = loop.getSelectorEventLoop().delay(ttl, () -> cacheMap.remove(host));
+                te = loop.getSelectorEventLoop().delay(ttl, Cache.this::remove);
             } else {
                 te = null;
             }
+
+            timestamp = System.currentTimeMillis();
         }
 
         public void remove() {
             if (te != null) {
                 te.cancel();
             }
+            assert Logger.lowLevelDebug("cache removed " + host);
             cacheMap.remove(host);
+
+            for (ResolveListener lsn : resolveListeners) {
+                try {
+                    lsn.onRemove(this);
+                } catch (Throwable t) {
+                    Logger.error(LogType.IMPROPER_USE, "onRemove() raised exception", t);
+                }
+            }
+        }
+
+        public Tuple<Inet4Address, Inet6Address> next() {
+            Inet4Address v4 = null;
+            Inet6Address v6 = null;
+            //noinspection Duplicates
+            if (ipv4.size() != 0) {
+                int idx = idxIpv4.getAndIncrement();
+                if (idx >= ipv4.size()) {
+                    idx = idx % ipv4.size();
+                    idxIpv4.set(idx + 1);
+                }
+                v4 = ipv4.get(idx);
+            }
+            //noinspection Duplicates
+            if (ipv6.size() != 0) {
+                int idx = idxIpv6.getAndIncrement();
+                if (idx >= ipv6.size()) {
+                    idx = idx % ipv6.size();
+                    idxIpv6.set(idx + 1);
+                }
+                v6 = ipv6.get(idx);
+            }
+            return new Tuple<>(v4, v6);
         }
 
         @Override
@@ -135,6 +169,7 @@ public class Resolver implements IResolver {
     private final NetEventLoop loop;
     public int ttl = 60000;
     private final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
+    private final CopyOnWriteArraySet<ResolveListener> resolveListeners = new CopyOnWriteArraySet<>();
 
     public Resolver(String alias) throws IOException {
         // currently we only use java standard lib to resolve the address
@@ -163,7 +198,17 @@ public class Resolver implements IResolver {
         }
         // record
         if (addresses.length > 0) {
-            cacheMap.put(task.host, new Cache(task.host, addresses));
+            Cache cache = new Cache(task.host, addresses);
+            assert Logger.lowLevelDebug("cache recorded " + cache.host);
+            cacheMap.put(task.host, cache);
+            for (ResolveListener lsn : resolveListeners) {
+                try {
+                    lsn.onResolve(cache);
+                } catch (Throwable t) {
+                    // we can do nothing about it
+                    Logger.error(LogType.IMPROPER_USE, "onResolve() raised exception", t);
+                }
+            }
         }
 
         // filter the result
@@ -261,24 +306,9 @@ public class Resolver implements IResolver {
                 doResolve(new ResolveTask(host, (Callback) cb, ipv4, ipv6)));
             return;
         }
-        Inet4Address v4 = null;
-        Inet6Address v6 = null;
-        if (r.ipv4.size() != 0) {
-            int idx = r.idxIpv4.getAndIncrement();
-            if (idx >= r.ipv4.size()) {
-                idx = idx % r.ipv4.size();
-                r.idxIpv4.set(idx + 1);
-            }
-            v4 = r.ipv4.get(idx);
-        }
-        if (r.ipv6.size() != 0) {
-            int idx = r.idxIpv6.getAndIncrement();
-            if (idx >= r.ipv6.size()) {
-                idx = idx % r.ipv6.size();
-                r.idxIpv6.set(idx + 1);
-            }
-            v6 = r.ipv6.get(idx);
-        }
+        Tuple<Inet4Address, Inet6Address> tup = r.next();
+        Inet4Address v4 = tup.left;
+        Inet6Address v6 = tup.right;
         @SuppressWarnings("UnnecessaryLocalVariable")
         Callback rawCB = cb; // to suppress compile error
         // check ipv4 first
@@ -326,6 +356,10 @@ public class Resolver implements IResolver {
         for (Cache c : cacheMap.values()) {
             c.remove();
         }
+    }
+
+    public void addListener(ResolveListener lsn) {
+        resolveListeners.add(lsn);
     }
 
     @Blocking
