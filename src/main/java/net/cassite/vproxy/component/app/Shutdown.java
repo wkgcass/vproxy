@@ -301,7 +301,7 @@ public class Shutdown {
                 String cmd = "add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + tl.server.id() + " server-groups " + tl.backends.alias +
-                    " in-buffer-size " + tl.inBufferSize + " out-buffer-size " + tl.outBufferSize +
+                    " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " persist " + tl.persistTimeout;
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + tl.securityGroup.alias;

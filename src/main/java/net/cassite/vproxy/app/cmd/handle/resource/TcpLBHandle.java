@@ -56,6 +56,17 @@ public class TcpLBHandle {
             cmd.args.put(Param.persist, "0");
     }
 
+    public static void checkUpdateTcpLB(Command cmd) throws Exception {
+        if (cmd.args.containsKey(Param.inbuffersize))
+            InBufferSizeHandle.check(cmd);
+
+        if (cmd.args.containsKey(Param.outbuffersize))
+            OutBufferSizeHandle.check(cmd);
+
+        if (cmd.args.containsKey(Param.persist))
+            PersistHandle.check(cmd);
+    }
+
     public static TcpLB get(Resource tcplb) throws NotFoundException {
         return Application.get().tcpLBHolder.get(tcplb.alias);
     }
@@ -98,6 +109,20 @@ public class TcpLBHandle {
         Application.get().tcpLBHolder.removeAndStop(cmd.resource.alias);
     }
 
+    public static void update(Command cmd) throws Exception {
+        TcpLB tcpLB = get(cmd.resource);
+
+        if (cmd.args.containsKey(Param.inbuffersize)) {
+            tcpLB.setInBufferSize(InBufferSizeHandle.get(cmd));
+        }
+        if (cmd.args.containsKey(Param.outbuffersize)) {
+            tcpLB.setOutBufferSize(OutBufferSizeHandle.get(cmd));
+        }
+        if (cmd.args.containsKey(Param.persist)) {
+            tcpLB.persistTimeout = PersistHandle.get(cmd);
+        }
+    }
+
     public static class TcpLBRef {
         public final TcpLB tcpLB;
 
@@ -110,7 +135,7 @@ public class TcpLBHandle {
             return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
                 + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
                 + " backends " + tcpLB.backends.alias
-                + " in buffer size " + tcpLB.inBufferSize + " out buffer size " + tcpLB.outBufferSize
+                + " in buffer size " + tcpLB.getInBufferSize() + " out buffer size " + tcpLB.getOutBufferSize()
                 + " persist " + tcpLB.persistTimeout
                 + " security-group " + tcpLB.securityGroup.alias;
         }

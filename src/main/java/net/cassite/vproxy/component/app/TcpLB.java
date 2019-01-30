@@ -122,8 +122,8 @@ public class TcpLB {
     public final EventLoopGroup workerGroup;
     public final InetSocketAddress bindAddress;
     public final ServerGroups backends;
-    public int inBufferSize; // modifiable
-    public int outBufferSize; // modifiable
+    private int inBufferSize; // modifiable
+    private int outBufferSize; // modifiable
     public final SecurityGroup securityGroup;
     public int persistTimeout; // modifiable
     // the modifiable fields only have effect when new connection arrives
@@ -349,5 +349,23 @@ public class TcpLB {
             return;
         }
         p.copySessions(coll);
+    }
+
+    public void setInBufferSize(int inBufferSize) {
+        this.inBufferSize = inBufferSize;
+        proxyNetConfig.setInBufferSize(inBufferSize);
+    }
+
+    public void setOutBufferSize(int outBufferSize) {
+        this.outBufferSize = outBufferSize;
+        proxyNetConfig.setOutBufferSize(outBufferSize);
+    }
+
+    public int getInBufferSize() {
+        return inBufferSize;
+    }
+
+    public int getOutBufferSize() {
+        return outBufferSize;
     }
 }

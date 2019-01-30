@@ -155,6 +155,17 @@ list-detail tcp-lb
 1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in buffer size 16384 out buffer size 16384"
 ```
 
+#### update
+
+Update persist, in-buffer-size or out-buffer-size of an lb.
+
+```
+update tcp-lb lb0 persist 10000 in-buffer-size 32768 out-buffer-size 32768
+"OK"
+```
+
+> You can miss some of the params, and only specified params will be updated.
+
 #### remove
 
 Remove and stop a tcp-loadbalancer. The already established connections won't be affected.

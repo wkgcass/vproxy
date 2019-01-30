@@ -687,6 +687,7 @@ public class Command {
                     case R:
                     case L:
                     case l:
+                    case u:
                         if (targetResource != null)
                             throw new Exception(cmd.resource.type.fullname + " is on top level");
                         // only check creation for tcp lb and secg
@@ -697,6 +698,12 @@ public class Command {
                             } else if (cmd.resource.type == ResourceType.secg) {
                                 SecurityGroupHandle.checkCreateSecurityGroup(cmd);
                             } // the other two does not need check
+                        }
+                        if (cmd.action == Action.u) {
+                            if (cmd.resource.type == ResourceType.tl) {
+                                TcpLBHandle.checkUpdateTcpLB(cmd);
+                            } else
+                                throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                         }
                         break;
                     default:
@@ -923,6 +930,9 @@ public class Command {
                     case r:
                     case R:
                         TcpLBHandle.forceRemove(this);
+                        return new CmdResult();
+                    case u:
+                        TcpLBHandle.update(this);
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
