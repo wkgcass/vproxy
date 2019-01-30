@@ -1,5 +1,7 @@
 package net.cassite.vproxy.example;
 
+import net.cassite.vproxy.dns.Resolver;
+
 public class RunAll {
     public static void main(String[] args) throws Exception {
         System.out.println("==============================================");
@@ -66,5 +68,7 @@ public class RunAll {
         System.out.println("              forbid lb server");
         System.out.println("==============================================");
         ForbidLBForEchoServers.main(new String[0]);
+
+        Resolver.stopDefault();
     }
 }
