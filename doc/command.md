@@ -254,8 +254,10 @@ add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr elg elg0
 
 Attach an existing server group into `server-groups`.
 
+* weight (w): the weight of group in this server-groups resource
+
 ```
-add server-group sg0 to server-groups sgs0
+add server-group sg0 to server-groups sgs0 weight 10
 "OK"
 ```
 
@@ -280,7 +282,7 @@ list-detail server-group
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0"
 
 list-detail server-group in server-groups sgs0
-1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0"
+1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 weight 10"
 ```
 
 #### update
@@ -289,11 +291,16 @@ Change health check config or load balancing algorithm.
 
 Param list is the same as add, but not all required.
 
+Also you can change the weight of a group in a `server-groups` resource.
+
 ```
 update server-group sg0 timeout 500 period 600 up 3 down 2
 "OK"
 
 update server-group sg0 method wlc
+"OK"
+
+update server-group sg0 in server-groups sgs0 weight 5
 "OK"
 ```
 
@@ -305,6 +312,15 @@ Remove a server group.
 
 ```
 remove server-group sg0
+"OK"
+```
+
+#### remove from
+
+Detach the group grom a `server-groups` resource.
+
+```
+remove server-group sg0 from server-groups sgs0
 "OK"
 ```
 

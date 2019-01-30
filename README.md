@@ -174,7 +174,7 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 #### ServerGroups
 
-`ServerGroups` is a list of groups, it's nothing but a container and does not do IO it self. It provides a `next()` method, which will go throught all serverGroups and retrieve a healthy server. The method of selecting serverGroup is always RR, it doesn't affect how `ServerGroup` selects server.
+`ServerGroups` is a list of groups, each group is assigned with a weight. It's nothing but a container and does not do IO it self. It provides a `next()` method, which will go throught all serverGroups and retrieve a healthy server. The method of selecting serverGroup is always WRR, and it doesn't affect how `ServerGroup` selects server.
 
 #### TcpLB
 
