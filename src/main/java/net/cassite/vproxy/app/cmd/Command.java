@@ -475,9 +475,11 @@ public class Command {
                 switch (cmd.action) {
                     case a:
                     case r:
-                    case R:
-                        // modification not supported for these resources
+                        // not supported for these resources
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case R:
+                        if (cmd.resource.type == ResourceType.bs)
+                            throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case L:
                     case l:
                         switch (cmd.resource.type) {
@@ -485,10 +487,10 @@ public class Command {
                                 BindServerHandle.checkBindServer(cmd.resource);
                                 break chnlsw;
                             case conn:
-                                ConnectionHandle.checkConnection(cmd.resource);
+                                ConnectionHandle.checkConnection(targetResource);
                                 break chnlsw;
                             case sess:
-                                SessionHandle.checkSession(cmd.resource);
+                                SessionHandle.checkSession(targetResource);
                                 break chnlsw;
                             // no need to add default here
                         }
@@ -755,6 +757,9 @@ public class Command {
                         List<Connection> connList = ConnectionHandle.list(targetResource);
                         List<String> connStrList = connList.stream().map(Connection::id).collect(Collectors.toList());
                         return new CmdResult(connStrList, connStrList, utilJoinList(connList));
+                    case R:
+                        ConnectionHandle.close(this);
+                        return new CmdResult();
                 }
             case sess: // can only be retrieve from tl
                 switch (action) {
@@ -765,6 +770,9 @@ public class Command {
                         List<Session> sessList = SessionHandle.list(targetResource);
                         List<List<String>> sessTupleList = sessList.stream().map(sess -> Arrays.asList(sess.active.id(), sess.passive.id())).collect(Collectors.toList());
                         return new CmdResult(sessList, sessTupleList, utilJoinList(sessList));
+                    case R:
+                        SessionHandle.close(this);
+                        return new CmdResult();
                 }
             case bs: // can only be retrieved from el
                 switch (action) {

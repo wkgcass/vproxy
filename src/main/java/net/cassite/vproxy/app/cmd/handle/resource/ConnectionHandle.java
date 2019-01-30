@@ -1,5 +1,6 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
+import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
@@ -11,15 +12,15 @@ import net.cassite.vproxy.connection.Connection;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class ConnectionHandle {
     private ConnectionHandle() {
     }
 
-    public static void checkConnection(Resource conn) throws Exception {
-        Resource parent = conn.parentResource;
+    public static void checkConnection(Resource parent) throws Exception {
         if (parent == null)
-            throw new Exception("cannot find " + conn.type.fullname + " on top level");
+            throw new Exception("cannot find " + ResourceType.conn.fullname + " on top level");
         if (parent.type == ResourceType.el) {
             EventLoopHandle.checkEventLoop(parent);
         } else if (parent.type == ResourceType.tl) {
@@ -27,7 +28,7 @@ public class ConnectionHandle {
         } else if (parent.type == ResourceType.svr) {
             ServerHandle.checkServer(parent);
         } else {
-            throw new Exception(parent.type.fullname + " does not contain " + conn.type.fullname);
+            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.conn.fullname);
         }
     }
 
@@ -92,5 +93,31 @@ public class ConnectionHandle {
         } else
             throw new Exception("i don't think that " + parent.type + " contains connections");
         return connections;
+    }
+
+    public static void close(Command cmd) throws Exception {
+        List<Connection> connections = list(cmd.prepositionResource);
+        String pattern = cmd.resource.alias;
+        Pattern p = null;
+        if (pattern.startsWith("/") && pattern.endsWith("/")) {
+            p = Pattern.compile(pattern.substring(1, pattern.length() - 1));
+        }
+        for (Connection c : connections) {
+            //noinspection Duplicates
+            if (p == null) {
+                // directly compare
+                if (c.id().equals(pattern)) {
+                    c.close();
+                    // there can be no other connection with the same id
+                    break;
+                }
+            } else {
+                // regex test
+                if (p.matcher(c.id()).find()) {
+                    c.close();
+                    // then continue
+                }
+            }
+        }
     }
 }

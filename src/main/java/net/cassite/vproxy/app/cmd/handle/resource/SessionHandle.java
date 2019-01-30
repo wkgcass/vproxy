@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.component.app.TcpLB;
@@ -8,17 +9,18 @@ import net.cassite.vproxy.component.proxy.Session;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.regex.Pattern;
 
 public class SessionHandle {
     private SessionHandle() {
     }
 
-    public static void checkSession(Resource session) throws Exception {
-        if (session.parentResource == null)
-            throw new Exception("cannot find " + session.type.fullname + " on top level");
-        if (session.parentResource.type != ResourceType.tl)
-            throw new Exception(session.parentResource.type.fullname + " does not contain " + session.type.fullname);
-        TcpLBHandle.checkTcpLB(session.parentResource);
+    public static void checkSession(Resource parent) throws Exception {
+        if (parent == null)
+            throw new Exception("cannot find " + ResourceType.sess.fullname + " on top level");
+        if (parent.type != ResourceType.tl)
+            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.sess.fullname);
+        TcpLBHandle.checkTcpLB(parent);
     }
 
     public static int count(Resource parent) throws Exception {
@@ -35,5 +37,31 @@ public class SessionHandle {
         lb.copySessions(sessions);
 
         return sessions;
+    }
+
+    public static void close(Command cmd) throws Exception {
+        List<Session> sessions = list(cmd.prepositionResource);
+        String pattern = cmd.resource.alias;
+        Pattern p = null;
+        if (pattern.startsWith("/") && pattern.endsWith("/")) {
+            p = Pattern.compile(pattern.substring(1, pattern.length() - 1));
+        }
+        for (Session s : sessions) {
+            //noinspection Duplicates
+            if (p == null) {
+                // directly compare
+                if (s.id().equals(pattern)) {
+                    s.close();
+                    // there can be no other session with the same id
+                    break;
+                }
+            } else {
+                // regex test
+                if (p.matcher(s.id()).find()) {
+                    s.close();
+                    // then continue
+                }
+            }
+        }
     }
 }

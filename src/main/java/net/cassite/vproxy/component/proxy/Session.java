@@ -20,6 +20,10 @@ public class Session {
         passive.close();
     }
 
+    public String id() {
+        return active.id() + "->" + passive.id();
+    }
+
     @Override
     public String toString() {
         return "Session(" + active + ", " + passive + ")";
