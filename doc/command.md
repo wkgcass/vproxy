@@ -619,6 +619,23 @@ list-detail connection in server svr0 in sg sg0
 1) "127.0.0.1:63537/127.0.0.1:6379"
 ```
 
+#### force-remove
+
+Close the connection, and if the connection is bond to a session, the session will be closed as well.
+
+Supports regexp pattern or plain string:
+
+* if the input starts with `/` and ends with `/`, then it's considered as a regexp
+* otherwise it matches the full string
+
+```
+force-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
+"OK"
+
+force-remove conn /.*/ from el worker2 in elg worker
+"OK"
+```
+
 ## Resource: session (sess)
 
 Represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server.
@@ -640,6 +657,18 @@ Get info about loadbalancer sessions. Can be retrieved from `tcp-lb`.
 list-detail session in tcp-lb lb0
 1) 1) "127.0.0.1:63536/127.0.0.1:6380"
    2) "127.0.0.1:63537/127.0.0.1:6379"
+```
+
+#### force-remove
+
+Close a session from lb. The related two connections will be closed as well.
+
+```
+force-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
+"OK"
+
+force-remove sess /127.0.0.1:58713.*/ from tl lb0
+"OK"
 ```
 
 ## Resource: bytes-in (bin)
