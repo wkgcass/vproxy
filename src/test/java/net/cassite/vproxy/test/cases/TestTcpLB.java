@@ -21,8 +21,11 @@ import net.cassite.vproxy.util.Utils;
 import org.junit.*;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.NetworkInterface;
+import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -33,6 +36,7 @@ public class TestTcpLB {
     private static final int lbPort = 18080;
 
     private static SelectorEventLoop serverLoop;
+    private static String addressOtherThan127;
 
     @BeforeClass
     public static void classSetUp() throws Exception {
@@ -43,6 +47,26 @@ public class TestTcpLB {
         new IdServer("0", serverNetLoop, 19080);
         new IdServer("1", serverNetLoop, 19081);
         new IdServer("2", serverNetLoop, 19082);
+
+        // find another ip bond to local
+        String address = null;
+        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+        out:
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            Enumeration<InetAddress> ips = nic.getInetAddresses();
+            while (ips.hasMoreElements()) {
+                InetAddress addr = ips.nextElement();
+                if (addr instanceof Inet4Address && !addr.getHostAddress().equals("127.0.0.1")) {
+                    address = addr.getHostAddress();
+                    break out;
+                }
+            }
+        }
+        addressOtherThan127 = address;
+        if (address == null)
+            throw new Exception("this machine do not have a non 127.0.0.1 address");
+        new IdServer("3", serverNetLoop, 19082, addressOtherThan127);
     }
 
     @AfterClass
@@ -692,5 +716,47 @@ public class TestTcpLB {
         // then client1 should be able to write
         client1.connect();
         client1.sendAndRecv("ok", 1);
+    }
+
+    @Test
+    public void replaceIp() throws Exception {
+        sgs0.add(sg1); // use sg1 because it contain only one backend
+        sg1.setHealthCheckConfig(new HealthCheckConfig(100, 500, 2, 3));
+
+        Client client1 = new Client(lbPort);
+        client1.connect();
+        String res = client1.sendAndRecv("anything", 1);
+        assertEquals("requesting svr2 should return 2", "2", res);
+        client1.close();
+
+        sg1.replaceIp("svr2", InetAddress.getByName("127.1.2.3")); // a backend not exist
+        // now there should be 2 backends named svr2
+        List<ServerGroup.ServerHandle> list = sg1.getServerHandles();
+        assertEquals("should be two servers", 2, list.size());
+        assertEquals("name should be svr2", "svr2", list.get(0).alias);
+        assertTrue("old server is logic deleted", list.get(0).isLogicDelete());
+        ServerGroup.ServerHandle old = list.get(0);
+        assertEquals("new server name should also be svr2", "svr2", list.get(1).alias);
+
+        Thread.sleep(650); // the health check period is 500ms and connect timeout is 100 ms
+
+        // now there should only be one backend
+        list = sg1.getServerHandles();
+        assertEquals("should be 1 server", 1, list.size());
+        assertSame("the old server should be preserved", old, list.get(0));
+        assertFalse("old server is not logic deleted now", old.isLogicDelete());
+
+        // let's try a server that will succeed
+        sg1.replaceIp("svr2", InetAddress.getByName(addressOtherThan127)); // use another one this time
+        list = sg1.getServerHandles();
+        assertEquals("should be two servers", 2, list.size());
+
+        Thread.sleep(1050); // period 500 and up 2 times
+
+        // now there should only be one backend
+        list = sg1.getServerHandles();
+        assertEquals("should be 1 server", 1, list.size());
+        assertNotSame("the old server is removed", old, list.get(0));
+        assertFalse("the new server is not logic deleted", list.get(0).isLogicDelete());
     }
 }

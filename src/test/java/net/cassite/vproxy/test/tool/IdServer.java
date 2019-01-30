@@ -21,8 +21,12 @@ public class IdServer {
     private final String id;
 
     public IdServer(String id, NetEventLoop loop, int port) throws IOException {
+        this(id, loop, port, "127.0.0.1");
+    }
+
+    public IdServer(String id, NetEventLoop loop, int port, String addr) throws IOException {
         this.id = id;
-        BindServer bindServer = BindServer.create(new InetSocketAddress("127.0.0.1", port));
+        BindServer bindServer = BindServer.create(new InetSocketAddress(addr, port));
         ProtocolServerHandler.apply(loop, bindServer,
             new ProtocolServerConfig(), new IdProtocolHandler());
     }

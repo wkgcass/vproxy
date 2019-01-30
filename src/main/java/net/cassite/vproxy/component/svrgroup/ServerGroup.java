@@ -14,9 +14,9 @@ import net.cassite.vproxy.connection.ConnCloseHandler;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetFlowRecorder;
+import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -25,6 +25,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
 import java.util.stream.Collectors;
 
@@ -38,6 +39,13 @@ public class ServerGroup {
                 healthy = true;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
                     "server " + ServerHandle.this.alias + "(" + server + ") status changed to UP");
+
+                // remove the replaced server because this server is UP
+                if (toLogicDelete != null) {
+                    assert Logger.lowLevelDebug("remove old logic-delete server");
+                    ServerGroup.this.remove(toLogicDelete);
+                    toLogicDelete = null;
+                }
             }
 
             @Override
@@ -57,18 +65,49 @@ public class ServerGroup {
             public void downOnce(SocketAddress remote) {
                 // do nothing but debug log
                 assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + ")");
+
+                // the server handle is default DOWN when added
+                // so there's no chance for the `down()` to be called if it's actually DOWN
+                // so we think this server is DOWN when down fires
+
+                // handle the replaced server
+                // will remove logic delete flag for that
+                // and will remove this server because this is DOWN
+                if (toLogicDelete != null) {
+                    assert Logger.lowLevelDebug("restore the logic-delete server and remove self");
+                    synchronized (ServerGroup.this) {
+                        // the old server is still inside the server group?
+                        if (ServerGroup.this.servers.contains(toLogicDelete)) {
+                            ServerHandle.this.logicDelete = true;
+                            toLogicDelete.logicDelete = false;
+
+                            // remove self
+                            ServerGroup.this.remove(ServerHandle.this);
+                        }
+                        // else:
+                        // do not remove self
+                        // if the old server is not inside the group
+
+                        // and we always remove the ref to old server
+                        toLogicDelete = null;
+                    }
+                }
             }
         }
 
         public final String alias;
+        private final long sid;
+        public final String hostName;
         private final ServerHealthCheckHandler handler = new ServerHealthCheckHandler();
         public final InetSocketAddress server;
         public final InetAddress local;
         private int weight;
+        private ServerHandle toLogicDelete; // the server will be deleted when this server is UP, may be null
         EventLoopWrapper el;
         boolean valid = true;
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
+        private boolean logicDelete = false; // if true, it will not be checked for dup alias nor saved to cfg file
         TCPHealthCheckClient healthCheckClient;
 
         private final LongAdder fromRemoteBytes = new LongAdder();
@@ -76,11 +115,19 @@ public class ServerGroup {
 
         private ConcurrentMap<Connection, Object> connMap = new ConcurrentHashMap<>();
 
-        ServerHandle(String alias, InetSocketAddress server, InetAddress local, int initialWeight) {
+        ServerHandle(String alias, /**/long sid/**/,
+                     String hostName,
+                     InetSocketAddress server,
+                     InetAddress local,
+                     int initialWeight,
+                     ServerHandle toLogicDelete) {
             this.alias = alias;
+            this.sid = sid;
+            this.hostName = hostName;
             this.server = server;
             this.local = local;
             this.weight = initialWeight;
+            this.toLogicDelete = toLogicDelete;
         }
 
         // --- START statistics ---
@@ -120,6 +167,10 @@ public class ServerGroup {
             c.addAll(connMap.keySet());
         }
 
+        public boolean isLogicDelete() {
+            return logicDelete;
+        }
+
         public void setWeight(int weight) {
             boolean needReload = this.weight != weight;
             this.weight = weight;
@@ -152,6 +203,7 @@ public class ServerGroup {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
                 Logger.shouldNotHappen("this resource should not have attached, this is an unrecoverable bug!!!");
+                return;
             } catch (ClosedException e) {
                 // the selected event loop is closed, let's restart again
                 // however it's not expected to happen
@@ -169,10 +221,7 @@ public class ServerGroup {
         @Override
         public String id() {
             return "HealthCheck(" +
-                ServerGroup.this.alias + "/" +
-                ServerHandle.this.alias +
-                "(" + Utils.ipStr(server.getAddress().getAddress()) + ":" + server.getPort() + ")" +
-                ")";
+                ServerGroup.this.alias + "/" + ServerHandle.this.alias + "(" + ServerHandle.this.sid + ")";
         }
 
         @Override
@@ -182,8 +231,7 @@ public class ServerGroup {
             restart(); // try to restart
         }
 
-        // NOTE: stop() is public
-        public void stop() {
+        void stop() {
             if (el == null)
                 return;
             Logger.lowLevelDebug("stop health check for " + ServerHandle.this.alias + "(" + server + ")");
@@ -512,12 +560,84 @@ public class ServerGroup {
     }
 
     public synchronized void add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+        add(alias, null, server, local, weight);
+    }
+
+    public synchronized void add(String alias, /*nullable*/ String hostName, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+        add(alias, hostName, false, server, local, weight);
+    }
+
+    public synchronized void replaceIp(String alias, InetAddress newIp) throws NotFoundException {
+        // find the server to replace
+        ServerHandle toReplace = null;
+        ArrayList<ServerHandle> list = servers;
+        for (ServerHandle h : list) {
+            if (h.logicDelete) // ignore logic deleted servers
+                continue;
+            if (h.alias.equals(alias)) {
+                toReplace = h;
+                break;
+            }
+        }
+        if (toReplace == null)
+            throw new NotFoundException();
+        // do replace
+        try {
+            add(alias, toReplace.hostName, true,
+                new InetSocketAddress(newIp, toReplace.server.getPort()),
+                toReplace.local, toReplace.weight);
+        } catch (AlreadyExistException e) {
+            // should not raise the error
+            Logger.shouldNotHappen("should not raise AlreadyExist when replace", e);
+        }
+    }
+
+    /**
+     * this field is only used when adding, for debug purpose only
+     */
+    private final AtomicLong idForServer = new AtomicLong(0);
+
+    /**
+     * add a server into the group
+     *
+     * @param alias    server alias
+     * @param hostName host name to be resolved, can be null if it's an ip.
+     *                 and will be set to null if it's an ip even it's provided
+     * @param replace  if true, it will try to replace an existing server.
+     *                 if true and the server with same alias not found, it will simply add.
+     *                 the old server will be set to weight 0 and logic delete and will be removed when no connections
+     * @param server   ip:port, ip is resolved
+     * @param local    the local socket
+     * @param weight   server weight
+     * @throws AlreadyExistException already exists
+     */
+    private synchronized void add(String alias, String hostName, boolean replace, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+        // set the hostName to null if it's an ip literal
+        if (hostName != null && Resolver.isIpLiteral(hostName))
+            hostName = null;
+
+        // the server which will be logic deleted
+        // this server will be removed when the new server is UP
+        // and will remove the `logicDelete` flag if new server is DOWN
+        // will be null if alias not found or `replace` is set to false
+        ServerHandle toLogicDelete = null;
+
         ArrayList<ServerHandle> ls = servers;
         for (ServerHandle c : ls) {
-            if (c.alias.equals(alias))
-                throw new AlreadyExistException();
+            if (c.alias.equals(alias)) {
+                if (c.logicDelete) // ignore logic deleted servers
+                    continue;
+                if (!replace) // raise error if replace flag is disabled
+                    throw new AlreadyExistException();
+                toLogicDelete = c;
+                // directly set the flag
+                c.logicDelete = true;
+            }
         }
-        ServerHandle handle = new ServerHandle(alias, server, local, weight);
+
+        // attach new server
+        ServerHandle handle = new ServerHandle(
+            alias, idForServer.getAndIncrement(), hostName, server, local, weight, toLogicDelete);
         handle.start();
         ArrayList<ServerHandle> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
@@ -536,6 +656,8 @@ public class ServerGroup {
         boolean found = false;
         for (ServerHandle c : ls) {
             if (c.alias.equals(alias)) {
+                // here may remove multiple servers
+                // with the same alias
                 found = true;
                 c.stop();
             } else {
@@ -548,6 +670,31 @@ public class ServerGroup {
         resetMethodRelatedFields();
 
         assert Logger.lowLevelDebug("server removed " + alias + " from " + this.alias);
+    }
+
+    // this method should do exactly the same as `remove()`
+    // but only remove one serverHandle and do not raise error
+    private synchronized void remove(ServerHandle h) {
+        ArrayList<ServerHandle> ls = servers;
+        if (ls.isEmpty())
+            return;
+        ArrayList<ServerHandle> newLs = new ArrayList<>(servers.size() - 1);
+        boolean found = false;
+        for (ServerHandle c : ls) {
+            if (c == h) {
+                found = true;
+                c.stop();
+            } else {
+                newLs.add(c);
+            }
+        }
+        if (found) {
+            // only replace servers when found
+            servers = newLs;
+            resetMethodRelatedFields();
+        }
+
+        assert Logger.lowLevelDebug("server handle removed " + h.alias + "(" + h.sid + ") from " + this.alias);
     }
 
     public void clear() {

@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
@@ -57,8 +58,16 @@ public class ServerHandle {
     public static void add(Command cmd) throws Exception {
         String name = cmd.resource.alias;
 
+        String host;
+        {
+            String addr = cmd.args.get(Param.addr);
+            host = addr.substring(0, addr.lastIndexOf(":"));
+        }
+        // no need to check whether host is an ip
+        // will be check in `group.add()`
+
         ServerGroupHandle.get(cmd.prepositionResource)
-            .add(name, AddrHandle.get(cmd), IpHandle.get(cmd), WeightHandle.get(cmd));
+            .add(name, host, AddrHandle.get(cmd), IpHandle.get(cmd), WeightHandle.get(cmd));
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -85,7 +94,17 @@ public class ServerHandle {
 
         @Override
         public String toString() {
-            return h.alias + " -> connect to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
+            /*
+             * e.g. with host
+             * google -> google.com now connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             * or without host
+             * google -> connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             * or for logic deleted: add * before alias
+             * *google -> google.com now connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             */
+            return (h.isLogicDelete() ? "*" : "") + h.alias + " ->"
+                + (h.hostName == null ? "" : " host " + h.hostName + " now" /* now connected to */)
+                + " connect to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
                 + " via " + Utils.ipStr(h.local.getAddress()) + " weight " + h.getWeight()
                 + " currently " + (h.healthy ? "UP" : "DOWN");
         }

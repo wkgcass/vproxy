@@ -204,12 +204,16 @@ public class Resolver implements IResolver {
         return null;
     }
 
-    private boolean isIpv4(String s) {
+    private static boolean isIpv4(String s) {
         return IPAddressUtil.isIPv4LiteralAddress(s);
     }
 
-    private boolean isIpv6(String s) {
+    private static boolean isIpv6(String s) {
         return IPAddressUtil.isIPv6LiteralAddress(s);
+    }
+
+    public static boolean isIpLiteral(String s) {
+        return isIpv4(s) || isIpv6(s);
     }
 
     @SuppressWarnings("unchecked")
@@ -249,6 +253,8 @@ public class Resolver implements IResolver {
             return;
         }
 
+        // it's not ip literal
+        // let's resolve
         Cache r = cacheMap.get(host);
         if (r == null) {
             loop.getSelectorEventLoop().runOnLoop(() ->

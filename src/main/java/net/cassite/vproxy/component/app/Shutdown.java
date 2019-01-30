@@ -193,8 +193,14 @@ public class Shutdown {
             // create server
             for (ServerGroup sg : serverGroups) {
                 for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
+                    if (sh.isLogicDelete()) // ignore logic deleted servers
+                        continue;
                     String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
-                        " address " + Utils.ipStr(sh.server.getAddress().getAddress()) + ":" + sh.server.getPort() +
+                        " address "
+                        + (sh.hostName == null
+                        ? Utils.ipStr(sh.server.getAddress().getAddress())
+                        : sh.hostName)
+                        + ":" + sh.server.getPort() +
                         " via " + Utils.ipStr(sh.local.getAddress()) + " weight " + sh.getWeight();
                     commands.add(cmd);
                 }
