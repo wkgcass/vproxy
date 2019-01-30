@@ -6,6 +6,7 @@ import net.cassite.vproxy.util.Utils;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
@@ -18,6 +19,7 @@ public class ClientConnection extends Connection {
                                           RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
+        channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
         channel.bind(local);
         channel.connect(remote);
         try {

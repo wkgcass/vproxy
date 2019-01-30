@@ -5,6 +5,7 @@ import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -25,6 +26,7 @@ public class BindServer implements NetFlowRecorder {
     public static BindServer create(InetSocketAddress bindAddress) throws IOException {
         ServerSocketChannel channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
+        channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
         channel.bind(bindAddress);
         try {
             return new BindServer(channel);
