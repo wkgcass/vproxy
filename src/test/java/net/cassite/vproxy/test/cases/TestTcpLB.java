@@ -141,7 +141,7 @@ public class TestTcpLB {
         // all data that the frontend sends
         // and frontend can receive
         // all data that the backend replies
-        sgs0.add(sgEcho);
+        sgs0.add(sgEcho, 10);
 
         for (int i = 0; i < 3; ++i) {
             Client client = new Client(lbPort);
@@ -163,7 +163,7 @@ public class TestTcpLB {
         // add sg0 to sgs0
         // and we expect one request we get 1,
         // another request we get 2
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
 
         int zero = 0;
         int one = 0;
@@ -209,7 +209,7 @@ public class TestTcpLB {
     @Test
     public void removeAndAttachBackendOnRunning() throws Exception {
         // add sg0 to sgs0
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         sg0.remove("svr1"); // remove 1
 
         for (int i = 0; i < 100; ++i) {
@@ -245,8 +245,8 @@ public class TestTcpLB {
     public void attachAndRemoveBackendGroupOnRunning() throws Exception {
         // add sg0 and sg1 to sgs0
         // attach
-        sgs0.add(sg0);
-        sgs0.add(sg1);
+        sgs0.add(sg0, 10);
+        sgs0.add(sg1, 10);
 
         // the response would be
         // "2" : "1" : "0" = 2 : 1 : 1
@@ -276,6 +276,37 @@ public class TestTcpLB {
         assertEquals("\"2\":\"0\" = 2 : 1",
             2, ((double) two) / zero, 0.1);
 
+        // let's set sg0 weight to 5
+        ServerGroups.ServerGroupHandle sh = sgs0.getServerGroups().stream().filter(h -> h.alias.equals("sg0")).findFirst().get();
+        sh.setWeight(5);
+
+        // "2" : "1" : "0" = 4 : 1 : 1
+        zero = 0;
+        one = 0;
+        two = 0;
+        for (int i = 0; i < 100; ++i) {
+            Client client = new Client(lbPort);
+            client.connect();
+            String recv = client.sendAndRecv("anything", 1);
+            assertTrue("response should be 0 or 1 or 2", recv.equals("0") || recv.equals("1") || recv.equals("2"));
+            switch (recv) {
+                case "0":
+                    ++zero;
+                    break;
+                case "1":
+                    ++one;
+                    break;
+                default:
+                    ++two;
+                    break;
+            }
+            client.close();
+        }
+        assertEquals("\"2\":\"1\" = 4 : 1",
+            4, ((double) two) / one, 0.2);
+        assertEquals("\"2\":\"0\" = 4 : 1",
+            4, ((double) two) / zero, 0.2);
+
         // then let's detach the sg0
         sgs0.remove(sg0);
 
@@ -292,7 +323,7 @@ public class TestTcpLB {
     public void backendDead() throws Exception {
         // add sg0 to sgs0
         // and we make svr0 dead
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr0")).findFirst().get().healthy = false;
 
         for (int i = 0; i < 100; ++i) {
@@ -312,7 +343,7 @@ public class TestTcpLB {
         // and make a few connections (e.g. 5)
         // the new connections should be made to the selected server
         // also we make the selected server weight to 5
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         sg0.setMethod(Method.wlc);
         ServerGroup.ServerHandle h = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr0")).findFirst().get();
         h.setWeight(5);
@@ -365,7 +396,7 @@ public class TestTcpLB {
 
     @Test
     public void proxyPersist() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         // persists the connectors
         lb0.persistTimeout = 2000; // set to 2 seconds
 
@@ -467,7 +498,7 @@ public class TestTcpLB {
 
     @Test
     public void listAndCloseSession() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         Client client1 = new Client(lbPort);
         client1.connect();
         String id1 = client1.sendAndRecv("anything", 1);
@@ -505,7 +536,7 @@ public class TestTcpLB {
 
     @Test
     public void listAndCloseConnection() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         Client client1 = new Client(lbPort);
         client1.connect();
         String id1 = client1.sendAndRecv("anything", 1);
@@ -558,7 +589,7 @@ public class TestTcpLB {
 
     @Test
     public void checkBinBoutAndAcceptedConnections() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
         // let's get some resources that will not change
         ServerGroup.ServerHandle svr0 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr0")).findFirst().get();
         ServerGroup.ServerHandle svr1 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get();
@@ -646,7 +677,7 @@ public class TestTcpLB {
 
     @Test
     public void removeAndAddEventLoopOnRunning() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
 
         Client client1 = new Client(lbPort);
         client1.connect();
@@ -684,7 +715,7 @@ public class TestTcpLB {
 
     @Test
     public void forbidOnRunning() throws Exception {
-        sgs0.add(sg0);
+        sgs0.add(sg0, 10);
 
         // start another lb
         TcpLB lb1 = new TcpLB("lb1", elg0, elg0,
@@ -720,7 +751,7 @@ public class TestTcpLB {
 
     @Test
     public void replaceIp() throws Exception {
-        sgs0.add(sg1); // use sg1 because it contain only one backend
+        sgs0.add(sg1, 10); // use sg1 because it contain only one backend
         sg1.setHealthCheckConfig(new HealthCheckConfig(100, 500, 2, 3));
 
         Client client1 = new Client(lbPort);

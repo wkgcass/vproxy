@@ -229,12 +229,12 @@ public class Shutdown {
         {
             // attach group into groups
             for (ServerGroups sgs : serverGroupss) {
-                for (ServerGroup sg : sgs.getServerGroups()) {
+                for (ServerGroups.ServerGroupHandle sg : sgs.getServerGroups()) {
                     if (!serverGroupsNames.contains(sg.alias)) {
                         Logger.warn(LogType.IMPROPER_USE, "the sg " + sg.alias + " already removed");
                         continue;
                     }
-                    String cmd = "add server-group " + sg.alias + " to server-groups " + sgs.alias;
+                    String cmd = "add server-group " + sg.alias + " to server-groups " + sgs.alias + " weight " + sg.getWeight();
                     commands.add(cmd);
                 }
             }

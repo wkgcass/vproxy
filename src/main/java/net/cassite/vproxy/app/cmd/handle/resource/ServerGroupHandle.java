@@ -8,6 +8,7 @@ import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.HealthCheckHandle;
 import net.cassite.vproxy.app.cmd.handle.param.MethHandle;
+import net.cassite.vproxy.app.cmd.handle.param.WeightHandle;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -25,12 +26,27 @@ public class ServerGroupHandle {
     public static ServerGroup get(Resource resource) throws Exception {
         if (resource.parentResource == null)
             return Application.get().serverGroupHolder.get(resource.alias);
-        List<ServerGroup> ls = ServerGroupsHandle.get(resource.parentResource).getServerGroups();
-        for (ServerGroup s : ls) {
+        List<ServerGroups.ServerGroupHandle> ls = ServerGroupsHandle.get(resource.parentResource).getServerGroups();
+        for (ServerGroups.ServerGroupHandle s : ls) {
+            if (s.alias.equals(resource.alias))
+                return s.group;
+        }
+        throw new NotFoundException();
+    }
+
+    public static ServerGroups.ServerGroupHandle getHandle(Resource resource) throws Exception {
+        List<ServerGroups.ServerGroupHandle> ls = ServerGroupsHandle.get(resource.parentResource).getServerGroups();
+        for (ServerGroups.ServerGroupHandle s : ls) {
             if (s.alias.equals(resource.alias))
                 return s;
         }
         throw new NotFoundException();
+    }
+
+    public static void checkAttachServerGroup(Command cmd) throws Exception {
+        if (!cmd.args.containsKey(Param.w))
+            throw new Exception("missing argument " + Param.w.fullname);
+        WeightHandle.check(cmd);
     }
 
     public static void checkCreateServerGroup(Command cmd) throws Exception {
@@ -63,21 +79,34 @@ public class ServerGroupHandle {
     }
 
     public static void checkUpdateServerGroup(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.timeout)
-            || cmd.args.containsKey(Param.period)
-            || cmd.args.containsKey(Param.up)
-            || cmd.args.containsKey(Param.down)) {
-            try {
-                HealthCheckHandle.getHealthCheckConfig(cmd);
-            } catch (Exception e) {
-                throw new Exception("missing health check argument or is invalid");
+        if (cmd.resource.parentResource == null) {
+            // can only update the server group self info on top level
+            // i'm not saying that you cannot modify the one in serverGroups
+            // but you don't have to go into serverGroups to modify,
+            // the one on top level is the same one in any serverGroup
+            if (cmd.args.containsKey(Param.timeout)
+                || cmd.args.containsKey(Param.period)
+                || cmd.args.containsKey(Param.up)
+                || cmd.args.containsKey(Param.down)) {
+                try {
+                    HealthCheckHandle.getHealthCheckConfig(cmd);
+                } catch (Exception e) {
+                    throw new Exception("missing health check argument or is invalid");
+                }
             }
-        }
-        if (cmd.args.containsKey(Param.meth)) {
-            try {
-                MethHandle.get(cmd);
-            } catch (Exception e) {
-                throw new Exception("invalid method");
+            if (cmd.args.containsKey(Param.meth)) {
+                try {
+                    MethHandle.get(cmd);
+                } catch (Exception e) {
+                    throw new Exception("invalid method");
+                }
+            }
+        } else {
+            // can modify the weight in a ServerGroups
+            if (cmd.resource.parentResource.type != ResourceType.sgs)
+                throw new Exception(cmd.resource.parentResource.type.fullname + " does not contain " + ResourceType.sg.fullname);
+            if (cmd.args.containsKey(Param.w)) {
+                WeightHandle.check(cmd);
             }
         }
     }
@@ -121,8 +150,9 @@ public class ServerGroupHandle {
             Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd));
         } else {
             // add into serverGroups
+            int weight = WeightHandle.get(cmd);
             Application.get().serverGroupsHolder.get(cmd.prepositionResource.alias)
-                .add(Application.get().serverGroupHolder.get(cmd.resource.alias));
+                .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
         }
     }
 
@@ -135,7 +165,7 @@ public class ServerGroupHandle {
         // check serverGroups
         for (String groupsName : Application.get().serverGroupsHolder.names()) {
             ServerGroups groups = Application.get().serverGroupsHolder.get(groupsName);
-            if (groups.getServerGroups().contains(serverGroup)) {
+            if (groups.getServerGroups().stream().anyMatch(h -> h.group.equals(serverGroup))) {
                 throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgs.fullname + " " + groups.alias);
             }
         }
@@ -153,20 +183,34 @@ public class ServerGroupHandle {
     }
 
     public static void update(Command cmd) throws Exception {
-        ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
-        if (cmd.args.containsKey(Param.timeout)) {
-            g.setHealthCheckConfig(HealthCheckHandle.getHealthCheckConfig(cmd));
-        }
-        if (cmd.args.containsKey(Param.meth)) {
-            g.setMethod(MethHandle.get(cmd));
+        if (cmd.resource.parentResource == null) {
+            ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
+            if (cmd.args.containsKey(Param.timeout)) {
+                g.setHealthCheckConfig(HealthCheckHandle.getHealthCheckConfig(cmd));
+            }
+            if (cmd.args.containsKey(Param.meth)) {
+                g.setMethod(MethHandle.get(cmd));
+            }
+        } else {
+            ServerGroups.ServerGroupHandle h = getHandle(cmd.resource);
+            if (cmd.args.containsKey(Param.w)) {
+                h.setWeight(WeightHandle.get(cmd));
+            }
         }
     }
 
     public static class ServerGroupRef {
         private final ServerGroup g;
+        private final ServerGroups.ServerGroupHandle h;
 
         public ServerGroupRef(ServerGroup g) {
             this.g = g;
+            this.h = null;
+        }
+
+        public ServerGroupRef(ServerGroups.ServerGroupHandle h) {
+            this.h = h;
+            this.g = h.group;
         }
 
         @Override
@@ -174,7 +218,8 @@ public class ServerGroupHandle {
             HealthCheckConfig c = g.getHealthCheckConfig();
             return g.alias + " -> timeout " + c.timeout + " period " + c.period +
                 " up " + c.up + " down " + c.down + " method " + g.getMethod() +
-                " event-loop-group " + g.eventLoopGroup.alias;
+                " event-loop-group " + g.eventLoopGroup.alias +
+                (h == null ? "" : " weight " + h.getWeight());
         }
     }
 }

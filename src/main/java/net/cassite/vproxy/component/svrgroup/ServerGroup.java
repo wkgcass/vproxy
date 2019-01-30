@@ -471,6 +471,7 @@ public class ServerGroup {
                 original[i] = h.weight;
                 sum += h.weight;
             }
+            //noinspection Duplicates
             while (true) {
                 int idx = maxIndex(weights);
                 listSeq.add(idx);

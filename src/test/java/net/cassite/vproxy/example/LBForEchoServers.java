@@ -29,8 +29,8 @@ public class LBForEchoServers {
         ServerGroup grp2 = new ServerGroup("grp2", eventLoopGroup,
             new HealthCheckConfig(200, 800, 4, 5),
             Method.wrr);
-        serverGroups.add(grp1);
-        serverGroups.add(grp2);
+        serverGroups.add(grp1, 10);
+        serverGroups.add(grp2, 10);
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,

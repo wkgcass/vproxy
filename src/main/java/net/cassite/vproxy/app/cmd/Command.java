@@ -621,8 +621,10 @@ public class Command {
                                 throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
                             // also should check serverGroups
                             ServerGroupsHandle.checkServerGroups(targetResource);
-                            // no need to check for attaching,
-                            // the attach process has no param
+                            if (cmd.action == Action.a) {
+                                // also should check server group
+                                ServerGroupHandle.checkAttachServerGroup(cmd);
+                            }
                         } else {
                             // only check creation when on top level
                             if (cmd.action == Action.a) {
@@ -631,12 +633,6 @@ public class Command {
                         }
                         break;
                     case u:
-                        // can only update the server group on top level
-                        // i'm not saying that you cannot modify the one in serverGroups
-                        // but you don't have to go into serverGroups to modify,
-                        // the one on top level is the same one in any serverGroup
-                        if (targetResource != null)
-                            throw new Exception("you should update " + cmd.resource.type + " on top level");
                         ServerGroupHandle.checkUpdateServerGroup(cmd);
                         break;
                     default:

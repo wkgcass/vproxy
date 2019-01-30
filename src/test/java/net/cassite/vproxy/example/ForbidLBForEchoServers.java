@@ -32,8 +32,8 @@ public class ForbidLBForEchoServers {
         ServerGroup grp2 = new ServerGroup("grp2", eventLoopGroup,
             new HealthCheckConfig(200, 800, 1, 5),
             Method.wrr);
-        serverGroups.add(grp1);
-        serverGroups.add(grp2);
+        serverGroups.add(grp1, 10);
+        serverGroups.add(grp2, 10);
         SecurityGroup secg = new SecurityGroup("secg0", false);
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
