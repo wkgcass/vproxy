@@ -13,6 +13,7 @@ public class ProtocolHandlerContext<T> {
     private final ConcurrentLinkedQueue<byte[]> bytesSeq = new ConcurrentLinkedQueue<>();
     private ByteArrayChannel chnl = null; // the helper channel to write into out buffer
     public final String connectionId;
+    public final Connection connection;
     // make inBuffer public for user code to read
     public final RingBuffer inBuffer;
     // make outBuffer private and handle the writings inside the lib
@@ -26,6 +27,7 @@ public class ProtocolHandlerContext<T> {
 
     public ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
         this.connectionId = connectionId;
+        this.connection = connection;
         this.inBuffer = connection.inBuffer;
         this.outBuffer = connection.outBuffer;
         this.loop = loop;

@@ -249,7 +249,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
             }
             address = Utils.ipStr(pctx.address);
         }
-        Connector connector = connectorProvider.provide(pctx.reqType, address, pctx.port);
+        Connector connector = connectorProvider.provide(ctx.connection, pctx.reqType, address, pctx.port);
         if (connector == null) {
             assert Logger.lowLevelDebug("connector NOT found for " + address + ":" + pctx.port);
             pctx.errType = Socks5ProxyContext.CONNECTION_NOT_ALLOWED_BY_RULESET;

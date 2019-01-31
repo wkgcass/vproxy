@@ -9,6 +9,7 @@ import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.socks.AddressType;
 import net.cassite.vproxy.socks.Socks5ConnectorProvider;
@@ -19,6 +20,7 @@ import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.Supplier;
 
@@ -46,7 +48,13 @@ public class Socks5Server extends TcpLB {
     // singleton in one Socks5Server object
     class Socks5ServerConnectorProvider implements Socks5ConnectorProvider {
         @Override
-        public Connector provide(AddressType type, String address, int port) {
+        public Connector provide(Connection accepted, AddressType type, String address, int port) {
+            // check whitelist
+            InetAddress remoteAddress = accepted.remote.getAddress();
+            if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
+                return null; // terminated by securityGroup
+
+            // then let's try to find a connector
             ServerGroups serverGroups = Socks5Server.super.backends;
             if (type == AddressType.domain) {
                 String addrport = address + ":" + port;
