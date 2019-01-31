@@ -35,6 +35,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 
 ```
 +---+ tcp-lb (tl)
++---+ socks5-server (socks5)
 +---+ event-loop-group (elg)
 |        |
 |        +---+ event-loop (el)
@@ -172,6 +173,66 @@ Remove and stop a tcp-loadbalancer. The already established connections won't be
 
 ```
 remove tcp-lb lb0
+"OK"
+```
+
+## Resource: socks5-server (socks5)
+
+Socks5 proxy server.
+
+#### add
+
+Create a socks5 server.
+
+All params are the same as creating `tcp-lb`, but does not support `persist`.  
+See `add tcp-lb` for more info.
+
+* acceptor-elg (aelg): the acceptor event loop
+* event-loop-group (elg): the worker event loop
+* address (addr): the bind address
+* server-groups (sgs): used as backends, the socks5 only supports servers added into this group
+* in-buffer-size: input buffer size
+* out-buffer-size: output buffer size
+* security-group (secg): security group
+
+```
+add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0
+"OK"
+```
+
+#### list
+
+Retrieve names of socks5 servers.
+
+```
+list socks5-server
+1) "s5"
+```
+
+#### list-detail
+
+Retrieve detailed info of socks5 servers.
+
+```
+list-detail socks5-server
+1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in buffer size 16384 out buffer size 16384 security-group secg0"
+```
+
+#### update
+
+Update in-buffer-size or out-buffer-size of a socks5 server.
+
+```
+update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192
+"OK"
+```
+
+#### remove
+
+Remove a socks5 server.
+
+```
+remove socks5-server s5
 "OK"
 ```
 
@@ -590,7 +651,7 @@ Represents a `ServerSocketChannel`, which binds an ip:port.
 
 #### list
 
-Count bind servers. Can be retrieved from `event-loop`, `tcp-lb`.
+Count bind servers. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
 
 ```
 list bind-server in el el0 in elg elg0
@@ -598,11 +659,14 @@ list bind-server in el el0 in elg elg0
 
 list bind-server in tcp-lb lb0
 (integer) 1
+
+list bind-server in socks5-server s5
+(integer) 1
 ```
 
 #### list-detail
 
-Get info about bind servers. Can be retrieved from `event-loop`, `tcp-lb`.
+Get info about bind servers. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
 
 ```
 list-detail bind-server in el el0 in elg elg0
@@ -610,6 +674,9 @@ list-detail bind-server in el el0 in elg elg0
 
 list-detail bind-server in tcp-lb lb0
 1) "127.0.0.1:6380"
+
+list-detail bind-server in socks5-server s5
+1) "127.0.0.1:18081"
 ```
 
 ## Resource: connection (conn)
@@ -618,7 +685,7 @@ Represents a `SocketChannel`.
 
 #### list
 
-Count connections. Can be retrieved from `event-loop`, `tcp-lb`, `server`.
+Count connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
 
 ```
 list connection in el el0 in elg elg0
@@ -627,13 +694,16 @@ list connection in el el0 in elg elg0
 list connection in tcp-lb lb0
 (integer) 2
 
+list connection in socks5-server s5
+(integer) 2
+
 list connection in server svr0 in sg sg0
 (integer) 1
 ```
 
 #### list-detail
 
-Get info about connections. Can be retrieved from `event-loop`, `tcp-lb`, `server`.
+Get info about connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
 
 ```
 list-detail connection in el el0 in elg elg0
@@ -643,6 +713,10 @@ list-detail connection in el el0 in elg elg0
 list-detail connection in tcp-lb lb0
 1) "127.0.0.1:63536/127.0.0.1:6380"
 2) "127.0.0.1:63537/127.0.0.1:6379"
+
+list-detail connection in socks5-server s5
+1) "127.0.0.1:55981/127.0.0.1:18081"
+2) "127.0.0.1:55982/127.0.0.1:16666"
 
 list-detail connection in server svr0 in sg sg0
 1) "127.0.0.1:63537/127.0.0.1:6379"
@@ -671,21 +745,30 @@ Represents a tuple of connections: the connection from client to lb, and the con
 
 #### list
 
-Count loadbalancer sessions. Can be retrieved from `tcp-lb`.
+Count loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
 
 ```
 list session in tcp-lb lb0
 (integer) 1
+
+list session in socks5-server s5
+(integer) 2
 ```
 
 #### list-detail
 
-Get info about loadbalancer sessions. Can be retrieved from `tcp-lb`.
+Get info about loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
 
 ```
 list-detail session in tcp-lb lb0
 1) 1) "127.0.0.1:63536/127.0.0.1:6380"
    2) "127.0.0.1:63537/127.0.0.1:6379"
+
+list-detail session in socks5-server s5
+1) 1) "127.0.0.1:53589/127.0.0.1:18081"
+   2) "127.0.0.1:53591/127.0.0.1:16666"
+2) 1) "127.0.0.1:53590/127.0.0.1:18081"
+   2) "127.0.0.1:53592/127.0.0.1:16666"
 ```
 
 #### force-remove

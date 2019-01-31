@@ -10,7 +10,6 @@ import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.socks.AddressType;
-import net.cassite.vproxy.test.tool.Client;
 import net.cassite.vproxy.test.tool.IdServer;
 import net.cassite.vproxy.test.tool.Socks5Client;
 import org.junit.*;
@@ -20,7 +19,8 @@ import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertTrue;
 
 public class TestSocks5 {
     private static final int lbPort = 18080;

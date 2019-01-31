@@ -20,6 +20,8 @@ public class BindServerHandle {
             EventLoopHandle.checkEventLoop(parent);
         } else if (parent.type == ResourceType.tl) {
             TcpLBHandle.checkTcpLB(parent);
+        } else if (parent.type == ResourceType.socks5) {
+            Socks5ServerHandle.checkSocks5Server(parent);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + server.type.fullname);
         }
@@ -37,7 +39,7 @@ public class BindServerHandle {
         if (parent.type == ResourceType.el) {
             return EventLoopHandle.get(parent).serverCount();
         } else {
-            assert parent.type == ResourceType.tl;
+            assert parent.type == ResourceType.tl || parent.type == ResourceType.socks5;
             return 1;
         }
     }
@@ -46,6 +48,8 @@ public class BindServerHandle {
         List<BindServer> servers = new LinkedList<>();
         if (parent.type == ResourceType.el) {
             EventLoopHandle.get(parent).copyServers(servers);
+        } else if (parent.type == ResourceType.socks5) {
+            servers.add(Socks5ServerHandle.get(parent).server);
         } else {
             assert parent.type == ResourceType.tl;
             servers.add(TcpLBHandle.get(parent).server);

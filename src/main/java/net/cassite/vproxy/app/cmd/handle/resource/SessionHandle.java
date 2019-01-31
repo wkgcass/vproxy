@@ -4,6 +4,7 @@ import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
+import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.proxy.Session;
 
@@ -18,25 +19,46 @@ public class SessionHandle {
     public static void checkSession(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.sess.fullname + " on top level");
-        if (parent.type != ResourceType.tl)
+        if (parent.type == ResourceType.tl) {
+            TcpLBHandle.checkTcpLB(parent);
+        } else if (parent.type == ResourceType.socks5) {
+            Socks5ServerHandle.checkSocks5Server(parent);
+        } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.sess.fullname);
-        TcpLBHandle.checkTcpLB(parent);
+        }
     }
 
     public static int count(Resource parent) throws Exception {
-        // get session count from tcp loadbalancer
-        TcpLB lb = Application.get().tcpLBHolder.get(parent.alias);
-        return lb.sessionCount();
+        if (parent.type == ResourceType.tl) {
+            // get session count from tcp loadbalancer
+            TcpLB lb = Application.get().tcpLBHolder.get(parent.alias);
+            return lb.sessionCount();
+        } else {
+            assert parent.type == ResourceType.socks5;
+            Socks5Server socks5 = Application.get().socks5ServerHolder.get(parent.alias);
+            return socks5.sessionCount();
+        }
     }
 
     public static List<Session> list(Resource parent) throws Exception {
-        TcpLB lb = Application.get().tcpLBHolder.get(parent.alias);
+        if (parent.type == ResourceType.tl) {
+            TcpLB lb = Application.get().tcpLBHolder.get(parent.alias);
 
-        // retrieve sessions
-        List<Session> sessions = new LinkedList<>();
-        lb.copySessions(sessions);
+            // retrieve sessions
+            List<Session> sessions = new LinkedList<>();
+            lb.copySessions(sessions);
 
-        return sessions;
+            return sessions;
+        } else {
+            assert parent.type == ResourceType.socks5;
+            Socks5Server socks5 = Application.get().socks5ServerHolder.get(parent.alias);
+
+            // retrieve sessions
+            List<Session> sessions = new LinkedList<>();
+            socks5.copySessions(sessions);
+
+            return sessions;
+        }
     }
 
     public static void close(Command cmd) throws Exception {

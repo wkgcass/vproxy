@@ -2,6 +2,7 @@ package net.cassite.vproxy.app.cmd;
 
 public enum ResourceType {
     tl("tcp-lb"),
+    socks5("socks5-server"),
     elg("event-loop-group"),
     sgs("server-groups"),
     sg("server-group"),

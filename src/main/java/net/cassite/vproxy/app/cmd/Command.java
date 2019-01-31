@@ -61,6 +61,7 @@ public class Command {
             "\n        for sub level resources: ${resource-type} ${resource-name} in ${resource-type} ${resource-name} in ..." +
             "\n        Available resource types:" +
             "\n            tcp-lb           | tl                  tcp loadbalancer" +
+            "\n            socks5-server    | socks5              socks5 proxy server" +
             "\n            event-loop-group | elg                 event loop group" +
             "\n            server-groups    | sgs                 server groups" +
             "\n            server-group     | sg                  server group" +
@@ -69,9 +70,9 @@ public class Command {
             "\n            server           | svr                 server, is inside server group" +
             "\n            security-group-rule | secgr            security group rule, is inside security group" +
             "\n            resolver                               the dns resolver" +
-            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb" +
-            "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|server" +
-            "\n            session          | sess                a proxy session, is inside tcp-lb" +
+            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb|socks5-server" +
+            "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|socks-server|server" +
+            "\n            session          | sess                a proxy session, is inside tcp-lb|socks5-server" +
             "\n            bytes-in         | bin                 input bytes (net flow from remote to local), is inside bind-server|connection|server" +
             "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
             "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
@@ -84,15 +85,18 @@ public class Command {
             "\n        down                                       health check down times  , required when (creating|updating server group) or (updating server group health check)" +
             "\n        method               | meth                method to retrieve       , required when (creating|updating server group)" +
             "\n        weight               | w                   weight                   , required when (adding|updating server in server group)" +
-            "\n        event-loop-group     | elg                 event loop group         , required when (creating server group) or (creating tcp-lb as the worker group)" +
-            "\n        acceptor-elg         | aelg                acceptor event loop group, required when (creating tcp-lb)" +
-            "\n        address              | addr                ip address or ip:port    , required when (creating tcp-lb) or (adding server into server group)" +
+            "\n        event-loop-group     | elg                 event loop group         , required when (creating server group) or" +
+            "\n                                                                                            (creating tcp-lb as the worker group) or" +
+            "\n                                                                                            (creating socks5-server as the worker group)" +
+            "\n        acceptor-elg         | aelg                acceptor event loop group, required when (creating tcp-lb) or (creating socks5-server)" +
+            "\n        address              | addr                ip address or ip:port    , required when (creating tcp-lb) or (creating socks5-server) or" +
+            "\n                                                                                            (adding server into server group)" +
             "\n        ip                   | via                 ip address               , required when (adding server into server group as the local ip)" +
-            "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb)" +
-            "\n        in-buffer-size                             in buffer size           , required when (creating tcp-lb)" +
-            "\n        out-buffer-size                            out buffer size          , required when (creating tcp-lb)" +
-            "\n        security-group       | secg                security group           , required when (creating tcp-lb)" +
-            "\n        persist                                    connector persist timeout, required when (creating tcp-lb)" +
+            "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb) or (creating socks5-server)" +
+            "\n        in-buffer-size                             in buffer size           , required when (creating|updating tcp-lb) or (creating|updating socks5-server)" +
+            "\n        out-buffer-size                            out buffer size          , required when (creating|updating tcp-lb) or (creating|updating socks5-server)" +
+            "\n        security-group       | secg                security group           , required when (creating tcp-lb) or (creating socks5-server)" +
+            "\n        persist                                    connector persist timeout, required when (creating|updating tcp-lb)" +
             "\n        default                                    enum: allow or deny      , required when (creating security-group-rule) or (creating security-group)" +
             "\n        network              | net                 network: network/mask    , required when (creating security-group-rule)" +
             "\n        protocol                                   enum: tcp or udp         , required when (creating security-group-rule)" +
@@ -677,6 +681,7 @@ public class Command {
                 break;
             case sgs: // server groups
             case tl: // tcp lb
+            case socks5: // socks5 server
             case elg: // event loog group
             case secg: // security group
                 // these four are only exist on top level
@@ -695,6 +700,8 @@ public class Command {
                         if (cmd.action == Action.a) {
                             if (cmd.resource.type == ResourceType.tl) {
                                 TcpLBHandle.checkCreateTcpLB(cmd);
+                            } else if (cmd.resource.type == ResourceType.socks5) {
+                                Socks5ServerHandle.checkCreateSocks5Server(cmd);
                             } else if (cmd.resource.type == ResourceType.secg) {
                                 SecurityGroupHandle.checkCreateSecurityGroup(cmd);
                             } // the other two does not need check
@@ -702,6 +709,8 @@ public class Command {
                         if (cmd.action == Action.u) {
                             if (cmd.resource.type == ResourceType.tl) {
                                 TcpLBHandle.checkUpdateTcpLB(cmd);
+                            } else if (cmd.resource.type == ResourceType.socks5) {
+                                Socks5ServerHandle.checkUpdateSocks5Server(cmd);
                             } else
                                 throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                         }
@@ -933,6 +942,27 @@ public class Command {
                         return new CmdResult();
                     case u:
                         TcpLBHandle.update(this);
+                        return new CmdResult();
+                }
+                throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
+            case socks5: // socks5 proxy server
+                switch (action) {
+                    case l:
+                        List<String> socks5Names = Socks5ServerHandle.names();
+                        return new CmdResult(socks5Names, socks5Names, utilJoinList(socks5Names));
+                    case L:
+                        List<Socks5ServerHandle.Socks5ServerRef> socks5RefList = Socks5ServerHandle.details();
+                        List<String> socks5RefStrList = socks5RefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(socks5RefList, socks5RefStrList, utilJoinList(socks5RefList));
+                    case a:
+                        Socks5ServerHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        Socks5ServerHandle.forceRemove(this);
+                        return new CmdResult();
+                    case u:
+                        Socks5ServerHandle.update(this);
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);

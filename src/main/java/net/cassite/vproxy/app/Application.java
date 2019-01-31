@@ -19,6 +19,7 @@ public class Application {
     public final SecurityGroupHolder securityGroupHolder;
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
+    public final Socks5ServerHolder socks5ServerHolder;
 
     private Application() throws IOException {
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
@@ -29,6 +30,7 @@ public class Application {
         SelectorEventLoop _controlEventLoop = SelectorEventLoop.open();
         this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
         this.respControllerHolder = new RESPControllerHolder();
+        this.socks5ServerHolder = new Socks5ServerHolder();
     }
 
     static void create() throws IOException {

@@ -25,6 +25,8 @@ public class ConnectionHandle {
             EventLoopHandle.checkEventLoop(parent);
         } else if (parent.type == ResourceType.tl) {
             TcpLBHandle.checkTcpLB(parent);
+        } else if (parent.type == ResourceType.socks5) {
+            Socks5ServerHandle.checkSocks5Server(parent);
         } else if (parent.type == ResourceType.svr) {
             ServerHandle.checkServer(parent);
         } else {
@@ -41,7 +43,7 @@ public class ConnectionHandle {
     }
 
     public static int count(Resource parent) throws Exception {
-        if (parent.type == ResourceType.tl) {
+        if (parent.type == ResourceType.tl || parent.type == ResourceType.socks5) {
 
             // get session count and double it
             return SessionHandle.count(parent) * 2;
@@ -64,7 +66,7 @@ public class ConnectionHandle {
     public static List<Connection> list(Resource parent) throws Exception {
         List<Connection> connections;
 
-        if (parent.type == ResourceType.tl) {
+        if (parent.type == ResourceType.tl || parent.type == ResourceType.socks5) {
 
             // get sessions
             List<Session> sessions = SessionHandle.list(parent);
