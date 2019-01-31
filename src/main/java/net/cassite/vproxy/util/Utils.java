@@ -27,14 +27,14 @@ public class Utils {
     }
 
     private static String ipv6Str(byte[] ip) {
-        return "[" + addTo(4, Integer.toHexString((ip[0] << 8) | ip[1]))
-            + ":" + addTo(4, Integer.toHexString((ip[2] << 8) | ip[3]))
-            + ":" + addTo(4, Integer.toHexString((ip[4] << 8) | ip[5]))
-            + ":" + addTo(4, Integer.toHexString((ip[6] << 8) | ip[7]))
-            + ":" + addTo(4, Integer.toHexString((ip[8] << 8) | ip[9]))
-            + ":" + addTo(4, Integer.toHexString((ip[10] << 8) | ip[11]))
-            + ":" + addTo(4, Integer.toHexString((ip[12] << 8) | ip[13]))
-            + ":" + addTo(4, Integer.toHexString((ip[14] << 8) | ip[15]))
+        return "[" + addTo(4, Integer.toHexString(((ip[0] << 8) & 0xFFFF) | ip[1]))
+            + ":" + addTo(4, Integer.toHexString(((ip[2] << 8) & 0xFFFF) | ip[3]))
+            + ":" + addTo(4, Integer.toHexString(((ip[4] << 8) & 0xFFFF) | ip[5]))
+            + ":" + addTo(4, Integer.toHexString(((ip[6] << 8) & 0xFFFF) | ip[7]))
+            + ":" + addTo(4, Integer.toHexString(((ip[8] << 8) & 0xFFFF) | ip[9]))
+            + ":" + addTo(4, Integer.toHexString(((ip[10] << 8) & 0xFFFF) | ip[11]))
+            + ":" + addTo(4, Integer.toHexString(((ip[12] << 8) & 0xFFFF) | ip[13]))
+            + ":" + addTo(4, Integer.toHexString(((ip[14] << 8) & 0xFFFF) | ip[15]))
             + "]";
     }
 

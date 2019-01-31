@@ -1,10 +1,10 @@
 package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.RingBuffer;
-import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxy.protocol.ProtocolConnectionHandler;
+import net.cassite.vproxy.protocol.ProtocolHandler;
+import net.cassite.vproxy.protocol.ProtocolHandlerContext;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.nio.channels.SocketChannel;
@@ -57,9 +57,23 @@ public class Proxy {
 
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
-            // make connection to another end point
-            Connector connector = config.connGen.genConnector(connection);
+            switch (config.connGen.get().type()) {
+                case handler:
+                    handleHandler(connection);
+                    break;
+                case direct:
+                default:
+                    handleDirect(connection);
+            }
+        }
 
+        private void handleDirect(Connection connection) {
+            // make connection to another end point
+            Connector connector = config.connGen.get().genConnector(connection);
+            handleDirect(connection, connector);
+        }
+
+        private void handleDirect(Connection connection, Connector connector) {
             // check whether address tuple is null
             // null means the user code fail to provide a new connection
             // maybe user think that the backend is not working, or the source ip is forbidden
@@ -112,6 +126,83 @@ public class Proxy {
                 // should not happen
                 // but if it happens, we close both sides
                 utilCloseSessionAndReleaseBuffers(session);
+            }
+        }
+
+        class HandlerCallback extends Callback<Connector, IOException> {
+            private final NetEventLoop loop;
+            private final Connection active;
+
+            HandlerCallback(NetEventLoop loop, Connection active) {
+                this.loop = loop;
+                this.active = active;
+            }
+
+            @Override
+            protected void onSucceeded(Connector connector) {
+                // remove the connection from loop first
+                // because we want to remove the old ConnectionHandler
+                // then handle it as direct
+                try {
+                    loop.removeConnection(active);
+                } catch (Throwable t) {
+                    // will raise error if it's not in the loop
+                    // which should not happen
+                    // but if happens, we close the connection
+                    Logger.shouldNotHappen("remove the active connection from loop failed", t);
+                    return;
+                }
+                // we don't care whether the connector is null or not
+                // will be checked in the following method
+
+                // handle like a normal proxy:
+                handleDirect(active, connector);
+            }
+
+            @Override
+            protected void onFailed(IOException err) {
+                // we cannot handle the connection anymore
+                // close it
+                active.close();
+                // we do not log here, the log should be in user code
+            }
+        }
+
+        @SuppressWarnings(/*ignore generics here*/"unchecked")
+        private void handleHandler(Connection connection) {
+            // retrieve the handler
+            ProtocolHandler pHandler = config.connGen.get().handler();
+            // retrieve an event loop provided by user code
+            // the net flow will be handled here
+            NetEventLoop loop = config.handleLoopProvider.get();
+
+            // create a protocol context and init the handler
+            ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, loop.getSelectorEventLoop(), pHandler);
+            pHandler.init(pctx);
+
+            // set callback
+            Tuple<Object, Callback<Connector, IOException>> tup = (Tuple) pctx.data;
+            if (tup == null) {
+                // user code fail to provide the data
+                Logger.error(LogType.IMPROPER_USE, "user code should set a tuple(T, null) to the data field");
+                // close the connection because we cannot handle it anymore
+                connection.close();
+                return;
+            }
+            tup = new Tuple<>(tup.left, new HandlerCallback(loop, connection));
+            pctx.data = tup;
+
+            // the following code should be same as in ProtocolServerHandler
+            //noinspection Duplicates
+            try {
+                loop.addConnection(connection, pHandler, new ProtocolConnectionHandler(pctx));
+            } catch (IOException e) {
+                // handle exception in handler
+                pHandler.exception(pctx, e);
+                // and do some log
+                Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add new connection into loop failed", e);
+                // the connection should be closed by the lib
+                connection.close();
             }
         }
 

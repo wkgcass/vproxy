@@ -6,10 +6,7 @@ import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
-import net.cassite.vproxy.component.proxy.Proxy;
-import net.cassite.vproxy.component.proxy.ProxyEventHandler;
-import net.cassite.vproxy.component.proxy.ProxyNetConfig;
-import net.cassite.vproxy.component.proxy.Session;
+import net.cassite.vproxy.component.proxy.*;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.BindServer;
@@ -28,6 +25,7 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.function.Supplier;
 
 public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
@@ -176,7 +174,7 @@ public class TcpLB {
         // init proxyNetConfig
         // acceptEventLoop will be assigned in start() method
         this.proxyNetConfig
-            .setConnGen(this::connectorProvider) // the handle code is too long for a lambda, so move into a method
+            .setConnGen(provideConnectorGen())
             .setHandleLoopProvider(() -> {
                 // get a event loop from group
                 EventLoopWrapper w = workerGroup.next();
@@ -200,6 +198,12 @@ public class TcpLB {
             this.server.close(); // close the socket if attach failed
             throw e;
         }
+    }
+
+    // this method can override
+    protected Supplier<ConnectorGen> provideConnectorGen() {
+        ConnectorGen cg = this::connectorProvider;
+        return () -> cg;
     }
 
     // provide a connector

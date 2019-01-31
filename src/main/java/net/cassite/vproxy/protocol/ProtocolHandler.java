@@ -8,4 +8,8 @@ public interface ProtocolHandler<T> {
     void exception(ProtocolHandlerContext<T> ctx, Throwable err);
 
     void end(ProtocolHandlerContext<T> ctx);
+
+    default boolean closeOnRemoval(ProtocolHandlerContext<T> ctx) {
+        return true;
+    }
 }

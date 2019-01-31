@@ -6,10 +6,10 @@ import net.cassite.vproxy.connection.ConnectionHandlerContext;
 import java.io.IOException;
 
 @SuppressWarnings("unchecked")
-class ProtocolConnectionHandler implements ConnectionHandler {
+public class ProtocolConnectionHandler implements ConnectionHandler {
     private final ProtocolHandlerContext pctx;
 
-    ProtocolConnectionHandler(ProtocolHandlerContext pctx) {
+    public ProtocolConnectionHandler(ProtocolHandlerContext pctx) {
         this.pctx = pctx;
     }
 
@@ -39,8 +39,10 @@ class ProtocolConnectionHandler implements ConnectionHandler {
     @Override
     public void removed(ConnectionHandlerContext ctx) {
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        // close the connection when loop ends
-        ctx.connection.close();
-        handler.end(pctx);
+        if (handler.closeOnRemoval(pctx)) {
+            // close the connection when loop ends
+            ctx.connection.close();
+        }
+        handler.end(pctx); // let handler know whether or not it's removed
     }
 }

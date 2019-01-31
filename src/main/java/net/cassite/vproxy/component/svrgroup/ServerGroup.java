@@ -251,6 +251,10 @@ public class ServerGroup {
             healthCheckClient = null;
         }
 
+        public Connector makeConnector() {
+            return new SvrHandleConnector(this);
+        }
+
         @Override
         public String toString() {
             return id();
@@ -414,7 +418,7 @@ public class ServerGroup {
                 } // --------- END ---------
             }
         }
-        return new SvrHandleConnector(Sm);
+        return Sm.makeConnector();
         // }
         // }
         // return null;
@@ -438,7 +442,7 @@ public class ServerGroup {
         int realIdx = wrr.seq[idx];
         ServerHandle h = wrr.servers.get(realIdx);
         if (h.healthy)
-            return new SvrHandleConnector(h);
+            return h.makeConnector();
         else
             return wrrNext(wrr, recursion + 1);
     }

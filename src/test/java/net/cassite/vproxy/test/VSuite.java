@@ -12,6 +12,7 @@ import org.junit.runners.Suite;
     TestNetMask.class,
     TestTimer.class,
     TestResolver.class,
+    TestSocks5.class,
 
     AfterAll.class
 })

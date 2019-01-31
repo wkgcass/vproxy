@@ -24,7 +24,7 @@ public class ProtocolHandlerContext<T> {
     // a field for user code to set data
     public T data;
 
-    ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
+    public ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
         this.connectionId = connectionId;
         this.inBuffer = connection.inBuffer;
         this.outBuffer = connection.outBuffer;

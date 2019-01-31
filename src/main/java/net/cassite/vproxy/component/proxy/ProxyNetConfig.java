@@ -3,11 +3,13 @@ package net.cassite.vproxy.component.proxy;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.NetEventLoop;
 
+import java.util.function.Supplier;
+
 public class ProxyNetConfig {
     NetEventLoop acceptLoop;
     BindServer server;
     NetEventLoopProvider handleLoopProvider;
-    ConnectorGen connGen;
+    Supplier<ConnectorGen> connGen;
 
 
     int inBufferSize = 128;
@@ -28,7 +30,7 @@ public class ProxyNetConfig {
         return this;
     }
 
-    public ProxyNetConfig setConnGen(ConnectorGen connGen) {
+    public ProxyNetConfig setConnGen(Supplier<ConnectorGen> connGen) {
         this.connGen = connGen;
         return this;
     }
@@ -55,7 +57,7 @@ public class ProxyNetConfig {
         return handleLoopProvider;
     }
 
-    public ConnectorGen getConnGen() {
+    public Supplier<ConnectorGen> getConnGen() {
         return connGen;
     }
 

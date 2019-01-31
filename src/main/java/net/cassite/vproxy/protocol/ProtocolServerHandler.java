@@ -39,6 +39,8 @@ public class ProtocolServerHandler implements ServerHandler {
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
         ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, eventLoop.getSelectorEventLoop(), handler);
         handler.init(pctx);
+        // Proxy.java copies these codes:
+        //noinspection Duplicates
         try {
             eventLoop.addConnection(connection, handler, new ProtocolConnectionHandler(pctx));
         } catch (IOException e) {
@@ -46,6 +48,8 @@ public class ProtocolServerHandler implements ServerHandler {
             handler.exception(pctx, e);
             // and do some log
             Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add new connection into loop failed", e);
+            // the connection should be closed by the lib
+            connection.close();
         }
     }
 
