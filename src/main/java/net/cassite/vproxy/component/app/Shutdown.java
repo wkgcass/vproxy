@@ -309,6 +309,45 @@ public class Shutdown {
                 commands.add(cmd);
             }
         }
+        {
+            // create socks5 server
+            Socks5ServerHolder socks5h = app.socks5ServerHolder;
+            List<String> names = socks5h.names();
+            for (String name : names) {
+                Socks5Server socks5;
+                try {
+                    socks5 = socks5h.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("socks5 not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                if (!eventLoopGroupNames.contains(socks5.acceptorGroup.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the elg " + socks5.acceptorGroup.alias + " already removed");
+                    continue;
+                }
+                if (!eventLoopGroupNames.contains(socks5.workerGroup.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the elg " + socks5.workerGroup.alias + " already removed");
+                    continue;
+                }
+                if (!serverGroupsNames.contains(socks5.backends.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the sgs " + socks5.backends.alias + " already removed");
+                    continue;
+                }
+                if (!securityGroupNames.contains(socks5.securityGroup.alias) && !socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the secg " + socks5.securityGroup.alias + " already removed");
+                    continue;
+                }
+                String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
+                    " event-loop-group " + socks5.workerGroup.alias +
+                    " address " + socks5.server.id() + " server-groups " + socks5.backends.alias +
+                    " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize();
+                if (!socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
+                    cmd += " security-group " + socks5.securityGroup.alias;
+                }
+                commands.add(cmd);
+            }
+        }
         StringBuilder sb = new StringBuilder();
         for (String cmd : commands) {
             sb.append(cmd).append("\n");
