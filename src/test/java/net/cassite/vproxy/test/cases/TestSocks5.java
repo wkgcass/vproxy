@@ -38,7 +38,7 @@ public class TestSocks5 {
     @BeforeClass
     public static void classSetUp() throws Exception {
         serverLoop = SelectorEventLoop.open();
-        new Thread(serverLoop::loop, "serverLoop").start();
+        serverLoop.loop(r -> new Thread(r, "serverLoop"));
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
         new IdServer("0", serverNetLoop, 19080);
         new IdServer("1", serverNetLoop, 19081, "::1");

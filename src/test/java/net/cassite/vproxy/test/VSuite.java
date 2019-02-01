@@ -13,6 +13,7 @@ import org.junit.runners.Suite;
     TestTimer.class,
     TestResolver.class,
     TestSocks5.class,
+    TestUDP.class,
 
     AfterAll.class
 })

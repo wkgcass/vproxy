@@ -4,7 +4,7 @@ import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.NetworkChannel;
 
 public interface ServerHandler {
     void acceptFail(ServerHandlerContext ctx, IOException err);
@@ -12,7 +12,15 @@ public interface ServerHandler {
     void connection(ServerHandlerContext ctx, Connection connection);
 
     // <in buffer, out buffer>
-    Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel);
+    Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel);
 
     void removed(ServerHandlerContext ctx);
+
+    default void exception(ServerHandlerContext ctx, IOException err) {
+        // do nothing
+    }
+
+    default ConnectionHandler udpHandler(ServerHandlerContext ctx, Connection conn) {
+        throw new UnsupportedOperationException();
+    }
 }

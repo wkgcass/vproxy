@@ -7,7 +7,7 @@ import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.NetworkChannel;
 
 public class ProtocolServerHandler implements ServerHandler {
     private NetEventLoop eventLoop;
@@ -54,7 +54,7 @@ public class ProtocolServerHandler implements ServerHandler {
     }
 
     @Override
-    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
         return new Tuple<>(
             RingBuffer.allocate(inBufferSize),
             RingBuffer.allocate(outBufferSize)

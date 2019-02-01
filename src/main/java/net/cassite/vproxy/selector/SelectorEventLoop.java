@@ -9,6 +9,7 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
+import java.util.function.Function;
 
 public class SelectorEventLoop {
     static class RegisterData {
@@ -20,7 +21,7 @@ public class SelectorEventLoop {
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
-    public Thread runningThread;
+    public volatile Thread runningThread;
 
     // these locks are a little tricky
     // see comments in loop() and close()
@@ -131,6 +132,18 @@ public class SelectorEventLoop {
             SelectableChannel channel = tuple.left;
             RegisterData att = tuple.right;
             triggerRemovedCallback(channel, att);
+        }
+    }
+
+    @Blocking // will block until the loop actually starts
+    public void loop(Function<Runnable, Thread> constructThread) {
+        constructThread.apply(this::loop).start();
+        while (runningThread == null) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                // ignore the interruption
+            }
         }
     }
 

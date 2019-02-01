@@ -14,6 +14,7 @@ import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.connection.Protocol;
 import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.test.tool.CaseUtils;
 import net.cassite.vproxy.test.tool.Client;
 import net.cassite.vproxy.test.tool.EchoServer;
 import net.cassite.vproxy.test.tool.IdServer;
@@ -21,11 +22,8 @@ import net.cassite.vproxy.util.Utils;
 import org.junit.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.NetworkInterface;
-import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -41,7 +39,7 @@ public class TestTcpLB {
     @BeforeClass
     public static void classSetUp() throws Exception {
         serverLoop = SelectorEventLoop.open();
-        new Thread(serverLoop::loop, "serverLoop").start();
+        serverLoop.loop(r -> new Thread(r, "serverLoop"));
         new EchoServer(serverLoop, 20080); // no need to record the echo server
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
         new IdServer("0", serverNetLoop, 19080);
@@ -49,22 +47,8 @@ public class TestTcpLB {
         new IdServer("2", serverNetLoop, 19082);
 
         // find another ip bond to local
-        String address = null;
-        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
-        out:
-        while (nics.hasMoreElements()) {
-            NetworkInterface nic = nics.nextElement();
-            Enumeration<InetAddress> ips = nic.getInetAddresses();
-            while (ips.hasMoreElements()) {
-                InetAddress addr = ips.nextElement();
-                if (addr instanceof Inet4Address && !addr.getHostAddress().equals("127.0.0.1")) {
-                    address = addr.getHostAddress();
-                    break out;
-                }
-            }
-        }
-        addressOtherThan127 = address;
-        if (address == null)
+        addressOtherThan127 = CaseUtils.ipv4OtherThan127();
+        if (addressOtherThan127 == null)
             throw new Exception("this machine do not have a non 127.0.0.1 address");
         new IdServer("3", serverNetLoop, 19082, addressOtherThan127);
     }
@@ -121,7 +105,7 @@ public class TestTcpLB {
 
         loop = SelectorEventLoop.open();
 
-        new Thread(loop::loop, "Test").start();
+        loop.loop(r -> new Thread(r, "Test"));
     }
 
     @After

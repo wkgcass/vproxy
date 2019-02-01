@@ -8,7 +8,7 @@ import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.NetworkChannel;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.concurrent.ConcurrentHashMap;
@@ -33,7 +33,7 @@ public class EventLoopWrapper extends NetEventLoop {
         }
 
         @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
             return handler.getIOBuffers(channel);
         }
 
@@ -210,10 +210,9 @@ public class EventLoopWrapper extends NetEventLoop {
         // no need to set thread to null in the new thread
         // the loop will exit only when selector is closed
         // and the selector will not be able to open again
-        thread = new Thread(() -> {
-            this.selectorEventLoop.loop();
+        this.selectorEventLoop.loop(r -> new Thread(() -> {
+            r.run();
             removeResources();
-        }, "EventLoopThread:" + alias);
-        thread.start();
+        }, "EventLoopThread:" + alias));
     }
 }

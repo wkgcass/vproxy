@@ -3,7 +3,9 @@ package net.cassite.vproxy.util;
 import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
+import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
@@ -73,10 +75,96 @@ public class RingBuffer {
         return retrieveLimit(this.sPos, this.ePosIsAfterSPos);
     }
 
+    public int storeBytesFrom(ByteBuffer byteBuffer) {
+        // NOTE: ----------------
+        // NOTE: the method has a copy: storeBytesFrom(Channel) for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+
+        if (closed)
+            return -1; // handle nothing because it's already closed
+
+        operating = true;
+
+        boolean triggerReadable = false;
+        try { // only use try-finally here, we do not catch
+
+            // is for triggering readable event
+            final int usedSpace = used();
+            boolean triggerReadablePre = usedSpace == 0 && !handler.isEmpty();
+
+            int lim = storeLimit();
+            if (lim == 0)
+                return 0; // buffer is full
+            buffer.limit(ePos + lim).position(ePos);
+
+            // calculate size for input byteBuffer
+            int oldLimit = byteBuffer.limit();
+            int read = byteBuffer.remaining();
+            if (byteBuffer.remaining() > lim) {
+                byteBuffer.limit(byteBuffer.position() + lim);
+                read = lim;
+            } // otherwise it's safe to write
+
+            buffer.put(byteBuffer);
+
+            ePos += read;
+
+            triggerReadable = triggerReadablePre && read > 0;
+
+            if (ePos == cap) {
+                ePos = 0;
+                ePosIsAfterSPos = false;
+            }
+            if (read == lim) {
+                // maybe have more bytes to read
+                lim = storeLimit();
+                if (lim == 0)
+                    return read; // buffer is full now
+
+                byteBuffer.limit(oldLimit);
+                int read2 = byteBuffer.remaining();
+                if (read2 > lim) {
+                    byteBuffer.limit(byteBuffer.position() + lim);
+                    read2 = lim;
+                }
+
+                buffer.limit(ePos + lim).position(ePos);
+
+                buffer.put(byteBuffer);
+
+                ePos += read2;
+                // this time, ePos will not reach cap
+                return read + read2;
+            } else {
+                return read;
+            }
+        } finally { // do trigger here
+            if (triggerReadable) {
+                for (RingBufferETHandler aHandler : handler) {
+                    aHandler.readableET();
+                }
+            }
+            operating = false;
+            handler.removeAll(handlerToRemove);
+            handler.addAll(handlerToAdd);
+        }
+
+        // NOTE: ----------------
+        // NOTE: the method has a copy: storeBytesFrom(Channel) for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+    }
+
     /**
      * @return may return -1 for EOF
      */
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+        // NOTE: ----------------
+        // NOTE: the method has a copy: storeBytesFrom(ByteBuffer) for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+
         if (closed)
             return -1; // handle nothing because it's already closed
 
@@ -130,6 +218,11 @@ public class RingBuffer {
             handler.removeAll(handlerToRemove);
             handler.addAll(handlerToAdd);
         }
+
+        // NOTE: ----------------
+        // NOTE: the method has a copy: storeBytesFrom(ByteBuffer) for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
     }
 
     private void resetCursors() {
@@ -143,6 +236,11 @@ public class RingBuffer {
     }
 
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+        // NOTE: ----------------
+        // NOTE: the method has a copy: writeToDatagramChannel() for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+
         if (closed)
             return 0; // handle nothing because it's closed
 
@@ -200,6 +298,85 @@ public class RingBuffer {
             handler.removeAll(handlerToRemove);
             handler.addAll(handlerToAdd);
         }
+
+        // NOTE: ----------------
+        // NOTE: the method has a copy: writeToDatagramChannel() for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+    }
+
+    public int writeToDatagramChannel(DatagramChannel channel, SocketAddress sockAddr) throws IOException {
+        return writeToDatagramChannel(channel, sockAddr, Integer.MAX_VALUE);
+    }
+
+    public int writeToDatagramChannel(DatagramChannel channel, SocketAddress sockAddr, int maxBytesToWrite) throws IOException {
+        // NOTE: ----------------
+        // NOTE: the method has a copy: writeTo() for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
+
+        if (closed)
+            return 0; // handle nothing because it's closed
+
+        operating = true;
+        boolean triggerWritable = false;
+
+        try { // only use try-finally here, we do not catch
+
+            // is for triggering writable event
+            final int freeSpace = free();
+            boolean triggerWritablePre = freeSpace == 0 && !handler.isEmpty();
+
+            int lim = retrieveLimit();
+            if (lim == 0)
+                return 0; // buffer is empty
+            int realWrite = Math.min(lim, maxBytesToWrite);
+            buffer.limit(sPos + realWrite).position(sPos);
+            int write = channel.send(buffer, sockAddr);
+            sPos += write;
+
+            triggerWritable = triggerWritablePre && write > 0;
+
+            if (sPos == cap) {
+                sPos = 0;
+                ePosIsAfterSPos = true;
+            }
+            if (write == lim && write < maxBytesToWrite) {
+                // maybe have more bytes to write
+                lim = retrieveLimit();
+                if (lim == 0) {
+                    // buffer is empty now
+                    resetCursors();
+                    return write;
+                }
+                realWrite = Math.min(lim, maxBytesToWrite - write/* the bytes left to write */);
+                buffer.limit(sPos + realWrite).position(sPos);
+                int write2 = channel.send(buffer, sockAddr);
+                sPos += write2;
+                // this time, sPos will not reach cap
+                // but let's check whether is empty for resetting cursor
+                if (retrieveLimit() == 0) {
+                    resetCursors();
+                }
+                return write + write2;
+            } else {
+                return write;
+            }
+        } finally { // do trigger here
+            if (triggerWritable) {
+                for (RingBufferETHandler aHandler : handler) {
+                    aHandler.writableET();
+                }
+            }
+            operating = false;
+            handler.removeAll(handlerToRemove);
+            handler.addAll(handlerToAdd);
+        }
+
+        // NOTE: ----------------
+        // NOTE: the method has a copy: writeTo() for performance concern
+        // NOTE: if anything changes here, do remember to change the copy
+        // NOTE: ----------------
     }
 
     public int free() {

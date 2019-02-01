@@ -7,8 +7,7 @@ import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.*;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -65,9 +64,24 @@ public class Connection implements NetFlowRecorder {
                     _cctx.handler.writable(_cctx);
                 }
 
+                // for server udp channels, just write, and should not add OP_WRITE event
+                if (!looksLikeAConnection) {
+                    int write;
+                    try {
+                        write = outBuffer.writeToDatagramChannel((DatagramChannel) channel, remote);
+                    } catch (IOException ignore) {
+                        // we ignore any error when writing udp
+                        return;
+                    }
+
+                    incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
+
+                    return; // end `Quick Write`
+                }
+
                 boolean addWriteOnLoop = true;
                 try {
-                    int write = outBuffer.writeTo(channel);
+                    int write = outBuffer.writeTo((WritableByteChannel) channel);
                     if (write > 0) {
                         incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
                         // NOTE: should also record in NetEventLoop writable event
@@ -107,7 +121,10 @@ public class Connection implements NetFlowRecorder {
     public final InetSocketAddress remote;
     protected InetSocketAddress local;
     protected final String _id;
-    public final SocketChannel channel;
+    public final SelectableChannel channel;
+    public final Protocol protocol;
+    private final boolean looksLikeAConnection; // this field determines outBufferETHandler's behavior
+    BindServer.UDPConn _udpDummyConn; // should be removed when this connection is closed
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize
@@ -125,7 +142,7 @@ public class Connection implements NetFlowRecorder {
      * bytes in this buffer will be wrote to channel
      */
     public final RingBuffer outBuffer;
-    private final InBufferETHandler inBufferETHandler;
+    /*private let ClientConnection have access*/ final InBufferETHandler inBufferETHandler;
     private final OutBufferETHandler outBufferETHandler;
     boolean remoteClosed = false;
 
@@ -134,12 +151,21 @@ public class Connection implements NetFlowRecorder {
 
     private boolean closed = false;
 
-    Connection(SocketChannel channel, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+    Connection(Protocol protocol,
+               SelectableChannel channel,
+               InetSocketAddress remote,
+               RingBuffer inBuffer, RingBuffer outBuffer, boolean looksLikeAConnection) throws IOException {
+        this.protocol = protocol;
+        this.looksLikeAConnection = looksLikeAConnection;
+        assert (protocol == Protocol.TCP && channel instanceof SocketChannel)
+            || (protocol == Protocol.UDP && channel instanceof DatagramChannel);
+        assert (protocol == Protocol.UDP) || (((SocketChannel) channel).getRemoteAddress().equals(remote));
+
         this.channel = channel;
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
-        remote = ((InetSocketAddress) channel.getRemoteAddress());
-        local = (InetSocketAddress) channel.getLocalAddress();
+        this.remote = remote;
+        local = (InetSocketAddress) ((NetworkChannel) channel).getLocalAddress();
         _id = genId();
 
         inBufferETHandler = new InBufferETHandler();
@@ -147,6 +173,8 @@ public class Connection implements NetFlowRecorder {
 
         this.inBuffer.addHandler(inBufferETHandler);
         this.outBuffer.addHandler(outBufferETHandler);
+        // in the outBufferETHandler
+        // if buffer did not wrote all content, simply ignore the left part
     }
 
     // --- START statistics ---
@@ -186,7 +214,8 @@ public class Connection implements NetFlowRecorder {
     }
 
     protected String genId() {
-        return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
+        return (protocol == Protocol.UDP ? "UDP:" : "")
+            + Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
             + "/"
             + (local == null ? "[unbound]" :
             (
@@ -217,18 +246,31 @@ public class Connection implements NetFlowRecorder {
             h.onConnClose(this);
         connCloseHandlers.clear();
 
+        // no need to check protocol
+        // removing a non-existing element from a collection is safe
         inBuffer.removeHandler(inBufferETHandler);
         outBuffer.removeHandler(outBufferETHandler);
 
         NetEventLoop eventLoop = _eventLoop;
-        if (eventLoop != null) {
+        if (eventLoop != null && looksLikeAConnection) {
             eventLoop.removeConnection(this);
+
+            /*udp dummy conn does not add to the loop*/
         }
         releaseEventLoopRelatedFields();
-        try {
-            channel.close();
-        } catch (IOException e) {
-            // we can do nothing about it
+        if (looksLikeAConnection) {
+            try {
+                channel.close();
+            } catch (IOException e) {
+                // we can do nothing about it
+            }
+
+            // the channel is dummy for udp server and should not close
+        }
+
+        if (_udpDummyConn != null) {
+            _udpDummyConn.remove();
+            _udpDummyConn = null;
         }
     }
 

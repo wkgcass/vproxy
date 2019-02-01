@@ -7,7 +7,7 @@ import net.cassite.vproxy.protocol.ProtocolHandlerContext;
 import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.NetworkChannel;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -207,7 +207,7 @@ public class Proxy {
         }
 
         @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
             RingBuffer inBuffer = RingBuffer.allocateDirect(config.inBufferSize);
             RingBuffer outBuffer = RingBuffer.allocateDirect(config.outBufferSize);
             return new Tuple<>(inBuffer, outBuffer);

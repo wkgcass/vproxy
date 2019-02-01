@@ -183,7 +183,7 @@ public class Resolver implements IResolver {
     }
 
     public void start() {
-        new Thread(loop.getSelectorEventLoop()::loop, alias).start();
+        loop.getSelectorEventLoop().loop(r -> new Thread(r, alias));
     }
 
     private void doResolve(ResolveTask task) {

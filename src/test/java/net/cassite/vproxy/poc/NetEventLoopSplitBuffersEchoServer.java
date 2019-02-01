@@ -8,7 +8,7 @@ import net.cassite.vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
+import java.nio.channels.NetworkChannel;
 
 /**
  * the server is almost the same as {@link NetEventLoopEchoServer} but splits inBuffer and outBuffer
@@ -43,7 +43,7 @@ class My2ServerHandler extends MyServerHandler implements ServerHandler {
     }
 
     @Override
-    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
         // make the buffer small to demonstrate what will be done when buffer is full
         RingBuffer inBuffer = RingBuffer.allocateDirect(8);
         RingBuffer outBuffer = RingBuffer.allocateDirect(4);

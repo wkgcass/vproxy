@@ -15,7 +15,7 @@ public class TestTimer {
     @Before
     public void setUp() throws Exception {
         loop = SelectorEventLoop.open();
-        new Thread(loop::loop, "EventLoop").start();
+        loop.loop(r -> new Thread(r, "EventLoop"));
     }
 
     @After
