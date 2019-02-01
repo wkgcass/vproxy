@@ -1,5 +1,6 @@
 package net.cassite.vproxy.app;
 
+import net.cassite.vproxy.app.cmd.SystemCommand;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.component.app.Shutdown;
 import net.cassite.vproxy.component.app.StdIOController;
@@ -23,6 +24,10 @@ public class Main {
         "\n" +
         "\n\t\tresp-controller ${address} ${password}       start the resp-controller, will" +
         "\n\t\t                                             be named as `resp-controller`" +
+        "\n\t\tallowSystemCallInNonStdIOController          allow system call in all controllers" +
+        "\n" +
+        "\n\t\tnoStdIOController                            StdIOController will not start" +
+        "\n\t\t                                             if the flag is set" +
         "";
 
     private static void beforeStart() {
@@ -43,7 +48,7 @@ public class Main {
             return;
         }
         // init signal hooks
-        Shutdown.init();
+        Shutdown.initSignal();
         // start ControlEventLoop
         Application.get().controlEventLoop.loop();
 
@@ -51,6 +56,7 @@ public class Main {
 
         // load config if specified in args
         boolean loaded = false;
+        boolean noStdIOController = false;
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
@@ -107,6 +113,12 @@ public class Main {
                         return;
                     }
                     break;
+                case "allowSystemCallInNonStdIOController":
+                    SystemCommand.allowNonStdIOController = true;
+                    break;
+                case "noStdIOController":
+                    noStdIOController = true;
+                    break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");
                     System.exit(1);
@@ -129,9 +141,11 @@ public class Main {
 
         // start controllers
 
-        // start stdioController
-        StdIOController controller = new StdIOController();
-        new Thread(controller::start, "StdIOControllerThread").start();
+        if (!noStdIOController) {
+            // start stdioController
+            StdIOController controller = new StdIOController();
+            new Thread(controller::start, "StdIOControllerThread").start();
+        }
 
         // start scheduled saving task
         Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);

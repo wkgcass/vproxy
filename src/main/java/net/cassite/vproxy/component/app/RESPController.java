@@ -4,6 +4,7 @@ import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.Action;
 import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.cmd.SystemCommand;
 import net.cassite.vproxy.component.exception.XException;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.NetEventLoop;
@@ -79,34 +80,27 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             cb.failed(new XException("invalid the command format"));
             return;
         }
-        String s = ((String) o).trim();
-        if (s.contains("\n") || s.contains("\r")) {
+        String line = ((String) o).trim();
+        if (line.contains("\n") || line.contains("\r")) {
             cb.failed(new XException("invalid the command format"));
             return;
         }
-        if (s.equals("help") || s.equals("man")) {
+        if (line.equals("help") || line.equals("man")) {
             // the `help` command is trapped by redis-cli
             // so let's use man instead
             cb.succeeded(Command.helpString().split("\n"));
             return;
         }
-        Command cmd;
-        try {
-            cmd = Command.parseStrCmd(s);
-        } catch (Exception e) {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                "parse cmd failed! " + Utils.formatErr(e) + " ... type `help` to show the help message");
-            cb.failed(e); // callback failed
-            return;
-        }
-        cmd.run(new Callback<CmdResult, Throwable>() {
+
+        boolean[] isListAction = {false}; // use array to change the variable captured by the inner class
+        Callback<CmdResult, Throwable> callback = new Callback<CmdResult, Throwable>() {
             @Override
             protected void onSucceeded(CmdResult value) {
                 if (value.processedResult == null) {
-                    if (cmd.action != Action.l && cmd.action != Action.L) {
-                        cb.succeeded("OK"); // redis usually returns OK response when something is done
-                    } else {
+                    if (isListAction[0]) {
                         cb.succeeded(null); // for list operations just return list, maybe the command wants to return so
+                    } else {
+                        cb.succeeded("OK"); // redis usually returns OK response when something is done
                     }
                 } else {
                     cb.succeeded(value.processedResult);
@@ -117,6 +111,26 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             protected void onFailed(Throwable err) {
                 cb.failed(err);
             }
-        });
+        };
+
+        if (SystemCommand.isSystemCall(line)) {
+            if (!SystemCommand.allowNonStdIOController) {
+                cb.failed(new XException("system call denied in RESPController"));
+                return;
+            }
+            SystemCommand.handleSystemCall(line, callback);
+        } else {
+            Command cmd;
+            try {
+                cmd = Command.parseStrCmd(line);
+            } catch (Exception e) {
+                Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                    "parse cmd failed! " + Utils.formatErr(e) + " ... type `help` to show the help message");
+                cb.failed(e); // callback failed
+                return;
+            }
+            isListAction[0] = cmd.action == Action.l || cmd.action == Action.L;
+            cmd.run(callback);
+        }
     }
 }

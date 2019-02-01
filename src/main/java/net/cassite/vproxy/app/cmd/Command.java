@@ -33,20 +33,7 @@ public class Command {
             "vproxy:" +
             "\n    help                     | h                   show this message" +
             "\n    man                                            show this message" +
-            "\n    System commands:" +
-            "\n        System call: help                          show this message" +
-            "\n        System call: shutdown                      shutdown the vproxy process" +
-            "\n        System call: load ${filepath}              load config commands from a file" +
-            "\n        System call: save ${filepath}              save current config into a file" +
-            "\n        System call: add resp-controller           start resp controller" +
-            "\n                               ${alias}" +
-            "\n                               address  ${bind addr}" +
-            "\n                               password ${password}" +
-            "\n        System call: remove resp-controller        stop resp controller" +
-            "\n                               ${name}" +
-            "\n        System call: list-detail resp-controller   check resp controller" +
-            "\n        System call: list config                   show current config" +
-            "\n    (System commands can only be executed via StdIOController)" +
+            SystemCommand.systemCallHelpStr +
             "\n    Operate a resource:" +
             "\n        list                 | l                   list resources' names" +
             "\n        list-detail          | L                   list detailed info about resources" +

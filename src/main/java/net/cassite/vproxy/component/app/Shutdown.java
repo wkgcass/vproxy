@@ -24,7 +24,7 @@ public class Shutdown {
     private static boolean initiated = false;
     private static int sigIntTimes = 0;
 
-    public static void init() {
+    public static void initSignal() {
         if (initiated)
             return;
         initiated = true;
