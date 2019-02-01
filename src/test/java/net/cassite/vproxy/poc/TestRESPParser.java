@@ -1,4 +1,4 @@
-package net.cassite.vproxy.example;
+package net.cassite.vproxy.poc;
 
 import net.cassite.vproxy.redis.Parser;
 import net.cassite.vproxy.redis.entity.*;

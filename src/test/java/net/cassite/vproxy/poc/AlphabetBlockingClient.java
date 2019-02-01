@@ -1,4 +1,4 @@
-package net.cassite.vproxy.example;
+package net.cassite.vproxy.poc;
 
 import java.io.IOException;
 import java.io.InputStream;
