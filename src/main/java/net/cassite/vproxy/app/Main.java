@@ -28,6 +28,7 @@ public class Main {
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
         "\n\t\t                                             if the flag is set" +
+        "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
         "";
 
     private static void beforeStart() {
@@ -118,6 +119,9 @@ public class Main {
                     break;
                 case "noStdIOController":
                     noStdIOController = true;
+                    break;
+                case "sigIntDirectlyShutdown":
+                    Shutdown.sigIntBeforeTerminate = 1;
                     break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");

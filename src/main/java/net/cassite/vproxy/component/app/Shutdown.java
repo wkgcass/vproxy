@@ -23,6 +23,7 @@ public class Shutdown {
 
     private static boolean initiated = false;
     private static int sigIntTimes = 0;
+    public static int sigIntBeforeTerminate = 3;
 
     public static void initSignal() {
         if (initiated)
@@ -31,7 +32,7 @@ public class Shutdown {
         try {
             Signal.handle(new Signal("INT"), s -> {
                 ++sigIntTimes;
-                if (sigIntTimes > 2) {
+                if (sigIntTimes >= sigIntBeforeTerminate) {
                     sigIntTimes = -10000; // set to a very small number to prevent triggered multiple times
                     saveAndQuit(128 + 2);
                 } else {
