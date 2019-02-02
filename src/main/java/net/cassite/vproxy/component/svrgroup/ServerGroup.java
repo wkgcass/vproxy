@@ -24,9 +24,11 @@ import java.net.SocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.atomic.LongAdder;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class ServerGroup {
@@ -46,6 +48,9 @@ public class ServerGroup {
                     ServerGroup.this.remove(toLogicDelete);
                     toLogicDelete = null;
                 }
+
+                // alert event
+                alertListeners(lsn -> lsn.up(ServerHandle.this));
             }
 
             @Override
@@ -53,6 +58,9 @@ public class ServerGroup {
                 healthy = false;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
                     "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN");
+
+                // alert event
+                alertListeners(lsn -> lsn.down(ServerHandle.this));
             }
 
             @Override
@@ -216,6 +224,9 @@ public class ServerGroup {
             Logger.lowLevelDebug("health check for " +
                 ServerHandle.this.alias + "(" + server + ") " +
                 "is started on loop " + el.alias);
+
+            // alert event
+            alertListeners(lsn -> lsn.start(this));
         }
 
         @Override
@@ -249,6 +260,15 @@ public class ServerGroup {
                 healthCheckClient.stop();
             }
             healthCheckClient = null;
+
+            // alert event
+            alertListeners(lsn -> lsn.stop(this));
+        }
+
+        private void alertListeners(Consumer<ServerListener> code) {
+            for (ServerListener lsn : serverListeners) {
+                code.accept(lsn);
+            }
         }
 
         public Connector makeConnector() {
@@ -291,6 +311,7 @@ public class ServerGroup {
     private Method method;
     private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
+    private final CopyOnWriteArraySet<ServerListener> serverListeners = new CopyOnWriteArraySet<>();
 
     // START fields for WRR
     static class WRR {
@@ -722,6 +743,10 @@ public class ServerGroup {
         } catch (NotFoundException e) {
             // ignore exception
         }
+    }
+
+    public void addServerListener(ServerListener serverListener) {
+        this.serverListeners.add(serverListener);
     }
 
     public List<ServerHandle> getServerHandles() {

@@ -15,4 +15,5 @@ public enum LogType {
     USER_HANDLE_FAIL,
     INVALID_EXTERNAL_DATA,
     RESOLVE_REPLACE,
+    DISCOVERY_EVENT,
 }

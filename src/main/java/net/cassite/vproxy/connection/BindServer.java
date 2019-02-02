@@ -66,7 +66,7 @@ public class BindServer implements NetFlowRecorder {
 
     public final InetSocketAddress bind;
     private final String _id;
-    final SelectableChannel channel;
+    public final SelectableChannel channel;
     final Protocol protocol;
 
     // this field is only for udp
