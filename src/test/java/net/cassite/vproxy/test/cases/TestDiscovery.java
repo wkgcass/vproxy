@@ -2,12 +2,13 @@ package net.cassite.vproxy.test.cases;
 
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.exception.NoException;
-import net.cassite.vproxy.discovery.Discovery;
-import net.cassite.vproxy.discovery.DiscoveryConfig;
-import net.cassite.vproxy.discovery.TimeoutConfig;
+import net.cassite.vproxy.connection.BindServer;
+import net.cassite.vproxy.discovery.*;
 import net.cassite.vproxy.util.BlockCallback;
 import net.cassite.vproxy.util.IPType;
 import org.junit.Test;
+
+import java.lang.reflect.Field;
 
 import static org.junit.Assert.*;
 
@@ -158,6 +159,84 @@ public class TestDiscovery {
         Thread.sleep(500);
         assertEquals(2, d0.getNodes().size());
         assertEquals(2, d1.getNodes().size());
+
+        // cleanup
+        BlockCallback<Void, NoException> cb = new BlockCallback<>();
+        d1.close(cb);
+        cb.block();
+        cb = new BlockCallback<>();
+        d0.close(cb);
+        cb.block();
+    }
+
+    @Test
+    public void discoveryListener() throws Exception {
+        int[] upAlert = {0};
+        int[] downAlert = {0};
+        int[] removeAlert = {0};
+
+        Discovery d0 = new Discovery("d0",
+            new DiscoveryConfig(
+                "lo0", IPType.v4, 17080, 18080, 18080,
+                32, 18080, 18081,
+                new TimeoutConfig(20, Integer.MAX_VALUE, 20, Integer.MAX_VALUE, 2000),
+                new HealthCheckConfig(1000, 500, 2, 3)
+            ));
+        d0.addNodeListener(new NodeListener() {
+            @Override
+            public void up(Node node) {
+                assertEquals("d1", node.nodeName);
+                ++upAlert[0];
+            }
+
+            @Override
+            public void down(Node node) {
+                assertEquals("d1", node.nodeName);
+                ++downAlert[0];
+            }
+
+            @Override
+            public void leave(Node node) {
+                assertEquals("d1", node.nodeName);
+                ++removeAlert[0];
+            }
+        });
+
+        Discovery d1 = new Discovery("d1",
+            new DiscoveryConfig(
+                "lo0", IPType.v4, 17081, 18081, 18081,
+                32, 18080, 18081,
+                new TimeoutConfig(30, Integer.MAX_VALUE, 30, Integer.MAX_VALUE, 2000),
+                new HealthCheckConfig(1000, 500, 2, 3)
+            ));
+
+        // now d0 and d1 not discovered each other
+        // sleep for 500ms, then they found each other
+        Thread.sleep(500);
+        assertEquals("currently not up", 0, upAlert[0]);
+        assertEquals(0, downAlert[0]);
+        assertEquals(0, removeAlert[0]);
+        // sleep for another 500ms, then the server is up
+        Thread.sleep(550);
+        assertEquals("should be up", 1, upAlert[0]);
+        assertEquals(0, downAlert[0]);
+        assertEquals(0, removeAlert[0]);
+        Thread.sleep(100);
+        // close the d1 socket but do not close it, use reflect
+        Field tcpServerF = Discovery.class.getDeclaredField("tcpServer");
+        tcpServerF.setAccessible(true);
+        BindServer tcpServer = (BindServer) tcpServerF.get(d1);
+        tcpServer.close();
+        // wait for 1500 ms, d1 should be down
+        Thread.sleep(1550);
+        assertEquals(1, upAlert[0]);
+        assertEquals("should be down now", 1, downAlert[0]);
+        assertEquals(0, removeAlert[0]);
+        // wait for 2000 ms
+        Thread.sleep(2050);
+        assertEquals(1, upAlert[0]);
+        assertEquals(1, downAlert[0]);
+        assertEquals("should be removed", 1, removeAlert[0]);
 
         // cleanup
         BlockCallback<Void, NoException> cb = new BlockCallback<>();

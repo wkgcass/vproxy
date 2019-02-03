@@ -23,6 +23,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 /**
@@ -420,6 +422,9 @@ public class Discovery {
 
             n.node.healthy = true;
             calcAll(); // recalculate hash and other related things
+
+            // alert up
+            alertNodeListeners(lsn -> lsn.up(n.node));
         }
 
         @Override
@@ -435,6 +440,9 @@ public class Discovery {
 
             n.node.healthy = false;
             calcAll(); // recalculate hash and other related things
+
+            // alert down
+            alertNodeListeners(lsn -> lsn.down(n.node));
         }
 
         @Override
@@ -495,6 +503,8 @@ public class Discovery {
     private final NodeExistenceConnectionHandler nodeExistenceConnectionHandler = new NodeExistenceConnectionHandler();
     private final NodeDataServerHandler nodeDataServerHandler = new NodeDataServerHandler();
 
+    private CopyOnWriteArraySet<NodeListener> nodeListeners = new CopyOnWriteArraySet<>();
+
     public Discovery(String nodeName,
                      DiscoveryConfig config) throws IOException {
         eventLoopGroup = new EventLoopGroup("EventLoopGroup:" + nodeName);
@@ -547,6 +557,12 @@ public class Discovery {
         startSearch();
     }
 
+    private void alertNodeListeners(Consumer<NodeListener> f) {
+        for (NodeListener lsn : nodeListeners) {
+            f.accept(lsn);
+        }
+    }
+
     private void resetSearchAddressBytes() {
         searchNetworkByte = new byte[config.searchNetworkByte.length];
         System.arraycopy(config.searchNetworkByte, 0, searchNetworkByte, 0, searchNetworkByte.length);
@@ -595,13 +611,16 @@ public class Discovery {
             Logger.error(LogType.INVALID_EXTERNAL_DATA, "the name " + groupServerName + " not exists");
             return;
         }
-        nodes.remove(groupServerName);
+        Node node = nodes.remove(groupServerName).node;
         try {
             hcGroup.remove(groupServerName);
         } catch (NotFoundException e) {
             Logger.shouldNotHappen("the node not exist in hcGroup " + groupServerName);
         }
         calcAll();
+
+        // alert down
+        alertNodeListeners(lsn -> lsn.leave(node));
 
         Logger.warn(LogType.DISCOVERY_EVENT, "node " + groupServerName + " is REMOVED");
     }
@@ -797,6 +816,10 @@ public class Discovery {
 
     public List<Node> getNodes() {
         return nodes.values().stream().map(n -> n.node).collect(Collectors.toList());
+    }
+
+    public void addNodeListener(NodeListener lsn) {
+        nodeListeners.add(lsn);
     }
 
     public boolean isClosed() {

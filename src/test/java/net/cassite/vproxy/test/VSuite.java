@@ -14,6 +14,7 @@ import org.junit.runners.Suite;
     TestResolver.class,
     TestSocks5.class,
     TestUDP.class,
+    TestDiscovery.class,
 
     AfterAll.class
 })
