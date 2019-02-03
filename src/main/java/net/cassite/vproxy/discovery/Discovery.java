@@ -1,6 +1,5 @@
 package net.cassite.vproxy.discovery;
 
-import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.*;
 import net.cassite.vproxy.component.svrgroup.Method;
@@ -393,7 +392,7 @@ public class Discovery {
         void startTimer() {
             if (detachTimer != null)
                 return; // already started
-            detachTimer = loop.getSelectorEventLoop().delay(detachTimeout, () -> {
+            detachTimer = loop.getSelectorEventLoop().delay(config.timeoutConfig.detachTimeout, () -> {
                 removeNode(keyName);
                 detachTimer = null;
             });
@@ -467,14 +466,6 @@ public class Discovery {
         return nodeName + "@" + address + ":" + tcpPort;
     }
 
-    public static final int ppsLimitWhenNotJoined = 250; // when nodes.size() == 0, send udp packet in this speed
-    private static final int delayWhenNotJoined = 1000 / ppsLimitWhenNotJoined;
-    public static final int intervalWhenNotJoined = 10500; // when nodes.size() == 0, the interval between two searches, bigger than hc.period * hc.up
-    public static final int ppsLimitWhenJoined = 20; // when nodes.size() <> 0, send udp packet in this speed
-    private static final int delayWhenJoined = 1000 / ppsLimitWhenJoined;
-    public static final int intervalWhenJoined = 60000; // when nodes.size() <> 0, the interval between two searches
-    public static final int detachTimeout = 5 * 60 * 1000; // if a node is unhealthy for a long time, do detach it
-
     public final String nodeName; // this is not the identifier, just a hint for human to read
     public final NetEventLoop loop;
 
@@ -521,9 +512,7 @@ public class Discovery {
 
         this.config = config;
         try {
-            this.hcGroup = new ServerGroup("nodes", eventLoopGroup,
-                // we fix the health check config
-                new HealthCheckConfig(500, 5000, 2, 3), Method.wrr);
+            this.hcGroup = new ServerGroup("nodes", eventLoopGroup, config.healthCheckConfig, Method.wrr);
         } catch (AlreadyExistException | ClosedException e) {
             Logger.shouldNotHappen("adding health check group failed", e);
             throw new RuntimeException(e);
@@ -620,7 +609,8 @@ public class Discovery {
     private void sendBuffer(ByteBuffer buffer, InetSocketAddress sockAddr) throws IOException {
         int pos = buffer.position();
         int lim = buffer.limit();
-        udpSock.send(buffer, sockAddr);
+        int res = udpSock.send(buffer, sockAddr);
+        assert Logger.lowLevelDebug("udpSock.send wrote " + res + " bytes");
         buffer.position(pos).limit(lim);
     }
 
@@ -639,7 +629,9 @@ public class Discovery {
         if (intoInterval && !isInInterval) {
             intoInterval = false; // reset the flag
             isInInterval = true;
-            int delay = nodes.size() == 1 /*1 means the node itself*/ ? intervalWhenNotJoined : intervalWhenJoined;
+            int delay = nodes.size() == 1 /*1 means the node itself*/
+                ? config.timeoutConfig.intervalWhenNotJoined
+                : config.timeoutConfig.intervalWhenJoined;
             loop.getSelectorEventLoop().delay(delay, this::startSearch);
             return;
         }
@@ -655,7 +647,9 @@ public class Discovery {
             }
         }
 
-        int delay = nodes.size() == 1 /*1 means the node itself*/ ? delayWhenNotJoined : delayWhenJoined;
+        int delay = nodes.size() == 1 /*1 means the node itself*/
+            ? config.timeoutConfig.delayWhenNotJoined
+            : config.timeoutConfig.delayWhenJoined;
         loop.getSelectorEventLoop().delay(delay, this::startSearch);
     }
 
@@ -665,8 +659,7 @@ public class Discovery {
     }
 
     private InetSocketAddress nextSearch() {
-        if (searchCount >=
-            config.searchNetworkCursorMaxExclusive * (config.searchMaxUDPPort - config.searchMinUDPPort + 1/*inclusive*/)) {
+        if (searchCount >= config.searchMaxCount) {
             // the round finishes
             resetSearchCount();
             return null;
@@ -811,8 +804,10 @@ public class Discovery {
     }
 
     public void close(Callback<Void, /*will not fire*/NoException> cb) {
-        if (closed)
+        if (closed) {
+            cb.succeeded(null);
             return;
+        }
         closed = true;
 
         // close the udp server to stop receiving packets
@@ -829,6 +824,7 @@ public class Discovery {
         byte[] bytesToSend = Serializer.from(messageToSend);
         ByteBuffer byteBuffer = ByteBuffer.allocateDirect(bytesToSend.length);
         byteBuffer.put(bytesToSend);
+        byteBuffer.flip();
         leave(byteBuffer, nodes.values().iterator(), new Callback<Void, NoException>() {
             @Override
             protected void onSucceeded(Void value) {
@@ -858,13 +854,18 @@ public class Discovery {
             leave(leaveMsg, nodes, cb);
             return;
         }
+        if (n.node.address.equals(config.bindAddress) && n.node.udpPort == config.udpPort) {
+            // self node, ignore
+            leave(leaveMsg, nodes, cb);
+            return;
+        }
         try {
-            udpSock.send(leaveMsg, new InetSocketAddress(n.node.address, n.node.udpPort));
+            sendBuffer(leaveMsg, new InetSocketAddress(n.node.address, n.node.udpPort));
         } catch (IOException e) {
             // ignore error
             assert Logger.lowLevelDebug("udp sock send leave message failed " + e);
         }
-        loop.getSelectorEventLoop().delay(ppsLimitWhenNotJoined, () -> leave(leaveMsg, nodes, cb));
+        loop.getSelectorEventLoop().delay(config.timeoutConfig.ppsLimitWhenNotJoined, () -> leave(leaveMsg, nodes, cb));
     }
 
     private void releaseAfterLeave(Callback<Void, NoException> cb) {

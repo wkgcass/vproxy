@@ -285,11 +285,6 @@ class HandlerForUDPServer implements Handler<DatagramChannel> {
         int stored = udpConn.connection.inBuffer.storeBytesFrom(buffer);
         // we do not care about the res, but let's log if not reading all
         assert toStore == stored || Logger.lowLevelDebug("toStore = " + toStore + ", stored = " + stored);
-        if (stored == 0) {
-            // remove the OP_READ if cannot read anymore
-            ctx.rmOps(SelectionKey.OP_READ);
-            return;
-        }
         udpConn.connection.incFromRemoteBytes(stored); // reading from remote channel
 
         // fire readable event

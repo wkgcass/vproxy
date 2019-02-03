@@ -3,10 +3,7 @@ package net.cassite.vproxy.selector;
 import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
-import java.nio.channels.ClosedChannelException;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.Selector;
+import java.nio.channels.*;
 import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
@@ -181,7 +178,7 @@ public class SelectorEventLoop {
                         selectedSize = selector.select(time); // wait until the nearest timer
                     }
                 }
-            } catch (IOException e) {
+            } catch (IOException | ClosedSelectorException e) {
                 // let's ignore this exception and continue
                 // if it's closed, the next loop will not run
                 continue;

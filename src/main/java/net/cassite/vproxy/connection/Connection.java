@@ -171,7 +171,11 @@ public class Connection implements NetFlowRecorder {
         inBufferETHandler = new InBufferETHandler();
         outBufferETHandler = new OutBufferETHandler();
 
-        this.inBuffer.addHandler(inBufferETHandler);
+        if (!looksLikeAConnection) {
+            // the fd is the server datagram socket, so will not remove OP_READ
+            // so there is no need to add OP_READ back
+            this.inBuffer.addHandler(inBufferETHandler);
+        }
         this.outBuffer.addHandler(outBufferETHandler);
         // in the outBufferETHandler
         // if buffer did not wrote all content, simply ignore the left part
