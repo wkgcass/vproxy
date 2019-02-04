@@ -1,7 +1,6 @@
 package net.cassite.vproxy.test.cases;
 
 import net.cassite.vproxy.component.check.HealthCheckConfig;
-import net.cassite.vproxy.component.exception.NoException;
 import net.cassite.vproxy.component.khala.Khala;
 import net.cassite.vproxy.component.khala.KhalaConfig;
 import net.cassite.vproxy.component.khala.KhalaNode;
@@ -11,17 +10,31 @@ import net.cassite.vproxy.discovery.Discovery;
 import net.cassite.vproxy.discovery.DiscoveryConfig;
 import net.cassite.vproxy.discovery.Node;
 import net.cassite.vproxy.discovery.TimeoutConfig;
-import net.cassite.vproxy.util.BlockCallback;
+import net.cassite.vproxy.test.tool.DiscoveryHolder;
 import net.cassite.vproxy.util.IPType;
+import org.junit.After;
+import org.junit.Before;
 import org.junit.Test;
 
 import java.lang.reflect.Field;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class TestKhala {
+    private DiscoveryHolder holder;
+
+    @Before
+    public void setUp() {
+        holder = new DiscoveryHolder();
+    }
+
+    @After
+    public void tearDown() {
+        holder.release();
+    }
+
     @Test
     public void addNode() throws Exception {
         Discovery d0 = new Discovery("d0", new DiscoveryConfig(
@@ -34,6 +47,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d0);
         Khala k0 = new Khala(d0, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic check for test*/));
         Discovery d1 = new Discovery("d1", new DiscoveryConfig(
             "lo0", IPType.v4,
@@ -45,6 +59,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic check for test*/));
 
         Map<Node, Set<KhalaNode>> nodes0 = k0.getKhalaNodes();
@@ -89,14 +104,6 @@ public class TestKhala {
         assertEquals(2, nodes1.size());
         assertEquals(1, nodes1.get(d1.localNode).size());
         assertEquals("nexus node added and learns the pylon node", 1, nodes1.get(d0.localNode).size());
-
-        // cleanup
-        BlockCallback<Void, NoException> cb = new BlockCallback<>();
-        d0.close(cb);
-        cb.block();
-        cb = new BlockCallback<>();
-        d1.close(cb);
-        cb.block();
     }
 
     @Test
@@ -111,6 +118,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d0);
         Khala k0 = new Khala(d0, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         Discovery d1 = new Discovery("d1", new DiscoveryConfig(
             "lo0", IPType.v4,
@@ -122,6 +130,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         Discovery d2 = new Discovery("d2", new DiscoveryConfig(
             "lo0", IPType.v4,
@@ -133,6 +142,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d2);
         Khala k2 = new Khala(d2, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
 
         Map<Node, Set<KhalaNode>> nodes0 = k0.getKhalaNodes();
@@ -273,17 +283,6 @@ public class TestKhala {
         assertEquals("will not sync", 1, nodes2.get(d0.localNode).size());
         assertEquals(0, nodes2.get(d1.localNode).size());
         assertEquals(1, nodes2.get(d2.localNode).size());
-
-        // cleanup
-        BlockCallback<Void, NoException> cb = new BlockCallback<>();
-        d0.close(cb);
-        cb.block();
-        cb = new BlockCallback<>();
-        d1.close(cb);
-        cb.block();
-        cb = new BlockCallback<>();
-        d2.close(cb);
-        cb.block();
     }
 
     @Test
@@ -298,6 +297,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d0);
         Khala k0 = new Khala(d0, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         Discovery d1 = new Discovery("d1", new DiscoveryConfig(
             "lo0", IPType.v4,
@@ -309,6 +309,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         // add pylons to prevent a report to nexus
         k0.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9990));
@@ -336,6 +337,7 @@ public class TestKhala {
                 3000),
             new HealthCheckConfig(200, 500, 2, 3)
         ));
+        holder.add(d2);
         Khala k2 = new Khala(d2, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         k2.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9992));
 
@@ -380,16 +382,5 @@ public class TestKhala {
         assertEquals(1, nodes2.get(d0.localNode).size());
         // assertEquals(1, nodes2.get(d1.localNode).size());
         assertEquals(1, nodes2.get(d2.localNode).size());
-
-        // cleanup
-        BlockCallback<Void, NoException> cb = new BlockCallback<>();
-        d0.close(cb);
-        cb.block();
-        cb = new BlockCallback<>();
-        d1.close(cb);
-        cb.block();
-        cb = new BlockCallback<>();
-        d2.close(cb);
-        cb.block();
     }
 }

@@ -181,7 +181,9 @@ public class Discovery {
                         return;
                     }
 
-                    resetSearchCount(); // got a response, so we reset the search count
+                    if (initialSearchCount >= config.initialMinSearch) {
+                        resetSearchCount(); // got a response, and already searched multiple times, so we reset the search count
+                    }
                     requestForNodes(node);
                     break;
                 }
@@ -397,6 +399,8 @@ public class Discovery {
     private Set<NodeListener> nodeListeners = new HashSet<>();
     private Set<NodeDataHandler> externalHandlers = new HashSet<>();
 
+    private int initialSearchCount = 0;
+
     public Discovery(String nodeName,
                      DiscoveryConfig config) throws IOException {
         eventLoopGroup = new EventLoopGroup("EventLoopGroup:" + nodeName);
@@ -447,7 +451,7 @@ public class Discovery {
             throw e;
         }
 
-        startSearch();
+        loop.getSelectorEventLoop().delay(config.timeoutConfig.delayWhenNotJoined, this::startSearch);
     }
 
     private void alertNodeListeners(Consumer<NodeListener> f) {
@@ -637,6 +641,9 @@ public class Discovery {
             return null;
         }
         ++searchCount;
+        if (initialSearchCount <= config.initialMinSearch) {
+            ++initialSearchCount;
+        }
 
         // inc and check whether the port cursor is too big
         int curPortCursor = searchPortCursor++;

@@ -25,6 +25,7 @@ public class DiscoveryConfig {
     long searchMaxCount;
 
     public final InetAddress bindInetAddress;
+    public final int initialMinSearch;
 
     public DiscoveryConfig(String nicName,
                            IPType ipType,
@@ -103,5 +104,6 @@ public class DiscoveryConfig {
             (long) Math.pow(2, ((bindInetAddress instanceof Inet4Address) ? 32 : 128) - searchMask);
 
         this.searchMaxCount = this.searchNetworkCursorMaxExclusive * (searchMaxUDPPort - searchMinUDPPort + 1/*inclusive*/);
+        this.initialMinSearch = (int) Math.min(256, this.searchMaxCount);
     }
 }
