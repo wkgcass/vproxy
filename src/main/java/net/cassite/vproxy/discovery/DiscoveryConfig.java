@@ -10,7 +10,6 @@ import java.util.Enumeration;
 public class DiscoveryConfig {
     public final String nic;
     public final String bindAddress;
-    final InetAddress bindInetAddress;
     public final int udpSockPort;
     public final int udpPort;
     public final int tcpPort;
@@ -24,6 +23,8 @@ public class DiscoveryConfig {
     final byte[] searchNetworkByte;
     final byte[] searchMaskByte;
     long searchMaxCount;
+
+    public final InetAddress bindInetAddress;
 
     public DiscoveryConfig(String nicName,
                            IPType ipType,

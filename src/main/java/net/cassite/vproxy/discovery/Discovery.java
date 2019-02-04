@@ -6,10 +6,15 @@ import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerListener;
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.discovery.protocol.NodeExistenceMsg;
 import net.cassite.vproxy.discovery.protocol.NodeDataMsg;
+import net.cassite.vproxy.discovery.protocol.NodeExistenceMsg;
+import net.cassite.vproxy.protocol.ProtocolServerConfig;
+import net.cassite.vproxy.protocol.ProtocolServerHandler;
 import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPConfig;
+import net.cassite.vproxy.redis.RESPProtocolHandler;
 import net.cassite.vproxy.redis.Serializer;
+import net.cassite.vproxy.redis.application.*;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.*;
 import sun.nio.ch.DirectBuffer;
@@ -23,7 +28,6 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
@@ -213,161 +217,47 @@ public class Discovery {
         }
     }
 
-    class NodeDataHandler implements ClientConnectionHandler {
-        final ByteArrayChannel chnl;
-        final Parser redisParser;
-
-        NodeDataHandler() {
-            List<Object[]> nodeList = new LinkedList<>();
-            for (NodeDetach n : nodes.values()) {
-                Object[] e = {
-                    n.node.nodeName,
-                    n.node.address,
-                    n.node.udpPort,
-                    n.node.tcpPort,
-                    n.node.healthy ? 1 : 0 // resp doesn't support boolean
-                };
-                nodeList.add(e);
-            }
-            Object[] message = {
-                1 /*version*/,
-                "nodes" /*type*/,
-                nodeList,
-            };
-            byte[] bytes = Serializer.from(message);
-            chnl = ByteArrayChannel.fromFull(bytes);
-            redisParser = new Parser(16384);
+    class NodeDataApplication implements RESPApplication<RESPApplicationContext> {
+        @Override
+        public RESPApplicationContext context() {
+            return new RESPApplicationContext();
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
-            try {
-                ctx.connection.outBuffer.storeBytesFrom(chnl);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-            }
-        }
-
-        protected void runOnReadDone(ConnectionHandlerContext ctx) {
-            ctx.connection.close();
-        }
-
-        @Override
-        public void readable(ConnectionHandlerContext ctx) {
-            int res = redisParser.feed(ctx.connection.inBuffer);
-            if (res == -1) {
-                String msg = redisParser.getErrorMessage();
-                if (msg == null) {
-                    // want more data
-                    return;
+        public void handle(Object o, RESPApplicationContext ctx, Callback<Object, Throwable> cb) {
+            if (o instanceof List && ((List) o).size() > 2
+                && (((List) o).get(0).equals(1)) // version == 1
+                && !(((List) o).get(1).equals("nodes")) // type != nodes
+            ) {
+                // not `nodes` message
+                // maybe an upper level message
+                // so let's try to handle it in external application handler
+                String type = (String) ((List) o).get(1);
+                boolean found = false;
+                for (NodeDataHandler h : externalHandlers) {
+                    if (h.canHandle(type)) {
+                        found = true;
+                        h.handle(o, ctx, cb);
+                        break;
+                    }
                 }
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, parse failed: " + msg);
-                ctx.connection.close(); // close the connection on parse error
+                if (!found) {
+                    cb.failed(new XException("unknown message type " + type));
+                }
                 return;
             }
-            // everything received
-            runOnReadDone(ctx);
+            handleReceivedNodeData(o, new Callback<Void, XException>() {
+                @Override
+                protected void onSucceeded(Void value) {
+                    // return this node messages
+                    cb.succeeded(getNodeDataToSend());
+                }
 
-            // parse done
-            // do not check whether there's data left, we don't care
-            Object o = redisParser.getResult().getJavaObject();
-            NodeDataMsg msg;
-            try {
-                msg = NodeDataMsg.parse(o);
-            } catch (XException e) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, e.getMessage());
-                return;
-            }
-            if (msg.version != 1) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, version mismatch: " + msg);
-                return;
-            }
-            if (!msg.type.equals("nodes")) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, type mismatch: " + msg);
-                return;
-            }
-            Logger.info(LogType.DISCOVERY_EVENT, "receive nodes message, recording ...");
-
-            // record the nodes
-            for (Node n : msg.nodes) {
-                recordNode(n);
-            }
-        }
-
-        @Override
-        public void writable(ConnectionHandlerContext ctx) {
-            try {
-                ctx.connection.outBuffer.storeBytesFrom(chnl);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-            }
-        }
-
-        @Override
-        public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.UNEXPECTED, "exception occurred in connection", err);
-            ctx.connection.close();
-        }
-
-        @Override
-        public void closed(ConnectionHandlerContext ctx) {
-            // ignore
-        }
-
-        @Override
-        public void removed(ConnectionHandlerContext ctx) {
-            // removed, so close
-            ctx.connection.close();
-        }
-    }
-
-    class NodeDataServerHandler implements ServerHandler {
-        @Override
-        public void acceptFail(ServerHandlerContext ctx, IOException err) {
-            // ignore
-            assert Logger.lowLevelDebug("accept failed " + err);
-        }
-
-        @Override
-        public void connection(ServerHandlerContext ctx, Connection connection) {
-            assert Logger.lowLevelDebug("got new connection in ResponseNode " + connection);
-            try {
-                loop.addConnection(connection, null, new NodeDataConnectionHandler());
-            } catch (IOException e) {
-                Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add connection into loop failed", e);
-            }
-        }
-
-        @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
-            // use heap buffer because the connection will be terminated very shortly
-            return new Tuple<>(RingBuffer.allocate(16384), RingBuffer.allocate(16384));
-        }
-
-        @Override
-        public void removed(ServerHandlerContext ctx) {
-            ctx.server.close();
-        }
-    }
-
-    class NodeDataConnectionHandler extends NodeDataHandler implements ConnectionHandler {
-        @Override
-        protected void runOnReadDone(ConnectionHandlerContext ctx) {
-            try {
-                ctx.connection.outBuffer.storeBytesFrom(chnl);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-            }
-        }
-
-        @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
-            // will not fire
-        }
-
-        @Override
-        public void closed(ConnectionHandlerContext ctx) {
-            // ignore closed events in the server
+                @Override
+                protected void onFailed(XException err) {
+                    // ignore, messages are logged in `handleReceivedNodeData()`
+                }
+            });
         }
     }
 
@@ -476,6 +366,7 @@ public class Discovery {
 
     public final String nodeName; // this is not the identifier, just a hint for human to read
     public final NetEventLoop loop;
+    public final Node localNode;
 
     public final DiscoveryConfig config;
     private long searchCount = 0;
@@ -501,9 +392,10 @@ public class Discovery {
 
     private final NodeExistenceServerHandler nodeExistenceServerHandler = new NodeExistenceServerHandler();
     private final NodeExistenceConnectionHandler nodeExistenceConnectionHandler = new NodeExistenceConnectionHandler();
-    private final NodeDataServerHandler nodeDataServerHandler = new NodeDataServerHandler();
+    private final NodeDataApplication nodeDataApplication = new NodeDataApplication();
 
-    private CopyOnWriteArraySet<NodeListener> nodeListeners = new CopyOnWriteArraySet<>();
+    private Set<NodeListener> nodeListeners = new HashSet<>();
+    private Set<NodeDataHandler> externalHandlers = new HashSet<>();
 
     public Discovery(String nodeName,
                      DiscoveryConfig config) throws IOException {
@@ -533,6 +425,7 @@ public class Discovery {
         informBuffer = ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/);
         Node n = new Node(nodeName, config.bindAddress, config.udpPort, config.tcpPort);
         n.healthy = true;
+        this.localNode = n;
         String groupServerName = buildGroupServerName(nodeName, config.bindAddress, config.tcpPort);
         nodes.put(groupServerName, new NodeDetach(groupServerName, n, true));
         calcAll();
@@ -563,6 +456,55 @@ public class Discovery {
         }
     }
 
+    private void handleReceivedNodeData(Object o, Callback<Void, XException> cb) {
+        NodeDataMsg msg;
+        try {
+            msg = NodeDataMsg.parse(o);
+        } catch (XException e) {
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, e.getMessage());
+            cb.failed(e);
+            return;
+        }
+        if (msg.version != 1) {
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, version mismatch: " + msg);
+            cb.failed(new XException("version mismatch"));
+            return;
+        }
+        if (!msg.type.equals("nodes")) {
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, type mismatch: " + msg);
+            cb.failed(new XException("type mismatch"));
+            return;
+        }
+        Logger.info(LogType.DISCOVERY_EVENT, "receive nodes message, recording ...");
+
+        // parse done
+        cb.succeeded(null);
+
+        // record the nodes
+        for (Node n : msg.nodes) {
+            recordNode(n);
+        }
+    }
+
+    private Object[] getNodeDataToSend() {
+        List<Object[]> nodeList = new LinkedList<>();
+        for (NodeDetach n : nodes.values()) {
+            Object[] e = {
+                n.node.nodeName,
+                n.node.address,
+                n.node.udpPort,
+                n.node.tcpPort,
+                n.node.healthy ? 1 : 0 // resp doesn't support boolean
+            };
+            nodeList.add(e);
+        }
+        return new Object[]{
+            1 /*version*/,
+            "nodes" /*type*/,
+            nodeList,
+        };
+    }
+
     private void resetSearchAddressBytes() {
         searchNetworkByte = new byte[config.searchNetworkByte.length];
         System.arraycopy(config.searchNetworkByte, 0, searchNetworkByte, 0, searchNetworkByte.length);
@@ -586,7 +528,18 @@ public class Discovery {
 
     private BindServer startTcpServer() throws IOException {
         BindServer tcp = BindServer.create(new InetSocketAddress(config.bindInetAddress, config.tcpPort));
-        loop.addServer(tcp, null, nodeDataServerHandler);
+        ProtocolServerHandler.apply(loop, tcp,
+            // protocol scope
+            new ProtocolServerConfig().setOutBufferSize(16384).setInBufferSize(16384),
+            new RESPProtocolHandler(
+                // (protocol=resp) handler scope
+                new RESPConfig().setMaxParseLen(16384),
+                new RESPApplicationHandler(
+                    // (protocol=resp) (handler=application) scope
+                    new RESPApplicationConfig().setPassword(null),
+                    // the application impl
+                    nodeDataApplication
+                )));
         return tcp;
     }
 
@@ -722,23 +675,28 @@ public class Discovery {
     }
 
     private void requestForNodes(Node target) {
-        // use heap buffer here
-        // because the connection will be terminated when gets data
-        // connection won't last long
-        RingBuffer input = RingBuffer.allocate(16384);
-        RingBuffer output = RingBuffer.allocate(16384);
-        ClientConnection clientConnection;
-        try {
-            clientConnection = ClientConnection.create(new InetSocketAddress(target.address, target.tcpPort), config.bindInetAddress, input, output);
-        } catch (IOException e) {
-            Logger.error(LogType.CONN_ERROR, "create client conn failed", e);
-            return;
-        }
-        try {
-            loop.addClientConnection(clientConnection, null, new NodeDataHandler());
-        } catch (IOException e) {
-            Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add client connection failed", e);
-        }
+        RESPClientUtils.oneReq(loop, new InetSocketAddress(target.inetAddress, target.tcpPort), config.bindInetAddress,
+            getNodeDataToSend(), 3000, new Callback<Object, IOException>() {
+                @Override
+                protected void onSucceeded(Object value) {
+                    handleReceivedNodeData(value, new Callback<Void, XException>() {
+                        @Override
+                        protected void onSucceeded(Void value) {
+                            // do nothing, everything is done
+                        }
+
+                        @Override
+                        protected void onFailed(XException err) {
+                            // do nothing, msg is logged in `handleReceivedNodeData()`
+                        }
+                    });
+                }
+
+                @Override
+                protected void onFailed(IOException err) {
+                    Logger.error(LogType.DISCOVERY_EVENT, "request for nodes failed", err);
+                }
+            });
     }
 
     private void calcAll() {
@@ -819,7 +777,21 @@ public class Discovery {
     }
 
     public void addNodeListener(NodeListener lsn) {
-        nodeListeners.add(lsn);
+        loop.getSelectorEventLoop().runOnLoop(() -> {
+            // alert `up()` for all healthy nodes
+            for (NodeDetach n : nodes.values()) {
+                if (n.node.healthy && (!n.node.address.equals(config.bindAddress) || n.node.tcpPort != config.tcpPort)) {
+                    lsn.up(n.node);
+                }
+            }
+            nodeListeners.add(lsn);
+        });
+    }
+
+    public void addExternalHandler(NodeDataHandler h) {
+        loop.getSelectorEventLoop().runOnLoop(() ->
+            externalHandlers.add(h)
+        );
     }
 
     public boolean isClosed() {

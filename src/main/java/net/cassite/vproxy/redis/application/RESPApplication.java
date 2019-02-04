@@ -7,7 +7,9 @@ import java.util.List;
 public interface RESPApplication<CTX extends RESPApplicationContext> {
     CTX context();
 
-    List<RESPCommand> commands();
+    default List<RESPCommand> commands() {
+        return null; // default return null, means (no commands)
+    }
 
     void handle(Object o, CTX ctx, Callback<Object, Throwable> cb);
 }

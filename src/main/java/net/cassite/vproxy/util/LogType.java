@@ -16,4 +16,5 @@ public enum LogType {
     INVALID_EXTERNAL_DATA,
     RESOLVE_REPLACE,
     DISCOVERY_EVENT,
+    KHALA_EVENT,
 }

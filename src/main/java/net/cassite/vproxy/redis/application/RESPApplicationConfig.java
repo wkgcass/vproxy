@@ -36,6 +36,10 @@ public class RESPApplicationConfig {
     // the password byte array will be cleared
     // after doing hash
     public RESPApplicationConfig setPassword(byte[] password) {
+        if (password == null) {
+            this.password = null; // remove the password
+            return this;
+        }
         this.password = hashCrypto.apply(password);
         for (int i = 0; i < password.length; ++i) {
             password[i] = 0; // fill with 0

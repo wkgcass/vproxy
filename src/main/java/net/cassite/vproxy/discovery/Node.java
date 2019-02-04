@@ -11,10 +11,11 @@ import java.util.Objects;
 public class Node implements Comparable<Node> {
     public final String nodeName;
     public final String address;
-    final InetAddress inetAddress;
     public final int udpPort;
     public final int tcpPort;
     public boolean healthy = false; // default the node is unhealthy, will become healthy in hc callback
+
+    public final InetAddress inetAddress;
 
     public Node(String nodeName, String address, int udpPort, int tcpPort) throws UnknownHostException {
         this.nodeName = nodeName;
@@ -36,7 +37,6 @@ public class Node implements Comparable<Node> {
         Node node = (Node) o;
         return udpPort == node.udpPort &&
             tcpPort == node.tcpPort &&
-            healthy == node.healthy &&
             Objects.equals(nodeName, node.nodeName) &&
             Objects.equals(address, node.address) &&
             Objects.equals(inetAddress, node.inetAddress);
@@ -44,7 +44,7 @@ public class Node implements Comparable<Node> {
 
     @Override
     public int hashCode() {
-        return Objects.hash(nodeName, address, inetAddress, udpPort, tcpPort, healthy);
+        return Objects.hash(nodeName, address, inetAddress, udpPort, tcpPort);
     }
 
     @Override
