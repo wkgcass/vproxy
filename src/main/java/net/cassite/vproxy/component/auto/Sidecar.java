@@ -138,8 +138,7 @@ public class Sidecar {
 
     public synchronized void addService(String service, int localServicePort) throws Exception {
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
-        String serverName = AutoUtil.utilServerNameFromNode(
-            new KhalaNode(KhalaNodeType.pylon, service, zone, "127.0.0.1", localServicePort));
+        String serverName = AutoUtil.utilServerName(service, "127.0.0.1", localServicePort);
 
         TcpLB tcpLB = null;
         for (TcpLB lb : lbs) {
@@ -250,8 +249,7 @@ public class Sidecar {
 
     public synchronized void maintain(String service, int localServicePort) {
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
-        String serverName = AutoUtil.utilServerNameFromNode(
-            new KhalaNode(KhalaNodeType.pylon, service, zone, "127.0.0.1", localServicePort));
+        String serverName = AutoUtil.utilServerName(service, "127.0.0.1", localServicePort);
 
         TcpLB tcpLB = null;
         for (TcpLB lb : lbs) {

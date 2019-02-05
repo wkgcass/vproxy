@@ -19,6 +19,10 @@ public class AutoUtil {
     }
 
     static String utilServerNameFromNode(KhalaNode node) {
-        return node.service + "@" + node.address + ":" + node.port;
+        return utilServerName(node.service, node.address, node.port);
+    }
+
+    static String utilServerName(String service, String address, int port) {
+        return service + "@" + address + ":" + port;
     }
 }
