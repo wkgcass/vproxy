@@ -6,12 +6,14 @@ public class KhalaNode {
     public final KhalaNodeType type;
     public final String service;
     public final String zone;
+    public final String address;
     public final int port;
 
-    public KhalaNode(KhalaNodeType type, String service, String zone, int port) {
+    public KhalaNode(KhalaNodeType type, String service, String zone, String address, int port) {
         this.type = type;
         this.service = service;
         this.zone = zone;
+        this.address = address;
         this.port = port;
     }
 
@@ -23,12 +25,13 @@ public class KhalaNode {
         return port == khalaNode.port &&
             type == khalaNode.type &&
             Objects.equals(service, khalaNode.service) &&
-            Objects.equals(zone, khalaNode.zone);
+            Objects.equals(zone, khalaNode.zone) &&
+            Objects.equals(address, khalaNode.address);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(type, service, zone, port);
+        return Objects.hash(type, service, zone, address, port);
     }
 
     @Override
@@ -37,6 +40,7 @@ public class KhalaNode {
             "type=" + type +
             ", service='" + service + '\'' +
             ", zone='" + zone + '\'' +
+            ", address='" + address + '\'' +
             ", port=" + port +
             '}';
     }

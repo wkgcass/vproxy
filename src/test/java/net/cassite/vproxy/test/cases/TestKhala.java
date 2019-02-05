@@ -70,7 +70,7 @@ public class TestKhala {
         assertEquals(0, nodes1.get(d1.localNode).size());
 
         // wait until d0 and d1 find each other
-        Thread.sleep(1050);
+        Thread.sleep(1250);
 
         nodes0 = k0.getKhalaNodes();
         nodes1 = k1.getKhalaNodes();
@@ -82,7 +82,7 @@ public class TestKhala {
         assertEquals(0, nodes1.get(d0.localNode).size());
 
         // add pylon node
-        k0.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9990));
+        k0.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.0", 9990));
         Thread.sleep(1000 /*wait long enough*/);
         nodes0 = k0.getKhalaNodes();
         nodes1 = k1.getKhalaNodes();
@@ -94,7 +94,7 @@ public class TestKhala {
         assertEquals(0, nodes1.get(d0.localNode).size());
 
         // add nexus node
-        k1.addLocal(new KhalaNode(KhalaNodeType.nexus, "s0", "z0", 9991));
+        k1.addLocal(new KhalaNode(KhalaNodeType.nexus, "s0", "z0", "127.0.0.1", 9991));
         Thread.sleep(1000 /*wait long enough*/);
         nodes0 = k0.getKhalaNodes();
         nodes1 = k1.getKhalaNodes();
@@ -175,11 +175,11 @@ public class TestKhala {
         assertEquals(0, nodes2.get(d2.localNode).size());
 
         // add one nexus node and two pylon nodes
-        KhalaNode pylon0 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9990);
+        KhalaNode pylon0 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.0", 9990);
         k0.addLocal(pylon0);
-        KhalaNode nexus1 = new KhalaNode(KhalaNodeType.nexus, "s0", "z0", 9991);
+        KhalaNode nexus1 = new KhalaNode(KhalaNodeType.nexus, "s0", "z0", "127.0.0.1", 9991);
         k1.addLocal(nexus1);
-        KhalaNode pylon2 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9992);
+        KhalaNode pylon2 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.2", 9992);
         k2.addLocal(pylon2);
 
         // wait until the data sync
@@ -229,7 +229,7 @@ public class TestKhala {
         assertEquals(1, nodes2.get(d2.localNode).size());
 
         // let's add a new pylon
-        KhalaNode pylon01 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9890);
+        KhalaNode pylon01 = new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.0", 9890);
         k0.addLocal(pylon01);
         k2.sync();
         Thread.sleep(1000 /*wait long enough*/);
@@ -312,8 +312,8 @@ public class TestKhala {
         holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
         // add pylons to prevent a report to nexus
-        k0.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9990));
-        k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9991));
+        k0.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.0", 9990));
+        k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.1", 9991));
 
         // wait for d0 d1 find each other and sync-ed khala
         Thread.sleep(1050);
@@ -339,7 +339,7 @@ public class TestKhala {
         ));
         holder.add(d2);
         Khala k2 = new Khala(d2, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
-        k2.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", 9992));
+        k2.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.2", 9992));
 
         Thread.sleep(1050); // wait for sync
         nodes0 = k0.getKhalaNodes();

@@ -2,9 +2,9 @@ package net.cassite.vproxy.util;
 
 import net.cassite.vproxy.dns.Resolver;
 
-import java.net.InetAddress;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.util.Arrays;
+import java.util.Enumeration;
 
 public class Utils {
     private Utils() {
@@ -292,5 +292,45 @@ public class Utils {
                 // the `getMask()` method can be more simple
                 return 0;
         }
+    }
+
+    public static InetAddress getInetAddressFromNic(String nicName, IPType ipType) throws SocketException {
+        InetAddress bindInetAddress;
+        Inet4Address v4Addr = null;
+        Inet6Address v6Addr = null;
+        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            if (nicName.equals(nic.getDisplayName())) {
+                Enumeration<InetAddress> addresses = nic.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress a = addresses.nextElement();
+                    if (a instanceof Inet4Address) {
+                        v4Addr = (Inet4Address) a;
+                    } else if (a instanceof Inet6Address) {
+                        v6Addr = (Inet6Address) a;
+                    }
+                    if (v4Addr != null && v6Addr != null)
+                        break; // both v4 and v6 found
+                }
+                break; // nic found, so break
+            }
+        }
+        if (v4Addr == null && v6Addr == null)
+            throw new SocketException("nic " + nicName + " not found or no ip address");
+        if (ipType == IPType.v4 && v4Addr == null)
+            throw new SocketException("nic " + nicName + " do not have a v4 ip");
+        if (ipType == IPType.v6 && v6Addr == null)
+            throw new SocketException("nic " + nicName + " do not have a v6 ip");
+        if (ipType == IPType.v4) {
+            //noinspection ConstantConditions
+            assert v4Addr != null;
+            bindInetAddress = v4Addr;
+        } else {
+            assert v6Addr != null;
+            bindInetAddress = v6Addr;
+        }
+
+        return bindInetAddress;
     }
 }

@@ -58,21 +58,23 @@ public class KhalaMsg {
                     throw new XException("invalid message, khala-node is not a list");
 
                 List kNode = (List) ee;
-                if (kNode.size() < 4)
+                if (kNode.size() < 5)
                     throw new XException("invalid message, khala-node list too short");
                 if (!(kNode.get(0) instanceof String)
                     || !(kNode.get(1) instanceof String)
                     || !(kNode.get(2) instanceof String)
-                    || !(kNode.get(3) instanceof Integer))
+                    || !(kNode.get(3) instanceof String)
+                    || !(kNode.get(4) instanceof Integer))
                     throw new XException("invalid message, khala-node wrong format");
                 String kType = (String) kNode.get(0);
                 if (!kType.equals("nexus") && !kType.equals("pylon"))
                     throw new XException("invalid message, khala-node type is wrong");
                 String service = (String) kNode.get(1);
                 String zone = (String) kNode.get(2);
-                int port = (int) kNode.get(3);
+                String kNAddress = (String) kNode.get(3);
+                int port = (int) kNode.get(4);
 
-                KhalaNode kn = new KhalaNode(KhalaNodeType.valueOf(kType), service, zone, port);
+                KhalaNode kn = new KhalaNode(KhalaNodeType.valueOf(kType), service, zone, kNAddress, port);
                 list.add(kn);
             }
         }

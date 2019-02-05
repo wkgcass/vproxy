@@ -14,6 +14,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.stream.Collectors;
 
 /**
@@ -36,6 +37,7 @@ import java.util.stream.Collectors;
  * ----------khalaNodeType
  * ----------service
  * ----------zone
+ * ----------address
  * ----------port
  * --------]
  * ------]
@@ -94,7 +96,7 @@ public class Khala {
     private final Map<Node, NodeWrap> nodes = new ConcurrentHashMap<>();
     private final Map<Node, Set<KhalaNode>> khalaNodes = new ConcurrentHashMap<>();
     private final Set<KhalaNode> localKhalaNodes = new ConcurrentHashSet<>();
-    private final Set<KhalaNodeListener> khalaNodeListeners = new HashSet<>();
+    private final Set<KhalaNodeListener> khalaNodeListeners = new CopyOnWriteArraySet<>();
     private final Random rand = new Random();
 
     public Khala(Discovery discovery, KhalaConfig config) {
@@ -436,6 +438,7 @@ public class Khala {
                 kNode.add(kn.type.name());
                 kNode.add(kn.service);
                 kNode.add(kn.zone);
+                kNode.add(kn.address);
                 kNode.add(kn.port);
                 khalaNodeList.add(kNode);
             }
@@ -563,6 +566,7 @@ public class Khala {
                             node.type.name(),
                             node.service,
                             node.zone,
+                            node.address,
                             node.port
                         }
                     }
@@ -640,6 +644,10 @@ public class Khala {
             }
             khalaNodeListeners.add(lsn);
         });
+    }
+
+    public void removeKhalaNodeListener(KhalaNodeListener lsn) {
+        khalaNodeListeners.remove(lsn);
     }
 
     private void doSync() {

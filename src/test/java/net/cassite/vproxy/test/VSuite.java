@@ -16,6 +16,7 @@ import org.junit.runners.Suite;
     TestUDP.class,
     TestDiscovery.class,
     TestKhala.class,
+    TestAuto.class,
 
     AfterAll.class
 })

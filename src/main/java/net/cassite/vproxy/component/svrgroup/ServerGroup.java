@@ -123,6 +123,8 @@ public class ServerGroup {
 
         private ConcurrentMap<Connection, Object> connMap = new ConcurrentHashMap<>();
 
+        public Object data; // the data field, not used by this lib
+
         ServerHandle(String alias, /**/long sid/**/,
                      String hostName,
                      InetSocketAddress server,
