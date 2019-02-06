@@ -1,5 +1,7 @@
 package net.cassite.vproxy.app;
 
+import net.cassite.vproxy.app.mesh.AutoLBHolder;
+import net.cassite.vproxy.app.mesh.SidecarHolder;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
@@ -21,6 +23,9 @@ public class Application {
     public final RESPControllerHolder respControllerHolder;
     public final Socks5ServerHolder socks5ServerHolder;
 
+    public final SidecarHolder sidecarHolder;
+    public final AutoLBHolder autoLBHolder;
+
     private Application() throws IOException {
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();
@@ -31,6 +36,9 @@ public class Application {
         this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
         this.respControllerHolder = new RESPControllerHolder();
         this.socks5ServerHolder = new Socks5ServerHolder();
+
+        this.sidecarHolder = new SidecarHolder();
+        this.autoLBHolder = new AutoLBHolder();
     }
 
     static void create() throws IOException {

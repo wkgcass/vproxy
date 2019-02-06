@@ -141,7 +141,7 @@ public class TestAuto {
         // now sidecar and alb10 should find each other
 
         assertEquals("socks5 have one group", 1, socks5Server.backends.getServerGroups().size());
-        assertEquals("socks5 have one group: s0", "sidecar:nexus:grp:s0", socks5Server.backends.getServerGroups().get(0).group.alias);
+        assertEquals("socks5 have one group: s0", "s0", socks5Server.backends.getServerGroups().get(0).group.alias);
         assertEquals("s0 have one server", 1, socks5Server.backends.getServerGroups().get(0).group.getServerHandles().size());
         assertEquals("s0 have one server: the lb", 28080,
             socks5Server.backends.getServerGroups().get(0).group.getServerHandles().get(0).server.getPort());
@@ -159,7 +159,7 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         assertEquals("socks5 have one group", 1, socks5Server.backends.getServerGroups().size());
-        assertEquals("socks5 have one group: s0", "sidecar:nexus:grp:s0", socks5Server.backends.getServerGroups().get(0).group.alias);
+        assertEquals("socks5 have one group: s0", "s0", socks5Server.backends.getServerGroups().get(0).group.alias);
         assertEquals("s0 have two servers", 2, socks5Server.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         assertEquals("the autoLB20 has no backends", 0, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
@@ -175,7 +175,7 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         assertEquals("socks5 have two groups", 2, socks5Server.backends.getServerGroups().size());
-        assertEquals("socks5 have two groups: s0/s1", "sidecar:nexus:grp:s1", socks5Server.backends.getServerGroups().get(1).group.alias);
+        assertEquals("socks5 have two groups: s0/s1", "s1", socks5Server.backends.getServerGroups().get(1).group.alias);
         assertEquals("s1 have one server", 1, socks5Server.backends.getServerGroups().get(1).group.getServerHandles().size());
 
         assertEquals("the autoLB11 has no backends", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());

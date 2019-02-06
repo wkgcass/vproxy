@@ -2,6 +2,7 @@ package net.cassite.vproxy.app;
 
 import net.cassite.vproxy.app.cmd.SystemCommand;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
+import net.cassite.vproxy.app.mesh.ServiceMeshMain;
 import net.cassite.vproxy.component.app.Shutdown;
 import net.cassite.vproxy.component.app.StdIOController;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
@@ -18,17 +19,21 @@ import java.security.Security;
 public class Main {
     private static final String _HELP_STR_ = "" +
         "vproxy: usage java " + Main.class.getName() + " \\" +
-        "\n\t\thelp                                         show this message" +
+        "\n\t\thelp                                         Show this message" +
         "\n" +
-        "\n\t\tload ${filename}                             load configuration from file" +
+        "\n\t\tload ${filename}                             Load configuration from file" +
         "\n" +
-        "\n\t\tresp-controller ${address} ${password}       start the resp-controller, will" +
+        "\n\t\tresp-controller ${address} ${password}       Start the resp-controller, will" +
         "\n\t\t                                             be named as `resp-controller`" +
-        "\n\t\tallowSystemCallInNonStdIOController          allow system call in all controllers" +
+        "\n\t\tallowSystemCallInNonStdIOController          Allow system call in all controllers" +
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
         "\n\t\t                                             if the flag is set" +
         "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
+        "\n" +
+        "\n\t\tserviceMeshConfig                            Specify config file and launch into service mesh mode" +
+        "\n\t\t                                             All resources will become readonly" +
+        "\n\t\t                                             and save/load/auto-save will be disabled" +
         "";
 
     private static void beforeStart() {
@@ -122,6 +127,42 @@ public class Main {
                     break;
                 case "sigIntDirectlyShutdown":
                     Shutdown.sigIntBeforeTerminate = 1;
+                    break;
+                case "serviceMeshConfig":
+                    if (next == null) {
+                        System.err.println("config file path required");
+                        System.exit(1);
+                        return;
+                    }
+                    if (loaded) {
+                        System.err.println("cannot run `load` and `serviceMeshConfig` at the same time");
+                        System.exit(1);
+                        return;
+                    }
+                    // handle config, so increase the cursor
+                    ++i;
+                    ServiceMeshMain serviceMesh = ServiceMeshMain.getInstance();
+                    int exitCode = serviceMesh.load(next);
+                    if (exitCode != 0) {
+                        System.exit(exitCode);
+                        return;
+                    }
+                    exitCode = serviceMesh.check();
+                    if (exitCode != 0) {
+                        System.exit(exitCode);
+                        return;
+                    }
+                    exitCode = serviceMesh.gen();
+                    if (exitCode != 0) {
+                        System.exit(0);
+                        return;
+                    }
+                    exitCode = serviceMesh.start();
+                    if (exitCode != 0) {
+                        System.exit(exitCode);
+                        return;
+                    }
+                    Config.serviceMeshMode = true;
                     break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");

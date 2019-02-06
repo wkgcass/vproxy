@@ -72,7 +72,7 @@ public class AutoLB {
 
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
         String sgsName = AutoUtil.utilSgsName(alias, service);
-        String groupName = AutoUtil.utilServerGroupNameFromServiceName(alias, "nexus", service);
+        String groupName = AutoUtil.utilServerGroupNameFromServiceName(service);
 
         ServerGroups sgs = new ServerGroups(sgsName);
         ServerGroup sg;

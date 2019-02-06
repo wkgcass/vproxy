@@ -493,6 +493,7 @@ public class Khala {
             return; // ignore if it not exists
         for (KhalaNode kn : kNodes) {
             alertNodeRemove(node, kn);
+            Logger.warn(LogType.KHALA_EVENT, "node removed " + kn);
         }
     }
     // ---------------------

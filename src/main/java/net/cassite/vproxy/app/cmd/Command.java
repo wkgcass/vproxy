@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.cmd;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -412,6 +413,14 @@ public class Command {
     }
 
     private static void semantic(Command cmd) throws Exception {
+        // check the app mode
+        if (Config.serviceMeshMode) {
+            // only list/list-detail allowed for service mesh mode
+            if (cmd.action != Action.l && cmd.action != Action.L) {
+                throw new Exception("only list/list-detail allowed for service mesh mode");
+            }
+        }
+
         if (cmd.action == Action.l || cmd.action == Action.L) {
             // for list operations, to/from are not allowed
             if (cmd.preposition != null) {

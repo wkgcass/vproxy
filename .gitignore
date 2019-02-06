@@ -28,6 +28,7 @@ hs_err_pid*
 
 # idea
 .idea/
+out/
 
 # mac os
 .DS_Store

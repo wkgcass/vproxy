@@ -14,8 +14,8 @@ public class AutoUtil {
         return mainResource + ":groups:" + service;
     }
 
-    static String utilServerGroupNameFromServiceName(String mainResource, String usage, String service) {
-        return mainResource + ":" + usage + ":grp:" + service;
+    static String utilServerGroupNameFromServiceName(String service) {
+        return service;
     }
 
     static String utilServerNameFromNode(KhalaNode node) {

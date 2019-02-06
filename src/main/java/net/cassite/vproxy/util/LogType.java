@@ -17,4 +17,5 @@ public enum LogType {
     RESOLVE_REPLACE,
     DISCOVERY_EVENT,
     KHALA_EVENT,
+    ALERT,
 }

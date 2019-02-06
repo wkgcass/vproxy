@@ -7,7 +7,7 @@ public class KhalaConfig {
         this.syncPeriod = syncPeriod;
     }
 
-    public KhalaConfig getDefault() {
+    public static KhalaConfig getDefault() {
         return new KhalaConfig(120_000);
     }
 }

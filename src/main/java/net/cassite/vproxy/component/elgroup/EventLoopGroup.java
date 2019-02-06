@@ -4,17 +4,12 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.Blocking;
-import net.cassite.vproxy.util.LogType;
-import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
+import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -25,7 +20,7 @@ public class EventLoopGroup {
     private boolean preClose = false; // if true, then all MODIFY operations are disabled or return default value
     private boolean closed = false; // if true, then all operations are disabled or return default value
     private final AtomicInteger cursor = new AtomicInteger(0); // current cursor of the eventLoops
-    private final ConcurrentMap<String, EventLoopGroupAttach> attaches = new ConcurrentHashMap<>();
+    private final ConcurrentHashSet<EventLoopGroupAttach> attaches = new ConcurrentHashSet<>();
 
     public EventLoopGroup(String alias) {
         this.alias = alias;
@@ -131,14 +126,14 @@ public class EventLoopGroup {
         if (closed) {
             return Collections.emptyList();
         }
-        return new ArrayList<>(attaches.keySet());
+        return attaches.stream().map(EventLoopGroupAttach::id).collect(Collectors.toList());
     }
 
     @ThreadSafe
     public void attachResource(EventLoopGroupAttach resource) throws AlreadyExistException, ClosedException {
         if (preClose)
             throw new ClosedException();
-        if (attaches.putIfAbsent(resource.id(), resource) != null) {
+        if (!attaches.add(resource)) {
             throw new AlreadyExistException();
         }
     }
@@ -147,13 +142,13 @@ public class EventLoopGroup {
     public void detachResource(EventLoopGroupAttach resource) throws NotFoundException {
         if (preClose)
             return;
-        if (attaches.remove(resource.id()) == null) {
+        if (!attaches.remove(resource)) {
             throw new NotFoundException();
         }
     }
 
     private void invokeResourcesOnAdd() {
-        for (EventLoopGroupAttach resource : attaches.values()) {
+        for (EventLoopGroupAttach resource : attaches) {
             try {
                 resource.onEventLoopAdd();
             } catch (Throwable t) {
@@ -165,7 +160,7 @@ public class EventLoopGroup {
     }
 
     private void removeResources() {
-        for (EventLoopGroupAttach resource : attaches.values()) {
+        for (EventLoopGroupAttach resource : attaches) {
             try {
                 resource.onClose();
             } catch (Throwable t) {

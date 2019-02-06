@@ -30,7 +30,7 @@ public class Sidecar {
                 return; // ignore the node event if don't care
             }
 
-            String grpName = AutoUtil.utilServerGroupNameFromServiceName(alias, "nexus", node.service);
+            String grpName = AutoUtil.utilServerGroupNameFromServiceName(node.service);
             String svrName = AutoUtil.utilServerNameFromNode(node);
 
             List<ServerGroups.ServerGroupHandle> groups = socks5Server.backends.getServerGroups();
@@ -72,7 +72,7 @@ public class Sidecar {
                 return; // ignore the node event if don't care
             }
 
-            String grpName = AutoUtil.utilServerGroupNameFromServiceName(alias, "nexus", node.service);
+            String grpName = AutoUtil.utilServerGroupNameFromServiceName(node.service);
             String svrName = AutoUtil.utilServerNameFromNode(node);
 
             List<ServerGroups.ServerGroupHandle> groups = socks5Server.backends.getServerGroups();
@@ -247,7 +247,9 @@ public class Sidecar {
         khalaNodes.remove(kn);
     }
 
-    public synchronized void maintain(String service, int localServicePort) {
+    // true if the service is removed or changed into maintain mode
+    // false if the service not found
+    public synchronized boolean maintain(String service, int localServicePort) {
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
         String serverName = AutoUtil.utilServerName(service, "127.0.0.1", localServicePort);
 
@@ -259,12 +261,12 @@ public class Sidecar {
             }
         }
         if (tcpLB == null)
-            return; // ignore if tcp lb not found
+            return false; // ignore if tcp lb not found
 
         ServerGroup grp = tcpLB.backends.getServerGroups().get(0).group;
         // check whether the server exists in the group
         if (grp.getServerHandles().stream().noneMatch(h -> h.alias.equals(serverName))) {
-            return; // ignore if not exists
+            return false; // ignore if not exists
         }
         if (grp.getServerHandles().size() == 1) {
             // this is the only server in the group
@@ -277,6 +279,7 @@ public class Sidecar {
 
             // set _MAINTAIN_FLAG_
             grp.getServerHandles().get(0).data = _MAINTAIN_FLAG_;
+            return true;
         } else {
             // no need to remove from khala
             // just remove the server
@@ -286,7 +289,9 @@ public class Sidecar {
                 // ignore if not found
                 // however it should not happen
                 Logger.shouldNotHappen("got exception when removing server from group", e);
+                return false;
             }
+            return true;
         }
     }
 
@@ -340,7 +345,7 @@ public class Sidecar {
     private TcpLB createTcpLBServer(int port, String service) throws Exception {
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
         String sgsName = AutoUtil.utilSgsName(alias, service);
-        String groupName = AutoUtil.utilServerGroupNameFromServiceName(alias, "local", service);
+        String groupName = AutoUtil.utilServerGroupNameFromServiceName(service);
 
         ServerGroups sgs = new ServerGroups(sgsName);
         ServerGroup sg;

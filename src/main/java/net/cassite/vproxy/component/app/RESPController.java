@@ -1,10 +1,7 @@
 package net.cassite.vproxy.component.app;
 
 import net.cassite.vproxy.app.Application;
-import net.cassite.vproxy.app.cmd.Action;
-import net.cassite.vproxy.app.cmd.CmdResult;
-import net.cassite.vproxy.app.cmd.Command;
-import net.cassite.vproxy.app.cmd.SystemCommand;
+import net.cassite.vproxy.app.cmd.*;
 import net.cassite.vproxy.component.exception.XException;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.NetEventLoop;
@@ -119,6 +116,8 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
                 return;
             }
             SystemCommand.handleSystemCall(line, callback);
+        } else if (ServiceMeshCommand.isServiceMeshCommand(line)) {
+            ServiceMeshCommand.handleCommand(line, callback);
         } else {
             Command cmd;
             try {
