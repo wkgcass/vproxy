@@ -289,6 +289,8 @@ public class Sidecar {
             khalaNodes.remove(kn);
 
             // set _MAINTAIN_FLAG_
+            if (grp.getServerHandles().get(0).data == _MAINTAIN_FLAG_)
+                return false;
             grp.getServerHandles().get(0).data = _MAINTAIN_FLAG_;
             return true;
         } else {

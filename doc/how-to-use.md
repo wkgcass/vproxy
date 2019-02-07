@@ -8,6 +8,7 @@ There are multiple ways of using vproxy:
 * Config file: load a pre configured file when starting or when running.
 * StdIOController: type in commands into vproxy and get messages from std-out.
 * RESPController: use `redis-cli` or `telnet` to operate the vproxy instance.
+* Service Mesh: let the nodes in the cluster to automatically find each other and handle network traffic.
 
 ## Config file
 
@@ -125,6 +126,46 @@ To stop a RESPController, you can type in:
 (done)                                       ---- this is response
 >
 ```
+
+## Service Mesh
+
+Specify the service mesh config file when starting:
+
+```
+java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
+```
+
+When service mesh config is specified, the process launches into service mesh mode.  
+All resources will become read-only in service mesh mode, the resources will be automatically handled by service mesh modules.
+
+There are two roles provided by vproxy.
+
+* sidecar: Deployed on application host. One sidecar per host. The user application should use socks5 and use domain names to request cluster services, traffic will be automatically directed to correct endpoints. And user app should listen on localhost, the sidecar will help export the service.
+* auto_lb: Used as a tcp loadbalancer. The lb will automatically learn node changes in the cluster, and add or remove nodes in backend list.
+
+The user application should use any kind of redis client to let sidecar know what service is running locally.
+
+Use the following redis command to add/check/remove services of a sidecar.  
+They behave just like redis SET commands:
+
+```
+sadd service $your_service_domain:$protocol_port:$local_port
+# return 1 or 0
+
+smembers service
+# return a list of services you just added
+
+srem service $your_service_domain:$protocol_port:$local_port
+# return 1 or 0
+```
+
+User app is recommended to:
+
+1. Use socks5 and domain to make requests, domains should be resolved on the proxy(sidecar) side.
+2. Use redis client to register the service when just the app just launched.
+3. The service name should be `domain:protocol_port`, e.g. `myservice.com:80`, requesting urls are the same, e.g. `http://myservice.com`.
+4. Use redis client to deregister the service and wait for traffic to end before the app stops.
+5. Note that: external traffic should not go through the sidecar(socks5 proxy) (because the vproxy network does not know how to make requests to external resources).
 
 ## Example and Explanation
 

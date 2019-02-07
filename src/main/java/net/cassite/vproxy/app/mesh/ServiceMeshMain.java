@@ -15,12 +15,8 @@ import net.cassite.vproxy.util.Tuple;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.net.NetworkInterface;
-import java.net.SocketException;
-import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.Properties;
+import java.net.*;
+import java.util.*;
 
 public class ServiceMeshMain {
     class Sidecar {
@@ -230,12 +226,15 @@ public class ServiceMeshMain {
         checkNull("ip_type", ipType);
 
         checkNull("discovery", discovery);
-        checkNull("discovery.name", discovery.name);
         checkNull("discovery.nic", discovery.nic);
         checkNull("discovery.ip_type", discovery.ipType);
         checkNull("discovery.udp_sock_port", discovery.udpSockPort);
         checkNull("discovery.udp_port", discovery.udpPort);
         checkNull("discovery.tcp_port", discovery.tcpPort);
+        InetAddress addr = getNicAddress(discovery.nic, discovery.ipType);
+        if (addr == null)
+            throw new XException("discovery nic address not found");
+        discovery.name = addr.getHostName();
 
         checkNull("discovery.search", discovery.search);
         checkNull("discovery.search.mask", discovery.search.mask);
@@ -355,9 +354,6 @@ public class ServiceMeshMain {
                 throw new XException("invalid key");
             String k = arr[1];
             switch (k) {
-                case "name":
-                    discovery.name = loadString(value);
-                    break;
                 case "nic":
                     discovery.nic = loadNic(value);
                     break;
@@ -476,6 +472,32 @@ public class ServiceMeshMain {
             }
         }
         throw new XException("nic " + value + " not found");
+    }
+
+    private InetAddress getNicAddress(String nicName, IPType ipType) {
+        Enumeration<NetworkInterface> nics;
+        try {
+            nics = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e) {
+            return null;
+        }
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            if (nic.getName().equals(nicName)) {
+                Enumeration<InetAddress> addresses = nic.getInetAddresses();
+                while (addresses.hasMoreElements()) {
+                    InetAddress inet = addresses.nextElement();
+                    if (ipType == IPType.v4) {
+                        if (inet instanceof Inet4Address)
+                            return inet;
+                    } else {
+                        if (inet instanceof Inet6Address)
+                            return inet;
+                    }
+                }
+            }
+        }
+        return null;
     }
 
     private IPType loadIPType(String value) throws XException {
