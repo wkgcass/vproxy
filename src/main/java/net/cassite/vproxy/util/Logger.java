@@ -57,6 +57,10 @@ public class Logger {
         fatal(LogType.UNEXPECTED, "should not happen - " + msg);
     }
 
+    public static void alert(String msg) {
+        info(LogType.ALERT, msg);
+    }
+
     public static void shouldNotHappen(String msg, Throwable err) {
         fatal(LogType.UNEXPECTED, "should not happen - " + msg);
         err.printStackTrace();

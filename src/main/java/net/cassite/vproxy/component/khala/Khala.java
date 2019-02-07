@@ -91,11 +91,249 @@ public class Khala {
         }
     }
 
+    class NodeMap {
+        private final Map<Node, NodeWrap> nodes = new ConcurrentHashMap<>();
+
+        /**
+         * adding the node into `nodes`
+         * Should only call this method with remote nodes
+         * Local node(s) should directly register via the private fields `nodes`
+         * <p>
+         * When added, the node will be checked for a list of KhalaNodes,
+         * those khala nodes will be added to KhalaNodes collection.
+         *
+         * @param node the remote node to register
+         * @throws IllegalStateException throw when the node already exists
+         */
+        public void add(Node node) {
+            NodeWrap w = nodes.put(node, new NodeWrap(node));
+            if (w != null) {
+                // the node should not be recorded for multiple times
+                // we cannot handle the situation, it must be a bug
+                Logger.shouldNotHappen("node " + node + " already exists");
+                throw new IllegalStateException("node " + node + " already exists");
+            }
+            // should init the node
+            checkRemote(node, new Callback<Void, Throwable>() {
+                @Override
+                protected void onSucceeded(Void value) {
+                    NodeWrap wrap = nodes.get(node);
+                    if (wrap == null || wrap.targetState == NodeState.deleted) {
+                        // the node state is `deleted` or not exists, so remove the node
+                        removeNode(node);
+                        return;
+                    }
+                    wrap.state = NodeState.stable;
+                }
+
+                @Override
+                protected void onFailed(Throwable err) {
+                    // ignore err when failed
+                    // we remove the node
+                    removeNode(node);
+                }
+            });
+        }
+
+        /**
+         * removing the node from `nodes`
+         * Should only call this method with remote nodes
+         * Local node(s) should not be removed.
+         * <p>
+         * When removed, the corresponding recordings in `khalaNodes` will be removed as well.
+         *
+         * @param node the remote node to remove
+         */
+        private void removeNode(Node node) {
+            nodes.remove(node);
+            khalaNodes.remove(node);
+        }
+
+        public boolean containsKey(Node node) {
+            return nodes.containsKey(node);
+        }
+
+        public NodeWrap get(Node node) {
+            return nodes.get(node);
+        }
+
+        public Set<Node> getNodes() {
+            return nodes.keySet();
+        }
+    }
+
+    class KhalaNodeRecorder {
+        private final Map<Node, Set<KhalaNode>> khalaNodes = new ConcurrentHashMap<>();
+
+        /**
+         * specify a remote discovery node and init khala nodes with a list.
+         * <p>
+         * Only call this method with remote nodes.
+         * Local nodes should be handled directly via private field.
+         *
+         * @param node the remote node to add
+         * @throws IllegalStateException throw if already exists
+         */
+        public void add(Node node) {
+            Set<KhalaNode> set = khalaNodes.put(node, new HashSet<>());
+            if (set != null) {
+                // the khala node set should not be recorded multiple times
+                // we cannot handle the situation, it must be a bug
+                Logger.shouldNotHappen("khala nodes in " + node + " already exists");
+                throw new IllegalStateException("khala nodes in " + node + " already exists");
+            }
+        }
+
+        /**
+         * add a khala node into the network
+         *
+         * @param kn the node to add
+         */
+        public void addLocal(KhalaNode kn) {
+            if (!khalaNodes.containsKey(discovery.localNode)) {
+                khalaNodes.put(discovery.localNode, new HashSet<>());
+            }
+            if (khalaNodes.get(discovery.localNode).add(kn)) {
+                // successfully added
+                // then should notify others about the added node
+                notifyNetworkAddKhalaNode(kn);
+            }
+        }
+
+        /**
+         * record the remote khala node.
+         * <p>
+         * Only call this method with remote nodes.
+         * Local nodes should be handled with addLocal() method.
+         *
+         * @param node      discovery node
+         * @param khalaNode khala node
+         */
+        public void add(Node node, KhalaNode khalaNode) {
+            Set<KhalaNode> set = khalaNodes.get(node);
+            if (set == null) { // init with a set if not exists
+                Logger.alert("khala nodes in " + node + " should exist");
+                set = new HashSet<>();
+                khalaNodes.put(node, set);
+            }
+            if (!set.add(khalaNode)) {
+                return; // already recorded
+            }
+            listenerNodeAdd(node, khalaNode);
+        }
+
+        /**
+         * remove the remote khala node.
+         * <p>
+         * Only call this method with remote nodes.
+         * Local nodes should be handled with removeLocal method.
+         *
+         * @param node      discovery node
+         * @param khalaNode khala node
+         */
+        public void remove(Node node, KhalaNode khalaNode) {
+            Set<KhalaNode> set = khalaNodes.get(node);
+            if (set == null) { // init with a set if not exists
+                Logger.alert("khala nodes in " + node + " should exist");
+                set = new HashSet<>();
+                khalaNodes.put(node, set);
+            }
+            if (!set.remove(khalaNode)) {
+                // already removed, do nothing
+                return;
+            }
+            listenerNodeRemove(node, khalaNode);
+        }
+
+        /**
+         * remove a khala node from network
+         *
+         * @param kn the node to remove
+         */
+        public void removeLocal(KhalaNode kn) {
+            if (!khalaNodes.containsKey(discovery.localNode)) {
+                khalaNodes.put(discovery.localNode, new HashSet<>());
+            }
+            if (khalaNodes.get(discovery.localNode).remove(kn)) {
+                // successfully removed
+                // then should notify others about the removal
+                notifyNetworkRemoveKhalaNode(kn);
+            }
+        }
+
+        /**
+         * remove all related resources of a remote discovery node.
+         * <p>
+         * Only call this method with remote nodes.
+         * Local discovery node(s) should not be removed.
+         *
+         * @param node the remote node to remove
+         * @throws IllegalStateException throw if already exists
+         */
+        public void remove(Node node) {
+            Set<KhalaNode> set = khalaNodes.remove(node);
+            if (set == null) {
+                // the node not recorded, ignore
+                return;
+            }
+            for (KhalaNode kn : set) {
+                listenerNodeRemove(node, kn);
+            }
+        }
+
+        public Set<KhalaNode> getKhalaNodes(Node node) {
+            if (!khalaNodes.containsKey(node)) {
+                Logger.alert("khala node list of node " + node + " not exists");
+                khalaNodes.put(node, new HashSet<>());
+            }
+            return khalaNodes.get(node);
+        }
+
+        // alert listeners for node adding
+        private void listenerNodeAdd(Node n, KhalaNode node) {
+            Logger.info(LogType.KHALA_EVENT, "node added " + node);
+            for (KhalaNodeListener lsn : khalaNodeListeners) {
+                lsn.add(n, node);
+            }
+        }
+
+        // alert listeners for node removing
+        private void listenerNodeRemove(Node n, KhalaNode node) {
+            Logger.warn(LogType.KHALA_EVENT, "node removed " + node);
+            for (KhalaNodeListener lsn : khalaNodeListeners) {
+                lsn.remove(n, node);
+            }
+        }
+
+        // make a diff between remote and local
+        // the result is a tuple:
+        // < in remote not in local (toAdd), in local not in remote (toRemove)>
+        public Tuple<Set<KhalaNode>, Set<KhalaNode>> runDiff(Node node, List<KhalaNode> remote) {
+            Set<KhalaNode> local = khalaNodes.get(node);
+            if (local == null) {
+                Logger.alert("khala nodes in " + node + " not exist");
+                local = new HashSet<>();
+                khalaNodes.put(node, local);
+            }
+
+            Set<KhalaNode> toAdd = new HashSet<>();
+            Set<KhalaNode> toRemove = new HashSet<>();
+            for (KhalaNode n : remote) {
+                if (!local.contains(n))
+                    toAdd.add(n);
+            }
+            for (KhalaNode n : local) {
+                if (!remote.contains(n))
+                    toRemove.add(n);
+            }
+            return new Tuple<>(toAdd, toRemove);
+        }
+    }
+
     public final Discovery discovery;
     public final KhalaConfig config;
-    private final Map<Node, NodeWrap> nodes = new ConcurrentHashMap<>();
-    private final Map<Node, Set<KhalaNode>> khalaNodes = new ConcurrentHashMap<>();
-    private final Set<KhalaNode> localKhalaNodes = new ConcurrentHashSet<>();
+    private final NodeMap nodes = new NodeMap();
+    private final KhalaNodeRecorder khalaNodes = new KhalaNodeRecorder();
     private final Set<KhalaNodeListener> khalaNodeListeners = new CopyOnWriteArraySet<>();
     private final Random rand = new Random();
 
@@ -106,8 +344,10 @@ public class Khala {
         // init local node
         NodeWrap localNodeWrap = new NodeWrap(discovery.localNode);
         localNodeWrap.state = NodeState.stable;
-        nodes.put(discovery.localNode, localNodeWrap);
-        khalaNodes.put(discovery.localNode, new HashSet<>());
+        // use private field to record the node
+        // because they are local nodes and should not be handled as the remote nodes
+        nodes.nodes.put(discovery.localNode, localNodeWrap);
+        khalaNodes.khalaNodes.put(discovery.localNode, new HashSet<>());
 
         // init periodic event
         discovery.loop.getSelectorEventLoop().period(config.syncPeriod, this::doSync);
@@ -122,7 +362,7 @@ public class Khala {
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             @Override
             public void handle(Object o, RESPApplicationContext respApplicationContext, Callback<Object, Throwable> cb) {
-                Tuple<KhalaMsg, XException> tup = validateResponse(o, "khala", "khala-add", "khala-remove", "khala-local");
+                Tuple<KhalaMsg, XException> tup = utilValidateResponse(o, "khala", "khala-add", "khala-remove", "khala-local");
                 if (tup.right != null) {
                     cb.failed(tup.right);
                     return;
@@ -178,53 +418,26 @@ public class Khala {
         discovery.addNodeListener(new NodeListener() {
             @Override
             public void up(Node node) {
-                discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
-                    NodeWrap wrap = nodes.get(node);
-                    if (wrap == null) {
-                        wrap = new NodeWrap(node);
-                        nodes.put(node, wrap);
-                        if (!khalaNodes.containsKey(node))
-                            khalaNodes.put(node, new HashSet<>());
-                        initNode(node);
-                        return;
-                    }
-                    wrap.targetState = NodeState.stable;
-                });
+                // fire when the remote node is UP
+                // the node should be recorded
+                nodes.add(node);
             }
 
             @Override
             public void down(Node node) {
-                discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
-                    NodeWrap wrap = nodes.get(node);
-                    if (wrap == null)
-                        return; // not exist
-                    wrap.targetState = NodeState.deleted;
-                    if (wrap.state == NodeState.stable) {
-                        removeNode(node);
-                    }
-                });
+                // fire when the remote node is DOWN
+                // the node should be removed
+                nodes.removeNode(node);
             }
 
             @Override
             public void leave(Node node) {
-                down(node);
+                down(node); // handled the same as down()
             }
         });
     }
 
-    private void alertNodeAdd(Node n, KhalaNode node) {
-        for (KhalaNodeListener lsn : khalaNodeListeners) {
-            lsn.add(n, node);
-        }
-    }
-
-    private void alertNodeRemove(Node n, KhalaNode node) {
-        for (KhalaNodeListener lsn : khalaNodeListeners) {
-            lsn.remove(n, node);
-        }
-    }
-
-    private Tuple<KhalaMsg, XException> validateResponse(Object o, String... expectedType) {
+    private Tuple<KhalaMsg, XException> utilValidateResponse(Object o, String... expectedType) {
         if (!(o instanceof List)) {
             Logger.error(LogType.KHALA_EVENT, "invalid message");
             return new Tuple<>(null, new XException("invalid message"));
@@ -256,30 +469,22 @@ public class Khala {
         return false;
     }
 
+    // ---------------------
+    // START khala event handlings
+    // ---------------------
+
     // handle khala-add event
     private void handleAdd(Node n, KhalaNode node) {
         if (discoveryNodeNotExist(n))
             return;
-
-        Set<KhalaNode> nodes = khalaNodes.get(n);
-        if (nodes.contains(node))
-            return; // already exist, ignore the event
-        Logger.info(LogType.KHALA_EVENT, "node added " + node);
-        nodes.add(node); // record it
-        alertNodeAdd(n, node);
+        khalaNodes.add(n, node);
     }
 
     // handle khala-remove event
     private void handleRemove(Node n, KhalaNode node) {
         if (discoveryNodeNotExist(n))
             return;
-
-        Set<KhalaNode> nodes = khalaNodes.get(n);
-        if (!nodes.contains(node))
-            return;
-        Logger.warn(LogType.KHALA_EVENT, "node removed " + node);
-        nodes.remove(node);
-        alertNodeRemove(n, node);
+        khalaNodes.remove(n, node);
     }
 
     // handle khala-local response
@@ -287,20 +492,17 @@ public class Khala {
         if (discoveryNodeNotExist(n))
             return;
 
-        Set<KhalaNode> local = khalaNodes.get(n);
-        Tuple<Set<KhalaNode>, Set<KhalaNode>> wantAddRemove = runDiff(remote, local);
+        Tuple<Set<KhalaNode>, Set<KhalaNode>> wantAddRemove = khalaNodes.runDiff(n, remote);
         // because it's directly retrieved from remote
         // so the result data is trusted without another check
         // add missing nodes and remove redundant nodes
         for (KhalaNode toAdd : wantAddRemove.left) {
             Logger.info(LogType.KHALA_EVENT, "node added via a check " + toAdd);
-            local.add(toAdd);
-            alertNodeAdd(n, toAdd);
+            khalaNodes.add(n, toAdd);
         }
         for (KhalaNode toRemove : wantAddRemove.right) {
             Logger.info(LogType.KHALA_EVENT, "node removed via a check " + toRemove);
-            local.remove(toRemove);
-            alertNodeRemove(n, toRemove);
+            khalaNodes.remove(n, toRemove);
         }
     }
 
@@ -315,8 +517,7 @@ public class Khala {
             if (discoveryNodeNotExist(n))
                 continue;
 
-            Set<KhalaNode> local = khalaNodes.get(n);
-            Tuple<Set<KhalaNode>, Set<KhalaNode>> wantAddRemove = runDiff(remote, local);
+            Tuple<Set<KhalaNode>, Set<KhalaNode>> wantAddRemove = khalaNodes.runDiff(n, remote);
             if (wantAddRemove.left.isEmpty() && wantAddRemove.right.isEmpty()) {
                 // the two collections are the same
                 continue;
@@ -326,6 +527,14 @@ public class Khala {
             checkRemote(n);
         }
     }
+
+    // ---------------------
+    // END khala event handlings
+    // ---------------------
+
+    // ---------------------
+    // START khala requests
+    // ---------------------
 
     // make a khala-local request and handle the response
     private void checkRemote(Node n) {
@@ -342,6 +551,7 @@ public class Khala {
         });
     }
 
+    // send a `khala-local` request and handle the response
     private void checkRemote(Node n, Callback<Void, Throwable> cb) {
         if (discoveryNodeNotExist(n)) {
             cb.failed(new XException("discovery node not exist"));
@@ -359,7 +569,7 @@ public class Khala {
             new Callback<Object, IOException>() {
                 @Override
                 protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = validateResponse(value, "khala-local");
+                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala-local");
                     if (tup.right != null) {
                         cb.failed(tup.right);
                         return;
@@ -384,29 +594,16 @@ public class Khala {
             });
     }
 
-    // make a diff between remote and local
-    // the result is a tuple:
-    // < in remote not in local (toAdd), in local not in remote (toRemove)>
-    private Tuple</*want_add*/Set<KhalaNode>, /*want_remove*/Set<KhalaNode>>
-    runDiff(List<KhalaNode> remote, Set<KhalaNode> local) {
-        Set<KhalaNode> toAdd = new HashSet<>();
-        Set<KhalaNode> toRemove = new HashSet<>();
-        for (KhalaNode n : remote) {
-            if (!local.contains(n))
-                toAdd.add(n);
-        }
-        for (KhalaNode n : local) {
-            if (!remote.contains(n))
-                toRemove.add(n);
-        }
-        return new Tuple<>(toAdd, toRemove);
-    }
+    // ---------------------
+    // END khala requests
+    // ---------------------
 
     // ---------------------
-    // START khala msg
+    // START khala msg builders
     // ---------------------
+
     private Object[] buildFullKhalaMsg() {
-        return buildKhalaMsgByNodes("khala", nodes.keySet());
+        return buildKhalaMsgByNodes("khala", nodes.getNodes());
     }
 
     private Object[] buildLocalKhalaMsg() {
@@ -432,7 +629,7 @@ public class Khala {
             nodeList.add(n.tcpPort);
             nodeList.add(khalaNodeList);
 
-            Set<KhalaNode> kNodes = khalaNodes.computeIfAbsent(n, x -> new HashSet<>());
+            Set<KhalaNode> kNodes = khalaNodes.getKhalaNodes(n);
             for (KhalaNode kn : kNodes) {
                 List<Object> kNode = new ArrayList<>(4);
                 kNode.add(kn.type.name());
@@ -446,64 +643,16 @@ public class Khala {
 
         return msg;
     }
-    // ---------------------
-    // END khala msg
-    // ---------------------
 
     // ---------------------
-    // START discovery node operations
-    // ---------------------
-    private void initNode(Node node) {
-        // send full khala info to the node
-        // and ignore the result
-        checkRemote(node, new Callback<Void, Throwable>() {
-            @Override
-            protected void onSucceeded(Void value) {
-                NodeWrap wrap = nodes.get(node);
-                if (wrap == null || wrap.targetState == NodeState.deleted) {
-                    Set<KhalaNode> nodes = khalaNodes.remove(node);
-                    for (KhalaNode kn : nodes) {
-                        alertNodeRemove(node, kn);
-                    }
-                    Khala.this.nodes.remove(node);
-                    return;
-                }
-                wrap.state = NodeState.stable;
-            }
-
-            @Override
-            protected void onFailed(Throwable err) {
-                // ignore err when failed
-                // we remove the node
-                nodes.remove(node);
-                Set<KhalaNode> kNodes = khalaNodes.remove(node);
-                if (kNodes == null)
-                    return; // it not exists or already removed
-                for (KhalaNode kn : kNodes) {
-                    alertNodeRemove(node, kn);
-                }
-            }
-        });
-    }
-
-    private void removeNode(Node node) {
-        nodes.remove(node);
-        Set<KhalaNode> kNodes = khalaNodes.remove(node);
-        if (kNodes == null)
-            return; // ignore if it not exists
-        for (KhalaNode kn : kNodes) {
-            alertNodeRemove(node, kn);
-            Logger.warn(LogType.KHALA_EVENT, "node removed " + kn);
-        }
-    }
-    // ---------------------
-    // END discovery node operations
+    // END khala msg builders
     // ---------------------
 
     // ---------------------
     // START khala notification
     // ---------------------
-    private void notifyFullKhala(Node node) {
+
+    private void notifyNetworkFullKhala(Node node) {
         Object[] msg = buildFullKhalaMsg();
         RESPClientUtils.retry(
             discovery.loop,
@@ -515,7 +664,7 @@ public class Khala {
             new Callback<Object, IOException>() {
                 @Override
                 protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = validateResponse(value, "khala");
+                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala");
                     if (tup.right != null) {
                         return;
                     }
@@ -530,29 +679,29 @@ public class Khala {
             });
     }
 
-    private void notifyAddKhalaNode(KhalaNode node) {
+    private void notifyNetworkAddKhalaNode(KhalaNode node) {
         boolean notifyAll = node.type == KhalaNodeType.nexus;
-        for (Node n : khalaNodes.keySet()) {
+        for (Node n : khalaNodes.khalaNodes.keySet()) {
             if (n.equals(discovery.localNode))
                 continue; // don't send to local node
-            if (notifyAll || khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
-                notify("khala-add", n, node);
+            if (notifyAll || khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
+                notifyNetwork("khala-add", n, node);
             }
         }
     }
 
-    private void notifyRemoveKhalaNode(KhalaNode node) {
+    private void notifyNetworkRemoveKhalaNode(KhalaNode node) {
         boolean notifyAll = node.type == KhalaNodeType.nexus;
-        for (Node n : khalaNodes.keySet()) {
+        for (Node n : khalaNodes.khalaNodes.keySet()) {
             if (n.equals(discovery.localNode))
                 continue; // don't send to local node
-            if (notifyAll || khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
-                notify("khala-remove", n, node);
+            if (notifyAll || khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
+                notifyNetwork("khala-remove", n, node);
             }
         }
     }
 
-    private void notify(String type, Node remoteNode, KhalaNode node) {
+    private void notifyNetwork(String type, Node remoteNode, KhalaNode node) {
         Object[] msg = {
             1 /*version*/,
             type,
@@ -583,7 +732,7 @@ public class Khala {
             new Callback<Object, IOException>() {
                 @Override
                 protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = validateResponse(value, "khala");
+                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala");
                     if (tup.right != null) {
                         return;
                     }
@@ -597,49 +746,34 @@ public class Khala {
                 }
             });
     }
+
     // ---------------------
     // END khala notification
     // ---------------------
 
+    // ---------------------
+    // START local op
+    // ---------------------
+
     public void addLocal(KhalaNode khalaNode) {
-        discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
-            if (!this.localKhalaNodes.add(khalaNode)) {
-                // already added
-                return;
-            }
-            Set<KhalaNode> set = this.khalaNodes.computeIfAbsent(discovery.localNode, k -> new HashSet<>());
-            set.add(khalaNode);
-            notifyAddKhalaNode(khalaNode);
-        });
+        discovery.loop.getSelectorEventLoop().runOnLoop(() -> this.khalaNodes.addLocal(khalaNode));
     }
 
     public void removeLocal(KhalaNode khalaNode) {
-        discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
-            if (!this.localKhalaNodes.remove(khalaNode)) {
-                // not found
-                return;
-            }
-            Set<KhalaNode> set = this.khalaNodes.get(discovery.localNode);
-            if (set == null)
-                return; // already removed
-            set.remove(khalaNode);
-            notifyRemoveKhalaNode(khalaNode);
-        });
-    }
-
-    public Set<KhalaNode> getLocalKhalaNodes() {
-        return new HashSet<>(localKhalaNodes);
+        discovery.loop.getSelectorEventLoop().runOnLoop(() -> this.khalaNodes.removeLocal(khalaNode));
     }
 
     public Map<Node, Set<KhalaNode>> getKhalaNodes() {
-        return new HashMap<>(khalaNodes);
+        return new HashMap<>(khalaNodes.khalaNodes);
     }
 
     public void addKhalaNodeListener(KhalaNodeListener lsn) {
+        // the listener might be alerted when adding
+        // so run the process on discovery event loop
         discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
             // alert add() event for all nodes
-            for (Node n : khalaNodes.keySet()) {
-                for (KhalaNode kn : khalaNodes.get(n)) {
+            for (Node n : khalaNodes.khalaNodes.keySet()) {
+                for (KhalaNode kn : khalaNodes.getKhalaNodes(n)) {
                     lsn.add(n, kn);
                 }
             }
@@ -651,18 +785,23 @@ public class Khala {
         khalaNodeListeners.remove(lsn);
     }
 
+    // ---------------------
+    // END local op
+    // ---------------------
+
+    // randomly pick a nexus node and sync with that node
     private void doSync() {
-        List<Node> ns = nodes.keySet()
+        List<Node> ns = nodes.nodes.keySet()
             .stream()
             .filter(n ->
                 !n.equals(discovery.localNode) && // not local node
-                    khalaNodes.containsKey(n) && // valid
-                    khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus) /*only check nexus*/)
+                    khalaNodes.khalaNodes.containsKey(n) && // valid
+                    khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus) /*only check nexus*/)
             .collect(Collectors.toList());
         if (ns.isEmpty())
             return;
         Node n = ns.get(rand.nextInt(ns.size()));
-        notifyFullKhala(n);
+        notifyNetworkFullKhala(n);
     }
 
     public void sync() {
