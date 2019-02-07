@@ -1,6 +1,7 @@
 package net.cassite.vproxy.util;
 
 import java.util.Collection;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -32,12 +33,13 @@ public class ConcurrentHashSet<E> implements Set<E> {
 
     @Override
     public Object[] toArray() {
-        throw new UnsupportedOperationException();
+        return new HashSet<>(this).toArray();
     }
 
     @Override
     public <T> T[] toArray(T[] a) {
-        throw new UnsupportedOperationException();
+        //noinspection SuspiciousToArrayCall
+        return new HashSet<>(this).toArray(a);
     }
 
     @Override
@@ -66,7 +68,16 @@ public class ConcurrentHashSet<E> implements Set<E> {
 
     @Override
     public boolean retainAll(Collection<?> c) {
-        throw new UnsupportedOperationException();
+        Iterator<E> ite = iterator();
+        boolean ret = false;
+        while (ite.hasNext()) {
+            E e = ite.next();
+            if (!c.contains(e)) {
+                ite.remove();
+                ret = true;
+            }
+        }
+        return ret;
     }
 
     @Override

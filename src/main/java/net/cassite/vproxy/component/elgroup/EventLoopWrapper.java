@@ -11,8 +11,6 @@ import java.io.IOException;
 import java.nio.channels.NetworkChannel;
 import java.util.Collection;
 import java.util.Iterator;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 
 public class EventLoopWrapper extends NetEventLoop {
     class ServerHandlerWrapper implements ServerHandler {
@@ -104,11 +102,9 @@ public class EventLoopWrapper extends NetEventLoop {
 
     public final String alias;
     private final SelectorEventLoop selectorEventLoop;
-    private final ConcurrentHashMap<BindServer, Object> servers = new ConcurrentHashMap<>();
-    private final ConcurrentMap<Connection, Object> connections = new ConcurrentHashMap<>();
-    private static final Object _VALUE_ = new Object();
-    private final ConcurrentMap<String, EventLoopAttach> attaches = new ConcurrentHashMap<>();
-    private Thread thread;
+    private final ConcurrentHashSet<BindServer> servers = new ConcurrentHashSet<>();
+    private final ConcurrentHashSet<Connection> connections = new ConcurrentHashSet<>();
+    private final ConcurrentHashSet<EventLoopAttach> attaches = new ConcurrentHashSet<>();
 
     public EventLoopWrapper(String alias, SelectorEventLoop selectorEventLoop) {
         super(selectorEventLoop);
@@ -118,7 +114,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     @Override
     public void addServer(BindServer server, Object attachment, ServerHandler handler) throws IOException {
-        servers.put(server, _VALUE_); // make sure the server recorded
+        servers.add(server); // make sure the server recorded
         try {
             super.addServer(server, attachment, new ServerHandlerWrapper(handler));
         } catch (IOException e) {
@@ -129,7 +125,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     @Override
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
-        connections.put(connection, _VALUE_); // make sure the connection recorded
+        connections.add(connection); // make sure the connection recorded
         try {
             super.addConnection(connection, attachment, new ConnectionHandlerWrapper(handler));
         } catch (IOException e) {
@@ -140,7 +136,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     @Override
     public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
-        connections.put(connection, _VALUE_); // make sure the connection recorded
+        connections.add(connection); // make sure the connection recorded
         try {
             super.addClientConnection(connection, attachment, new ClientConnectionHandlerWrapper(handler));
         } catch (IOException e) {
@@ -154,7 +150,7 @@ public class EventLoopWrapper extends NetEventLoop {
         if (selectorEventLoop.isClosed()) {
             throw new ClosedException();
         }
-        if (attaches.putIfAbsent(resource.id(), resource) != null) {
+        if (!attaches.add(resource)) {
             throw new AlreadyExistException();
         }
     }
@@ -163,13 +159,13 @@ public class EventLoopWrapper extends NetEventLoop {
     public void detachResource(EventLoopAttach resource) throws NotFoundException {
         if (selectorEventLoop.isClosed())
             return;
-        if (attaches.remove(resource.id()) == null) {
+        if (!attaches.remove(resource)) {
             throw new NotFoundException();
         }
     }
 
     private void removeResources() {
-        Iterator<EventLoopAttach> ite = attaches.values().iterator();
+        Iterator<EventLoopAttach> ite = attaches.iterator();
         while (ite.hasNext()) {
             EventLoopAttach resource = ite.next();
             ite.remove();
@@ -188,7 +184,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     // this is a very expansive operation
     public void copyServers(Collection<? super BindServer> servers) {
-        servers.addAll(this.servers.keySet());
+        servers.addAll(this.servers);
     }
 
     public int serverCount() {
@@ -197,24 +193,15 @@ public class EventLoopWrapper extends NetEventLoop {
 
     // this is a very expansive operation
     public void copyConnections(Collection<? super Connection> connections) {
-        connections.addAll(this.connections.keySet());
+        connections.addAll(this.connections);
     }
 
     public int connectionCount() {
         return this.connections.size();
     }
 
-    // this is a very expansive operation
-    public void copyResources(Collection<? super EventLoopAttach> resources) {
-        resources.addAll(this.attaches.values());
-    }
-
-    public int resourceCount() {
-        return this.attaches.size();
-    }
-
     public void loop() {
-        if (thread != null) {
+        if (getSelectorEventLoop().runningThread != null) {
             throw new IllegalStateException();
         }
         // no need to set thread to null in the new thread

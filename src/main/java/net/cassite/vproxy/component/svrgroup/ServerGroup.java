@@ -15,6 +15,7 @@ import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetFlowRecorder;
 import net.cassite.vproxy.dns.Resolver;
+import net.cassite.vproxy.util.ConcurrentHashSet;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
@@ -22,8 +23,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
@@ -32,8 +31,6 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class ServerGroup {
-    private static final Object _VALUE_ = new Object(); // value for Map in ServerHandle
-
     public class ServerHandle implements EventLoopAttach, NetFlowRecorder, ConnCloseHandler {
         class ServerHealthCheckHandler implements HealthCheckHandler {
             @Override
@@ -121,7 +118,7 @@ public class ServerGroup {
         private final LongAdder fromRemoteBytes = new LongAdder();
         private final LongAdder toRemoteBytes = new LongAdder();
 
-        private ConcurrentMap<Connection, Object> connMap = new ConcurrentHashMap<>();
+        private ConcurrentHashSet<Connection> connMap = new ConcurrentHashSet<>();
 
         public Object data; // the data field, not used by this lib
 
@@ -166,7 +163,7 @@ public class ServerGroup {
         }
 
         void attachConnection(Connection conn) {
-            connMap.put(conn, _VALUE_);
+            connMap.add(conn);
         }
 
         public int connectionCount() {
@@ -174,7 +171,7 @@ public class ServerGroup {
         }
 
         public void copyConnections(Collection<? super Connection> c) {
-            c.addAll(connMap.keySet());
+            c.addAll(connMap);
         }
 
         public boolean isLogicDelete() {
