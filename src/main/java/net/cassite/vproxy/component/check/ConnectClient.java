@@ -16,25 +16,43 @@ import java.nio.channels.InterruptedByTimeoutException;
 public class ConnectClient {
     class ConnectClientConnectionHandler implements ClientConnectionHandler {
         private final Callback<Void, IOException> callback;
-        private final TimerEvent timerEvent;
+        private final TimerEvent connectionTimeoutEvent;
+        private boolean done = false;
+        private TimerEvent delayTimeoutEvent;
 
-        ConnectClientConnectionHandler(Callback<Void, IOException> callback, TimerEvent timerEvent) {
+        ConnectClientConnectionHandler(Callback<Void, IOException> callback, TimerEvent connectionTimeoutEvent) {
             this.callback = callback;
-            this.timerEvent = timerEvent;
+            this.connectionTimeoutEvent = connectionTimeoutEvent;
         }
 
         @SuppressWarnings("unchecked")
         @Override
         public void connected(ClientConnectionHandlerContext ctx) {
-            timerEvent.cancel(); // cancel timer if possible
-            ctx.connection.close(); // close the connection
-
-            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
+            cancelTimers(); // cancel timer if possible
+            if (checkProtocol == CheckProtocol.tcp) {
+                // for non-delay tcp, directly close the connection and return success
+                closeAndCallSucc(ctx);
+            } else {
+                assert checkProtocol == CheckProtocol.tcpDelay;
+                // for tcp-delay, wait for a while then close connection
+                delayTimeoutEvent = eventLoop.getSelectorEventLoop().delay(
+                    // wait for half the timeout,
+                    // in case the waiting time greater than checking period in TCPHealthCheckClient
+                    timeout / 2,
+                    () -> {
+                        // the connection is ok after the timeout
+                        // so callback
+                        closeAndCallSucc(ctx);
+                    });
+            }
         }
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
-            // will never fire
+            // if readable, the remote endpoint is absolutely alive
+            // we close the connection and call callback
+            cancelTimers();
+            closeAndCallSucc(ctx);
         }
 
         @Override
@@ -45,7 +63,7 @@ public class ConnectClient {
         @SuppressWarnings("unchecked")
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            timerEvent.cancel(); // cancel timer if possible
+            cancelTimers(); // cancel timer if possible
             ctx.connection.close(); // close the connection
 
             assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
@@ -55,28 +73,53 @@ public class ConnectClient {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
-            // will never fire since we do not read or write
+            // check whether is done
+            if (done)
+                return;
+            // "not done and closed" means the remote closed the connection
+            // which means: remote is listening, but something went wrong
+            // maybe an lb with no healthy backends
+            // so we consider it an unhealthy check
+            cancelTimers();
+            if (!callback.isCalled() /*already called by timer*/ && !stopped)
+                callback.failed(new IOException("remote closed"));
         }
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
             ctx.connection.close();
         }
+
+        private void cancelTimers() {
+            connectionTimeoutEvent.cancel(); // cancel the connection timeout event
+            if (delayTimeoutEvent != null) { // cancel the delay event if exists
+                delayTimeoutEvent.cancel();
+            }
+        }
+
+        private void closeAndCallSucc(ConnectionHandlerContext ctx) {
+            done = true;
+            ctx.connection.close();
+            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
+        }
     }
 
     public final NetEventLoop eventLoop;
     public final InetSocketAddress remote;
     public final InetAddress local;
+    public final CheckProtocol checkProtocol;
     public final int timeout;
     private boolean stopped = false;
 
     public ConnectClient(NetEventLoop eventLoop,
                          InetSocketAddress remote,
                          InetAddress local,
+                         CheckProtocol checkProtocol,
                          int timeout) {
         this.eventLoop = eventLoop;
         this.remote = remote;
         this.local = local;
+        this.checkProtocol = checkProtocol;
         this.timeout = timeout;
     }
 
@@ -85,8 +128,9 @@ public class ConnectClient {
         ClientConnection conn;
         try {
             conn = ClientConnection.create(remote, local,
-                // i/o buffer is not useful at all here
-                RingBuffer.allocate(0), RingBuffer.allocate(0));
+                // set input buffer to 1 to be able to read things
+                // output buffer is not useful at all here
+                RingBuffer.allocate(1), RingBuffer.allocate(0));
         } catch (IOException e) {
             if (!stopped) cb.failed(e);
             return;

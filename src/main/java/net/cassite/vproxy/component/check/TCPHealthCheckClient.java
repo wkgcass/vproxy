@@ -81,7 +81,11 @@ public class TCPHealthCheckClient {
                                 HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,
                                 HealthCheckHandler handler) {
-        this.connectClient = new ConnectClient(eventLoop, remote, local, healthCheckConfig.timeout);
+        this.connectClient = new ConnectClient(
+            eventLoop, remote, local,
+            healthCheckConfig.checkProtocol,
+            healthCheckConfig.timeout);
+
         this.period = healthCheckConfig.period;
         this.up = healthCheckConfig.up;
         this.down = healthCheckConfig.down;

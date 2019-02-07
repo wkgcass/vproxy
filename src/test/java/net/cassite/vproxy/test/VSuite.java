@@ -17,6 +17,7 @@ import org.junit.runners.Suite;
     TestDiscovery.class,
     TestKhala.class,
     TestAuto.class,
+    TestConnectClient.class,
 
     AfterAll.class
 })

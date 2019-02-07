@@ -5,16 +5,22 @@ public class HealthCheckConfig {
     public final int period;
     public final int up;
     public final int down;
+    public final CheckProtocol checkProtocol;
 
     public HealthCheckConfig(int timeout, int period, int up, int down) {
+        this(timeout, period, up, down, CheckProtocol.tcp);
+    }
+
+    public HealthCheckConfig(int timeout, int period, int up, int down, CheckProtocol checkProtocol) {
         this.timeout = timeout;
         this.period = period;
         this.up = up;
         this.down = down;
+        this.checkProtocol = checkProtocol;
     }
 
     public HealthCheckConfig(HealthCheckConfig c) {
-        this(c.timeout, c.period, c.up, c.down);
+        this(c.timeout, c.period, c.up, c.down, c.checkProtocol);
     }
 
     @Override
@@ -24,6 +30,7 @@ public class HealthCheckConfig {
             ", period=" + period +
             ", up=" + up +
             ", down=" + down +
+            ", checkProtocol=\"" + checkProtocol + '\"' +
             '}';
     }
 }

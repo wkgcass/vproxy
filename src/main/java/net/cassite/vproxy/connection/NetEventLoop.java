@@ -354,7 +354,9 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         if (cctx.connection.inBuffer.free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
             assert Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
-            ctx.rmOps(SelectionKey.OP_READ);
+            if (ctx.getChannel().isOpen()) { // the connection might be closed in readable(), so let's check
+                ctx.rmOps(SelectionKey.OP_READ);
+            }
         }
     }
 

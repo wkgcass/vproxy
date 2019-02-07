@@ -1,5 +1,6 @@
 package net.cassite.vproxy.discovery;
 
+import net.cassite.vproxy.component.check.CheckProtocol;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 
 public class TimeoutConfig {
@@ -37,6 +38,6 @@ public class TimeoutConfig {
     }
 
     public static HealthCheckConfig getDefaultHc() {
-        return new HealthCheckConfig(500, 5000, 2, 3);
+        return new HealthCheckConfig(500, 5000, 2, 3, CheckProtocol.tcpDelay);
     }
 }
