@@ -39,13 +39,13 @@ public class Shutdown {
                     System.out.println("press ctrl-c more times to quit");
                 }
             });
-            System.out.println("SIGINT handled");
+            assert Logger.lowLevelDebug("SIGINT handled");
         } catch (Exception e) {
             System.err.println("SIGINT not handled");
         }
         try {
             Signal.handle(new Signal("HUP"), s -> saveAndQuit(128 + 1));
-            System.out.println("SIGHUP handled");
+            assert Logger.lowLevelDebug("SIGHUP handled");
         } catch (Exception e) {
             System.err.println("SIGHUP not handled");
         }

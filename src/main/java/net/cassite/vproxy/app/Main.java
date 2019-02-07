@@ -68,6 +68,10 @@ public class Main {
             String next = i + 1 < args.length ? args[i + 1] : null;
             String next2 = i + 2 < args.length ? args[i + 2] : null;
             switch (arg) {
+                case "version":
+                    System.out.println(Application.get().version);
+                    System.exit(0);
+                    return;
                 case "help":
                     System.out.println(_HELP_STR_);
                     System.exit(0);

@@ -88,6 +88,11 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             cb.succeeded(Command.helpString().split("\n"));
             return;
         }
+        if (line.equals("version")) {
+            // version
+            cb.succeeded(Application.get().version);
+            return;
+        }
 
         boolean[] isListAction = {false}; // use array to change the variable captured by the inner class
         Callback<CmdResult, Throwable> callback = new Callback<CmdResult, Throwable>() {

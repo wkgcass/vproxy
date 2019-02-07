@@ -1,0 +1,22 @@
+[
+  {
+    "name" : "net.cassite.vproxy.app.cmd.Action",
+    "allPublicFields" : true
+  },
+  {
+    "name" : "net.cassite.vproxy.app.cmd.Flag",
+    "allPublicFields" : true
+  },
+  {
+    "name" : "net.cassite.vproxy.app.cmd.Param",
+    "allPublicFields" : true
+  },
+  {
+    "name" : "net.cassite.vproxy.app.cmd.Preposition",
+    "allPublicFields" : true
+  },
+  {
+    "name" : "net.cassite.vproxy.app.cmd.ResourceType",
+    "allPublicFields" : true
+  }
+]

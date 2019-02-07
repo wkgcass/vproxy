@@ -1,5 +1,6 @@
 package net.cassite.vproxy.component.app;
 
+import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.SystemCommand;
@@ -21,6 +22,10 @@ public class StdIOController {
                 continue;
             if (line.equals("h") || line.equals("help") || line.equals("man")) {
                 stdoutSync(Command.helpString());
+                continue;
+            }
+            if (line.equals("version")) {
+                stdoutSync(Application.get().version);
                 continue;
             }
             if (SystemCommand.isSystemCall(line)) {

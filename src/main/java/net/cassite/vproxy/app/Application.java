@@ -14,6 +14,8 @@ public class Application {
         return application;
     }
 
+    public final String version;
+
     public final EventLoopGroupHolder eventLoopGroupHolder;
     public final ServerGroupHolder serverGroupHolder;
     public final ServerGroupsHolder serverGroupsHolder;
@@ -28,6 +30,8 @@ public class Application {
     public final AutoLBHolder autoLBHolder;
 
     private Application() throws IOException {
+        this.version = "0.0.1-SNAPSHOT"; // _THE_VERSION_
+
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();
         this.serverGroupsHolder = new ServerGroupsHolder();

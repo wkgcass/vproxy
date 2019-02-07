@@ -3,7 +3,7 @@ plugins {
 }
 
 group 'net.cassite'
-version '0.0.1-SNAPSHOT'
+version loadVersion()
 
 sourceCompatibility = 1.8
 
@@ -13,4 +13,39 @@ repositories {
 
 dependencies {
     testCompile group: 'junit', name: 'junit', version: '4.12'
+}
+
+jar {
+    manifest {
+        attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
+    }
+}
+
+def loadVersion() {
+    def PREFIX = "this.version = \""
+    def SUFFIX = "\"; // _THE_VERSION_"
+    def ver = file(sourceSets.main.java.srcDirs[0].path + "/net/cassite/vproxy/app/Application.java")
+    def lines = ver.getText().split("\n")
+    for (def line : lines) {
+        line = line.trim()
+        if (line.startsWith(PREFIX) && line.endsWith(SUFFIX)) {
+            return line.substring(PREFIX.length(), line.length() - SUFFIX.length())
+        }
+    }
+    return "unknown"
+}
+
+task nativeImage(type: Exec, description: "build native image") {
+    dependsOn 'jar'
+
+    workingDir buildDir.path + "/libs"
+
+    def reflectconfig = sourceSets.main.resources.srcDirs[0].path + "/reflectconfig.json"
+
+    def command = ["native-image",
+                   "-H:ReflectionConfigurationFiles=" + reflectconfig,
+                   "-jar",
+                   project.name + "-" + version + ".jar"]
+    //noinspection GroovyAssignabilityCheck
+    commandLine command
 }
