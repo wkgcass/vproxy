@@ -10,6 +10,10 @@ public class AutoUtil {
         return mainResource + ":" + service; // use the service name as the lb name
     }
 
+    static String utilExtractServiceNameFromName(String mainResource, String name) {
+        return name.substring(mainResource.length() + ":".length());
+    }
+
     static String utilSgsName(String mainResource, String service) {
         return mainResource + ":groups:" + service;
     }

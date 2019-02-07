@@ -136,6 +136,17 @@ public class Sidecar {
         config.khala.addKhalaNodeListener(sidecarKhalaNodeListener);
     }
 
+    public List<String> getServices() {
+        List<String> ls = new LinkedList<>();
+        for (TcpLB lb : lbs) {
+            if (lb == null)
+                continue;
+            String serviceName = AutoUtil.utilExtractServiceNameFromName(alias, lb.alias);
+            ls.add(serviceName);
+        }
+        return ls;
+    }
+
     public synchronized void addService(String service, int localServicePort) throws Exception {
         String lbName = AutoUtil.utilLBNameFromServiceName(alias, service);
         String serverName = AutoUtil.utilServerName(service, "127.0.0.1", localServicePort);

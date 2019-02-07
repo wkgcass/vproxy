@@ -19,6 +19,7 @@ public enum ResourceType {
     persist("persist"),
     resolver("resolver"),
     dnscache("dns-cache"),
+    autolb("auto-lb"),
 
     respcontroller("resp-controller"),
     ;

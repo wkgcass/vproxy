@@ -35,4 +35,12 @@ public class ServerGroupsHolder {
         if (g == null)
             throw new NotFoundException();
     }
+
+    void clear() {
+        map.clear();
+    }
+
+    void put(String alias, ServerGroups sgs) {
+        map.put(alias, sgs);
+    }
 }

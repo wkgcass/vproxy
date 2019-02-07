@@ -18,10 +18,11 @@ public class Application {
     public final ServerGroupHolder serverGroupHolder;
     public final ServerGroupsHolder serverGroupsHolder;
     public final TcpLBHolder tcpLBHolder;
+    public final Socks5ServerHolder socks5ServerHolder;
     public final SecurityGroupHolder securityGroupHolder;
+
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
-    public final Socks5ServerHolder socks5ServerHolder;
 
     public final SidecarHolder sidecarHolder;
     public final AutoLBHolder autoLBHolder;
@@ -43,5 +44,13 @@ public class Application {
 
     static void create() throws IOException {
         application = new Application();
+    }
+
+    void clear() {
+        Application.get().eventLoopGroupHolder.clear();
+        Application.get().serverGroupHolder.clear();
+        Application.get().serverGroupsHolder.clear();
+        Application.get().tcpLBHolder.clear();
+        Application.get().socks5ServerHolder.clear();
     }
 }

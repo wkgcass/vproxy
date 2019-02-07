@@ -194,6 +194,11 @@ public class Main {
 
         // start scheduled saving task
         Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
+        // start scheduled sync task
+        if (Config.serviceMeshMode) {
+            Application.get().controlEventLoop.getSelectorEventLoop().period(10 * 1000,
+                ServiceMeshResourceSynchronizer::sync);
+        }
     }
 
     private static void saveConfig() {

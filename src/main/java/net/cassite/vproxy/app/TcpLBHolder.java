@@ -51,4 +51,12 @@ public class TcpLBHolder {
             throw new NotFoundException();
         tl.destroy();
     }
+
+    void clear() {
+        map.clear();
+    }
+
+    void put(String alias, TcpLB tcpLB) {
+        map.put(alias, tcpLB);
+    }
 }

@@ -3,6 +3,7 @@ package net.cassite.vproxy.app.cmd;
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
+import net.cassite.vproxy.component.auto.AutoLB;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.exception.XException;
@@ -66,6 +67,8 @@ public class Command {
             "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
             "\n            persist                                persisted connector, is inside tcp-lb" +
             "\n            dns-cache                              dns cache, is inside resolver" +
+            "\n        Only available in service mesh mode:" +
+            "\n            auto-lb                                auto lb resources" +
             "\n    Parameters:" +
             "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
             "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
@@ -89,6 +92,9 @@ public class Command {
             "\n        network              | net                 network: network/mask    , required when (creating security-group-rule)" +
             "\n        protocol                                   enum: tcp or udp         , required when (creating security-group-rule)" +
             "\n        port-range                                 an integer tuple $i,$j   , required when (creating security-group-rule)" +
+            "\n        service                                    service name             , required when (creating auto-lb)" +
+            "\n        zone                                       zone name                , required when (creating auto-lb)" +
+            "\n        port                                       a port integer           , required when (creating auto-lb)" +
             "\n    Usages Example:" +
             "\n        add event-loop-group elg0                  // creates a new event loop group named elg0" +
             "\n        add event-loop el00 to elg0                // creates a new event loop named el00 in elg0" +
@@ -416,8 +422,8 @@ public class Command {
         // check the app mode
         if (Config.serviceMeshMode) {
             // only list/list-detail allowed for service mesh mode
-            if (cmd.action != Action.l && cmd.action != Action.L) {
-                throw new Exception("only list/list-detail allowed for service mesh mode");
+            if (cmd.action != Action.l && cmd.action != Action.L && cmd.resource.type != ResourceType.autolb) {
+                throw new Exception("only list/list-detail allowed in service mesh mode");
             }
         }
 
@@ -718,6 +724,23 @@ public class Command {
             case resolver:
                 // disallow all operations on resolver
                 throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+            case autolb:
+                switch (cmd.action) {
+                    case r:
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case a:
+                    case R:
+                    case L:
+                    case l:
+                        AutoLBHandle.check(targetResource);
+                        if (cmd.action == Action.a) {
+                            AutoLBHandle.checkCreate(cmd);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             default:
                 throw new Exception("unknown resource type " + cmd.resource.type.fullname);
         }
@@ -1012,6 +1035,24 @@ public class Command {
                         return new CmdResult(caches, cacheStrList, utilJoinList(caches));
                     case R:
                         DnsCacheHandle.remove(this);
+                        return new CmdResult();
+                }
+            case autolb:
+                switch (action) {
+                    case l:
+                        List<String> names = AutoLBHandle.names();
+                        return new CmdResult(names, names, utilJoinList(names));
+                    case L:
+                        List<AutoLB> autoLBs = AutoLBHandle.detail();
+                        List<String> autoLBStrList = autoLBs.stream().map(l ->
+                            l.alias + " -> service " + l.service + " zone " + l.zone + " port " + l.lb.bindAddress.getPort())
+                            .collect(Collectors.toList());
+                        return new CmdResult(autoLBs, autoLBStrList, utilJoinList(autoLBStrList));
+                    case R:
+                        AutoLBHandle.remove(this);
+                        return new CmdResult();
+                    case a:
+                        AutoLBHandle.add(this);
                         return new CmdResult();
                 }
             default:

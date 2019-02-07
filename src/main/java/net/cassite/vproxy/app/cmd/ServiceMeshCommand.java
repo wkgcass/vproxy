@@ -5,6 +5,8 @@ import net.cassite.vproxy.component.auto.Sidecar;
 import net.cassite.vproxy.component.exception.XException;
 import net.cassite.vproxy.util.Callback;
 
+import java.util.List;
+
 public class ServiceMeshCommand {
     private ServiceMeshCommand() {
     }
@@ -12,12 +14,18 @@ public class ServiceMeshCommand {
     public static boolean isServiceMeshCommand(String line) {
         // line:
         // sadd service $service_name:$port
+        // srem service $service_name:$port
+        // smembers service
 
         String[] foo = line.split(" ");
-        if (foo.length != 3)
+        if (foo.length != 2 && foo.length != 3)
             return false;
-        if ((!foo[0].equalsIgnoreCase("sadd") && !foo[0].equalsIgnoreCase("srem"))
-            || !foo[1].equals("service"))
+        if (!foo[1].equals("service"))
+            return false;
+        if (foo.length == 2 && !foo[0].equalsIgnoreCase("smembers"))
+            return false;
+        assert foo.length == 3;
+        if (!foo[0].equalsIgnoreCase("sadd") && !foo[0].equalsIgnoreCase("srem"))
             return false;
         String v = foo[2];
         int idx = v.lastIndexOf(":");
@@ -43,33 +51,49 @@ public class ServiceMeshCommand {
         }
 
         String cmd;
-        String service;
-        int port;
+        String service = null;
+        int port = 0;
 
         {
             String[] arr = line.split(" ");
             cmd = arr[0].toLowerCase();
 
-            String strServicePort = arr[2];
-            int idx = strServicePort.lastIndexOf(":");
+            if (cmd.equals("sadd") || cmd.equals("srem")) {
+                String strServicePort = arr[2];
+                int idx = strServicePort.lastIndexOf(":");
 
-            service = strServicePort.substring(0, idx);
-            port = Integer.parseInt(strServicePort.substring(idx + 1));
+                service = strServicePort.substring(0, idx);
+                port = Integer.parseInt(strServicePort.substring(idx + 1));
+            }
         }
 
-        if (cmd.equals("sadd")) {
-            try {
-                sidecar.addService(service, port);
-            } catch (Exception e) {
-                callback.failed(e);
-                return;
-            }
-            callback.succeeded(new CmdResult(null, 1 /*sadd returns integer value*/, ""));
-        } else {
-            assert cmd.equals("srem");
+        switch (cmd) {
+            case "smembers":
+                List<String> list = sidecar.getServices();
+                StringBuilder sb = new StringBuilder();
+                boolean isFirst = true;
+                for (String s : list) {
+                    if (isFirst) isFirst = false;
+                    else sb.append("\n");
+                    sb.append(s);
+                }
+                callback.succeeded(new CmdResult(list, list, sb.toString()));
+                break;
+            case "sadd":
+                try {
+                    sidecar.addService(service, port);
+                } catch (Exception e) {
+                    callback.failed(e);
+                    return;
+                }
+                callback.succeeded(new CmdResult(null, 1 /*sadd returns integer value*/, ""));
+                break;
+            default:
+                assert cmd.equals("srem");
 
-            boolean removed = sidecar.maintain(service, port);
-            callback.succeeded(new CmdResult(null, (removed ? 1 : 0) /*srem returns integer value*/, ""));
+                boolean removed = sidecar.maintain(service, port);
+                callback.succeeded(new CmdResult(null, (removed ? 1 : 0) /*srem returns integer value*/, ""));
+                break;
         }
     }
 }

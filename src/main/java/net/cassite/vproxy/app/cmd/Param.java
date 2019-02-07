@@ -21,6 +21,10 @@ public enum Param {
     portrange("port-range"),
     persist("persist"),
 
+    service("service"),
+    zone("zone"),
+    port("port"),
+
     pass("password"),
     ;
     public final String fullname;

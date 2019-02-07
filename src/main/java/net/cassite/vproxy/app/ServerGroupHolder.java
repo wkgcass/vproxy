@@ -44,4 +44,12 @@ public class ServerGroupHolder {
             throw new NotFoundException();
         g.destroy();
     }
+
+    void clear() {
+        map.clear();
+    }
+
+    void put(String alias, ServerGroup sg) {
+        map.put(alias, sg);
+    }
 }
