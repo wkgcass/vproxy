@@ -10,6 +10,12 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
+    Connector connector; // maybe null, only for recording purpose, will not be used by the connection lib
+
+    public Connector getConnector() {
+        return connector;
+    }
+
     public static ClientConnection create(InetSocketAddress remote, InetAddress local,
                                           RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         return create(remote, new InetSocketAddress(local, 0), inBuffer, outBuffer);

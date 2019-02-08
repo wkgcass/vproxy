@@ -20,11 +20,18 @@ public class Connector {
     }
 
     public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
-        return ClientConnection.create(remote, local, in, out);
+        ClientConnection conn = ClientConnection.create(remote, local, in, out);
+        conn.connector = this;
+        return conn;
     }
 
     public boolean isValid() {
         return true; // it's always valid for a manually created Connector
+    }
+
+    // let user code alert that the connection failed
+    public void connectionFailed() {
+        // do nothing in default implementation
     }
 
     @Override

@@ -276,6 +276,7 @@ public class Proxy {
 
     class SessionClientConnectionHandler implements ClientConnectionHandler {
         private final Session session;
+        private boolean isConnected = false;
 
         SessionClientConnectionHandler(Session session) {
             this.session = session;
@@ -284,6 +285,7 @@ public class Proxy {
         @Override
         public void connected(ClientConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("passive connection established: " + ctx.connection);
+            isConnected = true; // it's connected
 
             // now we can add active connection into event loop
             // use event loop from context
@@ -317,6 +319,15 @@ public class Proxy {
             Logger.error(LogType.CONN_ERROR, "session got exception: " + err);
             // close both sides
             utilCloseSessionAndReleaseBuffers(session);
+
+            if (!isConnected) {
+                // the connection failed before established
+                // we should alert the connector that the connection failed
+                Connector connector = ((ClientConnection) ctx.connection).getConnector();
+                if (connector != null) {
+                    connector.connectionFailed();
+                }
+            }
         }
 
         @Override

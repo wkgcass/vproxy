@@ -28,4 +28,10 @@ class SvrHandleConnector extends Connector {
     public boolean isValid() {
         return serverHandle.valid;
     }
+
+    @Override
+    public void connectionFailed() {
+        // accelerate the down process
+        serverHandle.healthCheckClient.manuallyDownOnce();
+    }
 }

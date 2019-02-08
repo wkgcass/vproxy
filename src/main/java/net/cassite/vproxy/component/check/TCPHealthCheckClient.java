@@ -143,4 +143,10 @@ public class TCPHealthCheckClient {
         connectClient.stop();
         periodTimer = null;
     }
+
+    // call this method
+    // and the down count will +1
+    public void manuallyDownOnce() {
+        connectResultHandler.onFailed();
+    }
 }
