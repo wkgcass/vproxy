@@ -36,9 +36,7 @@ public class ConnectClient {
                 assert checkProtocol == CheckProtocol.tcpDelay;
                 // for tcp-delay, wait for a while then close connection
                 delayTimeoutEvent = eventLoop.getSelectorEventLoop().delay(
-                    // wait for half the timeout,
-                    // in case the waiting time greater than checking period in TCPHealthCheckClient
-                    timeout / 2,
+                    50, // fix the delay
                     () -> {
                         // the connection is ok after the timeout
                         // so callback

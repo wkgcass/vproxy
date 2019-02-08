@@ -18,6 +18,10 @@ import java.nio.channels.InterruptedByTimeoutException;
 import static org.junit.Assert.*;
 
 public class TestConnectClient {
+    private static final int normalServerPort = 19080;
+    private static final int directWritePort = 19081;
+    private static final int directClosePort = 19082;
+
     private static SelectorEventLoop serverLoop;
 
     @BeforeClass
@@ -25,9 +29,9 @@ public class TestConnectClient {
         serverLoop = SelectorEventLoop.open();
         serverLoop.loop(r -> new Thread(r, "serverLoop"));
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
-        new IdServer("0", serverNetLoop, 19080);
-        new SendOnConnectIdServer("abcdefghijklmn"/*make it long to fill the buffer*/, serverNetLoop, 19081);
-        new DirectCloseServer(serverNetLoop, 19082);
+        new IdServer("0", serverNetLoop, normalServerPort);
+        new SendOnConnectIdServer("abcdefghijklmn"/*make it long to fill the buffer*/, serverNetLoop, directWritePort);
+        new DirectCloseServer(serverNetLoop, directClosePort);
     }
 
     @AfterClass
@@ -51,77 +55,55 @@ public class TestConnectClient {
         netEventLoop.getSelectorEventLoop().close();
     }
 
-    @Test
-    public void connectionSuccessToNormalServer() throws Exception {
+    private void doConnect(CheckProtocol protocol, int port) throws Exception {
+        doConnect("127.0.0.1", protocol, port);
+    }
+
+    private void doConnect(String targetAddress, CheckProtocol protocol, int port) throws Exception {
         ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19080),
+            new InetSocketAddress(targetAddress, port),
             InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcp,
+            protocol,
             100);
         BlockCallback<Void, IOException> cb = new BlockCallback<>();
         client.handle(cb);
-        cb.block(); // should success
+        cb.block();
+    }
+
+    @Test
+    public void connectionSuccessToNormalServer() throws Exception {
+        doConnect(CheckProtocol.tcp, normalServerPort);
+        // should success
     }
 
     @Test
     public void connectionWithDelaySuccessToNormalServer() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19080),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcpDelay,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
-        cb.block(); // should success
+        doConnect(CheckProtocol.tcpDelay, normalServerPort);
+        // should success
     }
 
     @Test
     public void connectionSuccessToActivelyWriteServer() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19081),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcp,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
-        cb.block(); // should success
+        doConnect(CheckProtocol.tcp, directWritePort);
+        // should success
     }
 
     @Test
     public void connectionWithDelaySuccessToActivelyWriteServer() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19081),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcpDelay,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
-        cb.block(); // should success
+        doConnect(CheckProtocol.tcpDelay, directWritePort);
+        // should success
     }
 
     @Test
     public void connectionSuccessToCloseServer() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19082),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcp,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
-        cb.block(); // should success
+        doConnect(CheckProtocol.tcp, directClosePort);
+        // should success
     }
 
     @Test
     public void connectionWithDelayFailToCloseServer() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 19082),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcpDelay,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
         try {
-            cb.block();
+            doConnect(CheckProtocol.tcpDelay, directClosePort);
             fail();
         } catch (IOException e) {
             assertEquals("remote closed", e.getMessage());
@@ -130,15 +112,8 @@ public class TestConnectClient {
 
     @Test
     public void connectionFailWithReset() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 22222),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcp,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
         try {
-            cb.block();
+            doConnect(CheckProtocol.tcp, 22222);
             fail();
         } catch (IOException e) {
             assertEquals("Connection refused", e.getMessage());
@@ -147,15 +122,8 @@ public class TestConnectClient {
 
     @Test
     public void connectionWithDelayFailWithReset() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.0.0.1", 22222),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcpDelay,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
         try {
-            cb.block();
+            doConnect(CheckProtocol.tcpDelay, 22222);
             fail();
         } catch (IOException e) {
             assertEquals("Connection refused", e.getMessage());
@@ -164,15 +132,8 @@ public class TestConnectClient {
 
     @Test
     public void connectionFailWithUnreachable() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.1.2.3", 22222),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcp,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
         try {
-            cb.block();
+            doConnect("127.1.2.3", CheckProtocol.tcp, 22222);
             fail();
         } catch (IOException e) {
             assertTrue(e instanceof InterruptedByTimeoutException);
@@ -181,15 +142,8 @@ public class TestConnectClient {
 
     @Test
     public void connectionWithDelayFailWithUnreachable() throws Exception {
-        ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress("127.1.2.3", 22222),
-            InetAddress.getByName("127.0.0.1"),
-            CheckProtocol.tcpDelay,
-            100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
-        client.handle(cb);
         try {
-            cb.block();
+            doConnect("127.1.2.3", CheckProtocol.tcpDelay, 22222);
             fail();
         } catch (IOException e) {
             assertTrue(e instanceof InterruptedByTimeoutException);
