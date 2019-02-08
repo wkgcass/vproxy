@@ -8,6 +8,7 @@ import net.cassite.vproxy.component.app.StdIOController;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
@@ -34,6 +35,7 @@ public class Main {
         "\n\t\tserviceMeshConfig                            Specify config file and launch into service mesh mode" +
         "\n\t\t                                             All resources will become readonly" +
         "\n\t\t                                             and save/load/auto-save will be disabled" +
+        "\n\t\tpidFile                                      Set the pid file path" +
         "";
 
     private static void beforeStart() {
@@ -63,6 +65,7 @@ public class Main {
         // load config if specified in args
         boolean loaded = false;
         boolean noStdIOController = false;
+        String pidFilePath = null;
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
@@ -158,7 +161,7 @@ public class Main {
                     }
                     exitCode = serviceMesh.gen();
                     if (exitCode != 0) {
-                        System.exit(0);
+                        System.exit(exitCode);
                         return;
                     }
                     exitCode = serviceMesh.start();
@@ -167,6 +170,16 @@ public class Main {
                         return;
                     }
                     Config.serviceMeshMode = true;
+                    break;
+                case "pidFile":
+                    if (next == null) {
+                        System.err.println("pid file path should be specified");
+                        System.exit(1);
+                        return;
+                    }
+                    // handle pid file path, so increase the cursor
+                    ++i;
+                    pidFilePath = next;
                     break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");
@@ -186,6 +199,15 @@ public class Main {
                     System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
                 }
             }
+        }
+
+        // write pid file
+        try {
+            Shutdown.writePid(pidFilePath);
+        } catch (Exception e) {
+            Logger.fatal(LogType.UNEXPECTED, "writing pid failed: " + Utils.formatErr(e));
+            // failed on writing pid file is not a critical error
+            // so we don't quit
         }
 
         // start controllers

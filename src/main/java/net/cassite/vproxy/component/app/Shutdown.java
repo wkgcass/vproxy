@@ -15,6 +15,7 @@ import net.cassite.vproxy.util.*;
 import sun.misc.Signal;
 
 import java.io.*;
+import java.lang.management.ManagementFactory;
 import java.util.*;
 
 public class Shutdown {
@@ -79,6 +80,41 @@ public class Shutdown {
         return System.getProperty("user.home") + File.separator + ".vproxy.last";
     }
 
+    private static void backupAndRemove(String filepath) throws Exception {
+        File f = new File(filepath);
+        File bakF = new File(filepath + ".bak");
+
+        if (!f.exists())
+            return; // do nothing if no need to backup
+        if (bakF.exists() && !bakF.delete()) // remove old backup file
+            throw new Exception("remove old backup file failed: " + bakF.getPath());
+        if (f.exists() && !f.renameTo(bakF)) // do rename (backup)
+            throw new Exception("backup the file failed: " + bakF.getPath());
+    }
+
+    public static void writePid(String filepath) throws Exception {
+        if (filepath == null) {
+            filepath = System.getProperty("user.home") + File.separator + ".vproxy.pid";
+        }
+        if (filepath.startsWith("~")) {
+            filepath = System.getProperty("user.home") + filepath.substring("~".length());
+        }
+
+        backupAndRemove(filepath);
+        File f = new File(filepath);
+        if (!f.createNewFile()) {
+            throw new Exception("create new file failed");
+        }
+        FileOutputStream fos = new FileOutputStream(f);
+        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+
+        String pidStr = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
+        bw.write(pidStr + "\n");
+        bw.flush();
+
+        fos.close();
+    }
+
     @Blocking // writing file is blocking
     public static void save(String filepath) throws Exception {
         if (Config.serviceMeshMode) {
@@ -92,14 +128,8 @@ public class Shutdown {
         if (filepath.startsWith("~")) {
             filepath = System.getProperty("user.home") + filepath.substring("~".length());
         }
+        backupAndRemove(filepath);
         File f = new File(filepath);
-        File bakF = new File(filepath + ".bak");
-        if (bakF.exists() && !bakF.delete()) {
-            throw new Exception("remove old backup file failed");
-        }
-        if (f.exists() && !f.renameTo(bakF)) {
-            throw new Exception("backup old file failed");
-        }
         if (!f.createNewFile()) {
             throw new Exception("create new file failed");
         }
