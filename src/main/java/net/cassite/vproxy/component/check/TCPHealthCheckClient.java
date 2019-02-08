@@ -147,6 +147,10 @@ public class TCPHealthCheckClient {
     // call this method
     // and the down count will +1
     public void manuallyDownOnce() {
-        connectResultHandler.onFailed();
+        // should run on event loop thread
+        // because the callback not thread safe
+        connectClient.eventLoop.getSelectorEventLoop().runOnLoop(
+            connectResultHandler::onFailed
+        );
     }
 }
