@@ -1035,7 +1035,7 @@ public class HelpCommand {
                         )
                     ))
             )),
-        autolb("auto-lb", null, "Only available in service mesh mode. The auto-lb instance",
+        autolb("auto-lb", null, "A loadbalancer that learns node changes and automatically updates its backend server list. Only available in service mesh mode",
             Arrays.asList(
                 new ResActMan(ActMan.add, "create a new auto-lb instance",
                     Arrays.asList(

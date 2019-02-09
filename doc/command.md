@@ -46,8 +46,9 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 |        |
 |        +---+ server (svr)
 +---+ security-group (secg)
-         |
-         +---+ security-group-rule (secgr)
+|        |
+|        +---+ security-group-rule (secgr)
++---+ auto-lb /* only available in service mesh mode */
 
    bind-server (bs) --+
   connection (conn)   +-- /* channel */
@@ -108,7 +109,7 @@ Modify a resource.
 
 Remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted.
 
-## Action: force-remote (R)
+## Action: force-remove (R)
 
 Remove and destroy/stop a resource, regardless of warnings.
 
@@ -832,4 +833,48 @@ Get history total accepted connection count. Can be retrieved from `bind-server`
 ```
 list accepted-conn-count in bind-server 127.0.0.1:6380 in tl lb0
 (integer) 2
+```
+
+## Resource: auto-lb
+
+A loadbalancer that learns node changes and automatically updates its backend server list. Only available in service mesh mode.
+
+#### add
+
+Create a new auto-lb instance.
+
+* service: the service watched by the auto lb
+* zone: the zone watched by the auto lb
+* port: the auto lb listening port
+
+```
+add auto-lb lb0 service myservice.com:443 zone z0 port 18080
+"OK"
+```
+
+#### list
+
+Get names of auto-lb instances.
+
+```
+list auto-lb
+1) "lb0"
+```
+
+#### list-detail
+
+Get detailed info about auto-lb instances.
+
+```
+list-detail auto-lb
+1) "lb0 -> service myservice.com:443 zone z0 port 18080"
+```
+
+#### force-remove
+
+Remove an auto-lb instance.
+
+```
+force-remove auto-lb lb0
+"OK"
 ```
