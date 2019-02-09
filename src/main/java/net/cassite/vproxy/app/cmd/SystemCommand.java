@@ -24,7 +24,6 @@ public class SystemCommand {
     }
 
     static final String systemCallHelpStr = "" +
-        "\n    System commands:" +
         "\n        System call: help                          show this message" +
         "\n        System call: shutdown                      shutdown the vproxy process" +
         "\n        System call: load ${filepath}              load config commands from a file" +

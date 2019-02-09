@@ -31,77 +31,7 @@ public class Command {
     public final Map<Param, String> args = new HashMap<>();
 
     public static String helpString() {
-        return "" +
-            "vproxy:" +
-            "\n    help                     | h                   show this message" +
-            "\n    man                                            show this message" +
-            SystemCommand.systemCallHelpStr +
-            "\n    Operate a resource:" +
-            "\n        list                 | l                   list resources' names" +
-            "\n        list-detail          | L                   list detailed info about resources" +
-            "\n        add                  | a                   create a resource" +
-            "\n        add . to .           | a . to .            add a resource into another one" +
-            "\n        update               | u                   update a resource" +
-            "\n        remove               | r                   remove and release a resource" +
-            "\n        force-remove         | R                   force remove and release a resource" +
-            "\n        remove . from .      | r . from .          detach a resource from another one, the detached resource is not released" +
-            "\n    How to represent a resource:" +
-            "\n        for top level resources: ${resource-type} ${resource-name}" +
-            "\n        for sub level resources: ${resource-type} ${resource-name} in ${resource-type} ${resource-name} in ..." +
-            "\n        Available resource types:" +
-            "\n            tcp-lb           | tl                  tcp loadbalancer" +
-            "\n            socks5-server    | socks5              socks5 proxy server" +
-            "\n            event-loop-group | elg                 event loop group" +
-            "\n            server-groups    | sgs                 server groups" +
-            "\n            server-group     | sg                  server group" +
-            "\n            security-group   | secg                security group" +
-            "\n            event-loop       | el                  event loop, is inside event loop group" +
-            "\n            server           | svr                 server, is inside server group" +
-            "\n            security-group-rule | secgr            security group rule, is inside security group" +
-            "\n            resolver                               the dns resolver" +
-            "\n            bind-server      | bs                  bind server record (socket that is listening), is inside event-loop|tcp-lb|socks5-server" +
-            "\n            connection       | conn                connection record, is inside event-loop|tcp-lb|socks-server|server" +
-            "\n            session          | sess                a proxy session, is inside tcp-lb|socks5-server" +
-            "\n            bytes-in         | bin                 input bytes (net flow from remote to local), is inside bind-server|connection|server" +
-            "\n            bytes-out        | bout                output bytes(net flow from local to remote), is inside bind-server|connection|server" +
-            "\n            accepted-conn-count                    accepted connections count, is inside bind-server" +
-            "\n            persist                                persisted connector, is inside tcp-lb" +
-            "\n            dns-cache                              dns cache, is inside resolver" +
-            "\n        Only available in service mesh mode:" +
-            "\n            auto-lb                                auto lb resources" +
-            "\n    Parameters:" +
-            "\n        timeout                                    health check timeout     , required when (creating|updating server group) or (updating server group health check)" +
-            "\n        period                                     health check period      , required when (creating|updating server group) or (updating server group health check)" +
-            "\n        up                                         health check up times    , required when (creating|updating server group) or (updating server group health check)" +
-            "\n        down                                       health check down times  , required when (creating|updating server group) or (updating server group health check)" +
-            "\n        method               | meth                method to retrieve       , required when (creating|updating server group)" +
-            "\n        weight               | w                   weight                   , required when (adding|updating server in server group)" +
-            "\n        event-loop-group     | elg                 event loop group         , required when (creating server group) or" +
-            "\n                                                                                            (creating tcp-lb as the worker group) or" +
-            "\n                                                                                            (creating socks5-server as the worker group)" +
-            "\n        acceptor-elg         | aelg                acceptor event loop group, required when (creating tcp-lb) or (creating socks5-server)" +
-            "\n        address              | addr                ip address or ip:port    , required when (creating tcp-lb) or (creating socks5-server) or" +
-            "\n                                                                                            (adding server into server group)" +
-            "\n        ip                   | via                 ip address               , required when (adding server into server group as the local ip)" +
-            "\n        server-groups        | sgs                 server groups            , required when (creating tcp-lb) or (creating socks5-server)" +
-            "\n        in-buffer-size                             in buffer size           , required when (creating|updating tcp-lb) or (creating|updating socks5-server)" +
-            "\n        out-buffer-size                            out buffer size          , required when (creating|updating tcp-lb) or (creating|updating socks5-server)" +
-            "\n        security-group       | secg                security group           , required when (creating tcp-lb) or (creating socks5-server)" +
-            "\n        persist                                    connector persist timeout, required when (creating|updating tcp-lb)" +
-            "\n        default                                    enum: allow or deny      , required when (creating security-group-rule) or (creating security-group)" +
-            "\n        network              | net                 network: network/mask    , required when (creating security-group-rule)" +
-            "\n        protocol                                   enum: tcp or udp         , required when (creating security-group-rule)" +
-            "\n        port-range                                 an integer tuple $i,$j   , required when (creating security-group-rule)" +
-            "\n        service                                    service name             , required when (creating auto-lb)" +
-            "\n        zone                                       zone name                , required when (creating auto-lb)" +
-            "\n        port                                       a port integer           , required when (creating auto-lb)" +
-            "\n    Usages Example:" +
-            "\n        add event-loop-group elg0                  // creates a new event loop group named elg0" +
-            "\n        add event-loop el00 to elg0                // creates a new event loop named el00 in elg0" +
-            "\n        add server-group g0 timeout 500 period 800 up 4 down 5 method wrr elg elg0     // creates a server group named g0 with these arguments" +
-            "\n        list-detail tcp-lb                         // list detailed info about all tcp lbs" +
-            ""
-            ;
+        return HelpCommand.helpString();
     }
 
     public static Command parseStrCmd(String line) throws Exception {

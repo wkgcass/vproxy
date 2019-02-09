@@ -88,6 +88,10 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             cb.succeeded(Command.helpString().split("\n"));
             return;
         }
+        if (line.startsWith("man ")) {
+            cb.succeeded(HelpCommand.manLine(line).split("\n"));
+            return;
+        }
         if (line.equals("version")) {
             // version
             cb.succeeded(Application.get().version);
