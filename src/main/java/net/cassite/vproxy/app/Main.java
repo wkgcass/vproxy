@@ -32,10 +32,12 @@ public class Main {
         "\n\t\t                                             if the flag is set" +
         "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
         "\n" +
-        "\n\t\tserviceMeshConfig                            Specify config file and launch into service mesh mode" +
+        "\n\t\tserviceMeshConfig ${filename}                Specify config file and launch into service mesh mode" +
         "\n\t\t                                             All resources will become readonly" +
         "\n\t\t                                             and save/load/auto-save will be disabled" +
         "\n\t\tpidFile                                      Set the pid file path" +
+        "\n" +
+        "\n\t\tnoLoadLast                                   Do not load last config on start up" +
         "";
 
     private static void beforeStart() {
@@ -180,6 +182,9 @@ public class Main {
                     // handle pid file path, so increase the cursor
                     ++i;
                     pidFilePath = next;
+                    break;
+                case "noLoadLast":
+                    loaded = true; // set this flag to true, then last config won't be loaded
                     break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");
