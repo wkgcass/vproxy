@@ -3,9 +3,12 @@ package net.cassite.vproxy.component.app;
 import net.cassite.vproxy.app.*;
 import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.mesh.ServiceMeshMain;
+import net.cassite.vproxy.component.auto.AutoConfig;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
+import net.cassite.vproxy.component.exception.NoException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.secure.SecurityGroupRule;
@@ -35,7 +38,7 @@ public class Shutdown {
                 ++sigIntTimes;
                 if (sigIntTimes >= sigIntBeforeTerminate) {
                     sigIntTimes = -10000; // set to a very small number to prevent triggered multiple times
-                    saveAndQuit(128 + 2);
+                    endSaveAndQuit(128 + 2);
                 } else {
                     System.out.println("press ctrl-c more times to quit");
                 }
@@ -45,7 +48,7 @@ public class Shutdown {
             System.err.println("SIGINT not handled");
         }
         try {
-            Signal.handle(new Signal("HUP"), s -> saveAndQuit(128 + 1));
+            Signal.handle(new Signal("HUP"), s -> endSaveAndQuit(128 + 1));
             assert Logger.lowLevelDebug("SIGHUP handled");
         } catch (Exception e) {
             System.err.println("SIGHUP not handled");
@@ -64,16 +67,26 @@ public class Shutdown {
 
     public static void shutdown() {
         System.err.println("bye");
-        saveAndQuit(0);
+        endSaveAndQuit(0);
     }
 
-    private static void saveAndQuit(int exitCode) {
+    private static void endSaveAndQuit(int exitCode) {
+        end();
         try {
             save(null);
         } catch (Exception e) {
             Logger.shouldNotHappen("save failed", e);
         }
         System.exit(exitCode);
+    }
+
+    private static void end() {
+        AutoConfig autoConfig = ServiceMeshMain.getInstance().getAutoConfig();
+        if (autoConfig != null) {
+            BlockCallback<Void, NoException> cb = new BlockCallback<>();
+            autoConfig.khala.discovery.close(cb);
+            cb.block();
+        }
     }
 
     public static String defaultFilePath() {
