@@ -32,7 +32,7 @@ public class TimeoutConfig {
         return new TimeoutConfig(
             250,
             10500,
-            200,
+            50,
             60 * 1000,
             5 * 60 * 1000);
     }

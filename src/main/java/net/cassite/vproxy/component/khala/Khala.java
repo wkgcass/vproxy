@@ -508,8 +508,8 @@ public class Khala {
 
     // handle khala response
     private void handleFullKhala(Map<Node, List<KhalaNode>> remoteNodeMap) {
-        if (remoteNodeMap.size() <= 1) {
-            // ignore if the remote has no node data or only contain a self node
+        if (remoteNodeMap.isEmpty()) {
+            // ignore if the remote has no node data
             return;
         }
         for (Node n : remoteNodeMap.keySet()) {
