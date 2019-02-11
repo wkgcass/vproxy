@@ -24,7 +24,9 @@ public class ServiceMeshCommand {
             return false;
         if (foo.length == 2 && !foo[0].equalsIgnoreCase("smembers"))
             return false;
-        assert foo.length == 3;
+        if (foo.length == 2)
+            return true; // the cmd "smembers service" is already checked, so directly return true here
+
         if (!foo[0].equalsIgnoreCase("sadd") && !foo[0].equalsIgnoreCase("srem"))
             return false;
         String v = foo[2];

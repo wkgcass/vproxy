@@ -11,6 +11,7 @@ import net.cassite.vproxy.discovery.DiscoveryConfig;
 import net.cassite.vproxy.discovery.TimeoutConfig;
 import net.cassite.vproxy.util.IPType;
 import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxy.util.Utils;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -185,7 +186,8 @@ public class ServiceMeshMain {
             this.autoConfig = new AutoConfig(aelg, workerGroup, khala,
                 nic, ipType, TimeoutConfig.getDefaultHc(), Method.wrr);
         } catch (Exception e) {
-            return exit("got exception: " + e.getClass().getSimpleName() + " " + e.getMessage());
+            e.printStackTrace();
+            return exit("got exception: " + Utils.formatErr(e));
         }
         return 0;
     }

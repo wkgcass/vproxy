@@ -8,6 +8,7 @@ name=$4
 # make MacOS image on the host system
 native-image \
     -H:ReflectionConfigurationFiles="$reflectconfigpath/$reflectconfig" \
+    -D+A:UseDatagramChannel=false \
     -jar "$libdir/$name.jar" \
     "$libdir/$name-macos"
 
@@ -20,6 +21,7 @@ docker \
     \
     /graalvm/bin/native-image \
     -H:ReflectionConfigurationFiles="/vproxy_res/$reflectconfig" \
+    -D+A:UseDatagramChannel=false \
     -jar "/vproxy_lib/$name.jar" \
     "/vproxy_lib/$name-linux"
 

@@ -1,5 +1,6 @@
 package net.cassite.vproxy.discovery;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.*;
 import net.cassite.vproxy.component.svrgroup.Method;
@@ -15,6 +16,7 @@ import net.cassite.vproxy.redis.RESPConfig;
 import net.cassite.vproxy.redis.RESPProtocolHandler;
 import net.cassite.vproxy.redis.Serializer;
 import net.cassite.vproxy.redis.application.*;
+import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.*;
 import sun.nio.ch.DirectBuffer;
@@ -89,8 +91,7 @@ public class Discovery {
     }
 
     class NodeExistenceConnectionHandler implements ConnectionHandler {
-        private void clearBuffer(ConnectionHandlerContext ctx) {
-            RingBuffer rb = ctx.connection.inBuffer;
+        private void clearBuffer(RingBuffer rb) {
             if (rb.used() <= 0)
                 return;
             byte[] tmp = new byte[rb.used()];
@@ -107,8 +108,24 @@ public class Discovery {
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
-            Parser parser = new Parser(ctx.connection.inBuffer.capacity());
-            int res = parser.feed(ctx.connection.inBuffer);
+            handle(ctx.connection.remote.getAddress(), ctx.connection.inBuffer);
+        }
+
+        public void readable(InetAddress remoteAddr, byte[] bytes, int len) {
+            RingBuffer rb = RingBuffer.allocate(len);
+            ByteArrayChannel chnl = ByteArrayChannel.from(bytes, 0, len, 0);
+            try {
+                rb.storeBytesFrom(chnl);
+            } catch (IOException e) {
+                // it's memory operation, should not happen
+                return;
+            }
+            handle(remoteAddr, rb);
+        }
+
+        void handle(InetAddress remoteAddr, RingBuffer buffer) {
+            Parser parser = new Parser(buffer.capacity());
+            int res = parser.feed(buffer);
             if (res == -1) {
                 String msg = parser.getErrorMessage();
                 if (msg == null) {
@@ -116,12 +133,12 @@ public class Discovery {
                 } else {
                     Logger.error(LogType.INVALID_EXTERNAL_DATA, "parse error " + msg);
                 }
-                clearBuffer(ctx);
+                clearBuffer(buffer);
                 return;
             }
-            if (ctx.connection.inBuffer.used() > 0) {
+            if (buffer.used() > 0) {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid data, still have data after parsing");
-                clearBuffer(ctx);
+                clearBuffer(buffer);
                 return;
             }
             Object o = parser.getResult().getJavaObject();
@@ -146,7 +163,7 @@ public class Discovery {
                 return;
             }
 
-            String remote = Utils.ipStr(ctx.connection.remote.getAddress().getAddress());
+            String remote = Utils.ipStr(remoteAddr.getAddress());
 
             switch (msg.type) {
                 case "search": {
@@ -384,8 +401,12 @@ public class Discovery {
 
     // resources
     private final EventLoopGroup eventLoopGroup;
+    private final SelectorEventLoop blockingUDPSendThread;
+    private final SelectorEventLoop blockingUDPRecvThread;
     private final DatagramChannel udpSock;
+    private final DatagramSocket udpBlockingSock;
     private final BindServer udpServer;
+    private final DatagramSocket udpBlockingServer;
     private final BindServer tcpServer;
 
     private boolean intoInterval = false; // should go into a long interval
@@ -401,56 +422,118 @@ public class Discovery {
 
     private int initialSearchCount = 0;
 
-    public Discovery(String nodeName,
-                     DiscoveryConfig config) throws IOException {
-        eventLoopGroup = new EventLoopGroup("EventLoopGroup:" + nodeName);
+    public Discovery(String nodeName, DiscoveryConfig config) throws IOException {
+        SelectorEventLoop blockingUDPSendThread = null;
+        SelectorEventLoop blockingUDPRecvThread = null;
+        EventLoopGroup eventLoopGroup = null;
+        ServerGroup hcGroup = null;
+        ByteBuffer searchBuffer = null;
+        ByteBuffer informBuffer = null;
+        DatagramChannel udpSock = null;
+        DatagramSocket udpBlockingSock = null;
+        BindServer udpServer = null;
+        DatagramSocket udpBlockingServer = null;
+        BindServer tcpServer = null;
+
         try {
-            eventLoopGroup.add("EventLoop:" + nodeName);
-        } catch (AlreadyExistException | ClosedException e) {
-            Logger.shouldNotHappen("adding event loop failed", e);
-            throw new RuntimeException(e);
+            blockingUDPSendThread = SelectorEventLoop.open();
+            if (!Config.useDatagramChannel)
+                blockingUDPSendThread.loop(r -> new Thread(r, "BlockingUDPSendThread:" + nodeName));
+            blockingUDPRecvThread = SelectorEventLoop.open();
+            if (!Config.useDatagramChannel)
+                blockingUDPRecvThread.loop(r -> new Thread(r, "BlockingUDPRecvThread:" + nodeName));
+            eventLoopGroup = new EventLoopGroup("EventLoopGroup:" + nodeName);
+            try {
+                eventLoopGroup.add("EventLoop:" + nodeName);
+            } catch (AlreadyExistException | ClosedException e) {
+                Logger.shouldNotHappen("adding event loop failed", e);
+                throw new RuntimeException(e);
+            }
+
+            this.nodeName = nodeName;
+
+            this.loop = eventLoopGroup.next();
+            assert this.loop != null;
+
+            this.config = config;
+            try {
+                hcGroup = new ServerGroup("nodes", eventLoopGroup, config.healthCheckConfig, Method.wrr);
+            } catch (AlreadyExistException | ClosedException e) {
+                Logger.shouldNotHappen("adding health check group failed", e);
+                throw new RuntimeException(e);
+            }
+            hcGroup.addServerListener(new HealthListener());
+
+            searchBuffer = Config.useDatagramChannel
+                ? ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/)
+                : ByteBuffer.allocate(/*--*/nodeName.getBytes().length + 256/*make it large enough*/);
+            informBuffer = Config.useDatagramChannel
+                ? ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/)
+                : ByteBuffer.allocate(/*--*/nodeName.getBytes().length + 256/*make it large enough*/);
+            Node n = new Node(nodeName, config.bindAddress, config.udpPort, config.tcpPort);
+            n.healthy = true;
+            this.localNode = n;
+            String groupServerName = buildGroupServerName(nodeName, config.bindAddress, config.tcpPort);
+            nodes.put(groupServerName, new NodeDetach(groupServerName, n, true));
+
+            udpSock = startUdpSock();
+            udpBlockingSock = startUdpBlockingSock();
+            udpServer = startUdpServer();
+            udpBlockingServer = createUdpBlockingServer();
+            tcpServer = startTcpServer();
+        } catch (Throwable t) {
+            // release
+            if (blockingUDPSendThread != null)
+                blockingUDPSendThread.close();
+            if (blockingUDPRecvThread != null)
+                blockingUDPRecvThread.close();
+            if (eventLoopGroup != null)
+                eventLoopGroup.close();
+            if (hcGroup != null)
+                hcGroup.clear();
+            if (searchBuffer instanceof DirectBuffer)
+                ((DirectBuffer) searchBuffer).cleaner().clean();
+            if (informBuffer instanceof DirectBuffer)
+                ((DirectBuffer) informBuffer).cleaner().clean();
+            if (udpSock != null)
+                udpSock.close();
+            if (udpBlockingSock != null)
+                udpBlockingSock.close();
+            if (udpServer != null)
+                udpServer.close();
+            if (udpBlockingServer != null)
+                udpBlockingServer.close();
+            //noinspection ConstantConditions
+            if (tcpServer != null)
+                tcpServer.close();
+            // raise
+            if (t instanceof IOException) {
+                throw (IOException) t;
+            } else if (t instanceof RuntimeException) {
+                throw (RuntimeException) t;
+            } else {
+                throw new RuntimeException(t);
+            }
         }
+        // assign local fields
+        this.blockingUDPSendThread = blockingUDPSendThread;
+        this.blockingUDPRecvThread = blockingUDPRecvThread;
+        this.eventLoopGroup = eventLoopGroup;
+        this.hcGroup = hcGroup;
+        this.searchBuffer = searchBuffer;
+        this.informBuffer = informBuffer;
+        this.udpSock = udpSock;
+        this.udpBlockingSock = udpBlockingSock;
+        this.udpServer = udpServer;
+        this.udpBlockingServer = udpBlockingServer;
+        this.tcpServer = tcpServer;
 
-        this.nodeName = nodeName;
-
-        this.loop = eventLoopGroup.next();
-        assert this.loop != null;
-
-        this.config = config;
-        try {
-            this.hcGroup = new ServerGroup("nodes", eventLoopGroup, config.healthCheckConfig, Method.wrr);
-        } catch (AlreadyExistException | ClosedException e) {
-            Logger.shouldNotHappen("adding health check group failed", e);
-            throw new RuntimeException(e);
-        }
-        this.hcGroup.addServerListener(new HealthListener());
-
-        searchBuffer = ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/);
-        informBuffer = ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/);
-        Node n = new Node(nodeName, config.bindAddress, config.udpPort, config.tcpPort);
-        n.healthy = true;
-        this.localNode = n;
-        String groupServerName = buildGroupServerName(nodeName, config.bindAddress, config.tcpPort);
-        nodes.put(groupServerName, new NodeDetach(groupServerName, n, true));
+        // calc
         calcAll();
-
         resetSearchAddressBytes();
 
-        this.udpSock = startUdpSock();
-        try {
-            this.udpServer = startUdpServer();
-        } catch (IOException e) {
-            this.udpSock.close();
-            throw e;
-        }
-        try {
-            this.tcpServer = startTcpServer();
-        } catch (IOException e) {
-            this.udpSock.close();
-            this.udpServer.close();
-            throw e;
-        }
-
+        // start
+        startUdpBlockingServer();
         loop.getSelectorEventLoop().delay(config.timeoutConfig.delayWhenNotJoined, this::startSearch);
     }
 
@@ -514,7 +597,18 @@ public class Discovery {
         System.arraycopy(config.searchNetworkByte, 0, searchNetworkByte, 0, searchNetworkByte.length);
     }
 
+    private DatagramSocket startUdpBlockingSock() throws IOException {
+        if (Config.useDatagramChannel)
+            return null;
+        DatagramSocket sock = new DatagramSocket(null);
+        // sock.setReuseAddress(true); graalvm doesn't support
+        sock.bind(new InetSocketAddress(config.bindInetAddress, config.udpSockPort));
+        return sock;
+    }
+
     private DatagramChannel startUdpSock() throws IOException {
+        if (!Config.useDatagramChannel)
+            return null;
         DatagramChannel chnl = DatagramChannel.open((config.bindInetAddress instanceof Inet6Address)
             ? StandardProtocolFamily.INET6
             : StandardProtocolFamily.INET);
@@ -524,7 +618,39 @@ public class Discovery {
         return chnl;
     }
 
+    private DatagramSocket createUdpBlockingServer() throws IOException {
+        if (Config.useDatagramChannel)
+            return null;
+        DatagramSocket server = new DatagramSocket(null);
+        // server.setReuseAddress(true); grralvm doesn't support
+        server.bind(new InetSocketAddress(config.bindInetAddress, config.udpPort));
+        return server;
+    }
+
+    private void startUdpBlockingServer() {
+        if (Config.useDatagramChannel)
+            return;
+        blockingUDPRecvThread.runOnLoop(() -> {
+            byte[] buf = new byte[16384];
+            DatagramPacket pkt = new DatagramPacket(buf, 0, buf.length);
+            while (!udpBlockingServer.isClosed()) {
+                try {
+                    udpBlockingServer.receive(pkt);
+                } catch (IOException e) {
+                    // maybe the error is because that the socket is closed
+                    if (!udpBlockingServer.isClosed()) {
+                        Logger.shouldNotHappen("udp blocking server receive() failed", e);
+                    }
+                    continue;
+                }
+                nodeExistenceConnectionHandler.readable(pkt.getAddress(), buf, pkt.getLength());
+            }
+        });
+    }
+
     private BindServer startUdpServer() throws IOException {
+        if (!Config.useDatagramChannel)
+            return null;
         BindServer udp = BindServer.createUDP(new InetSocketAddress(config.bindInetAddress, config.udpPort));
         loop.addServer(udp, null, nodeExistenceServerHandler);
         return udp;
@@ -585,7 +711,24 @@ public class Discovery {
     private void sendBuffer(ByteBuffer buffer, InetSocketAddress sockAddr) throws IOException {
         int pos = buffer.position();
         int lim = buffer.limit();
-        int res = udpSock.send(buffer, sockAddr);
+        int res;
+        if (Config.useDatagramChannel) {
+            res = udpSock.send(buffer, sockAddr);
+        } else {
+            res = lim; // mock the res, we don't care about the result anyway
+            byte[] bytes = buffer.array();
+            DatagramPacket pkt = new DatagramPacket(bytes, lim);
+            pkt.setAddress(sockAddr.getAddress());
+            pkt.setPort(sockAddr.getPort());
+            blockingUDPSendThread.runOnLoop(() -> {
+                assert Logger.lowLevelDebug("run blocking udp sock to send data");
+                try {
+                    udpBlockingSock.send(pkt);
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("send udp pkt failed", e);
+                }
+            });
+        }
         assert Logger.lowLevelDebug("udpSock.send wrote " + res + " bytes");
         buffer.position(pos).limit(lim);
     }
@@ -813,7 +956,11 @@ public class Discovery {
         closed = true;
 
         // close the udp server to stop receiving packets
-        udpServer.close();
+        if (Config.useDatagramChannel) {
+            udpServer.close();
+        } else {
+            udpBlockingServer.close();
+        }
         // send `leave` message to all nodes
         Object[] messageToSend = {
             1 /*version*/,
@@ -824,7 +971,10 @@ public class Discovery {
             "",
         };
         byte[] bytesToSend = Serializer.from(messageToSend);
-        ByteBuffer byteBuffer = ByteBuffer.allocateDirect(bytesToSend.length);
+        ByteBuffer byteBuffer =
+            Config.useDatagramChannel
+                ? ByteBuffer.allocateDirect(bytesToSend.length)
+                : ByteBuffer.allocate(bytesToSend.length);
         byteBuffer.put(bytesToSend);
         byteBuffer.flip();
         leave(byteBuffer, nodes.values().iterator(), new Callback<Void, NoException>() {
@@ -879,7 +1029,11 @@ public class Discovery {
             // we ignore the error because it's closing
         }
         try {
-            udpSock.close();
+            if (Config.useDatagramChannel) {
+                udpSock.close();
+            } else {
+                udpBlockingSock.close();
+            }
         } catch (IOException e) {
             // ignore, we can do nothing about it
             Logger.error(LogType.UNEXPECTED, "closing the udpSock failed", e);
@@ -891,6 +1045,16 @@ public class Discovery {
         }
         if (informBuffer instanceof DirectBuffer) {
             ((DirectBuffer) informBuffer).cleaner().clean();
+        }
+
+        // close blocking threads
+        try {
+            blockingUDPRecvThread.close();
+        } catch (IOException ignore) {
+        }
+        try {
+            blockingUDPSendThread.close();
+        } catch (IOException ignore) {
         }
 
         // callback
