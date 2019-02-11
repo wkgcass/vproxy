@@ -49,3 +49,21 @@ task nativeImage(type: Exec, description: "build native image") {
     //noinspection GroovyAssignabilityCheck
     commandLine command
 }
+
+// make sure you are running MacOS and has a docker image called `native-image-pack`
+// graalvm is in `/graalvm` inside the image
+// also note that, all stopped containers will be removed
+task nativeImageAll(type: Exec, description: "build macos and linux images") {
+    dependsOn 'jar'
+
+    def libdir = buildDir.path + "/libs"
+    def reflectconfigpath = sourceSets.main.resources.srcDirs[0].path
+    def reflectconfig = "reflectconfig.json"
+    def name = project.name + "-" + version
+
+    def command = ["/bin/bash",
+                   reflectconfigpath + "/nativeImageAll.sh",
+                   libdir, reflectconfigpath, reflectconfig, name]
+    //noinspection GroovyAssignabilityCheck
+    commandLine command
+}
