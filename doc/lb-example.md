@@ -122,7 +122,7 @@ Then the tcp loadbalancer starts.
 
 #### Check and save config
 
-You can run some special commands in vproxy console, they **CANNOT** be executed from `redis-cli`.
+You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCallInNonStdIOController` on start up, but methods related to local filesystem or process will not be allowed for safety concern).
 
 Check config:
 
