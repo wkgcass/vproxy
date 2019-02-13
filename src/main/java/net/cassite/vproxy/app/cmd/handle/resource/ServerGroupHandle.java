@@ -131,12 +131,12 @@ public class ServerGroupHandle {
             List<String> names = holder.names();
             List<ServerGroupRef> list = new LinkedList<>();
             for (String name : names) {
-                list.add(new ServerGroupRef(holder.get(name)));
+                list.add(new ServerGroupRef(name, holder.get(name)));
             }
             return list;
         } else {
             return ServerGroupsHandle.get(targetResource).getServerGroups()
-                .stream().map(ServerGroupRef::new).collect(Collectors.toList());
+                .stream().map(h -> new ServerGroupRef(h.alias, h)).collect(Collectors.toList());
         }
     }
 
@@ -200,15 +200,18 @@ public class ServerGroupHandle {
     }
 
     public static class ServerGroupRef {
+        private final String alias;
         private final ServerGroup g;
         private final ServerGroups.ServerGroupHandle h;
 
-        public ServerGroupRef(ServerGroup g) {
+        public ServerGroupRef(String alias, ServerGroup g) {
+            this.alias = alias; // serverGroup alias may not be the same as g.alias (see ServiceMeshResourceSynchronizer)
             this.g = g;
             this.h = null;
         }
 
-        public ServerGroupRef(ServerGroups.ServerGroupHandle h) {
+        public ServerGroupRef(String alias, ServerGroups.ServerGroupHandle h) {
+            this.alias = alias;
             this.h = h;
             this.g = h.group;
         }
@@ -216,7 +219,7 @@ public class ServerGroupHandle {
         @Override
         public String toString() {
             HealthCheckConfig c = g.getHealthCheckConfig();
-            return g.alias + " -> timeout " + c.timeout + " period " + c.period +
+            return alias + " -> timeout " + c.timeout + " period " + c.period +
                 " up " + c.up + " down " + c.down + " method " + g.getMethod() +
                 " event-loop-group " + g.eventLoopGroup.alias +
                 (h == null ? "" : " weight " + h.getWeight());
