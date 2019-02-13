@@ -352,8 +352,20 @@ public class Command {
         // check the app mode
         if (Config.serviceMeshMode) {
             // only list/list-detail allowed for service mesh mode
-            if (cmd.action != Action.l && cmd.action != Action.L && cmd.resource.type != ResourceType.autolb) {
-                throw new Exception("only list/list-detail allowed in service mesh mode");
+            if (cmd.action != Action.l && cmd.action != Action.L) {
+                //noinspection PointlessBooleanExpression
+                if (true
+                    // auto-lb can be operated
+                    && cmd.resource.type != ResourceType.autolb
+                    // connection related resources can be removed
+                    && cmd.resource.type != ResourceType.bs
+                    && cmd.resource.type != ResourceType.conn
+                    && cmd.resource.type != ResourceType.sess
+                    && cmd.resource.type != ResourceType.persist
+                    && cmd.resource.type != ResourceType.dnscache
+                ) {
+                    throw new Exception("only list/list-detail allowed in service mesh mode");
+                }
             }
         }
 
