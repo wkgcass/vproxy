@@ -390,7 +390,8 @@ public class Shutdown {
                 String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
                     " event-loop-group " + socks5.workerGroup.alias +
                     " address " + socks5.server.id() + " server-groups " + socks5.backends.alias +
-                    " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize();
+                    " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
+                    " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
                 if (!socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + socks5.securityGroup.alias;
                 }

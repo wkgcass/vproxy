@@ -22,7 +22,7 @@ public class Socks5ServerHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    public void add(String alias,
+    public Socks5Server add(String alias,
                     EventLoopGroup acceptorEventLoopGroup,
                     EventLoopGroup workerEventLoopGroup,
                     InetSocketAddress bindAddress,
@@ -35,6 +35,7 @@ public class Socks5ServerHolder {
         Socks5Server socks5Server = new Socks5Server(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, inBufferSize, outBufferSize, securityGroup);
         map.put(alias, socks5Server);
         socks5Server.start();
+        return socks5Server;
     }
 
     public Socks5Server get(String alias) throws NotFoundException {

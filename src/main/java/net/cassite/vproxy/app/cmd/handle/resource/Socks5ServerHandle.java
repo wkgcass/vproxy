@@ -2,6 +2,7 @@ package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.cmd.Flag;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
@@ -94,9 +95,14 @@ public class Socks5ServerHandle {
         } else {
             secg = SecurityGroup.allowAll();
         }
-        Application.get().socks5ServerHolder.add(
+        Socks5Server server = Application.get().socks5ServerHolder.add(
             alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg
         );
+        if (cmd.flags.contains(Flag.allownonbackend)) {
+            server.allowNonBackend = true;
+        } else if (cmd.flags.contains(Flag.denynonbackend)) {
+            server.allowNonBackend = false;
+        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -111,6 +117,11 @@ public class Socks5ServerHandle {
         }
         if (cmd.args.containsKey(Param.outbuffersize)) {
             socks5.setOutBufferSize(OutBufferSizeHandle.get(cmd));
+        }
+        if (cmd.flags.contains(Flag.allownonbackend)) {
+            socks5.allowNonBackend = true;
+        } else if (cmd.flags.contains(Flag.denynonbackend)) {
+            socks5.allowNonBackend = false;
         }
     }
 
@@ -127,7 +138,8 @@ public class Socks5ServerHandle {
                 + " bind " + Utils.ipStr(socks5.bindAddress.getAddress().getAddress()) + ":" + socks5.bindAddress.getPort()
                 + " backends " + socks5.backends.alias
                 + " in buffer size " + socks5.getInBufferSize() + " out buffer size " + socks5.getOutBufferSize()
-                + " security-group " + socks5.securityGroup.alias;
+                + " security-group " + socks5.securityGroup.alias
+                + " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
         }
     }
 }
