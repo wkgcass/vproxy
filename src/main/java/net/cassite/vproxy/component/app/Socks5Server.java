@@ -122,6 +122,7 @@ public class Socks5Server extends TcpLB {
                     protected void onFailed(UnknownHostException err) {
                         // resolve failed
                         assert Logger.lowLevelDebug("resolve for " + address + " failed in socks5 server" + err);
+                        providedCallback.accept(null);
                     }
                 });
             } else {
