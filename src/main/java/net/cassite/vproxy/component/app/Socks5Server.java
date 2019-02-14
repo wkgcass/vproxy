@@ -22,6 +22,7 @@ import net.cassite.vproxy.util.Utils;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 public class Socks5Server extends TcpLB {
@@ -48,11 +49,13 @@ public class Socks5Server extends TcpLB {
     // singleton in one Socks5Server object
     class Socks5ServerConnectorProvider implements Socks5ConnectorProvider {
         @Override
-        public Connector provide(Connection accepted, AddressType type, String address, int port) {
+        public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
             // check whitelist
             InetAddress remoteAddress = accepted.remote.getAddress();
-            if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
-                return null; // terminated by securityGroup
+            if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort())) {
+                providedCallback.accept(null);
+                return; // terminated by securityGroup
+            }
 
             // then let's try to find a connector
             ServerGroups serverGroups = Socks5Server.super.backends;
@@ -61,7 +64,8 @@ public class Socks5Server extends TcpLB {
                 // search for a group with name same as the address:port
                 for (ServerGroups.ServerGroupHandle gh : serverGroups.getServerGroups()) {
                     if (gh.alias.equals(addrport)) { // matches
-                        return gh.group.next();
+                        providedCallback.accept(gh.group.next());
+                        return;
                     }
                 }
             } else {
@@ -70,14 +74,15 @@ public class Socks5Server extends TcpLB {
                     for (ServerGroup.ServerHandle sh : gh.group.getServerHandles()) {
                         // match address and port
                         if (Utils.ipStr(sh.server.getAddress().getAddress()).equals(address) && sh.server.getPort() == port) {
-                            return sh.makeConnector();
+                            providedCallback.accept(sh.makeConnector());
+                            return;
                         }
                     }
                 }
             }
             // return null if not found
             // the lib will handle it
-            return null;
+            providedCallback.accept(null);
         }
     }
 

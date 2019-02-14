@@ -249,19 +249,51 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
             }
             address = Utils.ipStr(pctx.address);
         }
-        Connector connector = connectorProvider.provide(ctx.connection, pctx.reqType, address, pctx.port);
-        if (connector == null) {
-            assert Logger.lowLevelDebug("connector NOT found for " + address + ":" + pctx.port);
-            pctx.errType = Socks5ProxyContext.CONNECTION_NOT_ALLOWED_BY_RULESET;
-            return -1;
-        } else {
-            assert Logger.lowLevelDebug("connector found for " + address + ":" + pctx.port + ", " + connector);
-            pctx.done = true; // mark it's done
-            pctx.connector = connector;
-            pctx.errType = 0;
-            byte[] writeBack = getCommonResp(pctx);
-            ctx.write(writeBack);
-            return 11; // callback
+        boolean[] sameThread = {false}; // tell the outside method, that callback and method are running in the same thread
+        boolean[] returned = {false}; // tell the callback, that the outside method has already returned
+        //noinspection UnnecessaryLocalVariable
+        Object lock = sameThread; // randomly pick an object as the lock
+        connectorProvider.provide(ctx.connection, pctx.reqType, address, pctx.port, connector -> {
+            // we should do a lock
+            // the `sameThread` and `returned` state should be synchronized
+            synchronized (lock) {
+
+                // setting the `sameThread` field to true
+                // it will be checked before method `serverDone()` returns
+                // if it's already returned, this flag would be false before returning
+                // otherwise, it will be true which indicates that the callback and
+                // `serverDone()` are in the same thread
+                sameThread[0] = true;
+
+                if (connector == null) {
+                    assert Logger.lowLevelDebug("connector NOT found for " + address + ":" + pctx.port);
+                    pctx.errType = Socks5ProxyContext.CONNECTION_NOT_ALLOWED_BY_RULESET;
+                    pctx.state = -1;
+                    if (returned[0]) {
+                        // the method already returned, so it should invoke `fall` by itself
+                        // instead of invoked by the while-loop code
+                        fail(ctx, pctx);
+                    }
+                } else {
+                    assert Logger.lowLevelDebug("connector found for " + address + ":" + pctx.port + ", " + connector);
+                    pctx.done = true; // mark it's done
+                    pctx.connector = connector;
+                    pctx.errType = 0;
+                    byte[] writeBack = getCommonResp(pctx);
+                    ctx.write(writeBack);
+                    pctx.state = 11; // change state to (callback)
+                    // and then, wait for client data
+                }
+            }
+        });
+        //noinspection SynchronizationOnLocalVariableOrMethodParameter
+        synchronized (lock) {
+            returned[0] = true;
+            if (sameThread[0]) {
+                return pctx.state; // return the state assigned in callback
+            } else {
+                return 12; // just break the loop for now, data and further events will be handled in callback
+            }
         }
     }
 
