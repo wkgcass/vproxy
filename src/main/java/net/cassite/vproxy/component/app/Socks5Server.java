@@ -126,7 +126,7 @@ public class Socks5Server extends TcpLB {
                     }
                 });
             } else {
-                if (!Resolver.isIpLiteral(address)) {
+                if (!Utils.isIpLiteral(address)) {
                     assert Logger.lowLevelDebug("client request with an invalid ip " + address);
                     providedCallback.accept(null);
                     return;

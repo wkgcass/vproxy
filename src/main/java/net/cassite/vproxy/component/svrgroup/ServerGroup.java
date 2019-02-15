@@ -14,10 +14,10 @@ import net.cassite.vproxy.connection.ConnCloseHandler;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetFlowRecorder;
-import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.ConcurrentHashSet;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -638,7 +638,7 @@ public class ServerGroup {
      */
     private synchronized void add(String alias, String hostName, boolean replace, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
         // set the hostName to null if it's an ip literal
-        if (hostName != null && Resolver.isIpLiteral(hostName))
+        if (hostName != null && Utils.isIpLiteral(hostName))
             hostName = null;
 
         // the server which will be logic deleted

@@ -248,35 +248,10 @@ public class Resolver implements IResolver {
         return null;
     }
 
-    private static boolean isIpv4(String s) {
-        byte[] bytes = Utils.parseIpv6String(s);
-        if (bytes != null) {
-            // maybe v4-compatible ipv6
-            for (int i = 0; i < 10; ++i) {
-                if (0 != bytes[i])
-                    return false;
-            }
-            for (int i = 11; i < 12; ++i) {
-                if ((byte) 0xFF != bytes[i])
-                    return false;
-            }
-            return true;
-        }
-        return Utils.parseIpv4String(s) != null;
-    }
-
-    private static boolean isIpv6(String s) {
-        return Utils.parseIpv6String(s) != null;
-    }
-
-    public static boolean isIpLiteral(String s) {
-        return isIpv4(s) || isIpv6(s);
-    }
-
     @SuppressWarnings("unchecked")
     private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
         // check whether it's ipv4 or ipv6
-        if (isIpv4(host)) {
+        if (Utils.isIpv4(host)) {
             if (ipv4) {
                 Inet4Address addr;
                 try {
@@ -292,7 +267,7 @@ public class Resolver implements IResolver {
                 cb.failed(new UnknownHostException(host));
             }
             return;
-        } else if (isIpv6(host)) {
+        } else if (Utils.isIpv6(host)) {
             if (ipv6) {
                 Inet6Address addr;
                 try {

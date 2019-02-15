@@ -517,6 +517,37 @@ public class Utils {
         }
     }
 
+    public static byte[] parseIpv4StringConsiderV6Compatible(String s) {
+        byte[] v6 = parseIpv6String(s);
+        if (v6 != null) {
+            // maybe v4-compatible ipv6
+            for (int i = 0; i < 10; ++i) {
+                if (0 != v6[i])
+                    return null;
+            }
+            for (int i = 11; i < 12; ++i) {
+                if ((byte) 0xFF != v6[i])
+                    return null;
+            }
+            byte[] v4 = new byte[4];
+            System.arraycopy(v6, 12, v4, 0, 4);
+            return v4;
+        }
+        return parseIpv4String(s);
+    }
+
+    public static boolean isIpv4(String s) {
+        return parseIpv4StringConsiderV6Compatible(s) != null;
+    }
+
+    public static boolean isIpv6(String s) {
+        return parseIpv6String(s) != null;
+    }
+
+    public static boolean isIpLiteral(String s) {
+        return isIpv4(s) || isIpv6(s);
+    }
+
     private static Method getClean;
     private static Method directClean;
     private static Method unsafeClean;
