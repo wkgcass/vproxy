@@ -4,7 +4,6 @@ import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.*;
-import sun.net.util.IPAddressUtil;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -250,11 +249,24 @@ public class Resolver implements IResolver {
     }
 
     private static boolean isIpv4(String s) {
-        return IPAddressUtil.isIPv4LiteralAddress(s);
+        byte[] bytes = Utils.parseIpv6String(s);
+        if (bytes != null) {
+            // maybe v4-compatible ipv6
+            for (int i = 0; i < 10; ++i) {
+                if (0 != bytes[i])
+                    return false;
+            }
+            for (int i = 11; i < 12; ++i) {
+                if ((byte) 0xFF != bytes[i])
+                    return false;
+            }
+            return true;
+        }
+        return Utils.parseIpv4String(s) != null;
     }
 
     private static boolean isIpv6(String s) {
-        return IPAddressUtil.isIPv6LiteralAddress(s);
+        return Utils.parseIpv6String(s) != null;
     }
 
     public static boolean isIpLiteral(String s) {

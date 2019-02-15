@@ -1,7 +1,5 @@
 package net.cassite.vproxy.util;
 
-import sun.nio.ch.DirectBuffer;
-
 import java.io.IOException;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
@@ -30,6 +28,7 @@ import java.util.Set;
  * [----------------------ePos,sPos--------]
  */
 public class RingBuffer {
+    private final boolean isDirect;
     private final ByteBuffer buffer;
     private int ePos; // end pos
     private int sPos; // start pos
@@ -42,17 +41,18 @@ public class RingBuffer {
     private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
-    private RingBuffer(ByteBuffer buffer) {
+    private RingBuffer(boolean isDirect, ByteBuffer buffer) {
+        this.isDirect = isDirect;
         this.buffer = buffer;
         this.cap = buffer.capacity();
     }
 
     public static RingBuffer allocateDirect(int cap) {
-        return new RingBuffer(ByteBuffer.allocateDirect(cap));
+        return new RingBuffer(true, ByteBuffer.allocateDirect(cap));
     }
 
     public static RingBuffer allocate(int cap) {
-        return new RingBuffer(ByteBuffer.allocate(cap));
+        return new RingBuffer(false, ByteBuffer.allocate(cap));
     }
 
     private int storeLimit() {
@@ -452,13 +452,8 @@ public class RingBuffer {
         if (cleaned)
             return;
         cleaned = true;
-        if (buffer instanceof DirectBuffer) {
-            // the api is undocumented
-            // i don't know what will happen in future java versions
-            try {
-                ((DirectBuffer) buffer).cleaner().clean();
-            } catch (Throwable ignore) {
-            }
+        if (isDirect) {
+            Utils.clean(buffer);
         }
     }
 

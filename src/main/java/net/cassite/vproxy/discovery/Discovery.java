@@ -19,7 +19,6 @@ import net.cassite.vproxy.redis.application.*;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.*;
-import sun.nio.ch.DirectBuffer;
 
 import java.io.IOException;
 import java.net.*;
@@ -491,10 +490,10 @@ public class Discovery {
                 eventLoopGroup.close();
             if (hcGroup != null)
                 hcGroup.clear();
-            if (searchBuffer instanceof DirectBuffer)
-                ((DirectBuffer) searchBuffer).cleaner().clean();
-            if (informBuffer instanceof DirectBuffer)
-                ((DirectBuffer) informBuffer).cleaner().clean();
+            if (searchBuffer != null)
+                Utils.clean(searchBuffer);
+            if (informBuffer != null)
+                Utils.clean(informBuffer);
             if (udpSock != null)
                 udpSock.close();
             if (udpBlockingSock != null)
@@ -993,9 +992,7 @@ public class Discovery {
 
     private void leave(ByteBuffer leaveMsg, Iterator<NodeDetach> nodes, Callback<Void, NoException> cb) {
         if (!nodes.hasNext()) {
-            if (leaveMsg instanceof DirectBuffer) { // do release the direct memory
-                ((DirectBuffer) leaveMsg).cleaner().clean();
-            }
+            Utils.clean(leaveMsg); // do release if it's direct memory
             cb.succeeded(null);
             return;
         }
@@ -1040,12 +1037,8 @@ public class Discovery {
         }
 
         // then release the buffers
-        if (searchBuffer instanceof DirectBuffer) {
-            ((DirectBuffer) searchBuffer).cleaner().clean();
-        }
-        if (informBuffer instanceof DirectBuffer) {
-            ((DirectBuffer) informBuffer).cleaner().clean();
-        }
+        Utils.clean(searchBuffer);
+        Utils.clean(informBuffer);
 
         // close blocking threads
         try {

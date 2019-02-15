@@ -1,10 +1,16 @@
 package net.cassite.vproxy.util;
 
 import net.cassite.vproxy.dns.Resolver;
+import sun.misc.Unsafe;
 
+import java.lang.reflect.Field;
+import java.lang.reflect.Method;
 import java.net.*;
+import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Utils {
     private Utils() {
@@ -332,5 +338,246 @@ public class Utils {
         }
 
         return bindInetAddress;
+    }
+
+    public static String[] split(String str, String e) {
+        List<String> ls = new LinkedList<>();
+        int idx = -e.length();
+        int lastIdx = 0;
+        while (true) {
+            idx = str.indexOf(e, idx + e.length());
+            if (idx == -1) {
+                ls.add(str.substring(lastIdx));
+                break;
+            }
+            ls.add(str.substring(lastIdx, idx));
+            lastIdx = idx + e.length();
+        }
+        //noinspection ToArrayCallWithZeroLengthArrayArgument
+        return ls.toArray(new String[ls.size()]);
+    }
+
+    // return null if not ip literal
+    public static byte[] parseIpString(String ip) {
+        if (ip.contains(":"))
+            return parseIpv6String(ip);
+        else
+            return parseIpv4String(ip);
+    }
+
+    // return null if not ipv4
+    public static byte[] parseIpv4String(String ipv4) {
+        byte[] ipBytes = new byte[4];
+        if (parseIpv4String(ipv4, ipBytes, 0) == -1) {
+            return null; // wrong len or parse fail
+        } else {
+            return ipBytes;
+        }
+    }
+
+    private static int parseIpv4String(String ipv4, byte[] ipBytes, int fromIdx) {
+        String[] split = split(ipv4, ".");
+        if (split.length != 4)
+            return -1; // wrong len
+        for (int i = 0; i < split.length; ++i) {
+            int idx = fromIdx + i;
+            if (idx >= ipBytes.length) {
+                return -1; // too long
+            }
+            String s = split[i];
+            char[] digits = s.toCharArray();
+            if (digits.length > 3 || digits.length == 0) {
+                return -1; // invalid for a byte
+            }
+            for (char c : digits) {
+                if (c < '0' || c > '9')
+                    return -1; // should be decimal digits
+            }
+            if (s.startsWith("0") && s.length() > 1)
+                return -1; // 0n is invalid
+            int num = Integer.parseInt(s);
+            if (num > 255)
+                return -1; // invalid byte
+            ipBytes[idx] = (byte) num;
+        }
+        return split.length;
+    }
+
+    // return null if not ipv6
+    public static byte[] parseIpv6String(String ipv6) {
+        if (ipv6.startsWith("[") && ipv6.endsWith("]")) {
+            ipv6 = ipv6.substring(1, ipv6.length() - 1);
+        }
+        { // check how many ::
+            int count = split(ipv6, "::").length - 1;
+            if (count > 1)
+                return null; // at most 1
+        }
+        boolean hasDblColon;
+        String colonOnly;
+        String colonAndDot;
+        {
+            int idx = ipv6.indexOf("::");
+            if (idx == -1) {
+                hasDblColon = false;
+                colonOnly = null;
+                colonAndDot = ipv6;
+            } else {
+                hasDblColon = true;
+                colonOnly = ipv6.substring(0, idx);
+                colonAndDot = ipv6.substring(idx + "::".length());
+            }
+        }
+        byte[] ipBytes = new byte[16];
+        int consumed = parseIpv6ColonPart(colonOnly, ipBytes, 0);
+        if (consumed == -1)
+            return null; // parse failed
+        int consumed2 = parseIpv6LastBits(colonAndDot, ipBytes);
+        if (consumed2 == -1)
+            return null; // parse failed
+        if (hasDblColon) {
+            if (consumed + consumed2 >= 16)
+                return null; // wrong len
+        } else {
+            if (consumed + consumed2 != 16)
+                return null; // wrong len
+        }
+        return ipBytes;
+    }
+
+    // -1 for fail
+    private static int parseIpv6ColonPart(String s, byte[] ipBytes, int fromIdx) {
+        if (s == null || s.isEmpty())
+            return 0;
+        if (fromIdx < 0)
+            return -1;
+        // only hex number splited by `:`
+        String[] split = split(s, ":");
+        for (int i = 0; i < split.length; ++i) {
+            int baseIndex = fromIdx + 2 * i; // every field occupy 2 bytes
+            if (baseIndex >= ipBytes.length) {
+                return -1; // too long
+            }
+            char[] field = split[i].toCharArray();
+            if (field.length > 4) {
+                // four hexadecimal digits
+                return -1;
+            }
+            if (field.length == 0) {
+                // there must be at least one numeral in every field
+                return -1;
+            }
+            for (char c : field) {
+                if ((c < 'A' || c > 'F') && (c < 'a' || c > 'f') && (c < '0' || c > '9')) {
+                    // hexadecimal
+                    return -1;
+                }
+            }
+            switch (field.length) {
+                case 1:
+                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[0] + "", 16);
+                    break;
+                case 2:
+                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[0] + "" + field[1], 16);
+                    break;
+                case 3:
+                    ipBytes[baseIndex] = (byte) Integer.parseInt(field[0] + "", 16);
+                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[1] + "" + field[2], 16);
+                    break;
+                case 4:
+                    ipBytes[baseIndex] = (byte) Integer.parseInt(field[0] + "" + field[1], 16);
+                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[2] + "" + field[3], 16);
+                    break;
+                default:
+                    // should not happen
+                    return -1;
+            }
+        }
+        return split.length * 2;
+    }
+
+    // -1 for fail
+    private static int parseIpv6LastBits(String s, byte[] ipBytes) {
+        if (s.contains(".")) {
+            int idx = s.indexOf('.');
+            idx = s.lastIndexOf(':', idx);
+            if (idx == -1) {
+                return parseIpv4String(s, ipBytes, ipBytes.length - 4);
+            } else {
+                String colonPart = s.substring(0, idx);
+                String dotPart = s.substring(idx + 1);
+                int r = parseIpv4String(dotPart, ipBytes, ipBytes.length - 4);
+                if (r == -1) {
+                    return -1; // wrong len or parse failed
+                }
+                return 4 + parseIpv6ColonPart(colonPart, ipBytes, ipBytes.length - 4 - split(colonPart, ":").length * 2);
+            }
+        } else {
+            return parseIpv6ColonPart(s, ipBytes, ipBytes.length - split(s, ":").length * 2);
+        }
+    }
+
+    private static Method getClean;
+    private static Method directClean;
+    private static Method unsafeClean;
+    private static Unsafe U;
+
+    static {
+        try {
+            getClean = Class.forName("sun.nio.ch.DirectBuffer").getMethod("cleaner");
+            getClean.setAccessible(true);
+
+            directClean = Class.forName("sun.misc.Cleaner").getMethod("clean");
+            directClean.setAccessible(true);
+        } catch (ClassNotFoundException | NoSuchMethodException e) {
+            if (getClean == null) {
+                assert Logger.lowLevelDebug("Reflection failure: no sun.nio.ch.DirectBuffer.cleaner() method found " + e);
+            } else {
+                assert Logger.lowLevelDebug("Reflection failure: no sun.misc.Cleaner.clean() method found " + e);
+            }
+            getClean = null;
+            directClean = null;
+        }
+        try {
+            Field field = Unsafe.class.getDeclaredField("theUnsafe");
+            field.setAccessible(true);
+            U = (Unsafe) field.get(null);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            assert Logger.lowLevelDebug("Reflection failure: get unsafe failed " + e);
+        }
+        try {
+            //noinspection JavaReflectionMemberAccess
+            unsafeClean = Unsafe.class.getMethod("invokeCleaner", ByteBuffer.class);
+            unsafeClean.setAccessible(true);
+        } catch (NoSuchMethodException e) {
+            assert Logger.lowLevelDebug("Reflection failure: no sun.misc.Unsafe.invokeCleaner() method found " + e);
+            unsafeClean = null;
+        }
+    }
+
+    public static void clean(ByteBuffer buffer) {
+        assert Logger.lowLevelDebug("run Utils.clean");
+        if (!buffer.getClass().getName().equals("sun.nio.ch.DirectBuffer")) {
+            assert Logger.lowLevelDebug("not direct buffer");
+            return;
+        }
+        assert Logger.lowLevelDebug("is direct buffer, do clean");
+        if (directClean != null) {
+            try {
+                directClean.invoke(getClean.invoke(buffer));
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("invoke direct clean failed", t);
+            }
+            return;
+        }
+        if (unsafeClean != null && U != null) {
+            try {
+                unsafeClean.invoke(U, buffer);
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("invoke direct clean failed", t);
+            }
+            return;
+        }
+        Logger.shouldNotHappen("no available cleaner");
     }
 }
