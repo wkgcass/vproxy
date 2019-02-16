@@ -1,5 +1,7 @@
 # vproxy
 
+[中文文档](https://github.com/wkgcass/vproxy/blob/master/README_ZH.md)
+
 ## Intro
 
 VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only requires Java 8 to run.
@@ -13,6 +15,8 @@ Clone it, javac it, then everything is ready for running.
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
 * TCP Loadbalancer: we only support TCP for now.
+
+> GraalVM does not support DatagramChannel yet. We don't prepare to support UDP loadbalancing until graalvm supports DatagramChannel. Currently we only use DatagramSocket (blockingIO) on control panel.
 
 ## How to use
 

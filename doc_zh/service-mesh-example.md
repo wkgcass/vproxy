@@ -1,12 +1,12 @@
-# Service mesh example
+# Service mesh 例子
 
-## Example Repo
+## 例子的git仓库
 
 [https://github.com/wkgcass/vproxy-service-mesh-example](https://github.com/wkgcass/vproxy-service-mesh-example)
 
-## Detail
+## 细节
 
-The example will create 5 containers, see `NAMES` column:
+这个例子程序将创建5个容器，见`NAMES`一列：
 
 ```
 CONTAINER ID        IMAGE                         COMMAND                  CREATED             STATUS              PORTS                    NAMES
@@ -17,7 +17,7 @@ CONTAINER ID        IMAGE                         COMMAND                  CREAT
 d7f70ba0fefb        vproxy-service-mesh-example   "/bin/bash /autolb.sh"   9 seconds ago       Up 9 seconds                                 example-auto-lb
 ```
 
-These containers form a network like this:
+这几个容器组成了如下的一个网络：
 
 ```
                                                                           +-----------------+
@@ -55,11 +55,11 @@ client---->|   Frontend   |-.--.---+                                            
                                            |               |
                                            +---------------+
 
-line --------> is real netflow
-line --.--.--> is logic netflow
+line --------> 真实的网络流量
+line --.--.--> 逻辑网络流量
 ```
 
-The client requests `Frontend`. The `Frontend` will fetch data from `Service (A 1/2)/(B)` and respond to the client.
+客户端访问`Frontend`。然后`Frontend`从`Service (A 1/2)/(B)`获取数据，并返回给客户端。
 
 ```
 curl localhost:8080/service-b
@@ -72,15 +72,15 @@ curl localhost:8080/service-a
 {"service":"a","resp":"8679ffb59411"}
 ```
 
-The `service` field is service name, and the `resp` field is the container id.
+其中，`service`指的是服务名，`resp`内容是容器id。
 
-When the service A and B launches, each service registers itself on local sidecar, and the frontend uses socks5 (provided by sidecar) to proxy the netflow.  
-Details can be found in example code.
+当A服务和B服务启动时，它们分别向各自的sidecar注册服务。前端服务使用sidecar提供的socks5功能来代理网络流量。  
+更多细节可见例子代码。
 
-## Another Usage
+## 另一种使用方式
 
-You can use vproxy exactly same as the example code (lb and socks5), but you can also only use the lb part and ignore the socks5 part.
+你可以就像例子中描述的那样来使用vproxy（lb+socks5），不过你也可以只使用lb部分，忽略socks5的部分。
 
-The auto-lb config require you to specify the listen port for each service, so, you can fix the lb ip (or a virtual ip of the lb) and port into you app's config.  
-When a service starts, it should register it self into the sidecar. Requests sent by the service can be directly sent to the lb address instead of being proxied by the sidecar.  
-New nodes will be automatically learned by the lb just like the example.
+Auto-lb配置文件需要你为每一个服务指定一个监听端口，所以你可以在你应用的配置文件里指定负载均衡的ip（或者负载均衡的虚拟ip）和端口。  
+当服务启动时，这个服务需要将自身注册到sidecar中。这个服务的请求可以直接发到lb上而不是通过sidecar代理。  
+就像例子中一样，新节点也可以自动被负载均衡识别到。

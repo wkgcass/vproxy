@@ -136,7 +136,10 @@ java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
 ```
 
 When service mesh config is specified, the process launches into service mesh mode.  
-All resources will become read-only in service mesh mode, the resources will be automatically handled by service mesh modules.
+All (asset) resources will become read-only in service mesh mode, the resources will be automatically handled by service mesh modules.
+
+> Asset resources means the resources which are not changed very often. e.g. tcp-lb is an asset resource, but session is not.  
+> Auto-lb is a resource in service mesh mode, and only available in this mode, which is also writable.
 
 There are two roles provided by vproxy.
 
@@ -179,7 +182,7 @@ add server-groups sgs0
 add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 server-groups sgs0 in-buffer-size 256 out-buffer-size 256
 add event-loop el0 to event-loop-group elg0
 add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0
-add server-group sg0 to server-groups sgs0
+add server-group sg0 to server-groups sgs0 weight 10
 add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10
 ```
 
@@ -240,7 +243,7 @@ To add a backend, you can:
 
 1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0`  
     which creates a server group named `sg0`; the health check configurations are: check timeout is 1 second, check every 3 seconds, consider the server UP when got 4 successful checks and consider the server DOWN when got 5 failed checks; the method of retrieving server from this group is `wrr`
-2. `add server-group sg0 to server-groups sgs0`  
+2. `add server-group sg0 to server-groups sgs0 weight 10`  
     which adds the server group `sg0` into serverGroups `sgs0`. Adding `sg0` to `sgs0` is because the tcp-lb is using `sgs0` as its backend server groups
 3. `add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10`  
     which adds a new server named `s0` into server group `sg0` with remote address `127.0.0.1:12345`, and you want to visit it via `127.0.0.1`, the weight of the server in this group is `10`
