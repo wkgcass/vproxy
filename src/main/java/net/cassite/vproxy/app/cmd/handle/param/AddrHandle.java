@@ -27,14 +27,7 @@ public class AddrHandle {
         int addrPort = Integer.parseInt(addrStr.substring(idx + 1));
 
         BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
-        if (ipv4 && ipv6) {
-            Resolver.getDefault().resolve(addrIp, cb);
-        } else if (ipv4) {
-            Resolver.getDefault().resolveV4(addrIp, cb);
-        } else {
-            assert ipv6;
-            Resolver.getDefault().resolveV6(addrIp, cb);
-        }
+        Resolver.getDefault().resolve(addrIp, ipv4, ipv6, cb);
         InetAddress addr = cb.block();
         return new InetSocketAddress(addr, addrPort);
     }

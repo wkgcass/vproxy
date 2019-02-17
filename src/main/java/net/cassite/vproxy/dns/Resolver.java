@@ -317,6 +317,11 @@ public class Resolver implements IResolver {
         resolveN(host, true, true, cb);
     }
 
+    @Override
+    public void resolve(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
+        resolveN(host, ipv4, ipv6, cb);
+    }
+
     @SuppressWarnings("unchecked")
     @Override
     public void resolveV6(String host, Callback<? super Inet6Address, ? super UnknownHostException> cb) {

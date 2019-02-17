@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.cmd.handle.param;
 
 import net.cassite.vproxy.app.cmd.Command;
+import net.cassite.vproxy.app.cmd.Flag;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.BlockCallback;
@@ -13,8 +14,15 @@ public class IpHandle {
     }
 
     public static InetAddress get(Command cmd) throws Exception {
+        boolean ipv4 = !cmd.flags.contains(Flag.noipv4);
+        boolean ipv6 = !cmd.flags.contains(Flag.noipv6);
+        String ip = cmd.args.get(Param.ip);
+        return get(ip, ipv4, ipv6);
+    }
+
+    public static InetAddress get(String addrIp, boolean ipv4, boolean ipv6) throws Exception {
         BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
-        Resolver.getDefault().resolve(cmd.args.get(Param.ip), cb);
+        Resolver.getDefault().resolve(addrIp, ipv4, ipv6, cb);
         return cb.block();
     }
 

@@ -64,6 +64,11 @@ public class HelpCommand {
                 if (len > maxLenOfFullName)
                     maxLenOfFullName = len;
             }
+            for (FlagMan flagMan : FlagMan.values()) {
+                int len = flagMan.flag.length();
+                if (len > maxLenOfFullName)
+                    maxLenOfFullName = len;
+            }
         }
         maxLenOfFullName += 4;
         int maxLenOfShortName = 0;
@@ -84,6 +89,13 @@ public class HelpCommand {
                 if (paramMan.shortVer == null)
                     continue;
                 int len = paramMan.shortVer.length();
+                if (len > maxLenOfShortName)
+                    maxLenOfShortName = len;
+            }
+            for (FlagMan flagMan : FlagMan.values()) {
+                if (flagMan.shortVer == null)
+                    continue;
+                int len = flagMan.shortVer.length();
                 if (len > maxLenOfShortName)
                     maxLenOfShortName = len;
             }
@@ -132,6 +144,13 @@ public class HelpCommand {
                 .append(withSpaces(paramMan.shortVer, maxLenOfShortName))
                 .append(withMaxLen(paramMan.descr, descrMaxLen, descrSpaces));
         }
+        sb.append("\n    Available flags:");
+        for (FlagMan flagMan : FlagMan.values()) {
+            sb.append("\n        ")
+                .append(withSpaces(flagMan.flag, maxLenOfFullName))
+                .append(withSpaces(flagMan.shortVer, maxLenOfShortName))
+                .append(withMaxLen(flagMan.descr, descrMaxLen, descrSpaces));
+        }
         return sb.toString();
     }
 
@@ -154,7 +173,11 @@ public class HelpCommand {
                 try {
                     return man(getParam(item));
                 } catch (IllegalArgumentException e3) {
-                    return "No manual entry for " + item;
+                    try {
+                        return man(getFlag(item));
+                    } catch (IllegalArgumentException e4) {
+                        return "No manual entry for " + item;
+                    }
                 }
             }
         }
@@ -184,6 +207,14 @@ public class HelpCommand {
         for (ParamMan paramMan : ParamMan.values()) {
             if (paramMan.param.equals(s) || s.equals(paramMan.shortVer))
                 return paramMan;
+        }
+        throw new IllegalArgumentException();
+    }
+
+    private static FlagMan getFlag(String s) {
+        for (FlagMan flagMan : FlagMan.values()) {
+            if (flagMan.flag.equals(s) || s.equals(flagMan.shortVer))
+                return flagMan;
         }
         throw new IllegalArgumentException();
     }
@@ -219,6 +250,15 @@ public class HelpCommand {
             sb.append("Short version: ").append(paramMan.shortVer).append("\n");
         }
         sb.append(paramMan.descr);
+        return sb.toString();
+    }
+
+    private static String man(FlagMan flagMan) {
+        StringBuilder sb = new StringBuilder();
+        sb.append("Flag: ").append(flagMan.flag).append("\n");
+        if (flagMan.shortVer != null)
+            sb.append("Short version: ").append(flagMan.shortVer).append("\n");
+        sb.append(flagMan.descr);
         return sb.toString();
     }
 
@@ -278,6 +318,27 @@ public class HelpCommand {
                 sb.append(" Default: ").append(rapm.defaultValue);
             }
             sb.append("\n");
+        }
+        sb.append("\n");
+        if (!resActMan.flagDescr.isEmpty()) {
+            sb.append("Flags:\n");
+        }
+        for (ResActFlagMan rafm : resActMan.flagDescr) {
+            if (rafm.optional) {
+                sb.append("[optional] ");
+            } else {
+                sb.append("           ");
+            }
+            if (rafm.optional && rafm.isDefault) {
+                sb.append("[default] ");
+            } else {
+                sb.append("          ");
+            }
+            sb.append(rafm.flag.flag);
+            if (rafm.flag.shortVer != null) {
+                sb.append(" (").append(rafm.flag.shortVer).append(")");
+            }
+            sb.append(": ").append(rafm.descr).append("\n");
         }
         sb.append("\n");
         if (resActMan.note != null) {
@@ -356,6 +417,23 @@ public class HelpCommand {
         }
     }
 
+    public enum FlagMan {
+        noipv4("noipv4", null, "do not use ipv4 address. Use with address|ip|via"),
+        noipv6("noipv6", null, "do not use ipv6 address. Use with address|ip|via"),
+        allownonbackend("allow-non-backend", null, "allow to access non backend endpoints"),
+        denynonbackend("deny-non-backend", null, "only able to access backend endpoints"),
+        ;
+        public final String flag;
+        public final String shortVer;
+        public final String descr;
+
+        FlagMan(String flag, String shortVer, String descr) {
+            this.flag = flag;
+            this.shortVer = shortVer;
+            this.descr = descr;
+        }
+    }
+
     public enum ResMan {
         tcplb("tcp-lb", "tl", "TCP load balancer", Arrays.asList(
             new ResActMan(ActMan.add, "create a loadbalancer",
@@ -422,6 +500,10 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
+                ),
+                Arrays.asList(
+                    new ResActFlagMan(FlagMan.allownonbackend, "allow to access non backend endpoints", false),
+                    new ResActFlagMan(FlagMan.denynonbackend, "only enable backend endpoints", true)
                 ),
                 Collections.singletonList(
                     new Tuple<>(
@@ -1092,17 +1174,27 @@ public class HelpCommand {
         public final ActMan act;
         public final String descr;
         public final List<ResActParamMan> paramDescr;
+        public final List<ResActFlagMan> flagDescr;
         public final List<Tuple<String, String>> examples;
         public final String note;
 
         ResActMan(ActMan act, String descr, List<ResActParamMan> paramDescr, List<Tuple<String, String>> examples) {
-            this(act, descr, paramDescr, examples, null);
+            this(act, descr, paramDescr, Collections.emptyList(), examples);
+        }
+
+        ResActMan(ActMan act, String descr, List<ResActParamMan> paramDescr, List<ResActFlagMan> flagDescr, List<Tuple<String, String>> examples) {
+            this(act, descr, paramDescr, flagDescr, examples, null);
         }
 
         ResActMan(ActMan act, String descr, List<ResActParamMan> paramDescr, List<Tuple<String, String>> examples, String note) {
+            this(act, descr, paramDescr, Collections.emptyList(), examples, note);
+        }
+
+        ResActMan(ActMan act, String descr, List<ResActParamMan> paramDescr, List<ResActFlagMan> flagDescr, List<Tuple<String, String>> examples, String note) {
             this.act = act;
             this.descr = descr.substring(0, 1).toUpperCase() + descr.substring(1) + ".";
             this.paramDescr = Collections.unmodifiableList(paramDescr);
+            this.flagDescr = Collections.unmodifiableList(flagDescr);
             this.examples = examples;
             this.note = note;
         }
@@ -1126,6 +1218,20 @@ public class HelpCommand {
             this.descr = descr.substring(0, 1).toUpperCase() + descr.substring(1) + ".";
             this.optional = true;
             this.defaultValue = defaultValue;
+        }
+    }
+
+    public static class ResActFlagMan {
+        public final FlagMan flag;
+        public final String descr;
+        public final boolean optional;
+        public final boolean isDefault;
+
+        public ResActFlagMan(FlagMan flag, String descr, boolean isDefault) {
+            this.flag = flag;
+            this.descr = descr.substring(0, 1).toUpperCase() + descr.substring(1) + ".";
+            this.optional = true;
+            this.isDefault = isDefault;
         }
     }
 }
