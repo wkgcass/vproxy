@@ -532,6 +532,10 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
                 ),
+                Arrays.asList(
+                    new ResActFlagMan(FlagMan.allownonbackend, "allow to access non backend endpoints", false),
+                    new ResActFlagMan(FlagMan.denynonbackend, "only enable backend endpoints", true)
+                ),
                 Collections.singletonList(
                     new Tuple<>(
                         "update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192",

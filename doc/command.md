@@ -192,9 +192,14 @@ See `add tcp-lb` for more info.
 * event-loop-group (elg): the worker event loop
 * address (addr): the bind address
 * server-groups (sgs): used as backends, the socks5 only supports servers added into this group
-* in-buffer-size: input buffer size
-* out-buffer-size: output buffer size
+* in-buffer-size: input buffer size. *optional*
+* out-buffer-size: output buffer size. *optional*
 * security-group (secg): security group
+
+Flags:
+
+* allow-non-backend: allow to access non backend endpoints. *optional*
+* deny-non-backend: only able to access backend endpoints. *optional, is default*
 
 ```
 add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0
@@ -221,10 +226,10 @@ list-detail socks5-server
 
 #### update
 
-Update in-buffer-size or out-buffer-size of a socks5 server.
+Update in-buffer-size or out-buffer-size of a socks5 server. Also, whether to allow non backend endpoints can be updated.
 
 ```
-update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192
+update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192 allow-non-backend
 "OK"
 ```
 
