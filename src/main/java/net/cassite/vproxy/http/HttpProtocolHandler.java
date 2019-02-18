@@ -21,7 +21,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
         int err = ctx.data.parser.feed(ctx.inBuffer);
         if (err == 0) {
             // parse done
-            ctx.data.result = ctx.data.parser.getHttpReq();
+            ctx.data.result = ctx.data.parser.getResult();
             ctx.data.parser = null;
             request(ctx);
         } else {

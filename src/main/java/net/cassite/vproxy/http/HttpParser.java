@@ -1,18 +1,12 @@
 package net.cassite.vproxy.http;
 
-import net.cassite.vproxy.util.ByteArrayChannel;
-import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.AbstractParser;
 import net.cassite.vproxy.util.Utils;
 
-import java.io.IOException;
-
-public class HttpParser {
-    private final HttpReq req = new HttpReq();
-    private int state = 0;
-    private String errorMessage;
-
-    private final byte[] bytes = new byte[1];
-    private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
+public class HttpParser extends AbstractParser<HttpReq> {
+    public HttpParser() {
+        result = new HttpReq();
+    }
 
     /*
      * state:
@@ -36,31 +30,7 @@ public class HttpParser {
      * 16: \n before body, expecting body for content-length -> 16 then \r -> 8
      */
 
-    // -1 for need more or fail
-    // 0 for done
-    public int feed(RingBuffer buffer) {
-        while (buffer.used() != 0) {
-            chnl.reset();
-            try {
-                buffer.writeTo(chnl);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-                return -1;
-            }
-
-            byte b = bytes[0];
-            state = doSwitch(b);
-            if (state == -1) { // parse failed, return -1
-                return -1;
-            }
-        }
-        if (state == 9) {
-            return 0;
-        }
-        return -1; // indicating that the parser want more data
-    }
-
-    private int doSwitch(byte b) {
+    protected int doSwitch(byte b) {
         char c = (char) Utils.positive(b);
         switch (state) {
             case 0:
@@ -108,8 +78,8 @@ public class HttpParser {
     }
 
     private int state00init(char c) {
-        req.method = new StringBuilder();
-        req.method.append(c);
+        result.method = new StringBuilder();
+        result.method.append(c);
         return 1; // httpMethod
     }
 
@@ -117,7 +87,7 @@ public class HttpParser {
         if (c == ' ') {
             return 2; // space before url
         } else {
-            req.method.append(c);
+            result.method.append(c);
             return 1; // not changed
         }
     }
@@ -126,8 +96,8 @@ public class HttpParser {
         if (c == ' ') {
             return 2; // not changed
         } else {
-            req.url = new StringBuilder();
-            req.url.append(c);
+            result.url = new StringBuilder();
+            result.url.append(c);
             return 3; // url
         }
     }
@@ -136,7 +106,7 @@ public class HttpParser {
         if (c == ' ') {
             return 4; // space after url
         } else {
-            req.url.append(c);
+            result.url.append(c);
             return 3; // not changed
         }
     }
@@ -145,8 +115,8 @@ public class HttpParser {
         if (c == ' ') {
             return 4; // not changed
         } else {
-            req.version = new StringBuilder();
-            req.version.append(c);
+            result.version = new StringBuilder();
+            result.version.append(c);
             return 5; // version
         }
     }
@@ -155,7 +125,7 @@ public class HttpParser {
         if (c == '\r') {
             return 6; // \r after version
         } else {
-            req.version.append(c);
+            result.version.append(c);
             return 5; // not changed
         }
     }
@@ -173,9 +143,9 @@ public class HttpParser {
         if (c == '\r') {
             return 8; // \r before end
         } else {
-            req.currentParsingHeader = new HttpHeader();
-            req.currentParsingHeader.key = new StringBuilder();
-            req.currentParsingHeader.key.append(c);
+            result.currentParsingHeader = new HttpHeader();
+            result.currentParsingHeader.key = new StringBuilder();
+            result.currentParsingHeader.key.append(c);
             return 10; // header key
         }
     }
@@ -198,7 +168,7 @@ public class HttpParser {
         if (c == ':') {
             return 11; // header colon
         } else {
-            req.currentParsingHeader.key.append(c);
+            result.currentParsingHeader.key.append(c);
             return 10;
         }
     }
@@ -207,8 +177,8 @@ public class HttpParser {
         if (c == ' ') {
             return 11; // not changed
         } else {
-            req.currentParsingHeader.value = new StringBuilder();
-            req.currentParsingHeader.value.append(c);
+            result.currentParsingHeader.value = new StringBuilder();
+            result.currentParsingHeader.value.append(c);
             return 12; // header value
         }
     }
@@ -217,7 +187,7 @@ public class HttpParser {
         if (c == '\r') {
             return 13; // \r after header
         } else {
-            req.currentParsingHeader.value.append(c);
+            result.currentParsingHeader.value.append(c);
             return 12; // not changed
         }
     }
@@ -233,14 +203,14 @@ public class HttpParser {
 
     private int state14newlineAfterHeader(char c) {
         // record the header
-        req.headers.add(req.currentParsingHeader);
-        req.currentParsingHeader = null;
+        result.headers.add(result.currentParsingHeader);
+        result.currentParsingHeader = null;
         if (c == '\r') {
             return 15; // \r after last header
         } else {
-            req.currentParsingHeader = new HttpHeader();
-            req.currentParsingHeader.key = new StringBuilder();
-            req.currentParsingHeader.key.append(c);
+            result.currentParsingHeader = new HttpHeader();
+            result.currentParsingHeader.key = new StringBuilder();
+            result.currentParsingHeader.key.append(c);
             return 10; // header key
         }
     }
@@ -248,10 +218,10 @@ public class HttpParser {
     private int state15returnAfterLastHeader(char c) {
         if (c == '\n') {
             // check content-length
-            for (HttpHeader h : req.headers) {
+            for (HttpHeader h : result.headers) {
                 if (h.key.toString().trim().equalsIgnoreCase("content-length")) {
                     try {
-                        req.bodyLen = Integer.parseInt(h.value.toString().trim());
+                        result.bodyLen = Integer.parseInt(h.value.toString().trim());
                     } catch (NumberFormatException e) {
                         errorMessage = "invalid Content-Length: " + h.value.toString().trim();
                         return -1;
@@ -259,13 +229,13 @@ public class HttpParser {
                     break;
                 }
             }
-            if (req.bodyLen < 0) {
-                errorMessage = "invalid Content-Length: " + req.bodyLen + " < 0";
+            if (result.bodyLen < 0) {
+                errorMessage = "invalid Content-Length: " + result.bodyLen + " < 0";
                 return -1;
-            } else if (req.bodyLen == 0) {
+            } else if (result.bodyLen == 0) {
                 return 9; // \n before end
             } else {
-                req.body = new StringBuilder();
+                result.body = new StringBuilder();
                 return 16; // \n before body
             }
         } else {
@@ -275,23 +245,15 @@ public class HttpParser {
     }
 
     private int state16newlineBeforeBody(char c) {
-        if (req.bodyLen == 0) {
+        if (result.bodyLen == 0) {
             return state09newlineBeforeEnd(); // let it raise error
         } else {
-            req.body.append(c);
-            --req.bodyLen;
-            if (req.bodyLen == 0) {
+            result.body.append(c);
+            --result.bodyLen;
+            if (result.bodyLen == 0) {
                 return 9; // let it end
             }
             return 16; // body, not changed
         }
-    }
-
-    public String getErrorMessage() {
-        return errorMessage;
-    }
-
-    public HttpReq getHttpReq() {
-        return req;
     }
 }
