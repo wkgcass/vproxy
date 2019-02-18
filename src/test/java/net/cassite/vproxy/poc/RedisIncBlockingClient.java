@@ -1,6 +1,6 @@
 package net.cassite.vproxy.poc;
 
-import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
 
@@ -34,7 +34,7 @@ public class RedisIncBlockingClient {
         RingBuffer rb = RingBuffer.allocate(64);
         byte[] buffer = new byte[64];
         for (int i = 0; i < times; ++i) { // demonstrate for 10 times
-            Parser parser = new Parser(64);
+            RESPParser parser = new RESPParser(64);
             double rand = Math.random();
             String toSend;
             if (rand < 0.25) {

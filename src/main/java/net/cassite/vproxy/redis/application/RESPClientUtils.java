@@ -1,7 +1,7 @@
 package net.cassite.vproxy.redis.application;
 
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.redis.Serializer;
 import net.cassite.vproxy.redis.entity.RESP;
 import net.cassite.vproxy.util.ByteArrayChannel;
@@ -55,7 +55,7 @@ public class RESPClientUtils {
             // connection won't last long
             ClientConnection conn = ClientConnection.create(remote, local, RingBuffer.allocate(16384), RingBuffer.allocate(16384));
             loop.addClientConnection(conn, null, new ClientConnectionHandler() {
-                private final Parser parser = new Parser(16384);
+                private final RESPParser parser = new RESPParser(16384);
 
                 private void write(ConnectionHandlerContext ctx) {
                     try {

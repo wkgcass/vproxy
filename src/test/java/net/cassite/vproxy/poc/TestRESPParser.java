@@ -1,6 +1,6 @@
 package net.cassite.vproxy.poc;
 
-import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.redis.entity.*;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
@@ -111,7 +111,7 @@ public class TestRESPParser {
     }
 
     private static RESP parse(String str) throws Exception {
-        Parser parser = new Parser(16384);
+        RESPParser parser = new RESPParser(16384);
         byte[] bytes = str.getBytes();
         RingBuffer rb = RingBuffer.allocate(bytes.length);
         ByteArrayChannel ch = ByteArrayChannel.fromFull(bytes);

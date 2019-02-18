@@ -11,7 +11,7 @@ import net.cassite.vproxy.discovery.protocol.NodeDataMsg;
 import net.cassite.vproxy.discovery.protocol.NodeExistenceMsg;
 import net.cassite.vproxy.protocol.ProtocolServerConfig;
 import net.cassite.vproxy.protocol.ProtocolServerHandler;
-import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.redis.RESPConfig;
 import net.cassite.vproxy.redis.RESPProtocolHandler;
 import net.cassite.vproxy.redis.Serializer;
@@ -123,7 +123,7 @@ public class Discovery {
         }
 
         void handle(InetAddress remoteAddr, RingBuffer buffer) {
-            Parser parser = new Parser(buffer.capacity());
+            RESPParser parser = new RESPParser(buffer.capacity());
             int res = parser.feed(buffer);
             if (res == -1) {
                 String msg = parser.getErrorMessage();

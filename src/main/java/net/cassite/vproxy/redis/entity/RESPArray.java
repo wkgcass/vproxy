@@ -1,13 +1,13 @@
 package net.cassite.vproxy.redis.entity;
 
-import net.cassite.vproxy.redis.Parser;
+import net.cassite.vproxy.redis.RESPParser;
 
 import java.util.LinkedList;
 import java.util.List;
 
 public class RESPArray extends RESP {
     public int len;
-    public Parser parser;
+    public RESPParser parser;
     public final LinkedList<RESP> array = new LinkedList<>();
 
     @Override

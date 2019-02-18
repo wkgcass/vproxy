@@ -9,7 +9,7 @@ import net.cassite.vproxy.util.Utils;
 import java.io.IOException;
 
 @SuppressWarnings("Duplicates")
-public class Parser {
+public class RESPParser {
     private final int maxLen;
     private int parsedLen = 0;
 
@@ -75,7 +75,7 @@ public class Parser {
      * ----->(\r) ------> simple end ---> 2
      */
 
-    public Parser(int maxLen) {
+    public RESPParser(int maxLen) {
         this.maxLen = maxLen;
     }
 
@@ -388,7 +388,7 @@ public class Parser {
     private int switchArrayBody12(int b) {
         RESPArray array = (RESPArray) resp;
         if (array.parser == null) {
-            array.parser = new Parser(this.maxLen - parsedLen);
+            array.parser = new RESPParser(this.maxLen - parsedLen);
         }
         int res = array.parser.doSwitch(b);
         if (res == -1)

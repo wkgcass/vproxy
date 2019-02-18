@@ -27,7 +27,7 @@ public class RESPProtocolHandler implements ProtocolHandler<RESPContext> {
     @Override
     public void readable(ProtocolHandlerContext<RESPContext> ctx) {
         if (ctx.data.parser == null) {
-            ctx.data.parser = new Parser(config.maxParseLen);
+            ctx.data.parser = new RESPParser(config.maxParseLen);
         }
         int r = ctx.data.parser.feed(ctx.inBuffer);
         if (r == -1) {

@@ -1,6 +1,6 @@
 package net.cassite.vproxy.redis;
 
 public class RESPContext {
-    Parser parser;
+    RESPParser parser;
     Object attachment;
 }
