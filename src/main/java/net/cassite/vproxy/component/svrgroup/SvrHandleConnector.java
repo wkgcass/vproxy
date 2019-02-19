@@ -7,7 +7,7 @@ import net.cassite.vproxy.util.RingBuffer;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-class SvrHandleConnector extends Connector {
+public class SvrHandleConnector extends Connector {
     private final ServerGroup.ServerHandle serverHandle;
 
     SvrHandleConnector(ServerGroup.ServerHandle h) {
@@ -33,5 +33,9 @@ class SvrHandleConnector extends Connector {
     public void connectionFailed() {
         // accelerate the down process
         serverHandle.healthCheckClient.manuallyDownOnce();
+    }
+
+    public String getHostName() {
+        return serverHandle.hostName;
     }
 }

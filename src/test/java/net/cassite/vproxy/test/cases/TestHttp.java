@@ -34,7 +34,7 @@ public class TestHttp {
         ProtocolServerHandler.apply(loop,
             BindServer.create(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 18080)),
             new ProtocolServerConfig().setInBufferSize(16384).setOutBufferSize(16384),
-            new HttpProtocolHandler() {
+            new HttpProtocolHandler(true) {
                 @Override
                 protected void request(ProtocolHandlerContext<HttpContext> ctx) {
                     String result = ctx.data.result.toString();

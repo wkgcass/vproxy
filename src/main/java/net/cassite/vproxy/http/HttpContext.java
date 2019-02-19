@@ -1,6 +1,6 @@
 package net.cassite.vproxy.http;
 
 public class HttpContext {
-    public HttpParser parser;
+    public HttpReqParser parser;
     public HttpReq result;
 }

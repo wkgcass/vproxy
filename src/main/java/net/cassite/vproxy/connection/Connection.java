@@ -288,7 +288,7 @@ public class Connection implements NetFlowRecorder {
         _cctx = cctx;
     }
 
-    NetEventLoop getEventLoop() {
+    public NetEventLoop getEventLoop() {
         return _eventLoop;
     }
 

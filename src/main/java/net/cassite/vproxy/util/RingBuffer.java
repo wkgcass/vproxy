@@ -156,6 +156,15 @@ public class RingBuffer {
         // NOTE: ----------------
     }
 
+    public int storeBytesFrom(ByteArrayChannel channel) {
+        try {
+            return storeBytesFrom((ReadableByteChannel) channel);
+        } catch (IOException e) {
+            // it's memory operation, should not happen
+            throw new RuntimeException(e);
+        }
+    }
+
     /**
      * @return may return -1 for EOF
      */
@@ -229,6 +238,15 @@ public class RingBuffer {
         sPos = 0;
         ePos = 0;
         ePosIsAfterSPos = true;
+    }
+
+    public int writeTo(ByteArrayChannel channel) {
+        try {
+            return writeTo((WritableByteChannel) channel);
+        } catch (IOException e) {
+            // it's memory operation, should not raise error
+            throw new RuntimeException(e);
+        }
     }
 
     public int writeTo(WritableByteChannel channel) throws IOException {
@@ -465,12 +483,7 @@ public class RingBuffer {
         // use a while loop because data may be read into buffer
         // on callback
         while (used() != 0) {
-            try {
-                writeTo(chnl);
-            } catch (IOException e) {
-                // it's memory operation
-                // should not happen
-            }
+            writeTo(chnl);
             chnl.reset();
         }
     }

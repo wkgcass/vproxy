@@ -10,21 +10,18 @@ import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.Protocol;
-import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.socks.AddressType;
 import net.cassite.vproxy.socks.Socks5ConnectorProvider;
 import net.cassite.vproxy.socks.Socks5ProxyContext;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.Callback;
-import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -98,50 +95,7 @@ public class Socks5Server extends TcpLB {
         }
 
         private void handleNonBackend(AddressType type, String address, int port, Consumer<Connector> providedCallback) {
-            // we don't know which address to request the remote endpoint,
-            // so we bind all
-            InetAddress local;
-            try {
-                local = InetAddress.getByName("0.0.0.0");
-            } catch (UnknownHostException e) {
-                // this should not happen
-                // should always succeed
-                Logger.shouldNotHappen("getting 0.0.0.0 failed", e);
-                providedCallback.accept(null);
-                return;
-            }
-
-            if (type == AddressType.domain) { // resolve if it's domain
-                Resolver.getDefault().resolve(address, new Callback<InetAddress, UnknownHostException>() {
-                    @Override
-                    protected void onSucceeded(InetAddress value) {
-                        providedCallback.accept(new Connector(new InetSocketAddress(value, port), local));
-                    }
-
-                    @Override
-                    protected void onFailed(UnknownHostException err) {
-                        // resolve failed
-                        assert Logger.lowLevelDebug("resolve for " + address + " failed in socks5 server" + err);
-                        providedCallback.accept(null);
-                    }
-                });
-            } else {
-                if (!Utils.isIpLiteral(address)) {
-                    assert Logger.lowLevelDebug("client request with an invalid ip " + address);
-                    providedCallback.accept(null);
-                    return;
-                }
-                InetAddress remote;
-                try {
-                    remote = InetAddress.getByName(address);
-                } catch (UnknownHostException e) {
-                    // should not happen when retrieving from an ip address
-                    Logger.shouldNotHappen("getting " + address + " failed", e);
-                    providedCallback.accept(null);
-                    return;
-                }
-                providedCallback.accept(new Connector(new InetSocketAddress(remote, port), local));
-            }
+            Utils.directConnect(type, address, port, providedCallback);
         }
     }
 

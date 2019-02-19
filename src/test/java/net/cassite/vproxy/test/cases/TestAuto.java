@@ -2,8 +2,8 @@ package net.cassite.vproxy.test.cases;
 
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.app.TcpLB;
-import net.cassite.vproxy.component.auto.AutoLB;
 import net.cassite.vproxy.component.auto.AutoConfig;
+import net.cassite.vproxy.component.auto.AutoLB;
 import net.cassite.vproxy.component.auto.Sidecar;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;

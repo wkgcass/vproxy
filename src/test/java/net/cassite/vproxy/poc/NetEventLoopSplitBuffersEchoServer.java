@@ -57,14 +57,7 @@ class My2ConnectionHandler extends MyConnectionHandler implements ConnectionHand
 
     @Override
     public void readable(ConnectionHandlerContext ctx) {
-        int writeBytes;
-        try {
-            writeBytes = ctx.connection.inBuffer.writeTo(byteArrayChannel);
-        } catch (IOException e) {
-            // should not happen, it's memory operation
-            e.printStackTrace();
-            return;
-        }
+        int writeBytes = ctx.connection.inBuffer.writeTo(byteArrayChannel);
         if (writeBytes == 0) {
             System.out.println("writes nothing, either the in-buffer is empty or the buffer is full");
         } else {
@@ -75,13 +68,7 @@ class My2ConnectionHandler extends MyConnectionHandler implements ConnectionHand
 
     @Override
     public void writable(ConnectionHandlerContext ctx) {
-        try {
-            ctx.connection.outBuffer.storeBytesFrom(byteArrayChannel);
-        } catch (IOException e) {
-            // should not happen, it's memory operation
-            e.printStackTrace();
-            return;
-        }
+        ctx.connection.outBuffer.storeBytesFrom(byteArrayChannel);
         if (byteArrayChannel.used() == 0) {
             System.out.println("everything wrote in writable callback, reset the ByteArrayChannel wrapper");
             byteArrayChannel.reset();

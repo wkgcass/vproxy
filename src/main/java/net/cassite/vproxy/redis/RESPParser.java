@@ -6,8 +6,6 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Utils;
 
-import java.io.IOException;
-
 @SuppressWarnings("Duplicates")
 public class RESPParser {
     private final int maxLen;
@@ -88,16 +86,7 @@ public class RESPParser {
         while (true) {
             chnl.reset();
             // an integer field that does multiple things, no particular name for it
-            int foo;
-            try {
-                foo = buffer.writeTo(chnl);
-            } catch (IOException ignore) {
-                // it will never happen
-                // because we are writing to a memory
-                // just return for java syntax
-                errorMessage = "will not happen";
-                return -1;
-            }
+            int foo = buffer.writeTo(chnl);
             if (foo == 0)
                 return -1; // indicating `want more`
             ++parsedLen;

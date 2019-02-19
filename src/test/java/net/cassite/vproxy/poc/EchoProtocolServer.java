@@ -37,11 +37,7 @@ public class EchoProtocolServer {
                     int len = inBuffer.used();
                     byte[] bytes = new byte[len];
                     ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-                    try {
-                        inBuffer.writeTo(chnl);
-                    } catch (IOException e) {
-                        // should not happen
-                    }
+                    inBuffer.writeTo(chnl);
                     // the bytes array is filled with all bytes in inBuffer
                     // then we write the bytes back to client
                     ctx.write(bytes);

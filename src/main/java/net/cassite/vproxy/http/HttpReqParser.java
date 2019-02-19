@@ -3,9 +3,17 @@ package net.cassite.vproxy.http;
 import net.cassite.vproxy.util.AbstractParser;
 import net.cassite.vproxy.util.Utils;
 
-public class HttpParser extends AbstractParser<HttpReq> {
-    public HttpParser() {
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+
+public class HttpReqParser extends AbstractParser<HttpReq> {
+    private final boolean parseBody;
+
+    public HttpReqParser(boolean parseBody) {
+        super(new HashSet<>(Arrays.asList(9, 100)), Collections.singleton(100));
         result = new HttpReq();
+        this.parseBody = parseBody;
     }
 
     /*
@@ -27,7 +35,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
      * 14: \n after header, expecting \r -> 15 or header key -> 10
      * 15: \r after last header, if no content-length or content-length 0, expecting \n -> 9,
      *                           otherwise expecting \n -> 16
-     * 16: \n before body, expecting body for content-length -> 16 then \r -> 8
+     * 16: \n before body, expecting body for content-length -> 16 then -> 9
      */
 
     protected int doSwitch(byte b) {
@@ -150,7 +158,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state08returnBeforeEnd(char c) {
+    protected int state08returnBeforeEnd(char c) {
         if (c == '\n') {
             return 9; // \n before end
         } else {
@@ -159,12 +167,12 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state09newlineBeforeEnd() {
+    protected int state09newlineBeforeEnd() {
         errorMessage = "the request should have ended but still receiving data. pipeline not supported";
         return -1; // error
     }
 
-    private int state10headerKey(char c) {
+    protected int state10headerKey(char c) {
         if (c == ':') {
             return 11; // header colon
         } else {
@@ -173,7 +181,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state11headerColon(char c) {
+    protected int state11headerColon(char c) {
         if (c == ' ') {
             return 11; // not changed
         } else {
@@ -183,7 +191,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state12headerValue(char c) {
+    protected int state12headerValue(char c) {
         if (c == '\r') {
             return 13; // \r after header
         } else {
@@ -192,7 +200,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state13returnAfterHeader(char c) {
+    protected int state13returnAfterHeader(char c) {
         if (c == '\n') {
             return 14; // \n after header
         } else {
@@ -201,7 +209,7 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state14newlineAfterHeader(char c) {
+    protected int state14newlineAfterHeader(char c) {
         // record the header
         result.headers.add(result.currentParsingHeader);
         result.currentParsingHeader = null;
@@ -215,7 +223,8 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state15returnAfterLastHeader(char c) {
+    @SuppressWarnings("Duplicates") // same as HttpRespParser
+    protected int state15returnAfterLastHeader(char c) {
         if (c == '\n') {
             // check content-length
             for (HttpHeader h : result.headers) {
@@ -235,8 +244,12 @@ public class HttpParser extends AbstractParser<HttpReq> {
             } else if (result.bodyLen == 0) {
                 return 9; // \n before end
             } else {
-                result.body = new StringBuilder();
-                return 16; // \n before body
+                if (parseBody) {
+                    result.body = new StringBuilder();
+                    return 16; // \n before body
+                } else {
+                    return 100; // end before body
+                }
             }
         } else {
             errorMessage = "state15: expecting \\n but got " + c;
@@ -244,7 +257,8 @@ public class HttpParser extends AbstractParser<HttpReq> {
         }
     }
 
-    private int state16newlineBeforeBody(char c) {
+    @SuppressWarnings("Duplicates") // same as HttpRespParser
+    protected int state16newlineBeforeBody(char c) {
         if (result.bodyLen == 0) {
             return state09newlineBeforeEnd(); // let it raise error
         } else {

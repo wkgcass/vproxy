@@ -11,8 +11,8 @@ import net.cassite.vproxy.discovery.protocol.NodeDataMsg;
 import net.cassite.vproxy.discovery.protocol.NodeExistenceMsg;
 import net.cassite.vproxy.protocol.ProtocolServerConfig;
 import net.cassite.vproxy.protocol.ProtocolServerHandler;
-import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.redis.RESPConfig;
+import net.cassite.vproxy.redis.RESPParser;
 import net.cassite.vproxy.redis.RESPProtocolHandler;
 import net.cassite.vproxy.redis.Serializer;
 import net.cassite.vproxy.redis.application.*;
@@ -97,11 +97,7 @@ public class Discovery {
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(tmp);
             while (rb.used() > 0) {
                 chnl.reset();
-                try {
-                    rb.writeTo(chnl);
-                } catch (IOException e) {
-                    // will not happen, it's memory operation
-                }
+                rb.writeTo(chnl);
             }
         }
 
@@ -113,12 +109,7 @@ public class Discovery {
         public void readable(InetAddress remoteAddr, byte[] bytes, int len) {
             RingBuffer rb = RingBuffer.allocate(len);
             ByteArrayChannel chnl = ByteArrayChannel.from(bytes, 0, len, 0);
-            try {
-                rb.storeBytesFrom(chnl);
-            } catch (IOException e) {
-                // it's memory operation, should not happen
-                return;
-            }
+            rb.storeBytesFrom(chnl);
             handle(remoteAddr, rb);
         }
 

@@ -84,4 +84,8 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
         this.writeLen = initialLen;
         this.readOff = initialReadOff;
     }
+
+    public byte[] get() {
+        return arr;
+    }
 }

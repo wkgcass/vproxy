@@ -93,23 +93,12 @@ public class TestUDP {
                     public void readable(ConnectionHandlerContext ctx) {
                         byte[] bytes = new byte[32];
                         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-                        int size;
-                        try {
-                            size = ctx.connection.inBuffer.writeTo(chnl);
-                        } catch (IOException e) {
-                            fail();
-                            return;
-                        }
+                        int size = ctx.connection.inBuffer.writeTo(chnl);
                         String s = new String(bytes, 0, size, StandardCharsets.UTF_8);
                         assertEquals("hello", s);
 
                         chnl = ByteArrayChannel.from(bytes, 0, size, 0);
-                        try {
-                            ctx.connection.outBuffer.storeBytesFrom(chnl);
-                        } catch (IOException e) {
-                            fail();
-                            return;
-                        }
+                        ctx.connection.outBuffer.storeBytesFrom(chnl);
                         ++step2;
                     }
 
@@ -166,13 +155,7 @@ public class TestUDP {
             public void readable(ConnectionHandlerContext ctx) {
                 byte[] bytes = new byte[32];
                 ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-                int size;
-                try {
-                    size = ctx.connection.inBuffer.writeTo(chnl);
-                } catch (IOException e) {
-                    fail("should not write fail");
-                    return;
-                }
+                int size = ctx.connection.inBuffer.writeTo(chnl);
                 assertEquals("should get only 1 byte", 1, size);
                 assertEquals("result should be 0", "0", new String(bytes, 0, 1, StandardCharsets.UTF_8));
                 step.incrementAndGet();
@@ -183,12 +166,7 @@ public class TestUDP {
                 }
                 bytes = "anything".getBytes();
                 chnl = ByteArrayChannel.fromFull(bytes);
-                try {
-                    size = udp.outBuffer.storeBytesFrom(chnl);
-                } catch (IOException e) {
-                    fail("should not store fail");
-                    return;
-                }
+                size = udp.outBuffer.storeBytesFrom(chnl);
                 assertEquals(8, size);
             }
 
@@ -216,13 +194,7 @@ public class TestUDP {
 
         byte[] bytes = "anything".getBytes();
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
-        int size;
-        try {
-            size = udp.outBuffer.storeBytesFrom(chnl);
-        } catch (IOException e) {
-            fail("should not store fail");
-            return;
-        }
+        int size = udp.outBuffer.storeBytesFrom(chnl);
         assertEquals(8, size);
 
         while (step.get() < 100) {

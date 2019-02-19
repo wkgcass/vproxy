@@ -4,17 +4,15 @@ import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
 
-import java.io.IOException;
-
 public class Socks5ProxyContext {
-    static final byte GENERAL_SOCKS_SERVER_FAILURE = 0x01;
-    static final byte CONNECTION_NOT_ALLOWED_BY_RULESET = 0x02;
-    static final byte NETWORK_UNREACHABLE = 0x03;
-    static final byte HOST_UNREACHABLE = 0x04;
-    static final byte CONNECTION_REFUSED = 0x05;
-    static final byte TTL_EXPIRED = 0x06;
-    static final byte COMMAND_NOT_SUPPORTED = 0x07;
-    static final byte ADDRESS_TYPE_NOT_SUPPORTED = 0x08;
+    public static final byte GENERAL_SOCKS_SERVER_FAILURE = 0x01;
+    public static final byte CONNECTION_NOT_ALLOWED_BY_RULESET = 0x02;
+    public static final byte NETWORK_UNREACHABLE = 0x03;
+    public static final byte HOST_UNREACHABLE = 0x04;
+    public static final byte CONNECTION_REFUSED = 0x05;
+    public static final byte TTL_EXPIRED = 0x06;
+    public static final byte COMMAND_NOT_SUPPORTED = 0x07;
+    public static final byte ADDRESS_TYPE_NOT_SUPPORTED = 0x08;
 
     // state:
     // 0: expecting version
@@ -61,11 +59,7 @@ public class Socks5ProxyContext {
 
     byte next() {
         chnl.reset();
-        try {
-            inBuffer.writeTo(chnl);
-        } catch (IOException ignore) {
-            // should not happen, it's writing to memory
-        }
+        inBuffer.writeTo(chnl);
         return b[0];
     }
 }

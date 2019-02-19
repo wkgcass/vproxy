@@ -5,8 +5,6 @@ import net.cassite.vproxy.redis.entity.*;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
 
-import java.io.IOException;
-
 public class TestRESPParser {
     public static void main(String[] args) throws Exception {
         {
@@ -115,11 +113,7 @@ public class TestRESPParser {
         byte[] bytes = str.getBytes();
         RingBuffer rb = RingBuffer.allocate(bytes.length);
         ByteArrayChannel ch = ByteArrayChannel.fromFull(bytes);
-        try {
-            rb.storeBytesFrom(ch);
-        } catch (IOException e) {
-            // will not happen
-        }
+        rb.storeBytesFrom(ch);
         int r = parser.feed(rb);
         if (r != 0) {
             if (parser.getErrorMessage() == null)

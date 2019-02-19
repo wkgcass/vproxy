@@ -5,9 +5,13 @@ import net.cassite.vproxy.protocol.ProtocolHandlerContext;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.Logger;
 
-import java.io.IOException;
-
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
+    private final boolean parseBody;
+
+    protected HttpProtocolHandler(boolean parseBody) {
+        this.parseBody = parseBody;
+    }
+
     @Override
     public void init(ProtocolHandlerContext<HttpContext> ctx) {
         ctx.data = new HttpContext();
@@ -16,7 +20,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
     @Override
     public void readable(ProtocolHandlerContext<HttpContext> ctx) {
         if (ctx.data.parser == null) {
-            ctx.data.parser = new HttpParser();
+            ctx.data.parser = new HttpReqParser(parseBody);
         }
         int err = ctx.data.parser.feed(ctx.inBuffer);
         if (err == 0) {
@@ -39,11 +43,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(foo);
             while (ctx.inBuffer.used() != 0) {
                 chnl.reset();
-                try {
-                    ctx.inBuffer.writeTo(chnl);
-                } catch (IOException e) {
-                    // should not happen, it's memory operation
-                }
+                ctx.inBuffer.writeTo(chnl);
             }
         }
 

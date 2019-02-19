@@ -43,13 +43,7 @@ public class IdServer {
             int size = ctx.inBuffer.used();
             byte[] empty = new byte[size];
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(empty);
-            try {
-                ctx.inBuffer.writeTo(chnl);
-            } catch (IOException e) {
-                // should not happen
-                // it's memory operation
-                return;
-            }
+            ctx.inBuffer.writeTo(chnl);
             inBytes.addAndGet(size);
             // respond the id
             byte[] toWrite = id.getBytes();

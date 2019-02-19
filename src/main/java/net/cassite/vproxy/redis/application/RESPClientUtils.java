@@ -58,12 +58,7 @@ public class RESPClientUtils {
                 private final RESPParser parser = new RESPParser(16384);
 
                 private void write(ConnectionHandlerContext ctx) {
-                    try {
-                        ctx.connection.outBuffer.storeBytesFrom(chnl);
-                    } catch (IOException e) {
-                        // should not happen
-                        // it's memory operation
-                    }
+                    ctx.connection.outBuffer.storeBytesFrom(chnl);
                 }
 
                 @Override

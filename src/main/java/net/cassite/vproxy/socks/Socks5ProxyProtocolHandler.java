@@ -314,11 +314,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(x);
             while (pctx.inBuffer.used() > 0) {
                 chnl.reset();
-                try {
-                    pctx.inBuffer.writeTo(chnl);
-                } catch (IOException ignore) {
-                    // should not happen, it's writing to memory
-                }
+                pctx.inBuffer.writeTo(chnl);
             }
         }
 

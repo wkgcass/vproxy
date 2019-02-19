@@ -12,7 +12,6 @@ import net.cassite.vproxy.component.exception.ClosedException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.connection.ConnCloseHandler;
 import net.cassite.vproxy.connection.Connection;
-import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetFlowRecorder;
 import net.cassite.vproxy.util.ConcurrentHashSet;
 import net.cassite.vproxy.util.LogType;
@@ -270,7 +269,7 @@ public class ServerGroup {
             }
         }
 
-        public Connector makeConnector() {
+        public SvrHandleConnector makeConnector() {
             return new SvrHandleConnector(this);
         }
 
@@ -355,7 +354,7 @@ public class ServerGroup {
     /**
      * @return null if not found any healthy
      */
-    public Connector next() {
+    public SvrHandleConnector next() {
         if (method == Method.wrr) {
             return wrrNext();
         } else if (method == Method.wlc) {
@@ -401,11 +400,11 @@ public class ServerGroup {
      * return NULL;
      */
 
-    private Connector wlcNext() {
+    private SvrHandleConnector wlcNext() {
         return wlcNext(_wlc, 0);
     }
 
-    private Connector wlcNext(WLC wlc, int mStart) {
+    private SvrHandleConnector wlcNext(WLC wlc, int mStart) {
         if (mStart >= wlc.servers.size())
             return null;
 
@@ -444,11 +443,11 @@ public class ServerGroup {
         // return null;
     }
 
-    private Connector wrrNext() {
+    private SvrHandleConnector wrrNext() {
         return wrrNext(this._wrr, 0);
     }
 
-    private Connector wrrNext(WRR wrr, int recursion) {
+    private SvrHandleConnector wrrNext(WRR wrr, int recursion) {
         if (recursion > wrr.seq.length)
             return null;
         if (wrr.seq.length == 0)

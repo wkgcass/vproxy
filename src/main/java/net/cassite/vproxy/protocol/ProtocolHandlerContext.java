@@ -3,10 +3,8 @@ package net.cassite.vproxy.protocol;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.ByteArrayChannel;
-import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
-import java.io.IOException;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class ProtocolHandlerContext<T> {
@@ -48,15 +46,7 @@ public class ProtocolHandlerContext<T> {
         }
         while (true) {
             {
-                int size;
-                try {
-                    size = outBuffer.storeBytesFrom(chnl);
-                } catch (IOException e) {
-                    // will not happen
-                    // because we are reading from memory
-                    Logger.shouldNotHappen("should not get error when reading memory");
-                    return; // just return for java syntax
-                }
+                int size = outBuffer.storeBytesFrom(chnl);
                 // the chnl might be null because buffer ET writable handler called
 
                 if (size == 0) {

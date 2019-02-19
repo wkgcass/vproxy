@@ -1,6 +1,6 @@
 package net.cassite.vproxy.util;
 
-import java.io.IOException;
+import java.util.Set;
 
 public abstract class AbstractParser<T> {
     protected int state = 0; // initial state is set to 0
@@ -9,24 +9,28 @@ public abstract class AbstractParser<T> {
 
     private final byte[] bytes = new byte[1];
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
+    private final Set<Integer> terminateStates;
+    private final Set<Integer> terminateRegardlessOfInputStates;
+
+    protected AbstractParser(Set<Integer> terminateStates, Set<Integer> terminateRegardlessOfInputStates) {
+        this.terminateStates = terminateStates;
+        this.terminateRegardlessOfInputStates = terminateRegardlessOfInputStates;
+    }
 
     public int feed(RingBuffer buffer) {
         while (buffer.used() != 0) {
             chnl.reset();
-            try {
-                buffer.writeTo(chnl);
-            } catch (IOException e) {
-                // should not happen, it's memory operation
-                return -1;
-            }
+            buffer.writeTo(chnl);
 
             byte b = bytes[0];
             state = doSwitch(b);
             if (state == -1) { // parse failed, return -1
                 return -1;
             }
+            if (terminateRegardlessOfInputStates.contains(state))
+                break;
         }
-        if (state == 9) {
+        if (terminateStates.contains(9)) {
             return 0;
         }
         return -1; // indicating that the parser want more data

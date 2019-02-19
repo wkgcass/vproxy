@@ -62,22 +62,11 @@ public class UDPIdServer {
             // ignore the input, just clear the buffer
             byte[] bytes = new byte[ctx.connection.inBuffer.used()];
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-            try {
-                ctx.connection.inBuffer.writeTo(chnl);
-            } catch (IOException e) {
-                assert false;
-                // should not happen
-                return;
-            }
+            ctx.connection.inBuffer.writeTo(chnl);
 
             bytes = id.getBytes();
             chnl = ByteArrayChannel.fromFull(bytes);
-            try {
-                ctx.connection.outBuffer.storeBytesFrom(chnl);
-            } catch (IOException e) {
-                assert false;
-                // should not happen
-            }
+            ctx.connection.outBuffer.storeBytesFrom(chnl);
         }
 
         @Override
