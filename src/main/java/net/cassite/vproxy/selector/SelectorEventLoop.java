@@ -257,10 +257,35 @@ public class SelectorEventLoop {
         if (needLockAndWake()) {
             synchronized (OPERATE_SELECTOR_LOCK) { // lock it to make sure register is done
                 selector.wakeup();
-                channel.register(selector, ops, registerData);
+                add0(channel, ops, registerData);
             }
         } else {
+            add0(channel, ops, registerData);
+        }
+    }
+
+    // a helper function for adding a channel into the selector
+    private void add0(SelectableChannel channel, int ops, Object registerData) throws IOException {
+        try {
             channel.register(selector, ops, registerData);
+        } catch (CancelledKeyException e) {
+            // the key might still being processed
+            // but is canceled
+            // it will be removed after handled
+            // so we re-run this in next-next tick
+            // the next tick to ensure this key is removed
+            // then next next tick we can register
+
+            assert Logger.lowLevelDebug("key already canceled, we register it on next tick after keys are handled");
+
+            nextTick(() -> nextTick(() -> {
+                try {
+                    channel.register(selector, ops, registerData);
+                } catch (ClosedChannelException e1) {
+                    // will not happen, if the channel is closed, this statement will not run
+                    throw new RuntimeException(e1);
+                }
+            }));
         }
     }
 
