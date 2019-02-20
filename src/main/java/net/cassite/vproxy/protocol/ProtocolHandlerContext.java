@@ -17,7 +17,7 @@ public class ProtocolHandlerContext<T> {
     // make outBuffer private and handle the writings inside the lib
     private final RingBuffer outBuffer;
     // the loop that handles write process
-    private final SelectorEventLoop loop;
+    public final SelectorEventLoop loop;
     private final ProtocolHandler handler;
 
     // a field for user code to set data
@@ -26,8 +26,8 @@ public class ProtocolHandlerContext<T> {
     public ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
         this.connectionId = connectionId;
         this.connection = connection;
-        this.inBuffer = connection.inBuffer;
-        this.outBuffer = connection.outBuffer;
+        this.inBuffer = connection.getInBuffer();
+        this.outBuffer = connection.getOutBuffer();
         this.loop = loop;
         this.handler = handler;
     }

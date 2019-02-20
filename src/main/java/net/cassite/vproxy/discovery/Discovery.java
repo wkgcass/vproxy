@@ -103,7 +103,7 @@ public class Discovery {
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
-            handle(ctx.connection.remote.getAddress(), ctx.connection.inBuffer);
+            handle(ctx.connection.remote.getAddress(), ctx.connection.getInBuffer());
         }
 
         public void readable(InetAddress remoteAddr, byte[] bytes, int len) {

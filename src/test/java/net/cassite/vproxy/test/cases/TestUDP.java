@@ -93,12 +93,12 @@ public class TestUDP {
                     public void readable(ConnectionHandlerContext ctx) {
                         byte[] bytes = new byte[32];
                         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-                        int size = ctx.connection.inBuffer.writeTo(chnl);
+                        int size = ctx.connection.getInBuffer().writeTo(chnl);
                         String s = new String(bytes, 0, size, StandardCharsets.UTF_8);
                         assertEquals("hello", s);
 
                         chnl = ByteArrayChannel.from(bytes, 0, size, 0);
-                        ctx.connection.outBuffer.storeBytesFrom(chnl);
+                        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
                         ++step2;
                     }
 
@@ -155,7 +155,7 @@ public class TestUDP {
             public void readable(ConnectionHandlerContext ctx) {
                 byte[] bytes = new byte[32];
                 ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-                int size = ctx.connection.inBuffer.writeTo(chnl);
+                int size = ctx.connection.getInBuffer().writeTo(chnl);
                 assertEquals("should get only 1 byte", 1, size);
                 assertEquals("result should be 0", "0", new String(bytes, 0, 1, StandardCharsets.UTF_8));
                 step.incrementAndGet();
@@ -166,7 +166,7 @@ public class TestUDP {
                 }
                 bytes = "anything".getBytes();
                 chnl = ByteArrayChannel.fromFull(bytes);
-                size = udp.outBuffer.storeBytesFrom(chnl);
+                size = udp.getOutBuffer().storeBytesFrom(chnl);
                 assertEquals(8, size);
             }
 
@@ -194,7 +194,7 @@ public class TestUDP {
 
         byte[] bytes = "anything".getBytes();
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
-        int size = udp.outBuffer.storeBytesFrom(chnl);
+        int size = udp.getOutBuffer().storeBytesFrom(chnl);
         assertEquals(8, size);
 
         while (step.get() < 100) {

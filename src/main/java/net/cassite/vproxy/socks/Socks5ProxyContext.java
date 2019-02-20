@@ -49,7 +49,7 @@ public class Socks5ProxyContext {
     private final byte[] b = new byte[1];
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
 
-    Socks5ProxyContext(RingBuffer inBuffer) {
+    public Socks5ProxyContext(RingBuffer inBuffer) {
         this.inBuffer = inBuffer;
     }
 

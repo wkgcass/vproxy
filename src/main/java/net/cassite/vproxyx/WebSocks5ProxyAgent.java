@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx;
 
 import net.cassite.vproxy.component.check.CheckProtocol;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
@@ -17,6 +17,7 @@ import net.cassite.vproxy.socks.Socks5ProxyContext;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxyx.websocks5.WebSocks5ProxyAgentConnectorProvider;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -25,11 +26,13 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
 
-public class WebSocks5ProxyAgentMain {
+@SuppressWarnings("unused")
+public class WebSocks5ProxyAgent {
     public static void main0(String[] args) throws Exception {
         // first of all, let's parse the configuration file
         // TODO --- below
         List<Pattern> proxyDomains = new LinkedList<>();
+        proxyDomains.add(Pattern.compile(".*"));
         // TODO --- upper
 
         // let's create a server, if bind failed, error would be thrown

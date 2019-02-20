@@ -81,10 +81,10 @@ public class NetEventLoop {
     @ThreadSafe
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
         int ops = 0;
-        if (connection.inBuffer.free() > 0) {
+        if (connection.getInBuffer().free() > 0) {
             ops |= SelectionKey.OP_READ;
         }
-        if (connection.outBuffer.used() > 0) {
+        if (connection.getOutBuffer().used() > 0) {
             ops |= SelectionKey.OP_WRITE;
         }
 
@@ -112,9 +112,9 @@ public class NetEventLoop {
             fireConnected = connection.protocol == Protocol.TCP; // only TCP can have connection and fire event
 
             ops = 0;
-            if (connection.inBuffer.free() > 0)
+            if (connection.getInBuffer().free() > 0)
                 ops |= SelectionKey.OP_READ;
-            if (connection.outBuffer.used() > 0)
+            if (connection.getOutBuffer().used() > 0)
                 ops |= SelectionKey.OP_WRITE;
         } else {
             ops = SelectionKey.OP_CONNECT;
@@ -282,7 +282,7 @@ class HandlerForUDPServer implements Handler<DatagramChannel> {
             sctx.handler.connection(sctx, conn);
         }
         int toStore = buffer.remaining();
-        int stored = udpConn.connection.inBuffer.storeBytesFrom(buffer);
+        int stored = udpConn.connection.getInBuffer().storeBytesFrom(buffer);
         // we do not care about the res, but let's log if not reading all
         assert toStore == stored || Logger.lowLevelDebug("toStore = " + toStore + ", stored = " + stored);
         udpConn.connection.incFromRemoteBytes(stored); // reading from remote channel
@@ -325,13 +325,13 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     @Override
     public void readable(HandlerContext<SelectableChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
-        if (cctx.connection.inBuffer.free() == 0) {
+        if (cctx.connection.getInBuffer().free() == 0) {
             Logger.shouldNotHappen("the connection has no space to store data");
             return;
         }
         int read;
         try {
-            read = cctx.connection.inBuffer.storeBytesFrom((ReadableByteChannel) /* it's definitely readable */ ctx.getChannel());
+            read = cctx.connection.getInBuffer().storeBytesFrom((ReadableByteChannel) /* it's definitely readable */ ctx.getChannel());
         } catch (IOException e) {
             cctx.handler.exception(cctx, e);
             return;
@@ -351,7 +351,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         }
         cctx.connection.incFromRemoteBytes(read); // record net flow, it's reading, so is "from remote"
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
-        if (cctx.connection.inBuffer.free() == 0) {
+        if (cctx.connection.getInBuffer().free() == 0) {
             // the in-buffer is full, and client code cannot read, remove read event
             assert Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
             if (ctx.getChannel().isOpen()) { // the connection might be closed in readable(), so let's check
@@ -363,7 +363,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     @Override
     public void writable(HandlerContext<SelectableChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
-        if (cctx.connection.outBuffer.used() == 0) {
+        if (cctx.connection.getOutBuffer().used() == 0) {
             if (cctx.connection.remoteClosed) {
                 // no bytes to write, then the connection can be closed now
                 cctx.connection.close();
@@ -375,7 +375,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         }
         int write;
         try {
-            write = cctx.connection.outBuffer.writeTo((WritableByteChannel) /* it's definitely writable */ ctx.getChannel());
+            write = cctx.connection.getOutBuffer().writeTo((WritableByteChannel) /* it's definitely writable */ ctx.getChannel());
         } catch (IOException e) {
             cctx.handler.exception(cctx, e);
             return;
@@ -388,7 +388,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         cctx.connection.incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
         // NOTE: should also record in Quick Write impl in Connection.java
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
-        if (cctx.connection.outBuffer.used() == 0) {
+        if (cctx.connection.getOutBuffer().used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event
             assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_WRITE);
@@ -423,7 +423,7 @@ class HandlerForClientConnection extends HandlerForConnection {
         }
 
         int ops = SelectionKey.OP_READ;
-        if (cctx.connection.outBuffer.used() > 0) {
+        if (cctx.connection.getOutBuffer().used() > 0) {
             ops |= SelectionKey.OP_WRITE;
         }
         ctx.modify(ops);

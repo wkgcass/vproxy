@@ -58,7 +58,7 @@ public class RESPClientUtils {
                 private final RESPParser parser = new RESPParser(16384);
 
                 private void write(ConnectionHandlerContext ctx) {
-                    ctx.connection.outBuffer.storeBytesFrom(chnl);
+                    ctx.connection.getOutBuffer().storeBytesFrom(chnl);
                 }
 
                 @Override
@@ -69,7 +69,7 @@ public class RESPClientUtils {
 
                 @Override
                 public void readable(ConnectionHandlerContext ctx) {
-                    int res = parser.feed(ctx.connection.inBuffer);
+                    int res = parser.feed(ctx.connection.getInBuffer());
                     if (res == -1) {
                         String msg = parser.getErrorMessage();
                         if (msg == null) {

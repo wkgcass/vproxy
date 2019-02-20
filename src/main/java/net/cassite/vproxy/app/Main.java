@@ -14,6 +14,9 @@ import net.cassite.vproxy.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.security.Security;
 
@@ -43,11 +46,51 @@ public class Main {
     private static void beforeStart() {
         Security.setProperty("networkaddress.cache.ttl", "0");
         Resolver.getDefault();
-        ServerAddressUpdater.init();
+    }
+
+    private static void runApp(String appClass, String[] args) {
+        Class<?> cls;
+        try {
+            cls = Class.forName("net.cassite.vproxyx." + appClass);
+        } catch (ClassNotFoundException e) {
+            System.err.println("Class " + appClass + " not found");
+            System.exit(1);
+            return;
+        }
+        Method method;
+        try {
+            method = cls.getMethod("main0", String[].class);
+        } catch (NoSuchMethodException e) {
+            System.err.println("Public method not found: " + appClass + "#main0(String[])");
+            System.exit(1);
+            return;
+        }
+        if (!Modifier.isStatic(method.getModifiers())) {
+            System.err.println("Method " + appClass + "#main0(String[]) is not static");
+            System.exit(1);
+            return;
+        }
+        try {
+            method.invoke(null, (Object) args);
+        } catch (IllegalAccessException e) {
+            e.printStackTrace();
+            System.exit(1);
+        } catch (InvocationTargetException e) {
+            e.getTargetException().printStackTrace();
+            System.exit(1);
+        }
     }
 
     public static void main(String[] args) {
         beforeStart();
+
+        // check for system properties and may run an app
+        // apps can be found in vproxyx package
+        String appClass = System.getProperty("+A:AppClass");
+        if (appClass != null) {
+            runApp(appClass, args);
+            return;
+        }
 
         try {
             Application.create();
@@ -57,6 +100,8 @@ public class Main {
             System.exit(1);
             return;
         }
+        // init the address updater (should be called after Application initiates)
+        ServerAddressUpdater.init();
         // init signal hooks
         Shutdown.initSignal();
         // start ControlEventLoop

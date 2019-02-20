@@ -109,7 +109,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             "\r\n"
         ).getBytes();
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
-        ctx.connection.outBuffer.storeBytesFrom(chnl);
+        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
         // the out-buffer is large enough to fit the message, so no need to buffer it from here
 
         step = 1;
@@ -120,7 +120,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     public void readable(ConnectionHandlerContext ctx) {
         if (step == 1) {
             // http
-            int res = httpRespParser.feed(ctx.connection.inBuffer);
+            int res = httpRespParser.feed(ctx.connection.getInBuffer());
             if (res != 0) {
                 String errMsg = httpRespParser.getErrorMessage();
                 if (errMsg != null) {
@@ -135,15 +135,15 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             checkAndProcessHttpRespAndSendWebSocketFrame(ctx, httpRespParser.getResult());
         } else if (step == 2) {
             // WebSocket
-            ctx.connection.inBuffer.writeTo(webSocketFrame);
+            ctx.connection.getInBuffer().writeTo(webSocketFrame);
             if (webSocketFrame.free() != 0) {
                 return; // still have data to read
             }
             // read done, check whether still have data to read
-            if (ctx.connection.inBuffer.used() != 0) {
+            if (ctx.connection.getInBuffer().used() != 0) {
                 // still got data
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data other than the frame header " + ctx.connection.inBuffer.toString());
+                    "in buffer still have data other than the frame header " + ctx.connection.getInBuffer().toString());
                 providedCallback.accept(null);
                 ctx.connection.close();
                 return;
@@ -154,15 +154,15 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             sendSocks5AuthMethodExchange(ctx);
         } else if (step == 3) {
             // socks5 auth method respond
-            ctx.connection.inBuffer.writeTo(socks5AuthMethodExchange);
+            ctx.connection.getInBuffer().writeTo(socks5AuthMethodExchange);
             if (socks5AuthMethodExchange.free() != 0) {
                 return; // still have data to read
             }
             // read done, check whether still have data to read
-            if (ctx.connection.inBuffer.used() != 0) {
+            if (ctx.connection.getInBuffer().used() != 0) {
                 // still got data
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data other than the auth exchange " + ctx.connection.inBuffer.toString());
+                    "in buffer still have data other than the auth exchange " + ctx.connection.getInBuffer().toString());
                 providedCallback.accept(null);
                 ctx.connection.close();
                 return;
@@ -171,7 +171,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             checkAndProcessAuthExchangeAndSendConnect(ctx);
         } else if (step == 5) {
             // socks5 connected respond first 5 bytes
-            ctx.connection.inBuffer.writeTo(socks5ConnectResult);
+            ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
             if (socks5ConnectResult.free() != 0) {
                 return; // still have data to read
             }
@@ -179,15 +179,15 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             checkAndProcessFirst5BytesOfConnectResult(ctx);
         } else {
             // left bytes for socks5
-            ctx.connection.inBuffer.writeTo(socks5ConnectResult);
+            ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
             if (socks5ConnectResult.free() != 0) {
                 return; // still have data to read
             }
             // check inBuffer
-            if (ctx.connection.inBuffer.used() != 0) {
+            if (ctx.connection.getInBuffer().used() != 0) {
                 // still got data
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data after socks5 connect response " + ctx.connection.inBuffer.toString());
+                    "in buffer still have data after socks5 connect response " + ctx.connection.getInBuffer().toString());
                 providedCallback.accept(null);
                 ctx.connection.close();
                 return;
@@ -218,10 +218,10 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         }
 
         // clear the input buffer in case got body
-        ctx.connection.inBuffer.clear();
+        ctx.connection.getInBuffer().clear();
 
         // send WebSocket frame:
-        WebSocks5Utils.sendWebSocketFrame(ctx);
+        WebSocks5Utils.sendWebSocketFrame(ctx.connection.getOutBuffer());
         step = 2;
         // expecting to read the exactly same data as sent
         byte[] bytes = new byte[WebSocks5Utils.bytesToSendForWebSocketFrame.length];
@@ -235,7 +235,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             0, // no auth
         };
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
-        ctx.connection.outBuffer.storeBytesFrom(chnl);
+        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
         step = 3;
         byte[] ex = new byte[2];
         socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
@@ -272,7 +272,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         System.arraycopy(chars, 0, toSend, 5, chars.length);
 
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
-        ctx.connection.outBuffer.storeBytesFrom(chnl);
+        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
 
         // make buffer for incoming data
         step = 5;
@@ -314,9 +314,10 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         }
 
         // check the input buffer, whether already contain the left data
-        if (ctx.connection.inBuffer.used() == leftLen) {
+        if (ctx.connection.getInBuffer().used() == leftLen) {
+            ctx.connection.getInBuffer().clear();
             done(ctx);
-        } else if (ctx.connection.inBuffer.used() < leftLen) {
+        } else if (ctx.connection.getInBuffer().used() < leftLen) {
             // read more data
             step = 6;
             byte[] foo = new byte[leftLen];
@@ -324,7 +325,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         } else {
             // more than leftLen, which is invalid
             Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                "still got data after the connection response" + ctx.connection.inBuffer.toString());
+                "still got data after the connection response" + ctx.connection.getInBuffer().toString());
             providedCallback.accept(null);
             ctx.connection.close();
         }

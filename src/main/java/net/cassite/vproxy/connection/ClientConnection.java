@@ -62,7 +62,7 @@ public class ClientConnection extends Connection {
         // then let's bind the ET handler
         // it's useful for udp client because it looks like a connection
         if (protocol == Protocol.UDP) {
-            this.inBuffer.addHandler(inBufferETHandler);
+            this.getInBuffer().addHandler(inBufferETHandler);
         }
     }
 

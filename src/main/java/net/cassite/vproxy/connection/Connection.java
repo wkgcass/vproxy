@@ -12,6 +12,20 @@ import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
 public class Connection implements NetFlowRecorder {
+    /**
+     * bytes will be read from channel into this buffer
+     */
+    public RingBuffer getInBuffer() {
+        return inBuffer;
+    }
+
+    /**
+     * bytes in this buffer will be wrote to channel
+     */
+    public RingBuffer getOutBuffer() {
+        return outBuffer;
+    }
+
     // the inBuffer might be full, and we need to handle writable event
     class InBufferETHandler implements RingBufferETHandler {
         @Override
@@ -56,7 +70,7 @@ public class Connection implements NetFlowRecorder {
                 // buffer should be handled in
                 // the same thread
 
-                if (outBuffer.free() != 0) {
+                if (getOutBuffer().free() != 0) {
                     // try to flush buffer in user code
                     // (we assume user code preserves a buffer to write)
                     // (since ringBuffer will not extend)
@@ -68,7 +82,7 @@ public class Connection implements NetFlowRecorder {
                 if (!looksLikeAConnection) {
                     int write;
                     try {
-                        write = outBuffer.writeToDatagramChannel((DatagramChannel) channel, remote);
+                        write = getOutBuffer().writeToDatagramChannel((DatagramChannel) channel, remote);
                     } catch (IOException ignore) {
                         // we ignore any error when writing udp
                         return;
@@ -81,12 +95,12 @@ public class Connection implements NetFlowRecorder {
 
                 boolean addWriteOnLoop = true;
                 try {
-                    int write = outBuffer.writeTo((WritableByteChannel) channel);
+                    int write = getOutBuffer().writeTo((WritableByteChannel) channel);
                     if (write > 0) {
                         incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
                         // NOTE: should also record in NetEventLoop writable event
                     }
-                    if (outBuffer.used() == 0) {
+                    if (getOutBuffer().used() == 0) {
                         // have nothing to write now
 
                         // at this time, we let user write again
@@ -94,7 +108,7 @@ public class Connection implements NetFlowRecorder {
                         // user buffer
                         _cctx.handler.writable(_cctx);
 
-                        if (outBuffer.used() == 0) {
+                        if (getOutBuffer().used() == 0) {
                             // outBuffer still empty
                             // do not add OP_WRITE
                             addWriteOnLoop = false;
@@ -134,14 +148,8 @@ public class Connection implements NetFlowRecorder {
     private final List<NetFlowRecorder> netFlowRecorders = new CopyOnWriteArrayList<>();
     private final List<ConnCloseHandler> connCloseHandlers = new CopyOnWriteArrayList<>();
 
-    /**
-     * bytes will be read from channel into this buffer
-     */
-    public final RingBuffer inBuffer;
-    /**
-     * bytes in this buffer will be wrote to channel
-     */
-    public final RingBuffer outBuffer;
+    private /*only modified in UNSAFE methods*/ RingBuffer inBuffer;
+    private /*only modified in UNSAFE methods*/ RingBuffer outBuffer;
     /*private let ClientConnection have access*/ final InBufferETHandler inBufferETHandler;
     private final OutBufferETHandler outBufferETHandler;
     boolean remoteClosed = false;
@@ -174,9 +182,9 @@ public class Connection implements NetFlowRecorder {
         if (!looksLikeAConnection) {
             // the fd is the server datagram socket, so will not remove OP_READ
             // so there is no need to add OP_READ back
-            this.inBuffer.addHandler(inBufferETHandler);
+            this.getInBuffer().addHandler(inBufferETHandler);
         }
-        this.outBuffer.addHandler(outBufferETHandler);
+        this.getOutBuffer().addHandler(outBufferETHandler);
         // in the outBufferETHandler
         // if buffer did not wrote all content, simply ignore the left part
     }
@@ -252,8 +260,8 @@ public class Connection implements NetFlowRecorder {
 
         // no need to check protocol
         // removing a non-existing element from a collection is safe
-        inBuffer.removeHandler(inBufferETHandler);
-        outBuffer.removeHandler(outBufferETHandler);
+        getInBuffer().removeHandler(inBufferETHandler);
+        getOutBuffer().removeHandler(outBufferETHandler);
 
         NetEventLoop eventLoop = _eventLoop;
         if (eventLoop != null && looksLikeAConnection) {
@@ -299,5 +307,26 @@ public class Connection implements NetFlowRecorder {
     @Override
     public String toString() {
         return "Connection(" + id() + ")[" + (closed ? "closed" : "open") + "]";
+    }
+
+    // UNSAFE
+
+    public void UNSAFE_replaceBuffer(RingBuffer in, RingBuffer out) throws IOException {
+        assert Logger.lowLevelDebug("UNSAFE_replaceBuffer()");
+        // we should make sure that the buffers are empty
+        if (getInBuffer().used() != 0 || getOutBuffer().used() != 0) {
+            throw new IOException("cannot replace buffer when they are not empty");
+        }
+        // remove handler from the buffers
+        inBuffer.removeHandler(inBufferETHandler);
+        outBuffer.removeHandler(outBufferETHandler);
+
+        // add for new buffers
+        in.addHandler(inBufferETHandler);
+        out.addHandler(outBufferETHandler);
+
+        // assign buffers
+        this.inBuffer = in;
+        this.outBuffer = out;
     }
 }

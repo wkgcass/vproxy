@@ -12,6 +12,7 @@ public class HttpRespParser extends AbstractParser<HttpResp> {
 
     public HttpRespParser(boolean parseBody) {
         super(new HashSet<>(Arrays.asList(9, 100)), Collections.singleton(100));
+        result = new HttpResp();
         this.parseBody = parseBody;
     }
 

@@ -10,6 +10,7 @@ import java.net.InetSocketAddress;
 
 public class AlreadyConnectedConnector extends Connector {
     private final ClientConnection conn;
+
     public AlreadyConnectedConnector(InetSocketAddress remote, InetAddress local, ClientConnection conn) {
         super(remote, local);
         this.conn = conn;
@@ -17,8 +18,14 @@ public class AlreadyConnectedConnector extends Connector {
 
     @Override
     public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
-        in.clean();
-        out.clean();
+        RingBuffer oldI = conn.getInBuffer();
+        RingBuffer oldO = conn.getOutBuffer();
+
+        conn.UNSAFE_replaceBuffer(in, out);
+
+        oldI.clean();
+        oldO.clean();
+
         return conn;
     }
 }

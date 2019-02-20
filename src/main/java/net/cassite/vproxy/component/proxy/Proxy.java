@@ -38,8 +38,8 @@ public class Proxy {
 
     private static void utilCloseConnectionAndReleaseBuffers(Connection connection) {
         utilCloseConnection(connection);
-        connection.inBuffer.clean();
-        connection.outBuffer.clean();
+        connection.getInBuffer().clean();
+        connection.getOutBuffer().clean();
     }
 
     private static void utilCloseSessionAndReleaseBuffers(Session session) {
@@ -85,7 +85,7 @@ public class Proxy {
 
             ClientConnection clientConnection;
             try {
-                clientConnection = connector.connect(/*switch the two buffers to make a PROXY*/connection.outBuffer, connection.inBuffer);
+                clientConnection = connector.connect(/*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {
                 Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid: " + e);
                 // it should not happen if user provided endpoint is valid
@@ -236,7 +236,7 @@ public class Proxy {
         public void writable(ConnectionHandlerContext ctx) {
             // we might write the last bytes here
             // when we write everything, we close the connection
-            if (session.passive.isClosed() && ctx.connection.outBuffer.used() == 0)
+            if (session.passive.isClosed() && ctx.connection.getOutBuffer().used() == 0)
                 utilCloseConnectionAndReleaseBuffers(ctx.connection);
         }
 
@@ -253,7 +253,7 @@ public class Proxy {
             // now the active connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
                 return;
-            if (session.passive.outBuffer.used() == 0) {
+            if (session.passive.getOutBuffer().used() == 0) {
                 // nothing to write anymore
                 // close the passive connection
                 assert Logger.lowLevelDebug("nothing to write for passive connection, do close");
@@ -264,7 +264,7 @@ public class Proxy {
                 // then the passive will not be able to write anything to active
 
                 // the passive can still read from the active conn's in-buffer if still got some bytes
-                session.passive.inBuffer.close();
+                session.passive.getInBuffer().close();
             }
         }
 
@@ -310,7 +310,7 @@ public class Proxy {
         public void writable(ConnectionHandlerContext ctx) {
             // we might write the last bytes here
             // when we write everyhing, we close the connection
-            if (session.active.isClosed() && ctx.connection.outBuffer.used() == 0)
+            if (session.active.isClosed() && ctx.connection.getOutBuffer().used() == 0)
                 utilCloseConnectionAndReleaseBuffers(ctx.connection);
         }
 
@@ -336,7 +336,7 @@ public class Proxy {
             // now the passive connection is closed
             if (session.isClosed()) // do nothing if the session is already closed
                 return;
-            if (session.active.outBuffer.used() == 0) {
+            if (session.active.getOutBuffer().used() == 0) {
                 // nothing to write anymore
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(session.active);
@@ -346,7 +346,7 @@ public class Proxy {
                 // then the active will not be able to write anything to passive
 
                 // the active can still read from the passive conn's in-buffer if still got some bytes
-                session.active.inBuffer.close();
+                session.active.getInBuffer().close();
             }
         }
 

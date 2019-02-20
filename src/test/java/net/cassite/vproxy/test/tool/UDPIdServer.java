@@ -60,13 +60,13 @@ public class UDPIdServer {
         @Override
         public void readable(ConnectionHandlerContext ctx) {
             // ignore the input, just clear the buffer
-            byte[] bytes = new byte[ctx.connection.inBuffer.used()];
+            byte[] bytes = new byte[ctx.connection.getInBuffer().used()];
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
-            ctx.connection.inBuffer.writeTo(chnl);
+            ctx.connection.getInBuffer().writeTo(chnl);
 
             bytes = id.getBytes();
             chnl = ByteArrayChannel.fromFull(bytes);
-            ctx.connection.outBuffer.storeBytesFrom(chnl);
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
         }
 
         @Override
