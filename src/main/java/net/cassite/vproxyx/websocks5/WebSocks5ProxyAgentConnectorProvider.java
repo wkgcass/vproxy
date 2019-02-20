@@ -53,6 +53,15 @@ public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProv
         }
         // retrieve a remote connection
         SvrHandleConnector connector = servers.next();
+        if (connector == null) {
+            // no connectors for now
+            // the process is definitely cannot proceed
+            // we do not try direct connect here
+            // (because it's specified in config file that this domain requires proxy)
+            // just raise error
+            providedCallback.accept(null);
+            return;
+        }
         ClientConnection conn;
         try {
             conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
