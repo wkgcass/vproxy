@@ -591,7 +591,7 @@ public class Utils {
 
     public static void clean(ByteBuffer buffer) {
         assert Logger.lowLevelDebug("run Utils.clean");
-        if (!buffer.getClass().getName().equals("sun.nio.ch.DirectBuffer")) {
+        if (!buffer.getClass().getName().equals("java.nio.DirectByteBuffer")) {
             assert Logger.lowLevelDebug("not direct buffer");
             return;
         }
