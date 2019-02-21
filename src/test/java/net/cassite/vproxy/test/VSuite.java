@@ -18,6 +18,7 @@ import org.junit.runners.Suite;
     TestKhala.class,
     TestAuto.class,
     TestConnectClient.class,
+    TestSSLRingBuffers.class,
 
     AfterAll.class
 })
