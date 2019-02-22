@@ -40,9 +40,9 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
     private final SSLEngine engine;
     private final Consumer<Runnable> resumer;
 
-    public SSLWrapRingBuffer(SimpleRingBuffer plainBytesBuffer,
-                             SSLEngine engine,
-                             Consumer<Runnable> resumer) {
+    SSLWrapRingBuffer(SimpleRingBuffer plainBytesBuffer,
+                      SSLEngine engine,
+                      Consumer<Runnable> resumer) {
         this.plainBufferForApp = plainBytesBuffer;
         this.engine = engine;
         this.resumer = resumer;

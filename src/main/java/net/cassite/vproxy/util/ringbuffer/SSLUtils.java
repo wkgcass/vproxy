@@ -1,13 +1,38 @@
 package net.cassite.vproxy.util.ringbuffer;
 
+import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.Tuple;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
+import java.util.function.Consumer;
 
 public class SSLUtils {
     private SSLUtils() {
+    }
+
+    public static class SSLBufferPair extends Tuple<SSLUnwrapRingBuffer, SSLWrapRingBuffer> {
+        public SSLBufferPair(SSLUnwrapRingBuffer left, SSLWrapRingBuffer right) {
+            super(left, right);
+        }
+    }
+
+    public static SSLBufferPair genbuf(SSLEngine engine,
+                                       SimpleRingBuffer input,
+                                       SimpleRingBuffer output,
+                                       SelectorEventLoop loop) {
+        return genbuf(engine, input, output, loop::runOnLoop);
+    }
+
+    public static SSLBufferPair genbuf(SSLEngine engine,
+                                       SimpleRingBuffer input,
+                                       SimpleRingBuffer output,
+                                       Consumer<Runnable> resumer) {
+        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, resumer);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap);
+        return new SSLBufferPair(unwrap, wrap);
     }
 
     public static SimpleRingBuffer resizeFor(SimpleRingBuffer buf, SSLEngine engine) {

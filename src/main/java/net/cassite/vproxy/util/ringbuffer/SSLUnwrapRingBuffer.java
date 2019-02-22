@@ -30,10 +30,10 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     private boolean closed = false;
 
-    public SSLUnwrapRingBuffer(SimpleRingBuffer plainBufferForApp,
-                               SSLEngine engine,
-                               Consumer<Runnable> resumer,
-                               SSLWrapRingBuffer pair) {
+    SSLUnwrapRingBuffer(SimpleRingBuffer plainBufferForApp,
+                        SSLEngine engine,
+                        Consumer<Runnable> resumer,
+                        SSLWrapRingBuffer pair) {
         this.plainBufferForApp = plainBufferForApp;
         this.engine = engine;
         this.resumer = resumer;

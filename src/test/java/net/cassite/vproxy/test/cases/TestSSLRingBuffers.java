@@ -3,7 +3,9 @@ package net.cassite.vproxy.test.cases;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.RingBufferETHandler;
+import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
+import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 import net.cassite.vproxy.util.ringbuffer.SSLWrapRingBuffer;
 import net.cassite.vproxy.util.ringbuffer.SimpleRingBuffer;
 import org.junit.Test;
@@ -69,11 +71,13 @@ public class TestSSLRingBuffers {
 
         // init buffers
 
-        serverWrap = new SSLWrapRingBuffer(serverOutputData, serverEngine, q::add);
-        serverUnwrap = new SSLUnwrapRingBuffer(serverInputData, serverEngine, q::add, serverWrap);
+        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, q::add);
+        serverWrap = tuple.right;
+        serverUnwrap = tuple.left;
 
-        clientWrap = new SSLWrapRingBuffer(clientOutputData, clientEngine, q::add);
-        clientUnwrap = new SSLUnwrapRingBuffer(clientInputData, clientEngine, q::add, clientWrap);
+        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, q::add);
+        clientWrap = tuple.right;
+        clientUnwrap = tuple.left;
 
         // set callback
         serverWrap.addHandler(new RingBufferETHandler() {

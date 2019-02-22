@@ -30,11 +30,11 @@ public interface RingBuffer {
     SimpleRingBuffer EMPTY_BUFFER = allocate(0);
 
     static SimpleRingBuffer allocateDirect(int cap) {
-        return new SimpleRingBuffer(true, ByteBuffer.allocateDirect(cap));
+        return SimpleRingBuffer.allocateDirect(cap);
     }
 
     static SimpleRingBuffer allocate(int cap) {
-        return new SimpleRingBuffer(false, ByteBuffer.allocate(cap));
+        return SimpleRingBuffer.allocate(cap);
     }
 
     default int storeBytesFrom(ByteBuffer byteBuffer) {

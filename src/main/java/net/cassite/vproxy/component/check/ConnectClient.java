@@ -128,7 +128,7 @@ public class ConnectClient {
             conn = ClientConnection.create(remote, local,
                 // set input buffer to 1 to be able to read things
                 // output buffer is not useful at all here
-                RingBuffer.allocate(1), RingBuffer.allocate(0));
+                RingBuffer.allocate(1), RingBuffer.EMPTY_BUFFER);
         } catch (IOException e) {
             if (!stopped) cb.failed(e);
             return;

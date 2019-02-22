@@ -26,7 +26,15 @@ public class SimpleRingBuffer implements RingBuffer {
     private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
-    public SimpleRingBuffer(boolean isDirect, ByteBuffer buffer) {
+    public static SimpleRingBuffer allocateDirect(int cap) {
+        return new SimpleRingBuffer(true, ByteBuffer.allocateDirect(cap));
+    }
+
+    public static SimpleRingBuffer allocate(int cap) {
+        return new SimpleRingBuffer(false, ByteBuffer.allocate(cap));
+    }
+
+    private SimpleRingBuffer(boolean isDirect, ByteBuffer buffer) {
         this.isDirect = isDirect;
         this.buffer = buffer;
         this.cap = buffer.capacity();
