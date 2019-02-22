@@ -1,25 +1,163 @@
 package net.cassite.vproxy.test.cases;
 
-import net.cassite.vproxy.util.ByteArrayChannel;
-import net.cassite.vproxy.util.RingBuffer;
-import net.cassite.vproxy.util.RingBufferETHandler;
-import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxy.connection.*;
+import net.cassite.vproxy.dns.Resolver;
+import net.cassite.vproxy.http.HttpResp;
+import net.cassite.vproxy.http.HttpRespParser;
+import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.util.*;
 import net.cassite.vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 import net.cassite.vproxy.util.ringbuffer.SSLWrapRingBuffer;
 import net.cassite.vproxy.util.ringbuffer.SimpleRingBuffer;
+import org.junit.AfterClass;
+import org.junit.BeforeClass;
 import org.junit.Test;
 
 import javax.net.ssl.KeyManagerFactory;
 import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.TrustManagerFactory;
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
+import static org.junit.Assert.fail;
 
 public class TestSSLRingBuffers {
+    @BeforeClass
+    public static void setUpClass() {
+        System.setProperty("javax.net.debug", "all");
+    }
+
+    @AfterClass
+    public static void tearDownClass() {
+        System.setProperty("javax.net.debug", "");
+    }
+
+    SelectorEventLoop selectorEventLoop;
+
+    @Test
+    public void requestSite() throws Exception {
+        String url = "https://ip.cn";
+        String host = url.substring("https://".length());
+        int port = 443;
+        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        Resolver.getDefault().resolveV4(host, cb);
+        InetAddress inet;
+        try {
+            inet = cb.block();
+        } catch (UnknownHostException e) {
+            System.out.println("we are not able to resolve the address, " +
+                "may be network is wrong, we ignore this case");
+            return;
+        }
+        // make a socket to test whether it's accessible
+        {
+            try (Socket sock = new Socket()) {
+                sock.connect(new InetSocketAddress(inet, port));
+            } catch (IOException e) {
+                System.out.println("we cannot connect to the remote," +
+                    "may be network is wrong, we ignore this case");
+                return;
+            }
+        }
+
+        // create loop
+        selectorEventLoop = SelectorEventLoop.open();
+        NetEventLoop loop = new NetEventLoop(selectorEventLoop);
+
+        // create connection
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        ctx.init(null, null, null);
+        SSLEngine engine = ctx.createSSLEngine(host, port);
+        engine.setUseClientMode(true);
+        SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
+            engine,
+            RingBuffer.allocate(16384),
+            RingBuffer.allocate(16384),
+            8192,
+            32768,
+            selectorEventLoop
+        );
+        ClientConnection conn = ClientConnection.create(
+            new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"),
+            pair.left, pair.right
+        );
+        loop.addClientConnection(conn, null, new MySSLClientConnectionHandler());
+
+        // start
+        selectorEventLoop.loop();
+    }
+
+    class MySSLClientConnectionHandler implements ClientConnectionHandler {
+        private final ByteArrayChannel chnl;
+        private final HttpRespParser parser;
+
+        MySSLClientConnectionHandler() {
+            chnl = ByteArrayChannel.fromFull(("" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: ip.cn\r\n" +
+                "User-Agent: vproxy\r\n" + // add an agent, otherwise it will return 403
+                "\r\n").getBytes());
+            parser = new HttpRespParser(false);
+        }
+
+        @Override
+        public void connected(ClientConnectionHandlerContext ctx) {
+            // send http request
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+        }
+
+        @Override
+        public void readable(ConnectionHandlerContext ctx) {
+            int res = parser.feed(ctx.connection.getInBuffer());
+            if (res != 0) {
+                String err = parser.getErrorMessage();
+                assertNull("got error: " + err, err);
+                return;
+            }
+            // headers done
+            HttpResp resp = parser.getResult();
+            assertEquals("failed: " + resp.toString(), "200", resp.statusCode.toString().trim());
+            // the body is truncated
+            // we actually do not need that
+            // successfully parsing the status and headers means that
+            // this lib is working properly
+            try {
+                selectorEventLoop.close();
+            } catch (IOException e) {
+                fail(e.getMessage());
+            }
+        }
+
+        @Override
+        public void writable(ConnectionHandlerContext ctx) {
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+        }
+
+        @Override
+        public void exception(ConnectionHandlerContext ctx, IOException err) {
+            fail();
+        }
+
+        @Override
+        public void closed(ConnectionHandlerContext ctx) {
+            // ignore
+        }
+
+        @Override
+        public void removed(ConnectionHandlerContext ctx) {
+            // ignore
+        }
+    }
+
     private static final String keyStoreFile = "testkeys";
     private static final String trustStoreFile = "testkeys";
 
@@ -43,8 +181,6 @@ public class TestSSLRingBuffers {
 
     @Test
     public void wrapThenUnwrap() throws Exception {
-        // System.setProperty("javax.net.debug", "all");
-
         KeyStore ks = KeyStore.getInstance("JKS");
         KeyStore ts = KeyStore.getInstance("JKS");
 
@@ -71,11 +207,11 @@ public class TestSSLRingBuffers {
 
         // init buffers
 
-        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, q::add);
+        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, 8192, 32768, q::add);
         serverWrap = tuple.right;
         serverUnwrap = tuple.left;
 
-        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, q::add);
+        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, 8192, 32768, q::add);
         clientWrap = tuple.right;
         clientUnwrap = tuple.left;
 

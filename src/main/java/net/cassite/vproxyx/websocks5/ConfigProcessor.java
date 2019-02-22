@@ -70,6 +70,13 @@ public class ConfigProcessor {
                     step = 0; // return to normal state
                     continue;
                 }
+                if (!line.startsWith("websocks5://") && !line.startsWith("websocks5s://")) {
+                    throw new Exception("unknown protocol: " + line);
+                }
+
+                boolean useSSL = line.startsWith("websocks5s");
+                line = line.substring(useSSL ? "websocks5s://".length() : "websocks5://".length());
+
                 int colonIdx = line.lastIndexOf(':');
                 if (colonIdx == -1)
                     throw new Exception("invalid address:port for proxy.server.list: " + line);
@@ -86,18 +93,23 @@ public class ConfigProcessor {
                 if (port < 1 || port > 65535) {
                     throw new Exception("invalid port: " + line);
                 }
+                ServerGroup.ServerHandle handle;
                 if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
                 } else if (Utils.isIpv6(hostPart)) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("::"), 10);
+                    handle = group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("::"), 10);
                 } else {
                     BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();
                     Resolver.getDefault().resolveV4(hostPart, cb);
                     InetAddress inet = cb.block();
-                    group.add(hostPart, hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = group.add(hostPart, hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
                 }
+
+                // this will be used when connection establishes to remote
+                // in WebSocks5ProxyAgentConnectorProvider.java
+                handle.data = useSSL;
             } else {
                 //noinspection ConstantConditions
                 assert step == 2;

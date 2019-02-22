@@ -24,11 +24,19 @@ import net.cassite.vproxyx.websocks5.WebSocks5ProxyAgentConnectorProvider;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class WebSocks5ProxyAgent {
     public static void main0(String[] args) throws Exception {
+        // debug option
+        //noinspection ConstantConditions,TrivialFunctionalExpressionUsage
+        assert ((Predicate<Void>) v -> {
+            System.setProperty("javax.net.debug", "all");
+            return true;
+        }).test(null);
+
         String configFile = "~/vproxy-websocks5-agent.conf";
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
@@ -107,7 +115,7 @@ public class WebSocks5ProxyAgent {
             new ProxyNetConfig()
                 .setAcceptLoop(acceptor.next())
                 .setInBufferSize(16384)
-                .setOutBufferSize(16384)
+                .setOutBufferSize(65536)
                 .setHandleLoopProvider(worker::next)
                 .setServer(server)
                 .setConnGen(() -> connGen),

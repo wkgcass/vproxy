@@ -38,4 +38,8 @@ public class SvrHandleConnector extends Connector {
     public String getHostName() {
         return serverHandle.hostName;
     }
+
+    public Object getData() {
+        return serverHandle.data;
+    }
 }

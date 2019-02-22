@@ -3,6 +3,7 @@ package net.cassite.vproxy.util.ringbuffer;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.RingBufferETHandler;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -20,17 +21,31 @@ import java.util.function.Consumer;
  * which can be retrieved by user
  */
 public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffer {
-    private final SimpleRingBuffer plainBufferForApp;
-    private SimpleRingBuffer encryptedBufferForInput;
+    class WritableHandler implements RingBufferETHandler {
+        @Override
+        public void readableET() {
+            triggerReadable(); // proxy the event
+        }
+
+        @Override
+        public void writableET() {
+            generalUnwrap();
+        }
+    }
+
+    private /*might be replaced when switching*/ ByteBufferRingBuffer plainBufferForApp;
+    private final SimpleRingBuffer encryptedBufferForInput;
     private final SSLEngine engine;
     private final Consumer<Runnable> resumer;
+    private final WritableHandler writableHandler = new WritableHandler();
 
     // will call the pair's wrap/wrapHandshake when need to send data
     private final SSLWrapRingBuffer pair;
 
     private boolean closed = false;
 
-    SSLUnwrapRingBuffer(SimpleRingBuffer plainBufferForApp,
+    SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
+                        int inputCap,
                         SSLEngine engine,
                         Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair) {
@@ -38,11 +53,13 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         this.engine = engine;
         this.resumer = resumer;
         this.pair = pair;
-        resizeForInput();
-    }
 
-    private void resizeForInput() {
-        this.encryptedBufferForInput = SSLUtils.resizeFor(this.encryptedBufferForInput, engine);
+        // we add a handler to the plain buffer
+        plainBufferForApp.addHandler(writableHandler);
+
+        // use heap buffer
+        // it will interact heavily with java code
+        this.encryptedBufferForInput = RingBuffer.allocate(inputCap);
     }
 
     @Override
@@ -63,9 +80,29 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         return read;
     }
 
+    private void resumeDefragmentInput() {
+        resumer.accept(() -> {
+            encryptedBufferForInput.defragment();
+            generalUnwrap();
+        });
+    }
+
+    private void resumeDefragmentApp() {
+        resumer.accept(() -> {
+            plainBufferForApp.defragment();
+            generalUnwrap();
+        });
+    }
+
+    private void resumeGeneralUnwrap() {
+        resumer.accept(this::generalUnwrap);
+    }
+
     private void generalUnwrap() {
         if (encryptedBufferForInput.used() == 0)
             return; // no data for unwrapping
+        assert Logger.lowLevelDebug(
+            "encryptedBufferForInput has " + encryptedBufferForInput.used() + " bytes BEFORE unwrap");
         boolean inBufferWasFull = encryptedBufferForInput.free() == 0;
         setOperating(true);
         try {
@@ -89,6 +126,8 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             // it's memory operation, should not happen
             Logger.shouldNotHappen("got exception when unwrapping", e);
         } finally {
+            assert Logger.lowLevelDebug(
+                "encryptedBufferForInput has " + encryptedBufferForInput.used() + " bytes AFTER unwrap");
             boolean inBufferNowNotFull = encryptedBufferForInput.free() > 0;
             if (inBufferWasFull && inBufferNowNotFull) {
                 triggerWritable();
@@ -103,9 +142,10 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     private boolean unwrapHandshake(SSLEngineResult result) {
         assert Logger.lowLevelDebug("unwrapHandshake: " + result);
-        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-            Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW for handshake, expanding");
-            generalUnwrap();
+        if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
+            Logger.warn(LogType.SSL_ERROR, "BUFFER_UNDERFLOW for handshake unwrap, " +
+                "expecting " + engine.getSession().getPacketBufferSize());
+            resumeDefragmentInput();
             return false;
         }
 
@@ -131,9 +171,9 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
                 if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                     resumer.accept(pair::generalWrap);
                 } else if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
-                    resumer.accept(this::doWhenHandshakeSucc);
+                    doWhenHandshakeSucc();
                 } else {
-                    resumer.accept(this::generalUnwrap);
+                    resumeGeneralUnwrap();
                 }
             }).start();
             return true;
@@ -141,7 +181,11 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
             // should call the pair to wrap
             pair.generalWrap();
+            return true;
         }
+        assert status == SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
+        // call again, in case some data not unwrapped
+        resumeGeneralUnwrap();
         return true;
     }
 
@@ -152,16 +196,27 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             Logger.shouldNotHappen("the unwrapping returned CLOSED");
             return false;
         }
-        if (status == SSLEngineResult.Status.OK)
+        if (status == SSLEngineResult.Status.OK) {
+            resumeGeneralUnwrap(); // in case some data left in input buffer
             return true; // done
+        }
         if (status == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
-            assert Logger.lowLevelDebug("BUFFER_UNDERFLOW, expecting more data");
+            if (engine.getSession().getPacketBufferSize() > encryptedBufferForInput.capacity()) {
+                Logger.warn(LogType.SSL_ERROR, "BUFFER_UNDERFLOW in unwrap, " +
+                    "expecting " + engine.getSession().getPacketBufferSize());
+            } else {
+                assert Logger.lowLevelDebug("BUFFER_UNDERFLOW in unwrap, " +
+                    "expecting " + engine.getSession().getPacketBufferSize());
+            }
+            resumeDefragmentInput(); // defragment to try to make more space
+            // NOTE: if it's capacity is smaller than required, we can do nothing here
             return true;
         }
         if (status == SSLEngineResult.Status.BUFFER_OVERFLOW) {
-            Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW, expanding");
-            resizeForInput();
-            resumer.accept(this::generalUnwrap); // unwrap again
+            Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in unwrap, " +
+                "expecting " + engine.getSession().getApplicationBufferSize());
+            resumeDefragmentApp(); // defragment to try to make more space
+            // NOTE: if it's capacity is smaller than required, we can do nothing here
             return false;
         }
         // should have no other status when reaches here
@@ -171,8 +226,8 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
-        throw new IOException("you should not call this method, " +
-            "data should be read via the buffer you set when creating this unwrap buffer");
+        // proxy the operation from plain buffer
+        return plainBufferForApp.writeTo(channel, maxBytesToWrite);
     }
 
     @Override
@@ -183,8 +238,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     @Override
     public int used() {
-        // why use app buffer
-        // see comments in SSLWrapRingBuffer#capacity
+        // user may use this to check whether the buffer still had data left
         return plainBufferForApp.used();
     }
 
@@ -210,5 +264,23 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
     @Override
     public void clear() {
         plainBufferForApp.clear();
+    }
+
+    @Override
+    public RingBuffer switchBuffer(RingBuffer buf) throws RejectSwitchException {
+        if (plainBufferForApp.used() != 0)
+            throw new RejectSwitchException("the plain buffer is not empty");
+        if (!(buf instanceof ByteBufferRingBuffer))
+            throw new RejectSwitchException("the input is not a ByteBufferRingBuffer");
+
+        // switch buffers and handlers
+        plainBufferForApp.removeHandler(writableHandler);
+        plainBufferForApp = (ByteBufferRingBuffer) buf;
+        plainBufferForApp.addHandler(writableHandler);
+
+        // try to unwrap any data if presents
+        generalUnwrap();
+
+        return this;
     }
 }

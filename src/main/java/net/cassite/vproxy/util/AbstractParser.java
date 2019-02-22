@@ -30,7 +30,7 @@ public abstract class AbstractParser<T> {
             if (terminateRegardlessOfInputStates.contains(state))
                 break;
         }
-        if (terminateStates.contains(9)) {
+        if (terminateStates.contains(state)) {
             return 0;
         }
         return -1; // indicating that the parser want more data

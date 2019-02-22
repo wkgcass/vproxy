@@ -111,16 +111,19 @@ public class Connection implements NetFlowRecorder {
                         if (getOutBuffer().used() == 0) {
                             // outBuffer still empty
                             // do not add OP_WRITE
+                            assert Logger.lowLevelDebug("the out buffer is still empty, do NOT add op_write. " + channel);
                             addWriteOnLoop = false;
                         }
                         // we do not write again if got any bytes
                         // let the NetEventLoop handle
                     }
-                } catch (IOException ignore) {
+                } catch (IOException e) {
                     // we ignore the exception
                     // it should be handled in NetEventLoop
+                    assert Logger.lowLevelDebug("got exception in quick write: " + e);
                 }
                 if (addWriteOnLoop) {
+                    assert Logger.lowLevelDebug("add OP_WRITE for channel " + channel);
                     eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_WRITE);
                 }
             }
@@ -315,8 +318,15 @@ public class Connection implements NetFlowRecorder {
         assert Logger.lowLevelDebug("UNSAFE_replaceBuffer()");
         // we should make sure that the buffers are empty
         if (getInBuffer().used() != 0 || getOutBuffer().used() != 0) {
-            throw new IOException("cannot replace buffer when they are not empty");
+            throw new IOException("cannot replace buffers when they are not empty");
         }
+        try {
+            in = inBuffer.switchBuffer(in);
+            out = outBuffer.switchBuffer(out);
+        } catch (RingBuffer.RejectSwitchException e) {
+            throw new IOException("cannot replace buffers when they are not empty");
+        }
+
         // remove handler from the buffers
         inBuffer.removeHandler(inBufferETHandler);
         outBuffer.removeHandler(outBufferETHandler);

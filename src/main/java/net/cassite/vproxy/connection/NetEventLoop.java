@@ -325,6 +325,9 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     @Override
     public void readable(HandlerContext<SelectableChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
+
+        assert Logger.lowLevelDebug("readable fired " + cctx.connection);
+
         if (cctx.connection.getInBuffer().free() == 0) {
             Logger.shouldNotHappen("the connection has no space to store data");
             return;
@@ -349,6 +352,9 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             Logger.shouldNotHappen("read nothing, the event should not be fired");
             return;
         }
+
+        assert Logger.lowLevelDebug("read " + read + " bytes for " + cctx.connection);
+
         cctx.connection.incFromRemoteBytes(read); // record net flow, it's reading, so is "from remote"
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
         if (cctx.connection.getInBuffer().free() == 0) {

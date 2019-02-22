@@ -2,6 +2,7 @@ package net.cassite.vproxyx.websocks5;
 
 import net.cassite.vproxy.connection.ClientConnection;
 import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
@@ -10,10 +11,12 @@ import java.net.InetSocketAddress;
 
 public class AlreadyConnectedConnector extends Connector {
     private final ClientConnection conn;
+    private final NetEventLoop loop;
 
-    public AlreadyConnectedConnector(InetSocketAddress remote, InetAddress local, ClientConnection conn) {
+    public AlreadyConnectedConnector(InetSocketAddress remote, InetAddress local, ClientConnection conn, NetEventLoop loop) {
         super(remote, local);
         this.conn = conn;
+        this.loop = loop;
     }
 
     @Override
@@ -23,9 +26,18 @@ public class AlreadyConnectedConnector extends Connector {
 
         conn.UNSAFE_replaceBuffer(in, out);
 
-        oldI.clean();
-        oldO.clean();
+        if (conn.getInBuffer() != oldI) {
+            oldI.clean();
+        }
+        if (conn.getOutBuffer() != oldO) {
+            oldO.clean();
+        }
 
         return conn;
+    }
+
+    @Override
+    public NetEventLoop loop() {
+        return loop;
     }
 }

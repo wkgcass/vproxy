@@ -105,7 +105,17 @@ public class Proxy {
             // and we only register the passive connection here
             // the active connection will be registered
             // when the passive connection is successfully established
-            NetEventLoop loop = config.handleLoopProvider.get();
+            NetEventLoop loop;
+            {
+                NetEventLoop foo = connector.loop();
+                if (foo == null) {
+                    assert Logger.lowLevelDebug("connector did not provide any loop, retrieve a new one");
+                    loop = config.handleLoopProvider.get();
+                } else {
+                    assert Logger.lowLevelDebug("connector provided a loop");
+                    loop = foo;
+                }
+            }
             if (loop == null) {
                 // the loop not exist
                 utilCloseSessionAndReleaseBuffers(session);
@@ -173,6 +183,12 @@ public class Proxy {
             // retrieve an event loop provided by user code
             // the net flow will be handled here
             NetEventLoop loop = config.handleLoopProvider.get();
+            if (loop == null) {
+                // the loop not exist
+                Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for handler");
+                connection.close();
+                return;
+            }
 
             // create a protocol context and init the handler
             ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, loop.getSelectorEventLoop(), pHandler);

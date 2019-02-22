@@ -8,7 +8,9 @@ import net.cassite.vproxy.http.HttpRespParser;
 import net.cassite.vproxy.socks.AddressType;
 import net.cassite.vproxy.socks.Socks5ConnectorProvider;
 import net.cassite.vproxy.util.*;
+import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
@@ -64,7 +66,25 @@ public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProv
         }
         ClientConnection conn;
         try {
-            conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+            if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
+                SSLEngine engine;
+                if (connector.getHostName() == null) {
+                    engine = WebSocks5Utils.getSslContext().createSSLEngine();
+                } else {
+                    engine = WebSocks5Utils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
+                }
+                engine.setUseClientMode(true);
+                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
+                    engine,
+                    RingBuffer.allocate(16384),
+                    RingBuffer.allocate(16384),
+                    32768,
+                    32768,
+                    loop.getSelectorEventLoop());
+                conn = connector.connect(pair.left, pair.right);
+            } else {
+                conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+            }
         } catch (IOException e) {
             Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
             providedCallback.accept(null);
@@ -357,7 +377,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             return;
         }
         providedCallback.accept(new AlreadyConnectedConnector(
-            ctx.connection.remote, local, (ClientConnection) ctx.connection
+            ctx.connection.remote, local, (ClientConnection) ctx.connection, ctx.eventLoop
         ));
 
         // every thing is done now

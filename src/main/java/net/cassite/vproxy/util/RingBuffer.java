@@ -94,4 +94,15 @@ public interface RingBuffer {
     void clean();
 
     void clear();
+
+    class RejectSwitchException extends Exception {
+        public RejectSwitchException(String msg) {
+            super(msg);
+        }
+    }
+
+    default RingBuffer switchBuffer(RingBuffer buf) throws RejectSwitchException {
+        // default: simply use the new buffer when need to switch
+        return buf;
+    }
 }

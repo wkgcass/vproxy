@@ -19,8 +19,8 @@ import java.util.function.Consumer;
  * store plain bytes into this buffer<br>
  * and will be converted to encrypted bytes
  * which will be wrote to channels<br>
- * NOTE: this buffer will reject all operations on `storing`
- * and writableET() will never fire.
+ * <br>
+ * NOTE: storage/writableET is proxied to/from the plain buffer
  */
 public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer {
     class ReadableHandler implements RingBufferETHandler {
@@ -31,25 +31,30 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
         @Override
         public void writableET() {
-            // ignored
+            triggerWritable(); // proxy the event
         }
     }
 
-    private final SimpleRingBuffer plainBufferForApp;
-    private SimpleRingBuffer encryptedBufferForOutput;
+    private /*might change when switching*/ ByteBufferRingBuffer plainBufferForApp;
+    private final SimpleRingBuffer encryptedBufferForOutput;
     private final SSLEngine engine;
     private final Consumer<Runnable> resumer;
+    private final ReadableHandler readableHandler = new ReadableHandler();
 
-    SSLWrapRingBuffer(SimpleRingBuffer plainBytesBuffer,
+    SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
+                      int outputCap,
                       SSLEngine engine,
                       Consumer<Runnable> resumer) {
         this.plainBufferForApp = plainBytesBuffer;
         this.engine = engine;
         this.resumer = resumer;
-        resizeForOutput();
 
-        // we add a handler to the input buffer
-        plainBufferForApp.addHandler(new ReadableHandler());
+        // use heap buffer for output
+        // it will interact heavily with java code
+        this.encryptedBufferForOutput = RingBuffer.allocate(outputCap);
+
+        // we add a handler to the plain buffer
+        plainBufferForApp.addHandler(readableHandler);
 
         // do init first few bytes
         init();
@@ -64,8 +69,11 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         }
     }
 
-    private void resizeForOutput() {
-        encryptedBufferForOutput = SSLUtils.resizeFor(encryptedBufferForOutput, engine);
+    private void resumeDefragment() {
+        resumer.accept(() -> {
+            encryptedBufferForOutput.defragment();
+            generalWrap();
+        });
     }
 
     void generalWrap() {
@@ -75,8 +83,6 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
             plainBufferForApp.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
                 bufferPlain -> encryptedBufferForOutput.operateOnByteBufferStoreIn(bufferEncrypted -> {
                     SSLEngineResult result;
-                    int l = bufferEncrypted.limit();
-                    int m = bufferPlain.limit();
                     try {
                         result = engine.wrap(bufferPlain, bufferEncrypted);
                     } catch (SSLException e) {
@@ -110,6 +116,12 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
     private boolean wrapHandshake(SSLEngineResult result) {
         assert Logger.lowLevelDebug("wrapHandshake: " + result);
+        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+            Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW for handshake wrap, " +
+                "expecting " + engine.getSession().getPacketBufferSize());
+            resumeDefragment();
+            return false;
+        }
 
         SSLEngineResult.HandshakeStatus status = result.getHandshakeStatus();
         if (status == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
@@ -148,16 +160,17 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
         // here: BUFFER_OVERFLOW
         assert status == SSLEngineResult.Status.BUFFER_OVERFLOW;
-        Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW, expanding");
-        resizeForOutput();
-        resumer.accept(this::generalWrap); // wrap again
+        Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in wrap, " +
+            "expecting " + engine.getSession().getPacketBufferSize());
+        resumeDefragment(); // try to make more space
+        // NOTE: if it's capacity is smaller than required, we can do nothing here
         return false;
     }
 
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
-        throw new IOException("you should not call this method, " +
-            "data should be stored via the buffer you set when creating this wrap buffer");
+        // do store to the plain buffer
+        return plainBufferForApp.storeBytesFrom(channel);
     }
 
     @Override
@@ -168,8 +181,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
     @Override
     public int free() {
-        // why use app buffer
-        // see comments in SSLWrapRingBuffer#capacity
+        // user code may check this for writing data into the buffer
         return plainBufferForApp.free();
     }
 
@@ -205,5 +217,23 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
     @Override
     public void clear() {
         plainBufferForApp.clear();
+    }
+
+    @Override
+    public RingBuffer switchBuffer(RingBuffer buf) throws RejectSwitchException {
+        if (plainBufferForApp.used() != 0)
+            throw new RejectSwitchException("the plain buffer is not empty");
+        if (!(buf instanceof ByteBufferRingBuffer))
+            throw new RejectSwitchException("the input is not a ByteBufferRingBuffer");
+
+        // switch buffers and handlers
+        plainBufferForApp.removeHandler(readableHandler);
+        plainBufferForApp = (ByteBufferRingBuffer) buf;
+        plainBufferForApp.addHandler(readableHandler);
+
+        // try to wrap any data if presents
+        generalWrap();
+
+        return this;
     }
 }

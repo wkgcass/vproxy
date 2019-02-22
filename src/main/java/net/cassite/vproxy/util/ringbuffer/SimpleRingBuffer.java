@@ -12,16 +12,18 @@ import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
-public class SimpleRingBuffer implements RingBuffer {
+public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private final boolean isDirect;
-    private final ByteBuffer buffer;
+    private /*may change after defragment*/ ByteBuffer buffer;
     private int ePos; // end pos
     private int sPos; // start pos
-    private int cap;
+    private final int cap;
     private boolean ePosIsAfterSPos = true; // true then end is limit, otherwise start is limit
     private boolean closed = false;
 
+    private boolean notFirstOperator = false;
     private boolean operating = false;
+    private boolean operatingBuffer = false;
     private Set<RingBufferETHandler> handler = new HashSet<>();
     private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
@@ -191,16 +193,39 @@ public class SimpleRingBuffer implements RingBuffer {
         }
     }
 
-    interface WriteOutOp {
-        void accept(ByteBuffer buffer) throws IOException;
+    private boolean isFirstOperate() {
+        assert Logger.lowLevelDebug("thread " + Thread.currentThread() + " is operating");
+        boolean firstOperator = !notFirstOperator;
+        if (firstOperator) {
+            notFirstOperator = true;
+        }
+        operating = true;
+        return firstOperator;
     }
 
-    int operateOnByteBufferWriteOut(int maxBytesToWrite, WriteOutOp op) throws IOException {
+    private void resetFirst(boolean firstOperator) {
+        if (!firstOperator)
+            return;
+        operating = false;
+        notFirstOperator = false;
+
+        handler.removeAll(handlerToRemove);
+        handler.addAll(handlerToAdd);
+    }
+
+    public int operateOnByteBufferWriteOut(int maxBytesToWrite, ByteBufferRingBuffer.WriteOutOp op) throws IOException {
         if (closed)
             return 0; // handle nothing because it's closed
+        if (operatingBuffer) {
+            throw new IllegalStateException("this buffer is operating");
+        }
 
-        operating = true;
+        boolean firstOperator = isFirstOperate();
+        operatingBuffer = true;
+
         boolean triggerWritable = false;
+
+        assert Logger.lowLevelDebug("before operate write out, sPos=" + sPos);
 
         try { // only use try-finally here, we do not catch
 
@@ -220,6 +245,7 @@ public class SimpleRingBuffer implements RingBuffer {
             // and calculate writing bytes
             if (newLimit != buffer.limit()) {
                 // limit of the buffer changed, which is illegal for writing
+                assert Logger.lowLevelDebug("newLimit=" + newLimit + ", buffer.limit()=" + buffer.limit());
                 throw new IllegalStateException("should only write out");
             }
             int write = (buffer.position() - sPos);
@@ -248,6 +274,7 @@ public class SimpleRingBuffer implements RingBuffer {
                 // and calculate writing bytes
                 if (newLimit != buffer.limit()) {
                     // limit of the buffer changed, which is illegal for writing
+                    assert Logger.lowLevelDebug("newLimit=" + newLimit + ", buffer.limit()=" + buffer.limit());
                     throw new IllegalStateException("should only write out");
                 }
                 int write2 = (buffer.position() - sPos);
@@ -263,28 +290,30 @@ public class SimpleRingBuffer implements RingBuffer {
                 return write;
             }
         } finally { // do trigger here
+            operatingBuffer = false;
             if (triggerWritable) {
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.writableET();
                 }
             }
-            operating = false;
-            handler.removeAll(handlerToRemove);
-            handler.addAll(handlerToAdd);
+            resetFirst(firstOperator);
         }
     }
 
-    interface StoreInOp {
-        boolean test(ByteBuffer buffer) throws IOException;
-    }
-
-    int operateOnByteBufferStoreIn(StoreInOp op) throws IOException {
+    public int operateOnByteBufferStoreIn(ByteBufferRingBuffer.StoreInOp op) throws IOException {
         if (closed)
             return -1; // handle nothing because it's already closed
+        if (operatingBuffer) {
+            throw new IllegalStateException("this buffer is operating");
+        }
 
-        operating = true;
+        boolean firstOperator = isFirstOperate();
+        operatingBuffer = true;
 
         boolean triggerReadable = false;
+
+        assert Logger.lowLevelDebug("before operate store in, ePos=" + ePos);
+
         try { // only use try-finally here, we do not catch
 
             // is for triggering readable event
@@ -302,6 +331,7 @@ public class SimpleRingBuffer implements RingBuffer {
             // calculate reading bytes
             if (newLimit != buffer.limit()) {
                 // limit of the buffer changed, which is illegal
+                assert Logger.lowLevelDebug("newLimit=" + newLimit + ", buffer.limit()=" + buffer.limit());
                 throw new IllegalStateException("should only read in");
             }
             int read = buffer.position() - ePos;
@@ -328,6 +358,7 @@ public class SimpleRingBuffer implements RingBuffer {
                 // calculate reading bytes
                 if (newLimit != buffer.limit()) {
                     // limit of the buffer changed, which is illegal for reading
+                    assert Logger.lowLevelDebug("newLimit=" + newLimit + ", buffer.limit()=" + buffer.limit());
                     throw new IllegalStateException("should only read in");
                 }
                 int read2 = buffer.position() - ePos;
@@ -341,14 +372,59 @@ public class SimpleRingBuffer implements RingBuffer {
                 return read;
             }
         } finally { // do trigger here
+            operatingBuffer = false;
             if (triggerReadable) {
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.readableET();
                 }
             }
-            operating = false;
-            handler.removeAll(handlerToRemove);
-            handler.addAll(handlerToAdd);
+            resetFirst(firstOperator);
         }
+    }
+
+    @Override
+    public boolean canDefragment() {
+        return sPos != 0;
+    }
+
+    @Override
+    public void defragment() {
+        if (operating)
+            throw new IllegalStateException("cannot perform defragment when it's operating");
+
+        if (sPos == 0)
+            return; // no need to defragment if sPos is already 0
+        // we make the code simple:
+        // create a new buffer with exactly the same capacity
+        // and store data into the new buffer
+        //
+        // then we make a swap
+        ByteBuffer newBuffer;
+        if (isDirect) {
+            newBuffer = ByteBuffer.allocateDirect(cap);
+        } else {
+            newBuffer = ByteBuffer.allocate(cap);
+        }
+
+        if (ePosIsAfterSPos) {
+            buffer.limit(ePos).position(sPos); // sPos, ePos, cap
+        } else {
+            buffer.limit(cap).position(sPos); // ePos, sPos, cap
+        }
+        newBuffer.put(buffer);
+        if (!ePosIsAfterSPos) {
+            // still have some bytes
+            buffer.limit(ePos).position(0);
+            newBuffer.put(buffer);
+        }
+
+        if (isDirect) {
+            Utils.clean(buffer); // clean the old buffer
+        }
+
+        sPos = 0;
+        ePos = newBuffer.position();
+        ePosIsAfterSPos = true;
+        buffer = newBuffer;
     }
 }

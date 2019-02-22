@@ -34,6 +34,11 @@ public class Connector {
         // do nothing in default implementation
     }
 
+    // provide a event loop
+    public NetEventLoop loop() {
+        return null; // default: do not provide
+    }
+
     @Override
     public String toString() {
         return "Connector(remote(" + remote + "), local(" + local + "))";

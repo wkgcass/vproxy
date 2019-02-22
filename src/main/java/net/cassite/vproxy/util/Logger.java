@@ -1,7 +1,16 @@
 package net.cassite.vproxy.util;
 
+import java.util.Date;
+
 public class Logger {
     private Logger() {
+    }
+
+    @SuppressWarnings("deprecation")
+    private static String current() {
+        long cur = System.currentTimeMillis();
+        Date d = new Date(cur);
+        return "[" + d.getHours() + ":" + d.getMinutes() + ":" + d.getSeconds() + "." + (cur % 1000) + "]";
     }
 
     // some message for debugging this project
@@ -10,18 +19,18 @@ public class Logger {
     public static boolean lowLevelDebug(String msg) {
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
-        System.out.println(threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
+        System.out.println(current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
         return true;
     }
 
     public static void stdout(String msg) {
-        System.out.println(msg);
+        System.out.println(current() + msg);
     }
 
     private static void privateStderr(String err) {
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[3];
-        System.err.println(threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + err);
+        System.err.println(current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + err);
     }
 
     public static void stderr(String err) {
@@ -45,12 +54,12 @@ public class Logger {
 
     // expected errors, maybe user misuse, and we can recover
     public static void warn(LogType logType, String err) {
-        System.err.println(logType + " - " + err);
+        System.err.println(current() + logType + " - " + err);
     }
 
     // expected condition
     public static void info(LogType logType, String msg) {
-        System.out.println(logType + " - " + msg);
+        System.out.println(current() + logType + " - " + msg);
     }
 
     public static void shouldNotHappen(String msg) {

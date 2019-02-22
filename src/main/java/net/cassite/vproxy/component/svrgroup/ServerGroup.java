@@ -583,12 +583,12 @@ public class ServerGroup {
         return new HealthCheckConfig(healthCheckConfig);
     }
 
-    public synchronized void add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        add(alias, null, server, local, weight);
+    public synchronized ServerHandle add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+        return add(alias, null, server, local, weight);
     }
 
-    public synchronized void add(String alias, /*nullable*/ String hostName, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        add(alias, hostName, false, server, local, weight);
+    public synchronized ServerHandle add(String alias, /*nullable*/ String hostName, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+        return add(alias, hostName, false, server, local, weight);
     }
 
     public synchronized void replaceIp(String alias, InetAddress newIp) throws NotFoundException {
@@ -635,7 +635,7 @@ public class ServerGroup {
      * @param weight   server weight
      * @throws AlreadyExistException already exists
      */
-    private synchronized void add(String alias, String hostName, boolean replace, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+    private synchronized ServerHandle add(String alias, String hostName, boolean replace, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
         // set the hostName to null if it's an ip literal
         if (hostName != null && Utils.isIpLiteral(hostName))
             hostName = null;
@@ -670,6 +670,8 @@ public class ServerGroup {
         resetMethodRelatedFields();
 
         assert Logger.lowLevelDebug("server added: " + alias + "(" + server + ") to " + this.alias);
+
+        return handle;
     }
 
     public synchronized void remove(String alias) throws NotFoundException {

@@ -6,11 +6,17 @@ import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
+import javax.net.ssl.SSLContext;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Predicate;
 
 public class WebSocks5Utils {
+    private WebSocks5Utils() {
+    }
+
     /*
       0                   1                   2                   3
       0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1 2 3 4 5 6 7 8 9 0 1
@@ -52,9 +58,6 @@ public class WebSocks5Utils {
         // no masking-key
         // then payload continues
     };
-
-    private WebSocks5Utils() {
-    }
 
     public static void sendWebSocketFrame(RingBuffer outBuffer) {
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage,AssertWithSideEffects
@@ -171,5 +174,31 @@ public class WebSocks5Utils {
             return false;
         }
         return true;
+    }
+
+    private static volatile SSLContext sslContext;
+
+    public static SSLContext getSslContext() {
+        if (sslContext != null) {
+            return sslContext;
+        }
+        synchronized (WebSocks5Utils.class) {
+            if (sslContext != null) {
+                return sslContext;
+            }
+            try {
+                sslContext = SSLContext.getInstance("TLS");
+            } catch (NoSuchAlgorithmException e) {
+                sslContext = null;
+                throw new RuntimeException(e);
+            }
+            try {
+                sslContext.init(null, null, null);
+            } catch (KeyManagementException e) {
+                sslContext = null;
+                throw new RuntimeException(e);
+            }
+        }
+        return sslContext;
     }
 }

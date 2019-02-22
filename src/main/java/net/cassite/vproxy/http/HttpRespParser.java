@@ -226,7 +226,7 @@ public class HttpRespParser extends AbstractParser<HttpResp> {
     @SuppressWarnings("Duplicates") // same as HttpReqParser
     protected int state15returnAfterLastHeader(char c) {
         if (c == '\n') {
-            // check content-length
+            // check content-length and truncated
             for (HttpHeader h : result.headers) {
                 if (h.key.toString().trim().equalsIgnoreCase("content-length")) {
                     try {
@@ -235,7 +235,13 @@ public class HttpRespParser extends AbstractParser<HttpResp> {
                         errorMessage = "invalid Content-Length: " + h.value.toString().trim();
                         return -1;
                     }
-                    break;
+                    break; // content-length and truncated are not expected to appear together
+                }
+                if (h.key.toString().trim().equalsIgnoreCase("Transfer-Encoding")) {
+                    if (h.value.toString().trim().equals("chunked")) {
+                        result.bodyLen = Integer.MAX_VALUE; // set to max value to parse truncated body
+                        break; // content-length and truncated are not expected to appear together
+                    }
                 }
             }
             if (result.bodyLen < 0) {
@@ -259,6 +265,11 @@ public class HttpRespParser extends AbstractParser<HttpResp> {
 
     @SuppressWarnings("Duplicates") // same as HttpReqParser
     protected int state16newlineBeforeBody(char c) {
+        if (result.bodyLen == Integer.MAX_VALUE) {
+            // FIXME support chunked body
+            errorMessage = "we do not support chunked body for now";
+            return -1;
+        }
         if (result.bodyLen == 0) {
             return state09newlineBeforeEnd(); // let it raise error
         } else {
