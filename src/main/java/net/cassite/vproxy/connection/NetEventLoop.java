@@ -339,6 +339,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             cctx.handler.exception(cctx, e);
             return;
         }
+        assert Logger.lowLevelDebug("read " + read + " bytes from " + cctx.connection);
         if (read < 0) {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;
@@ -352,8 +353,6 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             Logger.shouldNotHappen("read nothing, the event should not be fired");
             return;
         }
-
-        assert Logger.lowLevelDebug("read " + read + " bytes for " + cctx.connection);
 
         cctx.connection.incFromRemoteBytes(read); // record net flow, it's reading, so is "from remote"
         cctx.handler.readable(cctx); // the in buffer definitely have some bytes, let client code read
@@ -386,6 +385,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             cctx.handler.exception(cctx, e);
             return;
         }
+        assert Logger.lowLevelDebug("wrote " + write + " bytes to " + cctx.connection);
         if (write <= 0) {
             Logger.shouldNotHappen("wrote nothing, the event should not be fired");
             // we ignore it for now

@@ -89,6 +89,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     private void resetCursors() {
+        assert Logger.lowLevelDebug("reset cursors");
         sPos = 0;
         ePos = 0;
         ePosIsAfterSPos = true;
@@ -230,8 +231,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         try { // only use try-finally here, we do not catch
 
             // is for triggering writable event
-            final int freeSpace = free();
-            boolean triggerWritablePre = freeSpace == 0 && !handler.isEmpty();
+            boolean triggerWritablePre = free() == 0;
 
             int lim = retrieveLimit();
             if (lim == 0)
@@ -290,8 +290,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
                 return write;
             }
         } finally { // do trigger here
+            assert Logger.lowLevelDebug("after operate write out, sPos=" + sPos);
+
             operatingBuffer = false;
             if (triggerWritable) {
+                assert Logger.lowLevelDebug("trigger writable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.writableET();
                 }
@@ -317,8 +320,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         try { // only use try-finally here, we do not catch
 
             // is for triggering readable event
-            final int usedSpace = used();
-            boolean triggerReadablePre = usedSpace == 0 && !handler.isEmpty();
+            boolean triggerReadablePre = used() == 0;
 
             int lim = storeLimit();
             if (lim == 0)
@@ -372,8 +374,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
                 return read;
             }
         } finally { // do trigger here
+            assert Logger.lowLevelDebug("after operate store in, ePos=" + ePos);
+
             operatingBuffer = false;
             if (triggerReadable) {
+                assert Logger.lowLevelDebug("trigger readable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.readableET();
                 }
