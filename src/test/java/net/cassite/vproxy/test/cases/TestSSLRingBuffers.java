@@ -41,7 +41,7 @@ public class TestSSLRingBuffers {
 
     @Test
     public void wrapThenUnwrap() throws Exception {
-        System.setProperty("javax.net.debug", "all");
+        // System.setProperty("javax.net.debug", "all");
 
         KeyStore ks = KeyStore.getInstance("JKS");
         KeyStore ts = KeyStore.getInstance("JKS");
