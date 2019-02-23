@@ -6,9 +6,21 @@ VProxy supports not only traditional loadbalancer, socks5 server, service mesh a
 
 The extended apps are defined in package `net.cassite.vproxyx`, each app entrance is a `void main0(String[])` method.
 
+Use `system property -D` to specify the app's class.
+
+NOTE: It's system property specified with `-D`, not a program argument.
+
+```shell
+-D+A:AppClass=$simple_name_of_a_class
 ```
+
+The full command could be:
+
+```shell
 java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
+#
 # or
+#
 java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
 ```
 

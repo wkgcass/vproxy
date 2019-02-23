@@ -6,9 +6,19 @@ vproxy 不但支持传统的负载均衡、socks5服务、service mesh、服务�
 
 扩展应用在包`net.cassite.vproxyx`下，每一个应用入口都是一个`void main0(String[])`方法。
 
+使用`系统属性 -D`来指定要运行的应用所在的类。
+
+注意：这是由`-D`指定的系统属性，而不是程序参数。
+
 ```
+-D+A:AppClass=$simple_name_of_a_class
+```
+
+```shell
 java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
+#
 # 或者
+#
 java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
 ```
 
