@@ -31,6 +31,8 @@ Questions about implementation detail are also welcome (in issues).
 * [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md): An example about vproxy service mesh.
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): Something about the architecture.
 * [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): The protocol which is used by vproxy service mesh impl.
+* [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
+* [websocks5.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks5.md): The WebSocks5 Protocol.
 
 ## Contribute
 
