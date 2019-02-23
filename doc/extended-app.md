@@ -28,8 +28,8 @@ See [The Websocks5 Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/w
 
 #### Start arguments
 
-* listen: an integer indicating which port the server should listen.
-* auth: a sequence of `user:password` pairs split by `,`.
+* `listen`: an integer indicating which port the server should listen.
+* `auth`: a sequence of `user:password` pairs split by `,`.
 
 e.g.
 
