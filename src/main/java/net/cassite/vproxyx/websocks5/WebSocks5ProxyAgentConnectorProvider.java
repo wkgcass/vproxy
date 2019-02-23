@@ -14,6 +14,7 @@ import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
+import java.util.Base64;
 import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
@@ -21,10 +22,17 @@ import java.util.regex.Pattern;
 public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProvider {
     private final List<Pattern> proxyDomains;
     private final ServerGroup servers;
+    private final String user;
+    private final String pass;
 
-    public WebSocks5ProxyAgentConnectorProvider(List<Pattern> proxyDomains, ServerGroup servers) {
+    public WebSocks5ProxyAgentConnectorProvider(List<Pattern> proxyDomains,
+                                                ServerGroup servers,
+                                                String user,
+                                                String pass) {
         this.proxyDomains = proxyDomains;
         this.servers = servers;
+        this.user = user;
+        this.pass = pass;
     }
 
     private boolean needProxy(String address) {
@@ -91,7 +99,9 @@ public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProv
             return;
         }
         try {
-            loop.addClientConnection(conn, null, new AgentClientConnectionHandler(connector.getHostName(), address, port, providedCallback));
+            loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
+                connector.getHostName(), address, port,
+                providedCallback, user, pass));
         } catch (IOException e) {
             Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
             providedCallback.accept(null);
@@ -104,6 +114,9 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     private final String domain;
     private final int port;
     private final Consumer<Connector> providedCallback;
+
+    private final String user;
+    private final String pass;
 
     // 0: init,
     // 1: expecting http resp,
@@ -118,11 +131,19 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     private ByteArrayChannel socks5AuthMethodExchange;
     private ByteArrayChannel socks5ConnectResult;
 
-    AgentClientConnectionHandler(String domainOfProxy, String domain, int port, Consumer<Connector> providedCallback) {
+    AgentClientConnectionHandler(String domainOfProxy,
+                                 String domain,
+                                 int port,
+                                 Consumer<Connector> providedCallback,
+                                 String user,
+                                 String pass) {
         this.domainOfProxy = domainOfProxy;
         this.domain = domain;
         this.port = port;
         this.providedCallback = providedCallback;
+
+        this.user = user;
+        this.pass = pass;
     }
 
     @Override
@@ -135,6 +156,9 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             "Host: " + domainOfProxy + "\r\n" +
             "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" + // copied from rfc 6455, we don't care in the protocol
             "Sec-WebSocket-Version: 13\r\n" +
+            "Authorization: Basic " +
+            Base64.getEncoder().encodeToString((user + ":" + WebSocks5Utils.calcPass(pass, Utils.currentMinute())).getBytes()) +
+            "\r\n" +
             "\r\n"
         ).getBytes();
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);

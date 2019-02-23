@@ -20,6 +20,8 @@ public class ConfigProcessor {
     public final ServerGroup group;
     private int listenPort = 1080;
     private List<Pattern> domains = new LinkedList<>();
+    private String user;
+    private String pass;
 
     public ConfigProcessor(String fileName, ServerGroup group) {
         this.fileName = fileName;
@@ -32,6 +34,14 @@ public class ConfigProcessor {
 
     public List<Pattern> getDomains() {
         return domains;
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public String getPass() {
+        return pass;
     }
 
     public void parse() throws Exception {
@@ -49,7 +59,7 @@ public class ConfigProcessor {
 
             if (step == 0) {
                 if (line.startsWith("agent.listen ")) {
-                    String port = line.substring("agent.listen ".length());
+                    String port = line.substring("agent.listen ".length()).trim();
                     try {
                         listenPort = Integer.parseInt(port);
                     } catch (NumberFormatException e) {
@@ -58,6 +68,17 @@ public class ConfigProcessor {
                     if (listenPort < 1 || listenPort > 65535) {
                         throw new Exception("invalid agent.listen, port number out of range");
                     }
+                } else if (line.startsWith("proxy.server.auth ")) {
+                    String auth = line.substring("proxy.server.auth ".length()).trim();
+                    String[] userpass = auth.split(":");
+                    if (userpass.length != 2)
+                        throw new Exception("invalid proxy.server.auth: " + auth);
+                    user = userpass[0].trim();
+                    if (user.isEmpty())
+                        throw new Exception("invalid proxy.server.auth: user is empty");
+                    pass = userpass[1].trim();
+                    if (pass.isEmpty())
+                        throw new Exception("invalid proxy.server.auth: pass is empty");
                 } else if (line.equals("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                 } else if (line.equals("proxy.domain.list.start")) {
@@ -127,5 +148,8 @@ public class ConfigProcessor {
                 domains.add(pattern);
             }
         }
+
+        if (user == null || pass == null)
+            throw new Exception("proxy.server.auth not present");
     }
 }

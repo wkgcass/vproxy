@@ -661,4 +661,11 @@ public class Utils {
             providedCallback.accept(new Connector(new InetSocketAddress(remote, port), local));
         }
     }
+
+    public static int currentMinute() {
+        return (int) (
+            (System.currentTimeMillis() / 60_000 // remove millis and seconds
+            ) % 60 // get minutes
+        );
+    }
 }

@@ -8,6 +8,7 @@ import net.cassite.vproxy.util.RingBuffer;
 
 import javax.net.ssl.SSLContext;
 import java.security.KeyManagementException;
+import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
@@ -200,5 +201,33 @@ public class WebSocks5Utils {
             }
         }
         return sslContext;
+    }
+
+    // base64str(base64str(sha256(password)) + str(minute_dec_digital)))
+    public static String calcPass(String pass, int minute) {
+        String foo;
+        { // first hash
+            MessageDigest sha256;
+            try {
+                sha256 = MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException e) {
+                Logger.shouldNotHappen("no SHA-256", e);
+                return null; // null will not be the same of any string
+            }
+            sha256.update(pass.getBytes());
+            foo = Base64.getEncoder().encodeToString(sha256.digest());
+        }
+        foo += minute;
+        { // second hash
+            MessageDigest sha256;
+            try {
+                sha256 = MessageDigest.getInstance("SHA-256");
+            } catch (NoSuchAlgorithmException e) {
+                Logger.shouldNotHappen("no SHA-256", e);
+                return null; // null will not be the same of any string
+            }
+            sha256.update(foo.getBytes());
+            return Base64.getEncoder().encodeToString(sha256.digest());
+        }
     }
 }

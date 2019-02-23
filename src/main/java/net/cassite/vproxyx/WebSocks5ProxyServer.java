@@ -9,6 +9,7 @@ import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.util.Callback;
+import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxyx.websocks5.WebSocks5ProtocolHandler;
 import net.cassite.vproxyx.websocks5.WebSocks5ProxyContext;
@@ -16,10 +17,13 @@ import net.cassite.vproxyx.websocks5.WebSocks5ProxyContext;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
+import java.util.Map;
 
 @SuppressWarnings("unused")
 public class WebSocks5ProxyServer {
     public static void main0(String[] args) throws Exception {
+        Map<String, String> auth = new HashMap<>();
         int port = -1;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -36,10 +40,28 @@ public class WebSocks5ProxyServer {
                 if (port < 1 || port > 65535) {
                     throw new IllegalArgumentException("port is not valid");
                 }
+            } else if (arg.equals("auth")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`auth` should be follow with a sequence of `user:password`");
+                }
+                String[] pairs = next.split(",");
+                for (String pair : pairs) {
+                    String[] userpass = pair.split(":");
+                    if (userpass.length != 2 || userpass[0].trim().isEmpty() || userpass[1].trim().isEmpty())
+                        throw new IllegalArgumentException("invalid user:password pair: " + pair);
+                    auth.put(userpass[0].trim(), userpass[1].trim());
+                }
             }
         }
         if (port == -1)
-            throw new IllegalArgumentException("listening port is not specified, set program argument: `listen $PORT`");
+            throw new IllegalArgumentException("listening port is not specified. `listen $PORT`, " +
+                "example: listen 1080");
+        if (auth.isEmpty())
+            throw new IllegalArgumentException("authentication not specified. `auth $USER:$PASS[,$USER2:$PASS2[,...]]`, " +
+                "example: auth alice:pasSw0rD,bob:PaSsw0Rd");
+
+        assert Logger.lowLevelDebug("listen: " + port);
+        assert Logger.lowLevelDebug("auth: " + auth);
 
         // init the listening server
         BindServer server = BindServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port));
@@ -60,7 +82,7 @@ public class WebSocks5ProxyServer {
         }
 
         // init the proxy server
-        WebSocks5ProtocolHandler webSocks5ProtocolHandler = new WebSocks5ProtocolHandler();
+        WebSocks5ProtocolHandler webSocks5ProtocolHandler = new WebSocks5ProtocolHandler(auth);
         ConnectorGen<WebSocks5ProxyContext> connGen = new ConnectorGen<WebSocks5ProxyContext>() {
             @Override
             public Type type() {

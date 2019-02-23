@@ -15,6 +15,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> {
@@ -22,6 +23,7 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
         @Override
         protected void request(ProtocolHandlerContext<HttpContext> ctx) {
             HttpReq req = ctx.data.result;
+            assert Logger.lowLevelDebug("receive new request " + req);
             if (!req.method.toString().equals("GET")) {
                 fail(ctx, 400, "invalid http method for upgrading to WebSocket");
                 return;
@@ -32,6 +34,10 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
             }
             if (ctx.inBuffer.used() != 0) {
                 fail(ctx, 400, "upgrading request should not contain a body");
+                return;
+            }
+            if (!checkAuth(req.headers)) {
+                fail(ctx, 401, "auth failed");
                 return;
             }
             String key = null;
@@ -66,6 +72,60 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
             // the client may make another http request
         }
 
+        private boolean checkAuth(List<HttpHeader> headers) {
+            for (HttpHeader h : headers) {
+                if (h.key.toString().trim().equalsIgnoreCase("authorization")) {
+                    String v = h.value.toString().trim();
+                    if (!v.startsWith("Basic ")) {
+                        assert Logger.lowLevelDebug("Authorization header not Basic: " + v);
+                        return false;
+                    }
+                    v = v.substring("Basic ".length()).trim();
+                    try {
+                        v = new String(Base64.getDecoder().decode(v.getBytes()));
+                    } catch (IllegalArgumentException e) {
+                        assert Logger.lowLevelDebug("Authorization Basic not base64: " + v);
+                        return false;
+                    }
+                    String[] userpass = v.split(":");
+                    if (userpass.length != 2) {
+                        assert Logger.lowLevelDebug("not user:pass, " + v);
+                        return false;
+                    }
+                    String user = userpass[0].trim();
+                    String pass = userpass[1].trim();
+
+                    String expectedPass = auth.get(user);
+                    if (expectedPass == null) {
+                        assert Logger.lowLevelDebug("user " + user + " not in registry");
+                        return false;
+                    }
+                    assert Logger.lowLevelDebug("do check for " + user + ":" + pass);
+                    return checkPass(pass, expectedPass);
+                }
+            }
+            assert Logger.lowLevelDebug("no Authorization header");
+            return false;
+        }
+
+        // we calculate the user's password with current minute number and sha256
+        // the input should match any of the following:
+        // 1. base64str(base64str(sha256(password)) + str(current_minute_dec_digital)))
+        // 2. base64str(base64str(sha256(password)) + str(current_minute_dec_digital - 1)))
+        // 3. base64str(base64str(sha256(password)) + str(current_minute_dec_digital + 1)))
+        private boolean checkPass(String pass, String expected) {
+            int m = Utils.currentMinute();
+            int mInc = m + 1;
+            if (mInc == 60)
+                mInc = 0;
+            int mDec = m - 1;
+            if (mDec == -1)
+                mDec = 59;
+            return pass.equals(WebSocks5Utils.calcPass(expected, m))
+                || pass.equals(WebSocks5Utils.calcPass(expected, mInc))
+                || pass.equals(WebSocks5Utils.calcPass(expected, mDec));
+        }
+
         private final String rfc6455UUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
         private String getWebSocketAccept(String key) {
@@ -98,6 +158,9 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
                 sb.append("Sec-Websocket-Accept: ").append(msg).append("\r\n");
                 sb.append("\r\n"); // end headers (and also the resp)
             } else {
+                if (statusCode == 401) {
+                    sb.append("WWW-Authenticate: Basic\r\n");
+                }
                 sb.append("Content-Length: ").append(msg.getBytes().length).append("\r\n");
                 sb.append("\r\n"); // end headers
                 sb.append(msg);
@@ -109,6 +172,12 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
     private final Socks5ProxyProtocolHandler socks5Handler = new Socks5ProxyProtocolHandler(
         (accepted, type, address, port, providedCallback) ->
             Utils.directConnect(type, address, port, providedCallback));
+
+    private final Map<String, String> auth;
+
+    public WebSocks5ProtocolHandler(Map<String, String> auth) {
+        this.auth = auth;
+    }
 
     @Override
     public void init(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
