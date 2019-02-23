@@ -68,6 +68,3 @@ task nativeImageAll(type: Exec, description: "build macos and linux images") {
     //noinspection GroovyAssignabilityCheck
     commandLine command
 }
-
-task stage(dependsOn: ['clean', 'jar'])
-jar.mustRunAfter clean
