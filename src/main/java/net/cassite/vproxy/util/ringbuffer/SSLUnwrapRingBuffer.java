@@ -145,7 +145,9 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
             Logger.warn(LogType.SSL_ERROR, "BUFFER_UNDERFLOW for handshake unwrap, " +
                 "expecting " + engine.getSession().getPacketBufferSize());
-            resumeDefragmentInput();
+            if (encryptedBufferForInput.canDefragment()) {
+                resumeDefragmentInput();
+            } // otherwise we wait until data is provided
             return false;
         }
 
@@ -208,8 +210,10 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
                 assert Logger.lowLevelDebug("BUFFER_UNDERFLOW in unwrap, " +
                     "expecting " + engine.getSession().getPacketBufferSize());
             }
-            resumeDefragmentInput(); // defragment to try to make more space
-            // NOTE: if it's capacity is smaller than required, we can do nothing here
+            if (encryptedBufferForInput.canDefragment()) {
+                resumeDefragmentInput(); // defragment to try to make more space for net flow input
+                // NOTE: if it's capacity is smaller than required, we can do nothing here
+            } // otherwise we need to wait for more data
             return true;
         }
         if (status == SSLEngineResult.Status.BUFFER_OVERFLOW) {
