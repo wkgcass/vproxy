@@ -29,7 +29,7 @@ public class SSLUtils {
                                        ByteBufferRingBuffer output,
                                        int inputCap, int outputCap,
                                        Consumer<Runnable> resumer) {
-        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, outputCap, engine, resumer);
+        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, outputCap, engine);
         SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, inputCap, engine, resumer, wrap);
         return new SSLBufferPair(unwrap, wrap);
     }

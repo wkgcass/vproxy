@@ -51,4 +51,9 @@ public abstract class AbstractRingBuffer implements RingBuffer {
             handler.remove(h);
         }
     }
+
+    @Override
+    public Set<RingBufferETHandler> getHandlers() {
+        return new HashSet<>(handler);
+    }
 }

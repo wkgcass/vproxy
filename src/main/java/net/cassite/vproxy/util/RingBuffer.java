@@ -8,6 +8,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Set;
 
 /**
  * 0                                     CAP
@@ -88,6 +89,8 @@ public interface RingBuffer {
     void addHandler(RingBufferETHandler h);
 
     void removeHandler(RingBufferETHandler h);
+
+    Set<RingBufferETHandler> getHandlers();
 
     void close();
 

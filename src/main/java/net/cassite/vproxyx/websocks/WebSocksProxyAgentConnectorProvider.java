@@ -16,6 +16,7 @@ import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.Base64;
 import java.util.List;
+import java.util.Set;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
@@ -152,6 +153,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         this.user = user;
         this.pass = pass;
     }
+
     private void utilAlertFail(ConnectionHandlerContext ctx) {
         providedCallback.accept(null);
         ctx.connection.close();
@@ -274,18 +276,37 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         // clear the input buffer in case got body
         ctx.connection.getInBuffer().clear();
 
-        // send WebSocket frame:
-        WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
         step = 2;
         // expecting to read the exactly same data as sent
         byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
         webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
 
-        // if not strict, we can send socks5 negotiation here
-        if (!strictMode) {
+        // send WebSocket frame:
+        if (strictMode) {
+            assert Logger.lowLevelDebug("strictMode is on, only send the websocket frame");
+            WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+        } else {
             assert Logger.lowLevelDebug("strictMode is off, send all packets");
+            // if not strict, we can send socks5 negotiation also
+            Set<RingBufferETHandler> handlers = ctx.connection.getOutBuffer().getHandlers();
+            // remove all handlers first
+            for (RingBufferETHandler h : handlers) {
+                ctx.connection.getOutBuffer().removeHandler(h);
+            }
+            WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
             sendSocks5AuthMethodExchange(ctx);
             sendSocks5Connect(ctx);
+            // and add them back
+            for (RingBufferETHandler h : handlers) {
+                ctx.connection.getOutBuffer().addHandler(h);
+            }
+            // trigger the readable
+            assert Logger.lowLevelDebug("manually trigger the readable event for " + handlers.size() + " times");
+            for (RingBufferETHandler h : handlers) {
+                h.readableET();
+            }
+
+            // in this way, all these data will be sent in the same tcp packet
         }
     }
 
@@ -393,6 +414,8 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     }
 
     private void done(ConnectionHandlerContext ctx) {
+        assert Logger.lowLevelDebug("handshake operation done " + ctx.connection);
+
         socks5ConnectResult = null;
         // remove the connection from loop
         ctx.eventLoop.removeConnection(ctx.connection);

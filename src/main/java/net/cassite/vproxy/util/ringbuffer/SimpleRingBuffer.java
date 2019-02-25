@@ -162,6 +162,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
     }
 
+    @Override
+    public Set<RingBufferETHandler> getHandlers() {
+        return new HashSet<>(handler);
+    }
+
     public void close() {
         closed = true;
     }

@@ -11,7 +11,8 @@ import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
-import java.util.function.Consumer;
+import java.util.Deque;
+import java.util.LinkedList;
 
 /**
  * the ring buffer which contains SSLEngine<br>
@@ -38,16 +39,14 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
     private /*might change when switching*/ ByteBufferRingBuffer plainBufferForApp;
     private final SimpleRingBuffer encryptedBufferForOutput;
     private final SSLEngine engine;
-    private final Consumer<Runnable> resumer;
+    private final Deque<Runnable> deferer = new LinkedList<>();
     private final ReadableHandler readableHandler = new ReadableHandler();
 
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
                       int outputCap,
-                      SSLEngine engine,
-                      Consumer<Runnable> resumer) {
+                      SSLEngine engine) {
         this.plainBufferForApp = plainBytesBuffer;
         this.engine = engine;
-        this.resumer = resumer;
 
         // use heap buffer for output
         // it will interact heavily with java code
@@ -69,8 +68,8 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         }
     }
 
-    private void resumeDefragment() {
-        resumer.accept(() -> {
+    private void deferDefragment() {
+        deferer.push(() -> {
             encryptedBufferForOutput.defragment();
             generalWrap();
         });
@@ -108,10 +107,16 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
             }
             setOperating(false);
         }
+
+        // check deferer
+        if (deferer.isEmpty())
+            return; // noting to run
+        assert deferer.size() == 1;
+        deferer.poll().run();
     }
 
-    private void doWhenHandshakeSucc() {
-        resumer.accept(this::generalWrap); // call wrap to send data (if data presents)
+    private void deferGeneralWrap() {
+        deferer.push(this::generalWrap);
     }
 
     private boolean wrapHandshake(SSLEngineResult result) {
@@ -119,7 +124,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW for handshake wrap, " +
                 "expecting " + engine.getSession().getPacketBufferSize());
-            resumeDefragment();
+            deferDefragment();
             return false;
         }
 
@@ -130,7 +135,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         }
         if (status == SSLEngineResult.HandshakeStatus.FINISHED) {
             assert Logger.lowLevelDebug("handshake finished");
-            doWhenHandshakeSucc();
+            deferGeneralWrap();
             return true; // done
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_TASK) {
@@ -138,7 +143,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
             return true;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
-            resumer.accept(this::generalWrap);
+            deferGeneralWrap();
             return true;
         }
         // NEED_UNWRAP ignored here
@@ -162,7 +167,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         assert status == SSLEngineResult.Status.BUFFER_OVERFLOW;
         Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in wrap, " +
             "expecting " + engine.getSession().getPacketBufferSize());
-        resumeDefragment(); // try to make more space
+        deferDefragment(); // try to make more space
         // NOTE: if it's capacity is smaller than required, we can do nothing here
         return false;
     }

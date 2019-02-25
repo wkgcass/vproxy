@@ -11,6 +11,8 @@ import javax.net.ssl.SSLException;
 import java.io.IOException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
+import java.util.Deque;
+import java.util.LinkedList;
 import java.util.function.Consumer;
 
 /**
@@ -37,6 +39,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
     private final SimpleRingBuffer encryptedBufferForInput;
     private final SSLEngine engine;
     private final Consumer<Runnable> resumer;
+    private final Deque<Runnable> deferResumer = new LinkedList<>();
     private final WritableHandler writableHandler = new WritableHandler();
 
     // will call the pair's wrap/wrapHandshake when need to send data
@@ -80,23 +83,41 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         return read;
     }
 
-    private void resumeDefragmentInput() {
-        resumer.accept(() -> {
+    // -------------------
+    // helper functions BEGIN
+    // -------------------
+    private void deferDefragmentInput() {
+        deferResumer.push(() -> {
             encryptedBufferForInput.defragment();
             generalUnwrap();
         });
     }
 
-    private void resumeDefragmentApp() {
-        resumer.accept(() -> {
+    private void deferDefragmentApp() {
+        deferResumer.push(() -> {
             plainBufferForApp.defragment();
             generalUnwrap();
         });
     }
 
+    private void deferGeneralUnwrap() {
+        deferResumer.push(this::generalUnwrap);
+    }
+
+    private void deferGeneralWrap() {
+        deferResumer.add(pair::generalWrap);
+    }
+
     private void resumeGeneralUnwrap() {
         resumer.accept(this::generalUnwrap);
     }
+
+    private void resumeGeneralWrap() {
+        resumer.accept(pair::generalWrap);
+    }
+    // -------------------
+    // helper functions END
+    // -------------------
 
     private void generalUnwrap() {
         if (encryptedBufferForInput.used() == 0)
@@ -134,10 +155,12 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             }
             setOperating(false);
         }
-    }
 
-    private void doWhenHandshakeSucc() {
-        resumer.accept(pair::generalWrap);
+        // might need instantly resume
+        if (deferResumer.isEmpty())
+            return; // nothing to resume now
+        assert deferResumer.size() == 1;
+        deferResumer.poll().run();
     }
 
     private boolean unwrapHandshake(SSLEngineResult result) {
@@ -146,7 +169,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             Logger.warn(LogType.SSL_ERROR, "BUFFER_UNDERFLOW for handshake unwrap, " +
                 "expecting " + engine.getSession().getPacketBufferSize());
             if (encryptedBufferForInput.canDefragment()) {
-                resumeDefragmentInput();
+                deferDefragmentInput();
             } // otherwise we wait until data is provided
             return false;
         }
@@ -158,7 +181,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         }
         if (status == SSLEngineResult.HandshakeStatus.FINISHED) {
             assert Logger.lowLevelDebug("handshake finished");
-            doWhenHandshakeSucc();
+            deferGeneralWrap();
             return true; // done
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_TASK) {
@@ -171,9 +194,9 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
                 }
                 assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
                 if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
-                    resumer.accept(pair::generalWrap);
+                    resumeGeneralWrap();
                 } else if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.FINISHED) {
-                    doWhenHandshakeSucc();
+                    resumeGeneralWrap();
                 } else {
                     resumeGeneralUnwrap();
                 }
@@ -187,7 +210,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         }
         assert status == SSLEngineResult.HandshakeStatus.NEED_UNWRAP;
         // call again, in case some data not unwrapped
-        resumeGeneralUnwrap();
+        deferGeneralUnwrap();
         return true;
     }
 
@@ -199,7 +222,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             return false;
         }
         if (status == SSLEngineResult.Status.OK) {
-            resumeGeneralUnwrap(); // in case some data left in input buffer
+            deferGeneralUnwrap(); // in case some data left in input buffer
             return true; // done
         }
         if (status == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
@@ -211,7 +234,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
                     "expecting " + engine.getSession().getPacketBufferSize());
             }
             if (encryptedBufferForInput.canDefragment()) {
-                resumeDefragmentInput(); // defragment to try to make more space for net flow input
+                deferDefragmentInput(); // defragment to try to make more space for net flow input
                 // NOTE: if it's capacity is smaller than required, we can do nothing here
             } // otherwise we need to wait for more data
             return true;
@@ -219,7 +242,7 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         if (status == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in unwrap, " +
                 "expecting " + engine.getSession().getApplicationBufferSize());
-            resumeDefragmentApp(); // defragment to try to make more space
+            deferDefragmentApp(); // defragment to try to make more space
             // NOTE: if it's capacity is smaller than required, we can do nothing here
             return false;
         }
