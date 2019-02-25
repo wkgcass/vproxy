@@ -21,6 +21,9 @@ public class Config {
     // -D+A:UseDatagramChannel=true|false
     public static boolean useDatagramChannel = true;
 
+    // -D+A:AppClass
+    public static final String appClass;
+
     static {
         String useDatagramChannel = System.getProperty("+A:UseDatagramChannel", "true");
         if (!useDatagramChannel.equals("true") && !useDatagramChannel.equals("false")) {
@@ -29,5 +32,7 @@ public class Config {
         if (useDatagramChannel.equals("false")) {
             Config.useDatagramChannel = false;
         }
+
+        appClass = System.getProperty("+A:AppClass");
     }
 }

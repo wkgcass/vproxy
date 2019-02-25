@@ -7,9 +7,10 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
 import javax.net.ssl.SSLContext;
-import java.security.KeyManagementException;
-import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
+import javax.net.ssl.TrustManager;
+import javax.net.ssl.TrustManagerFactory;
+import java.io.FileInputStream;
+import java.security.*;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Predicate;
@@ -134,7 +135,8 @@ public class WebSocks5Utils {
                 } else {
                     // the server should check the base64 string
                     try {
-                        pass = Base64.getDecoder().decode(headerVal).length == 16;
+                        Base64.getDecoder().decode(headerVal);
+                        pass = true;
                     } catch (IllegalArgumentException e) {
                         pass = false;
                     }
@@ -180,27 +182,35 @@ public class WebSocks5Utils {
     private static volatile SSLContext sslContext;
 
     public static SSLContext getSslContext() {
-        if (sslContext != null) {
-            return sslContext;
-        }
-        synchronized (WebSocks5Utils.class) {
-            if (sslContext != null) {
-                return sslContext;
-            }
-            try {
-                sslContext = SSLContext.getInstance("TLS");
-            } catch (NoSuchAlgorithmException e) {
-                sslContext = null;
-                throw new RuntimeException(e);
-            }
-            try {
-                sslContext.init(null, null, null);
-            } catch (KeyManagementException e) {
-                sslContext = null;
-                throw new RuntimeException(e);
-            }
-        }
         return sslContext;
+    }
+
+    public static void initSslContext(String path, String pass) throws Exception {
+        if (sslContext != null) {
+            throw new Exception("ssl context already initiated");
+        }
+
+        TrustManager[] tms = null;
+
+        if (path != null && pass != null) {
+            TrustManagerFactory tmf;
+            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
+            KeyStore store;
+            store = KeyStore.getInstance("JKS");
+            try (FileInputStream stream = new FileInputStream(path)) {
+                store.load(stream, pass.toCharArray());
+                tmf.init(store);
+                sslContext = SSLContext.getInstance("TLS");
+                tms = tmf.getTrustManagers();
+            }
+        }
+
+        try {
+            sslContext.init(null, tms, null);
+        } catch (KeyManagementException e) {
+            sslContext = null;
+            throw e;
+        }
     }
 
     // base64str(base64str(sha256(password)) + str(minute_dec_digital)))

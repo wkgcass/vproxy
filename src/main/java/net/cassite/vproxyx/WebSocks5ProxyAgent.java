@@ -20,6 +20,7 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxyx.websocks5.ConfigProcessor;
 import net.cassite.vproxyx.websocks5.WebSocks5ProxyAgentConnectorProvider;
+import net.cassite.vproxyx.websocks5.WebSocks5Utils;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -84,6 +85,33 @@ public class WebSocks5ProxyAgent {
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
         assert Logger.lowLevelDebug("proxy servers " +
             servers.getServerHandles().stream().map(h -> "\n" + new ServerHandle.ServerRef(h)).collect(Collectors.toList()));
+        assert Logger.lowLevelDebug("cacerts file " + configProcessor.getCacertsPath());
+        assert Logger.lowLevelDebug("cacerts password " + configProcessor.getCacertsPswd());
+
+        // init ssl
+        // we check whether ssl is used, if so, we load the sunec and init ssl context
+        {
+            boolean ssl = false;
+            for (ServerGroup.ServerHandle h : servers.getServerHandles()) {
+                if ((boolean) h.data) { // this field is set in ConfigProcessor.java
+                    ssl = true;
+                    break;
+                }
+            }
+            if (ssl) {
+                // directly load sunec here for error report
+                try {
+                    System.loadLibrary("sunec");
+                } catch (UnsatisfiedLinkError e) {
+                    throw new Exception("the dynamic lib for sunec not found\n" +
+                        "Did you forget to move the libsunec.so(linux)/libsunec.dylib(macos) " +
+                        "to your current directory?\n" +
+                        "Or you might want to set the lib's directory in -Djava.library.path", e);
+                }
+                // init the ssl context
+                WebSocks5Utils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd());
+            }
+        }
 
         // let's create a server, if bind failed, error would be thrown
         BindServer server = BindServer.create(

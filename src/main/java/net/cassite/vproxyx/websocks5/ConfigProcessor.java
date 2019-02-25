@@ -22,6 +22,8 @@ public class ConfigProcessor {
     private List<Pattern> domains = new LinkedList<>();
     private String user;
     private String pass;
+    private String cacertsPath;
+    private String cacertsPswd;
 
     public ConfigProcessor(String fileName, ServerGroup group) {
         this.fileName = fileName;
@@ -42,6 +44,14 @@ public class ConfigProcessor {
 
     public String getPass() {
         return pass;
+    }
+
+    public String getCacertsPath() {
+        return cacertsPath;
+    }
+
+    public String getCacertsPswd() {
+        return cacertsPswd;
     }
 
     public void parse() throws Exception {
@@ -79,6 +89,16 @@ public class ConfigProcessor {
                     pass = userpass[1].trim();
                     if (pass.isEmpty())
                         throw new Exception("invalid proxy.server.auth: pass is empty");
+                } else if (line.startsWith("agent.cacerts.path ")) {
+                    String path = line.substring("agent.cacerts.path ".length()).trim();
+                    if (path.isEmpty())
+                        throw new Exception("cacert path not specified");
+                    cacertsPath = path;
+                } else if (line.startsWith("agent.cacerts.pswd ")) {
+                    String pswd = line.substring("agent.cacerts.pswd ".length()).trim();
+                    if (pswd.isEmpty())
+                        throw new Exception("cacert path not specified");
+                    cacertsPswd = pswd;
                 } else if (line.equals("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                 } else if (line.equals("proxy.domain.list.start")) {

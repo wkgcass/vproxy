@@ -14,9 +14,6 @@ import net.cassite.vproxy.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
 import java.net.InetSocketAddress;
 import java.security.Security;
 
@@ -49,34 +46,20 @@ public class Main {
     }
 
     private static void runApp(String appClass, String[] args) {
-        Class<?> cls;
         try {
-            cls = Class.forName("net.cassite.vproxyx." + appClass);
-        } catch (ClassNotFoundException e) {
-            System.err.println("Class " + appClass + " not found");
-            System.exit(1);
-            return;
-        }
-        Method method;
-        try {
-            method = cls.getMethod("main0", String[].class);
-        } catch (NoSuchMethodException e) {
-            System.err.println("Public method not found: " + appClass + "#main0(String[])");
-            System.exit(1);
-            return;
-        }
-        if (!Modifier.isStatic(method.getModifiers())) {
-            System.err.println("Method " + appClass + "#main0(String[]) is not static");
-            System.exit(1);
-            return;
-        }
-        try {
-            method.invoke(null, (Object) args);
-        } catch (IllegalAccessException e) {
+            switch (appClass) {
+                case "WebSocks5ProxyAgent":
+                    net.cassite.vproxyx.WebSocks5ProxyAgent.main0(args);
+                    break;
+                case "WebSocks5ProxyServer":
+                    net.cassite.vproxyx.WebSocks5ProxyServer.main0(args);
+                    break;
+                default:
+                    System.err.println("unknown AppClass: " + appClass);
+                    System.exit(1);
+            }
+        } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
-        } catch (InvocationTargetException e) {
-            e.getTargetException().printStackTrace();
             System.exit(1);
         }
     }
@@ -86,7 +69,7 @@ public class Main {
 
         // check for system properties and may run an app
         // apps can be found in vproxyx package
-        String appClass = System.getProperty("+A:AppClass");
+        String appClass = Config.appClass;
         if (appClass != null) {
             runApp(appClass, args);
             return;
