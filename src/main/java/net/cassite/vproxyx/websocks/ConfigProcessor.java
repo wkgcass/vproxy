@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;
 
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.dns.Resolver;
@@ -111,12 +111,12 @@ public class ConfigProcessor {
                     step = 0; // return to normal state
                     continue;
                 }
-                if (!line.startsWith("websocks5://") && !line.startsWith("websocks5s://")) {
+                if (!line.startsWith("websocks://") && !line.startsWith("websockss://")) {
                     throw new Exception("unknown protocol: " + line);
                 }
 
-                boolean useSSL = line.startsWith("websocks5s");
-                line = line.substring(useSSL ? "websocks5s://".length() : "websocks5://".length());
+                boolean useSSL = line.startsWith("websockss");
+                line = line.substring(useSSL ? "websockss://".length() : "websocks://".length());
 
                 int colonIdx = line.lastIndexOf(':');
                 if (colonIdx == -1)
@@ -149,7 +149,7 @@ public class ConfigProcessor {
                 }
 
                 // this will be used when connection establishes to remote
-                // in WebSocks5ProxyAgentConnectorProvider.java
+                // in WebSocksProxyAgentConnectorProvider.java
                 handle.data = useSSL;
             } else {
                 //noinspection ConstantConditions

@@ -25,16 +25,16 @@ java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main
 例如：
 
 ```
-java -D+A:AppClass=WebSocks5ProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+java -D+A:AppClass=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
 ## 可用的应用
 
-### AppClass=WebSocks5ProxyServer
+### AppClass=WebSocksProxyServer
 
 一个代理服务器，即使在websocket网关后面也可以代理裸tcp流量。
 
-查看 [The Websocks5 Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks5.md) 获取更多信息。
+查看 [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md) 获取更多信息。
 
 #### 启动参数
 
@@ -47,16 +47,16 @@ java -D+A:AppClass=WebSocks5ProxyServer -jar vproxy.jar listen 18686 auth alice:
 listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
-### AppClass=WebSocks5Agent
+### AppClass=WebSocksAgent
 
-一个在本地运行的agent服务，它将websocks5转换为socks5，以便被其他应用使用。
+一个在本地运行的agent服务，它将websocks转换为socks5，以便被其他应用使用。
 
-查看 [The Websocks5 Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks5.md) 获取更多信息。
+查看 [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md) 获取更多信息。
 
 #### 启动参数
 
 (可选) 配置文件的完整路径
 
-如果没有指定，那么应用将使用`~/vproxy-websocks5-agent.conf`作为配置文件。
+如果没有指定，那么应用将使用`~/vproxy-websocks-agent.conf`作为配置文件。
 
-配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks5-agent-example.conf)。
+配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks-agent-example.conf)。

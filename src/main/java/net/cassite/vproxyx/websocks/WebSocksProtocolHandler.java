@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;
 
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.http.HttpContext;
@@ -18,7 +18,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> {
+public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> {
     private final HttpProtocolHandler httpProtocolHandler = new HttpProtocolHandler(false) {
         @Override
         protected void request(ProtocolHandlerContext<HttpContext> ctx) {
@@ -28,7 +28,7 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
                 fail(ctx, 400, "invalid http method for upgrading to WebSocket");
                 return;
             }
-            if (!WebSocks5Utils.checkUpgradeToWebSocketHeaders(req.headers, false)) {
+            if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(req.headers, false)) {
                 fail(ctx, 400, "upgrading related headers are invalid");
                 return;
             }
@@ -55,11 +55,11 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
             // everything is find, make an upgrade
             {
                 // handling on the server side
-                WebSocks5HttpContext wrapCtx = (WebSocks5HttpContext) ctx.data;
-                wrapCtx.webSocks5ProxyContext.step = 2; // next step is WebSocket
-                int expectingLen = WebSocks5Utils.bytesToSendForWebSocketFrame.length;
+                WebSocksHttpContext wrapCtx = (WebSocksHttpContext) ctx.data;
+                wrapCtx.webSocksProxyContext.step = 2; // next step is WebSocket
+                int expectingLen = WebSocksUtils.bytesToSendForWebSocketFrame.length;
                 byte[] foo = new byte[expectingLen];
-                wrapCtx.webSocks5ProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
+                wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
             ctx.write(response(101, accept)); // respond to the client about the upgrading
         }
@@ -121,9 +121,9 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
             int mDec = m - 1;
             if (mDec == -1)
                 mDec = 59;
-            return pass.equals(WebSocks5Utils.calcPass(expected, m))
-                || pass.equals(WebSocks5Utils.calcPass(expected, mInc))
-                || pass.equals(WebSocks5Utils.calcPass(expected, mDec));
+            return pass.equals(WebSocksUtils.calcPass(expected, m))
+                || pass.equals(WebSocksUtils.calcPass(expected, mInc))
+                || pass.equals(WebSocksUtils.calcPass(expected, mDec));
         }
 
         private final String rfc6455UUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
@@ -175,18 +175,18 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
 
     private final Map<String, String> auth;
 
-    public WebSocks5ProtocolHandler(Map<String, String> auth) {
+    public WebSocksProtocolHandler(Map<String, String> auth) {
         this.auth = auth;
     }
 
     @Override
-    public void init(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
-        ctx.data = new Tuple<>(new WebSocks5ProxyContext(
+    public void init(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
+        ctx.data = new Tuple<>(new WebSocksProxyContext(
             new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, httpProtocolHandler),
             new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, socks5Handler)
         ), null);
         ctx.data.left.step = 1;
-        ctx.data.left.httpContext.data = new WebSocks5HttpContext(ctx.data.left);
+        ctx.data.left.httpContext.data = new WebSocksHttpContext(ctx.data.left);
         socks5Handler.init(ctx.data.left.socks5Context);
         ctx.data.left.socks5Context.data = new Tuple<>(
             ctx.data.left.socks5Context.data.left,
@@ -206,7 +206,7 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
     }
 
     @Override
-    public void readable(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+    public void readable(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         if (ctx.data.left.step == 1) { // http step
             httpProtocolHandler.readable(ctx.data.left.httpContext);
         } else if (ctx.data.left.step == 2) { // WebSocket
@@ -216,7 +216,7 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
         }
     }
 
-    private void handleWebSocket(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+    private void handleWebSocket(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         ctx.inBuffer.writeTo(ctx.data.left.webSocketBytes);
         if (ctx.data.left.webSocketBytes.free() != 0) {
             return; // need more data
@@ -228,25 +228,25 @@ public class WebSocks5ProtocolHandler implements ProtocolHandler<Tuple<WebSocks5
             return;
         }
         ctx.data.left.step = 3; // socks5
-        WebSocks5Utils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+        WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
     }
 
     @Override
-    public void exception(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx, Throwable err) {
+    public void exception(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx, Throwable err) {
         // connection should be closed by the protocol lib
         // we ignore the exception here
-        assert Logger.lowLevelDebug("WebSocks5 exception " + ctx.connectionId + ", " + err);
+        assert Logger.lowLevelDebug("WebSocks exception " + ctx.connectionId + ", " + err);
     }
 
     @Override
-    public void end(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+    public void end(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         // connection is closed by the protocol lib
         // we ignore the event here
-        assert Logger.lowLevelDebug("WebSocks5 end " + ctx.connectionId);
+        assert Logger.lowLevelDebug("WebSocks end " + ctx.connectionId);
     }
 
     @Override
-    public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+    public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         if (ctx.data.left.step == 1 || ctx.data.left.step == 2) { // http step or WebSocket frame step
             return true; // proxy not established yet, so close the connection
         } else { // socks5 step

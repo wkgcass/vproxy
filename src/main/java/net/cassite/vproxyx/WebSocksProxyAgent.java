@@ -18,9 +18,9 @@ import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
-import net.cassite.vproxyx.websocks5.ConfigProcessor;
-import net.cassite.vproxyx.websocks5.WebSocks5ProxyAgentConnectorProvider;
-import net.cassite.vproxyx.websocks5.WebSocks5Utils;
+import net.cassite.vproxyx.websocks.ConfigProcessor;
+import net.cassite.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
+import net.cassite.vproxyx.websocks.WebSocksUtils;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -29,7 +29,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
-public class WebSocks5ProxyAgent {
+public class WebSocksProxyAgent {
     public static void main0(String[] args) throws Exception {
         // debug option
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage
@@ -38,7 +38,7 @@ public class WebSocks5ProxyAgent {
             return true;
         }).test(null);
 
-        String configFile = "~/vproxy-websocks5-agent.conf";
+        String configFile = "~/vproxy-websocks-agent.conf";
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
             System.out.println("If not specified, the config will be read from " + configFile);
@@ -109,7 +109,7 @@ public class WebSocks5ProxyAgent {
                         "Or you might want to set the lib's directory in -Djava.library.path", e);
                 }
                 // init the ssl context
-                WebSocks5Utils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd());
+                WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd());
             }
         }
 
@@ -121,7 +121,7 @@ public class WebSocks5ProxyAgent {
         ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>>
             handler =
             new Socks5ProxyProtocolHandler(
-                new WebSocks5ProxyAgentConnectorProvider(
+                new WebSocksProxyAgentConnectorProvider(
                     configProcessor.getDomains(),
                     servers,
                     configProcessor.getUser(),

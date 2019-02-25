@@ -1,8 +1,8 @@
-# The WebSocks5 Protocol
+# The WebSocks Protocol
 
 ## Abstraction
 
-The WebSocks5 protocol enables plain tcp data proxy through a WebSocket gateway
+The WebSocks protocol enables plain tcp data proxy through a WebSocket gateway
  which does not allow raw tcp data to pass.
 
 It is a combination of the WebSocket protocol (RFC 6455) and SOCKS Protocol
@@ -28,7 +28,7 @@ The WebSocket protocol is a protocol that allows two-way communication between
  a client and a server, so we can put socks5 handshaking and any tcp net flow
  above the WebSocket net flow, to make a proxy.
 
-Then there comes the WebSocks5 protocol.
+Then there comes the WebSocks protocol.
 
 ## Protocol
 
@@ -100,7 +100,7 @@ There are some placeholders in this packet:
 #### WebSocket Maximum Payload Length Frame
 
 When the client receives http 101 for connection upgrade, it should send a byte
- sequence with exactly 10 bytes. The WebSocks5 protocol does not care what is
+ sequence with exactly 10 bytes. The WebSocks protocol does not care what is
  contained in these 10 bytes, but, in order to go through a WebSocket gateway,
  these bytes should be the first 10 bytes of a Websocket frame, and:
 
@@ -144,7 +144,7 @@ Then the client and server should follow socks5 handshake procedure described in
 
 ### plain data
 
-After the socks5 handshake is done, the WebSocks5 handshake is done as well. The
+After the socks5 handshake is done, the WebSocks handshake is done as well. The
  server should proxy client data to remote endpoint based on the negotiation result
  according to RFC 1928.
 

@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;
 
 import net.cassite.vproxy.connection.ClientConnection;
 import net.cassite.vproxy.connection.Connector;

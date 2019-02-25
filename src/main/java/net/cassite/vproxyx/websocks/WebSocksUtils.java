@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;
 
 import net.cassite.vproxy.http.HttpHeader;
 import net.cassite.vproxy.util.ByteArrayChannel;
@@ -10,13 +10,16 @@ import javax.net.ssl.SSLContext;
 import javax.net.ssl.TrustManager;
 import javax.net.ssl.TrustManagerFactory;
 import java.io.FileInputStream;
-import java.security.*;
+import java.security.KeyManagementException;
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
 import java.util.List;
 import java.util.function.Predicate;
 
-public class WebSocks5Utils {
-    private WebSocks5Utils() {
+public class WebSocksUtils {
+    private WebSocksUtils() {
     }
 
     /*

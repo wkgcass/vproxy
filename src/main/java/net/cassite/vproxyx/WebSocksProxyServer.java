@@ -11,8 +11,8 @@ import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
-import net.cassite.vproxyx.websocks5.WebSocks5ProtocolHandler;
-import net.cassite.vproxyx.websocks5.WebSocks5ProxyContext;
+import net.cassite.vproxyx.websocks.WebSocksProtocolHandler;
+import net.cassite.vproxyx.websocks.WebSocksProxyContext;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -21,7 +21,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 @SuppressWarnings("unused")
-public class WebSocks5ProxyServer {
+public class WebSocksProxyServer {
     public static void main0(String[] args) throws Exception {
         Map<String, String> auth = new HashMap<>();
         int port = -1;
@@ -82,16 +82,16 @@ public class WebSocks5ProxyServer {
         }
 
         // init the proxy server
-        WebSocks5ProtocolHandler webSocks5ProtocolHandler = new WebSocks5ProtocolHandler(auth);
-        ConnectorGen<WebSocks5ProxyContext> connGen = new ConnectorGen<WebSocks5ProxyContext>() {
+        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth);
+        ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<WebSocksProxyContext>() {
             @Override
             public Type type() {
                 return Type.handler;
             }
 
             @Override
-            public ProtocolHandler<Tuple<WebSocks5ProxyContext, Callback<Connector, IOException>>> handler() {
-                return webSocks5ProtocolHandler;
+            public ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> handler() {
+                return webSocksProtocolHandler;
             }
 
             @Override

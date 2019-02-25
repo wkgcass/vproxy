@@ -11,6 +11,8 @@ import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
+import net.cassite.vproxyx.WebSocksProxyAgent;
+import net.cassite.vproxyx.WebSocksProxyServer;
 
 import java.io.File;
 import java.io.IOException;
@@ -48,11 +50,11 @@ public class Main {
     private static void runApp(String appClass, String[] args) {
         try {
             switch (appClass) {
-                case "WebSocks5ProxyAgent":
-                    net.cassite.vproxyx.WebSocks5ProxyAgent.main0(args);
+                case "WebSocksProxyAgent":
+                    WebSocksProxyAgent.main0(args);
                     break;
-                case "WebSocks5ProxyServer":
-                    net.cassite.vproxyx.WebSocks5ProxyServer.main0(args);
+                case "WebSocksProxyServer":
+                    WebSocksProxyServer.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);

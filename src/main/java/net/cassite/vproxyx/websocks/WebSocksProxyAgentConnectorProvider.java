@@ -1,4 +1,4 @@
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;
 
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.SvrHandleConnector;
@@ -19,16 +19,16 @@ import java.util.List;
 import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
-public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProvider {
+public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
     private final List<Pattern> proxyDomains;
     private final ServerGroup servers;
     private final String user;
     private final String pass;
 
-    public WebSocks5ProxyAgentConnectorProvider(List<Pattern> proxyDomains,
-                                                ServerGroup servers,
-                                                String user,
-                                                String pass) {
+    public WebSocksProxyAgentConnectorProvider(List<Pattern> proxyDomains,
+                                               ServerGroup servers,
+                                               String user,
+                                               String pass) {
         this.proxyDomains = proxyDomains;
         this.servers = servers;
         this.user = user;
@@ -46,14 +46,14 @@ public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProv
 
     @Override
     public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
-        // check whether need to proxy to the WebSocks5 server
+        // check whether need to proxy to the WebSocks server
         if (type != AddressType.domain || !needProxy(address)) {
             // just directly connect to the endpoint
             Utils.directConnect(type, address, port, providedCallback);
             return;
         }
 
-        // proxy the net flow using WebSocks5
+        // proxy the net flow using WebSocks
 
         NetEventLoop loop = accepted.getEventLoop();
         if (loop == null) {
@@ -77,9 +77,9 @@ public class WebSocks5ProxyAgentConnectorProvider implements Socks5ConnectorProv
             if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
                 SSLEngine engine;
                 if (connector.getHostName() == null) {
-                    engine = WebSocks5Utils.getSslContext().createSSLEngine();
+                    engine = WebSocksUtils.getSslContext().createSSLEngine();
                 } else {
-                    engine = WebSocks5Utils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
+                    engine = WebSocksUtils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
                 }
                 engine.setUseClientMode(true);
                 SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
@@ -157,7 +157,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" + // copied from rfc 6455, we don't care in the protocol
             "Sec-WebSocket-Version: 13\r\n" +
             "Authorization: Basic " +
-            Base64.getEncoder().encodeToString((user + ":" + WebSocks5Utils.calcPass(pass, Utils.currentMinute())).getBytes()) +
+            Base64.getEncoder().encodeToString((user + ":" + WebSocksUtils.calcPass(pass, Utils.currentMinute())).getBytes()) +
             "\r\n" +
             "\r\n"
         ).getBytes();
@@ -264,7 +264,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             return;
         }
         // check headers
-        if (!WebSocks5Utils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
+        if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
             providedCallback.accept(null);
             ctx.connection.close();
             return;
@@ -274,10 +274,10 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         ctx.connection.getInBuffer().clear();
 
         // send WebSocket frame:
-        WebSocks5Utils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+        WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
         step = 2;
         // expecting to read the exactly same data as sent
-        byte[] bytes = new byte[WebSocks5Utils.bytesToSendForWebSocketFrame.length];
+        byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
         webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
     }
 

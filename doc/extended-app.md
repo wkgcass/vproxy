@@ -27,16 +27,16 @@ java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main
 e.g.
 
 ```
-java -D+A:AppClass=WebSocks5ProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+java -D+A:AppClass=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
 ## Available apps
 
-### AppClass=WebSocks5ProxyServer
+### AppClass=WebSocksProxyServer
 
 A proxy server that can proxy raw tcp flow even when it's behind a websocket gateway.
 
-See [The Websocks5 Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks5.md) for more info.
+See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md) for more info.
 
 #### Start arguments
 
@@ -49,16 +49,16 @@ e.g.
 listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
-### AppClass=WebSocks5Agent
+### AppClass=WebSocksAgent
 
-An agent server run locally, which wraps websocks5 into socks5, so that other applications can use.
+An agent server run locally, which wraps websocks into socks5, so that other applications can use.
 
-See [The Websocks5 Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks5.md) for more info.
+See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md) for more info.
 
 #### Start arguments
 
 (optional) full path of the configuration file
 
-If not specified, the app will use `~/vproxy-websocks5-agent.conf` instead.
+If not specified, the app will use `~/vproxy-websocks-agent.conf` instead.
 
-The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks5-agent-example.conf).
+The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks-agent-example.conf).

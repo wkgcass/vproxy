@@ -1,5 +1,5 @@
 /**
- * This package implements a protocol called `websocks5` that binds WebSocket and Socks5 together<br>
+ * This package implements a protocol called `websocks` that binds WebSocket and the SOCKS protocol together<br>
  * The protocol is simple and follows rfc specifications.<br>
  * 1. the client sends an http upgrade request to upgrade to WebSocket<br>
  * 2. the server responds with a 101 http response<br>
@@ -22,6 +22,6 @@
  * 5. B connects to S (tcp) and tells A, A proxies that response to C<br>
  * 6. C sends/reads data to/from A, A proxies data to B, B proxies data to S<br>
  * You can also build a security link between A and B, using nginx/haproxy:<br>
- * C &lt;--socks5--&gt; A &lt;--websocks5--&gt; WrapTLS &lt;--tls--&gt; UnwrapTLS &lt;--websocks5--&gt; B &lt;--tcp--&gt; S<br>
+ * C &lt;--socks5--&gt; A &lt;--websocks--&gt; WrapTLS &lt;--tls--&gt; UnwrapTLS &lt;--websocks--&gt; B &lt;--tcp--&gt; S<br>
  */
-package net.cassite.vproxyx.websocks5;
+package net.cassite.vproxyx.websocks;

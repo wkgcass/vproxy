@@ -40,20 +40,20 @@ function makeLinux()
 # make MacOS image on the host system
 makeMacOS "" "$name"
 
-# make MacOS WebSocks5Agent
-makeMacOS "--enable-all-security-services -D+A:AppClass=WebSocks5ProxyAgent" "$name-WebSocks5Agent"
+# make MacOS WebSocksAgent
+makeMacOS "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
 
-# make MacOS WebSocks5Server
-makeMacOS "-D+A:AppClass=WebSocks5ProxyServer" "$name-WebSocks5Server"
+# make MacOS WebSocksServer
+makeMacOS "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # make Linux image on docker vm
 makeLinux "" "$name"
 
-# make MacOS WebSocks5Agent
-makeLinux "--enable-all-security-services -D+A:AppClass=WebSocks5ProxyAgent" "$name-WebSocks5Agent"
+# make MacOS WebSocksAgent
+makeLinux "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
 
-# make MacOS WebSocks5Server
-makeLinux "-D+A:AppClass=WebSocks5ProxyServer" "$name-WebSocks5Server"
+# make MacOS WebSocksServer
+makeLinux "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # clean the container(s)
 docker rm `docker container list --all | awk '{print $1}' | tail -n +2`

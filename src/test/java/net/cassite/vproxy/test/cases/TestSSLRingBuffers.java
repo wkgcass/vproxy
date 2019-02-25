@@ -5,7 +5,10 @@ import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.http.HttpResp;
 import net.cassite.vproxy.http.HttpRespParser;
 import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.util.*;
+import net.cassite.vproxy.util.BlockCallback;
+import net.cassite.vproxy.util.ByteArrayChannel;
+import net.cassite.vproxy.util.RingBuffer;
+import net.cassite.vproxy.util.RingBufferETHandler;
 import net.cassite.vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 import net.cassite.vproxy.util.ringbuffer.SSLWrapRingBuffer;
@@ -26,9 +29,7 @@ import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
-import static org.junit.Assert.fail;
+import static org.junit.Assert.*;
 
 public class TestSSLRingBuffers {
     @BeforeClass
