@@ -156,6 +156,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             "Host: " + domainOfProxy + "\r\n" +
             "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" + // copied from rfc 6455, we don't care in the protocol
             "Sec-WebSocket-Version: 13\r\n" +
+            "Sec-WebSocket-Protocol: socks5\r\n" + // for now, we support socks5 only
             "Authorization: Basic " +
             Base64.getEncoder().encodeToString((user + ":" + WebSocksUtils.calcPass(pass, Utils.currentMinute())).getBytes()) +
             "\r\n" +

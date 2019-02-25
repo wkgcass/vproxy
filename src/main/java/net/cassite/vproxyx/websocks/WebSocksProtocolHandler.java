@@ -13,10 +13,7 @@ import net.cassite.vproxy.util.*;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Base64;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> {
     private final HttpProtocolHandler httpProtocolHandler = new HttpProtocolHandler(false) {
@@ -40,6 +37,15 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 fail(ctx, 401, "auth failed");
                 return;
             }
+            {
+                String useProtocol = selectProtocol(req.headers);
+                if (useProtocol == null) {
+                    fail(ctx, 400, "no supported protocol");
+                    return;
+                }
+                // we only support socks5 for now, so no need to save this protocol string
+            }
+
             String key = null;
             for (HttpHeader header : req.headers) {
                 if (header.key.toString().trim().equalsIgnoreCase("sec-websocket-key")) {
@@ -52,7 +58,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 fail(ctx, 500, "generating sec-websocket-accept failed");
                 return;
             }
-            // everything is find, make an upgrade
+            // everything is fine, make an upgrade
             {
                 // handling on the server side
                 WebSocksHttpContext wrapCtx = (WebSocksHttpContext) ctx.data;
@@ -62,6 +68,26 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
             ctx.write(response(101, accept)); // respond to the client about the upgrading
+        }
+
+        // it's ordered with `-priority`, smaller the index is, higher priority it has
+        private final List<String> supportedProtocols = Collections.singletonList("socks5");
+
+        private String selectProtocol(List<HttpHeader> headers) {
+            List<String> protocols = new ArrayList<>();
+            for (HttpHeader h : headers) {
+                if (h.key.toString().trim().equalsIgnoreCase("sec-websocket-protocol")) {
+                    protocols.add(h.value.toString().trim());
+                }
+            }
+            if (protocols.isEmpty())
+                return null;
+
+            for (String p : supportedProtocols) {
+                if (protocols.contains(p))
+                    return p;
+            }
+            return null;
         }
 
         private void fail(ProtocolHandlerContext<HttpContext> ctx, int code, String msg) {
@@ -156,6 +182,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 sb.append("Upgrade: websocket\r\n");
                 sb.append("Connection: Upgrade\r\n");
                 sb.append("Sec-Websocket-Accept: ").append(msg).append("\r\n");
+                sb.append("Sec-WebSocket-Protocol: socks5\r\n"); // for now we only support socks5
                 sb.append("\r\n"); // end headers (and also the resp)
             } else {
                 if (statusCode == 401) {

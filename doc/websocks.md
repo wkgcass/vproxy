@@ -50,6 +50,7 @@ Connection: Upgrade\r\n
 Host: $host\r\n
 Sec-WebSocket-Key: $client_key\r\n
 Sec-WebSocket-Version: 13\r\n
+Sec-WebSocket-Protocol: $proxy_protocol\r\n
 Authorization: Basic $auth\r\n
 \r\n
 ```
@@ -61,6 +62,9 @@ There are some placeholders in this packet:
 * `$auth` is a base64 string which contains username and password, which follows
      RFC 7617 The 'Basic' HTTP Authentication Scheme, but we should make a little
      modification, see chapter `Auth` in this article.
+* `$proxy_protocol` is a string represents which proxy protocol the client would
+     like to use. This header may appear multiple times to let the server choose
+     one protocol out of them.
 
 Example:
 
@@ -71,6 +75,7 @@ Connection: Upgrade\r\n
 Host: myexample.com\r\n
 Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n
 Sec-WebSocket-Version: 13\r\n
+Sec-WebSocket-Protocol: socks5\r\n
 Authorization: Basic YWxpY2U6RTRqNkg5QVN3S0dWZ2tpTmNSajQ3Q0dmUkRsdjF2WW9vRHhFc0ZQRW9EVT0=\r\n
 \r\n
 ```
@@ -87,12 +92,15 @@ HTTP/1.1 101 Switching Protocols\r\n
 Upgrade: websocket\r\n
 Connection: Upgrade\r\n
 Sec-Websocket-Accept: $server_accept\r\n
+Sec-WebSocket-Protocol: $proxy_protocol\r\n
 \r\n
 ```
 
 There are some placeholders in this packet:
 
 * `$server_accept` should follow RFC 6455 Chapter 1.3
+* `$proxy_protocol` is a string represents the protocol that the server chooses.
+     This header should appear only once.
 
 > NOTE: The server is allowed to do anything if the client packet is invalid,
 > e.g. respond with http status 400 or 401, or close or reset the connection.
@@ -142,11 +150,33 @@ Then the client and server should follow socks5 handshake procedure described in
 * It's recommended for clients to only set `NO AUTHENTICATION REQUIRED` in the
      method list to minimize the handshake netflow.
 
-### plain data
+#### Other proxy protocols
+
+We may support more protocols, but currently we only support socks5.
+
+### Plain Data
 
 After the socks5 handshake is done, the WebSocks handshake is done as well. The
  server should proxy client data to remote endpoint based on the negotiation result
  according to RFC 1928.
+
+### Addition
+
+#### WebSocket PONG
+
+As specified in RFC 6455 Chapter 5.5.3, any endpoint can send an unsolicited PONG
+ message. We use this type of message to keep a connection alive if it in a connection
+ pool.
+
+The client may send PONG messages when the `WebSocket Maximum Payload Length Frame` has
+ yet not sent, but the server only parses the message, and do not reply.
+
+#### Combine Packets
+
+The bytes after an upgrade http handshake can be combined into one packet.
+ The server should allow more data than required, which mainly happens in the
+ socks step. The RFC 1928 asks servers and clients to follow the steps one
+ after one, however it won't hurt if just sending all bytes in one packet.
 
 ## Auth
 
