@@ -248,14 +248,13 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         if (ctx.data.left.webSocketBytes.free() != 0) {
             return; // need more data
         }
-        if (ctx.inBuffer.used() != 0) {
-            assert Logger.lowLevelDebug("the client still have data to write after header of the WebSocket frame");
-            ctx.data.right.failed(new IOException("protocol failed")); // callback with null
-            // the connection will be closed by the Proxy lib
-            return;
-        }
         ctx.data.left.step = 3; // socks5
         WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+        if (ctx.inBuffer.used() != 0) {
+            // still have data
+            // let's call readable to handle the socks step
+            readable(ctx);
+        }
     }
 
     @Override

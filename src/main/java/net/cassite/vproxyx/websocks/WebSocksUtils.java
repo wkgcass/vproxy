@@ -203,12 +203,12 @@ public class WebSocksUtils {
             try (FileInputStream stream = new FileInputStream(path)) {
                 store.load(stream, pass.toCharArray());
                 tmf.init(store);
-                sslContext = SSLContext.getInstance("TLS");
                 tms = tmf.getTrustManagers();
             }
         }
 
         try {
+            sslContext = SSLContext.getInstance("TLS");
             sslContext.init(null, tms, null);
         } catch (KeyManagementException e) {
             sslContext = null;

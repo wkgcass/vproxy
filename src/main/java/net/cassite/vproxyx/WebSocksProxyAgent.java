@@ -122,6 +122,7 @@ public class WebSocksProxyAgent {
             handler =
             new Socks5ProxyProtocolHandler(
                 new WebSocksProxyAgentConnectorProvider(
+                    configProcessor.isStrictMode(),
                     configProcessor.getDomains(),
                     servers,
                     configProcessor.getUser(),

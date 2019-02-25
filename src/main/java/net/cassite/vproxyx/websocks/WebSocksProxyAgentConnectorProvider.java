@@ -20,15 +20,18 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
+    private final boolean strictMode;
     private final List<Pattern> proxyDomains;
     private final ServerGroup servers;
     private final String user;
     private final String pass;
 
-    public WebSocksProxyAgentConnectorProvider(List<Pattern> proxyDomains,
+    public WebSocksProxyAgentConnectorProvider(boolean strictMode,
+                                               List<Pattern> proxyDomains,
                                                ServerGroup servers,
                                                String user,
                                                String pass) {
+        this.strictMode = strictMode;
         this.proxyDomains = proxyDomains;
         this.servers = servers;
         this.user = user;
@@ -100,6 +103,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
         try {
             loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
+                strictMode,
                 connector.getHostName(), address, port,
                 providedCallback, user, pass));
         } catch (IOException e) {
@@ -110,6 +114,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 }
 
 class AgentClientConnectionHandler implements ClientConnectionHandler {
+    private final boolean strictMode;
     private final String domainOfProxy;
     private final String domain;
     private final int port;
@@ -131,12 +136,14 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     private ByteArrayChannel socks5AuthMethodExchange;
     private ByteArrayChannel socks5ConnectResult;
 
-    AgentClientConnectionHandler(String domainOfProxy,
+    AgentClientConnectionHandler(boolean strictMode,
+                                 String domainOfProxy,
                                  String domain,
                                  int port,
                                  Consumer<Connector> providedCallback,
                                  String user,
                                  String pass) {
+        this.strictMode = strictMode;
         this.domainOfProxy = domainOfProxy;
         this.domain = domain;
         this.port = port;
@@ -144,6 +151,10 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
 
         this.user = user;
         this.pass = pass;
+    }
+    private void utilAlertFail(ConnectionHandlerContext ctx) {
+        providedCallback.accept(null);
+        ctx.connection.close();
     }
 
     @Override
@@ -179,9 +190,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
                 String errMsg = httpRespParser.getErrorMessage();
                 if (errMsg != null) {
                     // parse failed, server returned invalid message
-                    providedCallback.accept(null); // return null
-                    // close connection
-                    ctx.connection.close();
+                    utilAlertFail(ctx);
                 } // otherwise // want more data
                 return;
             }
@@ -193,33 +202,21 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             if (webSocketFrame.free() != 0) {
                 return; // still have data to read
             }
-            // read done, check whether still have data to read
-            if (ctx.connection.getInBuffer().used() != 0) {
-                // still got data
-                Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data other than the frame header " + ctx.connection.getInBuffer().toString());
-                providedCallback.accept(null);
-                ctx.connection.close();
-                return;
-            }
             // remove the chnl
             webSocketFrame = null;
-            // start socks5 negotiation
-            sendSocks5AuthMethodExchange(ctx);
+            if (strictMode) {
+                // start socks5 negotiation
+                assert Logger.lowLevelDebug("strictMode is on, send socks5 auth here");
+                sendSocks5AuthMethodExchange(ctx);
+            }
+            step = 3;
+            byte[] ex = new byte[2];
+            socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
         } else if (step == 3) {
             // socks5 auth method respond
             ctx.connection.getInBuffer().writeTo(socks5AuthMethodExchange);
             if (socks5AuthMethodExchange.free() != 0) {
                 return; // still have data to read
-            }
-            // read done, check whether still have data to read
-            if (ctx.connection.getInBuffer().used() != 0) {
-                // still got data
-                Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data other than the auth exchange " + ctx.connection.getInBuffer().toString());
-                providedCallback.accept(null);
-                ctx.connection.close();
-                return;
             }
             // process the resp
             checkAndProcessAuthExchangeAndSendConnect(ctx);
@@ -242,12 +239,17 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
                 // still got data
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
                     "in buffer still have data after socks5 connect response " + ctx.connection.getInBuffer().toString());
-                providedCallback.accept(null);
-                ctx.connection.close();
+                utilAlertFail(ctx);
                 return;
             }
             // process done
             done(ctx);
+            return;
+        }
+
+        if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0) {
+            // we may proceed
+            readable(ctx);
         }
     }
 
@@ -260,14 +262,12 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         // status code should be 101
         if (!resp.statusCode.toString().trim().equals("101")) {
             // the server refused to upgrade to WebSocket
-            providedCallback.accept(null);
-            ctx.connection.close();
+            utilAlertFail(ctx);
             return;
         }
         // check headers
         if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
-            providedCallback.accept(null);
-            ctx.connection.close();
+            utilAlertFail(ctx);
             return;
         }
 
@@ -280,6 +280,13 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         // expecting to read the exactly same data as sent
         byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
         webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
+
+        // if not strict, we can send socks5 negotiation here
+        if (!strictMode) {
+            assert Logger.lowLevelDebug("strictMode is off, send all packets");
+            sendSocks5AuthMethodExchange(ctx);
+            sendSocks5Connect(ctx);
+        }
     }
 
     private void sendSocks5AuthMethodExchange(ConnectionHandlerContext ctx) {
@@ -290,24 +297,9 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
         };
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
         ctx.connection.getOutBuffer().storeBytesFrom(chnl);
-        step = 3;
-        byte[] ex = new byte[2];
-        socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
     }
 
-    private void checkAndProcessAuthExchangeAndSendConnect(ConnectionHandlerContext ctx) {
-        byte[] ex = socks5AuthMethodExchange.get();
-        if (ex[0] != 5 || ex[1] != 0) {
-            // version != 5 or meth != no_auth
-            Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                "response version is wrong or method is wrong: " + ex[0] + "," + ex[1]);
-            providedCallback.accept(null);
-            ctx.connection.close();
-            return;
-        }
-        // set to null
-        socks5AuthMethodExchange = null;
-
+    private void sendSocks5Connect(ConnectionHandlerContext ctx) {
         // build message to send
 
         byte[] chars = domain.getBytes();
@@ -327,6 +319,24 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
 
         ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
         ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+    }
+
+    private void checkAndProcessAuthExchangeAndSendConnect(ConnectionHandlerContext ctx) {
+        byte[] ex = socks5AuthMethodExchange.get();
+        if (ex[0] != 5 || ex[1] != 0) {
+            // version != 5 or meth != no_auth
+            Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                "response version is wrong or method is wrong: " + ex[0] + "," + ex[1]);
+            utilAlertFail(ctx);
+            return;
+        }
+        // set to null
+        socks5AuthMethodExchange = null;
+
+        if (strictMode) {
+            assert Logger.lowLevelDebug("strictMode is on, send socks5 connect here");
+            sendSocks5Connect(ctx);
+        }
 
         // make buffer for incoming data
         step = 5;
@@ -342,8 +352,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             // version != 5 or resp != success
             Logger.error(LogType.INVALID_EXTERNAL_DATA,
                 "response version is wrong or resp is not success: " + connect5Bytes[0] + "," + connect5Bytes[1]);
-            providedCallback.accept(null);
-            ctx.connection.close();
+            utilAlertFail(ctx);
             return;
         }
         // [2] is preserved, ignore that
@@ -362,8 +371,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             default:
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
                     "RESP_TYPE is invalid: " + connect5Bytes[3]);
-                providedCallback.accept(null);
-                ctx.connection.close();
+                utilAlertFail(ctx);
                 return;
         }
 
@@ -380,8 +388,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             // more than leftLen, which is invalid
             Logger.error(LogType.INVALID_EXTERNAL_DATA,
                 "still got data after the connection response" + ctx.connection.getInBuffer().toString());
-            providedCallback.accept(null);
-            ctx.connection.close();
+            utilAlertFail(ctx);
         }
     }
 
@@ -397,8 +404,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
             local = InetAddress.getByName("0.0.0.0");
         } catch (UnknownHostException e) {
             Logger.shouldNotHappen("getByName 0.0.0.0 failed", e);
-            providedCallback.accept(null);
-            ctx.connection.close();
+            utilAlertFail(ctx);
             return;
         }
         providedCallback.accept(new AlreadyConnectedConnector(
@@ -416,7 +422,7 @@ class AgentClientConnectionHandler implements ClientConnectionHandler {
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
         Logger.error(LogType.CONN_ERROR, "connection " + ctx.connection + " got exception", err);
-        ctx.connection.close();
+        utilAlertFail(ctx);
     }
 
     @Override

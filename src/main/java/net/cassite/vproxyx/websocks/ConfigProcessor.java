@@ -24,6 +24,7 @@ public class ConfigProcessor {
     private String pass;
     private String cacertsPath;
     private String cacertsPswd;
+    private boolean strictMode = true;
 
     public ConfigProcessor(String fileName, ServerGroup group) {
         this.fileName = fileName;
@@ -52,6 +53,10 @@ public class ConfigProcessor {
 
     public String getCacertsPswd() {
         return cacertsPswd;
+    }
+
+    public boolean isStrictMode() {
+        return strictMode;
     }
 
     public void parse() throws Exception {
@@ -99,6 +104,18 @@ public class ConfigProcessor {
                     if (pswd.isEmpty())
                         throw new Exception("cacert path not specified");
                     cacertsPswd = pswd;
+                } else if (line.startsWith("agent.strict ")) {
+                    String val = line.substring("agent.strict ".length()).trim();
+                    switch (val) {
+                        case "on":
+                            strictMode = true;
+                            break;
+                        case "off":
+                            strictMode = false;
+                            break;
+                        default:
+                            throw new Exception("invalid value for agent.strict: " + val);
+                    }
                 } else if (line.equals("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                 } else if (line.equals("proxy.domain.list.start")) {
