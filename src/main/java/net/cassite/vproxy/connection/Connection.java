@@ -31,12 +31,12 @@ public class Connection implements NetFlowRecorder {
         @Override
         public void readableET() {
             // ignore the event
-            assert Logger.lowLevelDebug("readableET triggered (do nothing) " + Connection.this);
+            assert Logger.lowLevelNetDebug("readableET triggered (do nothing) " + Connection.this);
         }
 
         @Override
         public void writableET() {
-            assert Logger.lowLevelDebug("writableET triggered " + Connection.this);
+            assert Logger.lowLevelNetDebug("writableET triggered " + Connection.this);
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
@@ -62,7 +62,7 @@ public class Connection implements NetFlowRecorder {
     class OutBufferETHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
-            assert Logger.lowLevelDebug("readableET triggered " + Connection.this);
+            assert Logger.lowLevelNetDebug("readableET triggered " + Connection.this);
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
@@ -136,7 +136,7 @@ public class Connection implements NetFlowRecorder {
         @Override
         public void writableET() {
             // ignore the event
-            assert Logger.lowLevelDebug("writableET triggered (do nothing) " + Connection.this);
+            assert Logger.lowLevelNetDebug("writableET triggered (do nothing) " + Connection.this);
         }
     }
 

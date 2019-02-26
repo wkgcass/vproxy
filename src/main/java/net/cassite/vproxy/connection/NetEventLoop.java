@@ -339,7 +339,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             cctx.handler.exception(cctx, e);
             return;
         }
-        assert Logger.lowLevelDebug("read " + read + " bytes from " + cctx.connection);
+        assert Logger.lowLevelNetDebug("read " + read + " bytes from " + cctx.connection);
         if (read < 0) {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;

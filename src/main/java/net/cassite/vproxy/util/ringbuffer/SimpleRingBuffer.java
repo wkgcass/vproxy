@@ -89,7 +89,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     private void resetCursors() {
-        assert Logger.lowLevelDebug("reset cursors");
+        assert Logger.lowLevelNetDebug("reset cursors");
         sPos = 0;
         ePos = 0;
         ePosIsAfterSPos = true;
@@ -200,7 +200,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     private boolean isFirstOperate() {
-        assert Logger.lowLevelDebug("thread " + Thread.currentThread() + " is operating");
+        assert Logger.lowLevelNetDebug("thread " + Thread.currentThread() + " is operating");
         boolean firstOperator = !notFirstOperator;
         if (firstOperator) {
             notFirstOperator = true;
@@ -231,7 +231,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
         boolean triggerWritable = false;
 
-        assert Logger.lowLevelDebug("before operate write out, sPos=" + sPos);
+        assert Logger.lowLevelNetDebug("before operate write out, sPos=" + sPos);
 
         try { // only use try-finally here, we do not catch
 
@@ -295,11 +295,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
                 return write;
             }
         } finally { // do trigger here
-            assert Logger.lowLevelDebug("after operate write out, sPos=" + sPos);
+            assert Logger.lowLevelNetDebug("after operate write out, sPos=" + sPos);
 
             operatingBuffer = false;
             if (triggerWritable) {
-                assert Logger.lowLevelDebug("trigger writable for " + handler.size() + " times");
+                assert Logger.lowLevelNetDebug("trigger writable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.writableET();
                 }
@@ -320,7 +320,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
         boolean triggerReadable = false;
 
-        assert Logger.lowLevelDebug("before operate store in, ePos=" + ePos);
+        assert Logger.lowLevelNetDebug("before operate store in, ePos=" + ePos);
 
         try { // only use try-finally here, we do not catch
 
@@ -379,11 +379,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
                 return read;
             }
         } finally { // do trigger here
-            assert Logger.lowLevelDebug("after operate store in, ePos=" + ePos);
+            assert Logger.lowLevelNetDebug("after operate store in, ePos=" + ePos);
 
             operatingBuffer = false;
             if (triggerReadable) {
-                assert Logger.lowLevelDebug("trigger readable for " + handler.size() + " times");
+                assert Logger.lowLevelNetDebug("trigger readable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
                     aHandler.readableET();
                 }

@@ -23,6 +23,17 @@ public class Logger {
         return true;
     }
 
+    public static boolean lowLevelNetDebug(String msg) {
+        String debug = System.getProperty("javax.net.debug");
+        if (debug == null || debug.equals("all")) {
+            return true;
+        }
+        String threadName = Thread.currentThread().getName();
+        StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
+        System.out.println(current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
+        return true;
+    }
+
     public static void stdout(String msg) {
         System.out.println(current() + msg);
     }

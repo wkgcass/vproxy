@@ -31,13 +31,6 @@ import java.util.stream.Collectors;
 @SuppressWarnings("unused")
 public class WebSocksProxyAgent {
     public static void main0(String[] args) throws Exception {
-        // debug option
-        //noinspection ConstantConditions,TrivialFunctionalExpressionUsage
-        assert ((Predicate<Void>) v -> {
-            System.setProperty("javax.net.debug", "all");
-            return true;
-        }).test(null);
-
         String configFile = "~/vproxy-websocks-agent.conf";
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
