@@ -86,6 +86,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         @Override
         public ClientConnection provide(NetEventLoop loop) {
             SvrHandleConnector connector = servers.next();
+            if (connector == null) {
+                assert Logger.lowLevelDebug("no available remote server connector for now");
+                return null;
+            }
             boolean useSSL = (boolean) connector.getData(); /*useSSL, see ConfigProcessor*/
             ClientConnection conn;
             try {
@@ -122,6 +126,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             };
             ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
             conn.getOutBuffer().storeBytesFrom(chnl);
+            assert Logger.lowLevelDebug("sending PONG frame");
         }
     }
 
