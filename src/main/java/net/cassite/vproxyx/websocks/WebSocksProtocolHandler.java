@@ -244,10 +244,32 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     }
 
     private void handleWebSocket(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
-        ctx.inBuffer.writeTo(ctx.data.left.webSocketBytes);
+        ByteArrayChannel chnl = ctx.data.left.webSocketBytes;
+        ctx.inBuffer.writeTo(chnl);
+        if (chnl.used() > 2) {
+            // check first 2 bytes, whether it's indicating that it's a PONG message
+            byte[] b = chnl.get();
+            if ((b[0] & 0xf) == 0xA) {
+                // opcode is PONG
+                assert Logger.lowLevelDebug("received PONG message");
+                if (b[0] != (byte) 0b10001010 || b[1] != 0) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "the message is PONG, but is not expected: [" + b[0] + "][" + b[1] + "]");
+                    // here we went to an undefined state, we just leave it here
+                }
+                Utils.shiftLeft(b, 2);
+                ctx.data.left.webSocketBytes = ByteArrayChannel.from(b, 0, chnl.used() - 2, b.length + 2 - chnl.used());
+
+                // then we read again
+                handleWebSocket(ctx);
+                return;
+            } // otherwise it's not a PONG packet
+        } else {
+            return; // need more data
+        }
         if (ctx.data.left.webSocketBytes.free() != 0) {
             return; // need more data
         }
+        assert Logger.lowLevelDebug("web socket data receiving done");
         ctx.data.left.step = 3; // socks5
         WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
         if (ctx.inBuffer.used() != 0) {

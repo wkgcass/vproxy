@@ -115,7 +115,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         @Override
         public void keepalive(ClientConnection conn) {
-            // TODO do nothing for now, may send PONG message to keep the connection alive
+            // PONG frame
+            byte[] bytes = {
+                (byte) 0b10001010, // FIN and %xA
+                0, // mask=0 and paylod=0
+            };
+            ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
+            conn.getOutBuffer().storeBytesFrom(chnl);
         }
     }
 

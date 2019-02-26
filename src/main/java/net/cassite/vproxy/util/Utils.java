@@ -668,4 +668,12 @@ public class Utils {
             ) % 60 // get minutes
         );
     }
+
+    public static void shiftLeft(byte[] arr, int l) {
+        for (int i = 0; i < arr.length; ++i) {
+            int e = i + l;
+            byte b = e >= arr.length ? 0 : arr[e];
+            arr[i] = b;
+        }
+    }
 }
