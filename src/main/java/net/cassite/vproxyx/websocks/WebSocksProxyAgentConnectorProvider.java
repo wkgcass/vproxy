@@ -5,6 +5,10 @@ import net.cassite.vproxy.component.svrgroup.SvrHandleConnector;
 import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.http.HttpResp;
 import net.cassite.vproxy.http.HttpRespParser;
+import net.cassite.vproxy.pool.ConnectionPool;
+import net.cassite.vproxy.pool.ConnectionPoolHandler;
+import net.cassite.vproxy.pool.PoolCallback;
+import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.socks.AddressType;
 import net.cassite.vproxy.socks.Socks5ConnectorProvider;
 import net.cassite.vproxy.util.*;
@@ -21,22 +25,496 @@ import java.util.function.Consumer;
 import java.util.regex.Pattern;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
+    class WebSocksPoolHandler implements ConnectionPoolHandler {
+        class WebSocksClientHandshakeHandler implements ClientConnectionHandler {
+            private final String domainOfProxy;
+            private final HttpRespParser httpRespParser = new HttpRespParser(false);
+
+            WebSocksClientHandshakeHandler(String domainOfProxy) {
+                this.domainOfProxy = domainOfProxy;
+            }
+
+            @Override
+            public void connected(ClientConnectionHandlerContext ctx) {
+                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
+            }
+
+            @Override
+            public void readable(ConnectionHandlerContext ctx) {
+                CommonProcess.parseUpgradeResp(ctx, httpRespParser,
+                    /* fail */() -> {
+                        assert Logger.lowLevelDebug("handshake for the pool failed");
+                        cb.connectionError((ClientConnection) ctx.connection);
+                    },
+                    /* succ */() -> {
+                        assert Logger.lowLevelDebug("handshake for the pool succeeded");
+                        cb.handshakeDone((ClientConnection) ctx.connection);
+                    });
+            }
+
+            @Override
+            public void writable(ConnectionHandlerContext ctx) {
+                // do nothing, the buffer is large enough for handshaking
+            }
+
+            @Override
+            public void exception(ConnectionHandlerContext ctx, IOException err) {
+                Logger.error(LogType.CONN_ERROR, "conn " + ctx.connection +
+                    " got exception when handshaking for the pool", err);
+                cb.connectionError((ClientConnection) ctx.connection);
+            }
+
+            @Override
+            public void closed(ConnectionHandlerContext ctx) {
+                Logger.error(LogType.CONN_ERROR, "conn " + ctx.connection +
+                    " closed when handshaking for the pool");
+                cb.connectionError((ClientConnection) ctx.connection);
+            }
+
+            @Override
+            public void removed(ConnectionHandlerContext ctx) {
+                // ignore
+            }
+        }
+
+        private final PoolCallback cb;
+
+        WebSocksPoolHandler(PoolCallback cb) {
+            this.cb = cb;
+        }
+
+        @Override
+        public ClientConnection provide(NetEventLoop loop) {
+            SvrHandleConnector connector = servers.next();
+            boolean useSSL = (boolean) connector.getData(); /*useSSL, see ConfigProcessor*/
+            ClientConnection conn;
+            try {
+                if (useSSL) {
+                    conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector);
+                } else {
+                    conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                }
+            } catch (IOException e) {
+                Logger.error(LogType.CONN_ERROR, "make websocks connection for the pool failed", e);
+                return null;
+            }
+
+            try {
+                loop.addClientConnection(conn, null, new WebSocksClientHandshakeHandler(connector.getHostName()));
+            } catch (IOException e) {
+                conn.close();
+                return null;
+            }
+            return conn;
+        }
+
+        @Override
+        public void keepaliveReadable(ClientConnection conn) {
+            // do nothing, we do not expect any data
+        }
+
+        @Override
+        public void keepalive(ClientConnection conn) {
+            // TODO do nothing for now, may send PONG message to keep the connection alive
+        }
+    }
+
+    class AgentClientConnectionHandler implements ClientConnectionHandler {
+        private final String domainOfProxy;
+        private final String domain;
+        private final int port;
+        private final Consumer<Connector> providedCallback;
+
+        private final boolean usePooledConnection;
+
+        // 0: init,
+        // 1: expecting http resp,
+        // 2: expecting WebSocket resp,
+        // 3: expecting socks5 auth method exchange
+        // 4: preserved for socks5 auth result
+        // 5: expecting socks5 connect result first 4 bytes
+        // 6: expecting socks5 connect result
+        private int step = 0;
+        private HttpRespParser httpRespParser;
+        private ByteArrayChannel webSocketFrame;
+        private ByteArrayChannel socks5AuthMethodExchange;
+        private ByteArrayChannel socks5ConnectResult;
+
+        AgentClientConnectionHandler(String domainOfProxy,
+                                     String domain,
+                                     int port,
+                                     Consumer<Connector> providedCallback,
+                                     boolean usePooledConnection) {
+            this.domainOfProxy = domainOfProxy;
+            this.domain = domain;
+            this.port = port;
+            this.providedCallback = providedCallback;
+
+            this.usePooledConnection = usePooledConnection;
+        }
+
+        private void utilAlertFail(ConnectionHandlerContext ctx) {
+            providedCallback.accept(null);
+            ctx.connection.close();
+        }
+
+        @Override
+        public void connected(ClientConnectionHandlerContext ctx) {
+            if (!usePooledConnection) {
+                // start handshaking if the connection is not pooled
+                CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
+
+                step = 1;
+                httpRespParser = new HttpRespParser(false);
+            } else {
+                // otherwise, send the WebSocket frame
+                sendWebSocketFrame(ctx);
+
+                step = 2;
+            }
+        }
+
+        @Override
+        public void readable(ConnectionHandlerContext ctx) {
+            if (step == 1) {
+                CommonProcess.parseUpgradeResp(ctx, httpRespParser,
+                    /* fail */ () -> utilAlertFail(ctx),
+                    /* succ */ () -> {
+                        // remove the parser
+                        httpRespParser = null;
+
+                        sendWebSocketFrame(ctx);
+                    });
+            } else if (step == 2) {
+                // WebSocket
+                ctx.connection.getInBuffer().writeTo(webSocketFrame);
+                if (webSocketFrame.free() != 0) {
+                    return; // still have data to read
+                }
+                // remove the chnl
+                webSocketFrame = null;
+                if (strictMode) {
+                    // start socks5 negotiation
+                    assert Logger.lowLevelDebug("strictMode is on, send socks5 auth here");
+                    sendSocks5AuthMethodExchange(ctx);
+                }
+                step = 3;
+                byte[] ex = new byte[2];
+                socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
+            } else if (step == 3) {
+                // socks5 auth method respond
+                ctx.connection.getInBuffer().writeTo(socks5AuthMethodExchange);
+                if (socks5AuthMethodExchange.free() != 0) {
+                    return; // still have data to read
+                }
+                // process the resp
+                checkAndProcessAuthExchangeAndSendConnect(ctx);
+            } else if (step == 5) {
+                // socks5 connected respond first 5 bytes
+                ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
+                if (socks5ConnectResult.free() != 0) {
+                    return; // still have data to read
+                }
+                // process the resp
+                checkAndProcessFirst5BytesOfConnectResult(ctx);
+            } else {
+                // left bytes for socks5
+                ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
+                if (socks5ConnectResult.free() != 0) {
+                    return; // still have data to read
+                }
+                // check inBuffer
+                if (ctx.connection.getInBuffer().used() != 0) {
+                    // still got data
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                        "in buffer still have data after socks5 connect response " + ctx.connection.getInBuffer().toString());
+                    utilAlertFail(ctx);
+                    return;
+                }
+                // process done
+                done(ctx);
+                return;
+            }
+
+            if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0) {
+                // we may proceed
+                readable(ctx);
+            }
+        }
+
+        private void sendWebSocketFrame(ConnectionHandlerContext ctx) {
+            // prepare for web socket recv
+            step = 2;
+            // expecting to read the exactly same data as sent
+            byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
+            webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
+
+            // send WebSocket frame:
+            if (strictMode) {
+                assert Logger.lowLevelDebug("strictMode is on, only send the websocket frame");
+                WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+            } else {
+                assert Logger.lowLevelDebug("strictMode is off, send all packets");
+                // if not strict, we can send socks5 negotiation also
+                Set<RingBufferETHandler> handlers = ctx.connection.getOutBuffer().getHandlers();
+                // remove all handlers first
+                for (RingBufferETHandler h : handlers) {
+                    ctx.connection.getOutBuffer().removeHandler(h);
+                }
+                WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
+                sendSocks5AuthMethodExchange(ctx);
+                sendSocks5Connect(ctx);
+                // and add them back
+                for (RingBufferETHandler h : handlers) {
+                    ctx.connection.getOutBuffer().addHandler(h);
+                }
+                // trigger the readable
+                assert Logger.lowLevelDebug("manually trigger the readable event for " + handlers.size() + " times");
+                for (RingBufferETHandler h : handlers) {
+                    h.readableET();
+                }
+
+                // in this way, all these data will be sent in the same tcp packet
+            }
+        }
+
+        private void sendSocks5AuthMethodExchange(ConnectionHandlerContext ctx) {
+            byte[] toSend = {
+                5, // version
+                1, // cound
+                0, // no auth
+            };
+            ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+        }
+
+        private void sendSocks5Connect(ConnectionHandlerContext ctx) {
+            // build message to send
+
+            byte[] chars = domain.getBytes();
+
+            int len = 1 + 1 + 1 + 1 + (1 + chars.length) + 2;
+            byte[] toSend = new byte[len];
+            toSend[0] = 5; // version
+            toSend[1] = 1; // connect
+            toSend[2] = 0; // preserved
+            toSend[3] = 3; // domain
+            toSend[4] = (byte) domain.length(); // domain length
+            //---
+            toSend[toSend.length - 2] = (byte) ((port >> 8) & 0xff);
+            toSend[toSend.length - 1] = (byte) (port & 0xff);
+
+            System.arraycopy(chars, 0, toSend, 5, chars.length);
+
+            ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+        }
+
+        private void checkAndProcessAuthExchangeAndSendConnect(ConnectionHandlerContext ctx) {
+            byte[] ex = socks5AuthMethodExchange.get();
+            if (ex[0] != 5 || ex[1] != 0) {
+                // version != 5 or meth != no_auth
+                Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                    "response version is wrong or method is wrong: " + ex[0] + "," + ex[1]);
+                utilAlertFail(ctx);
+                return;
+            }
+            // set to null
+            socks5AuthMethodExchange = null;
+
+            if (strictMode) {
+                assert Logger.lowLevelDebug("strictMode is on, send socks5 connect here");
+                sendSocks5Connect(ctx);
+            }
+
+            // make buffer for incoming data
+            step = 5;
+            byte[] connect5Bytes = new byte[5];
+            // we only need 2 bytes to check whether connection established successfully
+            // and read another THREE bytes to know how long this message is
+            socks5ConnectResult = ByteArrayChannel.fromEmpty(connect5Bytes);
+        }
+
+        private void checkAndProcessFirst5BytesOfConnectResult(ConnectionHandlerContext ctx) {
+            byte[] connect5Bytes = socks5ConnectResult.get();
+            if (connect5Bytes[0] != 5 || connect5Bytes[1] != 0) {
+                // version != 5 or resp != success
+                Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                    "response version is wrong or resp is not success: " + connect5Bytes[0] + "," + connect5Bytes[1]);
+                utilAlertFail(ctx);
+                return;
+            }
+            // [2] is preserved, ignore that
+            // check [3] for type
+            int leftLen;
+            switch (connect5Bytes[3]) {
+                case 1: // ipv4
+                    leftLen = 4 - 1 + 2;
+                    break;
+                case 3: // domain
+                    leftLen = Utils.positive(connect5Bytes[4]) + 2;
+                    break;
+                case 4: // ipv6
+                    leftLen = 16 - 1 + 2;
+                    break;
+                default:
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                        "RESP_TYPE is invalid: " + connect5Bytes[3]);
+                    utilAlertFail(ctx);
+                    return;
+            }
+
+            // check the input buffer, whether already contain the left data
+            if (ctx.connection.getInBuffer().used() == leftLen) {
+                ctx.connection.getInBuffer().clear();
+                done(ctx);
+            } else if (ctx.connection.getInBuffer().used() < leftLen) {
+                // read more data
+                step = 6;
+                byte[] foo = new byte[leftLen];
+                socks5ConnectResult = ByteArrayChannel.fromEmpty(foo);
+            } else {
+                // more than leftLen, which is invalid
+                Logger.error(LogType.INVALID_EXTERNAL_DATA,
+                    "still got data after the connection response" + ctx.connection.getInBuffer().toString());
+                utilAlertFail(ctx);
+            }
+        }
+
+        private void done(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("handshake operation done " + ctx.connection);
+
+            socks5ConnectResult = null;
+            // remove the connection from loop
+            ctx.eventLoop.removeConnection(ctx.connection);
+
+            // add respond to the proxy lib
+
+            InetAddress local;
+            try {
+                local = InetAddress.getByName("0.0.0.0");
+            } catch (UnknownHostException e) {
+                Logger.shouldNotHappen("getByName 0.0.0.0 failed", e);
+                utilAlertFail(ctx);
+                return;
+            }
+            providedCallback.accept(new AlreadyConnectedConnector(
+                ctx.connection.remote, local, (ClientConnection) ctx.connection, ctx.eventLoop
+            ));
+
+            // every thing is done now
+        }
+
+        @Override
+        public void writable(ConnectionHandlerContext ctx) {
+            // do nothing here, the out buffer is large enough
+        }
+
+        @Override
+        public void exception(ConnectionHandlerContext ctx, IOException err) {
+            Logger.error(LogType.CONN_ERROR, "connection " + ctx.connection + " got exception", err);
+            utilAlertFail(ctx);
+        }
+
+        @Override
+        public void closed(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("connection " + ctx.connection + " closed");
+        }
+
+        @Override
+        public void removed(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("connection " + ctx.connection + " removed");
+        }
+    }
+
+    static class CommonProcess {
+        static ClientConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
+            SSLEngine engine;
+            if (connector.getHostName() == null) {
+                engine = WebSocksUtils.getSslContext().createSSLEngine();
+            } else {
+                engine = WebSocksUtils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
+            }
+            engine.setUseClientMode(true);
+            SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
+                engine,
+                RingBuffer.allocate(16384),
+                RingBuffer.allocate(16384),
+                32768,
+                32768,
+                loop);
+            return connector.connect(pair.left, pair.right);
+        }
+
+        static void sendUpgrade(ClientConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
+            // send http upgrade on connection
+            byte[] bytes = ("" +
+                "GET / HTTP/1.1\r\n" +
+                "Upgrade: websocket\r\n" +
+                "Connection: Upgrade\r\n" +
+                "Host: " + domainOfProxy + "\r\n" +
+                "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" + // copied from rfc 6455, we don't care in the protocol
+                "Sec-WebSocket-Version: 13\r\n" +
+                "Sec-WebSocket-Protocol: socks5\r\n" + // for now, we support socks5 only
+                "Authorization: Basic " +
+                Base64.getEncoder().encodeToString((user + ":" + WebSocksUtils.calcPass(pass, Utils.currentMinute())).getBytes()) +
+                "\r\n" +
+                "\r\n"
+            ).getBytes();
+            ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
+            ctx.connection.getOutBuffer().storeBytesFrom(chnl);
+            // the out-buffer is large enough to fit the message, so no need to buffer it from here
+        }
+
+        static void parseUpgradeResp(ConnectionHandlerContext ctx, HttpRespParser httpRespParser,
+                                     Runnable failCallback, Runnable successCallback) {
+            // http
+            int res = httpRespParser.feed(ctx.connection.getInBuffer());
+            if (res != 0) {
+                String errMsg = httpRespParser.getErrorMessage();
+                if (errMsg != null) {
+                    failCallback.run();
+                } // otherwise // want more data
+                return;
+            }
+
+            HttpResp resp = httpRespParser.getResult();
+            assert Logger.lowLevelDebug("got http response: " + resp);
+
+            // status code should be 101
+            if (!resp.statusCode.toString().trim().equals("101")) {
+                // the server refused to upgrade to WebSocket
+                failCallback.run();
+                return;
+            }
+            // check headers
+            if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
+                failCallback.run();
+                return;
+            }
+
+            // done
+            successCallback.run();
+        }
+    }
+
     private final boolean strictMode;
     private final List<Pattern> proxyDomains;
     private final ServerGroup servers;
     private final String user;
     private final String pass;
+    private final ConnectionPool pool;
 
-    public WebSocksProxyAgentConnectorProvider(boolean strictMode,
-                                               List<Pattern> proxyDomains,
-                                               ServerGroup servers,
-                                               String user,
-                                               String pass) {
-        this.strictMode = strictMode;
-        this.proxyDomains = proxyDomains;
+    public WebSocksProxyAgentConnectorProvider(ServerGroup servers,
+                                               NetEventLoop eventLoop,
+                                               ConfigProcessor config) {
+        this.strictMode = config.isStrictMode();
+        this.proxyDomains = config.getDomains();
         this.servers = servers;
-        this.user = user;
-        this.pass = pass;
+        this.user = config.getUser();
+        this.pass = config.getPass();
+
+        pool = new ConnectionPool(eventLoop, WebSocksPoolHandler::new, config.getPoolSize());
     }
 
     private boolean needProxy(String address) {
@@ -65,396 +543,47 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             providedCallback.accept(null);
             return;
         }
-        // retrieve a remote connection
-        SvrHandleConnector connector = servers.next();
-        if (connector == null) {
-            // no connectors for now
-            // the process is definitely cannot proceed
-            // we do not try direct connect here
-            // (because it's specified in config file that this domain requires proxy)
-            // just raise error
-            providedCallback.accept(null);
-            return;
-        }
-        ClientConnection conn;
-        try {
-            if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
-                SSLEngine engine;
-                if (connector.getHostName() == null) {
-                    engine = WebSocksUtils.getSslContext().createSSLEngine();
-                } else {
-                    engine = WebSocksUtils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
+
+        // try to fetch an existing connection from pool
+        pool.get(loop.getSelectorEventLoop(), conn -> {
+            boolean isPooledConn = conn != null;
+            if (conn == null) {
+                // retrieve a remote connection
+                SvrHandleConnector connector = servers.next();
+                if (connector == null) {
+                    // no connectors for now
+                    // the process is definitely cannot proceed
+                    // we do not try direct connect here
+                    // (because it's specified in config file that this domain requires proxy)
+                    // just raise error
+                    providedCallback.accept(null);
+                    return;
                 }
-                engine.setUseClientMode(true);
-                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
-                    engine,
-                    RingBuffer.allocate(16384),
-                    RingBuffer.allocate(16384),
-                    32768,
-                    32768,
-                    loop.getSelectorEventLoop());
-                conn = connector.connect(pair.left, pair.right);
-            } else {
-                conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
-            }
-        } catch (IOException e) {
-            Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
-            providedCallback.accept(null);
-            return;
-        }
-        try {
-            loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
-                strictMode,
-                connector.getHostName(), address, port,
-                providedCallback, user, pass));
-        } catch (IOException e) {
-            Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
-            providedCallback.accept(null);
-        }
-    }
-}
-
-class AgentClientConnectionHandler implements ClientConnectionHandler {
-    private final boolean strictMode;
-    private final String domainOfProxy;
-    private final String domain;
-    private final int port;
-    private final Consumer<Connector> providedCallback;
-
-    private final String user;
-    private final String pass;
-
-    // 0: init,
-    // 1: expecting http resp,
-    // 2: expecting WebSocket resp,
-    // 3: expecting socks5 auth method exchange
-    // 4: preserved for socks5 auth result
-    // 5: expecting socks5 connect result first 4 bytes
-    // 6: expecting socks5 connect result
-    private int step = 0;
-    private HttpRespParser httpRespParser;
-    private ByteArrayChannel webSocketFrame;
-    private ByteArrayChannel socks5AuthMethodExchange;
-    private ByteArrayChannel socks5ConnectResult;
-
-    AgentClientConnectionHandler(boolean strictMode,
-                                 String domainOfProxy,
-                                 String domain,
-                                 int port,
-                                 Consumer<Connector> providedCallback,
-                                 String user,
-                                 String pass) {
-        this.strictMode = strictMode;
-        this.domainOfProxy = domainOfProxy;
-        this.domain = domain;
-        this.port = port;
-        this.providedCallback = providedCallback;
-
-        this.user = user;
-        this.pass = pass;
-    }
-
-    private void utilAlertFail(ConnectionHandlerContext ctx) {
-        providedCallback.accept(null);
-        ctx.connection.close();
-    }
-
-    @Override
-    public void connected(ClientConnectionHandlerContext ctx) {
-        // send http upgrade on connection
-        byte[] bytes = ("" +
-            "GET / HTTP/1.1\r\n" +
-            "Upgrade: websocket\r\n" +
-            "Connection: Upgrade\r\n" +
-            "Host: " + domainOfProxy + "\r\n" +
-            "Sec-WebSocket-Key: dGhlIHNhbXBsZSBub25jZQ==\r\n" + // copied from rfc 6455, we don't care in the protocol
-            "Sec-WebSocket-Version: 13\r\n" +
-            "Sec-WebSocket-Protocol: socks5\r\n" + // for now, we support socks5 only
-            "Authorization: Basic " +
-            Base64.getEncoder().encodeToString((user + ":" + WebSocksUtils.calcPass(pass, Utils.currentMinute())).getBytes()) +
-            "\r\n" +
-            "\r\n"
-        ).getBytes();
-        ByteArrayChannel chnl = ByteArrayChannel.fromFull(bytes);
-        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
-        // the out-buffer is large enough to fit the message, so no need to buffer it from here
-
-        step = 1;
-        httpRespParser = new HttpRespParser(false);
-    }
-
-    @Override
-    public void readable(ConnectionHandlerContext ctx) {
-        if (step == 1) {
-            // http
-            int res = httpRespParser.feed(ctx.connection.getInBuffer());
-            if (res != 0) {
-                String errMsg = httpRespParser.getErrorMessage();
-                if (errMsg != null) {
-                    // parse failed, server returned invalid message
-                    utilAlertFail(ctx);
-                } // otherwise // want more data
-                return;
-            }
-            // succeeded, let's examine the content
-            checkAndProcessHttpRespAndSendWebSocketFrame(ctx, httpRespParser.getResult());
-        } else if (step == 2) {
-            // WebSocket
-            ctx.connection.getInBuffer().writeTo(webSocketFrame);
-            if (webSocketFrame.free() != 0) {
-                return; // still have data to read
-            }
-            // remove the chnl
-            webSocketFrame = null;
-            if (strictMode) {
-                // start socks5 negotiation
-                assert Logger.lowLevelDebug("strictMode is on, send socks5 auth here");
-                sendSocks5AuthMethodExchange(ctx);
-            }
-            step = 3;
-            byte[] ex = new byte[2];
-            socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
-        } else if (step == 3) {
-            // socks5 auth method respond
-            ctx.connection.getInBuffer().writeTo(socks5AuthMethodExchange);
-            if (socks5AuthMethodExchange.free() != 0) {
-                return; // still have data to read
-            }
-            // process the resp
-            checkAndProcessAuthExchangeAndSendConnect(ctx);
-        } else if (step == 5) {
-            // socks5 connected respond first 5 bytes
-            ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
-            if (socks5ConnectResult.free() != 0) {
-                return; // still have data to read
-            }
-            // process the resp
-            checkAndProcessFirst5BytesOfConnectResult(ctx);
-        } else {
-            // left bytes for socks5
-            ctx.connection.getInBuffer().writeTo(socks5ConnectResult);
-            if (socks5ConnectResult.free() != 0) {
-                return; // still have data to read
-            }
-            // check inBuffer
-            if (ctx.connection.getInBuffer().used() != 0) {
-                // still got data
-                Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "in buffer still have data after socks5 connect response " + ctx.connection.getInBuffer().toString());
-                utilAlertFail(ctx);
-                return;
-            }
-            // process done
-            done(ctx);
-            return;
-        }
-
-        if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0) {
-            // we may proceed
-            readable(ctx);
-        }
-    }
-
-    private void checkAndProcessHttpRespAndSendWebSocketFrame(ConnectionHandlerContext ctx, HttpResp resp) {
-        assert Logger.lowLevelDebug("got http response: " + resp);
-
-        // remove the parser
-        httpRespParser = null;
-
-        // status code should be 101
-        if (!resp.statusCode.toString().trim().equals("101")) {
-            // the server refused to upgrade to WebSocket
-            utilAlertFail(ctx);
-            return;
-        }
-        // check headers
-        if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
-            utilAlertFail(ctx);
-            return;
-        }
-
-        // clear the input buffer in case got body
-        ctx.connection.getInBuffer().clear();
-
-        step = 2;
-        // expecting to read the exactly same data as sent
-        byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
-        webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
-
-        // send WebSocket frame:
-        if (strictMode) {
-            assert Logger.lowLevelDebug("strictMode is on, only send the websocket frame");
-            WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
-        } else {
-            assert Logger.lowLevelDebug("strictMode is off, send all packets");
-            // if not strict, we can send socks5 negotiation also
-            Set<RingBufferETHandler> handlers = ctx.connection.getOutBuffer().getHandlers();
-            // remove all handlers first
-            for (RingBufferETHandler h : handlers) {
-                ctx.connection.getOutBuffer().removeHandler(h);
-            }
-            WebSocksUtils.sendWebSocketFrame(ctx.connection.getOutBuffer());
-            sendSocks5AuthMethodExchange(ctx);
-            sendSocks5Connect(ctx);
-            // and add them back
-            for (RingBufferETHandler h : handlers) {
-                ctx.connection.getOutBuffer().addHandler(h);
-            }
-            // trigger the readable
-            assert Logger.lowLevelDebug("manually trigger the readable event for " + handlers.size() + " times");
-            for (RingBufferETHandler h : handlers) {
-                h.readableET();
+                try {
+                    if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
+                        conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector);
+                    } else {
+                        conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                    }
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
+                    providedCallback.accept(null);
+                    return;
+                }
             }
 
-            // in this way, all these data will be sent in the same tcp packet
-        }
-    }
-
-    private void sendSocks5AuthMethodExchange(ConnectionHandlerContext ctx) {
-        byte[] toSend = {
-            5, // version
-            1, // cound
-            0, // no auth
-        };
-        ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
-        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
-    }
-
-    private void sendSocks5Connect(ConnectionHandlerContext ctx) {
-        // build message to send
-
-        byte[] chars = domain.getBytes();
-
-        int len = 1 + 1 + 1 + 1 + (1 + chars.length) + 2;
-        byte[] toSend = new byte[len];
-        toSend[0] = 5; // version
-        toSend[1] = 1; // connect
-        toSend[2] = 0; // preserved
-        toSend[3] = 3; // domain
-        toSend[4] = (byte) domain.length(); // domain length
-        //---
-        toSend[toSend.length - 2] = (byte) ((port >> 8) & 0xff);
-        toSend[toSend.length - 1] = (byte) (port & 0xff);
-
-        System.arraycopy(chars, 0, toSend, 5, chars.length);
-
-        ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
-        ctx.connection.getOutBuffer().storeBytesFrom(chnl);
-    }
-
-    private void checkAndProcessAuthExchangeAndSendConnect(ConnectionHandlerContext ctx) {
-        byte[] ex = socks5AuthMethodExchange.get();
-        if (ex[0] != 5 || ex[1] != 0) {
-            // version != 5 or meth != no_auth
-            Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                "response version is wrong or method is wrong: " + ex[0] + "," + ex[1]);
-            utilAlertFail(ctx);
-            return;
-        }
-        // set to null
-        socks5AuthMethodExchange = null;
-
-        if (strictMode) {
-            assert Logger.lowLevelDebug("strictMode is on, send socks5 connect here");
-            sendSocks5Connect(ctx);
-        }
-
-        // make buffer for incoming data
-        step = 5;
-        byte[] connect5Bytes = new byte[5];
-        // we only need 2 bytes to check whether connection established successfully
-        // and read another THREE bytes to know how long this message is
-        socks5ConnectResult = ByteArrayChannel.fromEmpty(connect5Bytes);
-    }
-
-    private void checkAndProcessFirst5BytesOfConnectResult(ConnectionHandlerContext ctx) {
-        byte[] connect5Bytes = socks5ConnectResult.get();
-        if (connect5Bytes[0] != 5 || connect5Bytes[1] != 0) {
-            // version != 5 or resp != success
-            Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                "response version is wrong or resp is not success: " + connect5Bytes[0] + "," + connect5Bytes[1]);
-            utilAlertFail(ctx);
-            return;
-        }
-        // [2] is preserved, ignore that
-        // check [3] for type
-        int leftLen;
-        switch (connect5Bytes[3]) {
-            case 1: // ipv4
-                leftLen = 4 - 1 + 2;
-                break;
-            case 3: // domain
-                leftLen = Utils.positive(connect5Bytes[4]) + 2;
-                break;
-            case 4: // ipv6
-                leftLen = 16 - 1 + 2;
-                break;
-            default:
-                Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "RESP_TYPE is invalid: " + connect5Bytes[3]);
-                utilAlertFail(ctx);
-                return;
-        }
-
-        // check the input buffer, whether already contain the left data
-        if (ctx.connection.getInBuffer().used() == leftLen) {
-            ctx.connection.getInBuffer().clear();
-            done(ctx);
-        } else if (ctx.connection.getInBuffer().used() < leftLen) {
-            // read more data
-            step = 6;
-            byte[] foo = new byte[leftLen];
-            socks5ConnectResult = ByteArrayChannel.fromEmpty(foo);
-        } else {
-            // more than leftLen, which is invalid
-            Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                "still got data after the connection response" + ctx.connection.getInBuffer().toString());
-            utilAlertFail(ctx);
-        }
-    }
-
-    private void done(ConnectionHandlerContext ctx) {
-        assert Logger.lowLevelDebug("handshake operation done " + ctx.connection);
-
-        socks5ConnectResult = null;
-        // remove the connection from loop
-        ctx.eventLoop.removeConnection(ctx.connection);
-
-        // add respond to the proxy lib
-
-        InetAddress local;
-        try {
-            local = InetAddress.getByName("0.0.0.0");
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("getByName 0.0.0.0 failed", e);
-            utilAlertFail(ctx);
-            return;
-        }
-        providedCallback.accept(new AlreadyConnectedConnector(
-            ctx.connection.remote, local, (ClientConnection) ctx.connection, ctx.eventLoop
-        ));
-
-        // every thing is done now
-    }
-
-    @Override
-    public void writable(ConnectionHandlerContext ctx) {
-        // do nothing here, the out buffer is large enough
-    }
-
-    @Override
-    public void exception(ConnectionHandlerContext ctx, IOException err) {
-        Logger.error(LogType.CONN_ERROR, "connection " + ctx.connection + " got exception", err);
-        utilAlertFail(ctx);
-    }
-
-    @Override
-    public void closed(ConnectionHandlerContext ctx) {
-        assert Logger.lowLevelDebug("connection " + ctx.connection + " closed");
-    }
-
-    @Override
-    public void removed(ConnectionHandlerContext ctx) {
-        assert Logger.lowLevelDebug("connection " + ctx.connection + " removed");
+            String hostname = conn.remote.getHostString();
+            if (Utils.isIpLiteral(hostname)) {
+                hostname = null;
+            }
+            try {
+                loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
+                    hostname, address, port,
+                    providedCallback, isPooledConn));
+            } catch (IOException e) {
+                Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
+                providedCallback.accept(null);
+            }
+        });
     }
 }

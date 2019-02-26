@@ -119,7 +119,7 @@ public class ServerGroup {
 
         private ConcurrentHashSet<Connection> connMap = new ConcurrentHashSet<>();
 
-        public Object data; // the data field, not used by this lib
+        public volatile Object data; // the data field, not used by this lib
 
         ServerHandle(String alias, /**/long sid/**/,
                      String hostName,

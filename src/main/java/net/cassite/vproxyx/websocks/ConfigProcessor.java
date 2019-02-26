@@ -24,7 +24,8 @@ public class ConfigProcessor {
     private String pass;
     private String cacertsPath;
     private String cacertsPswd;
-    private boolean strictMode = true;
+    private boolean strictMode = false;
+    private int poolSize = 10;
 
     public ConfigProcessor(String fileName, ServerGroup group) {
         this.fileName = fileName;
@@ -57,6 +58,10 @@ public class ConfigProcessor {
 
     public boolean isStrictMode() {
         return strictMode;
+    }
+
+    public int getPoolSize() {
+        return poolSize;
     }
 
     public void parse() throws Exception {
@@ -116,6 +121,18 @@ public class ConfigProcessor {
                         default:
                             throw new Exception("invalid value for agent.strict: " + val);
                     }
+                } else if (line.startsWith("agent.pool ")) {
+                    String size = line.substring("agent.pool ".length()).trim();
+                    int intSize;
+                    try {
+                        intSize = Integer.parseInt(size);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.pool, expecting an integer");
+                    }
+                    if (intSize < 0) {
+                        throw new Exception("invalid agent.pool, should not be negative");
+                    }
+                    poolSize = intSize;
                 } else if (line.equals("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                 } else if (line.equals("proxy.domain.list.start")) {

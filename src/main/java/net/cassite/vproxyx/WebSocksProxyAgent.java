@@ -121,12 +121,7 @@ public class WebSocksProxyAgent {
         ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>>
             handler =
             new Socks5ProxyProtocolHandler(
-                new WebSocksProxyAgentConnectorProvider(
-                    configProcessor.isStrictMode(),
-                    configProcessor.getDomains(),
-                    servers,
-                    configProcessor.getUser(),
-                    configProcessor.getPass())
+                new WebSocksProxyAgentConnectorProvider(servers, worker.next(), configProcessor)
             );
         ConnectorGen<Socks5ProxyContext> connGen = new ConnectorGen<Socks5ProxyContext>() {
             @Override

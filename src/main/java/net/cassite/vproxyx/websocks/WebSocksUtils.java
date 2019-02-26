@@ -164,9 +164,16 @@ public class WebSocksUtils {
                 } else {
                     // invalid
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "server invalid header Connection: " + headerVal);
+                        "invalid header Connection: " + headerVal);
                     return false;
                 }
+            }
+        }
+        for (HttpHeader header : headers) {
+            if (header.key.toString().equalsIgnoreCase("content-length")) {
+                Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                    "the upgrade handshake should not contain body");
+                return false;
             }
         }
 
