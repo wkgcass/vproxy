@@ -123,7 +123,7 @@ public class WebSocksUtils {
                 } else {
                     // invalid
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "server invalid header Upgrade: " + headerVal);
+                        "invalid header Upgrade: " + headerVal);
                     return false;
                 }
             } else if (headerKey.equalsIgnoreCase(
@@ -152,7 +152,7 @@ public class WebSocksUtils {
                 } else {
                     // invalid
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                        "server invalid header " + headerKey + ": " + headerVal);
+                        "invalid header " + headerKey + ": " + headerVal);
                     return false;
                 }
             } else if (headerKey.equalsIgnoreCase("connection")) {
@@ -180,7 +180,7 @@ public class WebSocksUtils {
         if (!foundUpgrade || !foundSec || !foundConnection) {
             // invalid resp
             Logger.warn(LogType.INVALID_EXTERNAL_DATA,
-                "server invalid response" +
+                "invalid http packet" +
                     ": foundUpgrade=" + foundUpgrade +
                     ", foundSec=" + foundSec +
                     ", foundConnection=" + foundConnection);
