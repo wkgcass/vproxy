@@ -662,11 +662,11 @@ public class Utils {
         }
     }
 
-    public static int currentMinute() {
-        return (int) (
+    public static long currentMinute() {
+        return
             (System.currentTimeMillis() / 60_000 // remove millis and seconds
-            ) % 60 // get minutes
-        );
+            ) * 60_000 // get minutes
+            ;
     }
 
     public static void shiftLeft(byte[] arr, int l) {

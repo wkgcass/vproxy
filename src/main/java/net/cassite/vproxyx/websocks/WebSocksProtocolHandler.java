@@ -140,13 +140,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         // 2. base64str(base64str(sha256(password)) + str(current_minute_dec_digital - 1)))
         // 3. base64str(base64str(sha256(password)) + str(current_minute_dec_digital + 1)))
         private boolean checkPass(String pass, String expected) {
-            int m = Utils.currentMinute();
-            int mInc = m + 1;
-            if (mInc == 60)
-                mInc = 0;
-            int mDec = m - 1;
-            if (mDec == -1)
-                mDec = 59;
+            long m = Utils.currentMinute();
+            long mInc = m + 60_000;
+            long mDec = m - 60_000;
             return pass.equals(WebSocksUtils.calcPass(expected, m))
                 || pass.equals(WebSocksUtils.calcPass(expected, mInc))
                 || pass.equals(WebSocksUtils.calcPass(expected, mDec));

@@ -166,10 +166,22 @@ After the socks5 handshake is done, the WebSocks handshake is done as well. The
 
 As specified in RFC 6455 Chapter 5.5.3, any endpoint can send an unsolicited PONG
  message. We use this type of message to keep a connection alive if it in a connection
- pool.
+ pool, otherwise the connection may be closed by WebSocket gateway or other intermediate
+ network nodes.
 
 The client may send PONG messages when the `WebSocket Maximum Payload Length Frame` has
- yet not sent, but the server only parses the message, and do not reply.
+ yet not sent. The server only parses the message, and should NOT reply.
+
+Also, we make a restriction about the flags, mask and payload_len:
+
+* the `FIN` bit should be SET.
+* three reserved bits should NOT be set.
+* the `mask` should NOT be set.
+* the `payload_len` should be `0`.
+
+Then the packet would be fixed to two bytes: `10001010 00000000`. This makes parsing
+ easier, after all, we only use PONG to keep the connection alive and not for sending
+ messages.
 
 #### Combine Packets
 
@@ -193,7 +205,7 @@ Authorization: Basic $(base64($username:$password))
 However the password goes on plain text and may be sniffered by others, then the
  person can use the password to access the proxy server.
 
-So we make a hash with a salt related to current minute.
+So we make a hash with a salt related to current minute (utc+0, unix timestamp).
 
 ```
 $password = base64(sha256(
@@ -204,15 +216,21 @@ $password = base64(sha256(
             ))
 ```
 
-where on the client side, `$minute` is set to `$current_minute_decimal_digit`.
+where on the client side, `$minute` is set to `$current_utc_minute_decimal_digit`.
+
+To get the `$current_utc_minute_decimal_digit`, you may write this (java as an example):
+
+```
+(System.currentTimeMillis() / 60_000) * 60_000
+```
 
 The server may have a little time difference with the client, so on server side,
  we should check all the following hashes and consider the input is valid if any
  of them passes:
 
-* `$minute = $current_minute_decimal_digit - 1`, or 59 if current is 0
-* `$minute = $current_minute_decimal_digit`
-* `$minute = $current_minute_decimal_digit + 1`, or 0 if current is 59
+* `$minute = $current_utc_minute_decimal_digit - 60_000`
+* `$minute = $current_utc_minute_decimal_digit`
+* `$minute = $current_utc_minute_decimal_digit + 60_000`
 
 If someone happen to get your net flow, the one will only be able to use your
  account to access the server for max 2 minutes.

@@ -224,7 +224,7 @@ public class WebSocksUtils {
     }
 
     // base64str(base64str(sha256(password)) + str(minute_dec_digital)))
-    public static String calcPass(String pass, int minute) {
+    public static String calcPass(String pass, long minute) {
         String foo;
         { // first hash
             MessageDigest sha256;
