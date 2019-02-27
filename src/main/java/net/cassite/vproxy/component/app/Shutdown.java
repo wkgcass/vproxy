@@ -131,7 +131,7 @@ public class Shutdown {
     @Blocking // writing file is blocking
     public static void save(String filepath) throws Exception {
         if (Config.serviceMeshMode) {
-            Logger.info(LogType.ALERT, "service mesh mode, saving is disabled");
+            Logger.alert("service mesh mode, saving is disabled");
             return;
         }
 
@@ -408,7 +408,7 @@ public class Shutdown {
     @Blocking // the reading file process is blocking
     public static void load(String filepath, Callback<String, Throwable> cb) throws Exception {
         if (Config.serviceMeshMode) {
-            Logger.info(LogType.ALERT, "service mesh mode, loading is disabled");
+            Logger.alert("service mesh mode, loading is disabled");
             return;
         }
 

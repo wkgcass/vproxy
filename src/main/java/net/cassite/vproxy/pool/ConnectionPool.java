@@ -110,7 +110,7 @@ public class ConnectionPool {
     }
 
     void handshakeDone(ClientConnection conn) {
-        Logger.info(LogType.ALERT, "handshake done for pooled connection: " + conn);
+        Logger.alert("handshake done for pooled connection: " + conn);
         connections.stream().filter(w -> w.conn.equals(conn)).forEach(this::handshakeDone);
     }
 
@@ -181,6 +181,7 @@ public class ConnectionPool {
 
                 ConnWrap foo = w; // use a new variable just to let the lambda capture
                 loop.removeConnection(w.conn);
+                Logger.alert("pooled connection retrieved: " + w.conn);
                 callerLoop.runOnLoop(() -> cb.accept(foo.conn));
                 break;
             }

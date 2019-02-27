@@ -29,7 +29,7 @@ public class ClientConnection extends Connection {
         channel.bind(local);
         channel.connect(remote);
         try {
-            return new ClientConnection(Protocol.TCP, channel, remote, inBuffer, outBuffer);
+            return new ClientConnection(Protocol.TCP, channel, remote, local, inBuffer, outBuffer);
         } catch (IOException e) {
             channel.close(); // close the channel if create ClientConnection failed
             throw e;
@@ -48,16 +48,17 @@ public class ClientConnection extends Connection {
         channel.bind(local);
         channel.connect(remote);
         try {
-            return new ClientConnection(Protocol.UDP, channel, remote, inBuffer, outBuffer);
+            return new ClientConnection(Protocol.UDP, channel, remote, local, inBuffer, outBuffer);
         } catch (IOException e) {
             channel.close(); // close the channel if create ClientConnection failed
             throw e;
         }
     }
 
-    private ClientConnection(Protocol protocol, SelectableChannel channel, InetSocketAddress remote,
+    private ClientConnection(Protocol protocol, SelectableChannel channel,
+                             InetSocketAddress remote, InetSocketAddress local,
                              RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        super(protocol, channel, remote, inBuffer, outBuffer, true/*it behaves like a connection*/);
+        super(protocol, channel, remote, local, inBuffer, outBuffer, true/*it behaves like a connection*/);
 
         // then let's bind the ET handler
         // it's useful for udp client because it looks like a connection

@@ -58,13 +58,13 @@ task nativeImageAll(type: Exec, description: "build macos and linux images") {
     dependsOn 'jar'
 
     def libdir = buildDir.path + "/libs"
-    def reflectconfigpath = sourceSets.main.resources.srcDirs[0].path
-    def reflectconfig = "reflectconfig.json"
+    def resourcespath = sourceSets.main.resources.srcDirs[0].path
+    def deppath = projectDir.path + "/dep"
     def name = project.name + "-" + version
 
     def command = ["/bin/bash",
-                   reflectconfigpath + "/nativeImageAll.sh",
-                   libdir, reflectconfigpath, reflectconfig, name]
+                   resourcespath + "/nativeImageAll.sh",
+                   libdir, resourcespath, deppath, name]
     //noinspection GroovyAssignabilityCheck
     commandLine command
 }

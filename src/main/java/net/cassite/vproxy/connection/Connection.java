@@ -141,7 +141,7 @@ public class Connection implements NetFlowRecorder {
     }
 
     public final InetSocketAddress remote;
-    protected InetSocketAddress local;
+    protected final InetSocketAddress local;
     protected final String _id;
     public final SelectableChannel channel;
     public final Protocol protocol;
@@ -171,6 +171,17 @@ public class Connection implements NetFlowRecorder {
                SelectableChannel channel,
                InetSocketAddress remote,
                RingBuffer inBuffer, RingBuffer outBuffer, boolean looksLikeAConnection) throws IOException {
+        this(protocol,
+            channel,
+            remote, (InetSocketAddress) ((NetworkChannel) channel).getLocalAddress(),
+            inBuffer, outBuffer,
+            looksLikeAConnection);
+    }
+
+    Connection(Protocol protocol,
+               SelectableChannel channel,
+               InetSocketAddress remote, InetSocketAddress local,
+               RingBuffer inBuffer, RingBuffer outBuffer, boolean looksLikeAConnection) throws IOException {
         this.protocol = protocol;
         this.looksLikeAConnection = looksLikeAConnection;
         assert (protocol == Protocol.TCP && channel instanceof SocketChannel)
@@ -181,7 +192,13 @@ public class Connection implements NetFlowRecorder {
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
         this.remote = remote;
-        local = (InetSocketAddress) ((NetworkChannel) channel).getLocalAddress();
+        { // try to retrieve real port
+            if (local.getPort() == 0) {
+                local = new InetSocketAddress(local.getAddress(),
+                    ((InetSocketAddress) ((NetworkChannel) channel).getLocalAddress()).getPort());
+            }
+        }
+        this.local = local;
         _id = genId();
 
         inBufferETHandler = new InBufferETHandler();
