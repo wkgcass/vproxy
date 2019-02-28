@@ -25,7 +25,6 @@ import net.cassite.vproxyx.websocks.WebSocksUtils;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")

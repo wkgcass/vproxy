@@ -132,6 +132,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
     class AgentClientConnectionHandler implements ClientConnectionHandler {
         private final String domainOfProxy;
+        private final AddressType addressType;
         private final String domain;
         private final int port;
         private final Consumer<Connector> providedCallback;
@@ -152,11 +153,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         private ByteArrayChannel socks5ConnectResult;
 
         AgentClientConnectionHandler(String domainOfProxy,
+                                     AddressType addressType,
                                      String domain,
                                      int port,
                                      Consumer<Connector> providedCallback,
                                      boolean usePooledConnection) {
             this.domainOfProxy = domainOfProxy;
+            this.addressType = addressType;
             this.domain = domain;
             this.port = port;
             this.providedCallback = providedCallback;
@@ -304,18 +307,59 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
             byte[] chars = domain.getBytes();
 
-            int len = 1 + 1 + 1 + 1 + (1 + chars.length) + 2;
+            int len;
+            switch (addressType) {
+                case ipv4:
+                    len = 1 + 1 + 1 + 1 + 4 + 2;
+                    break;
+                case domain:
+                    len = 1 + 1 + 1 + 1 + (1 + chars.length) + 2;
+                    break;
+                case ipv6:
+                    len = 1 + 1 + 1 + 1 + 16 + 2;
+                    break;
+                default:
+                    Logger.shouldNotHappen("unknown socks address type: " + addressType);
+                    utilAlertFail(ctx);
+                    return;
+            }
             byte[] toSend = new byte[len];
             toSend[0] = 5; // version
             toSend[1] = 1; // connect
             toSend[2] = 0; // preserved
-            toSend[3] = 3; // domain
-            toSend[4] = (byte) domain.length(); // domain length
+            toSend[3] = addressType.code; // type
             //---
             toSend[toSend.length - 2] = (byte) ((port >> 8) & 0xff);
             toSend[toSend.length - 1] = (byte) (port & 0xff);
 
-            System.arraycopy(chars, 0, toSend, 5, chars.length);
+            switch (addressType) {
+                case ipv4:
+                    byte[] v4 = Utils.parseIpv4StringConsiderV6Compatible(domain);
+                    if (v4 == null) {
+                        Logger.shouldNotHappen("the socks lib produces an invalid ipv4: " + domain);
+                        utilAlertFail(ctx);
+                        return;
+                    }
+                    System.arraycopy(v4, 0, toSend, 4, 4);
+                    break;
+                case domain:
+                    toSend[4] = (byte) domain.length(); // domain length
+                    System.arraycopy(chars, 0, toSend, 5, chars.length);
+                    break;
+                case ipv6:
+                    byte[] v6 = Utils.parseIpv4StringConsiderV6Compatible(domain);
+                    if (v6 == null) {
+                        Logger.shouldNotHappen("the socks lib produces an invalid ipv6: " + domain);
+                        utilAlertFail(ctx);
+                        return;
+                    }
+                    System.arraycopy(v6, 0, toSend, 4, 16);
+                    break;
+                default:
+                    Logger.shouldNotHappen("unknown socks address type: " + addressType);
+                    utilAlertFail(ctx);
+                    return;
+            }
 
             ByteArrayChannel chnl = ByteArrayChannel.fromFull(toSend);
             ctx.connection.getOutBuffer().storeBytesFrom(chnl);
@@ -540,13 +584,15 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     @Override
     public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
         // check whether need to proxy to the WebSocks server
-        if (type != AddressType.domain || !needProxy(address)) {
+        if (!needProxy(address)) {
+            Logger.alert("directly request " + address);
             // just directly connect to the endpoint
             Utils.directConnect(type, address, port, providedCallback);
             return;
         }
 
         // proxy the net flow using WebSocks
+        Logger.alert("proxy the request to " + address);
 
         NetEventLoop loop = accepted.getEventLoop();
         if (loop == null) {
@@ -589,7 +635,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
             try {
                 loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
-                    hostname, address, port,
+                    hostname, type, address, port,
                     providedCallback, isPooledConn));
             } catch (IOException e) {
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
