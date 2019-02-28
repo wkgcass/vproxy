@@ -1,7 +1,6 @@
 package net.cassite.vproxy.pool;
 
 import net.cassite.vproxy.connection.ClientConnection;
-import net.cassite.vproxy.connection.ClientConnectionHandler;
 import net.cassite.vproxy.connection.NetEventLoop;
 
 public interface ConnectionPoolHandler {

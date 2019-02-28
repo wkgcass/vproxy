@@ -1,14 +1,12 @@
 package net.cassite.vproxyx.websocks;
 
+import net.cassite.graal.JsContext;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.BlockCallback;
 import net.cassite.vproxy.util.Utils;
 
-import java.io.BufferedReader;
-import java.io.FileInputStream;
-import java.io.IOException;
-import java.io.InputStreamReader;
+import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
@@ -19,7 +17,7 @@ public class ConfigProcessor {
     public final String fileName;
     public final ServerGroup group;
     private int listenPort = 1080;
-    private List<Pattern> domains = new LinkedList<>();
+    private List<DomainChecker> domains = new LinkedList<>();
     private String user;
     private String pass;
     private String cacertsPath;
@@ -36,7 +34,7 @@ public class ConfigProcessor {
         return listenPort;
     }
 
-    public List<Pattern> getDomains() {
+    public List<DomainChecker> getDomains() {
         return domains;
     }
 
@@ -192,14 +190,31 @@ public class ConfigProcessor {
                     step = 0;
                     continue;
                 }
-                String regexp;
                 if (line.startsWith("/") && line.endsWith("/")) {
-                    regexp = line.substring(1, line.length() - 1);
+                    String regexp = line.substring(1, line.length() - 1);
+                    domains.add(new PatternDomainChecker(Pattern.compile(regexp)));
+                } else if (line.startsWith("[") && line.endsWith("]")) {
+                    String pacfile = line.substring(1, line.length() - 1);
+                    if (pacfile.startsWith("~")) {
+                        pacfile = System.getProperty("user.home") + File.separator + pacfile.substring(1);
+                    }
+
+                    JsContext jsContext = JsContext.newContext();
+                    String pacScript;
+                    try (FileReader filePac = new FileReader(pacfile)) {
+                        StringBuilder sb = new StringBuilder();
+                        BufferedReader br2 = new BufferedReader(filePac);
+                        String line2;
+                        while ((line2 = br2.readLine()) != null) {
+                            sb.append(line2).append("\n");
+                        }
+                        pacScript = sb.toString();
+                    }
+                    jsContext.eval(pacScript, Object.class);
+                    domains.add(new PacDomainChecker(jsContext));
                 } else {
-                    regexp = ".*" + line.replaceAll("\\.", "\\\\.") + "$";
+                    domains.add(new SuffixDomainChecker(line));
                 }
-                Pattern pattern = Pattern.compile(regexp);
-                domains.add(pattern);
             }
         }
 

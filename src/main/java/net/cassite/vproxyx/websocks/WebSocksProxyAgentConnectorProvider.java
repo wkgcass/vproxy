@@ -22,7 +22,6 @@ import java.util.Base64;
 import java.util.List;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.regex.Pattern;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
     class WebSocksPoolHandler implements ConnectionPoolHandler {
@@ -554,7 +553,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private final boolean strictMode;
-    private final List<Pattern> proxyDomains;
+    private final List<DomainChecker> proxyDomains;
     private final ServerGroup servers;
     private final String user;
     private final String pass;
@@ -573,8 +572,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private boolean needProxy(String address) {
-        for (Pattern p : proxyDomains) {
-            if (p.matcher(address).matches()) {
+        for (DomainChecker checker : proxyDomains) {
+            if (checker.needProxy(address)) {
                 return true;
             }
         }
