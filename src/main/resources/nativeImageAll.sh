@@ -37,7 +37,6 @@ function makeLinux()
         \
         /graalvm/bin/native-image \
         -H:ReflectionConfigurationFiles="/vproxy_res/$reflectconfig" \
-        -D+A:UseDatagramChannel=false \
         -D+A:Graal=true \
         --no-server \
         $args \
@@ -49,25 +48,25 @@ function makeLinux()
 makeMacOS "" "$name"
 
 # make MacOS WebSocksAgent
-makeMacOS "--language:js --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
+makeMacOS "-D+A:EnableJs=true --language:js --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
 
 # make MacOS WebSocksAgent without js support
-makeMacOS "-D+A:EnableJs=false --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
+makeMacOS "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
 
 # make MacOS WebSocksServer
-makeMacOS "-D+A:EnableJs=false -D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
+makeMacOS "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # make Linux image on docker vm
 makeLinux "" "$name"
 
 # make Linux WebSocksAgent
-makeLinux "--language:js --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
+makeLinux "-D+A:EnableJs=true --language:js --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent"
 
 # make Linux WebSocksAgent without js support
-makeLinux "-D+A:EnableJs=false --enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
+makeLinux "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
 
 # make Linux WebSocksServer
-makeLinux "-D+A:EnableJs=false -D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
+makeLinux "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # clean the container(s)
 docker rm `docker container list --all | awk '{print $1}' | tail -n +2`
