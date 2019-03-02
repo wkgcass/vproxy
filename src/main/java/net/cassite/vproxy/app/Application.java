@@ -30,7 +30,7 @@ public class Application {
     public final AutoLBHolder autoLBHolder;
 
     private Application() throws IOException {
-        this.version = "1.0.0-ALPHA-1"; // _THE_VERSION_
+        this.version = "1.0.0-ALPHA-2"; // _THE_VERSION_
 
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();
