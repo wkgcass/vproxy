@@ -13,12 +13,15 @@ import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.protocol.ProtocolHandler;
+import net.cassite.vproxy.protocol.ProtocolServerConfig;
+import net.cassite.vproxy.protocol.ProtocolServerHandler;
 import net.cassite.vproxy.socks.Socks5ProxyContext;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxyx.websocks.ConfigProcessor;
+import net.cassite.vproxyx.websocks.PACHandler;
 import net.cassite.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
 import net.cassite.vproxyx.websocks.WebSocksUtils;
 
@@ -107,7 +110,11 @@ public class WebSocksProxyAgent {
 
         // let's create a server, if bind failed, error would be thrown
         BindServer server = BindServer.create(
-            new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), configProcessor.getListenPort()));
+            new InetSocketAddress(InetAddress.getByName(
+                configProcessor.isGateway()
+                    ? "0.0.0.0"
+                    : "127.0.0.1"
+            ), configProcessor.getListenPort()));
 
         // initiate the agent
         ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>>
@@ -146,5 +153,23 @@ public class WebSocksProxyAgent {
 
         // start the agent
         proxy.handle();
+
+        // maybe we can start the pac server
+        if (configProcessor.getListenPort() != 0) {
+            assert Logger.lowLevelDebug("start pac server");
+            BindServer lsn = BindServer.create(new InetSocketAddress(
+                InetAddress.getByName("0.0.0.0"),
+                configProcessor.getPacServerPort()
+            ));
+            ProtocolServerHandler.apply(acceptor.next(), lsn,
+                new ProtocolServerConfig().setInBufferSize(256).setOutBufferSize(256),
+                new PACHandler(
+                    configProcessor.getPacServerIp(),
+                    configProcessor.getListenPort() // this port is for responding to clients
+                ));
+            Logger.alert("pac server started on " + configProcessor.getPacServerPort());
+        }
+
+        Logger.alert("agent started on " + configProcessor.getListenPort());
     }
 }

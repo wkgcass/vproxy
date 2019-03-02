@@ -36,7 +36,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
         }
     }
 
-    private void sendError(ProtocolHandlerContext<HttpContext> ctx, String errMsg) {
+    protected void sendError(ProtocolHandlerContext<HttpContext> ctx, String errMsg) {
         // flush all input data
         if (ctx.inBuffer.used() > 0) {
             byte[] foo = new byte[ctx.inBuffer.used()];

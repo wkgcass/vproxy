@@ -114,5 +114,7 @@ public class WebSocksProxyServer {
 
         // start the proxy server
         proxy.handle();
+
+        Logger.alert("server started on " + port);
     }
 }

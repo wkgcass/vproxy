@@ -17,6 +17,7 @@ public class ConfigProcessor {
     public final String fileName;
     public final ServerGroup group;
     private int listenPort = 1080;
+    private boolean gateway = false;
     private List<DomainChecker> domains = new LinkedList<>();
     private String user;
     private String pass;
@@ -25,6 +26,9 @@ public class ConfigProcessor {
     private boolean strictMode = false;
     private int poolSize = 10;
 
+    private String pacServerIp;
+    private int pacServerPort;
+
     public ConfigProcessor(String fileName, ServerGroup group) {
         this.fileName = fileName;
         this.group = group;
@@ -32,6 +36,10 @@ public class ConfigProcessor {
 
     public int getListenPort() {
         return listenPort;
+    }
+
+    public boolean isGateway() {
+        return gateway;
     }
 
     public List<DomainChecker> getDomains() {
@@ -62,6 +70,14 @@ public class ConfigProcessor {
         return poolSize;
     }
 
+    public String getPacServerIp() {
+        return pacServerIp;
+    }
+
+    public int getPacServerPort() {
+        return pacServerPort;
+    }
+
     public void parse() throws Exception {
         FileInputStream inputStream = new FileInputStream(fileName);
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
@@ -85,6 +101,18 @@ public class ConfigProcessor {
                     }
                     if (listenPort < 1 || listenPort > 65535) {
                         throw new Exception("invalid agent.listen, port number out of range");
+                    }
+                } else if (line.startsWith("agent.gateway ")) {
+                    String val = line.substring("agent.gateway ".length());
+                    switch (val) {
+                        case "on":
+                            gateway = true;
+                            break;
+                        case "off":
+                            gateway = false;
+                            break;
+                        default:
+                            throw new Exception("invalid value for agent.gateway: " + val);
                     }
                 } else if (line.startsWith("proxy.server.auth ")) {
                     String auth = line.substring("proxy.server.auth ".length()).trim();
@@ -131,6 +159,23 @@ public class ConfigProcessor {
                         throw new Exception("invalid agent.pool, should not be negative");
                     }
                     poolSize = intSize;
+                } else if (line.startsWith("agent.gateway.pac.address ")) {
+                    String val = line.substring("agent.gateway.pac.address ".length()).trim();
+                    String[] split = val.split(":");
+                    if (split.length != 2)
+                        throw new Exception("invalid agent.gateway.pac.address, should be $ip:$port");
+                    String ip = split[0];
+                    if (!ip.equals("*") && !Utils.isIpLiteral(ip))
+                        throw new Exception("invalid agent.gateway.pac.address, the ip is invalid");
+                    String portStr = split[1];
+                    int port;
+                    try {
+                        port = Integer.parseInt(portStr);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.gateway.pac.address, the port is invalid");
+                    }
+                    pacServerIp = ip;
+                    pacServerPort = port;
                 } else if (line.equals("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                 } else if (line.equals("proxy.domain.list.start")) {
