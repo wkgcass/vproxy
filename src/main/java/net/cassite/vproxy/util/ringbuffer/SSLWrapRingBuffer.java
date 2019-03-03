@@ -24,6 +24,7 @@ import java.util.LinkedList;
  * NOTE: storage/writableET is proxied to/from the plain buffer
  */
 public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer {
+    // this handler is for plain data buffer
     class ReadableHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
@@ -33,6 +34,32 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         @Override
         public void writableET() {
             triggerWritable(); // proxy the event
+        }
+    }
+
+    // this handler is for encrypted output buffer
+    class WritableHandler implements RingBufferETHandler {
+        @Override
+        public void readableET() {
+        }
+
+        @Override
+        public void writableET() {
+            if (plainBufferForApp.used() > 0) {
+                // only trigger when there are data inside the plain buffer
+                // because this should not happen when handshaking
+                //
+                // when handshaking: wrap will be called from Unwrap
+                // and buffer size is definitely enough
+
+                // so we should check before do read wrapping
+                generalWrap();
+            }
+        }
+
+        @Override
+        public boolean flushAware() {
+            return true;
         }
     }
 
@@ -51,6 +78,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         // use heap buffer for output
         // it will interact heavily with java code
         this.encryptedBufferForOutput = RingBuffer.allocate(outputCap);
+        this.encryptedBufferForOutput.addHandler(new WritableHandler());
 
         // we add a handler to the plain buffer
         plainBufferForApp.addHandler(readableHandler);
@@ -165,8 +193,15 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
         // here: BUFFER_OVERFLOW
         assert status == SSLEngineResult.Status.BUFFER_OVERFLOW;
-        Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in wrap, " +
+        assert Logger.lowLevelDebug("BUFFER_OVERFLOW in wrap, " +
             "expecting " + engine.getSession().getPacketBufferSize());
+
+        if (result.bytesConsumed() == 0 && !encryptedBufferForOutput.canDefragment()) {
+            // nothing consumed and encrypted buffer cannot defragment
+            // which means buffers are busy and data should not be processed any more
+            return true;
+        }
+
         deferDefragment(); // try to make more space
         // NOTE: if it's capacity is smaller than required, we can do nothing here
         return false;

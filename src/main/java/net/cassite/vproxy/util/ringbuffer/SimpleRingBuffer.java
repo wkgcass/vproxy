@@ -230,6 +230,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         operatingBuffer = true;
 
         boolean triggerWritable = false;
+        int bytesBeforeOperating = used();
 
         assert Logger.lowLevelNetDebug("before operate write out, sPos=" + sPos);
 
@@ -297,11 +298,20 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         } finally { // do trigger here
             assert Logger.lowLevelNetDebug("after operate write out, sPos=" + sPos);
 
+            // was > 0 and now nothing
+            // which means all data had been flushed out
+            boolean flushAwareCondition = bytesBeforeOperating > 0 && used() == 0;
+
             operatingBuffer = false;
-            if (triggerWritable) {
+            if (triggerWritable || flushAwareCondition /*precondition, would check whether the handler is aware of*/) {
                 assert Logger.lowLevelNetDebug("trigger writable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
-                    aHandler.writableET();
+                    // because the preconditions are checked, so
+                    // if not triggerWritable, then flushAwareCondition is definitely true
+                    // no need to check for it again here
+                    if (triggerWritable || aHandler.flushAware()) {
+                        aHandler.writableET();
+                    }
                 }
             }
             resetFirst(firstOperator);
