@@ -1,6 +1,8 @@
 package net.cassite.vproxy.util.ringbuffer;
 
 import net.cassite.vproxy.selector.SelectorEventLoop;
+import net.cassite.vproxy.util.LogType;
+import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 
 import javax.net.ssl.SSLEngine;
@@ -32,5 +34,12 @@ public class SSLUtils {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, outputCap, engine);
         SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, inputCap, engine, resumer, wrap);
         return new SSLBufferPair(unwrap, wrap);
+    }
+
+    public static SSLBufferPair genbuf(SSLEngine engine,
+                                       ByteBufferRingBuffer input,
+                                       ByteBufferRingBuffer output,
+                                       int inputCap, int outputCap) {
+        return genbuf(engine, input, output, inputCap, outputCap, (Consumer<Runnable>) null);
     }
 }

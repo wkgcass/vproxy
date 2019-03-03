@@ -94,17 +94,9 @@ public class WebSocksProxyAgent {
                 }
             }
             if (ssl) {
-                // directly load sunec here for error report
-                try {
-                    System.loadLibrary("sunec");
-                } catch (UnsatisfiedLinkError e) {
-                    throw new Exception("the dynamic lib for sunec not found\n" +
-                        "Did you forget to move the libsunec.so(linux)/libsunec.dylib(macos) " +
-                        "to your current directory?\n" +
-                        "Or you might want to set the lib's directory in -Djava.library.path", e);
-                }
                 // init the ssl context
-                WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd());
+                WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
+                    , "JKS", false);
             }
         }
 

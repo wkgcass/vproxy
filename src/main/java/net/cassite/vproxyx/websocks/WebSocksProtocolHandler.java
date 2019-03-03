@@ -9,11 +9,15 @@ import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.protocol.ProtocolHandlerContext;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.*;
+import net.cassite.vproxy.util.ringbuffer.ByteBufferRingBuffer;
+import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.function.Supplier;
 
 public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> {
     private final HttpProtocolHandler httpProtocolHandler = new HttpProtocolHandler(false) {
@@ -197,13 +201,37 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             Utils.directConnect(type, address, port, providedCallback));
 
     private final Map<String, String> auth;
+    private final Supplier<SSLEngine> engineSupplier;
 
-    public WebSocksProtocolHandler(Map<String, String> auth) {
+    public WebSocksProtocolHandler(Map<String, String> auth, Supplier<SSLEngine> engineSupplier) {
         this.auth = auth;
+        this.engineSupplier = engineSupplier;
+    }
+
+    private void initSSL(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
+        if (engineSupplier == null) {
+            return; // not ssl, no need to init
+        }
+        assert Logger.lowLevelDebug("should upgrade the connection to ssl");
+        SSLEngine engine = engineSupplier.get();
+        SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine,
+            (ByteBufferRingBuffer) ctx.connection.getInBuffer(),
+            (ByteBufferRingBuffer) ctx.connection.getOutBuffer(),
+            32768, 32768);
+        try {
+            // when init, there should have not read any data yet
+            // so we should safely replace the buffers
+            ctx.connection.UNSAFE_replaceBuffer(pair.left, pair.right);
+        } catch (IOException e) {
+            Logger.shouldNotHappen("got error when switching buffers", e);
+            // raise error to let others handle the error
+            throw new RuntimeException("should not happen and the error is unrecoverable", e);
+        }
     }
 
     @Override
     public void init(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
+        initSSL(ctx); // init if it's ssl (or may simply do nothing if not ssl)
         ctx.data = new Tuple<>(new WebSocksProxyContext(
             new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, httpProtocolHandler),
             new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, socks5Handler)

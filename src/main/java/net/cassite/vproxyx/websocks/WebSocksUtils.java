@@ -6,9 +6,7 @@ import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.TrustManager;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.*;
 import java.io.FileInputStream;
 import java.security.KeyManagementException;
 import java.security.KeyStore;
@@ -195,20 +193,39 @@ public class WebSocksUtils {
         return sslContext;
     }
 
-    public static void initSslContext(String path, String pass) throws Exception {
+    public static void initSslContext(String path, String pass, String format, boolean isServer) throws Exception {
         if (sslContext != null) {
             throw new Exception("ssl context already initiated");
         }
 
+        // directly load sunec here for error report
+        try {
+            System.loadLibrary("sunec");
+        } catch (UnsatisfiedLinkError e) {
+            throw new Exception("the dynamic lib for sunec not found\n" +
+                "Did you forget to move the libsunec.so(linux)/libsunec.dylib(macos) " +
+                "to your current directory?\n" +
+                "Or you might want to set the lib's directory in -Djava.library.path", e);
+        }
+
+        KeyManager[] kms = null;
         TrustManager[] tms = null;
 
         if (path != null && pass != null) {
-            TrustManagerFactory tmf;
-            tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
             KeyStore store;
-            store = KeyStore.getInstance("JKS");
+            store = KeyStore.getInstance(format);
             try (FileInputStream stream = new FileInputStream(path)) {
                 store.load(stream, pass.toCharArray());
+            }
+
+            if (isServer) {
+                KeyManagerFactory kmf;
+                kmf = KeyManagerFactory.getInstance(KeyManagerFactory.getDefaultAlgorithm());
+                kmf.init(store, pass.toCharArray());
+                kms = kmf.getKeyManagers();
+            } else {
+                TrustManagerFactory tmf;
+                tmf = TrustManagerFactory.getInstance(TrustManagerFactory.getDefaultAlgorithm());
                 tmf.init(store);
                 tms = tmf.getTrustManagers();
             }
@@ -216,7 +233,7 @@ public class WebSocksUtils {
 
         try {
             sslContext = SSLContext.getInstance("TLS");
-            sslContext.init(null, tms, null);
+            sslContext.init(kms, tms, null);
         } catch (KeyManagementException e) {
             sslContext = null;
             throw e;

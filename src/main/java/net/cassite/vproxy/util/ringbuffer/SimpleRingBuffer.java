@@ -240,8 +240,13 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             boolean triggerWritablePre = free() == 0;
 
             int lim = retrieveLimit();
-            if (lim == 0)
-                return 0; // buffer is empty
+            // we don't check the lim
+            // just call the op even if it's 0
+            // this is used when ssl handshaking
+            // the application buffer may be empty
+            // but data can still be sent
+            // if (lim == 0)
+            //     return 0; // buffer is empty
             int realWrite = Math.min(lim, maxBytesToWrite);
             int newLimit = sPos + realWrite;
             buffer.limit(newLimit).position(sPos);

@@ -1,5 +1,6 @@
 package net.cassite.vproxy.util.ringbuffer;
 
+import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
@@ -45,6 +46,8 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
     // will call the pair's wrap/wrapHandshake when need to send data
     private final SSLWrapRingBuffer pair;
 
+    // only used when resume if resumer not specified
+    private SelectorEventLoop lastLoop = null;
     private boolean closed = false;
 
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
@@ -108,18 +111,36 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         deferResumer.add(pair::generalWrap);
     }
 
+    private void doResume(Runnable r) {
+        if (resumer == null && lastLoop == null) {
+            Logger.fatal(LogType.IMPROPER_USE, "cannot get resumer or event loop to callback from the task");
+            return; // cannot continue if no loop
+        }
+        if (resumer != null) {
+            resumer.accept(r);
+        } else {
+            //noinspection ConstantConditions
+            assert lastLoop != null;
+            lastLoop.runOnLoop(r);
+        }
+    }
+
     private void resumeGeneralUnwrap() {
-        resumer.accept(this::generalUnwrap);
+        doResume(this::generalUnwrap);
     }
 
     private void resumeGeneralWrap() {
-        resumer.accept(pair::generalWrap);
+        doResume(pair::generalWrap);
     }
     // -------------------
     // helper functions END
     // -------------------
 
     private void generalUnwrap() {
+        generalUnwrap(0);
+    }
+
+    private void generalUnwrap(int recurse) {
         if (encryptedBufferForInput.used() == 0)
             return; // no data for unwrapping
         assert Logger.lowLevelDebug(
@@ -161,6 +182,11 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
             return; // nothing to resume now
         assert deferResumer.size() == 1;
         deferResumer.poll().run();
+
+        if (encryptedBufferForInput.used() > 0 && recurse < 32 /*randomly picked number, no special meaning*/) {
+            assert Logger.lowLevelDebug("still getting input data, current recurse: " + recurse);
+            generalUnwrap(recurse + 1);
+        }
     }
 
     private boolean unwrapHandshake(SSLEngineResult result) {
@@ -186,6 +212,10 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_TASK) {
             assert Logger.lowLevelDebug("ssl engine returns NEED_TASK");
+            if (resumer == null) {
+                lastLoop = SelectorEventLoop.current();
+                assert Logger.lowLevelDebug("resumer not specified, so we use the current event loop: " + lastLoop);
+            }
             new Thread(() -> {
                 assert Logger.lowLevelDebug("TASK begins");
                 Runnable r;

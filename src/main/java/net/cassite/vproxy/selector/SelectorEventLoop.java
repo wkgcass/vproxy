@@ -14,6 +14,12 @@ public class SelectorEventLoop {
         Object att;
     }
 
+    private static final ThreadLocal<SelectorEventLoop> loopThreadLocal = new ThreadLocal<>();
+
+    public static SelectorEventLoop current() {
+        return loopThreadLocal.get();
+    }
+
     private final Selector selector;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
@@ -146,7 +152,10 @@ public class SelectorEventLoop {
 
     @Blocking
     public void loop() {
+        // set thread
         runningThread = Thread.currentThread();
+        loopThreadLocal.set(this);
+        // run
         while (selector.isOpen()) {
             synchronized (CLOSE_LOCK) {
                 // yes, we lock the whole while body (except the select part)
@@ -206,6 +215,7 @@ public class SelectorEventLoop {
             // while-loop ends here
         }
         runningThread = null; // it's not running now, set to null
+        loopThreadLocal.remove(); // remove from thread local
         // do the final release
         release();
     }
