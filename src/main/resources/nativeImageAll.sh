@@ -80,3 +80,7 @@ chmod +x "$appcontentdir/$appname"
 cp "$libdir/$name-WebSocksAgent-macos" "$appcontentdir/"
 cp "$deppath/libsunec.dylib" "$appcontentdir/"
 # END
+
+# remove intermediate .o files
+cd "$libdir/"
+rm *.o
