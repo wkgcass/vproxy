@@ -54,7 +54,7 @@ makeMacOS "-D+A:EnableJs=true --language:js --enable-all-security-services -D+A:
 makeMacOS "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
 
 # make MacOS WebSocksServer
-makeMacOS "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
+makeMacOS "--enable-all-security-services -D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # make Linux image on docker vm
 makeLinux "" "$name"
@@ -66,7 +66,7 @@ makeLinux "-D+A:EnableJs=true --language:js --enable-all-security-services -D+A:
 makeLinux "--enable-all-security-services -D+A:AppClass=WebSocksProxyAgent" "$name-WebSocksAgent-no-js"
 
 # make Linux WebSocksServer
-makeLinux "-D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
+makeLinux "--enable-all-security-services -D+A:AppClass=WebSocksProxyServer" "$name-WebSocksServer"
 
 # clean the container(s)
 docker rm `docker container list --all | awk '{print $1}' | tail -n +2`
