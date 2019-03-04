@@ -5,6 +5,10 @@ public class Config {
     // set it smaller if your environment have a smaller udp ttl
     public static int udpTimeout = 300 * 1000;
 
+    // the default tcpTimeout is the same as LVS
+    // set it smaller if your environment have a smaller tcp session ttl
+    public static int tcpTimeout = 15 * 60_000;
+
     // service mesh mode:
     // all resources become readonly
     // and resources will be handled by auto-lb or sidecar

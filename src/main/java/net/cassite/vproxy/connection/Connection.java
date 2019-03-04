@@ -1,5 +1,6 @@
 package net.cassite.vproxy.connection;
 
+import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.RingBufferETHandler;
@@ -147,6 +148,7 @@ public class Connection implements NetFlowRecorder {
     public final Protocol protocol;
     private final boolean looksLikeAConnection; // this field determines outBufferETHandler's behavior
     BindServer.UDPConn _udpDummyConn; // should be removed when this connection is closed
+    TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize

@@ -1,5 +1,6 @@
 package net.cassite.vproxy.connection;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.selector.Handler;
 import net.cassite.vproxy.selector.HandlerContext;
 import net.cassite.vproxy.selector.SelectorEventLoop;
@@ -7,6 +8,7 @@ import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.SocketTimeoutException;
 import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
@@ -76,6 +78,9 @@ public class NetEventLoop {
                 throw e;
             }
         }
+        // now the connection is added into event loop
+        // we set the close timer
+        NetEventLoopUtils.resetCloseTimeout(att);
     }
 
     @ThreadSafe
@@ -98,6 +103,11 @@ public class NetEventLoop {
     public void removeConnection(Connection connection) {
         // event loop in connection object will be set to null in remove event
         selectorEventLoop.remove(connection.channel);
+        // clear timeout
+        if (connection.closeTimeout != null) {
+            connection.closeTimeout.cancel();
+            connection.closeTimeout = null;
+        }
     }
 
     @ThreadSafe
@@ -200,6 +210,32 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
         ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
         sctx.server._eventLoop = null;
         sctx.handler.removed(sctx);
+    }
+}
+
+class NetEventLoopUtils {
+    private NetEventLoopUtils() {
+    }
+
+    static void resetCloseTimeout(ConnectionHandlerContext ctx) {
+        Connection conn = ctx.connection;
+        assert Logger.lowLevelDebug("reset close timeout for connection " + conn);
+        if (conn.closeTimeout != null) {
+            conn.closeTimeout.cancel();
+        }
+        NetEventLoop loop = conn.getEventLoop();
+        if (loop == null) {
+            Logger.shouldNotHappen("try to reset close timeout, but the connection is not attached to any event loop: " + conn);
+        } else {
+            conn.closeTimeout = loop.getSelectorEventLoop().delay(Config.tcpTimeout, () -> {
+                ctx.handler.exception(ctx, new SocketTimeoutException("timeout by timer"));
+                // if the user code didn't close the connection, we do it for user
+                if (!conn.isClosed()) {
+                    ctx.handler.closed(ctx);
+                    conn.close();
+                }
+            });
+        }
     }
 }
 
@@ -327,6 +363,8 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
 
         assert Logger.lowLevelDebug("readable fired " + cctx.connection);
+        // reset close timer because now it's active (will read some data)
+        NetEventLoopUtils.resetCloseTimeout(cctx);
 
         if (cctx.connection.getInBuffer().free() == 0) {
             Logger.shouldNotHappen("the connection has no space to store data");
@@ -378,6 +416,10 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             }
             return;
         }
+
+        // reset close timer because now it's active (will send some data)
+        NetEventLoopUtils.resetCloseTimeout(cctx);
+
         int write;
         try {
             write = cctx.connection.getOutBuffer().writeTo((WritableByteChannel) /* it's definitely writable */ ctx.getChannel());
