@@ -18,9 +18,7 @@ import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.UnknownHostException;
-import java.util.Base64;
-import java.util.List;
-import java.util.Set;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
@@ -76,15 +74,17 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
         }
 
+        private final String alias;
         private final PoolCallback cb;
 
-        WebSocksPoolHandler(PoolCallback cb) {
+        WebSocksPoolHandler(String alias, PoolCallback cb) {
+            this.alias = alias;
             this.cb = cb;
         }
 
         @Override
         public ClientConnection provide(NetEventLoop loop) {
-            SvrHandleConnector connector = servers.next();
+            SvrHandleConnector connector = servers.get(alias).next();
             if (connector == null) {
                 assert Logger.lowLevelDebug("no available remote server connector for now");
                 return null;
@@ -553,37 +553,45 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private final boolean strictMode;
-    private final List<DomainChecker> proxyDomains;
-    private final ServerGroup servers;
+    private final Map<String, List<DomainChecker>> proxyDomains;
+    private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
-    private final ConnectionPool pool;
+    private final Map<String, ConnectionPool> pool;
 
-    public WebSocksProxyAgentConnectorProvider(ServerGroup servers,
-                                               NetEventLoop eventLoop,
+    public WebSocksProxyAgentConnectorProvider(NetEventLoop eventLoop,
                                                ConfigProcessor config) {
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
-        this.servers = servers;
+        this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
 
-        pool = new ConnectionPool(eventLoop, WebSocksPoolHandler::new, config.getPoolSize());
+        pool = new HashMap<>();
+        for (String alias : config.getServers().keySet()) {
+            final String finalAlias = alias;
+            pool.put(alias, new ConnectionPool(eventLoop,
+                cb -> new WebSocksPoolHandler(finalAlias, cb),
+                config.getPoolSize()));
+        }
     }
 
-    private boolean needProxy(String address) {
-        for (DomainChecker checker : proxyDomains) {
-            if (checker.needProxy(address)) {
-                return true;
+    private String getProxy(String address) {
+        for (Map.Entry<String, List<DomainChecker>> entry : proxyDomains.entrySet()) {
+            for (DomainChecker checker : entry.getValue()) {
+                if (checker.needProxy(address)) {
+                    return entry.getKey();
+                }
             }
         }
-        return false;
+        return null;
     }
 
     @Override
     public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
         // check whether need to proxy to the WebSocks server
-        if (!needProxy(address)) {
+        String serverAlias = getProxy(address);
+        if (serverAlias == null) {
             Logger.alert("directly request " + address);
             // just directly connect to the endpoint
             Utils.directConnect(type, address, port, providedCallback);
@@ -591,7 +599,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         // proxy the net flow using WebSocks
-        Logger.alert("proxy the request to " + address);
+        Logger.alert("proxy the request to " + address + " via " + serverAlias);
 
         NetEventLoop loop = accepted.getEventLoop();
         if (loop == null) {
@@ -601,11 +609,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         // try to fetch an existing connection from pool
-        pool.get(loop.getSelectorEventLoop(), conn -> {
+        pool.get(serverAlias).get(loop.getSelectorEventLoop(), conn -> {
             boolean isPooledConn = conn != null;
             if (conn == null) {
                 // retrieve a remote connection
-                SvrHandleConnector connector = servers.next();
+                SvrHandleConnector connector = servers.get(serverAlias).next();
                 if (connector == null) {
                     // no connectors for now
                     // the process is definitely cannot proceed

@@ -1,6 +1,9 @@
 package net.cassite.vproxyx.websocks;
 
 import net.cassite.graal.JsContext;
+import net.cassite.vproxy.component.check.HealthCheckConfig;
+import net.cassite.vproxy.component.elgroup.EventLoopGroup;
+import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.util.BlockCallback;
@@ -9,16 +12,19 @@ import net.cassite.vproxy.util.Utils;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.regex.Pattern;
 
 public class ConfigProcessor {
     public final String fileName;
-    public final ServerGroup group;
+    public final EventLoopGroup hcLoopGroup;
     private int listenPort = 1080;
     private boolean gateway = false;
-    private List<DomainChecker> domains = new LinkedList<>();
+    private Map<String, ServerGroup> servers = new HashMap<>();
+    private Map<String, List<DomainChecker>> domains = new HashMap<>();
     private String user;
     private String pass;
     private String cacertsPath;
@@ -29,9 +35,9 @@ public class ConfigProcessor {
     private String pacServerIp;
     private int pacServerPort;
 
-    public ConfigProcessor(String fileName, ServerGroup group) {
+    public ConfigProcessor(String fileName, EventLoopGroup hcLoopGroup) {
         this.fileName = fileName;
-        this.group = group;
+        this.hcLoopGroup = hcLoopGroup;
     }
 
     public int getListenPort() {
@@ -42,7 +48,11 @@ public class ConfigProcessor {
         return gateway;
     }
 
-    public List<DomainChecker> getDomains() {
+    public Map<String, ServerGroup> getServers() {
+        return servers;
+    }
+
+    public Map<String, List<DomainChecker>> getDomains() {
         return domains;
     }
 
@@ -78,10 +88,35 @@ public class ConfigProcessor {
         return pacServerPort;
     }
 
+    private ServerGroup getGroup(String alias) throws Exception {
+        if (alias == null) {
+            alias = "DEFAULT";
+        }
+        if (servers.containsKey(alias))
+            return servers.get(alias);
+        ServerGroup grp = new ServerGroup(alias, hcLoopGroup,
+            new HealthCheckConfig(5_000, 30_000, 1, 2)
+            , Method.wrr);
+        servers.put(alias, grp);
+        return grp;
+    }
+
+    private List<DomainChecker> getDomainList(String alias) {
+        if (alias == null) {
+            alias = "DEFAULT";
+        }
+        if (domains.containsKey(alias))
+            return domains.get(alias);
+        List<DomainChecker> checkers = new LinkedList<>();
+        domains.put(alias, checkers);
+        return checkers;
+    }
+
     public void parse() throws Exception {
         FileInputStream inputStream = new FileInputStream(fileName);
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
         int step = 0;
+        String currentAlias = null;
         // 0 -> normal
         // 1 -> proxy.server.list
         // 2 -> proxy.domain.list
@@ -176,16 +211,29 @@ public class ConfigProcessor {
                     }
                     pacServerIp = ip;
                     pacServerPort = port;
-                } else if (line.equals("proxy.server.list.start")) {
+                } else if (line.startsWith("proxy.server.list.start")) {
                     step = 1; // retrieving server list
-                } else if (line.equals("proxy.domain.list.start")) {
+                    if (!line.equals("proxy.server.list.start")) {
+                        String alias = line.substring("proxy.server.list.start".length()).trim();
+                        if (alias.split(" ").length > 1)
+                            throw new Exception("symbol cannot contain spaces");
+                        currentAlias = alias;
+                    }
+                } else if (line.startsWith("proxy.domain.list.start")) {
                     step = 2;
+                    if (!line.equals("proxy.domain.list.start")) {
+                        String alias = line.substring("proxy.domain.list.start".length()).trim();
+                        if (alias.split(" ").length > 1)
+                            throw new Exception("symbol cannot contain spaces");
+                        currentAlias = alias;
+                    }
                 } else {
                     throw new Exception("unknown line: " + line);
                 }
             } else if (step == 1) {
                 if (line.equals("proxy.server.list.end")) {
                     step = 0; // return to normal state
+                    currentAlias = null;
                     continue;
                 }
                 if (!line.startsWith("websocks://") && !line.startsWith("websockss://")) {
@@ -214,15 +262,15 @@ public class ConfigProcessor {
                 ServerGroup.ServerHandle handle;
                 if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
                 } else if (Utils.isIpv6(hostPart)) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = group.add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("::"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("::"), 10);
                 } else {
                     BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();
                     Resolver.getDefault().resolveV4(hostPart, cb);
                     InetAddress inet = cb.block();
-                    handle = group.add(hostPart, hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
                 }
 
                 // this will be used when connection establishes to remote
@@ -233,11 +281,12 @@ public class ConfigProcessor {
                 assert step == 2;
                 if (line.equals("proxy.domain.list.end")) {
                     step = 0;
+                    currentAlias = null;
                     continue;
                 }
                 if (line.startsWith("/") && line.endsWith("/")) {
                     String regexp = line.substring(1, line.length() - 1);
-                    domains.add(new PatternDomainChecker(Pattern.compile(regexp)));
+                    getDomainList(currentAlias).add(new PatternDomainChecker(Pattern.compile(regexp)));
                 } else if (line.startsWith("[") && line.endsWith("]")) {
                     String pacfile = line.substring(1, line.length() - 1);
                     if (pacfile.startsWith("~")) {
@@ -256,14 +305,24 @@ public class ConfigProcessor {
                         pacScript = sb.toString();
                     }
                     jsContext.eval(pacScript, Object.class);
-                    domains.add(new PacDomainChecker(jsContext));
+                    getDomainList(currentAlias).add(new PacDomainChecker(jsContext));
                 } else {
-                    domains.add(new SuffixDomainChecker(line));
+                    getDomainList(currentAlias).add(new SuffixDomainChecker(line));
                 }
             }
         }
 
+        // check for variables must present
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
+        // check for consistency of server list and domain list
+        for (String k : servers.keySet()) {
+            if (!domains.containsKey(k))
+                throw new Exception(k + " is defined in server list, but not in domain list");
+        }
+        for (String k : domains.keySet()) {
+            if (!servers.containsKey(k))
+                throw new Exception(k + " is defined in domain list, but not in server list");
+        }
     }
 }

@@ -66,39 +66,24 @@ public class WebSocksProxyAgent {
             worker.add("worker-loop-" + i);
         }
 
-        // create config for remote servers
-        ServerGroup servers = new ServerGroup("servers",
-            worker, // use worker to run health check
-            new HealthCheckConfig(1000, 30_000, 1, 2, CheckProtocol.tcp),
-            Method.wrr);
-
         // parse config
-        ConfigProcessor configProcessor = new ConfigProcessor(configFile, servers);
+        ConfigProcessor configProcessor = new ConfigProcessor(configFile, worker);
         configProcessor.parse();
 
         assert Logger.lowLevelDebug("listen on " + configProcessor.getListenPort());
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
         assert Logger.lowLevelDebug("proxy servers " +
-            servers.getServerHandles().stream().map(h -> "\n" + new ServerHandle.ServerRef(h)).collect(Collectors.toList()));
+            configProcessor.getServers().values().stream().map(server ->
+                server.getServerHandles().stream()
+                    .map(h -> "\n" + new ServerHandle.ServerRef(h)).collect(Collectors.toList())
+            ).collect(Collectors.toList())
+        );
         assert Logger.lowLevelDebug("cacerts file " + configProcessor.getCacertsPath());
         assert Logger.lowLevelDebug("cacerts password " + configProcessor.getCacertsPswd());
 
-        // init ssl
-        // we check whether ssl is used, if so, we load the sunec and init ssl context
-        {
-            boolean ssl = false;
-            for (ServerGroup.ServerHandle h : servers.getServerHandles()) {
-                if ((boolean) h.data) { // this field is set in ConfigProcessor.java
-                    ssl = true;
-                    break;
-                }
-            }
-            if (ssl) {
-                // init the ssl context
-                WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
-                    , "JKS", false);
-            }
-        }
+        // init the ssl context
+        WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
+            , "JKS", false);
 
         // let's create a server, if bind failed, error would be thrown
         BindServer server = BindServer.create(
@@ -112,7 +97,7 @@ public class WebSocksProxyAgent {
         ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>>
             handler =
             new Socks5ProxyProtocolHandler(
-                new WebSocksProxyAgentConnectorProvider(servers, worker.next(), configProcessor)
+                new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor)
             );
         ConnectorGen<Socks5ProxyContext> connGen = new ConnectorGen<Socks5ProxyContext>() {
             @Override
