@@ -15,7 +15,6 @@ import net.cassite.vproxy.component.secure.SecurityGroupRule;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.util.*;
-import sun.misc.Signal;
 
 import java.io.*;
 import java.lang.management.ManagementFactory;
@@ -34,7 +33,7 @@ public class Shutdown {
             return;
         initiated = true;
         try {
-            Signal.handle(new Signal("INT"), s -> {
+            SignalHook.getInstance().sigInt(() -> {
                 ++sigIntTimes;
                 if (sigIntTimes >= sigIntBeforeTerminate) {
                     sigIntTimes = -10000; // set to a very small number to prevent triggered multiple times
@@ -48,7 +47,7 @@ public class Shutdown {
             System.err.println("SIGINT not handled");
         }
         try {
-            Signal.handle(new Signal("HUP"), s -> endSaveAndQuit(128 + 1));
+            SignalHook.getInstance().sigHup(() -> endSaveAndQuit(128 + 1));
             assert Logger.lowLevelDebug("SIGHUP handled");
         } catch (Exception e) {
             System.err.println("SIGHUP not handled");

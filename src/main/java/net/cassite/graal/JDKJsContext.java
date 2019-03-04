@@ -12,7 +12,7 @@ public class JDKJsContext implements JsContext {
     }
 
     @Override
-    public <T> T eval(String script, Class<T> type) {
+    public synchronized <T> T eval(String script, Class<T> type) {
         try {
             //noinspection unchecked
             return (T) engine.eval(script);

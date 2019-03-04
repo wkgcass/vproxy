@@ -8,7 +8,7 @@ public class PolyglotJsContext implements JsContext {
     }
 
     @Override
-    public <T> T eval(String script, Class<T> type) {
+    public synchronized <T> T eval(String script, Class<T> type) {
         return ctx.eval("js", script, type);
     }
 }
