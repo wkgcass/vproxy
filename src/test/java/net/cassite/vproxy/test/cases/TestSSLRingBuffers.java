@@ -81,9 +81,9 @@ public class TestSSLRingBuffers {
         engine.setUseClientMode(true);
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
             engine,
+            RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
             RingBuffer.allocate(16384),
-            RingBuffer.allocate(16384),
-            8192,
+            SSLUtils.CIPHER_TEXT_SIZE,
             32768,
             selectorEventLoop
         );
@@ -165,12 +165,12 @@ public class TestSSLRingBuffers {
     ConcurrentLinkedQueue<Runnable> q = new ConcurrentLinkedQueue<>();
 
     SimpleRingBuffer serverOutputData = RingBuffer.allocate(16384);
-    SimpleRingBuffer serverInputData = RingBuffer.allocate(16384);
+    SimpleRingBuffer serverInputData = RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE);
     SSLWrapRingBuffer serverWrap;
     SSLUnwrapRingBuffer serverUnwrap;
 
     SimpleRingBuffer clientOutputData = RingBuffer.allocate(16384);
-    SimpleRingBuffer clientInputData = RingBuffer.allocate(16384);
+    SimpleRingBuffer clientInputData = RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE);
     SSLWrapRingBuffer clientWrap;
     SSLUnwrapRingBuffer clientUnwrap;
 
@@ -208,11 +208,11 @@ public class TestSSLRingBuffers {
 
         // init buffers
 
-        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, 8192, 32768, q::add);
+        SSLUtils.SSLBufferPair tuple = SSLUtils.genbuf(serverEngine, serverInputData, serverOutputData, SSLUtils.CIPHER_TEXT_SIZE, 32768, q::add);
         serverWrap = tuple.right;
         serverUnwrap = tuple.left;
 
-        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, 8192, 32768, q::add);
+        tuple = SSLUtils.genbuf(clientEngine, clientInputData, clientOutputData, SSLUtils.CIPHER_TEXT_SIZE, 32768, q::add);
         clientWrap = tuple.right;
         clientUnwrap = tuple.left;
 
