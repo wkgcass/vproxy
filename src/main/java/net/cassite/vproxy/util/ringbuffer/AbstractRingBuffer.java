@@ -12,6 +12,10 @@ public abstract class AbstractRingBuffer implements RingBuffer {
     private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
+    protected boolean isOperating() {
+        return operating;
+    }
+
     protected void setOperating(boolean operating) {
         if (this.operating && !operating) {
             handler.removeAll(handlerToRemove);

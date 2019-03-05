@@ -45,7 +45,8 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
 
         @Override
         public void writableET() {
-            if (plainBufferForApp.used() > 0) {
+            if (plainBufferForApp.used() > 0 && !isOperating()) {
+                assert Logger.lowLevelDebug("calling generalWrap from writableET");
                 // only trigger when there are data inside the plain buffer
                 // because this should not happen when handshaking
                 //
