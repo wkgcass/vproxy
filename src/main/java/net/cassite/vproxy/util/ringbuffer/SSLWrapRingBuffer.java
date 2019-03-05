@@ -138,10 +138,10 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         }
 
         // check deferer
-        if (deferer.isEmpty())
-            return; // noting to run
-        assert deferer.size() == 1;
-        deferer.poll().run();
+        if (!deferer.isEmpty()) {
+            assert deferer.size() == 1;
+            deferer.poll().run();
+        }
     }
 
     private void deferGeneralWrap() {
@@ -200,6 +200,9 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
         if (result.bytesConsumed() == 0 && !encryptedBufferForOutput.canDefragment()) {
             // nothing consumed and encrypted buffer cannot defragment
             // which means buffers are busy and data should not be processed any more
+            //
+            // the process will resume when encrypted output buffer is empty
+            // see WritableHandler
             return true;
         }
 
