@@ -93,7 +93,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             ClientConnection conn;
             try {
                 if (useSSL) {
-                    conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector);
+                    conn = CommonProcess.makeSSLConnection(connector);
                 } else {
                     conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
                 }
@@ -482,6 +482,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     static class CommonProcess {
+        static ClientConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
+            return makeSSLConnection(null, connector);
+        }
+
         static ClientConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
             SSLEngine engine;
             if (connector.getHostName() == null) {
@@ -490,13 +494,24 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 engine = WebSocksUtils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
             }
             engine.setUseClientMode(true);
-            SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
-                engine,
-                RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
-                RingBuffer.allocate(16384),
-                32768,
-                32768,
-                loop);
+            SSLUtils.SSLBufferPair pair;
+            if (loop == null) {
+                assert Logger.lowLevelDebug("event loop not specified, so we ignore the resumer for the ssl buffer pair");
+                pair = SSLUtils.genbuf(
+                    engine,
+                    RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
+                    RingBuffer.allocate(16384),
+                    32768,
+                    32768);
+            } else {
+                pair = SSLUtils.genbuf(
+                    engine,
+                    RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
+                    RingBuffer.allocate(16384),
+                    32768,
+                    32768,
+                    loop);
+            }
             return connector.connect(pair.left, pair.right);
         }
 

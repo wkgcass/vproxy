@@ -32,7 +32,8 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
         @Override
         public void writableET() {
-            if (!isOperating()) {
+            if (encryptedBufferForInput.used() > 0 && !isOperating()) {
+                assert Logger.lowLevelDebug("calling generalUnwrap from writableET");
                 generalUnwrap();
             }
         }

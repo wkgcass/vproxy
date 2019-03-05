@@ -105,6 +105,8 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
     }
 
     void generalWrap() {
+        int plainBeforeWrap = plainBufferForApp.used();
+        int plainAfterWrap; // we be set after the wrap done
         boolean outBufWasEmpty = encryptedBufferForOutput.used() == 0;
         setOperating(true);
         try {
@@ -129,6 +131,8 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
             // it's memory operation, should not happen
             Logger.shouldNotHappen("got exception when wrapping", e);
         } finally {
+            plainAfterWrap = plainBufferForApp.used();
+
             // then we check the buffer and try to invoke ETHandler
             boolean outBufNowNotEmpty = encryptedBufferForOutput.used() > 0;
             if (outBufWasEmpty && outBufNowNotEmpty) {
@@ -142,9 +146,33 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
             assert deferer.size() == 1;
             deferer.poll().run();
         }
+
+        boolean gotBytesConsumed = plainBeforeWrap != plainAfterWrap;
+        if (plainBufferForApp.used() > 0 && gotBytesConsumed) {
+            assert Logger.lowLevelDebug("still getting app data, run recursively");
+            generalWrap();
+        }
+        // otherwise the plain buffer is empty
+        // or no bytes consumed for now (maybe because the output buffer does not have enough space)
+        //
+        // for the first condition, new data will be wrapped when arrives
+        // for the second condition, when the output buffer is empty, data would be wrapped
     }
 
     private void deferGeneralWrap() {
+        // there are some differences between wrap ring buffer and unwrap ring buffer
+        // about whether to let (un)wrap/(un)wrapHandshake defer the (un)wrap process
+        //
+        // the unwrap ring buffer reads data from outside world and write to buffer inside app
+        // so when the outside world buffer is empty, it knows that there is nothing to do anymore
+        //
+        // however the wrap ring buffer may produce data by it self when handshaking
+        // and we cannot check whether handshake is done in `generalWrap`
+        // wo we let the wrapHandshake to do this for use
+        //
+        // for wrap() after handshake, we can tell whether to stop from the plain buffer
+        // so this method should not be used in wrap() function
+
         deferer.push(this::generalWrap);
     }
 
