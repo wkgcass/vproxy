@@ -11,6 +11,7 @@ import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
+import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 import net.cassite.vproxyx.websocks.WebSocksProtocolHandler;
 import net.cassite.vproxyx.websocks.WebSocksProxyContext;
 import net.cassite.vproxyx.websocks.WebSocksUtils;
@@ -174,7 +175,7 @@ public class WebSocksProxyServer {
         Proxy proxy = new Proxy(
             new ProxyNetConfig()
                 .setAcceptLoop(acceptor.next())
-                .setInBufferSize(16384)
+                .setInBufferSize(SSLUtils.PLAIN_TEXT_SIZE)
                 .setOutBufferSize(16384)
                 .setHandleLoopProvider(worker::next)
                 .setServer(server)

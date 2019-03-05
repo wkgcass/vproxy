@@ -215,6 +215,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         assert Logger.lowLevelDebug("should upgrade the connection to ssl");
         SSLEngine engine = engineSupplier.get();
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine,
+            // we can allocate new buffer here, but it's ok to use the original allocated buffers
             (ByteBufferRingBuffer) ctx.connection.getInBuffer(),
             (ByteBufferRingBuffer) ctx.connection.getOutBuffer(),
             32768, 32768);

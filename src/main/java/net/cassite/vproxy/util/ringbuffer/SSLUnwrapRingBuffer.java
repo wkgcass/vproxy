@@ -287,8 +287,13 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
         if (status == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             Logger.warn(LogType.SSL_ERROR, "BUFFER_OVERFLOW in unwrap, " +
                 "expecting " + engine.getSession().getApplicationBufferSize());
-            deferDefragmentApp(); // defragment to try to make more space
-            // TODO we should make a temp buffer for application data
+            int appBufferRequired = engine.getSession().getApplicationBufferSize();
+            if (appBufferRequired > plainBufferForApp.capacity()) {
+                Logger.shouldNotHappen("the user buffer is too small to hold data, " +
+                    "expecting : " + appBufferRequired);
+            } else {
+                deferDefragmentApp(); // defragment to try to make more space
+            }
             // NOTE: if it's capacity is smaller than required, we can do nothing here
             return false;
         }

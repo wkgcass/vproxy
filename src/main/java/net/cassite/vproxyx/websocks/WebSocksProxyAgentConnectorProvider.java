@@ -492,7 +492,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             engine.setUseClientMode(true);
             SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
                 engine,
-                RingBuffer.allocate(16384),
+                RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
                 RingBuffer.allocate(16384),
                 32768,
                 32768,
