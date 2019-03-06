@@ -53,6 +53,11 @@ public class Logger {
         privateStderr(logType + " - " + err);
     }
 
+    public static void fatal(LogType logType, String err, Throwable ex) {
+        privateStderr(logType + " - " + err);
+        ex.printStackTrace(System.err);
+    }
+
     // expected errors, but not normal condition
     public static void error(LogType logType, String err) {
         privateStderr(logType + " - " + err);

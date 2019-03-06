@@ -472,7 +472,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
-            assert Logger.lowLevelDebug("connection " + ctx.connection + " closed");
+            Logger.warn(LogType.CONN_ERROR, "connection " + ctx.connection + " closed, so the proxy cannot establish");
+            utilAlertFail(ctx);
         }
 
         @Override

@@ -87,7 +87,7 @@ public class Proxy {
             try {
                 clientConnection = connector.connect(/*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {
-                Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid: " + e);
+                Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid", e);
                 // it should not happen if user provided endpoint is valid
                 // but if it happens, we close both sides
 
@@ -169,10 +169,10 @@ public class Proxy {
 
             @Override
             protected void onFailed(IOException err) {
+                Logger.error(LogType.NO_CLIENT_CONN, "the user code got an exception", err);
                 // we cannot handle the connection anymore
-                // close it
-                active.close();
-                // we do not log here, the log should be in user code
+                // return an empty connector
+                handleDirect(active, null);
             }
         }
 

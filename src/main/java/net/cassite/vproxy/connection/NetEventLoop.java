@@ -437,9 +437,13 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         // NOTE: should also record in Quick Write impl in Connection.java
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.getOutBuffer().used() == 0) {
-            // all bytes flushed, and no client bytes for now, remove write event
-            assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
-            ctx.rmOps(SelectionKey.OP_WRITE);
+            if (!cctx.connection.remoteClosed) {
+                // all bytes flushed, and no client bytes for now, remove write event
+                assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
+                ctx.rmOps(SelectionKey.OP_WRITE);
+            } else {
+                assert Logger.lowLevelDebug("the remote write is closed, so we keep the WRITE event for " + cctx.connection);
+            }
         }
     }
 
