@@ -284,7 +284,16 @@ public class ConfigProcessor {
                     currentAlias = null;
                     continue;
                 }
-                if (line.startsWith("/") && line.endsWith("/")) {
+                if (line.startsWith(":")) {
+                    String portStr = line.substring(1);
+                    int port;
+                    try {
+                        port = Integer.parseInt(portStr);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid port rule: " + portStr);
+                    }
+                    getDomainList(currentAlias).add(new PortChecker(port));
+                } else if (line.startsWith("/") && line.endsWith("/")) {
                     String regexp = line.substring(1, line.length() - 1);
                     getDomainList(currentAlias).add(new PatternDomainChecker(Pattern.compile(regexp)));
                 } else if (line.startsWith("[") && line.endsWith("]")) {

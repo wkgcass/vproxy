@@ -7,7 +7,7 @@ import net.cassite.vproxy.util.Logger;
 import java.util.regex.Pattern;
 
 public interface DomainChecker {
-    boolean needProxy(String domain);
+    boolean needProxy(String domain, int port);
 }
 
 class SuffixDomainChecker implements DomainChecker {
@@ -18,7 +18,7 @@ class SuffixDomainChecker implements DomainChecker {
     }
 
     @Override
-    public boolean needProxy(String domain) {
+    public boolean needProxy(String domain, int port) {
         return domain.endsWith(suffix);
     }
 }
@@ -31,7 +31,7 @@ class PatternDomainChecker implements DomainChecker {
     }
 
     @Override
-    public boolean needProxy(String domain) {
+    public boolean needProxy(String domain, int port) {
         return pattern.matcher(domain).matches();
     }
 }
@@ -44,7 +44,7 @@ class PacDomainChecker implements DomainChecker {
     }
 
     @Override
-    public boolean needProxy(String domain) {
+    public boolean needProxy(String domain, int port) {
         String result;
         try {
             result = engine.eval("FindProxyForURL('', '" + domain + "')", String.class);
@@ -62,5 +62,18 @@ class PacDomainChecker implements DomainChecker {
         }
         assert Logger.lowLevelDebug("pac returns " + result + " for " + domain + ", do proxy");
         return true;
+    }
+}
+
+class PortChecker implements DomainChecker {
+    private final int port;
+
+    PortChecker(int port) {
+        this.port = port;
+    }
+
+    @Override
+    public boolean needProxy(String domain, int port) {
+        return port == this.port;
     }
 }

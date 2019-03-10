@@ -592,10 +592,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
     }
 
-    private String getProxy(String address) {
+    private String getProxy(String address, int port) {
         for (Map.Entry<String, List<DomainChecker>> entry : proxyDomains.entrySet()) {
             for (DomainChecker checker : entry.getValue()) {
-                if (checker.needProxy(address)) {
+                if (checker.needProxy(address, port)) {
                     return entry.getKey();
                 }
             }
@@ -606,16 +606,16 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     @Override
     public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
         // check whether need to proxy to the WebSocks server
-        String serverAlias = getProxy(address);
+        String serverAlias = getProxy(address, port);
         if (serverAlias == null) {
-            Logger.alert("directly request " + address);
+            Logger.alert("directly request " + address + ":" + port);
             // just directly connect to the endpoint
             Utils.directConnect(type, address, port, providedCallback);
             return;
         }
 
         // proxy the net flow using WebSocks
-        Logger.alert("proxy the request to " + address + " via " + serverAlias);
+        Logger.alert("proxy the request to " + address + ":" + port + " via " + serverAlias);
 
         NetEventLoop loop = accepted.getEventLoop();
         if (loop == null) {
