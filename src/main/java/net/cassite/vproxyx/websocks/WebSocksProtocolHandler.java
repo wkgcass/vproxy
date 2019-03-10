@@ -246,6 +246,8 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             new Callback<Connector, IOException>() {
                 @Override
                 protected void onSucceeded(Connector connector) {
+                    String id = ctx.connection.remote + "->" + connector.remote;
+                    Logger.alert("proxy establishes: " + id);
                     ctx.data.right.succeeded(connector);
                 }
 
