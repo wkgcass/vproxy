@@ -67,6 +67,9 @@ public class Connection implements NetFlowRecorder {
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
+                if (protocol == Protocol.TCP) {
+                    NetEventLoopUtils.resetCloseTimeout(_cctx);
+                }
                 assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
                 // let's directly write the data if possible
                 // we do not need lock here,
