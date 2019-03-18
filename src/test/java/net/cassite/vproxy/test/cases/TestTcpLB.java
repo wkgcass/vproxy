@@ -94,7 +94,7 @@ public class TestTcpLB {
         }
 
         sg1 = new ServerGroup("sg1", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg1.add("svr2", new InetSocketAddress("127.0.0.1", 19082), InetAddress.getByName("127.0.0.1"), 10);
+        sg1.add("svr2", new InetSocketAddress("127.0.0.1", 19082), InetAddress.getByName("0.0.0.0") /*here we bind all, see test: replaceIp()*/, 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg1.getServerHandles()) {
             h.healthy = true;
