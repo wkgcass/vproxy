@@ -40,11 +40,16 @@ java -D+A:AppClass=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:p
 
 * `listen`: 一个整数，用于表示服务器应当监听哪个端口。
 * `auth`: 一个`用户名:密码`对的序列，用`,`分割。
+* `ssl`: 一个标志位，用于表示使用TLS连接。当该选项启用时，`pkcs12`和`pkcs12pswd`均需要指定。
+* `pkcs12`: pkcs12文件的路径，文件中需要包含证书和私钥。
+* `pkcs12pswd`: pkcs12文件的密码。
+* `domain`: 当前主机的域名（可选）。
 
 例如：
 
 ```
-listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+listen 80 auth alice:pasSw0rD,bob:PaSsw0Rd
+listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl pkcs12 ~/mycertkey.p12 pkcs12pswd myPassWord domain example.com
 ```
 
 ### AppClass=WebSocksAgent

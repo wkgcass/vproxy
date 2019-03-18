@@ -42,11 +42,16 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 
 * `listen`: an integer indicating which port the server should listen.
 * `auth`: a sequence of `user:password` pairs split by `,`.
+* `ssl`: a flag, indicating using tls connections. When this option is set, `pkcs12` and `pkcs12pswd` should also be given.
+* `pkcs12`: the path to pkcs12 file, which should contain certificates and a private key.
+* `pkcs12pswd`: the password of the pkcs12 file.
+* `domain`: the domain name of current host (optional).
 
 e.g.
 
 ```
-listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+listen 80 auth alice:pasSw0rD,bob:PaSsw0Rd
+listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl pkcs12 ~/mycertkey.p12 pkcs12pswd myPassWord domain example.com
 ```
 
 ### AppClass=WebSocksAgent
