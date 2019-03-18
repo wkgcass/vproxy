@@ -1,6 +1,9 @@
 package net.cassite.vproxy.app;
 
 public class Config {
+    // a volatile long field is atomic, and we only read/assign this value, not increase
+    public static volatile long currentTimestamp = System.currentTimeMillis();
+
     // the default udpTimeout is the same as LVS
     // set it smaller if your environment have a smaller udp ttl
     public static int udpTimeout = 300 * 1000;

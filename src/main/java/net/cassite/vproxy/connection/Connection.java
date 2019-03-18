@@ -151,7 +151,9 @@ public class Connection implements NetFlowRecorder {
     public final Protocol protocol;
     private final boolean looksLikeAConnection; // this field determines outBufferETHandler's behavior
     BindServer.UDPConn _udpDummyConn; // should be removed when this connection is closed
+
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
+    long lastTimestamp;
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize

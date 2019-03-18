@@ -1,17 +1,14 @@
 package net.cassite.vproxy.util;
 
+import net.cassite.vproxy.app.Config;
+
 import java.util.PriorityQueue;
 
 public class TimeQueue<T> {
     PriorityQueue<TimeElem<T>> queue = new PriorityQueue<>((a, b) -> (int) (a.triggerTime - b.triggerTime));
-    private long current = 0;
-
-    public void setCurrent(long current) {
-        this.current = current;
-    }
 
     public TimeElem<T> push(int timeout, T elem) {
-        TimeElem<T> event = new TimeElem<>(current + timeout, elem, this);
+        TimeElem<T> event = new TimeElem<>(Config.currentTimestamp + timeout, elem, this);
         queue.add(event);
         return event;
     }
@@ -35,6 +32,6 @@ public class TimeQueue<T> {
         if (elem == null)
             return Integer.MAX_VALUE;
         long triggerTime = elem.triggerTime;
-        return Math.max((int) (triggerTime - current), 0);
+        return Math.max((int) (triggerTime - Config.currentTimestamp), 0);
     }
 }

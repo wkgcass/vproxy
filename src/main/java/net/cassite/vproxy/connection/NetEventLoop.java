@@ -220,22 +220,53 @@ class NetEventLoopUtils {
     static void resetCloseTimeout(ConnectionHandlerContext ctx) {
         Connection conn = ctx.connection;
         assert Logger.lowLevelDebug("reset close timeout for connection " + conn);
-        if (conn.closeTimeout != null) {
-            conn.closeTimeout.cancel();
+        conn.lastTimestamp = Config.currentTimestamp;
+
+        if (conn.closeTimeout == null) {
+            assert Logger.lowLevelDebug("need to add a new timeout event for " + conn);
+
+            NetEventLoop loop = conn.getEventLoop();
+            if (loop == null) {
+                if (!conn.isClosed()) {
+                    Logger.shouldNotHappen("try to reset close timeout, but the connection is not attached to any event loop: " + conn);
+                }
+            } else {
+                resetDelay(loop, ctx);
+            }
         }
-        NetEventLoop loop = conn.getEventLoop();
-        if (loop == null) {
-            Logger.shouldNotHappen("try to reset close timeout, but the connection is not attached to any event loop: " + conn);
+    }
+
+    private static void resetDelay(NetEventLoop loop, ConnectionHandlerContext ctx) {
+        Connection conn = ctx.connection;
+        assert Logger.lowLevelDebug("do reset timeout for " + conn);
+
+        final int timeout = Config.tcpTimeout; // TODO we should support connection timeout
+        int delay;
+        if (conn.lastTimestamp == 0) {
+            delay = timeout;
         } else {
-            conn.closeTimeout = loop.getSelectorEventLoop().delay(Config.tcpTimeout, () -> {
+            delay = (int) (timeout - (Config.currentTimestamp - conn.lastTimestamp));
+        }
+        if (delay < 0) {
+            Logger.shouldNotHappen("the delay is invalid, timeout = " + timeout + ", current = " + Config.currentTimestamp + ", last = " + conn.lastTimestamp);
+            delay = 0;
+        }
+        assert Logger.lowLevelDebug("the delay for " + conn + " is " + delay);
+        conn.closeTimeout = loop.getSelectorEventLoop().delay(delay, () -> {
+            // check current timestamp
+            int delta = (int) (Config.currentTimestamp - conn.lastTimestamp);
+            if (delta > timeout) {
+                assert Logger.lowLevelDebug("timeout triggered: " + conn);
                 ctx.handler.exception(ctx, new SocketTimeoutException("timeout by timer"));
                 // if the user code didn't close the connection, we do it for user
                 if (!conn.isClosed()) {
                     ctx.handler.closed(ctx);
                     conn.close();
                 }
-            });
-        }
+            } else {
+                resetDelay(loop, ctx);
+            }
+        });
     }
 }
 

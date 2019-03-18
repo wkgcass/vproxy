@@ -1,5 +1,6 @@
 package net.cassite.vproxy.selector;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
@@ -167,7 +168,7 @@ public class SelectorEventLoop {
                     break; // break if it's closed
 
                 // handle some non select events
-                timeQueue.setCurrent(System.currentTimeMillis());
+                Config.currentTimestamp = System.currentTimeMillis();
                 handleNonSelectEvents();
             }
             // here we do not lock select()
