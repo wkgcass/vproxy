@@ -3,30 +3,10 @@ package net.cassite.vproxy.util;
 import net.cassite.vproxy.util.ringbuffer.SimpleRingBuffer;
 
 import java.io.IOException;
-import java.net.SocketAddress;
-import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Set;
 
-/**
- * 0                                     CAP
- * first
- * ....->[           free space           ]
- * [sPos,ePos-----------------------------]
- * pace       ]->           ->[      free s
- * [---------sPos---------ePos------------]
- * then
- * [  free space  ]->                      ->
- * [------------ePos--------------------sPos
- * then
- * .........->[   free space    ]->
- * [------ePos----------------sPos--------]
- * maybe we have
- * ..........................->(cannot write into buf any more)
- * [----------------------ePos,sPos--------]
- */
 public interface RingBuffer {
     SimpleRingBuffer EMPTY_BUFFER = allocate(0);
 
@@ -36,10 +16,6 @@ public interface RingBuffer {
 
     static SimpleRingBuffer allocate(int cap) {
         return SimpleRingBuffer.allocate(cap);
-    }
-
-    default int storeBytesFrom(ByteBuffer byteBuffer) {
-        throw new UnsupportedOperationException();
     }
 
     default int storeBytesFrom(ByteArrayChannel channel) {
@@ -67,14 +43,6 @@ public interface RingBuffer {
     }
 
     int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException;
-
-    default int writeToDatagramChannel(DatagramChannel channel, SocketAddress sockAddr) throws IOException {
-        return writeToDatagramChannel(channel, sockAddr, Integer.MAX_VALUE);
-    }
-
-    default int writeToDatagramChannel(DatagramChannel channel, SocketAddress sockAddr, int maxBytesToWrite) throws IOException {
-        throw new UnsupportedOperationException();
-    }
 
     int free();
 

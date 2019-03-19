@@ -3,15 +3,30 @@ package net.cassite.vproxy.util.ringbuffer;
 import net.cassite.vproxy.util.*;
 
 import java.io.IOException;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
-import java.nio.channels.DatagramChannel;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
 
+/**
+ * 0                                     CAP
+ * first
+ * ....->[           free space           ]
+ * [sPos,ePos-----------------------------]
+ * pace       ]->           ->[      free s
+ * [---------sPos---------ePos------------]
+ * then
+ * [  free space  ]->                      ->
+ * [------------ePos--------------------sPos
+ * then
+ * .........->[   free space    ]->
+ * [------ePos----------------sPos--------]
+ * maybe we have
+ * ..........................->(cannot write into buf any more)
+ * [----------------------ePos,sPos--------]
+ */
 public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private final boolean isDirect;
     private /*may change after defragment*/ ByteBuffer buffer;
@@ -97,10 +112,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
         return operateOnByteBufferWriteOut(maxBytesToWrite, channel::write);
-    }
-
-    public int writeToDatagramChannel(DatagramChannel channel, SocketAddress sockAddr, int maxBytesToWrite) throws IOException {
-        return operateOnByteBufferWriteOut(maxBytesToWrite, b -> channel.send(buffer, sockAddr));
     }
 
     public int free() {
