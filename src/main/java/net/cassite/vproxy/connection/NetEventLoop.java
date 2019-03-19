@@ -9,12 +9,10 @@ import net.cassite.vproxy.util.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.ByteBuffer;
 import java.nio.channels.*;
 
 public class NetEventLoop {
     private static final HandlerForTCPServer handlerForTPCServer = new HandlerForTCPServer();
-    private /*static*/ final HandlerForUDPServer handlerForUDPServer = new HandlerForUDPServer(this);
     private static final HandlerForConnection handlerForConnection = new HandlerForConnection();
     private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
 
@@ -38,17 +36,10 @@ public class NetEventLoop {
             if (server._eventLoop != null)
                 throw new IOException("bindServer already registered to a event loop");
             server._eventLoop = this;
-            if (server.protocol == Protocol.TCP) {
-                //noinspection unchecked
-                selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
-                    new ServerHandlerContext(this, server, attachment, handler),
-                    (Handler) handlerForTPCServer);
-            } else {
-                //noinspection unchecked
-                selectorEventLoop.add(server.channel, SelectionKey.OP_READ,
-                    new ServerHandlerContext(this, server, attachment, handler),
-                    (Handler) handlerForUDPServer);
-            }
+            //noinspection unchecked
+            selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
+                new ServerHandlerContext(this, server, attachment, handler),
+                (Handler) handlerForTPCServer);
         }
     }
 
@@ -115,11 +106,10 @@ public class NetEventLoop {
         boolean fireConnected = false; // whether to fire `connected` event after registering
         // the connection might already be connected
         // so fire the event to let handler know
-        // also it might be UDP
 
         int ops;
-        if (connection.protocol != Protocol.TCP || ((SocketChannel) connection.channel).isConnected()) {
-            fireConnected = connection.protocol == Protocol.TCP; // only TCP can have connection and fire event
+        if ((connection.channel).isConnected()) {
+            fireConnected = true;
 
             ops = 0;
             if (connection.getInBuffer().free() > 0)
@@ -171,8 +161,8 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
         } else {
             Connection conn;
             try {
-                conn = new Connection(Protocol.TCP, sock, (InetSocketAddress) sock.getRemoteAddress(),
-                    ioBuffers.left, ioBuffers.right, true/*it IS a connection*/);
+                conn = new Connection(sock, (InetSocketAddress) sock.getRemoteAddress(),
+                    ioBuffers.left, ioBuffers.right);
             } catch (IOException e) {
                 Logger.shouldNotHappen("Connection object create failed: " + e);
                 return;
@@ -206,7 +196,6 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
 
     @Override
     public void removed(HandlerContext<ServerSocketChannel> ctx) {
-        // same as udp removed()
         ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
         sctx.server._eventLoop = null;
         sctx.handler.removed(sctx);
@@ -267,112 +256,6 @@ class NetEventLoopUtils {
                 resetDelay(loop, ctx);
             }
         });
-    }
-}
-
-class HandlerForUDPServer implements Handler<DatagramChannel> {
-    // allocate a big buffer for udp temp data
-    // the ip packet maximum is 65535 bytes
-    // create a buffer of 64k is ok because it's O(1) for any operation within 1 NetEventLoop
-    // reuse this buffer for every packet
-    // so remember to reset cursors before operating
-    private final ByteBuffer buffer = ByteBuffer.allocateDirect(65536);
-    private final NetEventLoop netEventLoop;
-
-    HandlerForUDPServer(NetEventLoop netEventLoop) {
-        this.netEventLoop = netEventLoop;
-    }
-
-    @Override
-    public void accept(HandlerContext<DatagramChannel> ctx) {
-        // will not fire
-    }
-
-    @Override
-    public void connected(HandlerContext<DatagramChannel> ctx) {
-        // will not fire
-    }
-
-    @Override
-    public void readable(HandlerContext<DatagramChannel> ctx) {
-        ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
-
-        // reset cursor of buffer
-        buffer.position(0).limit(65536);
-
-        InetSocketAddress remote;
-        try {
-            remote = (InetSocketAddress) ctx.getChannel().receive(buffer);
-        } catch (IOException e) {
-            // exception occurred when reading the udp channel
-            // maybe it's reset from localhost
-            // or maybe a bug
-            Logger.shouldNotHappen("reading udp " + ctx.getChannel() + " raise error", e);
-            sctx.handler.exception(sctx, e);
-            return;
-        }
-
-        // read completed, flip the buffer for writing
-        buffer.flip();
-
-        if (remote == null) {
-            assert Logger.lowLevelDebug("no data yet, ignore this event");
-            return;
-        }
-        BindServer server = sctx.server;
-        BindServer.UDPConn udpConn = server.udpDummyConnMap.get(remote);
-        if (udpConn == null) {
-            // initialize the dummy connection
-
-            Tuple<RingBuffer, RingBuffer> ioBuffers = sctx.handler.getIOBuffers(ctx.getChannel());
-            Connection conn;
-            try {
-                conn = new Connection(Protocol.UDP, ctx.getChannel(), remote,
-                    ioBuffers.left, ioBuffers.right, false/*it's nothing like a connection*/);
-            } catch (IOException e) {
-                Logger.shouldNotHappen("exception occurred when creating connection object for udp channel", e);
-                sctx.handler.exception(sctx, e);
-                return;
-            }
-
-            // retrieve context from user code
-            ConnectionHandlerContext cctx = new ConnectionHandlerContext(netEventLoop,
-                conn, sctx.attachment,
-                sctx.handler.udpHandler(sctx, conn));
-            conn.setEventLoopRelatedFields(netEventLoop, cctx);
-            conn.addNetFlowRecorder(server); // record net flow
-            // build a udp conn and store
-            udpConn = server.new UDPConn(remote, conn, cctx);
-            conn._udpDummyConn = udpConn;
-            server.udpDummyConnMap.put(remote, udpConn);
-            // fire connection event
-            sctx.handler.connection(sctx, conn);
-        }
-        int toStore = buffer.remaining();
-        int stored = udpConn.connection.getInBuffer().storeBytesFrom(buffer);
-        // we do not care about the res, but let's log if not reading all
-        assert toStore == stored || Logger.lowLevelDebug("toStore = " + toStore + ", stored = " + stored);
-        udpConn.connection.incFromRemoteBytes(stored); // reading from remote channel
-
-        // fire readable event
-        udpConn.cctx.handler.readable(udpConn.cctx);
-        // writable event will be handled in connection `Quick Write` mechanism
-
-        readable(ctx); // then we call readable again in case now got another packet
-    }
-
-    @Override
-    public void writable(HandlerContext<DatagramChannel> ctx) {
-        // we never add this event
-        // so won't fire
-    }
-
-    @Override
-    public void removed(HandlerContext<DatagramChannel> ctx) {
-        // same as tcp removed()
-        ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
-        sctx.server._eventLoop = null;
-        sctx.handler.removed(sctx);
     }
 }
 

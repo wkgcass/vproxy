@@ -67,9 +67,8 @@ public class Connection implements NetFlowRecorder {
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data
-                if (protocol == Protocol.TCP) {
-                    NetEventLoopUtils.resetCloseTimeout(_cctx);
-                }
+                NetEventLoopUtils.resetCloseTimeout(_cctx);
+
                 assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
                 // let's directly write the data if possible
                 // we do not need lock here,
@@ -85,24 +84,9 @@ public class Connection implements NetFlowRecorder {
                     _cctx.handler.writable(_cctx);
                 }
 
-                // for server udp channels, just write, and should not add OP_WRITE event
-                if (!looksLikeAConnection) {
-                    int write;
-                    try {
-                        write = getOutBuffer().writeToDatagramChannel((DatagramChannel) channel, remote);
-                    } catch (IOException ignore) {
-                        // we ignore any error when writing udp
-                        return;
-                    }
-
-                    incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
-
-                    return; // end `Quick Write`
-                }
-
                 boolean addWriteOnLoop = true;
                 try {
-                    int write = getOutBuffer().writeTo((WritableByteChannel) channel);
+                    int write = getOutBuffer().writeTo(channel);
                     assert Logger.lowLevelDebug("wrote " + write + " bytes to " + Connection.this);
                     if (write > 0) {
                         incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
@@ -147,11 +131,9 @@ public class Connection implements NetFlowRecorder {
     public final InetSocketAddress remote;
     protected final InetSocketAddress local;
     protected final String _id;
-    public final SelectableChannel channel;
-    public final Protocol protocol;
-    private final boolean looksLikeAConnection; // this field determines outBufferETHandler's behavior
-    BindServer.UDPConn _udpDummyConn; // should be removed when this connection is closed
+    public final SocketChannel channel;
 
+    // fields for closing the connection
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
     long lastTimestamp;
 
@@ -174,26 +156,17 @@ public class Connection implements NetFlowRecorder {
 
     private boolean closed = false;
 
-    Connection(Protocol protocol,
-               SelectableChannel channel,
+    Connection(SocketChannel channel,
                InetSocketAddress remote,
-               RingBuffer inBuffer, RingBuffer outBuffer, boolean looksLikeAConnection) throws IOException {
-        this(protocol,
-            channel,
+               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        this(channel,
             remote, (InetSocketAddress) ((NetworkChannel) channel).getLocalAddress(),
-            inBuffer, outBuffer,
-            looksLikeAConnection);
+            inBuffer, outBuffer);
     }
 
-    Connection(Protocol protocol,
-               SelectableChannel channel,
+    Connection(SocketChannel channel,
                InetSocketAddress remote, InetSocketAddress local,
-               RingBuffer inBuffer, RingBuffer outBuffer, boolean looksLikeAConnection) throws IOException {
-        this.protocol = protocol;
-        this.looksLikeAConnection = looksLikeAConnection;
-        assert (protocol == Protocol.TCP && channel instanceof SocketChannel)
-            || (protocol == Protocol.UDP && channel instanceof DatagramChannel);
-        assert (protocol == Protocol.UDP) || (((SocketChannel) channel).getRemoteAddress().equals(remote));
+               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
 
         this.channel = channel;
         this.inBuffer = inBuffer;
@@ -211,11 +184,7 @@ public class Connection implements NetFlowRecorder {
         inBufferETHandler = new InBufferETHandler();
         outBufferETHandler = new OutBufferETHandler();
 
-        if (looksLikeAConnection) {
-            // the fd is the server datagram socket, so will not remove OP_READ
-            // so there is no need to add OP_READ back
-            this.getInBuffer().addHandler(inBufferETHandler);
-        }
+        this.getInBuffer().addHandler(inBufferETHandler);
         this.getOutBuffer().addHandler(outBufferETHandler);
         // in the outBufferETHandler
         // if buffer did not wrote all content, simply ignore the left part
@@ -258,8 +227,7 @@ public class Connection implements NetFlowRecorder {
     }
 
     protected String genId() {
-        return (protocol == Protocol.UDP ? "UDP:" : "")
-            + Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
+        return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
             + "/"
             + (local == null ? "[unbound]" :
             (
@@ -296,25 +264,14 @@ public class Connection implements NetFlowRecorder {
         getOutBuffer().removeHandler(outBufferETHandler);
 
         NetEventLoop eventLoop = _eventLoop;
-        if (eventLoop != null && looksLikeAConnection) {
+        if (eventLoop != null) {
             eventLoop.removeConnection(this);
-
-            /*udp dummy conn does not add to the loop*/
         }
         releaseEventLoopRelatedFields();
-        if (looksLikeAConnection) {
-            try {
-                channel.close();
-            } catch (IOException e) {
-                // we can do nothing about it
-            }
-
-            // the channel is dummy for udp server and should not close
-        }
-
-        if (_udpDummyConn != null) {
-            _udpDummyConn.remove();
-            _udpDummyConn = null;
+        try {
+            channel.close();
+        } catch (IOException e) {
+            // we can do nothing about it
         }
     }
 

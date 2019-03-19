@@ -6,12 +6,8 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.Inet6Address;
 import java.net.InetSocketAddress;
-import java.net.StandardProtocolFamily;
 import java.net.StandardSocketOptions;
-import java.nio.channels.DatagramChannel;
-import java.nio.channels.NetworkChannel;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.HashMap;
@@ -67,7 +63,6 @@ public class BindServer implements NetFlowRecorder {
     public final InetSocketAddress bind;
     private final String _id;
     public final SelectableChannel channel;
-    final Protocol protocol;
 
     // this field is only for udp
     // the field will be accessed from only one connection (the event loop)
@@ -88,36 +83,15 @@ public class BindServer implements NetFlowRecorder {
         channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
         channel.bind(bindAddress);
         try {
-            return new BindServer(Protocol.TCP, channel);
+            return new BindServer(channel);
         } catch (IOException e) {
             channel.close(); // close the channel if create BindServer failed
             throw e;
         }
     }
 
-    public static BindServer createUDP(InetSocketAddress bindAddress) throws IOException {
-        DatagramChannel channel = DatagramChannel.open(
-            (bindAddress.getAddress() instanceof Inet6Address)
-                ? StandardProtocolFamily.INET6
-                : StandardProtocolFamily.INET
-        );
-        channel.configureBlocking(false);
-        channel.setOption(StandardSocketOptions.SO_REUSEADDR, true);
-        channel.bind(bindAddress);
-        try {
-            return new BindServer(Protocol.UDP, channel);
-        } catch (IOException e) {
-            channel.close(); // close the channel if create BindServer failed
-            throw e;
-        }
-    }
-
-    private BindServer(Protocol protocol, NetworkChannel channel) throws IOException {
-        this.protocol = protocol;
-        assert (protocol == Protocol.TCP && channel instanceof ServerSocketChannel)
-            || (protocol == Protocol.UDP && channel instanceof DatagramChannel);
-
-        this.channel = (SelectableChannel) channel;
+    private BindServer(ServerSocketChannel channel) throws IOException {
+        this.channel = channel;
         bind = (InetSocketAddress) channel.getLocalAddress();
         _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
     }
