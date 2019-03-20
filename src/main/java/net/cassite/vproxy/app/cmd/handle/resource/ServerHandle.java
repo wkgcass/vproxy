@@ -5,7 +5,6 @@ import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
 import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
-import net.cassite.vproxy.app.cmd.handle.param.IpHandle;
 import net.cassite.vproxy.app.cmd.handle.param.WeightHandle;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
@@ -29,7 +28,6 @@ public class ServerHandle {
 
     public static void checkCreateServer(Command cmd) throws Exception {
         AddrHandle.check(cmd);
-        IpHandle.check(cmd);
         WeightHandle.check(cmd);
     }
 
@@ -67,7 +65,7 @@ public class ServerHandle {
         // will be check in `group.add()`
 
         ServerGroupHandle.get(cmd.prepositionResource)
-            .add(name, host, AddrHandle.get(cmd), IpHandle.get(cmd), WeightHandle.get(cmd));
+            .add(name, host, AddrHandle.get(cmd), WeightHandle.get(cmd));
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -96,16 +94,15 @@ public class ServerHandle {
         public String toString() {
             /*
              * e.g. with host
-             * google -> google.com now connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             * google -> google.com now connect to 216.58.197.238:443 weight 10 currently UP
              * or without host
-             * google -> connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             * google -> connect to 216.58.197.238:443 weight 10 currently UP
              * or for logic deleted: add * before alias
-             * *google -> google.com now connect to 216.58.197.238:443 via 10.240.200.151 weight 10 currently UP
+             * *google -> google.com now connect to 216.58.197.238:443 weight 10 currently UP
              */
             return (h.isLogicDelete() ? "*" : "") + h.alias + " ->"
                 + (h.hostName == null ? "" : " host " + h.hostName + " now" /* now connected to */)
                 + " connect to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
-                + " via " + Utils.ipStr(h.local.getAddress()) + " weight " + h.getWeight()
                 + " currently " + (h.healthy ? "UP" : "DOWN");
         }
     }

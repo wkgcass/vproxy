@@ -60,7 +60,7 @@ public class Sidecar {
             }
 
             try {
-                group.add(svrName, new InetSocketAddress(node.address, node.port), config.bindInetAddress, 10);
+                group.add(svrName, new InetSocketAddress(node.address, node.port), 10);
             } catch (AlreadyExistException e) {
                 Logger.shouldNotHappen("add server into group failed", e);
             }
@@ -181,7 +181,6 @@ public class Sidecar {
         try {
             sg.add(serverName,
                 new InetSocketAddress("127.0.0.1", localServicePort),
-                InetAddress.getByName("127.0.0.1"),
                 10);
         } catch (AlreadyExistException e) {
             // remove maintain flag
@@ -191,9 +190,6 @@ public class Sidecar {
                     h.data = null; // remove _MAINTAIN_FLAG_
                 }
             }
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("got exception when adding the svr", e);
-            throw e;
         }
         // remove those with _MAINTAIN_FLAG_ because there is at least one alive process
         {

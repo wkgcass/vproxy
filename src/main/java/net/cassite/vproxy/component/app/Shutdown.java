@@ -248,8 +248,8 @@ public class Shutdown {
                         + (sh.hostName == null
                         ? Utils.ipStr(sh.server.getAddress().getAddress())
                         : sh.hostName)
-                        + ":" + sh.server.getPort() +
-                        " via " + Utils.ipStr(sh.local.getAddress()) + " weight " + sh.getWeight();
+                        + ":" + sh.server.getPort()
+                        + " weight " + sh.getWeight();
                     commands.add(cmd);
                 }
             }

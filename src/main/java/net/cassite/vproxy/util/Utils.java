@@ -616,24 +616,11 @@ public class Utils {
     }
 
     public static void directConnect(AddressType type, String address, int port, Consumer<Connector> providedCallback) {
-        // we don't know which address to request the remote endpoint,
-        // so we bind all
-        InetAddress local;
-        try {
-            local = InetAddress.getByName("0.0.0.0");
-        } catch (UnknownHostException e) {
-            // this should not happen
-            // should always succeed
-            Logger.shouldNotHappen("getting 0.0.0.0 failed", e);
-            providedCallback.accept(null);
-            return;
-        }
-
         if (type == AddressType.domain) { // resolve if it's domain
             Resolver.getDefault().resolve(address, new Callback<InetAddress, UnknownHostException>() {
                 @Override
                 protected void onSucceeded(InetAddress value) {
-                    providedCallback.accept(new Connector(new InetSocketAddress(value, port), local));
+                    providedCallback.accept(new Connector(new InetSocketAddress(value, port)));
                 }
 
                 @Override
@@ -658,7 +645,7 @@ public class Utils {
                 providedCallback.accept(null);
                 return;
             }
-            providedCallback.accept(new Connector(new InetSocketAddress(remote, port), local));
+            providedCallback.accept(new Connector(new InetSocketAddress(remote, port)));
         }
     }
 

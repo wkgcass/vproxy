@@ -77,12 +77,11 @@ public class TCPHealthCheckClient {
 
     public TCPHealthCheckClient(NetEventLoop eventLoop,
                                 InetSocketAddress remote,
-                                InetAddress local,
                                 HealthCheckConfig healthCheckConfig,
                                 boolean initialIsUp,
                                 HealthCheckHandler handler) {
         this.connectClient = new ConnectClient(
-            eventLoop, remote, local,
+            eventLoop, remote,
             healthCheckConfig.checkProtocol,
             healthCheckConfig.timeout);
 

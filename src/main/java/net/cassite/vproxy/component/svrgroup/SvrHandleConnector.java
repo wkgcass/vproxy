@@ -11,7 +11,7 @@ public class SvrHandleConnector extends Connector {
     private final ServerGroup.ServerHandle serverHandle;
 
     SvrHandleConnector(ServerGroup.ServerHandle h) {
-        super(h.server, new InetSocketAddress(h.local, 0));
+        super(h.server);
         this.serverHandle = h;
     }
 

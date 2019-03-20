@@ -17,7 +17,6 @@ public class HealthCheckClientExample {
         NetEventLoop eventLoop = new NetEventLoop(loop);
         TCPHealthCheckClient client = new TCPHealthCheckClient(eventLoop,
             new InetSocketAddress("127.0.0.1", 18080),
-            InetAddress.getByName("127.0.0.1"),
             new HealthCheckConfig(200, 800, 4, 5),
             true, new HealthCheckHandler() {
             @Override

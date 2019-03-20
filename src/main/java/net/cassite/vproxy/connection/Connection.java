@@ -158,14 +158,6 @@ public class Connection implements NetFlowRecorder {
     private boolean closed = false;
 
     Connection(SocketChannel channel,
-               InetSocketAddress remote,
-               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        this(channel,
-            remote, (InetSocketAddress) ((NetworkChannel) channel).getLocalAddress(),
-            inBuffer, outBuffer);
-    }
-
-    Connection(SocketChannel channel,
                InetSocketAddress remote, InetSocketAddress local,
                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
 
@@ -173,15 +165,6 @@ public class Connection implements NetFlowRecorder {
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
         this.remote = remote;
-        { // try to retrieve real port
-            if (local.getPort() == 0) {
-                InetSocketAddress sockAddr = ((InetSocketAddress) ((NetworkChannel) channel).getLocalAddress());
-                if (sockAddr != null) { // the local will be null if did not call `bind()`
-                    local = new InetSocketAddress(local.getAddress(),
-                        sockAddr.getPort());
-                }
-            }
-        }
         this.local = local;
         _id = genId();
 

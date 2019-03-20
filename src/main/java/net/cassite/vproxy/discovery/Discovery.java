@@ -585,7 +585,7 @@ public class Discovery {
         if (!nodes.containsKey(groupServerName)) {
             Logger.info(LogType.DISCOVERY_EVENT, "recording new node: " + node);
             try {
-                hcGroup.add(groupServerName, node.address, new InetSocketAddress(node.address, node.tcpPort), config.bindInetAddress, 10);
+                hcGroup.add(groupServerName, node.address, new InetSocketAddress(node.address, node.tcpPort), 10);
             } catch (AlreadyExistException e) {
                 Logger.shouldNotHappen("the node already exist in hcGroup " + groupServerName);
             }
@@ -718,7 +718,7 @@ public class Discovery {
     }
 
     private void requestForNodes(Node target) {
-        RESPClientUtils.oneReq(loop, new InetSocketAddress(target.inetAddress, target.tcpPort), config.bindInetAddress,
+        RESPClientUtils.oneReq(loop, new InetSocketAddress(target.inetAddress, target.tcpPort),
             getNodeDataToSend(), 3000, new Callback<Object, IOException>() {
                 @Override
                 protected void onSucceeded(Object value) {

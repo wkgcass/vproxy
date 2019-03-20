@@ -791,8 +791,7 @@ public class Command {
                         List<List<String>> persistStrList = persistRefs.stream().map(ref ->
                             Arrays.asList(
                                 "client: " + Utils.ipStr(ref.persist.clientAddress.getAddress()),
-                                "server: " + Utils.ipStr(ref.persist.connector.remote.getAddress().getAddress()) + ":" + ref.persist.connector.remote.getPort(),
-                                "   via: " + Utils.ipStr(ref.persist.connector.local.getAddress().getAddress()) + ":" + ref.persist.connector.local.getPort()
+                                "server: " + Utils.ipStr(ref.persist.connector.remote.getAddress().getAddress()) + ":" + ref.persist.connector.remote.getPort()
                             ))
                             .collect(Collectors.toList());
                         return new CmdResult(persistRefs, persistStrList, utilJoinList(persistRefs));

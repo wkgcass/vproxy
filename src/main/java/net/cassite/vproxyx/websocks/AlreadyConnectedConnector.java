@@ -13,8 +13,8 @@ public class AlreadyConnectedConnector extends Connector {
     private final ClientConnection conn;
     private final NetEventLoop loop;
 
-    public AlreadyConnectedConnector(InetSocketAddress remote, InetAddress local, ClientConnection conn, NetEventLoop loop) {
-        super(remote, local);
+    public AlreadyConnectedConnector(InetSocketAddress remote, ClientConnection conn, NetEventLoop loop) {
+        super(remote);
         this.conn = conn;
         this.loop = loop;
     }

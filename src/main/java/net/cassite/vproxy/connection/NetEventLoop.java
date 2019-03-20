@@ -161,7 +161,9 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
         } else {
             Connection conn;
             try {
-                conn = new Connection(sock, (InetSocketAddress) sock.getRemoteAddress(),
+                conn = new Connection(sock,
+                    (InetSocketAddress) sock.getRemoteAddress(),
+                    (InetSocketAddress) sock.getLocalAddress(),
                     ioBuffers.left, ioBuffers.right);
             } catch (IOException e) {
                 Logger.shouldNotHappen("Connection object create failed: " + e);

@@ -44,8 +44,8 @@ public class ForbidLBForEchoServers {
         );
         lb.start();
         // add each group one server
-        grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"), 10);
-        grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"), 10);
+        grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), 10);
+        grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), 10);
 
         // start client in another thread
         new Thread(() -> {

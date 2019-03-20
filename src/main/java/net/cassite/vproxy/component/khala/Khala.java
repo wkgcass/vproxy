@@ -565,7 +565,6 @@ public class Khala {
         RESPClientUtils.retry(
             discovery.loop,
             new InetSocketAddress(n.inetAddress, n.tcpPort),
-            discovery.config.bindInetAddress,
             msg,
             3000,
             3,
@@ -660,7 +659,6 @@ public class Khala {
         RESPClientUtils.retry(
             discovery.loop,
             new InetSocketAddress(node.inetAddress, node.tcpPort),
-            discovery.config.bindInetAddress,
             msg,
             3000,
             3,
@@ -728,7 +726,6 @@ public class Khala {
         };
         RESPClientUtils.retry(discovery.loop,
             new InetSocketAddress(remoteNode.inetAddress, remoteNode.tcpPort),
-            discovery.localNode.inetAddress,
             msg,
             3000,
             3,

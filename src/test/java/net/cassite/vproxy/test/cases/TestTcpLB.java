@@ -86,22 +86,22 @@ public class TestTcpLB {
         lb0.start();
 
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"), 10);
-        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"), 10);
+        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), 10);
+        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg0.getServerHandles()) {
             h.healthy = true;
         }
 
         sg1 = new ServerGroup("sg1", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg1.add("svr2", new InetSocketAddress("127.0.0.1", 19082), InetAddress.getByName("0.0.0.0") /*here we bind all, see test: replaceIp()*/, 10);
+        sg1.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg1.getServerHandles()) {
             h.healthy = true;
         }
 
         sgEcho = new ServerGroup("sgEcho", elg0, new HealthCheckConfig(400, 1000, 1, 3), Method.wrr);
-        sgEcho.add("echo", new InetSocketAddress("127.0.0.1", 20080), InetAddress.getByName("127.0.0.1"), 10);
+        sgEcho.add("echo", new InetSocketAddress("127.0.0.1", 20080), 10);
 
         loop = SelectorEventLoop.open();
 
@@ -204,7 +204,7 @@ public class TestTcpLB {
             client.close();
         }
 
-        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), InetAddress.getByName("127.0.0.1"), 5);
+        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), 5);
         sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get().healthy = true;
 
         int zero = 0;

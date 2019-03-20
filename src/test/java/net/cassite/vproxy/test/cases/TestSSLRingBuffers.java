@@ -88,7 +88,7 @@ public class TestSSLRingBuffers {
             selectorEventLoop
         );
         ClientConnection conn = ClientConnection.create(
-            new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"),
+            new InetSocketAddress(inet, port),
             pair.left, pair.right
         );
         loop.addClientConnection(conn, null, new MySSLClientConnectionHandler());

@@ -30,7 +30,7 @@ public class AutoLB {
 
             ServerGroup grp = lb.backends.getServerGroups().get(0).group;
             try {
-                grp.add(svrName, new InetSocketAddress(node.address, node.port), config.bindInetAddress, 10);
+                grp.add(svrName, new InetSocketAddress(node.address, node.port), 10);
             } catch (AlreadyExistException e) {
                 Logger.shouldNotHappen("add server into group failed", e);
             }

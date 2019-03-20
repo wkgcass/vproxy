@@ -444,16 +444,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
             // add respond to the proxy lib
 
-            InetAddress local;
-            try {
-                local = InetAddress.getByName("0.0.0.0");
-            } catch (UnknownHostException e) {
-                Logger.shouldNotHappen("getByName 0.0.0.0 failed", e);
-                utilAlertFail(ctx);
-                return;
-            }
             providedCallback.accept(new AlreadyConnectedConnector(
-                ctx.connection.remote, local, (ClientConnection) ctx.connection, ctx.eventLoop
+                ctx.connection.remote, (ClientConnection) ctx.connection, ctx.eventLoop
             ));
 
             // every thing is done now

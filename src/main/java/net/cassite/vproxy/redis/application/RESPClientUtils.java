@@ -18,12 +18,11 @@ public class RESPClientUtils {
 
     public static void retry(NetEventLoop loop,
                              InetSocketAddress remote,
-                             InetAddress local,
                              Object toSend,
                              int timeout,
                              int retryTimes,
                              Callback<Object, IOException> cb) {
-        oneReq(loop, remote, local, toSend, timeout, new Callback<Object, IOException>() {
+        oneReq(loop, remote, toSend, timeout, new Callback<Object, IOException>() {
             @Override
             protected void onSucceeded(Object value) {
                 cb.succeeded(value);
@@ -32,7 +31,7 @@ public class RESPClientUtils {
             @Override
             protected void onFailed(IOException err) {
                 if (retryTimes > 0) {
-                    retry(loop, remote, local, toSend, timeout, retryTimes - 1, cb);
+                    retry(loop, remote, toSend, timeout, retryTimes - 1, cb);
                 } else {
                     cb.failed(err);
                 }
@@ -42,7 +41,6 @@ public class RESPClientUtils {
 
     public static void oneReq(NetEventLoop loop,
                               InetSocketAddress remote,
-                              InetAddress local,
                               Object toSend,
                               int timeout,
                               Callback<Object, IOException> cb) {
@@ -53,7 +51,7 @@ public class RESPClientUtils {
             // use heap buffer here
             // because the connection will be terminated when gets data
             // connection won't last long
-            ClientConnection conn = ClientConnection.create(remote, local, RingBuffer.allocate(16384), RingBuffer.allocate(16384));
+            ClientConnection conn = ClientConnection.create(remote, RingBuffer.allocate(16384), RingBuffer.allocate(16384));
             loop.addClientConnection(conn, null, new ClientConnectionHandler() {
                 private final RESPParser parser = new RESPParser(16384);
 

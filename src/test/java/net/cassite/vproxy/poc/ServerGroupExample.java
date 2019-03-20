@@ -28,8 +28,8 @@ public class ServerGroupExample {
         ServerGroup serverGroup = new ServerGroup("server group", eventLoopGroup,
             new HealthCheckConfig(200, 800, 4, 5),
             Method.wrr);
-        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"), 5);
-        serverGroup.add("s2", new InetSocketAddress("127.0.0.1", portB), InetAddress.getByName("127.0.0.1"), 10);
+        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), 5);
+        serverGroup.add("s2", new InetSocketAddress("127.0.0.1", portB), 10);
 
         // create a event loop only for checking
         SelectorEventLoop eventLoop = SelectorEventLoop.open();
@@ -59,7 +59,7 @@ public class ServerGroupExample {
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------let's add serverA back with 10-----------\033[0m");
-        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), InetAddress.getByName("127.0.0.1"), 10); // now cursor = 2 use = 1
+        serverGroup.add("s1", new InetSocketAddress("127.0.0.1", portA), 10); // now cursor = 2 use = 1
 
         Thread.sleep(20000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------------remove event loop 1----------------\033[0m");

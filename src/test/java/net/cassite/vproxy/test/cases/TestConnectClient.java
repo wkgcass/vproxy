@@ -62,7 +62,6 @@ public class TestConnectClient {
     private void doConnect(String targetAddress, CheckProtocol protocol, int port) throws Exception {
         ConnectClient client = new ConnectClient(netEventLoop,
             new InetSocketAddress(targetAddress, port),
-            InetAddress.getByName("127.0.0.1"),
             protocol,
             100);
         BlockCallback<Void, IOException> cb = new BlockCallback<>();

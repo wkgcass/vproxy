@@ -262,15 +262,15 @@ public class ConfigProcessor {
                 ServerGroup.ServerHandle handle;
                 if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), 10);
                 } else if (Utils.isIpv6(hostPart)) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("::"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), 10);
                 } else {
                     BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();
                     Resolver.getDefault().resolveV4(hostPart, cb);
                     InetAddress inet = cb.block();
-                    handle = getGroup(currentAlias).add(hostPart, hostPart, new InetSocketAddress(inet, port), InetAddress.getByName("0.0.0.0"), 10);
+                    handle = getGroup(currentAlias).add(hostPart, hostPart, new InetSocketAddress(inet, port), 10);
                 }
 
                 // this will be used when connection establishes to remote

@@ -59,15 +59,15 @@ public class TestSocks5 {
         elg0 = new EventLoopGroup("elg0");
         elg0.add("el0");
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), InetAddress.getByName("127.0.0.1"), 10);
-        sg0.add("svr1", new InetSocketAddress("::1", 19081), InetAddress.getByName("::1"), 10);
+        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), 10);
+        sg0.add("svr1", new InetSocketAddress("::1", 19081), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg0.getServerHandles()) {
             h.healthy = true;
         }
         domainDotComGroup = new ServerGroup("domain.com:80", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        domainDotComGroup.add("svr2", new InetSocketAddress("127.0.0.1", 19082), InetAddress.getByName("127.0.0.1"), 10);
-        domainDotComGroup.add("svr3", new InetSocketAddress("127.0.0.1", 19083), InetAddress.getByName("127.0.0.1"), 10);
+        domainDotComGroup.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
+        domainDotComGroup.add("svr3", new InetSocketAddress("127.0.0.1", 19083), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : domainDotComGroup.getServerHandles()) {
             h.healthy = true;

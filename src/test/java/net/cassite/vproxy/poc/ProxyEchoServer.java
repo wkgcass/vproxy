@@ -29,12 +29,7 @@ public class ProxyEchoServer {
             .setAcceptLoop(netEventLoop)
             .setConnGen(() -> conn -> {
                 // connect to localhost 19080
-                try {
-                    return new Connector(new InetSocketAddress("127.0.0.1", 19080),
-                        new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 0));
-                } catch (UnknownHostException e) {
-                    return null;
-                }
+                return new Connector(new InetSocketAddress("127.0.0.1", 19080));
             })
             .setHandleLoopProvider(() -> netEventLoop) // use same event loop as the acceptor for demonstration
             .setServer(server)

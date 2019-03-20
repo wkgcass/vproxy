@@ -104,7 +104,6 @@ public class ServerGroup {
         public final String hostName;
         private final ServerHealthCheckHandler handler = new ServerHealthCheckHandler();
         public final InetSocketAddress server;
-        public final InetAddress local;
         private int weight;
         private ServerHandle toLogicDelete; // the server will be deleted when this server is UP, may be null
         EventLoopWrapper el;
@@ -124,14 +123,12 @@ public class ServerGroup {
         ServerHandle(String alias, /**/long sid/**/,
                      String hostName,
                      InetSocketAddress server,
-                     InetAddress local,
                      int initialWeight,
                      ServerHandle toLogicDelete) {
             this.alias = alias;
             this.sid = sid;
             this.hostName = hostName;
             this.server = server;
-            this.local = local;
             this.weight = initialWeight;
             this.toLogicDelete = toLogicDelete;
         }
@@ -204,7 +201,7 @@ public class ServerGroup {
                 return;
             }
             el = w;
-            healthCheckClient = new TCPHealthCheckClient(el, server, local, healthCheckConfig, healthy, handler);
+            healthCheckClient = new TCPHealthCheckClient(el, server, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
@@ -583,12 +580,12 @@ public class ServerGroup {
         return new HealthCheckConfig(healthCheckConfig);
     }
 
-    public synchronized ServerHandle add(String alias, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        return add(alias, null, server, local, weight);
+    public synchronized ServerHandle add(String alias, InetSocketAddress server, int weight) throws AlreadyExistException {
+        return add(alias, null, server, weight);
     }
 
-    public synchronized ServerHandle add(String alias, /*nullable*/ String hostName, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
-        return add(alias, hostName, false, server, local, weight);
+    public synchronized ServerHandle add(String alias, /*nullable*/ String hostName, InetSocketAddress server, int weight) throws AlreadyExistException {
+        return add(alias, hostName, false, server, weight);
     }
 
     public synchronized void replaceIp(String alias, InetAddress newIp) throws NotFoundException {
@@ -609,7 +606,7 @@ public class ServerGroup {
         try {
             add(alias, toReplace.hostName, true,
                 new InetSocketAddress(newIp, toReplace.server.getPort()),
-                toReplace.local, toReplace.weight);
+                toReplace.weight);
         } catch (AlreadyExistException e) {
             // should not raise the error
             Logger.shouldNotHappen("should not raise AlreadyExist when replace", e);
@@ -631,11 +628,10 @@ public class ServerGroup {
      *                 if true and the server with same alias not found, it will simply add.
      *                 the old server will be set to weight 0 and logic delete and will be removed when no connections
      * @param server   ip:port, ip is resolved
-     * @param local    the local socket
      * @param weight   server weight
      * @throws AlreadyExistException already exists
      */
-    private synchronized ServerHandle add(String alias, String hostName, boolean replace, InetSocketAddress server, InetAddress local, int weight) throws AlreadyExistException {
+    private synchronized ServerHandle add(String alias, String hostName, boolean replace, InetSocketAddress server, int weight) throws AlreadyExistException {
         // set the hostName to null if it's an ip literal
         if (hostName != null && Utils.isIpLiteral(hostName))
             hostName = null;
@@ -661,7 +657,7 @@ public class ServerGroup {
 
         // attach new server
         ServerHandle handle = new ServerHandle(
-            alias, idForServer.getAndIncrement(), hostName, server, local, weight, toLogicDelete);
+            alias, idForServer.getAndIncrement(), hostName, server, weight, toLogicDelete);
         handle.start();
         ArrayList<ServerHandle> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
