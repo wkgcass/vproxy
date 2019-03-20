@@ -8,7 +8,6 @@ public enum Param {
     elg("event-loop-group"),
     aelg("acceptor-elg"),
     addr("address"),
-    ip("via"),
     sgs("server-groups"),
     inbuffersize("in-buffer-size"),
     outbuffersize("out-buffer-size"),
