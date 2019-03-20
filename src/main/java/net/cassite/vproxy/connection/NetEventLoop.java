@@ -296,9 +296,15 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;
             assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
-            // remove read event add write event (maybe more bytes to write)
-            ctx.modify(SelectionKey.OP_WRITE);
-            // the connection will be closed after write
+            if (cctx.connection.getOutBuffer().used() == 0) {
+                // directly close here if no data needs to be sent
+                cctx.connection.close();
+                cctx.handler.closed(cctx);
+            } else {
+                // remove read event add write event (maybe more bytes to write)
+                ctx.modify(SelectionKey.OP_WRITE);
+                // the connection will be closed after write
+            }
             return;
         }
         if (read == 0) {
@@ -384,6 +390,7 @@ class HandlerForClientConnection extends HandlerForConnection {
             cctx.handler.exception(cctx, e);
             return;
         }
+        cctx.connection.regenId();
         if (!connected) {
             Logger.shouldNotHappen("the connection is not connected, should not fire the event");
         }

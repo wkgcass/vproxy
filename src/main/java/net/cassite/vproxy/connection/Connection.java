@@ -130,8 +130,8 @@ public class Connection implements NetFlowRecorder {
     }
 
     public final InetSocketAddress remote;
-    protected final InetSocketAddress local;
-    protected final String _id;
+    protected InetSocketAddress local; // may be modified if not connected (in this case, local will be null)
+    protected String _id; // may be modified if local was null
     public final SocketChannel channel;
 
     // fields for closing the connection
@@ -175,8 +175,11 @@ public class Connection implements NetFlowRecorder {
         this.remote = remote;
         { // try to retrieve real port
             if (local.getPort() == 0) {
-                local = new InetSocketAddress(local.getAddress(),
-                    ((InetSocketAddress) ((NetworkChannel) channel).getLocalAddress()).getPort());
+                InetSocketAddress sockAddr = ((InetSocketAddress) ((NetworkChannel) channel).getLocalAddress());
+                if (sockAddr != null) { // the local will be null if did not call `bind()`
+                    local = new InetSocketAddress(local.getAddress(),
+                        sockAddr.getPort());
+                }
             }
         }
         this.local = local;
