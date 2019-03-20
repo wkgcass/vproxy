@@ -7,7 +7,6 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.InterruptedByTimeoutException;
 

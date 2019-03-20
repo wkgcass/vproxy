@@ -3,7 +3,6 @@ package net.cassite.vproxy.connection;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class Connector {

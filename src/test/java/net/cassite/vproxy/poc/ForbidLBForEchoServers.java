@@ -16,7 +16,6 @@ import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 @SuppressWarnings("Duplicates")

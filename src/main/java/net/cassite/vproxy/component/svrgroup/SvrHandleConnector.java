@@ -5,7 +5,6 @@ import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class SvrHandleConnector extends Connector {
     private final ServerGroup.ServerHandle serverHandle;

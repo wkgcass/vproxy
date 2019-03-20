@@ -11,7 +11,6 @@ import net.cassite.vproxy.util.BlockCallback;
 import org.junit.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.channels.InterruptedByTimeoutException;
 

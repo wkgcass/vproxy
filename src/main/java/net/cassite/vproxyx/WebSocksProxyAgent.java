@@ -1,14 +1,10 @@
 package net.cassite.vproxyx;
 
 import net.cassite.vproxy.app.cmd.handle.resource.ServerHandle;
-import net.cassite.vproxy.component.check.CheckProtocol;
-import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.proxy.ConnectorGen;
 import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
-import net.cassite.vproxy.component.svrgroup.Method;
-import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;

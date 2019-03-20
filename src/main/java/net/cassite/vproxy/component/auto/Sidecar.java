@@ -14,9 +14,7 @@ import net.cassite.vproxy.util.ConcurrentHashSet;
 import net.cassite.vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;

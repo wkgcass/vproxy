@@ -12,7 +12,6 @@ import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.Arrays;
 

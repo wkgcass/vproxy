@@ -9,7 +9,6 @@ import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class RESPClientUtils {

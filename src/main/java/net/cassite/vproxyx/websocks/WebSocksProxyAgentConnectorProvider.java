@@ -16,8 +16,6 @@ import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Consumer;
 
