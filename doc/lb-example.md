@@ -34,7 +34,7 @@ then every server listens on `0.0.0.0:80`.
 
 ## VPROXY
 
-#### Start
+#### 1. Start
 
 Start vproxy instance, and create a `RESPController` for management:
 
@@ -48,7 +48,7 @@ java net.cassite.vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
 
 Start the vproxy and start a resp-controller and bind `10.0.3.10:16379` for the `ADMIN` to access.
 
-#### Use redis-cli
+#### 2. Use redis-cli
 
 Start a `redis-cli` on `ADMIN`:
 
@@ -58,7 +58,7 @@ redis-cli -h 10.0.3.10 -p 16379 -a m1PasSw0rd
 
 The following commands can be executed from the `redis-cli` (telnet also works).
 
-#### Threads
+#### 3. Threads
 
 Create two event loop groups: one for accepting connections, and one for handling net flow.
 
@@ -79,7 +79,7 @@ add event-loop worker2 to event-loop-group worker
 add event-loop worker3 to event-loop-group worker
 ```
 
-#### Backends
+#### 4. Backends
 
 Create a server group named `ngx`.
 
@@ -92,9 +92,9 @@ We use the worker event loop group to run health check.
 Attach backends to the group:
 
 ```
-add server backend1 to server-group ngx address 10.0.2.1:80 via 10.0.2.10 weight 10
-add server backend2 to server-group ngx address 10.0.2.2:80 via 10.0.2.10 weight 10
-add server backend3 to server-group ngx address 10.0.2.3:80 via 10.0.2.10 weight 10
+add server backend1 to server-group ngx address 10.0.2.1:80 weight 10
+add server backend2 to server-group ngx address 10.0.2.2:80 weight 10
+add server backend3 to server-group ngx address 10.0.2.3:80 weight 10
 ```
 
 You can use `list-detail` to check current health check status.
@@ -110,7 +110,7 @@ add server-groups backend-groups
 add server-group ngx to server-groups backend-groups
 ```
 
-#### TCP LB
+#### 5. TCP LB
 
 Create a loadbalancer and bind `10.0.0.10:80`.
 
@@ -120,7 +120,7 @@ add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:8
 
 Then the tcp loadbalancer starts.
 
-#### Check and save config
+#### 6. Check and save config
 
 You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCallInNonStdIOController` on start up, but methods related to local filesystem or process will not be allowed for safety concern).
 

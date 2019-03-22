@@ -10,7 +10,7 @@ vproxy有许多种使用方式：
 * RESPController: 使用`redis-cli`或者`telnet`来操作vproxy实例。
 * Service Mesh: 让集群中的节点自动互相识别以及处理网络流量。
 
-## 配置文件
+## 1. 配置文件
 
 vproxy配置文件是一个文本文件，每一行都是一条vproxy指令。  
 vproxy实例会解析每一行并一个一个的执行命令。  
@@ -20,7 +20,7 @@ vproxy实例会解析每一行并一个一个的执行命令。
 
 有三种方式来使用配置文件：
 
-#### 最后一次自动保存的配置文件
+#### 1.1. 最后一次自动保存的配置文件
 
 vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。  
 如果使用`sigint`，`sighup`关闭或者手动关闭，配置文件也会自动保存。
@@ -29,7 +29,7 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 
 总体来说，你只需要配置一次，然后就不用再关心配置文件了。
 
-#### 启动参数
+#### 1.2. 启动参数
 
 在启动时附带参数 `load ${filename}` 来加载配置文件:
 
@@ -39,7 +39,7 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 java net.cassite.vproxy.app.Main load ~/vproxy.conf
 ```
 
-#### system call 指令
+#### 1.3. System call 指令
 
 启动一个vproxy实例：
 
@@ -54,7 +54,7 @@ java net.cassite.vproxy.app.Main
 > System call: load ~/vproxy.conf             --- 从文件中读取配置
 ```
 
-## 使用 StdIOController
+## 2. 使用 StdIOController
 
 启动vproxy实例：
 
@@ -64,10 +64,9 @@ java net.cassite.vproxy.app.Main
 
 这样，StdIOController就启动了。你可以通过stdin输入命令。
 
-It's recommended to start vproxy instance via tmux or screen if you rely on the StdIOController.
 如果你经常使用StdIOController，那么推荐在tmux或者screen里启动vproxy实例。
 
-## 使用 RESPController
+## 3. 使用 RESPController
 
 `RESPController` 监听一个端口，并且使用 REdis Serialization Protocol 来传输命令和结果。  
 通过该Controller，你就可以使用`redis-cli`来操作vproxy实例了。
@@ -79,7 +78,7 @@ It's recommended to start vproxy instance via tmux or screen if you rely on the 
 
 你可以在启动时开启RESPController，或者在StdIOController中输入命令来启动。
 
-#### 启动参数
+#### 3.1 启动参数
 
 使用 `resp-controller ${address} ${password}` 启动参数来启动 RESPController。
 
@@ -96,7 +95,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 127.0.0.1:16379> man
 ```
 
-#### system call 命令
+#### 3.2. System call 命令
 
 启动vproxy实例：
 
@@ -126,7 +125,7 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 >
 ```
 
-## Service Mesh
+## 4. Service Mesh
 
 在启动时指定service mesh配置文件：
 
@@ -169,7 +168,7 @@ srem service $your_service_domain:$protocol_port:$local_port
 4. 在app关闭前，使用redis客户端来注销服务，并且等待流量跑完。
 5. 注意: 外部流量不应当经过sidecar（socks5代理），因为vproxy网络并不知道如何访问外部资源。
 
-## 例子和解释
+## 5. 例子和解释
 
 ### 配置文件
 
@@ -182,7 +181,7 @@ add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 serve
 add event-loop el0 to event-loop-group elg0
 add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0
 add server-group sg0 to server-groups sgs0 weight 10
-add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10
+add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
 
 保存之，比如说保存到`~/vproxy.conf`。
@@ -213,11 +212,10 @@ System call: add resp-controller r0 addr 0.0.0.0:16379 pass 123456
 redis-cli -p 16379 -h $vproxy主机的ip地址 -a 123456 [$你还可以直接在这里输入命令]
 ```
 
-你需要知道：`redis-cli`会自行处理`help`命令（打印redis-cli自己的帮助信息），所以我们提供了一个新命令，叫做`man`，用来获取帮助信息，内容和在stdIO中的`help`命令一样。
+注意：`redis-cli`会自行处理`help`命令（打印redis-cli自己的帮助信息），所以我们提供了一个新命令，叫做`man`，用来获取帮助信息，内容和在stdIO中的`help`命令一样。
 
 ### 通过stdio或者redis-cli操作的详细步骤
 
-To create a tcp loadbalancer, you can:
 如果要创建一个tcp负载均衡，你可以：
 
 1. 通过 `net.cassite.vproxy.app.Main` 启动程序
@@ -245,8 +243,8 @@ To create a tcp loadbalancer, you can:
     这条命令创建了一个名叫`sg0`的主机组；健康检查配置为：检查超时时间为1秒，每3秒检查一次，如果有4次成功的检查则将节点视为UP，如果有5次失败则将节点视为DOWN；从组里取节点的算法为`wrr`。
 2. `add server-group sg0 to server-groups sgs0 weight 10`  
     这条命令将主机组`sg0`加入了ServerGroups `sgs0`。将`sg0`加入`sgs0`是因为tcp负载均衡使用`sgs0`作为它的后端服务器列表。
-3. `add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10`  
-    这条命了往主机组`sg0`里添加了一个名为`s0`的新主机。远端地址为`127.0.0.1:12345`，通过`127.0.0.1`访问它，这个主机在组里的权重是`10`。
+3. `add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10`  
+    这条命令往主机组`sg0`里添加了一个名为`s0`的新主机。远端地址为`127.0.0.1:12345`，这个主机在组里的权重是`10`。
 
 过几秒后你应当能看到一个日志，告诉你刚才刚刚加入的主机状态变为UP。在这之后，负载均衡就可以正常接收请求了。
 
@@ -264,14 +262,17 @@ $action $resource-type [$resource-alias] [in $resource-type $resource-alias [in 
 举个例子：
 
 ```
-add server myserver0 to server-group group0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10
+add server myserver0 to server-group group0 address 127.0.0.1:12345 weight 10
 ```
 
-这条语句表示：我想要往主机组`group0`里添加一个一个名叫`myserver0`的主机，这个机子地址是`127.0.0.1:12345`，并且我想要通过`127.0.0.1`来访问它。这台机子在这个组里的权重为`10`。
+这条语句表示：我想要往主机组`group0`里添加一个一个名叫`myserver0`的主机，这个机子地址是`127.0.0.1:12345`。这台机子在这个组里的权重为`10`。
 
-You can use `help` command to check all available resources and params.
-你可以通过`help`命令来查看所有可用的资源和参数。
+你可以通过`help`或者`man`命令来查看所有可用的资源和参数。例如:
 
-> `flag(标志)`目前还没有在使用，不过为了扩展考虑算作语法的一部分。
+```
+> help
+> man
+> man tcp-lb
+```
 
-vproxy并不提供像nginx或者haproxy那样的配置文件。vproxy配置看起来更像ipvsadm。你可以控制许多底层组件，例如线程和EventLoop。并且你还可以不必重启地在运行时修改所有组件。
+vproxy并不提供像nginx或者haproxy那样的配置文件。vproxy配置看起来更像ipvsadm。你可以控制许多底层组件，例如线程和EventLoop。并且你还可以在运行时修改所有组件，而不必重启进程。

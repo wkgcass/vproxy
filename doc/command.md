@@ -437,14 +437,13 @@ remove event-loop el0 from event-loop-group elg0
 
 #### add to
 
-Specify name, remote ip:port, local request ip, weight, and attach the server into the server group
+Specify name, remote ip:port, weight, and attach the server into the server group
 
 * address (addr): remote address, ip:port
-* ip (via): local request ip address
 * weight: weight of the server, which will be used by wrr and wlc algorithm
 
 ```
-add server svr0 to server-group sg0 address 127.0.0.1:6379 via 127.0.0.1 weight 10
+add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
 "OK"
 ```
 
@@ -463,7 +462,7 @@ Retrieve detailed info of all servers in a server group.
 
 ```
 list-detail server in server-group sg0
-1) "svr0 -> connect to 127.0.0.1:6379 via 127.0.0.1 weight 10 currently DOWN"
+1) "svr0 -> connect to 127.0.0.1:6379 weight 10 currently DOWN"
 ```
 
 #### update
@@ -599,7 +598,6 @@ Retrieve detailed info of all persisted connectors.
 list-detail persist in tl lb0
 1) 1) "client: 127.0.0.1"
    2) "server: 127.0.0.1:16666"
-   3) "   via: 127.0.0.1:0"
 ```
 
 #### force-remove

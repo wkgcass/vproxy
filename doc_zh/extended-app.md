@@ -1,6 +1,6 @@
 # 扩展应用
 
-vproxy 不但支持传统的负载均衡、socks5服务、service mesh、服务发现，还支持一些特定领域使用的应用。
+vproxy 不但支持传统的负载均衡、socks5服务、service mesh、服务发现，还支持一些非通用需求的应用。
 
 ## 如何使用
 

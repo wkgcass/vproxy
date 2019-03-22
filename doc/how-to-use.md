@@ -10,7 +10,7 @@ There are multiple ways of using vproxy:
 * RESPController: use `redis-cli` or `telnet` to operate the vproxy instance.
 * Service Mesh: let the nodes in the cluster to automatically find each other and handle network traffic.
 
-## Config file
+## 1. Config file
 
 VProxy configuration is a text file, each line is a vproxy command.  
 The vproxy instance will parse all lines then run all commands one by one.  
@@ -20,7 +20,7 @@ See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) f
 
 There are 3 ways of using a config file:
 
-#### last auto saved config
+#### 1.1. last auto saved config
 
 The vproxy instance saves current config to `~/.vproxy.last` for every hour.  
 The config will also be saved when the process got `sigint`, `sighup` or manually shutdown via controller.
@@ -29,7 +29,7 @@ If you start vproxy instance without a `load` argument, the last saved config wi
 
 Generally, you only need to configure once and don't have to worry about the config file any more.
 
-#### startup argument
+#### 1.2. startup argument
 
 Use `load ${filename}` to load a configuration file when the vproxy instance starts:
 
@@ -42,7 +42,7 @@ java net.cassite.vproxy.app.Main load ~/vproxy.conf
 > Multiple config files can be specified, will be executed in parallel.  
 > Also, arguments in different categories can be combined, e.g. you can specify `load ...` and `resp-controller ... ...` at the same time.
 
-#### system call command
+#### 1.3. system call command
 
 Start the vproxy instance:
 
@@ -57,7 +57,7 @@ Then type in:
 > System call: load ~/vproxy.conf             --- loads config from a file
 ```
 
-## Use StdIOController
+## 2. Use StdIOController
 
 Start the vproxy instance:
 
@@ -69,7 +69,7 @@ Then the StdIOController starts, you can type in commands via standard input.
 
 It's recommended to start vproxy instance via tmux or screen if you rely on the StdIOController.
 
-## Use RESPController
+## 3. Use RESPController
 
 `RESPController` listens on a port and uses the REdis Serialization Protocol for transporting commands and results.  
 With the controller, you can use `redis-cli` to operate the vproxy instance.
@@ -81,7 +81,7 @@ With the controller, you can use `redis-cli` to operate the vproxy instance.
 
 You can start RESPController on startup or using a command in StdIOController.
 
-#### startup argument
+#### 3.1 startup argument
 
 Use `resp-controller ${address} ${password}` arguments to start the RESPController.
 
@@ -97,7 +97,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 127.0.0.1:16379> man
 ```
 
-#### system call command
+#### 3.2. system call command
 
 Start the vproxy instance:
 
@@ -127,7 +127,7 @@ To stop a RESPController, you can type in:
 >
 ```
 
-## Service Mesh
+## 4. Service Mesh
 
 Specify the service mesh config file when starting:
 
@@ -170,7 +170,7 @@ User app is recommended to:
 4. Use redis client to deregister the service and wait for traffic to end before the app stops.
 5. Note that: external traffic should not go through the sidecar(socks5 proxy) (because the vproxy network does not know how to make requests to external resources).
 
-## Example and Explanation
+## 5. Example and Explanation
 
 ### Config file
 
@@ -183,7 +183,7 @@ add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 serve
 add event-loop el0 to event-loop-group elg0
 add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0
 add server-group sg0 to server-groups sgs0 weight 10
-add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10
+add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
 
 and save it, perhaps you can save it into `~/vproxy.conf`.
@@ -245,8 +245,8 @@ To add a backend, you can:
     which creates a server group named `sg0`; the health check configurations are: check timeout is 1 second, check every 3 seconds, consider the server UP when got 4 successful checks and consider the server DOWN when got 5 failed checks; the method of retrieving server from this group is `wrr`
 2. `add server-group sg0 to server-groups sgs0 weight 10`  
     which adds the server group `sg0` into serverGroups `sgs0`. Adding `sg0` to `sgs0` is because the tcp-lb is using `sgs0` as its backend server groups
-3. `add server s0 to server-group sg0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10`  
-    which adds a new server named `s0` into server group `sg0` with remote address `127.0.0.1:12345`, and you want to visit it via `127.0.0.1`, the weight of the server in this group is `10`
+3. `add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10`  
+    which adds a new server named `s0` into server group `sg0`, the weight of the server in this group is `10`
 
 You may expect a log telling you that the server you just added is turned to UP in a few seconds. Then the loadbalancer is ready for connections.
 
@@ -264,13 +264,17 @@ $action $resource-type [$resource-alias] [in $resource-type $resource-alias [in 
 Here's an example:
 
 ```
-add server myserver0 to server-group group0 address 127.0.0.1:12345 ip 127.0.0.1 weight 10
+add server myserver0 to server-group group0 address 127.0.0.1:12345 weight 10
 ```
 
-which says that: I want to add a server named `myserver0` into server group `group0`, whose address is `127.0.0.1:12345` and I want to visit this address via ip `127.0.0.1`, the server's weight in this group is set to `10`.
+which says that: I want to add a server named `myserver0` into server group `group0`, whose address is `127.0.0.1:12345`, the server's weight in this group is set to `10`.
 
-You can use `help` command to check all available resources and params.
+You can use `help` command to check all available resources and params. e.g.
 
-> `flag`s are not used for now, but is part of syntax for further extension.
+```
+> help
+> man
+> man tcp-lb
+```
 
 VProxy does not provide configuration like nginx or haproxy, it looks more like ipvsadm. You can have full control of all low level components such as threads and event loops. Also you can modify all components during the runtime without a reload.

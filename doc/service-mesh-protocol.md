@@ -210,7 +210,7 @@ Khala messages use the same tcp server of discovery, but changes the req/resp me
           type: enum {nexus, pylon}. the khala node type.
           service: a string. the service name of the node.
           zone: a string. the zone name of the node.
-          address: an ip string. the listeneing address. might not be the same as discovery node address.
+          address: an ip string. the listening address. might not be the same as discovery node address.
           port: an integer. the listening port.
         }
       ]

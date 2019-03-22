@@ -397,7 +397,6 @@ public class HelpCommand {
         down("down", null, "health check down times"),
         method("method", "meth", "method to retrieve a server"),
         weight("weight", "w", "weight"),
-        ip("ip", "via", "ip address"),
         dft("default", null, "enum: allow or deny"),
         network("network", "net", "network: $network/$mask"),
         protocol("protocol", null, "enum: tcp or udp"),
@@ -418,8 +417,8 @@ public class HelpCommand {
     }
 
     public enum FlagMan {
-        noipv4("noipv4", null, "do not use ipv4 address. Use with address|ip|via"),
-        noipv6("noipv6", null, "do not use ipv6 address. Use with address|ip|via"),
+        noipv4("noipv4", null, "do not use ipv4 address. Use the flag with param: address"),
+        noipv6("noipv6", null, "do not use ipv6 address. Use the flag with param: address"),
         allownonbackend("allow-non-backend", null, "allow to access non backend endpoints"),
         denynonbackend("deny-non-backend", null, "only able to access backend endpoints"),
         ;
@@ -741,15 +740,14 @@ public class HelpCommand {
             )),
         server("server", "svr", "a remote endpoint",
             Arrays.asList(
-                new ResActMan(ActMan.addto, "specify name, remote ip:port, local request ip, weight, and attach the server into the server group",
+                new ResActMan(ActMan.addto, "specify name, remote ip:port, weight, and attach the server into the server group",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.address, "remote address, ip:port"),
-                        new ResActParamMan(ParamMan.ip, "local request ip address"),
                         new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr and wlc algorithm")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add server svr0 to server-group sg0 address 127.0.0.1:6379 via 127.0.0.1 weight 10",
+                            "add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10",
                             "\"OK\""
                         )
                     )),
@@ -766,7 +764,7 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "list-detail server in server-group sg0",
-                            "1) \"svr0 -> connect to 127.0.0.1:6379 via 127.0.0.1 weight 10 currently DOWN\""
+                            "1) \"svr0 -> connect to 127.0.0.1:6379 weight 10 currently DOWN\""
                         )
                     )),
                 new ResActMan(ActMan.update, "change weight of the server",
@@ -883,8 +881,7 @@ public class HelpCommand {
                         new Tuple<>(
                             "list-detail persist in tl lb0",
                             "1) 1) \"client: 127.0.0.1\"\n" +
-                                "   2) \"server: 127.0.0.1:16666\"\n" +
-                                "   3) \"   via: 127.0.0.1:0\""
+                                "   2) \"server: 127.0.0.1:16666\"\n"
                         )
                     )),
                 new ResActMan(ActMan.forceremove, "specify the source (client) address string and remove the persist record",
