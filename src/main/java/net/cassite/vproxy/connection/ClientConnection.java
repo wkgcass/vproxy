@@ -8,18 +8,6 @@ import java.net.*;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
-    private static final Inet4Address anyAddr4;
-    private static final Inet6Address anyAddr6;
-
-    static {
-        try {
-            anyAddr4 = (Inet4Address) InetAddress.getByName("0.0.0.0");
-            anyAddr6 = (Inet6Address) InetAddress.getByName("[0000:0000:0000:0000:0000:0000:0000:0000]");
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-    }
-
     Connector connector; // maybe null, only for recording purpose, will not be used by the connection lib
 
     public Connector getConnector() {
@@ -41,6 +29,9 @@ public class ClientConnection extends Connection {
     private ClientConnection(SocketChannel channel, InetSocketAddress remote,
                              RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         super(channel, remote, null, inBuffer, outBuffer);
+
+        // we want to simply reset the connection when closing
+        channel.setOption(StandardSocketOptions.SO_LINGER, 0);
     }
 
     // generate the id if not specified in constructor

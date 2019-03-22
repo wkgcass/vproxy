@@ -8,7 +8,6 @@ import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.List;
@@ -160,7 +159,7 @@ public class Connection implements NetFlowRecorder {
 
     Connection(SocketChannel channel,
                InetSocketAddress remote, InetSocketAddress local,
-               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+               RingBuffer inBuffer, RingBuffer outBuffer) {
 
         this.channel = channel;
         this.inBuffer = inBuffer;
@@ -176,9 +175,6 @@ public class Connection implements NetFlowRecorder {
         this.getOutBuffer().addHandler(outBufferETHandler);
         // in the outBufferETHandler
         // if buffer did not wrote all content, simply ignore the left part
-
-        // we want to simply reset the connection when closing
-        channel.setOption(StandardSocketOptions.SO_LINGER, 0);
     }
 
     // --- START statistics ---
