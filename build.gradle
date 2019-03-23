@@ -5,7 +5,7 @@ plugins {
 group 'net.cassite'
 version loadVersion()
 
-sourceCompatibility = 1.8
+sourceCompatibility = 11.0
 
 repositories {
     mavenCentral()

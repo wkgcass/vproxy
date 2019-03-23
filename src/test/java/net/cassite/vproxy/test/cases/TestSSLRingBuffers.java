@@ -75,7 +75,7 @@ public class TestSSLRingBuffers {
         NetEventLoop loop = new NetEventLoop(selectorEventLoop);
 
         // create connection
-        SSLContext ctx = SSLContext.getInstance("TLS");
+        SSLContext ctx = SSLContext.getInstance("TLSv1.2");
         ctx.init(null, null, null);
         SSLEngine engine = ctx.createSSLEngine(host, port);
         engine.setUseClientMode(true);
@@ -197,7 +197,7 @@ public class TestSSLRingBuffers {
         TrustManagerFactory tmf = TrustManagerFactory.getInstance("SunX509");
         tmf.init(ts);
 
-        SSLContext context = SSLContext.getInstance("TLS");
+        SSLContext context = SSLContext.getInstance("TLSv1.2");
         context.init(kmf.getKeyManagers(), tmf.getTrustManagers(), null);
 
         SSLEngine serverEngine = context.createSSLEngine();

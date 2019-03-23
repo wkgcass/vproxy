@@ -233,7 +233,7 @@ public class WebSocksUtils {
         }
 
         try {
-            sslContext = SSLContext.getInstance("TLS");
+            sslContext = SSLContext.getInstance("TLSv1.2");
             sslContext.init(kms, tms, null);
         } catch (KeyManagementException e) {
             sslContext = null;
