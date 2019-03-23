@@ -19,23 +19,22 @@ public class ClientConnection extends Connection {
                                           ConnectionOpts opts,
                                           RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         SocketChannel channel = SocketChannel.open();
-        channel.configureBlocking(false);
-        channel.connect(remote);
         try {
+            channel.configureBlocking(false);
+            // we want to simply reset the connection when closing
+            channel.setOption(StandardSocketOptions.SO_LINGER, 0);
+            channel.connect(remote);
             return new ClientConnection(channel, remote, opts, inBuffer, outBuffer);
         } catch (IOException e) {
-            channel.close(); // close the channel if create ClientConnection failed
+            channel.close();
             throw e;
         }
     }
 
     private ClientConnection(SocketChannel channel, InetSocketAddress remote,
                              ConnectionOpts opts,
-                             RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+                             RingBuffer inBuffer, RingBuffer outBuffer) {
         super(channel, remote, null, opts, inBuffer, outBuffer);
-
-        // we want to simply reset the connection when closing
-        channel.setOption(StandardSocketOptions.SO_LINGER, 0);
     }
 
     // generate the id if not specified in constructor

@@ -27,7 +27,11 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        handler.exception(pctx, err);
+        if ("Connection reset by peer".equals(err.getMessage())) {
+            handler.end(pctx);
+        } else {
+            handler.exception(pctx, err);
+        }
         ctx.connection.close(); // close the connection when got exception
     }
 
