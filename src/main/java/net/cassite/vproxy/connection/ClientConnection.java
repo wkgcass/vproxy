@@ -4,7 +4,8 @@ import net.cassite.vproxy.util.RingBuffer;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
@@ -14,12 +15,14 @@ public class ClientConnection extends Connection {
         return connector;
     }
 
-    public static ClientConnection create(InetSocketAddress remote, RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+    public static ClientConnection create(InetSocketAddress remote,
+                                          ConnectionOpts opts,
+                                          RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         SocketChannel channel = SocketChannel.open();
         channel.configureBlocking(false);
         channel.connect(remote);
         try {
-            return new ClientConnection(channel, remote, inBuffer, outBuffer);
+            return new ClientConnection(channel, remote, opts, inBuffer, outBuffer);
         } catch (IOException e) {
             channel.close(); // close the channel if create ClientConnection failed
             throw e;
@@ -27,8 +30,9 @@ public class ClientConnection extends Connection {
     }
 
     private ClientConnection(SocketChannel channel, InetSocketAddress remote,
+                             ConnectionOpts opts,
                              RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        super(channel, remote, null, inBuffer, outBuffer);
+        super(channel, remote, null, opts, inBuffer, outBuffer);
 
         // we want to simply reset the connection when closing
         channel.setOption(StandardSocketOptions.SO_LINGER, 0);

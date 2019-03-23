@@ -45,11 +45,6 @@ public class EventLoopWrapper extends NetEventLoop {
         public void exception(ServerHandlerContext ctx, IOException err) {
             handler.exception(ctx, err);
         }
-
-        @Override
-        public ConnectionHandler udpHandler(ServerHandlerContext ctx, Connection conn) {
-            return handler.udpHandler(ctx, conn);
-        }
     }
 
     class ConnectionHandlerWrapper implements ConnectionHandler {

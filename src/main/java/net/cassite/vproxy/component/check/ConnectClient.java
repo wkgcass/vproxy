@@ -122,6 +122,9 @@ public class ConnectClient {
         ClientConnection conn;
         try {
             conn = ClientConnection.create(remote,
+                // we do not use the timeout in connection opts
+                // because we need to divide the timeouts into several steps
+                ConnectionOpts.getDefault(),
                 // set input buffer to 1 to be able to read things
                 // output buffer is not useful at all here
                 RingBuffer.allocate(1), RingBuffer.EMPTY_BUFFER);

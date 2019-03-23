@@ -164,6 +164,7 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
                 conn = new Connection(sock,
                     (InetSocketAddress) sock.getRemoteAddress(),
                     (InetSocketAddress) sock.getLocalAddress(),
+                    sctx.handler.connectionOpts(),
                     ioBuffers.left, ioBuffers.right);
             } catch (IOException e) {
                 Logger.shouldNotHappen("Connection object create failed: " + e);
@@ -231,7 +232,7 @@ class NetEventLoopUtils {
         Connection conn = ctx.connection;
         assert Logger.lowLevelDebug("do reset timeout for " + conn);
 
-        final int timeout = Config.tcpTimeout; // TODO we should support connection timeout
+        final int timeout = conn.timeout;
         int delay;
         if (conn.lastTimestamp == 0) {
             delay = timeout;

@@ -1,6 +1,7 @@
 package net.cassite.vproxy.component.svrgroup;
 
 import net.cassite.vproxy.connection.ClientConnection;
+import net.cassite.vproxy.connection.ConnectionOpts;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.util.RingBuffer;
 
@@ -15,8 +16,8 @@ public class SvrHandleConnector extends Connector {
     }
 
     @Override
-    public ClientConnection connect(RingBuffer in, RingBuffer out) throws IOException {
-        ClientConnection conn = super.connect(in, out);
+    public ClientConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+        ClientConnection conn = super.connect(opts, in, out);
         conn.addNetFlowRecorder(serverHandle);
         serverHandle.attachConnection(conn);
         conn.addConnCloseHandler(serverHandle);

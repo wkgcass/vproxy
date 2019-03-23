@@ -50,7 +50,7 @@ public class RESPClientUtils {
             // use heap buffer here
             // because the connection will be terminated when gets data
             // connection won't last long
-            ClientConnection conn = ClientConnection.create(remote, RingBuffer.allocate(16384), RingBuffer.allocate(16384));
+            ClientConnection conn = ClientConnection.create(remote, ConnectionOpts.getDefault(), RingBuffer.allocate(16384), RingBuffer.allocate(16384));
             loop.addClientConnection(conn, null, new ClientConnectionHandler() {
                 private final RESPParser parser = new RESPParser(16384);
 

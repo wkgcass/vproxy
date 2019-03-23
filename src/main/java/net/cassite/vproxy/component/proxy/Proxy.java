@@ -85,7 +85,9 @@ public class Proxy {
 
             ClientConnection clientConnection;
             try {
-                clientConnection = connector.connect(/*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
+                clientConnection = connector.connect(
+                    /*TODO we need to support customized opts*/ConnectionOpts.getDefault(),
+                    /*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {
                 Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid", e);
                 // it should not happen if user provided endpoint is valid

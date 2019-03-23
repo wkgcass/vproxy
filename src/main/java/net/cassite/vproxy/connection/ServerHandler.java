@@ -20,7 +20,7 @@ public interface ServerHandler {
         // do nothing
     }
 
-    default ConnectionHandler udpHandler(ServerHandlerContext ctx, Connection conn) {
-        throw new UnsupportedOperationException();
+    default ConnectionOpts connectionOpts() {
+        return DefaultConnectionOpts.defaultConnectionOpts;
     }
 }

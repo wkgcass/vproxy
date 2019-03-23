@@ -137,6 +137,7 @@ public class Connection implements NetFlowRecorder {
     // fields for closing the connection
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
     long lastTimestamp;
+    public final int timeout;
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize
@@ -159,9 +160,11 @@ public class Connection implements NetFlowRecorder {
 
     Connection(SocketChannel channel,
                InetSocketAddress remote, InetSocketAddress local,
+               ConnectionOpts opts,
                RingBuffer inBuffer, RingBuffer outBuffer) {
 
         this.channel = channel;
+        this.timeout = opts.timeout;
         this.inBuffer = inBuffer;
         this.outBuffer = outBuffer;
         this.remote = remote;

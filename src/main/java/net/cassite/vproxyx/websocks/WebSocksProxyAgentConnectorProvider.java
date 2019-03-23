@@ -93,7 +93,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 if (useSSL) {
                     conn = CommonProcess.makeSSLConnection(connector);
                 } else {
-                    conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                    conn = connector.connect(
+                        WebSocksUtils.getConnectionOpts(),
+                        RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
                 }
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "make websocks connection for the pool failed", e);
@@ -503,7 +505,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     32768,
                     loop);
             }
-            return connector.connect(pair.left, pair.right);
+            return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
         }
 
         static void sendUpgrade(ClientConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
@@ -633,7 +635,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
                         conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector);
                     } else {
-                        conn = connector.connect(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                        conn = connector.connect(
+                            WebSocksUtils.getConnectionOpts(),
+                            RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
                     }
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
