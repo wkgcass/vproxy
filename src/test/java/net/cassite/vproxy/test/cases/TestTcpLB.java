@@ -594,6 +594,7 @@ public class TestTcpLB {
         String id1 = client1.sendAndRecv("client1msg000"/*13*/, 1);
         // send again to make a difference about outBytes between svr0 and svr1
         client1.sendAndRecv("client1msg001"/*13*/, 1);
+        Thread.sleep(10);
 
         assertEquals("the server is connected once", 1, server.getHistoryAcceptedConnectionCount());
         assertEquals("sent 26 bytes and received 2 bytes", 26, server.getFromRemoteBytes());
@@ -610,6 +611,7 @@ public class TestTcpLB {
         client2.connect();
         clients.add(client2);
         String id2 = client2.sendAndRecv("client2msg0"/*11*/, 1);
+        Thread.sleep(10);
 
         assertEquals("the server is connected twice", 2, server.getHistoryAcceptedConnectionCount());
         assertEquals("sent 11 bytes and received 1 byte", 37, server.getFromRemoteBytes());
