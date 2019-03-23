@@ -1,4 +1,4 @@
-package net.cassite.graal;
+package net.cassite.legacy;
 
 import javax.script.ScriptEngine;
 import javax.script.ScriptEngineManager;

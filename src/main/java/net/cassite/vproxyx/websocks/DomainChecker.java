@@ -1,6 +1,6 @@
 package net.cassite.vproxyx.websocks;
 
-import net.cassite.graal.JsContext;
+import net.cassite.legacy.JsContext;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 

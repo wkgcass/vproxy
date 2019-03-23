@@ -1,6 +1,6 @@
 package net.cassite.vproxyx.websocks;
 
-import net.cassite.graal.JsContext;
+import net.cassite.legacy.JsContext;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.svrgroup.Method;
