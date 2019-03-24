@@ -1,5 +1,6 @@
 package net.cassite.vproxy.component.auto;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.ClosedException;
@@ -93,7 +94,9 @@ public class AutoLB {
             tl = new TcpLB(lbName,
                 config.acceptorGroup, config.workerGroup,
                 new InetSocketAddress(config.bindInetAddress, port),
-                sgs, 16384, 16384, SecurityGroup.allowAll(), 0);
+                sgs,
+                Config.tcpTimeout,
+                16384, 16384, SecurityGroup.allowAll(), 0);
         } catch (IOException | ClosedException | AlreadyExistException e) {
             Logger.shouldNotHappen("got exception when creating tcp lb", e);
             throw e;

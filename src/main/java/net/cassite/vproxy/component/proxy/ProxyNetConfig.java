@@ -1,5 +1,6 @@
 package net.cassite.vproxy.component.proxy;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.NetEventLoop;
 
@@ -10,7 +11,7 @@ public class ProxyNetConfig {
     BindServer server;
     NetEventLoopProvider handleLoopProvider;
     Supplier<ConnectorGen> connGen;
-
+    int timeout = Config.tcpTimeout;
 
     int inBufferSize = 128;
     int outBufferSize = 128;
@@ -67,5 +68,14 @@ public class ProxyNetConfig {
 
     public int getOutBufferSize() {
         return outBufferSize;
+    }
+
+    public int getTimeout() {
+        return timeout;
+    }
+
+    public ProxyNetConfig setTimeout(int timeout) {
+        this.timeout = timeout;
+        return this;
     }
 }

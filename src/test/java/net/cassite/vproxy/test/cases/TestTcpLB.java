@@ -1,5 +1,6 @@
 package net.cassite.vproxy.test.cases;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
@@ -82,7 +83,7 @@ public class TestTcpLB {
         secg0 = new SecurityGroup("secg0", true);
         lb0 = new TcpLB("lb0", elg0, elg0,
             new InetSocketAddress("127.0.0.1", lbPort), sgs0,
-            16384, 16384, secg0, 0);
+            Config.tcpTimeout, 16384, 16384, secg0, 0);
         lb0.start();
 
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
@@ -706,7 +707,7 @@ public class TestTcpLB {
         // start another lb
         TcpLB lb1 = new TcpLB("lb1", elg0, elg0,
             new InetSocketAddress("127.0.0.1", lbPort + 1), sgs0,
-            16384, 16384, secg0, 0);
+            Config.tcpTimeout, 16384, 16384, secg0, 0);
         lb1.start();
 
         // deny lbPort

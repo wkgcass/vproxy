@@ -1,5 +1,6 @@
 package net.cassite.vproxy.test.cases;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
@@ -81,7 +82,8 @@ public class TestSocks5 {
         socks5 = new Socks5Server(
             "socks5", elg0, elg0,
             new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 18080),
-            sgs0, 16384, 16384, SecurityGroup.allowAll()
+            sgs0,
+            Config.tcpTimeout, 16384, 16384, SecurityGroup.allowAll()
         );
         socks5.start();
     }

@@ -16,21 +16,6 @@ import java.util.Collection;
  * the session operations will always be handled in the same event loop
  */
 public class Proxy {
-    private static void utilValidate(ProxyNetConfig config) {
-        if (config.acceptLoop == null)
-            throw new IllegalArgumentException("no accept loop");
-        if (config.connGen == null)
-            throw new IllegalArgumentException("no connection generator");
-        if (config.handleLoopProvider == null)
-            throw new IllegalArgumentException("no handler loop provider");
-        if (config.server == null)
-            throw new IllegalArgumentException("no server");
-        if (config.inBufferSize <= 0)
-            throw new IllegalArgumentException("inBufferSize <= 0");
-        if (config.outBufferSize <= 0)
-            throw new IllegalArgumentException("outBufferSize <= 0");
-    }
-
     private static void utilCloseConnection(Connection connection) {
         assert Logger.lowLevelDebug("close connection " + connection);
         connection.close();
@@ -86,7 +71,7 @@ public class Proxy {
             ClientConnection clientConnection;
             try {
                 clientConnection = connector.connect(
-                    /*TODO we need to support customized opts*/ConnectionOpts.getDefault(),
+                    new ConnectionOpts().setTimeout(config.timeout),
                     /*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {
                 Logger.fatal(LogType.CONN_ERROR, "make passive connection failed, maybe provided endpoint info is invalid", e);
@@ -232,6 +217,11 @@ public class Proxy {
         @Override
         public void removed(ServerHandlerContext ctx) {
             handler.serverRemoved(ctx.server);
+        }
+
+        @Override
+        public ConnectionOpts connectionOpts() {
+            return new ConnectionOpts().setTimeout(config.timeout);
         }
     }
 
@@ -385,7 +375,6 @@ public class Proxy {
     }
 
     public void handle() throws IOException {
-        utilValidate(config);
         config.acceptLoop.addServer(config.server, null, new SessionServerHandler());
     }
 

@@ -1,13 +1,11 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
-import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
-import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
-import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
-import net.cassite.vproxy.app.cmd.handle.param.PersistHandle;
+import net.cassite.vproxy.app.cmd.handle.param.*;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -54,6 +52,9 @@ public class TcpLBHandle {
             PersistHandle.check(cmd);
         else
             cmd.args.put(Param.persist, "0");
+
+        if (cmd.args.containsKey(Param.timeout))
+            TimeoutHandle.get(cmd);
     }
 
     public static void checkUpdateTcpLB(Command cmd) throws Exception {
@@ -93,15 +94,21 @@ public class TcpLBHandle {
         ServerGroups backend = Application.get().serverGroupsHolder.get(cmd.args.get(Param.sgs));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
+        int timeout;
         SecurityGroup secg;
         if (cmd.args.containsKey(Param.secg)) {
             secg = SecurityGroupHandle.get(cmd.args.get(Param.secg));
         } else {
             secg = SecurityGroup.allowAll();
         }
+        if (cmd.args.containsKey(Param.timeout)) {
+            timeout = TimeoutHandle.get(cmd);
+        } else {
+            timeout = Config.tcpTimeout;
+        }
         int persist = PersistHandle.get(cmd);
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg, persist
+            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, secg, persist
         );
     }
 
@@ -121,6 +128,9 @@ public class TcpLBHandle {
         if (cmd.args.containsKey(Param.persist)) {
             tcpLB.persistTimeout = PersistHandle.get(cmd);
         }
+        if (cmd.args.containsKey(Param.timeout)) {
+            tcpLB.setTimeout(TimeoutHandle.get(cmd));
+        }
     }
 
     public static class TcpLBRef {
@@ -135,6 +145,7 @@ public class TcpLBHandle {
             return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
                 + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
                 + " backends " + tcpLB.backends.alias
+                + " timeout " + tcpLB.getTimeout()
                 + " in buffer size " + tcpLB.getInBufferSize() + " out buffer size " + tcpLB.getOutBufferSize()
                 + " persist " + tcpLB.persistTimeout
                 + " security-group " + tcpLB.securityGroup.alias;

@@ -349,6 +349,7 @@ public class Shutdown {
                 String cmd = "add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + tl.server.id() + " server-groups " + tl.backends.alias +
+                    " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " persist " + tl.persistTimeout;
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -389,6 +390,7 @@ public class Shutdown {
                 String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
                     " event-loop-group " + socks5.workerGroup.alias +
                     " address " + socks5.server.id() + " server-groups " + socks5.backends.alias +
+                    " timeout " + socks5.getTimeout() +
                     " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
                     " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
                 if (!socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -448,7 +450,7 @@ public class Shutdown {
             return;
         }
         Command cmd = commands.get(idx);
-        cmd.run(new Callback<CmdResult, Throwable>() {
+        cmd.run(new Callback<>() {
             @Override
             protected void onSucceeded(CmdResult value) {
                 runCommandsOnLoading(commands, idx + 1, cb);

@@ -1,5 +1,6 @@
 package net.cassite.vproxy.poc;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
@@ -33,7 +34,7 @@ public class LBForEchoServers {
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
-            8, 4, // make buffers small to demonstrate what happen when buffer is full
+            Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
             SecurityGroup.allowAll(),
             0
         );

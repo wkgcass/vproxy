@@ -120,6 +120,7 @@ public class TcpLB {
     public final EventLoopGroup workerGroup;
     public final InetSocketAddress bindAddress;
     public final ServerGroups backends;
+    private int timeout; // modifiable
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
     public final SecurityGroup securityGroup;
@@ -155,6 +156,7 @@ public class TcpLB {
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
                  ServerGroups backends,
+                 int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup,
                  int persistTimeout) throws IOException, AlreadyExistException, ClosedException {
@@ -163,6 +165,7 @@ public class TcpLB {
         this.workerGroup = workerGroup;
         this.bindAddress = bindAddress;
         this.backends = backends;
+        this.timeout = timeout;
         this.inBufferSize = inBufferSize;
         this.outBufferSize = outBufferSize;
         this.securityGroup = securityGroup;
@@ -183,6 +186,7 @@ public class TcpLB {
                 assert Logger.lowLevelDebug("use event loop: " + w.alias);
                 return w;
             })
+            .setTimeout(timeout)
             .setInBufferSize(inBufferSize)
             .setOutBufferSize(outBufferSize)
             .setServer(this.server);
@@ -365,11 +369,20 @@ public class TcpLB {
         proxyNetConfig.setOutBufferSize(outBufferSize);
     }
 
+    public void setTimeout(int timeout) {
+        this.timeout = timeout;
+        proxyNetConfig.setTimeout(timeout);
+    }
+
     public int getInBufferSize() {
         return inBufferSize;
     }
 
     public int getOutBufferSize() {
         return outBufferSize;
+    }
+
+    public int getTimeout() {
+        return timeout;
     }
 }

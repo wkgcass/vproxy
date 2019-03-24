@@ -1,14 +1,12 @@
 package net.cassite.vproxy.app.cmd.handle.resource;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Flag;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
-import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
-import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
-import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
-import net.cassite.vproxy.app.cmd.handle.param.PersistHandle;
+import net.cassite.vproxy.app.cmd.handle.param.*;
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -50,6 +48,9 @@ public class Socks5ServerHandle {
             OutBufferSizeHandle.check(cmd);
         else
             cmd.args.put(Param.outbuffersize, "16384");
+
+        if (cmd.args.containsKey(Param.timeout))
+            TimeoutHandle.get(cmd);
     }
 
     public static void checkUpdateSocks5Server(Command cmd) throws Exception {
@@ -89,14 +90,20 @@ public class Socks5ServerHandle {
         ServerGroups backend = Application.get().serverGroupsHolder.get(cmd.args.get(Param.sgs));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
+        int timeout;
         SecurityGroup secg;
+        if (cmd.args.containsKey(Param.timeout)) {
+            timeout = TimeoutHandle.get(cmd);
+        } else {
+            timeout = Config.tcpTimeout;
+        }
         if (cmd.args.containsKey(Param.secg)) {
             secg = SecurityGroupHandle.get(cmd.args.get(Param.secg));
         } else {
             secg = SecurityGroup.allowAll();
         }
         Socks5Server server = Application.get().socks5ServerHolder.add(
-            alias, acceptor, worker, addr, backend, inBufferSize, outBufferSize, secg
+            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, secg
         );
         if (cmd.flags.contains(Flag.allownonbackend)) {
             server.allowNonBackend = true;
@@ -123,6 +130,9 @@ public class Socks5ServerHandle {
         } else if (cmd.flags.contains(Flag.denynonbackend)) {
             socks5.allowNonBackend = false;
         }
+        if (cmd.args.containsKey(Param.timeout)) {
+            socks5.setTimeout(TimeoutHandle.get(cmd));
+        }
     }
 
     public static class Socks5ServerRef {
@@ -137,6 +147,7 @@ public class Socks5ServerHandle {
             return socks5.alias + " -> acceptor " + socks5.acceptorGroup.alias + " worker " + socks5.workerGroup.alias
                 + " bind " + Utils.ipStr(socks5.bindAddress.getAddress().getAddress()) + ":" + socks5.bindAddress.getPort()
                 + " backends " + socks5.backends.alias
+                + " timeout " + socks5.getTimeout()
                 + " in buffer size " + socks5.getInBufferSize() + " out buffer size " + socks5.getOutBufferSize()
                 + " security-group " + socks5.securityGroup.alias
                 + " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
