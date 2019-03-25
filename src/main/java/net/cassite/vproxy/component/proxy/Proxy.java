@@ -40,7 +40,7 @@ public class Proxy {
 
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
-            switch (config.connGen.get().type()) {
+            switch (config.connGen.type()) {
                 case handler:
                     handleHandler(connection);
                     break;
@@ -52,7 +52,7 @@ public class Proxy {
 
         private void handleDirect(Connection connection) {
             // make connection to another end point
-            Connector connector = config.connGen.get().genConnector(connection);
+            Connector connector = config.connGen.genConnector(connection);
             handleDirect(connection, connector);
         }
 
@@ -166,7 +166,7 @@ public class Proxy {
         @SuppressWarnings(/*ignore generics here*/"unchecked")
         private void handleHandler(Connection connection) {
             // retrieve the handler
-            ProtocolHandler pHandler = config.connGen.get().handler();
+            ProtocolHandler pHandler = config.connGen.handler();
             // retrieve an event loop provided by user code
             // the net flow will be handled here
             NetEventLoop loop = config.handleLoopProvider.get();

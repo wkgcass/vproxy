@@ -23,7 +23,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 
 public class Socks5Server extends TcpLB {
     // singleton in one Socks5Server object
@@ -108,8 +107,8 @@ public class Socks5Server extends TcpLB {
     }
 
     @Override
-    protected Supplier<ConnectorGen> provideConnectorGen() {
+    protected ConnectorGen provideConnectorGen() {
         // create a socks5 connector gen
-        return () -> connectorGen;
+        return connectorGen;
     }
 }

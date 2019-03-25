@@ -119,7 +119,7 @@ public class WebSocksProxyAgent {
                 .setOutBufferSize(65536)
                 .setHandleLoopProvider(worker::next)
                 .setServer(server)
-                .setConnGen(() -> connGen),
+                .setConnGen(connGen),
             s -> {
                 // do nothing, won't happen
                 // when terminating, user should simply kill this process and won't close server

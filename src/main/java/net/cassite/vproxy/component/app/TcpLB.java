@@ -25,7 +25,6 @@ import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.function.Supplier;
 
 public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
@@ -205,9 +204,8 @@ public class TcpLB {
     }
 
     // this method can override
-    protected Supplier<ConnectorGen> provideConnectorGen() {
-        ConnectorGen cg = this::connectorProvider;
-        return () -> cg;
+    protected ConnectorGen provideConnectorGen() {
+        return this::connectorProvider;
     }
 
     // provide a connector
