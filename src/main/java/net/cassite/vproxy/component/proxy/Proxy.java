@@ -365,7 +365,7 @@ public class Proxy {
         }
     }
 
-    private final ProxyNetConfig config;
+    public final ProxyNetConfig config;
     private final ProxyEventHandler handler;
     private final ConcurrentHashSet<Session> sessions = new ConcurrentHashSet<>();
 

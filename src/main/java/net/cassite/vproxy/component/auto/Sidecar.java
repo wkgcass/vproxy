@@ -379,7 +379,7 @@ public class Sidecar {
                 sgs,
                 Config.tcpTimeout,
                 16384, 16384, SecurityGroup.allowAll(), 0);
-        } catch (IOException | ClosedException | AlreadyExistException e) {
+        } catch (ClosedException | AlreadyExistException e) {
             Logger.shouldNotHappen("got exception when creating tcp lb", e);
             throw e;
         }

@@ -578,7 +578,7 @@ public class TestTcpLB {
         // let's get some resources that will not change
         ServerGroup.ServerHandle svr0 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr0")).findFirst().get();
         ServerGroup.ServerHandle svr1 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get();
-        BindServer server = lb0.server;
+        BindServer server = lb0.servers.keySet().stream().findFirst().get();
 
         assertEquals("the server not connected", 0, server.getHistoryAcceptedConnectionCount());
         assertEquals("the server not connected", 0, server.getFromRemoteBytes());

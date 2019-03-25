@@ -21,6 +21,8 @@ public class LBForEchoServers {
     private static volatile boolean doContinue = true;
 
     public static void main(String[] args) throws AlreadyExistException, IOException, ClosedException, InterruptedException {
+        EventLoopGroup acceptorGroup = new EventLoopGroup("acceptorGroup");
+        acceptorGroup.add("acceptor");
         EventLoopGroup eventLoopGroup = new EventLoopGroup("eventLoopGroup");
         ServerGroups serverGroups = new ServerGroups("serverGroups");
         ServerGroup grp1 = new ServerGroup("grp1", eventLoopGroup,
@@ -32,7 +34,7 @@ public class LBForEchoServers {
         serverGroups.add(grp1, 10);
         serverGroups.add(grp2, 10);
         TcpLB lb = new TcpLB("myLb",
-            eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
+            acceptorGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
             Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
             SecurityGroup.allowAll(),
@@ -81,6 +83,7 @@ public class LBForEchoServers {
         System.out.println("\033[1;30m------------------------stop all servers-------------------\033[0m");
         // close the event loop group
         // which means stop all event loops inside the group
+        acceptorGroup.close();
         eventLoopGroup.close();
         // close echo2
         echo2.close();
@@ -90,9 +93,9 @@ public class LBForEchoServers {
 
     private static void runTimer(SelectorEventLoop eventLoop, TcpLB lb, ServerGroup grp1, ServerGroup grp2) {
         eventLoop.delay(1000, () -> {
-            long serverTo = lb.server.getToRemoteBytes();
-            long serverFrom = lb.server.getFromRemoteBytes();
-            long accepted = lb.server.getHistoryAcceptedConnectionCount();
+            long serverTo = lb.servers.keySet().stream().findFirst().get().getToRemoteBytes();
+            long serverFrom = lb.servers.keySet().stream().findFirst().get().getFromRemoteBytes();
+            long accepted = lb.servers.keySet().stream().findFirst().get().getHistoryAcceptedConnectionCount();
             System.out.println("server:\t\twrite to remote = \033[0;36m" + serverTo + "\033[0m\tread from remote: \033[0;36m" + serverFrom + "\033[0m\taccepted: \033[0;36m" + accepted + "\033[0m");
 
             for (ServerGroup g : Arrays.asList(grp1, grp2)) {

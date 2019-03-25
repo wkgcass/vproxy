@@ -9,20 +9,16 @@ import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.proxy.*;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
-import net.cassite.vproxy.connection.BindServer;
-import net.cassite.vproxy.connection.Connection;
-import net.cassite.vproxy.connection.Connector;
-import net.cassite.vproxy.connection.Protocol;
+import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
-import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ThreadSafe;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -30,22 +26,10 @@ public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
         @Override
         public void serverRemoved(BindServer server) {
-            if (stopped) {
-                assert Logger.lowLevelDebug("the proxy server removed, " +
-                    "but we do not create a new one because lb is stopped");
-                return;
-            }
-            assert Logger.lowLevelDebug("bindServer removed from loop, maybe the loop is closed. " +
-                "but lb(" + alias + ") is started, let's re-start or re-dispatch it");
-            proxyNetConfig.setAcceptLoop(null); // remove the loop from config, it will be assigned in start()
-            try {
-                if (proxy == null)
-                    start(); // proxy not exist, should run start
-                else
-                    redispatch(); // proxy exists, should run re-dispatch (assign the server channel to another selector)
-            } catch (IOException e) {
-                Logger.shouldNotHappen("the proxy start failed " + e);
-            }
+            assert Logger.lowLevelDebug("server removed: " + server);
+            // it's removed, so close the listening fd
+            server.close();
+            servers.remove(server);
         }
     }
 
@@ -60,7 +44,7 @@ public class TcpLB {
             if (stopped)
                 return; // ignore when lb is stopped
             try {
-                start(); // we call start(). whether already started will be determined in start() method
+                start(); // we call start(). how to start new servers will be determined in start() method
             } catch (IOException e) {
                 Logger.shouldNotHappen("the proxy start failed " + e);
             }
@@ -85,15 +69,20 @@ public class TcpLB {
             refresh();
         }
 
-        void refresh() {
+        // FIXME: there might still have concurrency, so I added synchronized on it
+        // FIXME: we could definitely find some better way to handle this
+        synchronized void refresh() {
             // stop the old timer first
             if (timeoutEvent != null) {
                 timeoutEvent.cancel();
                 timeoutEvent = null;
             }
             // always handle the timeout on accept event loop
-            // then there will be no concurrency
-            SelectorEventLoop loop = proxyNetConfig.getAcceptLoop().getSelectorEventLoop();
+
+            // because this method will always be called on the acceptor event loop
+            // so we use the selector event loop from thread local variable
+            SelectorEventLoop loop = SelectorEventLoop.current();
+
             if (loop == null) {
                 // cannot handle the persist timeout
                 // so let's just remove the persist entry from map
@@ -140,14 +129,10 @@ public class TcpLB {
     // true means the lb is fully teared down, server port is closed, and cannot be restored
     // false means the opposite
     private boolean destroyed = false;
-    // null means it's not actually started, however we MAY want it to start
-    // we will try our best to make it start
-    private Proxy proxy = null;
 
     private final LBAttach attach;
 
-    public final BindServer server;
-    private final ProxyNetConfig proxyNetConfig = new ProxyNetConfig();
+    public final ConcurrentMap<BindServer, Proxy> servers = new ConcurrentHashMap<>();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
 
     public TcpLB(String alias,
@@ -158,7 +143,7 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup,
-                 int persistTimeout) throws IOException, AlreadyExistException, ClosedException {
+                 int persistTimeout) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;
@@ -170,37 +155,13 @@ public class TcpLB {
         this.securityGroup = securityGroup;
         this.persistTimeout = persistTimeout;
 
-        // create server
-        this.server = BindServer.create(bindAddress);
-
-        // init proxyNetConfig
-        // acceptEventLoop will be assigned in start() method
-        this.proxyNetConfig
-            .setConnGen(provideConnectorGen())
-            .setHandleLoopProvider(() -> {
-                // get a event loop from group
-                EventLoopWrapper w = workerGroup.next();
-                if (w == null)
-                    return null; // return null if cannot get any
-                assert Logger.lowLevelDebug("use event loop: " + w.alias);
-                return w;
-            })
-            .setTimeout(timeout)
-            .setInBufferSize(inBufferSize)
-            .setOutBufferSize(outBufferSize)
-            .setServer(this.server);
-        // we do not create proxy object here
+        // we do not bind or create proxy object here
         // if it's created, it should start to run
         // so create it in start() method
 
         // attach to acceptorGroup
         this.attach = new LBAttach();
-        try {
-            acceptorGroup.attachResource(attach);
-        } catch (AlreadyExistException e) {
-            this.server.close(); // close the socket if attach failed
-            throw e;
-        }
+        acceptorGroup.attachResource(attach);
     }
 
     // this method can override
@@ -246,64 +207,62 @@ public class TcpLB {
         return connector;
     }
 
-    // the proxy still exist
-    // but we should dispatch server to another event loop
-    private void redispatch() throws IOException {
-        assert Logger.lowLevelDebug("redispatch() called on lb " + alias);
-        EventLoopWrapper w = acceptorGroup.next();
-        if (w == null) {
-            // event loop not returned
-            // we should remove the proxy object
-            proxy = null;
-            Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop when trying to re-dispatch the proxy server");
-            return;
-        }
-        assert Logger.lowLevelDebug("got a event loop, do re-dispatch");
-        proxyNetConfig.setAcceptLoop(w);
-
-        // also, we should re-dispatch the persist records
-        // before start accepting connections
-        // to ensure no race condition
-        for (Persist p : persistMap.values()) {
-            p.refresh(); // NOTE: the timeout is reset
-        }
-
-        // start accepting connections
-        // before re-dispatch servers
-        proxy.handle();
+    private ProxyNetConfig getProxyNetConfig(BindServer server, NetEventLoop eventLoop) {
+        return new ProxyNetConfig()
+            .setConnGen(provideConnectorGen())
+            .setHandleLoopProvider(() -> {
+                // get a event loop from group
+                EventLoopWrapper w = workerGroup.next();
+                if (w == null)
+                    return null; // return null if cannot get any
+                assert Logger.lowLevelDebug("use event loop: " + w.alias);
+                return w;
+            })
+            .setTimeout(timeout)
+            .setInBufferSize(inBufferSize)
+            .setOutBufferSize(outBufferSize)
+            .setServer(server)
+            .setAcceptLoop(eventLoop);
     }
 
     public void start() throws IOException {
         assert Logger.lowLevelDebug("start() called on lb " + alias);
         synchronized (this) {
-            if (proxy != null) { // quick handle when proxy is not null
-                assert Logger.lowLevelDebug("already started, ignore the start() call");
-                stopped = false;
-                return;
-            }
-
             if (destroyed) {
                 throw new IOException("the lb is already destroyed");
             }
 
             stopped = false;
 
-            EventLoopWrapper w = acceptorGroup.next();
-            if (w == null) {
-                assert Logger.lowLevelDebug("cannot start because event loop not retrieved, will start later");
+            List<EventLoopWrapper> eventLoops = acceptorGroup.list();
+            if (eventLoops.isEmpty()) {
+                assert Logger.lowLevelDebug("cannot start because event loop list is empty, will start later");
                 return;
             }
-            proxyNetConfig.setAcceptLoop(w);
+            Set<NetEventLoop> alreadyBondLoops = new HashSet<>();
+            for (Proxy pxy : servers.values()) {
+                alreadyBondLoops.add(pxy.config.getAcceptLoop());
+            }
 
-            proxy = new Proxy(proxyNetConfig, proxyEventHandler);
+            for (EventLoopWrapper w : eventLoops) {
+                if (alreadyBondLoops.contains(w))
+                    continue; // ignore already bond loops
 
-            try {
-                proxy.handle();
-            } catch (IOException e) {
-                assert Logger.lowLevelDebug("calling proxy.handle() failed");
-                this.proxy = null; // remove the proxy object if start failed
-                proxyNetConfig.setAcceptLoop(null); // remove the loop from config
-                throw e;
+                // start one server for each new event loop
+                BindServer server = BindServer.create(this.bindAddress);
+                ProxyNetConfig proxyNetConfig = getProxyNetConfig(server, w);
+                Proxy proxy = new Proxy(proxyNetConfig, proxyEventHandler);
+
+                try {
+                    proxy.handle();
+                } catch (IOException e) {
+                    assert Logger.lowLevelDebug("calling proxy.handle() failed");
+                    server.close();
+                    throw e;
+                }
+
+                servers.put(server, proxy);
+                assert Logger.lowLevelDebug("server " + bindAddress + "started for loop: " + w.alias);
             }
 
             assert Logger.lowLevelDebug("lb " + alias + " started");
@@ -313,15 +272,13 @@ public class TcpLB {
     public void stop() {
         assert Logger.lowLevelDebug("stop() called on lb " + alias);
         stopped = true;
-        Proxy proxy;
+
         synchronized (this) {
-            proxy = this.proxy;
-            if (proxy == null)
-                return; // already stopped
-            this.proxy = null;
+            for (Proxy pxy : servers.values()) {
+                pxy.stop(); // when it's stopped, the listening server will be closed in the serverRemoved callback
+            }
+            servers.clear();
         }
-        proxy.stop();
-        this.proxyNetConfig.setAcceptLoop(null); // remove the event loop from config
     }
 
     public void destroy() {
@@ -338,38 +295,41 @@ public class TcpLB {
         } catch (NotFoundException e) {
             // ignore
         }
-        server.close();
     }
 
     public int sessionCount() {
-        Proxy p = proxy;
-        if (p == null) {
-            return 0;
+        int cnt = 0;
+        for (Proxy pxy : servers.values()) {
+            cnt += pxy.sessionCount();
         }
-        return p.sessionCount();
+        return cnt;
     }
 
     public void copySessions(Collection<? super Session> coll) {
-        Proxy p = proxy;
-        if (p == null) {
-            return;
+        for (Proxy pxy : servers.values()) {
+            pxy.copySessions(coll);
         }
-        p.copySessions(coll);
     }
 
     public void setInBufferSize(int inBufferSize) {
         this.inBufferSize = inBufferSize;
-        proxyNetConfig.setInBufferSize(inBufferSize);
+        for (Proxy pxy : servers.values()) {
+            pxy.config.setInBufferSize(inBufferSize);
+        }
     }
 
     public void setOutBufferSize(int outBufferSize) {
         this.outBufferSize = outBufferSize;
-        proxyNetConfig.setOutBufferSize(outBufferSize);
+        for (Proxy pxy : servers.values()) {
+            pxy.config.setOutBufferSize(inBufferSize);
+        }
     }
 
     public void setTimeout(int timeout) {
         this.timeout = timeout;
-        proxyNetConfig.setTimeout(timeout);
+        for (Proxy pxy : servers.values()) {
+            pxy.config.setTimeout(inBufferSize);
+        }
     }
 
     public int getInBufferSize() {

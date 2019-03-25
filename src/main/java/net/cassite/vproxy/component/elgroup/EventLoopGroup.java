@@ -17,7 +17,6 @@ public class EventLoopGroup {
     public final String alias;
     private ArrayList<EventLoopWrapper> eventLoops = new ArrayList<>(0); // use array list to make code look better,
     // it's the same if you use array
-    private boolean preClose = false; // if true, then all MODIFY operations are disabled or return default value
     private boolean closed = false; // if true, then all operations are disabled or return default value
     private final AtomicInteger cursor = new AtomicInteger(0); // current cursor of the eventLoops
     private final ConcurrentHashSet<EventLoopGroupAttach> attaches = new ConcurrentHashSet<>();
@@ -31,6 +30,14 @@ public class EventLoopGroup {
      * START event loops
      * ========================
      */
+
+    @ThreadSafe
+    public List<EventLoopWrapper> list() {
+        if (closed) {
+            return Collections.emptyList();
+        }
+        return new ArrayList<>(eventLoops);
+    }
 
     @ThreadSafe
     public List<String> names() {
@@ -55,7 +62,7 @@ public class EventLoopGroup {
 
     @ThreadSafe
     public synchronized void add(String alias) throws AlreadyExistException, IOException, ClosedException {
-        if (preClose) {
+        if (closed) {
             throw new ClosedException();
         }
         ArrayList<EventLoopWrapper> ls = eventLoops;
@@ -89,7 +96,7 @@ public class EventLoopGroup {
     // closing selectorEventLoop is blocking, so this is blocking as well
     @ThreadSafe
     public synchronized void remove(String alias) throws NotFoundException {
-        if (preClose) {
+        if (closed) {
             return;
         }
         ArrayList<EventLoopWrapper> ls = eventLoops;
@@ -122,16 +129,8 @@ public class EventLoopGroup {
      */
 
     @ThreadSafe
-    public List<String> attachedNames() {
-        if (closed) {
-            return Collections.emptyList();
-        }
-        return attaches.stream().map(EventLoopGroupAttach::id).collect(Collectors.toList());
-    }
-
-    @ThreadSafe
     public void attachResource(EventLoopGroupAttach resource) throws AlreadyExistException, ClosedException {
-        if (preClose)
+        if (closed)
             throw new ClosedException();
         if (!attaches.add(resource)) {
             throw new AlreadyExistException();
@@ -140,7 +139,7 @@ public class EventLoopGroup {
 
     @ThreadSafe
     public void detachResource(EventLoopGroupAttach resource) throws NotFoundException {
-        if (preClose)
+        if (closed)
             return;
         if (!attaches.remove(resource)) {
             throw new NotFoundException();
@@ -184,13 +183,9 @@ public class EventLoopGroup {
      * ========================
      */
 
-    public synchronized void setPreClose(boolean preClose) {
-        this.preClose = preClose;
-    }
-
     @ThreadSafe
     public EventLoopWrapper next() {
-        if (preClose)
+        if (closed)
             return null;
 
         ArrayList<EventLoopWrapper> ls = eventLoops;
@@ -227,7 +222,6 @@ public class EventLoopGroup {
     public synchronized void close() {
         if (closed)
             return;
-        preClose = true;
         closed = true;
         // no modification should be made to eventLoops now
         ArrayList<EventLoopWrapper> ls = eventLoops;

@@ -49,10 +49,10 @@ public class BindServerHandle {
         if (parent.type == ResourceType.el) {
             EventLoopHandle.get(parent).copyServers(servers);
         } else if (parent.type == ResourceType.socks5) {
-            servers.add(Socks5ServerHandle.get(parent).server);
+            servers.addAll(Socks5ServerHandle.get(parent).servers.keySet());
         } else {
             assert parent.type == ResourceType.tl;
-            servers.add(TcpLBHandle.get(parent).server);
+            servers.addAll(TcpLBHandle.get(parent).servers.keySet());
         }
         return servers;
     }

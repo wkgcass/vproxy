@@ -34,6 +34,10 @@ public class Utils {
         return sb.toString();
     }
 
+    public static String ipport(InetSocketAddress addr) {
+        return ipStr(addr.getAddress().getAddress()) + ":" + addr.getPort();
+    }
+
     private static String ipv6Str(byte[] ip) {
         return "[" + addTo(4, Integer.toHexString(((ip[0] << 8) & 0xFFFF) | (ip[1] & 0xFF)))
             + ":" + addTo(4, Integer.toHexString(((ip[2] << 8) & 0xFFFF) | (ip[3] & 0xFF)))
