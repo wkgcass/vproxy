@@ -12,6 +12,7 @@ import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.*;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 import net.cassite.vproxy.selector.TimerEvent;
+import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ThreadSafe;
 
@@ -26,10 +27,12 @@ public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
         @Override
         public void serverRemoved(BindServer server) {
-            assert Logger.lowLevelDebug("server removed: " + server);
             // it's removed, so close the listening fd
             server.close();
             servers.remove(server);
+
+            Logger.info(LogType.ALERT, "server " + server + " is removed from the acceptor group, " +
+                servers.size() + " server(s) left");
         }
     }
 
@@ -239,6 +242,9 @@ public class TcpLB {
                 assert Logger.lowLevelDebug("cannot start because event loop list is empty, will start later");
                 return;
             }
+
+            // if a loop is already bond, we should not re-bind it to a server
+            // so we first extract bond loops and check later
             Set<NetEventLoop> alreadyBondLoops = new HashSet<>();
             for (Proxy pxy : servers.values()) {
                 alreadyBondLoops.add(pxy.config.getAcceptLoop());
@@ -262,7 +268,7 @@ public class TcpLB {
                 }
 
                 servers.put(server, proxy);
-                assert Logger.lowLevelDebug("server " + bindAddress + "started for loop: " + w.alias);
+                Logger.info(LogType.ALERT, "server " + bindAddress + "starts on loop: " + w.alias);
             }
 
             assert Logger.lowLevelDebug("lb " + alias + " started");
@@ -274,7 +280,7 @@ public class TcpLB {
         stopped = true;
 
         synchronized (this) {
-            for (Proxy pxy : servers.values()) {
+            for (Proxy pxy : new HashSet<>(servers.values())/*here we use a new hash set, to make sure we only remove the existing proxies*/) {
                 pxy.stop(); // when it's stopped, the listening server will be closed in the serverRemoved callback
             }
             servers.clear();
