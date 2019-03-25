@@ -51,6 +51,19 @@ public class Utils {
     }
 
     public static String ipStr(byte[] ip) {
+        { // return 0.0.0.0 if all zero (instead of ipv6 ::)
+            boolean allZero = true;
+            for (int i : ip) {
+                if (i != 0) {
+                    allZero = false;
+                    break;
+                }
+            }
+            if (allZero) {
+                return "0.0.0.0";
+            }
+        }
+
         if (ip.length == 16) {
             return ipv6Str(ip);
         } else if (ip.length == 4) {
