@@ -1,7 +1,5 @@
 package net.cassite.vproxy.connection;
 
-import net.cassite.vproxy.app.Config;
-import net.cassite.vproxy.selector.PeriodicEvent;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
@@ -10,63 +8,12 @@ import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;
 
 public class BindServer implements NetFlowRecorder {
-    // a dummy connection holder for udp
-    // since udp does not have connection
-    // we create one for convenience
-    class UDPConn {
-        final InetSocketAddress remote;
-        final Connection connection;
-        final ConnectionHandlerContext cctx;
-
-        // this counter will increase every time the remote sends a message
-        // and clear event will remote the counter
-        // if clear event find that this count is 0
-        // it means timeout, and this entry will be dropped
-        int counter = 0;
-        final PeriodicEvent clearEvent;
-
-        UDPConn(InetSocketAddress remote, Connection connection, ConnectionHandlerContext cctx) {
-            this.remote = remote;
-            this.connection = connection;
-            this.cctx = cctx;
-            if (_eventLoop != null) {
-                this.clearEvent = _eventLoop.getSelectorEventLoop().period(Config.udpTimeout, () -> {
-                    if (counter == 0) {
-                        // should drop the entry
-                        remove();
-                        // fire closed event
-                        cctx.handler.closed(cctx);
-                    }
-                });
-            } else {
-                this.clearEvent = null;
-            }
-        }
-
-        void cancel() {
-            if (this.clearEvent != null) {
-                this.clearEvent.cancel();
-            }
-        }
-
-        public void remove() {
-            cancel();
-            udpDummyConnMap.remove(this.remote);
-        }
-    }
-
     public final InetSocketAddress bind;
     private final String _id;
     public final SelectableChannel channel;
-
-    // this field is only for udp
-    // the field will be accessed from only one connection (the event loop)
-    final Map<InetSocketAddress, UDPConn> udpDummyConnMap = new HashMap<>(65536); // make it large
 
     // statistics
     private final LongAdder fromRemoteBytes = new LongAdder();
@@ -138,12 +85,6 @@ public class BindServer implements NetFlowRecorder {
         if (eventLoop != null) {
             eventLoop.removeServer(this);
         }
-
-        // clear after events removed from loop
-        for (UDPConn c : udpDummyConnMap.values()) {
-            c.cancel();
-        }
-        udpDummyConnMap.clear();
 
         _eventLoop = null;
         try {
