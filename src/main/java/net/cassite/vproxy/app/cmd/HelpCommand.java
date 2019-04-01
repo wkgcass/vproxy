@@ -613,7 +613,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.period, "do check every `${period}` milliseconds"),
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times"),
-                        new ResActParamMan(ParamMan.method, "loadbalancing algorithm, `wrr` or `wlc`", "wrr"),
+                        new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "wrr"),
                         new ResActParamMan(ParamMan.eventloopgroup, "choose a event-loop-group for the server group. health check operations will be performed on the event loop group")
                     ),
                     Collections.singletonList(
@@ -666,7 +666,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.period, "do check every `${period}` milliseconds", "not changed"),
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times", "not changed"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times", "not changed"),
-                        new ResActParamMan(ParamMan.method, "loadbalancing algorithm, `wrr` or `wlc`", "not changed"),
+                        new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "not changed"),
                         new ResActParamMan(ParamMan.weight, "the weight of group in this server-groups resource", "not changed")
                     ),
                     Arrays.asList(
@@ -736,7 +736,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "specify name, remote ip:port, weight, and attach the server into the server group",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.address, "remote address, ip:port"),
-                        new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr and wlc algorithm")
+                        new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr, wlc and source algorithm")
                     ),
                     Collections.singletonList(
                         new Tuple<>(

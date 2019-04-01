@@ -318,7 +318,7 @@ Specify name, event loop, load balancing method, health check config and create 
 * period: do check every `${period}` milliseconds
 * up: set server status to UP after succeeded for `${up}` times
 * down: set server status to DOWN after failed for `${down}` times
-* method: loadbalancing algorithm, `wrr` or `wlc`. *optional*, default `wrr`
+* method: loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. *optional*, default `wrr`
 * event-loop-group (elg): choose a event-loop-group for the server group. health check operations will be performed on the event loop group
 
 ```
@@ -438,7 +438,7 @@ remove event-loop el0 from event-loop-group elg0
 Specify name, remote ip:port, weight, and attach the server into the server group
 
 * address (addr): remote address, ip:port
-* weight: weight of the server, which will be used by wrr and wlc algorithm
+* weight: weight of the server, which will be used by wrr, wlc and source algorithm
 
 ```
 add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
