@@ -125,7 +125,7 @@ public class TcpLB {
         // we get a new connector
 
         // get a server from backends
-        Connector connector = backends.next();
+        Connector connector = backends.next(clientConn.remote);
         if (connector == null)
             return null; // return null if cannot get any
         assert Logger.lowLevelDebug("got a backend: " + connector);

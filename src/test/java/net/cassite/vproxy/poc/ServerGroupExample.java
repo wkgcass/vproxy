@@ -81,7 +81,7 @@ public class ServerGroupExample {
 
     private static void runTimer(SelectorEventLoop eventLoop, EventLoopGroup eventLoopGroup, ServerGroup grp) {
         eventLoop.delay(500, () -> {
-            Connector c = grp.next();
+            Connector c = grp.next(null);
             System.out.println("current active server is: \033[0;36m" + c + "\033[0m");
             List<String> names = eventLoopGroup.names();
             for (String name : names) {

@@ -82,7 +82,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         @Override
         public ClientConnection provide(NetEventLoop loop) {
-            SvrHandleConnector connector = servers.get(alias).next();
+            SvrHandleConnector connector = servers.get(alias).next(null/*we ignore the source because it's wrr*/);
             if (connector == null) {
                 assert Logger.lowLevelDebug("no available remote server connector for now");
                 return null;
@@ -621,7 +621,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             boolean isPooledConn = conn != null;
             if (conn == null) {
                 // retrieve a remote connection
-                SvrHandleConnector connector = servers.get(serverAlias).next();
+                SvrHandleConnector connector = servers.get(serverAlias).next(null/*we ignore the source because it's wrr*/);
                 if (connector == null) {
                     // no connectors for now
                     // the process is definitely cannot proceed

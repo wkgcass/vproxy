@@ -63,7 +63,7 @@ public class Socks5Server extends TcpLB {
                 // search for a group with name same as the address:port
                 for (ServerGroups.ServerGroupHandle gh : serverGroups.getServerGroups()) {
                     if (gh.alias.equals(addrport)) { // matches
-                        providedCallback.accept(gh.group.next());
+                        providedCallback.accept(gh.group.next(accepted.remote));
                         return;
                     }
                 }

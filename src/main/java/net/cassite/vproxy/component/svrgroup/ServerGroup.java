@@ -351,7 +351,7 @@ public class ServerGroup {
     /**
      * @return null if not found any healthy
      */
-    public SvrHandleConnector next() {
+    public SvrHandleConnector next(InetSocketAddress source) {
         if (method == Method.wrr) {
             return wrrNext();
         } else if (method == Method.wlc) {

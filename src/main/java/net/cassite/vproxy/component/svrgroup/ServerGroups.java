@@ -4,6 +4,7 @@ import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.connection.Connector;
 
+import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedList;
@@ -165,12 +166,12 @@ public class ServerGroups {
         return new ArrayList<>(serverGroups);
     }
 
-    public Connector next() {
+    public Connector next(InetSocketAddress source) {
         WRR wrr = _wrr;
-        return next(wrr, 0);
+        return next(source, wrr, 0);
     }
 
-    private /*use static to prevent access local variable*/ static Connector next(WRR wrr, int recursion) {
+    private /*use static to prevent access local variable*/ static Connector next(InetSocketAddress source, WRR wrr, int recursion) {
         if (recursion > wrr.seq.length)
             return null;
         ++recursion;
@@ -180,9 +181,9 @@ public class ServerGroups {
             idx = idx % wrr.seq.length;
             wrr.cursor.set(idx + 1);
         }
-        Connector connector = wrr.groups.get(wrr.seq[idx]).group.next();
+        Connector connector = wrr.groups.get(wrr.seq[idx]).group.next(source);
         if (connector != null)
             return connector;
-        return next(wrr, recursion);
+        return next(source, wrr, recursion);
     }
 }
