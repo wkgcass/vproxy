@@ -6,7 +6,10 @@ import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Flag;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
-import net.cassite.vproxy.app.cmd.handle.param.*;
+import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
+import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
+import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
+import net.cassite.vproxy.app.cmd.handle.param.TimeoutHandle;
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -27,6 +30,7 @@ public class Socks5ServerHandle {
             throw new Exception(socks5.type.fullname + " is on top level");
     }
 
+    @SuppressWarnings("Duplicates")
     public static void checkCreateSocks5Server(Command cmd) throws Exception {
         if (!cmd.args.containsKey(Param.elg))
             throw new Exception("missing argument " + Param.elg.fullname);
@@ -59,9 +63,6 @@ public class Socks5ServerHandle {
 
         if (cmd.args.containsKey(Param.outbuffersize))
             OutBufferSizeHandle.check(cmd);
-
-        if (cmd.args.containsKey(Param.persist))
-            PersistHandle.check(cmd);
     }
 
     public static Socks5Server get(Resource socks5) throws NotFoundException {
@@ -82,6 +83,7 @@ public class Socks5ServerHandle {
         return result;
     }
 
+    @SuppressWarnings("Duplicates")
     public static void add(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
         EventLoopGroup acceptor = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.aelg));

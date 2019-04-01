@@ -16,7 +16,6 @@ public enum ResourceType {
     acceptedconncount("accepted-conn-count"),
     secg("security-group"),
     secgr("security-group-rule"),
-    persist("persist"),
     resolver("resolver"),
     dnscache("dns-cache"),
     autolb("auto-lb"),

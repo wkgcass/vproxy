@@ -16,9 +16,7 @@ public class HelpCommand {
         }
         StringBuilder sb = new StringBuilder(originStr);
         int len = totalCount - originStr.length();
-        for (int i = 0; i < len; ++i) {
-            sb.append(" ");
-        }
+        sb.append(" ".repeat(len));
         return sb.toString();
     }
 
@@ -32,9 +30,7 @@ public class HelpCommand {
                 sb.append("-");
             }
             sb.append("\n");
-            for (int i = 0; i < spaces; ++i) {
-                sb.append(" ");
-            }
+            sb.append(" ".repeat(spaces));
             int end = idx + maxLen;
             if (end > originStr.length()) {
                 end = originStr.length();
@@ -389,7 +385,6 @@ public class HelpCommand {
         servergroups("server-groups", "sgs", "server groups"),
         inbuffersize("in-buffer-size", null, "in buffer size"),
         outbuffersize("out-buffer-size", null, "out buffer size"),
-        persist("persist", null, "connector persist timeout"),
         securitygroup("security-group", "secg", "security group"),
         timeout("timeout", null, "health check timeout"),
         period("period", null, "health check period"),
@@ -443,7 +438,6 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
-                    , new ResActParamMan(ParamMan.persist, "an integer representing the timeout (ms) of how long to persist a connector for a client ip", "0, means do not persist")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
                 ),
                 Collections.singletonList(
@@ -465,18 +459,17 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail tcp-lb",
-                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in buffer size 16384 out buffer size 16384 persist 0 security-group secg0\""
+                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in buffer size 16384 out buffer size 16384 security-group secg0\""
                     )
                 ))
-            , new ResActMan(ActMan.update, "update persist, in-buffer-size or out-buffer-size of an lb",
+            , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of an lb",
                 Arrays.asList(
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
-                    , new ResActParamMan(ParamMan.persist, "an integer representing the timeout (ms) of how long to persist a connector for a client ip", "not changed")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
-                        "update tcp-lb lb0 persist 10000 in-buffer-size 32768 out-buffer-size 32768",
+                        "update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768",
                         "\"OK\""
                     )
                 ))
@@ -861,34 +854,6 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "remove security-group-rule secgr0 from security-group secg0",
-                            "\"OK\""
-                        )
-                    ))
-            )),
-        persist("persist", null, "represents a persisted connector, which contains client source ip, which server to use and request server with which local ip",
-            Arrays.asList(
-                new ResActMan(ActMan.list, "count persisted connectors",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "list persist in tl lb0",
-                            "(integer) 1"
-                        )
-                    )),
-                new ResActMan(ActMan.listdetail, "retrieve detailed info of all persisted connectors",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "list-detail persist in tl lb0",
-                            "1) 1) \"client: 127.0.0.1\"\n" +
-                                "   2) \"server: 127.0.0.1:16666\"\n"
-                        )
-                    )),
-                new ResActMan(ActMan.forceremove, "specify the source (client) address string and remove the persist record",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "force-remove persist 127.0.0.1 from tcp-lb lb0",
                             "\"OK\""
                         )
                     ))

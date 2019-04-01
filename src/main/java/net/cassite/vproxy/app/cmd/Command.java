@@ -190,7 +190,6 @@ public class Command {
                         break loop;
                     }
                     if (isEnumMatch(next, Flag.class)) {
-                        //noinspection ConstantConditions
                         state = 7;
                         break;
                     }
@@ -215,7 +214,6 @@ public class Command {
                         break loop;
                     }
                     if (isEnumMatch(next, Flag.class)) {
-                        //noinspection ConstantConditions
                         state = 7;
                         break;
                     }
@@ -249,7 +247,6 @@ public class Command {
                         break;
                     }
                     if (isEnumMatch(next, Flag.class)) {
-                        //noinspection ConstantConditions
                         state = 7;
                         break;
                     }
@@ -361,7 +358,6 @@ public class Command {
                     && cmd.resource.type != ResourceType.bs
                     && cmd.resource.type != ResourceType.conn
                     && cmd.resource.type != ResourceType.sess
-                    && cmd.resource.type != ResourceType.persist
                     && cmd.resource.type != ResourceType.dnscache
                 ) {
                     throw new Exception("only list/list-detail allowed in service mesh mode");
@@ -489,20 +485,6 @@ public class Command {
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
                         BindServerHandle.checkBindServer(targetResource);
-                        break;
-                    default:
-                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
-                }
-                break;
-            case persist:
-                switch (cmd.action) {
-                    case a:
-                    case r:
-                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
-                    case R:
-                    case L:
-                    case l:
-                        PersistResourceHandle.checkPersistParent(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -780,24 +762,6 @@ public class Command {
                     case L:
                         long acc = StatisticHandle.acceptedConnCount(targetResource);
                         return new CmdResult(acc, acc, "" + acc);
-                }
-            case persist:
-                switch (action) {
-                    case l:
-                        int persistCnt = PersistResourceHandle.count(targetResource);
-                        return new CmdResult(persistCnt, persistCnt, "" + persistCnt);
-                    case L:
-                        List<PersistResourceHandle.PersistRef> persistRefs = PersistResourceHandle.detail(targetResource);
-                        List<List<String>> persistStrList = persistRefs.stream().map(ref ->
-                            Arrays.asList(
-                                "client: " + Utils.ipStr(ref.persist.clientAddress.getAddress()),
-                                "server: " + Utils.ipStr(ref.persist.connector.remote.getAddress().getAddress()) + ":" + ref.persist.connector.remote.getPort()
-                            ))
-                            .collect(Collectors.toList());
-                        return new CmdResult(persistRefs, persistStrList, utilJoinList(persistRefs));
-                    case R:
-                        PersistResourceHandle.remove(this);
-                        return new CmdResult();
                 }
             case svr: // can only be retrieved from server group
                 switch (action) {

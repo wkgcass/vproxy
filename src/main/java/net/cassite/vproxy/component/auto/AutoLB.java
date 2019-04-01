@@ -96,7 +96,7 @@ public class AutoLB {
                 new InetSocketAddress(config.bindInetAddress, port),
                 sgs,
                 Config.tcpTimeout,
-                16384, 16384, SecurityGroup.allowAll(), 0);
+                16384, 16384, SecurityGroup.allowAll());
         } catch (ClosedException | AlreadyExistException e) {
             Logger.shouldNotHappen("got exception when creating tcp lb", e);
             throw e;

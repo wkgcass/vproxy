@@ -54,8 +54,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
   connection (conn)   +-- /* channel */
      session (sess) --+
 
-            persist --+-- /* state */
-          dns-cache --+
+          dns-cache ----- /* state */
 
      bytes-in (bin) --+
    bytes-out (bout)   +-- /* statistics */
@@ -131,7 +130,6 @@ Create a loadbalancer.
 * server-groups (sgs): used as the backend servers
 * in-buffer-size: input buffer size. *optional*, default 16384 (bytes)
 * out-buffer-size: output buffer size. *optional*, default 16384 (bytes)
-* persist: an integer representing the timeout (ms) of how long to persist a connector for a client ip. *optional*, default 0, means do not persist
 * security-group (secg): specify a security group for the lb. *optional*, default allow any
 
 ```
@@ -159,10 +157,10 @@ list-detail tcp-lb
 
 #### update
 
-Update persist, in-buffer-size or out-buffer-size of an lb.
+Update in-buffer-size or out-buffer-size of an lb.
 
 ```
-update tcp-lb lb0 persist 10000 in-buffer-size 32768 out-buffer-size 32768
+update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768
 "OK"
 ```
 
@@ -185,7 +183,7 @@ Socks5 proxy server.
 
 Create a socks5 server.
 
-All params are the same as creating `tcp-lb`, but does not support `persist`.  
+All params are the same as creating `tcp-lb`.  
 See `add tcp-lb` for more info.
 
 * acceptor-elg (aelg): the acceptor event loop
@@ -573,39 +571,6 @@ Remove a rule from a security group.
 
 ```
 remove security-group-rule secgr0 from security-group secg0
-"OK"
-```
-
-## Resource: persist
-
-Represents a persisted connector, which contains client source ip, which server to use and request server with which local ip.  
-The resource only exist in `tcp-lb`.
-
-#### list
-
-Count persisted connectors.
-
-```
-list persist in tl lb0
-(integer) 1
-```
-
-#### list-detail
-
-Retrieve detailed info of all persisted connectors.
-
-```
-list-detail persist in tl lb0
-1) 1) "client: 127.0.0.1"
-   2) "server: 127.0.0.1:16666"
-```
-
-#### force-remove
-
-Specify the source (client) address string and remove the persist record.
-
-```
-force-remove persist 127.0.0.1 from tcp-lb lb0
 "OK"
 ```
 

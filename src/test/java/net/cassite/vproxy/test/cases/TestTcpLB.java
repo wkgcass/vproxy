@@ -83,7 +83,7 @@ public class TestTcpLB {
         secg0 = new SecurityGroup("secg0", true);
         lb0 = new TcpLB("lb0", elg0, elg0,
             new InetSocketAddress("127.0.0.1", lbPort), sgs0,
-            Config.tcpTimeout, 16384, 16384, secg0, 0);
+            Config.tcpTimeout, 16384, 16384, secg0);
         lb0.start();
 
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
@@ -380,94 +380,6 @@ public class TestTcpLB {
     }
 
     @Test
-    public void proxyPersist() throws Exception {
-        sgs0.add(sg0, 10);
-        // persists the connectors
-        lb0.persistTimeout = 2000; // set to 2 seconds
-
-        sg0.setMethod(Method.wlc); // set method to wlc to make the test more clear
-        // because if svr0 has 10 conns but svr1 has 0
-        // with wlc, the client is definitely sending request to svr1
-        // but if it's persisted, it will only request the persisted server
-        ServerGroup.ServerHandle h = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get();
-        // let's first set the server to DOWN to prevent being connected
-        h.healthy = false;
-
-        Client client = new Client(lbPort);
-        client.connect();
-        clients.add(client);
-        String recv = client.sendAndRecv("anything", 1);
-        assertEquals("it's 0 because svr1 is DOWN", "0", recv);
-
-        // the persist record should exist
-        assertEquals("should be one persist record", 1, lb0.persistMap.size());
-
-        // then set svr1 to UP
-        h.healthy = true;
-
-        for (int i = 0; i < 9/*total 10 connections*/; ++i) {
-            client = new Client(lbPort);
-            client.connect();
-            clients.add(client);
-            recv = client.sendAndRecv("anything", 1);
-            assertEquals("it's 0 because it's persisted", "0", recv);
-        }
-
-        // the persist record should not changed
-        assertEquals("should be one persist record", 1, lb0.persistMap.size());
-        InetAddress addr = lb0.persistMap.keySet().stream().findFirst().get();
-        assertEquals("the persisted key should be requester's ip", "127.0.0.1", Utils.ipStr(addr.getAddress()));
-
-        // let's remove the persist record
-        lb0.persistMap.get(addr).remove();
-        assertEquals("there should be no persist record now", 0, lb0.persistMap.size());
-
-        // and connect again
-        client = new Client(lbPort);
-        client.connect();
-        clients.add(client);
-        recv = client.sendAndRecv("anything", 1);
-        assertEquals("it's 1 because svr0 has 10 connections but svr1 has 0", "1", recv);
-        // let's connect 5 times
-        for (int i = 0; i < 9/*total 10 connections*/; ++i) {
-            client = new Client(lbPort);
-            client.connect();
-            clients.add(client);
-            recv = client.sendAndRecv("anything", 1);
-            assertEquals("it's 1 because it's persisted", "1", recv);
-        }
-        // this time, persist record should be pointed to svr1
-        assertEquals("should be one persist record", 1, lb0.persistMap.size());
-        // we do not check this time
-        // we are sure it's ok since it does exactly the same thing but change the target to svr1
-
-        // stop persist
-        lb0.persistTimeout = 0;
-        Thread.sleep(2500); // the timeout is 2000, so we sleep for 2500 to make sure it's definitely timed-out
-        // timed-out
-        assertEquals("there should be no persist record now", 0, lb0.persistMap.size());
-
-        // the connections should spread on each server
-        int zero = 0;
-        int one = 0;
-
-        for (int i = 0; i < 100; ++i) {
-            client = new Client(lbPort);
-            client.connect();
-            clients.add(client);
-            recv = client.sendAndRecv("anything", 1);
-            assertTrue("response should be 0 or 1", recv.equals("0") || recv.equals("1"));
-            if (recv.equals("0")) {
-                ++zero;
-            } else {
-                ++one;
-            }
-        }
-        assertTrue("weight same, so zero count and one count should be the same",
-            zero - one > -2 && zero - one < 2); // we allow +-1
-    }
-
-    @Test
     public void changeHealthCheckOnRunning() throws Exception {
         ServerGroup.ServerHandle h = sg0.getServerHandles().stream().findFirst().get();
         h.healthy = false;
@@ -707,7 +619,7 @@ public class TestTcpLB {
         // start another lb
         TcpLB lb1 = new TcpLB("lb1", elg0, elg0,
             new InetSocketAddress("127.0.0.1", lbPort + 1), sgs0,
-            Config.tcpTimeout, 16384, 16384, secg0, 0);
+            Config.tcpTimeout, 16384, 16384, secg0);
         lb1.start();
 
         // deny lbPort

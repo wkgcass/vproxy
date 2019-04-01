@@ -10,16 +10,16 @@ import net.cassite.vproxy.component.proxy.*;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.*;
-import net.cassite.vproxy.selector.SelectorEventLoop;
-import net.cassite.vproxy.selector.TimerEvent;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.ThreadSafe;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Collection;
+import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 
@@ -59,53 +59,6 @@ public class TcpLB {
         }
     }
 
-    @ThreadSafe(false)
-    public class Persist {
-        public final InetAddress clientAddress;
-        public final Connector connector;
-        TimerEvent timeoutEvent;
-
-        Persist(InetAddress clientAddress, Connector connector) {
-            this.clientAddress = clientAddress;
-            this.connector = connector;
-
-            refresh();
-        }
-
-        // FIXME: there might still have concurrency, so I added synchronized on it
-        // FIXME: we could definitely find some better way to handle this
-        synchronized void refresh() {
-            // stop the old timer first
-            if (timeoutEvent != null) {
-                timeoutEvent.cancel();
-                timeoutEvent = null;
-            }
-            // always handle the timeout on accept event loop
-
-            // because this method will always be called on the acceptor event loop
-            // so we use the selector event loop from thread local variable
-            SelectorEventLoop loop = SelectorEventLoop.current();
-
-            if (loop == null) {
-                // cannot handle the persist timeout
-                // so let's just remove the persist entry from map
-                persistMap.remove(clientAddress);
-                return;
-            }
-            timeoutEvent = loop.delay(persistTimeout, () ->
-                /* persistence expired */ persistMap.remove(clientAddress));
-        }
-
-        public void remove() {
-            if (timeoutEvent != null) {
-                timeoutEvent.cancel();
-                timeoutEvent = null;
-            }
-            // remove from map
-            persistMap.remove(clientAddress);
-        }
-    }
-
     public final String alias;
     public final EventLoopGroup acceptorGroup;
     public final EventLoopGroup workerGroup;
@@ -115,15 +68,7 @@ public class TcpLB {
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
     public final SecurityGroup securityGroup;
-    public int persistTimeout; // modifiable
     // the modifiable fields only have effect when new connection arrives
-
-    // the persisted connector map
-    // it will only be modified from one thread
-    // in data panel, no need to handle concurrency
-    // though it might be retrieved from control panel
-    // so we use concurrent hash map instead
-    public final ConcurrentMap<InetAddress, Persist> persistMap = new ConcurrentHashMap<>();
 
     // true means the lb is stopped, but it can still re-start.
     // false means we WANT the lb to start,
@@ -145,8 +90,7 @@ public class TcpLB {
                  ServerGroups backends,
                  int timeout,
                  int inBufferSize, int outBufferSize,
-                 SecurityGroup securityGroup,
-                 int persistTimeout) throws AlreadyExistException, ClosedException {
+                 SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;
@@ -156,7 +100,6 @@ public class TcpLB {
         this.inBufferSize = inBufferSize;
         this.outBufferSize = outBufferSize;
         this.securityGroup = securityGroup;
-        this.persistTimeout = persistTimeout;
 
         // we do not bind or create proxy object here
         // if it's created, it should start to run
@@ -178,35 +121,14 @@ public class TcpLB {
         InetAddress remoteAddress = clientConn.remote.getAddress();
         if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
             return null; // terminated by securityGroup
-        // check persist
-        Persist persist = persistMap.get(remoteAddress);
-        if (persist != null) {
-            if (persistTimeout == 0) {
-                persist.remove();
-            } else {
-                if (persist.connector.isValid()) {
-                    if (persistTimeout != 0)
-                        persist.refresh();
-                    return persist.connector;
-                } else {
-                    // the backend is not valid now
-                    // remove the persist record
-                    persist.remove();
-                }
-            }
-        }
-        // then we get a new connector
+
+        // we get a new connector
 
         // get a server from backends
         Connector connector = backends.next();
         if (connector == null)
             return null; // return null if cannot get any
         assert Logger.lowLevelDebug("got a backend: " + connector);
-        // record the connector
-        if (persistTimeout > 0) {
-            Persist p = new Persist(remoteAddress, connector);
-            persistMap.put(remoteAddress, p);
-        }
         return connector;
     }
 
@@ -268,7 +190,7 @@ public class TcpLB {
                 }
 
                 servers.put(server, proxy);
-                Logger.info(LogType.ALERT, "server " + bindAddress + "starts on loop: " + w.alias);
+                Logger.info(LogType.ALERT, "server " + bindAddress + " starts on loop: " + w.alias);
             }
 
             assert Logger.lowLevelDebug("lb " + alias + " started");

@@ -37,8 +37,7 @@ public class LBForEchoServers {
             acceptorGroup, eventLoopGroup, // use the same group for acceptor and worker
             new InetSocketAddress(18080), serverGroups,
             Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
-            SecurityGroup.allowAll(),
-            0
+            SecurityGroup.allowAll()
         );
         lb.start();
         // add each group one server

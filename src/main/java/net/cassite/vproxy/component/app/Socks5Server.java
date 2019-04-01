@@ -103,7 +103,7 @@ public class Socks5Server extends TcpLB {
     public boolean allowNonBackend = false;
 
     public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, ServerGroups backends, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
-        super(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup, 0);
+        super(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
     }
 
     @Override

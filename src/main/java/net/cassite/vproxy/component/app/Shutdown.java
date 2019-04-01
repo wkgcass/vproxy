@@ -53,7 +53,6 @@ public class Shutdown {
             System.err.println("SIGHUP not handled");
         }
         new Thread(() -> {
-            //noinspection InfiniteLoopStatement
             while (true) {
                 sigIntTimes = 0;
                 try {
@@ -350,8 +349,7 @@ public class Shutdown {
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + Utils.ipport(tl.bindAddress) + " server-groups " + tl.backends.alias +
                     " timeout " + tl.getTimeout() +
-                    " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
-                    " persist " + tl.persistTimeout;
+                    " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize();
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + tl.securityGroup.alias;
                 }
