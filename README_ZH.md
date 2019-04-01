@@ -2,9 +2,11 @@
 
 ## 简介
 
-VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 8即可运行。
+VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 11即可运行。
 
 1) clone，2) javac，3) 运行！
+
+此外还提供了Gradle的配置文件，请使用Gradle 4.10.2以上版本（支持java 11的gradle版本）。
 
 ## 模板
 
@@ -13,8 +15,6 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 * 运行时可修改：更新配置不需要重启。
 * 高效：性能是首要目标之一。
 * TCP负载均衡：目前仅支持TCP。
-
-> graalvm还不支持DatagramChannel，在它开始支持之前本项目不准备支持UDP负载均衡，仅将DatagramSock（blockingIO）作为控制面低流量用途使用。
 
 ## 如何使用
 

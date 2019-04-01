@@ -67,9 +67,9 @@ add event-loop-group acceptor
 add event-loop-group worker
 ```
 
-连接的接收器仅绑定一个线程，所以我们只在`acceptor`组内创建一个EventLoop（事件循环）。
+我们这里只在`acceptor`组内创建一个EventLoop（事件循环），但是，如果你的应用会有大量新建连接，那么你也可以在`acceptor`组内创建多个EventLoop。
 
-并且，因为这台机器有4个核，所以我们创建3个线程来处理网络流量。
+此外，因为这台机器有4个核，所以我们创建3个线程来处理网络流量。
 
 ```
 add event-loop acceptor1 to event-loop-group acceptor

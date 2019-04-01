@@ -67,7 +67,7 @@ add event-loop-group acceptor
 add event-loop-group worker
 ```
 
-The acceptor can only bind on one thread, so create only one event loop in the `acceptor` event loop group.
+We only create one event loop in the `acceptor` event loop group, however, if you expect that there are a lot of new connections to be handled, you can add more event loops into the `acceptor` event loop group.
 
 And because that the host has 4 cores, we create 3 threads for handling net flow.
 

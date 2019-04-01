@@ -4,9 +4,11 @@
 
 ## Intro
 
-VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only requires Java 8 to run.
+VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only requires Java 11 to run.
 
 Clone it, javac it, then everything is ready for running.
+
+Also, gradle configuration is provided, please use Gradle 4.10.2+ (which supports java 11).
 
 ## Aim
 
@@ -15,8 +17,6 @@ Clone it, javac it, then everything is ready for running.
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
 * TCP Loadbalancer: we only support TCP for now.
-
-> GraalVM does not support DatagramChannel yet. We don't prepare to support UDP loadbalancing until graalvm supports DatagramChannel. Currently we only use DatagramSocket (blockingIO) on control panel.
 
 ## How to use
 
