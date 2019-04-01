@@ -334,6 +334,33 @@ public class ServerGroup {
     private WLC _wlc;
     // END fields for WLC
 
+    // START fields for SOURCE
+    static class SOURCE {
+        final int[] seq;
+        final ArrayList<ServerHandle> servers;
+
+        SOURCE(int[] seq, ArrayList<ServerHandle> servers) {
+            this.seq = seq;
+            this.servers = servers;
+        }
+
+        // sdbm
+        int hash(byte[] bytes) {
+            int hash = 0;
+            for (byte aByte : bytes) {
+                hash = (aByte) + (hash << 6) + (hash << 16) - hash;
+            }
+            hash = Math.abs(hash);
+            if (hash < 0) { // Math.abs(-Integer.MAX_VALUE-1) == -Integer.MAX_VALUE-1
+                hash = 0;
+            }
+            return hash;
+        }
+    }
+
+    private SOURCE _source;
+    // END fields for SOURCE
+
     public ServerGroup(String alias,
                        EventLoopGroup eventLoopGroup,
                        HealthCheckConfig healthCheckConfig,
@@ -356,11 +383,31 @@ public class ServerGroup {
             return wrrNext();
         } else if (method == Method.wlc) {
             return wlcNext();
+        } else if (method == Method.source) {
+            return sourceHashGet(source.getAddress());
         } else {
             Logger.shouldNotHappen("unsupported method " + method);
             // use wrr instead
             return wrrNext();
         }
+    }
+
+    private SvrHandleConnector sourceHashGet(InetAddress source) {
+        byte[] bytes = source.getAddress();
+        return sourceHashGet(_source, _source.hash(bytes), 0);
+    }
+
+    private SvrHandleConnector sourceHashGet(SOURCE source, int hash, int recurse) {
+        if (recurse >= source.servers.size()) // this condition also checks empty state
+            return null;
+
+        int idx = hash % source.servers.size();
+        ServerHandle h = source.servers.get(idx);
+        if (h.healthy)
+            return h.makeConnector();
+
+        // increase the "hash" by 1, which means using the next server in the list
+        return sourceHashGet(source, idx + 1, recurse + 1);
     }
 
     /*
@@ -466,6 +513,53 @@ public class ServerGroup {
     private void resetMethodRelatedFields() {
         wrrReset();
         wlcReset();
+        sourceReset();
+    }
+
+    private int gcd(int a, int b) {
+        if (a == b) return a;
+        if (a > b) return gcd(a - b, b);
+        return gcd(b - a, a);
+    }
+
+    private void sourceReset() {
+        ArrayList<ServerHandle> svrs = new ArrayList<>(servers);
+        svrs.sort((a, b) -> {
+            byte[] ba = a.server.getAddress().getAddress();
+            byte[] bb = b.server.getAddress().getAddress();
+            if (ba.length > bb.length)
+                return 1;
+            if (bb.length > ba.length)
+                return -1;
+            for (int i = 0; i < ba.length; ++i) {
+                int diff = ba[i] - bb[i];
+                if (diff != 0)
+                    return diff;
+            }
+            return a.server.getPort() - b.server.getPort();
+        });
+        if (svrs.size() == 0) {
+            _source = new SOURCE(new int[0], svrs);
+            return;
+        }
+        int g = svrs.size() > 1
+            ? gcd(svrs.get(0).weight, svrs.get(1).weight)
+            : svrs.get(0).weight;
+        LinkedList<Integer> seqList = new LinkedList<>();
+        for (int sIdx = 0; sIdx < svrs.size(); sIdx++) {
+            ServerHandle s = svrs.get(sIdx);
+            int w = s.weight;
+            int times = w / g;
+            for (int i = 0; i < times; ++i) {
+                seqList.add(sIdx);
+            }
+        }
+        int[] seq = new int[seqList.size()];
+        int idx = 0;
+        for (Integer integer : seqList) {
+            seq[idx++] = integer;
+        }
+        _source = new SOURCE(seq, svrs);
     }
 
     private void wlcReset() {

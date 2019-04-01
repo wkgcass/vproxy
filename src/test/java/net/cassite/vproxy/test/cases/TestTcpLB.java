@@ -380,6 +380,30 @@ public class TestTcpLB {
     }
 
     @Test
+    public void proxySource() throws Exception {
+        // all requests should be sent to the same backend
+
+        // usually we do not use "source" proxy with multiple sg
+        // so in the test case, we only add one
+        sgs0.add(sg0, 10);
+        sg0.setMethod(Method.source);
+
+        // make connections
+        String resp = null;
+        for (int i = 0; i < 100; ++i) {
+            Client client = new Client(lbPort);
+            client.connect();
+            clients.add(client);
+            String recv = client.sendAndRecv("anything", 1);
+            if (resp == null) {
+                resp = recv;
+            } else {
+                assertEquals("connections should be sent to the same backend because we are using source", "0", recv);
+            }
+        }
+    }
+
+    @Test
     public void changeHealthCheckOnRunning() throws Exception {
         ServerGroup.ServerHandle h = sg0.getServerHandles().stream().findFirst().get();
         h.healthy = false;
