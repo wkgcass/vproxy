@@ -535,7 +535,6 @@ public class Discovery {
 
     private DatagramSocket startUdpBlockingSock() throws IOException {
         DatagramSocket sock = new DatagramSocket(null);
-        // sock.setReuseAddress(true); graalvm doesn't support
         sock.bind(new InetSocketAddress(config.bindInetAddress, config.udpSockPort));
         return sock;
     }
