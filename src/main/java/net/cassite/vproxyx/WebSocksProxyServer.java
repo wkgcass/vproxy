@@ -16,10 +16,13 @@ import net.cassite.vproxyx.websocks.WebSocksProtocolHandler;
 import net.cassite.vproxyx.websocks.WebSocksProxyContext;
 import net.cassite.vproxyx.websocks.WebSocksUtils;
 
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -36,6 +39,7 @@ public class WebSocksProxyServer {
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
+            //noinspection IfCanBeSwitch
             if (arg.equals("listen")) {
                 if (next == null) {
                     throw new IllegalArgumentException("`listen` should be followed with a port argument");
@@ -138,25 +142,41 @@ public class WebSocksProxyServer {
             // init the ssl context
             WebSocksUtils.initSslContext(pkcs12, pkcs12pswd,
                 "PKCS12", true);
+
+            // ssl params
+            SSLParameters params = new SSLParameters();
+            {
+                params.setApplicationProtocols(new String[]{"http/1.1"});
+                if (domain != null) {
+                    String reg = "^" + domain.replaceAll("\\.", "\\\\.") + "$";
+                    assert Logger.lowLevelDebug("the sni matcher regexp is " + reg);
+                    params.setSNIMatchers(Collections.singletonList(SNIHostName.createSNIMatcher(reg)));
+                }
+            }
+
+            // set some final variables for the lambda to use
             final String finalDomain = domain;
             final int finalPort = port;
-            if (domain != null) {
+
+            if (domain == null) {
                 engineSupplier = () -> {
                     SSLEngine engine = WebSocksUtils.getSslContext().createSSLEngine();
                     engine.setUseClientMode(false);
+                    engine.setSSLParameters(params);
                     return engine;
                 };
             } else {
                 engineSupplier = () -> {
                     SSLEngine engine = WebSocksUtils.getSslContext().createSSLEngine(finalDomain, finalPort);
                     engine.setUseClientMode(false);
+                    engine.setSSLParameters(params);
                     return engine;
                 };
             }
         }
         // init the proxy server
         WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier);
-        ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<WebSocksProxyContext>() {
+        ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<>() {
             @Override
             public Type type() {
                 return Type.handler;

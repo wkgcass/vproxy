@@ -14,7 +14,9 @@ import net.cassite.vproxy.socks.Socks5ConnectorProvider;
 import net.cassite.vproxy.util.*;
 import net.cassite.vproxy.util.ringbuffer.SSLUtils;
 
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.util.*;
 import java.util.function.Consumer;
@@ -481,12 +483,23 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         static ClientConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
             SSLEngine engine;
-            if (connector.getHostName() == null) {
+            String hostname = connector.getHostName();
+            if (hostname == null) {
                 engine = WebSocksUtils.getSslContext().createSSLEngine();
             } else {
-                engine = WebSocksUtils.getSslContext().createSSLEngine(connector.getHostName(), connector.remote.getPort());
+                engine = WebSocksUtils.getSslContext().createSSLEngine(hostname, connector.remote.getPort());
+            }
+            SSLParameters params = new SSLParameters();
+            {
+                params.setApplicationProtocols(new String[]{"http/1.1"});
+                if (hostname != null) {
+                    assert Logger.lowLevelDebug("using hostname " + hostname + " as sni");
+                    params.setServerNames(Collections.singletonList(new SNIHostName(hostname)));
+                }
             }
             engine.setUseClientMode(true);
+            engine.setSSLParameters(params);
+
             SSLUtils.SSLBufferPair pair;
             if (loop == null) {
                 assert Logger.lowLevelDebug("event loop not specified, so we ignore the resumer for the ssl buffer pair");
