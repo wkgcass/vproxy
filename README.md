@@ -8,7 +8,7 @@ VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only
 
 Clone it, javac it, then everything is ready for running.
 
-Also, gradle configuration is provided, please use Gradle 4.10.2+ (which supports java 11).
+(Gradlew is also provided.)
 
 ## Aim
 

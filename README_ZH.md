@@ -6,7 +6,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 1) clone，2) javac，3) 运行！
 
-此外还提供了Gradle的配置文件，请使用Gradle 4.10.2以上版本（支持java 11的gradle版本）。
+(还可以直接使用Gradlew)
 
 ## 模板
 
