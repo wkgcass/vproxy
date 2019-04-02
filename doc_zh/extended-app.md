@@ -11,26 +11,26 @@ vproxy 不但支持传统的负载均衡、socks5服务、service mesh、服务�
 注意：这是由`-D`指定的系统属性，而不是程序参数。
 
 ```
--D+A:AppClass=$simple_name_of_a_class
+-Deploy=$simple_name_of_a_class
 ```
 
 ```shell
-java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
 #
 # 或者
 #
-java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
 ```
 
 例如：
 
 ```
-java -D+A:AppClass=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+java -Deploy=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
 ## 可用的应用
 
-### AppClass=WebSocksProxyServer
+### Deploy=WebSocksProxyServer
 
 一个代理服务器，即使在websocket网关后面也可以代理裸tcp流量。
 
@@ -52,7 +52,7 @@ listen 80 auth alice:pasSw0rD,bob:PaSsw0Rd
 listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl pkcs12 ~/mycertkey.p12 pkcs12pswd myPassWord domain example.com
 ```
 
-### AppClass=WebSocksAgent
+### Deploy=WebSocksAgent
 
 一个在本地运行的agent服务，它将websocks转换为socks5，以便被其他应用使用。
 

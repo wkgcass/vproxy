@@ -17,10 +17,10 @@ public class Config {
     // and resources will be handled by auto-lb or sidecar
     public static boolean serviceMeshMode = false;
 
-    // -D+A:AppClass
+    // -Deploy=xxx
     public static final String appClass;
 
     static {
-        appClass = System.getProperty("+A:AppClass");
+        appClass = System.getProperty("eploy"); // -Deploy
     }
 }

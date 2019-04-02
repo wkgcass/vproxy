@@ -8,31 +8,31 @@ The extended apps are defined in package `net.cassite.vproxyx`, each app entranc
 
 Use `system property -D` to specify the app's class.
 
-NOTE: It's system property specified with `-D`, not a program argument.
+NOTE: It's system property specified with `-D`, not a program argument. And the system property is `eploy`, the initial `D` is the java command line option.
 
 ```shell
--D+A:AppClass=$simple_name_of_a_class
+-Deploy=$simple_name_of_a_class
 ```
 
 The full command could be:
 
 ```shell
-java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $application_args
 #
 # or
 #
-java -D+A:AppClass=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS net.cassite.vproxy.app.Main $application_args
 ```
 
 e.g.
 
 ```
-java -D+A:AppClass=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
+java -Deploy=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0rD,bob:PaSsw0Rd
 ```
 
 ## Available apps
 
-### AppClass=WebSocksProxyServer
+### Deploy=WebSocksProxyServer
 
 A proxy server that can proxy raw tcp flow even when it's behind a websocket gateway.
 
@@ -54,7 +54,7 @@ listen 80 auth alice:pasSw0rD,bob:PaSsw0Rd
 listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl pkcs12 ~/mycertkey.p12 pkcs12pswd myPassWord domain example.com
 ```
 
-### AppClass=WebSocksAgent
+### Deploy=WebSocksProxyAgent
 
 An agent server run locally, which wraps websocks into socks5, so that other applications can use.
 
