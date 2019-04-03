@@ -8,7 +8,7 @@ VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only
 
 Clone it, javac it, then everything is ready for running.
 
-(Gradlew is also provided.)
+(Gradlew and Dockerfile is also provided)
 
 ## Aim
 
@@ -29,6 +29,7 @@ Questions about implementation detail are also welcome (in issues).
 * [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): Detailed command document.
 * [lb-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/lb-example.md): An example about running a loadbalancer.
 * [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md): An example about vproxy service mesh.
+* [docker-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/docker-example.md): An example about building and running vproxy in docker.
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): Something about the architecture.
 * [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): The protocol which is used by vproxy service mesh impl.
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.

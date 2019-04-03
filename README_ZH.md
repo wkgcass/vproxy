@@ -6,7 +6,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 1) clone，2) javac，3) 运行！
 
-(还可以直接使用Gradlew)
+(可以直接使用Gradlew或者Dockerfile)
 
 ## 模板
 
@@ -27,6 +27,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 * [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): 详细的命令文档。
 * [lb-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/lb-example.md): 关于TCP负载均衡的一个使用例子。
 * [service-mesh-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/service-mesh-example.md): 关于service mesh的一个例子。
+* [docker-example.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/docker-example.md): 关于构建镜像以及在docker中运行vproxy的一个例子。
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): 架构相关。
 * [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): vproxy service mesh通信协议。
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
