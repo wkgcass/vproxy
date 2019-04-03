@@ -1,16 +1,17 @@
-FROM debian:9.7-slim
+FROM alpine:3.9.2
 
-## apt
-RUN apt-get update -y
-RUN apt-get install -y wget curl
+## apk
+RUN apk add wget curl
 
 ## use the / directory
 WORKDIR /
 
 ## download the vproxy runtime
-RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-ALPHA-4/vproxy-runtime-linux.tar.gz
-## extract (the extract result would be a directory "./vproxy-runtime-linux")
-RUN tar zxf vproxy-runtime-linux.tar.gz
+## extract (the extract result would be a directory "./vproxy-runtime-musl")
+## remove the tar.gz file
+RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-ALPHA-4/vproxy-runtime-musl.tar.gz && \
+    tar zxf vproxy-runtime-musl.tar.gz && \
+    rm -f vproxy-runtime-musl.tar.gz
 
 ## download the latest vproxy
 RUN curl https://raw.githubusercontent.com/wkgcass/vproxy/master/src/main/java/net/cassite/vproxy/app/Application.java 2>/dev/null \
@@ -18,11 +19,11 @@ RUN curl https://raw.githubusercontent.com/wkgcass/vproxy/master/src/main/java/n
     | awk '{print $3}' \
     | cut -d '"' -f 2 \
     1> /version
-RUN wget -q https://github.com/wkgcass/vproxy/releases/download/$(cat /version)/vproxy-$(cat /version).jar
-RUN mv vproxy-$(cat /version).jar vproxy.jar
+RUN wget -q https://github.com/wkgcass/vproxy/releases/download/$(cat /version)/vproxy-$(cat /version).jar && \
+    mv vproxy-$(cat /version).jar vproxy.jar
 
 ## set path variable
-ENV PATH="/vproxy-runtime-linux/bin:$PATH"
+ENV PATH="/vproxy-runtime-musl/bin:$PATH"
 
 ## default we start the vproxy with a resp-controller
 CMD ["java", \
