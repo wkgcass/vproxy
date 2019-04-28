@@ -15,7 +15,7 @@ import java.net.SocketException;
 import java.util.Enumeration;
 
 public class PACHandler extends HttpProtocolHandler {
-    private static final String prefix = "function FindProxyForURL(url,host){return 'SOCKS ";
+    private static final String prefix = "function FindProxyForURL(url,host){return 'SOCKS5 ";
     private static final String suffix = "';}";
 
     private final String host;
