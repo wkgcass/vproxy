@@ -48,7 +48,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ security-group (secg)
 |        |
 |        +---+ security-group-rule (secgr)
-+---+ auto-lb /* only available in service mesh mode */
++---+ smart-lb-group /* only available in service mesh mode */
 
    bind-server (bs) --+
   connection (conn)   +-- /* channel */
@@ -803,46 +803,47 @@ list accepted-conn-count in bind-server 127.0.0.1:6380 in tl lb0
 (integer) 2
 ```
 
-## Resource: auto-lb
+## Resource: smart-lb-group
 
-A loadbalancer that learns node changes and automatically updates its backend server list. Only available in service mesh mode.
+A binding for an lb and a server-group with info from service mesh network.
 
 #### add
 
-Create a new auto-lb instance.
+Create a new smart-lb-group binding.
 
 * service: the service watched by the auto lb
 * zone: the zone watched by the auto lb
-* port: the auto lb listening port
+* tcp-lb: the tcp lb to bind
+* server-group: the server group to bind
 
 ```
-add auto-lb lb0 service myservice.com:443 zone z0 port 18080
+add smart-lb-group slg0 service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0
 "OK"
 ```
 
 #### list
 
-Get names of auto-lb instances.
+Get names of smart-lb-group bindings.
 
 ```
-list auto-lb
-1) "lb0"
+list smart-lb-group
+1) "slg0"
 ```
 
 #### list-detail
 
-Get detailed info about auto-lb instances.
+Get detailed info about smart-lb-group bindings.
 
 ```
-list-detail auto-lb
-1) "lb0 -> service myservice.com:443 zone z0 port 18080"
+list-detail smart-lb-group
+1) "slg0 -> service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0"
 ```
 
-#### force-remove
+#### remove
 
-Remove an auto-lb instance.
+Remove the smart-lb-group binding.
 
 ```
-force-remove auto-lb lb0
+remove smart-lb-group slg0
 "OK"
 ```

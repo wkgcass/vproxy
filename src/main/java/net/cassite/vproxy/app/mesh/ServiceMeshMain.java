@@ -1,6 +1,7 @@
 package net.cassite.vproxy.app.mesh;
 
 import net.cassite.vproxy.app.Application;
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.component.auto.AutoConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.XException;
@@ -10,7 +11,6 @@ import net.cassite.vproxy.component.svrgroup.Method;
 import net.cassite.vproxy.discovery.DiscoveryConfig;
 import net.cassite.vproxy.discovery.TimeoutConfig;
 import net.cassite.vproxy.util.IPType;
-import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.File;
@@ -18,8 +18,6 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.*;
 import java.util.Enumeration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Properties;
 
 public class ServiceMeshMain {
@@ -36,23 +34,6 @@ public class ServiceMeshMain {
                 ", localPort=" + localPort +
                 ", minExportPort=" + minExportPort +
                 ", maxExportPort=" + maxExportPort +
-                '}';
-        }
-    }
-
-    class AutoLB {
-        private String alias;
-        private String service;
-        private String zone;
-        private int port;
-
-        @Override
-        public String toString() {
-            return "AutoLB{" +
-                "alias='" + alias + '\'' +
-                ", service='" + service + '\'' +
-                ", zone='" + zone + '\'' +
-                ", port=" + port +
                 '}';
         }
     }
@@ -101,12 +82,10 @@ public class ServiceMeshMain {
         return instance;
     }
 
-    private String mode;
     private int workers;
     private String nic;
     private IPType ipType;
     private Sidecar sidecar;
-    private Map<String, AutoLB> autoLBs;
     private Discovery discovery;
 
     private AutoConfig autoConfig;
@@ -121,12 +100,10 @@ public class ServiceMeshMain {
     @Override
     public String toString() {
         return "ServiceMeshMain{" +
-            "mode='" + mode + '\'' +
-            ", workers=" + workers +
+            "workers=" + workers +
             ", nic='" + nic + '\'' +
             ", ipType=" + ipType +
             ", sidecar=" + sidecar +
-            ", autoLBs=" + autoLBs +
             ", discovery=" + discovery +
             '}';
     }
@@ -197,12 +174,7 @@ public class ServiceMeshMain {
 
     public int start() {
         try {
-            if (mode.equals("sidecar")) {
-                launchSidecar();
-            } else {
-                assert mode.equals("auto_lb");
-                launchAutoLB();
-            }
+            launchSidecar();
         } catch (Exception e) {
             return exit("got exception when launching. " + e.getClass().getSimpleName() + " " + e.getMessage());
         }
@@ -215,17 +187,7 @@ public class ServiceMeshMain {
         );
     }
 
-    private void launchAutoLB() throws Exception {
-        for (String alias : autoLBs.keySet()) {
-            AutoLB autoLB = autoLBs.get(alias);
-            Application.get().autoLBHolder.add(
-                autoLB.alias, autoLB.service, autoLB.zone, autoLB.port
-            );
-        }
-    }
-
     private void checkWithException() throws XException {
-        checkNull("mode", mode);
         checkNull("workers", workers);
         checkNull("nic", nic);
         checkNull("ip_type", ipType);
@@ -246,23 +208,12 @@ public class ServiceMeshMain {
         checkNull("discovery.search.min_udp_port", discovery.search.minUDPPort);
         checkNull("discovery.search.max_udp_port", discovery.search.maxUDPPort);
 
-        if (mode.equals("sidecar")) {
+        if ("Sidecar".equals(Config.appClass)) {
             checkNull("sidecar", sidecar);
             checkNull("sidecar.zone", sidecar.zone);
             checkNull("sidecar.local_port", sidecar.localPort);
             checkNull("sidecar.min_export_port", sidecar.minExportPort);
             checkNull("sidecar.max_export_port", sidecar.maxExportPort);
-        } else {
-            assert mode.equals("auto_lb");
-
-            checkNull("auto_lb", autoLBs);
-            for (String alias : autoLBs.keySet()) {
-                AutoLB autoLB = autoLBs.get(alias);
-                String prefix = "auto_lb." + alias + ".";
-                checkNull(prefix + "service", autoLB.service);
-                checkNull(prefix + "zone", autoLB.zone);
-                checkNull(prefix + "port", autoLB.port);
-            }
         }
     }
 
@@ -286,9 +237,7 @@ public class ServiceMeshMain {
     }
 
     private void load(String key, String value) throws XException {
-        if (key.equals("mode")) {
-            mode = loadMode(value);
-        } else if (key.equals("workers")) {
+        if (key.equals("workers")) {
             workers = loadPositiveInt(value);
         } else if (key.equals("nic")) {
             nic = loadNic(value);
@@ -312,23 +261,6 @@ public class ServiceMeshMain {
                     break;
                 case "max_export_port":
                     sidecar.maxExportPort = loadPort(value);
-                    break;
-                default:
-                    throw new XException("unknown config");
-            }
-        } else if (key.startsWith("auto_lb.")) {
-            Tuple<String, String> tup = extractAutoLB(key);
-            AutoLB autoLB = constructAutoLB(tup.left);
-            String k = tup.right;
-            switch (k) {
-                case "service":
-                    autoLB.service = loadString(value);
-                    break;
-                case "zone":
-                    autoLB.zone = loadString(value);
-                    break;
-                case "port":
-                    autoLB.port = loadPort(value);
                     break;
                 default:
                     throw new XException("unknown config");
@@ -382,35 +314,11 @@ public class ServiceMeshMain {
         }
     }
 
-    private String loadMode(String value) throws XException {
-        if (!value.equals("sidecar") && !value.equals("auto_lb"))
-            throw new XException("invalid mode");
-        return value;
-    }
-
     private Sidecar constructSidecar() {
         if (sidecar == null) {
             sidecar = new Sidecar();
         }
         return sidecar;
-    }
-
-    private Tuple<String/*alias*/, String/*key*/> extractAutoLB(String key) throws XException {
-        String[] arr = key.split("\\.");
-        if (arr.length != 3)
-            throw new XException("invalid key");
-        return new Tuple<>(arr[1], arr[2]);
-    }
-
-    private AutoLB constructAutoLB(String alias) {
-        if (autoLBs == null)
-            autoLBs = new HashMap<>();
-        if (!autoLBs.containsKey(alias)) {
-            AutoLB autoLB = new AutoLB();
-            autoLB.alias = alias;
-            autoLBs.put(alias, autoLB);
-        }
-        return autoLBs.get(alias);
     }
 
     private Discovery constructDiscovery() {

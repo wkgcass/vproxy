@@ -134,20 +134,16 @@ java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
 ```
 
 如果指定了service mesh配置文件，该进程将进入service mesh模式。  
-在service mesh模式中，所有（实体）资源将会是只读的，这些资源会由service mesh模块自动处理。
-
-> 实体资源是指相对固定不变的资源，例如tcp-lb是实体资源，而session则不是。  
-> 此外，auto-lb是一个service mesh资源，仅在该模式中可用，也是可以读写的。
 
 vproxy提供两种service mesh的角色。
 
 * sidecar: 在应用主机上部署。一台主机一个sidecar。用户app应当使用socks5，并使用域名来访问集群内的服务，网络流量会自动定向至对应的端点。用户app应当只监听在localhost上，sidecar会帮你将服务发布出去。
-* auto_lb: 充当一个tcp负载均衡。负载均衡将自动学习集群中节点的变化，并相应增加或移除后端列表中的节点。
+* smart-lb-group: 指定一个tcp-lb和一个server-group。group将自动学习集群中节点的变化，并相应增加或移除列表中的节点。并且自动将tcp-lb的端口发布出去，供集群中其他节点访问。
 
-用户app应当使用（任何一种）redis客户端，来让sidecar知道何种服务在本地运行。
+用户app可以使用任何一种redis客户端，来让sidecar知道何种服务在本地运行。
 
 使用如下命令来 添加/查看/移除 sidecar中的服务。  
-看起来和操作redis的SET一样：
+看起来和操作redis的集合(SET)指令一样：
 
 ```
 sadd service $your_service_domain:$protocol_port:$local_port
@@ -162,11 +158,13 @@ srem service $your_service_domain:$protocol_port:$local_port
 
 建议用户app：
 
-1. 使用socks5和域名来发送请求，域名应当由代理（也就是sidecar）来解析。
+1. 使用socks5和域名来发送请求，域名也应当由代理（也就是sidecar）来解析。如果使用curl，需要设置`--socks5 'socks5h://'`，其中`h`表示让socks5代理来解析域名。
 2. 当服务启动后，立即使用redis客户端来注册服务。
 3. 服务名称应当为 `域名:协议端口号`，例如 `myservice.com:80`，访问url和它一致，例如 `http://myservice.com`。
 4. 在app关闭前，使用redis客户端来注销服务，并且等待流量跑完。
 5. 注意: 外部流量不应当经过sidecar（socks5代理），因为vproxy网络并不知道如何访问外部资源。
+
+关于本节内容，可以参考[service-mesh-example](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。
 
 ## 5. 例子和解释
 

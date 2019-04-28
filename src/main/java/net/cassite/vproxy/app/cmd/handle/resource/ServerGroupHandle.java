@@ -9,6 +9,7 @@ import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.HealthCheckHandle;
 import net.cassite.vproxy.app.cmd.handle.param.MethHandle;
 import net.cassite.vproxy.app.cmd.handle.param.WeightHandle;
+import net.cassite.vproxy.component.auto.SmartLBGroup;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
@@ -167,6 +168,13 @@ public class ServerGroupHandle {
             ServerGroups groups = Application.get().serverGroupsHolder.get(groupsName);
             if (groups.getServerGroups().stream().anyMatch(h -> h.group.equals(serverGroup))) {
                 throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgs.fullname + " " + groups.alias);
+            }
+        }
+        // check smart-lb-group
+        for (String slgName : Application.get().smartLBGroupHolder.names()) {
+            SmartLBGroup slg = Application.get().smartLBGroupHolder.get(slgName);
+            if (slg.handledGroup.equals(serverGroup)) {
+                throw new Exception(ResourceType.slg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.slg.fullname + " " + slg.alias);
             }
         }
     }

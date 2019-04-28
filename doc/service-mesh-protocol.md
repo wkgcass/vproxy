@@ -186,7 +186,7 @@ The khala network lib let user code focus on service handling. Any khala node ch
 
 There are two kinds of nodes in a khala network:
 
-1. Nexus: the traffic dispatcher node, usually used by an `auto-lb`, will alert all remote endpoints on any modification.
+1. Nexus: the traffic dispatcher node, usually used by a `smart-lb-group`, will alert all remote endpoints on any modification.
 2. Pylon: the normal node, usually used by a sidecar, will only alert endpoints with at least one nexus node on modification, and synchronization is periodic.
 
 One discovery node can carry multiple khala nodes.

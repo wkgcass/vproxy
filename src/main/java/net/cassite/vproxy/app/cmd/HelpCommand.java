@@ -398,7 +398,8 @@ public class HelpCommand {
         portrange("port-range", null, "an integer tuple $i,$j"),
         service("service", null, "service name"),
         zone("zone", null, "zone name"),
-        port("port", null, "a port integer"),
+        tcplb("tcp-lb", "tl", "tcp loadbalancer"),
+        servergroup("server-group", "sg", "a group of servers"),
         ;
         public final String param;
         public final String shortVer;
@@ -1083,41 +1084,42 @@ public class HelpCommand {
                         )
                     ))
             )),
-        autolb("auto-lb", null, "A loadbalancer that learns node changes and automatically updates its backend server list. Only available in service mesh mode",
+        slg("smart-lb-group", null, "A binding for an lb and a server-group with info from service mesh network",
             Arrays.asList(
-                new ResActMan(ActMan.add, "create a new auto-lb instance",
+                new ResActMan(ActMan.add, "create a new smart-lb-group binding",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.service, "the service watched by the auto lb"),
                         new ResActParamMan(ParamMan.zone, "the zone watched by the auto lb"),
-                        new ResActParamMan(ParamMan.port, "the auto lb listening port")
+                        new ResActParamMan(ParamMan.tcplb, "the tcp lb to bind"),
+                        new ResActParamMan(ParamMan.servergroup, "the server group to bind")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add auto-lb lb0 service myservice.com:443 zone z0 port 18080",
+                            "add smart-lb-group slg0 service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0",
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.list, "get names of auto-lb instances",
+                new ResActMan(ActMan.list, "get names of smart-lb-group bindings",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list auto-lb",
-                            "1) \"lb0\""
+                            "list smart-lb-group",
+                            "1) \"slg0\""
                         )
                     )),
-                new ResActMan(ActMan.listdetail, "get detailed info about auto-lb instances",
+                new ResActMan(ActMan.listdetail, "get detailed info about smart-lb-group bindings",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list-detail auto-lb",
-                            "1) \"lb0 -> service myservice.com:443 zone z0 port 18080\""
+                            "list-detail smart-lb-group",
+                            "1) \"slg0 -> service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0\""
                         )
                     )),
-                new ResActMan(ActMan.forceremove, "remove an auto-lb instance",
+                new ResActMan(ActMan.remove, "remove the smart-lb-group binding",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "force-remove auto-lb lb0",
+                            "remove smart-lb-group slg0",
                             "\"OK\""
                         )
                     ))

@@ -18,7 +18,7 @@ public enum ResourceType {
     secgr("security-group-rule"),
     resolver("resolver"),
     dnscache("dns-cache"),
-    autolb("auto-lb"),
+    slg("smart-lb-group"),
 
     respcontroller("resp-controller"),
     ;

@@ -1,16 +1,11 @@
 package net.cassite.vproxy.app;
 
-import net.cassite.vproxy.app.mesh.AutoLBHolder;
 import net.cassite.vproxy.app.mesh.SidecarHolder;
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.app.TcpLB;
-import net.cassite.vproxy.component.auto.AutoLB;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
-import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
-
-import java.util.List;
 
 public class ServiceMeshResourceSynchronizer {
     private ServiceMeshResourceSynchronizer() {
@@ -20,7 +15,6 @@ public class ServiceMeshResourceSynchronizer {
         Application.get().clear();
 
         syncSidecar(Application.get().sidecarHolder);
-        syncAutoLB(Application.get().autoLBHolder);
     }
 
     private static void syncSidecar(SidecarHolder sidecarHolder) {
@@ -30,24 +24,6 @@ public class ServiceMeshResourceSynchronizer {
         for (TcpLB lb : sidecarHolder.getSidecar().getTcpLBs()) {
             syncTcpLB(lb);
         }
-    }
-
-    private static void syncAutoLB(AutoLBHolder autoLBHolder) {
-        List<String> names = autoLBHolder.names();
-        for (String name : names) {
-            AutoLB autoLB;
-            try {
-                autoLB = autoLBHolder.get(name);
-            } catch (NotFoundException ignore) {
-                continue;
-            }
-            syncAutoLB(autoLB);
-        }
-    }
-
-    private static void syncAutoLB(AutoLB autoLB) {
-        TcpLB tcpLB = autoLB.lb;
-        syncTcpLB(tcpLB);
     }
 
     private static void syncTcpLB(TcpLB tcpLB) {

@@ -71,7 +71,7 @@ public class NetEventLoop {
         }
         // now the connection is added into event loop
         // we set the close timer
-        NetEventLoopUtils.resetCloseTimeout(att);
+        selectorEventLoop.runOnLoop(() -> NetEventLoopUtils.resetCloseTimeout(att));
     }
 
     @ThreadSafe
@@ -92,10 +92,12 @@ public class NetEventLoop {
     // this method is for both server connection and client connection
     @ThreadSafe
     public void removeConnection(Connection connection) {
+        assert Logger.lowLevelDebug("removing connection from loop: " + connection);
         // event loop in connection object will be set to null in remove event
         selectorEventLoop.remove(connection.channel);
         // clear timeout
         if (connection.closeTimeout != null) {
+            assert Logger.lowLevelDebug("cancel the close timeout: " + connection);
             connection.closeTimeout.cancel();
             connection.closeTimeout = null;
         }
@@ -249,7 +251,7 @@ class NetEventLoopUtils {
             int delta = (int) (Config.currentTimestamp - conn.lastTimestamp);
             if (delta > timeout) {
                 assert Logger.lowLevelDebug("timeout triggered: " + conn);
-                ctx.handler.exception(ctx, new SocketTimeoutException("timeout by timer"));
+                ctx.handler.exception(ctx, new SocketTimeoutException("timeout by timer: " + ctx.connection));
                 // if the user code didn't close the connection, we do it for user
                 if (!conn.isClosed()) {
                     ctx.handler.closed(ctx);

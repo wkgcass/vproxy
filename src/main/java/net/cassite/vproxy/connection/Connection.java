@@ -254,6 +254,7 @@ public class Connection implements NetFlowRecorder {
         getOutBuffer().removeHandler(outBufferETHandler);
 
         NetEventLoop eventLoop = _eventLoop;
+        _eventLoop = null;
         if (eventLoop != null) {
             eventLoop.removeConnection(this);
         }

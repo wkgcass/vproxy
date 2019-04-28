@@ -250,7 +250,11 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+            if (Utils.isReset(err)) {
+                assert Logger.lowLevelDebug("session " + session + " got exception: " + err);
+            } else {
+                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+            }
             // close both sides
             utilCloseSessionAndReleaseBuffers(session);
         }

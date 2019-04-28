@@ -3,8 +3,8 @@ package net.cassite.vproxy.test.cases;
 import net.cassite.vproxy.component.app.Socks5Server;
 import net.cassite.vproxy.component.app.TcpLB;
 import net.cassite.vproxy.component.auto.AutoConfig;
-import net.cassite.vproxy.component.auto.AutoLB;
 import net.cassite.vproxy.component.auto.Sidecar;
+import net.cassite.vproxy.component.auto.SmartLBGroup;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.StillRunningException;
@@ -12,7 +12,10 @@ import net.cassite.vproxy.component.khala.Khala;
 import net.cassite.vproxy.component.khala.KhalaConfig;
 import net.cassite.vproxy.component.khala.KhalaNode;
 import net.cassite.vproxy.component.khala.KhalaNodeType;
+import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.Method;
+import net.cassite.vproxy.component.svrgroup.ServerGroup;
+import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.discovery.Discovery;
 import net.cassite.vproxy.discovery.DiscoveryConfig;
 import net.cassite.vproxy.discovery.TimeoutConfig;
@@ -22,20 +25,29 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+
 import static org.junit.Assert.*;
 
-public class TestAuto {
+public class TestSmartLBGroup {
     private DiscoveryHolder holder;
     private EventLoopGroup elg0;
     private EventLoopGroup elg1;
     private EventLoopGroup elg2;
+    private ServerGroup serverGroup1;
+    private ServerGroup serverGroup2;
+    private ServerGroup serverGroup3;
 
     @Before
-    public void setUp() {
+    public void setUp() throws Exception {
         holder = new DiscoveryHolder();
         elg0 = new EventLoopGroup("elg0");
         elg1 = new EventLoopGroup("elg1");
         elg2 = new EventLoopGroup("elg2");
+        serverGroup1 = new ServerGroup("sg0", elg0, new HealthCheckConfig(3000, 1000, 2, 3), Method.wrr);
+        serverGroup2 = new ServerGroup("sg1", elg0, new HealthCheckConfig(3000, 1000, 2, 3), Method.wrr);
+        serverGroup3 = new ServerGroup("sg2", elg0, new HealthCheckConfig(3000, 1000, 2, 3), Method.wrr);
     }
 
     @After
@@ -44,6 +56,14 @@ public class TestAuto {
         elg0.close();
         elg1.close();
         elg2.close();
+    }
+
+    private TcpLB getLB(int listenPort, ServerGroup group) throws Exception {
+        ServerGroups sgs = new ServerGroups("sgs0");
+        sgs.add(group, 10);
+        return new TcpLB("tl0", elg0, elg0, new InetSocketAddress(InetAddress.getByName("127.0.0.1"), listenPort),
+            sgs, 1000, 16384, 16384, SecurityGroup.allowAll());
+        // NOTE: lb is not started because we don't have to start an lb in this test
     }
 
     private Khala getKhala(String discoveryName, int port) throws Exception {
@@ -66,25 +86,25 @@ public class TestAuto {
         Khala k0 = getKhala("d0", 18080);
         Khala k1 = getKhala("d1", 18081);
 
-        AutoLB autoLB = new AutoLB("alb", "s0", "z0", 16080, new AutoConfig(
+        SmartLBGroup smartLBGroup = new SmartLBGroup("alb", "s0", "z0", getLB(16080, serverGroup1), serverGroup1, new AutoConfig(
             elg0, elg0, k0, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ));
-        TcpLB lb = autoLB.lb;
+        TcpLB lb = smartLBGroup.handledLb;
         assertEquals("have one group", 1, lb.backends.getServerGroups().size());
         assertEquals("weight -eq 10 fixed in code", 10, lb.backends.getServerGroups().get(0).getWeight());
-        assertEquals("have no svr", 0, lb.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
         // add a node
         k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.1", 19080));
 
         Thread.sleep(3000 /*wait long enough*/);
-        // now the autoLB should have created an lb named s0, with group named s0, with a svr s0@127.0.0.1:19080
-        assertEquals("have one svr now", 1, lb.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("name pattern `$service@$addr:$port`", "s0@127.0.0.1:19080", lb.backends.getServerGroups().get(0).group.getServerHandles().get(0).alias);
+        // now the smartLBGroup should have created an lb named s0, with group named s0, with a svr s0@127.0.0.1:19080
+        assertEquals("have one svr now", 1, serverGroup1.getServerHandles().size());
+        assertEquals("name pattern `$service@$addr:$port`", "s0@127.0.0.1:19080", serverGroup1.getServerHandles().get(0).alias);
 
-        autoLB.destroy();
+        smartLBGroup.destroy();
     }
 
     @Test
@@ -92,12 +112,11 @@ public class TestAuto {
         Khala k0 = getKhala("d0", 18080);
         Khala k1 = getKhala("d1", 18081);
 
-        AutoLB autoLB = new AutoLB("alb", "s0", "z0", 16080, new AutoConfig(
+        SmartLBGroup smartLBGroup = new SmartLBGroup("alb", "s0", "z0", getLB(16080, serverGroup1), serverGroup1, new AutoConfig(
             elg0, elg0, k0, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ));
-        TcpLB lb = autoLB.lb;
 
         // same zone different service
         k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "sx", "z0", "127.0.0.1", 12345));
@@ -108,9 +127,9 @@ public class TestAuto {
 
         Thread.sleep(3000 /*wait long enough*/);
 
-        assertEquals("have no svr", 0, lb.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
-        autoLB.destroy();
+        smartLBGroup.destroy();
     }
 
     @Test
@@ -127,12 +146,12 @@ public class TestAuto {
         assertEquals("socks5 have no group", 0, socks5Server.backends.getServerGroups().size());
         assertEquals("sidecar have no lbs", 0, sidecar.getTcpLBs().size());
 
-        AutoLB alb10 = new AutoLB("alb10", "s0", "z0", 28080, new AutoConfig(
+        SmartLBGroup alb10 = new SmartLBGroup("alb10", "s0", "z0", getLB(28080, serverGroup1), serverGroup1, new AutoConfig(
             elg1, elg1, k1, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ));
-        TcpLB lb10 = alb10.lb;
+        TcpLB lb10 = alb10.handledLb;
         assertEquals("have one group", 1, lb10.backends.getServerGroups().size());
         assertEquals("weight -eq 10 fixed in code", 10, lb10.backends.getServerGroups().get(0).getWeight());
         assertEquals("have no svr", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
@@ -146,15 +165,15 @@ public class TestAuto {
         assertEquals("s0 have one server: the lb", 28080,
             socks5Server.backends.getServerGroups().get(0).group.getServerHandles().get(0).server.getPort());
 
-        assertEquals("the autoLB10 still has no backends", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has no backends", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
 
-        // now create another auto-lb with the same service
-        AutoLB alb20 = new AutoLB("alb21", "s0", "z0", 28081, new AutoConfig(
+        // now create another smart-lb-group with the same service
+        SmartLBGroup alb20 = new SmartLBGroup("alb21", "s0", "z0", getLB(28081, serverGroup2), serverGroup2, new AutoConfig(
             elg2, elg2, k1, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ));
-        TcpLB lb20 = alb20.lb;
+        TcpLB lb20 = alb20.handledLb;
 
         Thread.sleep(1000 /*wait long enough*/);
 
@@ -162,15 +181,15 @@ public class TestAuto {
         assertEquals("socks5 have one group: s0", "s0", socks5Server.backends.getServerGroups().get(0).group.alias);
         assertEquals("s0 have two servers", 2, socks5Server.backends.getServerGroups().get(0).group.getServerHandles().size());
 
-        assertEquals("the autoLB20 has no backends", 0, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 has no backends", 0, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
-        // now create another auto-lb with the same service
-        AutoLB alb11 = new AutoLB("alb12", "s1", "z0", 28082, new AutoConfig(
+        // now create another smart-lb-group with the same service
+        SmartLBGroup alb11 = new SmartLBGroup("alb12", "s1", "z0", getLB(28082, serverGroup3), serverGroup3, new AutoConfig(
             elg1, elg1, k1, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ));
-        TcpLB lb11 = alb11.lb;
+        TcpLB lb11 = alb11.handledLb;
 
         Thread.sleep(1000 /*wait long enough*/);
 
@@ -178,7 +197,7 @@ public class TestAuto {
         assertEquals("socks5 have two groups: s0/s1", "s1", socks5Server.backends.getServerGroups().get(1).group.alias);
         assertEquals("s1 have one server", 1, socks5Server.backends.getServerGroups().get(1).group.getServerHandles().size());
 
-        assertEquals("the autoLB11 has no backends", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 has no backends", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // add service s0 into sidecar
         sidecar.addService("s0", 22080);
@@ -194,12 +213,12 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // now the lb10 and lb20 should learn the s0 and add it to backend
-        assertEquals("the autoLB10 has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
         assertEquals(19080, lb10.backends.getServerGroups().get(0).group.getServerHandles().get(0).server.getPort());
-        assertEquals("the autoLB20 has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
         assertEquals(19080, lb20.backends.getServerGroups().get(0).group.getServerHandles().get(0).server.getPort());
         // lb11 should still have only 1 backend
-        assertEquals("the autoLB11 still has 0 backend", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 0 backend", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // add service s1 into sidecar
         sidecar.addService("s1", 22081);
@@ -214,11 +233,11 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // now the lb11 should learn the s1 and add it to backend
-        assertEquals("the autoLB11 has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
         assertEquals(19081, lb11.backends.getServerGroups().get(0).group.getServerHandles().get(0).server.getPort());
         // lb10/20 should still have only 1 backend
-        assertEquals("the autoLB10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // add another service s0 into sidecar
         sidecar.addService("s0", 22082);
@@ -231,9 +250,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // the lbs should not change
-        assertEquals("the autoLB11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // remove a service that is still running
         try {
@@ -254,9 +273,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // the lbs should not change
-        assertEquals("the autoLB11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // maintain 22082 (s0)
         sidecar.maintain("s0", 22082);
@@ -268,9 +287,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // the s0 pylon node should be removed
-        assertEquals("the autoLB11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 has 0 backend", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 has 0 backend", 0, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 has 0 backend", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 has 0 backend", 0, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // add 22080 (s0) back
         sidecar.addService("s0", 22080);
@@ -283,9 +302,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // the s0 pylon node should be learned again
-        assertEquals("the autoLB11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // remove the 22080 (s0) then add it back (s0)
         sidecar.maintain("s0", 22080); // into _MAINTAIN_ mode
@@ -299,9 +318,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // nothing changes on lb side
-        assertEquals("the autoLB11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 still has 1 backend", 1, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         // remove the 22081 (s1)
         sidecar.maintain("s1", 22081); // into _MAINTAIN_ mode
@@ -313,9 +332,9 @@ public class TestAuto {
         Thread.sleep(1000 /*wait long enough*/);
 
         // the s1 should be removed from the lb
-        assertEquals("the autoLB11 has 0 backend", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
-        assertEquals("the autoLB20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup11 has 0 backend", 0, lb11.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup10 still has 1 backend", 1, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
+        assertEquals("the smartLBGroup20 still has 1 backend", 1, lb20.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         sidecar.destory();
         alb10.destroy();
@@ -338,7 +357,7 @@ public class TestAuto {
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
         ), 19090, 19099);
-        AutoLB alb = new AutoLB("alb", "s0", "z2", 28080, new AutoConfig(
+        SmartLBGroup alb = new SmartLBGroup("alb", "s0", "z2", getLB(28080, serverGroup1), serverGroup1, new AutoConfig(
             elg1, elg1, k1, "lo0", IPType.v4,
             new HealthCheckConfig(200, 500, 2, 3),
             Method.wrr
@@ -354,7 +373,7 @@ public class TestAuto {
         assertEquals("socks5 have no group", 0, socks5Server2.backends.getServerGroups().size());
         assertEquals("sidecar have no lbs", 0, sidecar2.getTcpLBs().size());
 
-        TcpLB lb10 = alb.lb;
+        TcpLB lb10 = alb.handledLb;
         assertEquals("have no svr", 0, lb10.backends.getServerGroups().get(0).group.getServerHandles().size());
 
         sidecar.destory();

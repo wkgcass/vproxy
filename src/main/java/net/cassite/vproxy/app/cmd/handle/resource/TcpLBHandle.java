@@ -5,11 +5,13 @@ import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.cmd.Param;
 import net.cassite.vproxy.app.cmd.Resource;
+import net.cassite.vproxy.app.cmd.ResourceType;
 import net.cassite.vproxy.app.cmd.handle.param.AddrHandle;
 import net.cassite.vproxy.app.cmd.handle.param.InBufferSizeHandle;
 import net.cassite.vproxy.app.cmd.handle.param.OutBufferSizeHandle;
 import net.cassite.vproxy.app.cmd.handle.param.TimeoutHandle;
 import net.cassite.vproxy.component.app.TcpLB;
+import net.cassite.vproxy.component.auto.SmartLBGroup;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.secure.SecurityGroup;
@@ -106,6 +108,17 @@ public class TcpLBHandle {
         Application.get().tcpLBHolder.add(
             alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, secg
         );
+    }
+
+    public static void preCheckRemove(Command cmd) throws Exception {
+        TcpLB tcpLB = Application.get().tcpLBHolder.get(cmd.resource.alias);
+
+        for (String slgName : Application.get().smartLBGroupHolder.names()) {
+            SmartLBGroup slg = Application.get().smartLBGroupHolder.get(slgName);
+            if (slg.handledLb.equals(tcpLB)) {
+                throw new Exception(ResourceType.tl.fullname + " " + tcpLB.alias + " is used by " + ResourceType.slg.fullname + " " + slg.alias);
+            }
+        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {

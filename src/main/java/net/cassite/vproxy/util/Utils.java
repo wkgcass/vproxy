@@ -5,6 +5,7 @@ import net.cassite.vproxy.dns.Resolver;
 import net.cassite.vproxy.socks.AddressType;
 import sun.misc.Unsafe;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -15,6 +16,8 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class Utils {
+    public static final String RESET_MSG = "Connection reset by peer";
+
     private Utils() {
     }
 
@@ -637,5 +640,9 @@ public class Utils {
             byte b = e >= arr.length ? 0 : arr[e];
             arr[i] = b;
         }
+    }
+
+    public static boolean isReset(IOException t) {
+        return RESET_MSG.equals(t.getMessage());
     }
 }

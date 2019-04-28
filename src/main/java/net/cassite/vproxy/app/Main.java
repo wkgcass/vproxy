@@ -11,6 +11,7 @@ import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
+import net.cassite.vproxyx.Sidecar;
 import net.cassite.vproxyx.WebSocksProxyAgent;
 import net.cassite.vproxyx.WebSocksProxyServer;
 
@@ -35,8 +36,7 @@ public class Main {
         "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
         "\n" +
         "\n\t\tserviceMeshConfig ${filename}                Specify config file and launch into service mesh mode" +
-        "\n\t\t                                             All resources will become readonly" +
-        "\n\t\t                                             and save/load/auto-save will be disabled" +
+        "\n" +
         "\n\t\tpidFile                                      Set the pid file path" +
         "\n" +
         "\n\t\tnoLoadLast                                   Do not load last config on start up" +
@@ -56,6 +56,9 @@ public class Main {
                 case "WebSocksProxyServer":
                     WebSocksProxyServer.main0(args);
                     break;
+                case "Sidecar":
+                    Sidecar.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     System.exit(1);
@@ -73,8 +76,16 @@ public class Main {
         // apps can be found in vproxyx package
         String appClass = Config.appClass;
         if (appClass != null) {
-            runApp(appClass, args);
-            return;
+            if (appClass.equals("Sidecar")) {
+                // SPECIAL HANDLE for Sidecar app
+                // process the input args the same as Main app, but will run the Sidecar app instead
+                // also, disable the config loading and saving here
+                Config.configLoadingDisabled = true;
+                Config.configSavingDisabled = true;
+            } else {
+                runApp(appClass, args);
+                return;
+            }
         }
 
         try {
@@ -87,8 +98,6 @@ public class Main {
         }
         // init the address updater (should be called after Application initiates)
         ServerAddressUpdater.init();
-        // init signal hooks
-        Shutdown.initSignal();
         // start ControlEventLoop
         Application.get().controlEventLoop.loop();
 
@@ -178,6 +187,7 @@ public class Main {
                         System.exit(1);
                         return;
                     }
+                    System.out.println("loading service mesh config from: " + next);
                     // handle config, so increase the cursor
                     ++i;
                     ServiceMeshMain serviceMesh = ServiceMeshMain.getInstance();
@@ -196,12 +206,7 @@ public class Main {
                         System.exit(exitCode);
                         return;
                     }
-                    exitCode = serviceMesh.start();
-                    if (exitCode != 0) {
-                        System.exit(exitCode);
-                        return;
-                    }
-                    Config.serviceMeshMode = true;
+                    Config.serviceMeshConfigProvided = true;
                     break;
                 case "pidFile":
                     if (next == null) {
@@ -222,7 +227,7 @@ public class Main {
                     return;
             }
         }
-        if (!loaded) {
+        if (!loaded && !Config.configLoadingDisabled) {
             File f = new File(Shutdown.defaultFilePath());
             if (f.exists()) {
                 // load last config
@@ -253,12 +258,17 @@ public class Main {
             new Thread(controller::start, "StdIOControllerThread").start();
         }
 
-        // start scheduled saving task
-        Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
-        // start scheduled sync task
-        if (Config.serviceMeshMode) {
-            Application.get().controlEventLoop.getSelectorEventLoop().period(10 * 1000,
-                ServiceMeshResourceSynchronizer::sync);
+        // run main app or sidecar
+        if (appClass == null) {
+            // init signal hooks
+            Shutdown.initSignal();
+            // start scheduled saving task
+            Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
+        } else if (appClass.equals("Sidecar")) {
+            // run side car app
+            runApp(appClass, args);
+        } else {
+            throw new IllegalArgumentException("trying to deploy a `" + appClass + "` app but it's not valid");
         }
     }
 

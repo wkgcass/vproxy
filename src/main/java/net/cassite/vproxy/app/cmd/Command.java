@@ -3,7 +3,7 @@ package net.cassite.vproxy.app.cmd;
 import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.app.cmd.handle.resource.*;
-import net.cassite.vproxy.component.auto.AutoLB;
+import net.cassite.vproxy.component.auto.SmartLBGroup;
 import net.cassite.vproxy.component.exception.AlreadyExistException;
 import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.component.exception.XException;
@@ -346,25 +346,6 @@ public class Command {
     }
 
     private static void semantic(Command cmd) throws Exception {
-        // check the app mode
-        if (Config.serviceMeshMode) {
-            // only list/list-detail allowed for service mesh mode
-            if (cmd.action != Action.l && cmd.action != Action.L) {
-                //noinspection PointlessBooleanExpression
-                if (true
-                    // auto-lb can be operated
-                    && cmd.resource.type != ResourceType.autolb
-                    // connection related resources can be removed
-                    && cmd.resource.type != ResourceType.bs
-                    && cmd.resource.type != ResourceType.conn
-                    && cmd.resource.type != ResourceType.sess
-                    && cmd.resource.type != ResourceType.dnscache
-                ) {
-                    throw new Exception("only list/list-detail allowed in service mesh mode");
-                }
-            }
-        }
-
         if (cmd.action == Action.l || cmd.action == Action.L) {
             // for list operations, to/from are not allowed
             if (cmd.preposition != null) {
@@ -376,6 +357,10 @@ public class Command {
             }
         } else {
             // for non list operations, i.e. modification operations
+            // check whether config is allowed to be modified
+            if (Config.configModifyDisabled) {
+                throw new Exception("modifying is disabled");
+            }
             // the name to operate is required
             if (cmd.resource.alias == null) {
                 throw new Exception("resource name not specified when " + cmd.action.fullname + "(-ing) the resource");
@@ -648,17 +633,16 @@ public class Command {
             case resolver:
                 // disallow all operations on resolver
                 throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
-            case autolb:
+            case slg:
                 switch (cmd.action) {
-                    case r:
-                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case a:
+                    case r:
                     case R:
                     case L:
                     case l:
-                        AutoLBHandle.check(targetResource);
+                        SmartLBGroupHandle.check(targetResource);
                         if (cmd.action == Action.a) {
-                            AutoLBHandle.checkCreate(cmd);
+                            SmartLBGroupHandle.checkCreate(cmd);
                         }
                         break;
                     default:
@@ -861,6 +845,7 @@ public class Command {
                         TcpLBHandle.add(this);
                         return new CmdResult();
                     case r:
+                        TcpLBHandle.preCheckRemove(this);
                     case R:
                         TcpLBHandle.forceRemove(this);
                         return new CmdResult();
@@ -942,22 +927,23 @@ public class Command {
                         DnsCacheHandle.remove(this);
                         return new CmdResult();
                 }
-            case autolb:
+            case slg:
                 switch (action) {
                     case l:
-                        List<String> names = AutoLBHandle.names();
+                        List<String> names = SmartLBGroupHandle.names();
                         return new CmdResult(names, names, utilJoinList(names));
                     case L:
-                        List<AutoLB> autoLBs = AutoLBHandle.detail();
-                        List<String> autoLBStrList = autoLBs.stream().map(l ->
-                            l.alias + " -> service " + l.service + " zone " + l.zone + " port " + l.lb.bindAddress.getPort())
+                        List<SmartLBGroup> slgList = SmartLBGroupHandle.detail();
+                        List<String> slgStrList = slgList.stream().map(l ->
+                            l.alias + " -> service " + l.service + " zone " + l.zone + " tcp-lb " + l.handledLb.alias + " server-group " + l.handledGroup.alias)
                             .collect(Collectors.toList());
-                        return new CmdResult(autoLBs, autoLBStrList, utilJoinList(autoLBStrList));
+                        return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
+                    case r:
                     case R:
-                        AutoLBHandle.remove(this);
+                        SmartLBGroupHandle.remove(this);
                         return new CmdResult();
                     case a:
-                        AutoLBHandle.add(this);
+                        SmartLBGroupHandle.add(this);
                         return new CmdResult();
                 }
             default:

@@ -18,6 +18,8 @@ public enum Param {
     net("network"),
     protocol("protocol"),
     portrange("port-range"),
+    tl("tcp-lb"),
+    sg("server-group"),
 
     service("service"),
     zone("zone"),

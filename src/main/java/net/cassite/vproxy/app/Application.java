@@ -1,7 +1,7 @@
 package net.cassite.vproxy.app;
 
-import net.cassite.vproxy.app.mesh.AutoLBHolder;
 import net.cassite.vproxy.app.mesh.SidecarHolder;
+import net.cassite.vproxy.app.mesh.SmartLBGroupHolder;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
@@ -27,7 +27,7 @@ public class Application {
     public final RESPControllerHolder respControllerHolder;
 
     public final SidecarHolder sidecarHolder;
-    public final AutoLBHolder autoLBHolder;
+    public final SmartLBGroupHolder smartLBGroupHolder;
 
     private Application() throws IOException {
         this.version = "1.0.0-ALPHA-4"; // _THE_VERSION_
@@ -43,7 +43,7 @@ public class Application {
         this.socks5ServerHolder = new Socks5ServerHolder();
 
         this.sidecarHolder = new SidecarHolder();
-        this.autoLBHolder = new AutoLBHolder();
+        this.smartLBGroupHolder = new SmartLBGroupHolder();
     }
 
     static void create() throws IOException {

@@ -14,8 +14,20 @@ public class Config {
 
     // service mesh mode:
     // all resources become readonly
-    // and resources will be handled by auto-lb or sidecar
-    public static boolean serviceMeshMode = false;
+    // and resources will be handled by smart-lb-group or sidecar
+    public static boolean serviceMeshConfigProvided = false;
+
+    // whether the loading of configuration is disabled
+    // true = disabled, false = enabled
+    public static boolean configLoadingDisabled = false;
+
+    // whether the saving of configuration is disabled
+    // true = disabled, false = enabled
+    public static boolean configSavingDisabled = false;
+
+    // whether modifying configuration is disabled
+    // true = disabled, false = enabled
+    public static boolean configModifyDisabled = false;
 
     // -Deploy=xxx
     public static final String appClass;

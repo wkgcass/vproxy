@@ -4,7 +4,9 @@ import net.cassite.vproxy.app.*;
 import net.cassite.vproxy.app.cmd.CmdResult;
 import net.cassite.vproxy.app.cmd.Command;
 import net.cassite.vproxy.app.mesh.ServiceMeshMain;
+import net.cassite.vproxy.app.mesh.SmartLBGroupHolder;
 import net.cassite.vproxy.component.auto.AutoConfig;
+import net.cassite.vproxy.component.auto.SmartLBGroup;
 import net.cassite.vproxy.component.check.HealthCheckConfig;
 import net.cassite.vproxy.component.elgroup.EventLoopGroup;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
@@ -127,11 +129,9 @@ public class Shutdown {
 
     @Blocking // writing file is blocking
     public static void save(String filepath) throws Exception {
-        if (Config.serviceMeshMode) {
-            Logger.alert("service mesh mode, saving is disabled");
-            return;
+        if (Config.configSavingDisabled) {
+            throw new UnsupportedOperationException("saving is disabled");
         }
-
         if (filepath == null) {
             filepath = defaultFilePath();
         }
@@ -168,6 +168,10 @@ public class Shutdown {
 
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
+
+        List<TcpLB> tcpLbs = new LinkedList<>();
+
+        List<SmartLBGroup> smartLBGroups = new LinkedList<>();
 
         {
             // create event-loop-group
@@ -233,23 +237,6 @@ public class Shutdown {
                 commands.add(cmd);
                 serverGroups.add(sg);
                 serverGroupsNames.add(name);
-            }
-        }
-        {
-            // create server
-            for (ServerGroup sg : serverGroups) {
-                for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
-                    if (sh.isLogicDelete()) // ignore logic deleted servers
-                        continue;
-                    String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
-                        " address "
-                        + (sh.hostName == null
-                        ? Utils.ipStr(sh.server.getAddress().getAddress())
-                        : sh.hostName)
-                        + ":" + sh.server.getPort()
-                        + " weight " + sh.getWeight();
-                    commands.add(cmd);
-                }
             }
         }
         {
@@ -353,6 +340,7 @@ public class Shutdown {
                     cmd += " security-group " + tl.securityGroup.alias;
                 }
                 commands.add(cmd);
+                tcpLbs.add(tl);
             }
         }
         {
@@ -396,6 +384,55 @@ public class Shutdown {
                 commands.add(cmd);
             }
         }
+        {
+            // create smart-lb-group
+            SmartLBGroupHolder slgh = app.smartLBGroupHolder;
+            List<String> names = slgh.names();
+            for (String name : names) {
+                SmartLBGroup s;
+                try {
+                    s = slgh.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("smart-lb-group not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                if (!tcpLbs.contains(s.handledLb)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the tl " + s.handledLb.alias + " already removed");
+                    continue;
+                }
+                if (!serverGroups.contains(s.handledGroup)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the sg " + s.handledGroup.alias + " already removed");
+                    continue;
+                }
+                String cmd = "add smart-lb-group " + s.alias +
+                    " service " + s.service + " zone " + s.zone +
+                    " tcp-lb " + s.handledLb.alias + " server-group " + s.handledGroup.alias;
+                commands.add(cmd);
+                smartLBGroups.add(s);
+            }
+        }
+        {
+            // create server
+            for (ServerGroup sg : serverGroups) {
+                if (smartLBGroups.stream().anyMatch(s -> s.handledGroup.equals(sg))) {
+                    // do not init servers if it's attached to a smartLBGroup
+                    continue;
+                }
+                for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
+                    if (sh.isLogicDelete()) // ignore logic deleted servers
+                        continue;
+                    String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
+                        " address "
+                        + (sh.hostName == null
+                        ? Utils.ipStr(sh.server.getAddress().getAddress())
+                        : sh.hostName)
+                        + ":" + sh.server.getPort()
+                        + " weight " + sh.getWeight();
+                    commands.add(cmd);
+                }
+            }
+        }
         StringBuilder sb = new StringBuilder();
         for (String cmd : commands) {
             sb.append(cmd).append("\n");
@@ -405,11 +442,9 @@ public class Shutdown {
 
     @Blocking // the reading file process is blocking
     public static void load(String filepath, Callback<String, Throwable> cb) throws Exception {
-        if (Config.serviceMeshMode) {
-            Logger.alert("service mesh mode, loading is disabled");
-            return;
+        if (Config.configLoadingDisabled) {
+            throw new UnsupportedOperationException("loading is disabled");
         }
-
         if (filepath == null) {
             filepath = defaultFilePath();
         }
