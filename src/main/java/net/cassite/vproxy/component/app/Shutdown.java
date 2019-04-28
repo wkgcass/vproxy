@@ -17,7 +17,6 @@ import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.util.*;
 
 import java.io.*;
-import java.lang.management.ManagementFactory;
 import java.util.*;
 
 public class Shutdown {
@@ -119,8 +118,8 @@ public class Shutdown {
         FileOutputStream fos = new FileOutputStream(f);
         BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
-        String pidStr = ManagementFactory.getRuntimeMXBean().getName().split("@")[0];
-        bw.write(pidStr + "\n");
+        long pid = ProcessHandle.current().pid();
+        bw.write(pid + "\n");
         bw.flush();
 
         fos.close();
