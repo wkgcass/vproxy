@@ -12,7 +12,11 @@ repositories {
 }
 
 dependencies {
+    // make sure no `compile` dependencies appear here
+
     testCompile group: 'junit', name: 'junit', version: '4.12'
+    testCompile group: 'io.vertx', name: 'vertx-redis-client', version: '3.7.0'
+    testCompile group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
 }
 
 jar {
