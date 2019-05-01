@@ -38,9 +38,11 @@ public class BindServerHandle {
     public static int count(Resource parent) throws Exception {
         if (parent.type == ResourceType.el) {
             return EventLoopHandle.get(parent).serverCount();
+        } else if (parent.type == ResourceType.tl) {
+            return TcpLBHandle.get(parent).acceptorGroup.list().size();
         } else {
-            assert parent.type == ResourceType.tl || parent.type == ResourceType.socks5;
-            return 1;
+            assert parent.type == ResourceType.socks5;
+            return Socks5ServerHandle.get(parent).acceptorGroup.list().size();
         }
     }
 

@@ -94,15 +94,15 @@ public class ServerHandle {
         public String toString() {
             /*
              * e.g. with host
-             * google -> google.com now connect to 216.58.197.238:443 weight 10 currently UP
+             * google -> host google.com connect-to 216.58.197.238:443 weight 10 currently UP
              * or without host
-             * google -> connect to 216.58.197.238:443 weight 10 currently UP
+             * google -> connect-to 216.58.197.238:443 weight 10 currently UP
              * or for logic deleted: add * before alias
-             * *google -> google.com now connect to 216.58.197.238:443 weight 10 currently UP
+             * *google -> host google.com connect-to 216.58.197.238:443 weight 10 currently UP
              */
             return (h.isLogicDelete() ? "*" : "") + h.alias + " ->"
-                + (h.hostName == null ? "" : " host " + h.hostName + " now" /* now connected to */)
-                + " connect to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
+                + (h.hostName == null ? "" : " host " + h.hostName /* now connected to */)
+                + " connect-to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
                 + " currently " + (h.healthy ? "UP" : "DOWN");
         }
     }

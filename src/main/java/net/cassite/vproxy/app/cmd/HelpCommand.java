@@ -460,13 +460,14 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail tcp-lb",
-                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in buffer size 16384 out buffer size 16384 security-group secg0\""
+                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of an lb",
                 Arrays.asList(
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
+                    , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
@@ -517,13 +518,14 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail socks5-server",
-                        "1) \"s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in buffer size 16384 out buffer size 16384 security-group secg0\""
+                        "1) \"s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of a socks5 server",
                 Arrays.asList(
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
+                    , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
                 ),
                 Arrays.asList(
                     new ResActFlagMan(FlagMan.allownonbackend, "allow to access non backend endpoints", false),
@@ -758,7 +760,7 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "list-detail server in server-group sg0",
-                            "1) \"svr0 -> connect to 127.0.0.1:6379 weight 10 currently DOWN\""
+                            "1) \"svr0 -> connect-to 127.0.0.1:6379 weight 10 currently DOWN\""
                         )
                     )),
                 new ResActMan(ActMan.update, "change weight of the server",
@@ -806,6 +808,16 @@ public class HelpCommand {
                         new Tuple<>(
                             "list-detail security-group",
                             "1) \"secg0 -> default allow\""
+                        )
+                    )),
+                new ResActMan(ActMan.update, "update properties of a security group",
+                    Collections.singletonList(
+                        new ResActParamMan(ParamMan.dft, "default: enum {allow, deny}")
+                    ),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "update security-group secg0 default deny",
+                            "\"OK\""
                         )
                     )),
                 new ResActMan(ActMan.remove, "remove a security group",

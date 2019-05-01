@@ -152,15 +152,15 @@ Retrieve detailed info of all tcp-loadbalancers.
 
 ```
 list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in buffer size 16384 out buffer size 16384"
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 security-group secrg0"
 ```
 
 #### update
 
-Update in-buffer-size or out-buffer-size of an lb.
+Update in-buffer-size or out-buffer-size or security-group of an lb.
 
 ```
-update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768
+update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768 security-group secg0
 "OK"
 ```
 
@@ -219,15 +219,15 @@ Retrieve detailed info of socks5 servers.
 
 ```
 list-detail socks5-server
-1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in buffer size 16384 out buffer size 16384 security-group secg0"
+1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0"
 ```
 
 #### update
 
-Update in-buffer-size or out-buffer-size of a socks5 server. Also, whether to allow non backend endpoints can be updated.
+Update in-buffer-size or out-buffer-size or security-group of a socks5 server. Also, whether to allow non backend endpoints can be updated.
 
 ```
-update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192 allow-non-backend
+update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192 security-group secg0 allow-non-backend
 "OK"
 ```
 
@@ -460,7 +460,7 @@ Retrieve detailed info of all servers in a server group.
 
 ```
 list-detail server in server-group sg0
-1) "svr0 -> connect to 127.0.0.1:6379 weight 10 currently DOWN"
+1) "svr0 -> connect-to 127.0.0.1:6379 weight 10 currently DOWN"
 ```
 
 #### update
@@ -514,6 +514,15 @@ Retrieve detailed info of all security groups.
 ```
 list-detail security-group
 1) "secg0 -> default allow"
+```
+
+#### update
+
+Update properties of a security group.
+
+```
+update security-group secg0 default deny
+"OK"
 ```
 
 #### remove

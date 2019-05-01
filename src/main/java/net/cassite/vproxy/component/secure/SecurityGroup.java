@@ -11,10 +11,10 @@ import java.util.List;
 import java.util.Optional;
 
 public class SecurityGroup {
-    public static final String defaultName = "(allow all)";
+    public static final String defaultName = "(allow-all)";
 
     public final String alias;
-    public final boolean defaultAllow;
+    public boolean defaultAllow;
     private LinkedList<SecurityGroupRule> tcpRules = new LinkedList<>();
     private LinkedList<SecurityGroupRule> udpRules = new LinkedList<>();
 
@@ -66,7 +66,10 @@ public class SecurityGroup {
         }
         // check ip mask
         for (SecurityGroupRule r : rules) {
-            if (r.ipMaskMatch(rule))
+            if (r.ipMaskMatch(rule) &&
+                r.protocol == rule.protocol &&
+                r.minPort == rule.minPort &&
+                r.maxPort == rule.maxPort)
                 throw new AlreadyExistException();
         }
         rules.add(rule);
@@ -87,7 +90,7 @@ public class SecurityGroup {
         oldRules.addAll(tcpRules);
         oldRules.addAll(udpRules);
         Optional<SecurityGroupRule> optRule = oldRules.stream().filter(r -> r.alias.equals(name)).findFirst();
-        if (!optRule.isPresent())
+        if (optRule.isEmpty())
             throw new NotFoundException();
         if (optRule.get().protocol == Protocol.TCP) {
             tcpRules.remove(optRule.get());

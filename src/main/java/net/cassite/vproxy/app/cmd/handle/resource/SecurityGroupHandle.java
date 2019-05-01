@@ -52,6 +52,14 @@ public class SecurityGroupHandle {
         Application.get().securityGroupHolder.add(alias, defaultAllow);
     }
 
+    public static void update(Command cmd) throws NotFoundException {
+        String alias = cmd.resource.alias;
+        SecurityGroup secg = Application.get().securityGroupHolder.get(alias);
+        if (cmd.args.containsKey(Param.secgrdefault)) {
+            secg.defaultAllow = SecGRDefaultHandle.get(cmd);
+        }
+    }
+
     public static void preCheck(Command cmd) throws Exception {
         for (TcpLBHandle.TcpLBRef ref : TcpLBHandle.details()) {
             if (ref.tcpLB.securityGroup.alias.equals(cmd.resource.alias)) {

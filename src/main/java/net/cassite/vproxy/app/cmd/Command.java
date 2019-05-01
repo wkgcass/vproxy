@@ -622,7 +622,7 @@ public class Command {
                                 TcpLBHandle.checkUpdateTcpLB(cmd);
                             } else if (cmd.resource.type == ResourceType.socks5) {
                                 Socks5ServerHandle.checkUpdateSocks5Server(cmd);
-                            } else
+                            } else if (cmd.resource.type != ResourceType.secg)
                                 throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                         }
                         break;
@@ -886,6 +886,9 @@ public class Command {
                         return new CmdResult(secgStrList, secgStrList, utilJoinList(secg));
                     case a:
                         SecurityGroupHandle.add(this);
+                        return new CmdResult();
+                    case u:
+                        SecurityGroupHandle.update(this);
                         return new CmdResult();
                     case r:
                         SecurityGroupHandle.preCheck(this);

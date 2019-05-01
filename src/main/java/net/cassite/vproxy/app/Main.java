@@ -221,6 +221,9 @@ public class Main {
                 case "noLoadLast":
                     loaded = true; // set this flag to true, then last config won't be loaded
                     break;
+                case "noSave":
+                    Config.configSavingDisabled = true;
+                    break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");
                     System.exit(1);

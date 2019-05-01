@@ -67,7 +67,7 @@ public class TcpLB {
     private int timeout; // modifiable
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
-    public final SecurityGroup securityGroup;
+    public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
 
     // true means the lb is stopped, but it can still re-start.
