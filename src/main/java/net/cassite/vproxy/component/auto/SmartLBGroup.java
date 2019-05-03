@@ -9,12 +9,9 @@ import net.cassite.vproxy.component.khala.KhalaNodeType;
 import net.cassite.vproxy.component.svrgroup.ServerGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.discovery.Node;
-import net.cassite.vproxy.util.ConcurrentHashSet;
 import net.cassite.vproxy.util.Logger;
-import net.cassite.vproxy.util.Utils;
 
 import java.net.InetSocketAddress;
-import java.util.Set;
 
 public class SmartLBGroup {
     class SmartLBGroupKhalaNodeListener implements KhalaNodeListener {
@@ -63,7 +60,7 @@ public class SmartLBGroup {
     public final TcpLB handledLb; // this field is only for recording, and should not be used in any logic
     public final ServerGroup handledGroup;
 
-    private final Set<KhalaNode> khalaNodes = new ConcurrentHashSet<>();
+    private final KhalaNode khalaNode;
 
     public SmartLBGroup(String alias, String service, String zone, TcpLB lb, ServerGroup group, AutoConfig config) throws Exception {
         this.alias = alias;
@@ -109,16 +106,14 @@ public class SmartLBGroup {
         }
 
         config.khala.addKhalaNodeListener(smartLBGroupKhalaNodeListener);
-        KhalaNode kn = new KhalaNode(KhalaNodeType.nexus, service, zone, Utils.ipStr(lb.bindAddress.getAddress().getAddress()), lb.bindAddress.getPort());
+        KhalaNode kn = new KhalaNode(KhalaNodeType.nexus, service, zone, config.bindAddress, lb.bindAddress.getPort());
         config.khala.addLocal(kn);
-        khalaNodes.add(kn);
+        khalaNode = kn;
     }
 
     public void destroy() {
         config.khala.removeKhalaNodeListener(smartLBGroupKhalaNodeListener);
-        for (KhalaNode n : khalaNodes) {
-            config.khala.removeLocal(n);
-        }
+        config.khala.removeLocal(khalaNode);
         this.handledGroup.clear(); // remove all servers from the group
         // we ignore those manually added servers because it's not a legal operation
     }
