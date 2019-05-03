@@ -10,11 +10,11 @@
 
 ```
 CONTAINER ID        IMAGE                         COMMAND                  CREATED             STATUS              PORTS                    NAMES
-8679ffb59411        vproxy-service-mesh-example   "/bin/bash /service-…"   6 seconds ago       Up 6 seconds                                 example-service-a2
-7c6138d1b123        vproxy-service-mesh-example   "/bin/bash /service-…"   7 seconds ago       Up 7 seconds                                 example-service-b
-908131c78cba        vproxy-service-mesh-example   "/bin/bash /service-…"   8 seconds ago       Up 7 seconds                                 example-service-a
-27b420698fe0        vproxy-service-mesh-example   "/bin/bash /frontend…"   9 seconds ago       Up 8 seconds        0.0.0.0:8080->8080/tcp   example-frontend
-d7f70ba0fefb        vproxy-service-mesh-example   "/bin/bash /autolb.sh"   9 seconds ago       Up 9 seconds                                 example-auto-lb
+74b454845559        vproxy-service-mesh-example   "/bin/bash /service-…"   4 hours ago         Up 4 hours                                   example-service-a2
+8fb9da85c979        vproxy-service-mesh-example   "/bin/bash /service-…"   4 hours ago         Up 4 hours                                   example-service-b
+55d019262156        vproxy-service-mesh-example   "/bin/bash /service-…"   4 hours ago         Up 4 hours                                   example-service-a
+2e5000eba219        vproxy-service-mesh-example   "/bin/bash /frontend…"   4 hours ago         Up 4 hours          0.0.0.0:8080->8080/tcp   example-frontend
+4a583c0804df        vproxy-service-mesh-example   "/bin/bash /lb.sh"       4 hours ago         Up 4 hours                                   example-lb
 ```
 
 这几个容器组成了如下的一个网络：
@@ -49,11 +49,11 @@ client---->|   Frontend   |-.--.---+                                            
                   |                               |
                   |                               |
                   |                               |
-                  |                        +---------------+
-                  |                        |               |
-                  +----------------------->|    AutoLB     |
-                                           |               |
-                                           +---------------+
+                  |                        +--------------+
+                  |                        |              |
+                  +----------------------->| SmartLBGroup |
+                                           |              |
+                                           +--------------+
 
 line --------> 真实的网络流量
 line --.--.--> 逻辑网络流量
@@ -63,13 +63,13 @@ line --.--.--> 逻辑网络流量
 
 ```
 curl localhost:8080/service-b
-{"service":"b","resp":"7c6138d1b123"}
+{"service":"b","resp":"8fb9da85c979"}
 
 curl localhost:8080/service-a
-{"service":"a","resp":"908131c78cba"}
+{"service":"a","resp":"74b454845559"}
 
 curl localhost:8080/service-a
-{"service":"a","resp":"8679ffb59411"}
+{"service":"a","resp":"55d019262156"}
 ```
 
 其中，`service`指的是服务名，`resp`内容是容器id。
@@ -81,6 +81,6 @@ curl localhost:8080/service-a
 
 你可以就像例子中描述的那样来使用vproxy（lb+socks5），不过你也可以只使用lb部分，忽略socks5的部分。
 
-Auto-lb配置文件需要你为每一个服务指定一个监听端口，所以你可以在你应用的配置文件里指定负载均衡的ip（或者负载均衡的虚拟ip）和端口。  
+LB需要你在配置文件里指定监听端口，所以你可以在你应用的配置文件里指定负载均衡的ip（或者负载均衡的虚拟ip）和端口。  
 当服务启动时，这个服务需要将自身注册到sidecar中。这个服务的请求可以直接发到lb上而不是通过sidecar代理。  
 就像例子中一样，新节点也可以自动被负载均衡识别到。

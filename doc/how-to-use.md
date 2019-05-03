@@ -136,15 +136,11 @@ java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
 ```
 
 When service mesh config is specified, the process launches into service mesh mode.  
-All (asset) resources will become read-only in service mesh mode, the resources will be automatically handled by service mesh modules.
-
-> Asset resources means the resources which are not changed very often. e.g. tcp-lb is an asset resource, but session is not.  
-> Auto-lb is a resource in service mesh mode, and only available in this mode, which is also writable.
 
 There are two roles provided by vproxy.
 
 * sidecar: Deployed on application host. One sidecar per host. The user application should use socks5 and use domain names to request cluster services, traffic will be automatically directed to correct endpoints. And user app should listen on localhost, the sidecar will help export the service.
-* auto_lb: Used as a tcp loadbalancer. The lb will automatically learn node changes in the cluster, and add or remove nodes in backend list.
+* smart-lb-group: Used as a tcp loadbalancer. The lb will automatically learn node changes in the cluster, and add or remove nodes in backend list.
 
 The user application should use any kind of redis client to let sidecar know what service is running locally.
 
