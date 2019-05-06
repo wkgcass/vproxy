@@ -25,7 +25,7 @@ public class Logger {
 
     public static boolean lowLevelNetDebug(String msg) {
         String debug = System.getProperty("javax.net.debug");
-        if (debug == null || debug.equals("all")) {
+        if ("all".equals(debug)) {
             return true;
         }
         String threadName = Thread.currentThread().getName();
