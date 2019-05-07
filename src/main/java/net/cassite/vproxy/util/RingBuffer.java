@@ -46,7 +46,7 @@ public interface RingBuffer {
 
     default int writeTo(RingBuffer buffer, int maxBytesToWrite) {
         // NOTE: the default implementation of this method is general but with low efficiency
-        // TODO implement for SimpleRingBuffer
+        // ByteBufferRingBuffer has a fast implementation
 
         if (maxBytesToWrite < 0) {
             throw new IllegalArgumentException("input parameter maxBytesToWrite = " + maxBytesToWrite + " < 0");

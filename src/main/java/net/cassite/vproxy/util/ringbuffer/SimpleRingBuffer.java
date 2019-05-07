@@ -77,28 +77,10 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return retrieveLimit(this.sPos, this.ePosIsAfterSPos);
     }
 
-    public int storeBytesFrom(ByteBuffer byteBuffer) {
-        try {
-            return operateOnByteBufferStoreIn(b -> {
-                int lim = b.limit() - b.position();
-                int oldLimit = byteBuffer.limit();
-                if (byteBuffer.remaining() > lim) {
-                    // make sure it won't overflow
-                    byteBuffer.limit(byteBuffer.position() + lim);
-                } // otherwise it's safe to write
-                buffer.put(byteBuffer);
-                byteBuffer.limit(oldLimit); // restore the limit
-                return true;
-            });
-        } catch (IOException e) {
-            Logger.shouldNotHappen("it's memory operation, should not have IOException");
-            throw new RuntimeException(e);
-        }
-    }
-
     /**
      * @return may return -1 for EOF
      */
+    @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
         return operateOnByteBufferStoreIn(b -> channel.read(b) != -1);
     }
@@ -110,14 +92,17 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         ePosIsAfterSPos = true;
     }
 
+    @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
         return operateOnByteBufferWriteOut(maxBytesToWrite, channel::write);
     }
 
+    @Override
     public int free() {
         return cap - used();
     }
 
+    @Override
     public int used() {
         if (ePosIsAfterSPos) {
             return ePos - sPos;
@@ -126,10 +111,12 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
     }
 
+    @Override
     public int capacity() {
         return cap;
     }
 
+    @Override
     public byte[] getBytes() {
         int len = used();
         byte[] arr = new byte[len];
@@ -155,6 +142,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return new String(bytes, 0, bytes.length, StandardCharsets.UTF_8);
     }
 
+    @Override
     public void addHandler(RingBufferETHandler h) {
         if (operating) {
             handlerToRemove.remove(h);
@@ -164,6 +152,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
     }
 
+    @Override
     public void removeHandler(RingBufferETHandler h) {
         if (operating) {
             handlerToAdd.remove(h);
@@ -178,6 +167,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return new HashSet<>(handler);
     }
 
+    @Override
     public void close() {
         closed = true;
     }
@@ -188,6 +178,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
      * release the direct memory<br>
      * PLEASE BE VERY CAREFUL
      */
+    @Override
     public void clean() {
         if (cleaned)
             return;
@@ -198,6 +189,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     // clear the buffer
+    @Override
     public void clear() {
         byte[] b = new byte[capacity()];
         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
@@ -230,6 +222,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         handler.addAll(handlerToAdd);
     }
 
+    @Override
     public int operateOnByteBufferWriteOut(int maxBytesToWrite, ByteBufferRingBuffer.WriteOutOp op) throws IOException {
         if (closed)
             return 0; // handle nothing because it's closed
@@ -334,6 +327,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
     }
 
+    @Override
     public int operateOnByteBufferStoreIn(ByteBufferRingBuffer.StoreInOp op) throws IOException {
         if (closed)
             return -1; // handle nothing because it's already closed
