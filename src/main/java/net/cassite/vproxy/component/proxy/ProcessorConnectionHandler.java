@@ -249,6 +249,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                             frontendConnection.close();
                             return;
                         }
+                        // check data to write back
+                        {
+                            byte[] writeBackBytes = processor.produce(topCtx, subCtx);
+                            if (writeBackBytes != null && writeBackBytes.length != 0) {
+                                assert Logger.lowLevelDebug("got data to write back, len = " + writeBackBytes.length + ", conn = " + conn);
+                                writeToBackend(writeBackBytes);
+                            }
+                        }
                         readBackend(); // recursively handle more data
                         return;
                     }
@@ -272,6 +280,16 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     return;
                 }
                 assert Logger.lowLevelDebug("the processor return a message of length " + (dataToSend == null ? "null" : dataToSend.length));
+
+                // check data to write back
+                {
+                    byte[] writeBackBytes = processor.produce(topCtx, subCtx);
+                    if (writeBackBytes != null && writeBackBytes.length != 0) {
+                        assert Logger.lowLevelDebug("got bytes to write back, len = " + writeBackBytes.length + ", conn = " + conn);
+                        writeToBackend(writeBackBytes);
+                    }
+                }
+
                 if (dataToSend == null || dataToSend.length == 0) {
                     readBackend(); // recursively call to handle more data
                 } else {

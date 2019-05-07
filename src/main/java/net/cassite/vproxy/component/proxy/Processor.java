@@ -64,6 +64,17 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     byte[] feed(CTX ctx, SUB sub, byte[] data) throws Exception;
 
     /**
+     * produce some data to the connection represented by the sub context<br>
+     * this method will be checked after `feed` is called,
+     * and will not be called for frontend connections
+     *
+     * @param ctx context
+     * @param sub sub context
+     * @return data to send, or null if got nothing to send
+     */
+    byte[] produce(CTX ctx, SUB sub);
+
+    /**
      * the mode used to be `proxy` and now proxy handling is done
      *
      * @param ctx context

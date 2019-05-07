@@ -19,6 +19,11 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
+    public byte[] produce(CTX ctx, SUB sub) {
+        return sub.produce();
+    }
+
+    @Override
     public void proxyDone(CTX ctx, SUB sub) {
         sub.proxyDone();
     }

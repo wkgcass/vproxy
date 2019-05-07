@@ -67,6 +67,7 @@ import java.util.Map;
 
 public class Http2SubContext extends OOSubContext<Http2Context> {
     private static final byte[] SEQ_PREFACE_MAGIC = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
+    private static final byte[] SEQ_SETTINGS_ACK = {0, 0, 0, 4, 1, 0, 0, 0, 0};
 
     private static final int LEN_FRAME_HEAD = 9; // 72
     private static final int LEN_PADDING = 1; // 8
@@ -100,13 +101,28 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
 
     private Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
 
+    // the ack of settings frame
+    private byte[] syntheticAck = null;
+    private boolean syntheticAckFlag;
+    // When receiving the first settings frame from backend and this field is true,
+    // this field will be set to false and syntheticAck will be set
+    // also, this field will be set to false for the frontend connection and the first backend connection
+    // In this way, syntheticAck will only be sent when doing the backend handshaking except the first one
+    //
+    // The first handshaking is fully proxied between frontend and backend,
+    // so no need to make synthetic ack for the first backend connection
+    //
+    // this field will be used by handleSettingsFramePart()
+
     public Http2SubContext(Http2Context ctx, int connId) {
         super(ctx, connId);
 
         if (connId == 0) {
             state = 0;
+            syntheticAckFlag = false; // this field will not be used if it's frontend connection
         } else {
             state = 1;
+            syntheticAckFlag = !ctx.backendHandshaking; // this field will only be used when the first backend handshaking is done
         }
     }
 
@@ -215,6 +231,13 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             default:
                 throw new Error("should not reach here");
         }
+    }
+
+    @Override
+    public byte[] produce() {
+        byte[] ret = syntheticAck;
+        syntheticAck = null;
+        return ret;
     }
 
     private void parseFrame(byte[] data) {
@@ -366,6 +389,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 }
                 return frameBytes;
             }
+        }
+        if (syntheticAckFlag) {
+            syntheticAckFlag = false;
+            syntheticAck = SEQ_SETTINGS_ACK;
+            // though it's only reading the frame part, but it is absolutely followed by a payload part
+            // so sending ack here is fine and will correspond to the remote server state machine
         }
         { // otherwise should ignore the frame, both for frontend and backend
             assert Logger.lowLevelDebug("dropping the SETTINGS frame " +

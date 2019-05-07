@@ -17,6 +17,8 @@ public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubC
 
     public abstract byte[] feed(byte[] data) throws Exception;
 
+    public abstract byte[] produce();
+
     public abstract void proxyDone();
 
     public abstract byte[] connected();
