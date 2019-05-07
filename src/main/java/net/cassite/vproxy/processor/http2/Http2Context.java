@@ -7,11 +7,18 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class Http2Context extends OOContext<Http2SubContext> {
-    boolean handshaking = true;
+    boolean frontendHandshaking = true;
+    boolean backendHandshaking = true;
     byte[] clientHandshake = null; // PRI * ..... and SETTINGS frame as well
+
+    // the streamMap keys are the ids seen by the frontend
     private Map<Integer, Http2SubContext> streamMap = new HashMap<>();
 
-    byte[] settingsFrameHeader = null; // temporary field
+    private int backendStreamId = 0;
+    // the streamIdBack2Front is recorded in subCtx of the backend connection sub context
+    Map<Integer, Integer> streamIdFront2Back = new HashMap<>();
+
+    byte[] settingsFrameHeader = null; // this is a temporary field
 
     @Override
     public int connection(Http2SubContext front) {
@@ -36,5 +43,16 @@ public class Http2Context extends OOContext<Http2SubContext> {
             assert Logger.lowLevelDebug("recording a new stream from sub context (backend)" + streamId + " => " + subCtx.connId);
             streamMap.put(streamId, subCtx);
         }
+    }
+
+    void tryRecordStream(Integer streamId, Http2SubContext subCtx) {
+        if (!streamMap.containsKey(streamId)) {
+            streamMap.put(streamId, subCtx);
+        }
+    }
+
+    Integer nextServerStreamId() {
+        backendStreamId += 2;
+        return backendStreamId;
     }
 }

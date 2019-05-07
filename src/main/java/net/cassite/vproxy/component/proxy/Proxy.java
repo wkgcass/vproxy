@@ -385,11 +385,17 @@ public class Proxy {
                         }
                         isWritingBackend = true;
                         while (backendByteFlow.bytesToProxy != 0 || !backendByteFlow.bytesToSend.isEmpty()) {
-                            utilWriteData(backendByteFlow, frontendConnection, conn, frontendSubCtx);
-                            if (conn.getOutBuffer().free() == 0 || frontendConnection.getInBuffer().used() == 0) {
-                                // if the output is full, or the input is empty, should break the writing process and wait for the next signal
+                            if (conn.getOutBuffer().free() == 0) {
+                                // if the output is full, should break the writing process and wait for the next signal
+                                assert Logger.lowLevelDebug("the backend output buffer is full now, break the sending loop");
                                 break;
                             }
+                            // if it's running proxy and the frontend connection input is empty, break the loop
+                            if (backendByteFlow.runningProxy && frontendConnection.getInBuffer().used() == 0) {
+                                break;
+                            }
+
+                            utilWriteData(backendByteFlow, frontendConnection, conn, frontendSubCtx);
                         }
                         isWritingBackend = false; // writing done
                         // if writing is done
@@ -549,8 +555,8 @@ public class Proxy {
                                 // because the connection may be holding some data in the buffer
                                 handlingConnection.readBackend();
                             } else { // writing not done yet,
-                                // but if the backend connection input buffer is empty now
-                                if (handlingConnection.conn.getInBuffer().used() == 0) {
+                                // but if it's running proxy and the backend connection input buffer is empty
+                                if (flow.runningProxy && handlingConnection.conn.getInBuffer().used() == 0) {
                                     return; // cannot handle for now, end the method
                                 }
                             }
@@ -721,7 +727,7 @@ public class Proxy {
                     byte[] bytes = processor.connected(topCtx, bh.subCtx);
                     processor.chosen(topCtx, frontendSubCtx, bh.subCtx);
 
-                    if (bytes != null) {
+                    if (bytes != null && bytes.length > 0) {
                         bh.writeToBackend(bytes);
                     }
 
