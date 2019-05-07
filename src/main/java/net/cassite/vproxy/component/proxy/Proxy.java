@@ -488,6 +488,7 @@ public class Proxy {
                     public void exception(ConnectionHandlerContext ctx, IOException err) {
                         Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection);
                         frontendConnection.close();
+                        closeAll();
                     }
 
                     @Override
@@ -497,15 +498,14 @@ public class Proxy {
                         } else {
                             Logger.warn(LogType.CONN_ERROR, "backend connection " + ctx.connection + " closed before frontend connection " + frontendConnection);
                         }
-                        removeBackend(this);
-                        frontendConnection.close();
+                        closeAll();
                     }
 
                     @Override
                     public void removed(ConnectionHandlerContext ctx) {
                         if (!ctx.connection.isClosed())
                             Logger.error(LogType.IMPROPER_USE, "backend connection " + ctx.connection + " removed from event loop " + loop);
-                        frontendConnection.close();
+                        closeAll();
                     }
                 }
                 // --- END backend handler ---
@@ -742,26 +742,42 @@ public class Proxy {
                 @Override
                 public void exception(ConnectionHandlerContext ctx, IOException err) {
                     Logger.error(LogType.CONN_ERROR, "connection got exception", err);
-                    frontendConnection.close();
-                    // we will close connections to backend in closed callback
+                    closeAll();
                 }
 
                 @Override
                 public void closed(ConnectionHandlerContext ctx) {
                     assert Logger.lowLevelDebug("frontend connection is closed: " + frontendConnection);
-                    List<Integer> ints = new ArrayList<>(conn2intMap.values());
-                    for (int i : ints) {
-                        BackendConnectionHandler be = conns[i];
-                        removeBackend(be);
-                        be.conn.close();
-                    }
+                    closeAll();
                 }
 
                 @Override
                 public void removed(ConnectionHandlerContext ctx) {
                     if (!frontendConnection.isClosed())
                         Logger.error(LogType.IMPROPER_USE, "frontend connection " + frontendConnection + " removed from event loop " + loop);
+                    closeAll();
+                }
+
+                private boolean closed = false;
+
+                void closeAll() {
+                    if (closed) {
+                        return; // ignore if already closed
+                    }
+                    closed = true;
+
+                    assert Logger.lowLevelDebug("close all connections of " + frontendConnection);
+                    List<Integer> ints = new ArrayList<>(conn2intMap.values());
+                    for (int i : ints) {
+                        BackendConnectionHandler be = conns[i];
+                        removeBackend(be);
+                        be.conn.close();
+                        be.conn.getInBuffer().clean();
+                        be.conn.getOutBuffer().clean();
+                    }
                     frontendConnection.close();
+                    frontendConnection.getInBuffer().clean();
+                    frontendConnection.getOutBuffer().clean();
                 }
             };
             // --- END frontend handler ---
