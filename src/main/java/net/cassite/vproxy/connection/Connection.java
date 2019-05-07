@@ -70,50 +70,54 @@ public class Connection implements NetFlowRecorder {
                 // the buffer is readable means the channel can write data
                 NetEventLoopUtils.resetCloseTimeout(_cctx);
 
-                assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
-                // let's directly write the data if possible
-                // we do not need lock here,
-                // all operations about the
-                // buffer should be handled in
-                // the same thread
-
-                if (getOutBuffer().free() != 0) {
-                    // try to flush buffer in user code
-                    // (we assume user code preserves a buffer to write)
-                    // (since ringBuffer will not extend)
-                    // (which is unnecessary for an lb)
-                    _cctx.handler.writable(_cctx);
-                }
-
                 boolean addWriteOnLoop = true;
-                try {
-                    int write = getOutBuffer().writeTo(channel);
-                    assert Logger.lowLevelDebug("wrote " + write + " bytes to " + Connection.this);
-                    if (write > 0) {
-                        incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
-                        // NOTE: should also record in NetEventLoop writable event
-                    }
-                    if (getOutBuffer().used() == 0) {
-                        // have nothing to write now
+                if (noQuickWrite) {
+                    assert Logger.lowLevelDebug("quick write is disabled");
+                } else {
+                    assert Logger.lowLevelDebug("out buffer is readable, do WRITE for channel " + channel);
+                    // let's directly write the data if possible
+                    // we do not need lock here,
+                    // all operations about the
+                    // buffer should be handled in
+                    // the same thread
 
-                        // at this time, we let user write again
-                        // in case there are still some bytes in
-                        // user buffer
+                    if (getOutBuffer().free() != 0) {
+                        // try to flush buffer in user code
+                        // (we assume user code preserves a buffer to write)
+                        // (since ringBuffer will not extend)
+                        // (which is unnecessary for an lb)
                         _cctx.handler.writable(_cctx);
-
-                        if (getOutBuffer().used() == 0) {
-                            // outBuffer still empty
-                            // do not add OP_WRITE
-                            assert Logger.lowLevelDebug("the out buffer is still empty, do NOT add op_write. " + channel);
-                            addWriteOnLoop = false;
-                        }
-                        // we do not write again if got any bytes
-                        // let the NetEventLoop handle
                     }
-                } catch (IOException e) {
-                    // we ignore the exception
-                    // it should be handled in NetEventLoop
-                    assert Logger.lowLevelDebug("got exception in quick write: " + e);
+
+                    try {
+                        int write = getOutBuffer().writeTo(channel);
+                        assert Logger.lowLevelDebug("wrote " + write + " bytes to " + Connection.this);
+                        if (write > 0) {
+                            incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"
+                            // NOTE: should also record in NetEventLoop writable event
+                        }
+                        if (getOutBuffer().used() == 0) {
+                            // have nothing to write now
+
+                            // at this time, we let user write again
+                            // in case there are still some bytes in
+                            // user buffer
+                            _cctx.handler.writable(_cctx);
+
+                            if (getOutBuffer().used() == 0) {
+                                // outBuffer still empty
+                                // do not add OP_WRITE
+                                assert Logger.lowLevelDebug("the out buffer is still empty, do NOT add op_write. " + channel);
+                                addWriteOnLoop = false;
+                            }
+                            // we do not write again if got any bytes
+                            // let the NetEventLoop handle
+                        }
+                    } catch (IOException e) {
+                        // we ignore the exception
+                        // it should be handled in NetEventLoop
+                        assert Logger.lowLevelDebug("got exception in quick write: " + e);
+                    }
                 }
                 if (addWriteOnLoop) {
                     assert Logger.lowLevelDebug("add OP_WRITE for channel " + channel);
@@ -157,6 +161,8 @@ public class Connection implements NetFlowRecorder {
     private ConnectionHandlerContext _cctx = null;
 
     private boolean closed = false;
+
+    private boolean noQuickWrite = false;
 
     Connection(SocketChannel channel,
                InetSocketAddress remote, InetSocketAddress local,
@@ -315,5 +321,11 @@ public class Connection implements NetFlowRecorder {
         // assign buffers
         this.inBuffer = in;
         this.outBuffer = out;
+    }
+
+    public void runNoQuickWrite(Runnable r) {
+        noQuickWrite = true;
+        r.run();
+        noQuickWrite = false;
     }
 }

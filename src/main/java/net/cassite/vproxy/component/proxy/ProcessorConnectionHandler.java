@@ -66,10 +66,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 // nothing to write
                 return;
             }
-            int n = sourceConnection.getInBuffer()
-                .writeTo(targetConnection.getOutBuffer(), flow.bytesToProxy);
-            flow.bytesToProxy -= n;
-            assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.bytesToProxy + " left");
+            targetConnection.runNoQuickWrite(() -> {
+                int n = sourceConnection.getInBuffer()
+                    .writeTo(targetConnection.getOutBuffer(), flow.bytesToProxy);
+                flow.bytesToProxy -= n;
+                assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.bytesToProxy + " left");
+            });
             assert flow.bytesToProxy >= 0;
             // proxy is done
             if (flow.bytesToProxy == 0) {
@@ -88,7 +90,8 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 flow.chnl = ByteArrayChannel.fromFull(data);
                 assert Logger.lowLevelDebug("peek data from list, the length is " + data.length);
             }
-            targetConnection.getOutBuffer().storeBytesFrom(flow.chnl);
+            targetConnection.runNoQuickWrite(() ->
+                targetConnection.getOutBuffer().storeBytesFrom(flow.chnl));
             // sending this batch is done
             assert flow.chnl != null;
             assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.chnl.used());
