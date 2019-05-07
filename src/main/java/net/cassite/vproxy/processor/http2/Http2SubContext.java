@@ -1,6 +1,7 @@
 package net.cassite.vproxy.processor.http2;
 
 import net.cassite.vproxy.component.proxy.Processor;
+import net.cassite.vproxy.processor.OOSubContext;
 import net.cassite.vproxy.util.Logger;
 
 import java.util.Arrays;
@@ -52,14 +53,11 @@ import java.util.Arrays;
  * the lib will remove all stream dependency and drop priority packets
  */
 
-public class Http2SubContext extends Processor.SubContext {
+public class Http2SubContext extends OOSubContext<Http2Context> {
     private static final byte[] PREFACE_MAGIC = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
     private static final int FRAME_HEAD_LEN = 9; // 72
     private static final int PADDING = 1; // 8
     private static final int E_STREAMDEPENDENCY_WEIGHT = 5; // 1 + 31 + 8
-
-    public final Http2Context ctx;
-    public final int connId;
 
     private Http2Frame frame;
 
@@ -75,8 +73,7 @@ public class Http2SubContext extends Processor.SubContext {
      */
 
     public Http2SubContext(Http2Context ctx, int connId) {
-        this.ctx = ctx;
-        this.connId = connId;
+        super(ctx, connId);
 
         if (connId == 0) {
             state = 0;
@@ -85,6 +82,7 @@ public class Http2SubContext extends Processor.SubContext {
         }
     }
 
+    @Override
     public Processor.Mode mode() {
         switch (state) {
             case 0:
@@ -101,6 +99,7 @@ public class Http2SubContext extends Processor.SubContext {
         }
     }
 
+    @Override
     public int len() {
         switch (state) {
             case 0:
@@ -122,6 +121,7 @@ public class Http2SubContext extends Processor.SubContext {
         }
     }
 
+    @Override
     public byte[] feed(byte[] data) throws Exception {
         switch (state) {
             case 0:
@@ -272,6 +272,7 @@ public class Http2SubContext extends Processor.SubContext {
         return frame.streamIdentifier;
     }
 
+    @Override
     public void proxyDone() {
         // all proxy states goes to state 1
         // so simply set the frame to null and state 1 here
@@ -279,6 +280,7 @@ public class Http2SubContext extends Processor.SubContext {
         frame = null;
     }
 
+    @Override
     public byte[] connected() {
         if (connId == 0) {
             return null;
