@@ -10,6 +10,93 @@ import java.util.Map;
 
 // the impl corresponds to rfc7540
 /*
+ * A simple explanation about how it works.
+ *
+ * Can do:
+ * 1. dispatch one stream to one backend (full duplexing)
+ * 2. redirect push_promise from any backend to the client
+ * 3. standard http2 protocol for both frontend and backend
+ * 4. raw tcp, handshake with prior knowledge
+ * 5. any application level interaction between a client and a server
+ *
+ * Can do with the help of other software, or may be supported in the future:
+ * 1. handshake with tls alpn
+ *
+ * Cannot do (limitations):
+ * 1. stream dependency and priority
+ * 2. header compression
+ * 3. window upgrade frames
+ * 4. exchange settings (except the first exchange, which is forced according to rfc)
+ * 5. http clear text upgrade
+ * These limitations will not affect how user uses http/2.
+ * The not-supported-frames will be modified, dropped, or faked
+ * and will not affect the application level code.
+ * And NOTHING for the client/server is required to be changed because of these limitations.
+ *
+ * How vproxy handles the limitations:
+ * 1. stream dependency and priority
+ * The stream dependency and priority is not supported, but
+ * both client and server can send HEADERS frames with priority, or PRIORITY frames.
+ * The dependency and weight part will be removed from HEADERS frames, and
+ * the PRIORITY frames will be dropped. In this way, both client and server
+ * can use implementation with stream dependency and priority.
+ *
+ * 2. header compression
+ * The header compression is not supported, so vproxy will attach a setting
+ * to the first SETTINGS frame which must be sent by both client and server.
+ * SETTINGS_HEADER_TABLE_SIZE would be set to 0. In this way, the client and backend
+ * will not compress the headers, and can work well with vproxy.
+ *
+ * 3. window upgrade frames
+ * This is optional according to rfc, so vproxy just drops the frame.
+ *
+ * 4. exchange settings
+ * The first exchange is forced according to rfc, so it's supported.See the implementation detail
+ * for how it's supported. And will drop SETTINGS frames after the first exchange.
+ *
+ * 5. http clear text upgrade
+ * The user can use "with-prior-knowledge" way to connect to vproxy.
+ * e.g. for curl, add the "--http2 --http2-prior-knowledge" flags.
+ * ---- for vertx, call httpClientOptions.setHttp2ClearTextUpgrade(false)
+ *
+ * How it works:
+ * Assume the client sends a request, the server responses the request, and makes a push-promise.
+ *
+ * 1. Client sends preface and SETTINGS frame (maybe along with the first request HEADERS frame,
+ * -- but we discuss it later).
+ * 2. Vproxy parses the preface and SETTINGS frame, and add SETTINGS_HEADER_TABLE_SIZE=0
+ * -- to the SETTINGS frame, then proxy the whole bunch of data to the first selected backend A.
+ * -- Also, at the same time, vproxy would record the preface and the SETTINGS frame (after
+ * -- modified), let's call it the "clientHandshake".
+ * 3. The backend A returns a SETTINGS frame, and an "ack-SETTINGS" frame.
+ * 4. Vproxy parses the first SETTINGS frame from backend A, and add SETTINGS_HEADER_TABLE_SIZE=0
+ * -- to the frame, then proxy the whole bunch of data (including the "ack-SETTINGS" frame) to
+ * -- the client.
+ * 5. The client sends an "ack-SETTINGS" frame, and vproxy proxies it to the backend A.
+ * -- Now, the handshake part is done, and no SETTINGS frame would be allowed between frontend and backend.
+ * 6. The client would have sent a HEADERS frame, so vproxy would try to proxy the frame.
+ * -- Vproxy selects a new backend B (might be the same as A if there's only one available backend)
+ * -- and sends the previously recorded "clientHandshake" data to the backend B, as well as the
+ * -- HEADERS frame from client.
+ * 7. The backend B returns a SETTINGS frame and an "ack-SETTINGS" frame, vproxy will send an
+ * -- "ack-SETTINGS" frame to the backend B when receiving the first SETTINGS frame from backend B,
+ * -- and drop these SETTINGS frames.
+ * 8. The backend B responds with the following frames: "PUSH_PROMISE", "HEADERS", "DATA", where the
+ * -- HEADERS frame is the response headers, and data frame is the response data. The stream id in
+ * -- these frames are the request stream id, so vproxy simply proxies the HEADERS and DATA frames,
+ * -- but for the PUSH_PROMISE frame, vproxy would parse its payload, and generate a valid
+ * -- "server stream id", to replace the PROMISED_STREAM_ID, then proxies the data to client.
+ * -- The frames are proxied in an order the same as they are received.
+ * 9. The backend B will then send a "HEADERS" frame and a "DATA" frame, both with the stream id
+ * -- which recorded in the original PUSH_PROMISE frame. Vproxy modifies the stream id to the
+ * -- generated one, and then proxies the frames to frontend.
+ * 10. Done.
+ *
+ * You may check the Http2Proxy poc program for more info. Change the buffer sizes to a bigger one,
+ * then you can use Wireshark to view the netflow (otherwise the segments would be
+ * separated into very small pieces, which would be too small for Wireshark to decode).
+ */
+/*
  * preface magic:
  * 0x505249202a20485454502f322e300d0a0d0a534d0d0a0d0a
  *
@@ -61,8 +148,6 @@ import java.util.Map;
  * GOAWAY: proxy
  * WINDOW_UPDATE: ignore
  * CONTINUATION: proxy
- *
- * the lib will remove all stream dependency and drop priority packets
  */
 
 public class Http2SubContext extends OOSubContext<Http2Context> {
