@@ -1,5 +1,7 @@
 package net.cassite.vproxy.component.proxy;
 
+import net.cassite.vproxy.util.ByteArray;
+
 public interface Processor<CTX extends Processor.Context, SUB extends Processor.SubContext> {
     class Context {
     }
@@ -61,7 +63,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @return data to send, or null if nothing to send
      * @throws Exception raise exception if handling failed
      */
-    byte[] feed(CTX ctx, SUB sub, byte[] data) throws Exception;
+    ByteArray feed(CTX ctx, SUB sub, ByteArray data) throws Exception;
 
     /**
      * produce some data to the connection represented by the sub context<br>
@@ -72,7 +74,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @param sub sub context
      * @return data to send, or null if got nothing to send
      */
-    byte[] produce(CTX ctx, SUB sub);
+    ByteArray produce(CTX ctx, SUB sub);
 
     /**
      * the mode used to be `proxy` and now proxy handling is done
@@ -107,5 +109,5 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @return data to send when connected, or null if nothing to send.
      * Note: should return null for sub context with connId = 0
      */
-    byte[] connected(CTX ctx, SUB sub);
+    ByteArray connected(CTX ctx, SUB sub);
 }

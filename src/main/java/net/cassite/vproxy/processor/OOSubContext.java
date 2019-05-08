@@ -1,6 +1,7 @@
 package net.cassite.vproxy.processor;
 
 import net.cassite.vproxy.component.proxy.Processor;
+import net.cassite.vproxy.util.ByteArray;
 
 public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubContext {
     public final CTX ctx;
@@ -15,11 +16,11 @@ public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubC
 
     public abstract int len();
 
-    public abstract byte[] feed(byte[] data) throws Exception;
+    public abstract ByteArray feed(ByteArray data) throws Exception;
 
-    public abstract byte[] produce();
+    public abstract ByteArray produce();
 
     public abstract void proxyDone();
 
-    public abstract byte[] connected();
+    public abstract ByteArray connected();
 }

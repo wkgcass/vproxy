@@ -2,6 +2,7 @@ package net.cassite.vproxy.processor.http2;
 
 import net.cassite.vproxy.processor.OOContext;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.ByteArray;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -9,7 +10,7 @@ import java.util.Map;
 public class Http2Context extends OOContext<Http2SubContext> {
     boolean frontendHandshaking = true;
     boolean backendHandshaking = true;
-    byte[] clientHandshake = null; // PRI * ..... and SETTINGS frame as well
+    ByteArray clientHandshake = null; // PRI * ..... and SETTINGS frame as well
 
     // the streamMap keys are the ids seen by the frontend
     private Map<Integer, Http2SubContext> streamMap = new HashMap<>();
@@ -18,7 +19,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
     // the streamIdBack2Front is recorded in subCtx of the backend connection sub context
     Map<Integer, Integer> streamIdFront2Back = new HashMap<>();
 
-    byte[] settingsFrameHeader = null; // this is a temporary field
+    ByteArray settingsFrameHeader = null; // this is a temporary field
 
     @Override
     public int connection(Http2SubContext front) {

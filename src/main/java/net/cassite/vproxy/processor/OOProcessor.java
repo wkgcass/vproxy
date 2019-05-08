@@ -1,6 +1,7 @@
 package net.cassite.vproxy.processor;
 
 import net.cassite.vproxy.component.proxy.Processor;
+import net.cassite.vproxy.util.ByteArray;
 
 public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubContext> implements Processor<CTX, SUB> {
     @Override
@@ -14,12 +15,12 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
-    public byte[] feed(CTX ctx, SUB sub, byte[] data) throws Exception {
+    public ByteArray feed(CTX ctx, SUB sub, ByteArray data) throws Exception {
         return sub.feed(data);
     }
 
     @Override
-    public byte[] produce(CTX ctx, SUB sub) {
+    public ByteArray produce(CTX ctx, SUB sub) {
         return sub.produce();
     }
 
@@ -39,7 +40,7 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
-    public byte[] connected(CTX ctx, SUB sub) {
+    public ByteArray connected(CTX ctx, SUB sub) {
         return sub.connected();
     }
 }

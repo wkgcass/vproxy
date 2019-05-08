@@ -5,6 +5,7 @@ import net.cassite.vproxy.protocol.ProtocolConnectionHandler;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.protocol.ProtocolHandlerContext;
 import net.cassite.vproxy.util.*;
+import net.cassite.vproxy.util.ByteArray;
 
 import java.io.IOException;
 import java.nio.channels.NetworkChannel;
@@ -216,8 +217,8 @@ public class Proxy {
             Processor.Context topCtx = processor.init();
             Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0);
             {
-                byte[] data = processor.connected(topCtx, frontendSubCtx);
-                assert data == null || data.length == 0; // nothing should be directly written to the frontend
+                ByteArray data = processor.connected(topCtx, frontendSubCtx);
+                assert data == null || data.length() == 0; // nothing should be directly written to the frontend
             }
 
             // retrieve an event loop

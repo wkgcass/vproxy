@@ -3,8 +3,8 @@ package net.cassite.vproxy.processor.http2;
 import net.cassite.vproxy.component.proxy.Processor;
 import net.cassite.vproxy.processor.OOSubContext;
 import net.cassite.vproxy.util.Logger;
+import net.cassite.vproxy.util.ByteArray;
 
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -151,8 +151,8 @@ import java.util.Map;
  */
 
 public class Http2SubContext extends OOSubContext<Http2Context> {
-    private static final byte[] SEQ_PREFACE_MAGIC = "PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes();
-    private static final byte[] SEQ_SETTINGS_ACK = {0, 0, 0, 4, 1, 0, 0, 0, 0};
+    private static final ByteArray SEQ_PREFACE_MAGIC = ByteArray.from("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes());
+    private static final ByteArray SEQ_SETTINGS_ACK = ByteArray.from(0, 0, 0, 4, 1, 0, 0, 0, 0);
 
     private static final int LEN_FRAME_HEAD = 9; // 72
     private static final int LEN_PADDING = 1; // 8
@@ -187,7 +187,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     private Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
 
     // the ack of settings frame
-    private byte[] syntheticAck = null;
+    private ByteArray syntheticAck = null;
     private boolean syntheticAckFlag;
     // When receiving the first settings frame from backend and this field is true,
     // this field will be set to false and syntheticAck will be set
@@ -234,7 +234,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     public int len() {
         switch (state) {
             case 0:
-                return SEQ_PREFACE_MAGIC.length + LEN_FRAME_HEAD;
+                return SEQ_PREFACE_MAGIC.length() + LEN_FRAME_HEAD;
             case 1:
                 return LEN_FRAME_HEAD;
             case 3:
@@ -261,18 +261,16 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     @Override
-    public byte[] feed(byte[] data) throws Exception {
+    public ByteArray feed(ByteArray data) throws Exception {
         switch (state) {
             case 0:
-                assert data.length == SEQ_PREFACE_MAGIC.length + LEN_FRAME_HEAD;
+                assert data.length() == SEQ_PREFACE_MAGIC.length() + LEN_FRAME_HEAD;
                 // check the preface
-                byte[] prefacePart = new byte[SEQ_PREFACE_MAGIC.length];
-                System.arraycopy(data, 0, prefacePart, 0, SEQ_PREFACE_MAGIC.length);
-                if (0 != Arrays.compare(prefacePart, SEQ_PREFACE_MAGIC)) {
-                    throw new Exception("the preface magic is wrong! " + new String(data));
+                ByteArray prefacePart = data.sub(0, SEQ_PREFACE_MAGIC.length());
+                if (!prefacePart.equals(SEQ_PREFACE_MAGIC)) {
+                    throw new Exception("the preface magic is wrong! " + data);
                 }
-                byte[] framePart = new byte[LEN_FRAME_HEAD];
-                System.arraycopy(data, SEQ_PREFACE_MAGIC.length, framePart, 0, LEN_FRAME_HEAD);
+                ByteArray framePart = data.sub(SEQ_PREFACE_MAGIC.length(), LEN_FRAME_HEAD);
                 parseFrame(framePart);
                 // ignore the result from handleFrame.
                 // the first frame is always settings frame and should set state to 4
@@ -280,8 +278,6 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                     throw new Exception("invalid http2 protocol, no settings after preface. current frame is " + frame);
                 }
                 handleSettingsFramePart(framePart);
-                // re-fill the original data array, the length of payload should be modified
-                System.arraycopy(framePart, 0, data, SEQ_PREFACE_MAGIC.length, framePart.length);
                 assert state == 4;
                 return data;
             case 1:
@@ -290,8 +286,8 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             case 3:
                 state = 5; // set to proxy anything left in the header
                 if (frame.padded) {
-                    assert Logger.lowLevelDebug("the frame is padded, the padding length is " + data[0]);
-                    return new byte[data[0]]; // only return the PADDING part
+                    assert Logger.lowLevelDebug("the frame is padded, the padding length is " + data.get(0));
+                    return data.sub(0, 1); // only return the PADDING part
                 } else {
                     assert Logger.lowLevelDebug("the frame is not padded, so ignore this part");
                     return null; // not padded, so return nothing
@@ -319,16 +315,16 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     @Override
-    public byte[] produce() {
-        byte[] ret = syntheticAck;
+    public ByteArray produce() {
+        ByteArray ret = syntheticAck;
         syntheticAck = null;
         return ret;
     }
 
-    private void parseFrame(byte[] data) {
+    private void parseFrame(ByteArray data) {
         Http2Frame frame = new Http2Frame();
-        frame.length = 0x0fffffff & (data[0] << 16 | data[1] << 8 | data[2]);
-        byte type = data[3];
+        frame.length = data.uint24(0);
+        byte type = data.get(3);
         switch (type) {
             case 0x1:
                 frame.type = Http2Frame.Type.HEADERS;
@@ -347,17 +343,17 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 frame.type = Http2Frame.Type.PROXY;
                 break;
         }
-        byte flags = data[4];
+        byte flags = data.get(4);
         if (0 != (flags & 0x8)) frame.padded = true;
         if (0 != (flags & 0x20)) frame.priority = true;
         if (0 != (flags & 0x1)) frame.ack = true; // maybe it means "end stream", but we don't care
-        frame.streamIdentifier = data[5] << 24 | data[6] << 16 | data[7] << 8 | data[8];
+        frame.streamIdentifier = data.int32(5);
 
         this.frame = frame;
         assert Logger.lowLevelDebug("get http2 frame: " + frame + " in connection = " + connId);
     }
 
-    private byte[] handleFrame(byte[] frameBytes) throws Exception {
+    private ByteArray handleFrame(ByteArray frameBytes) throws Exception {
         // check (and modify) the stream id
         // if it's from frontend, we should try to record it first before modifying
         if (connId == 0) {
@@ -408,17 +404,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 // reset the length
                 int forwardLen = frame.length - LEN_E_STREAMDEPENDENCY_WEIGHT;
                 assert Logger.lowLevelDebug("the old length was " + frame.length + " new length is " + forwardLen);
-                byte b0 = (byte) ((forwardLen >> 16) & 0xff);
-                byte b1 = (byte) ((forwardLen >> 8) & 0xff);
-                byte b2 = (byte) ((forwardLen) & 0xff);
-                frameBytes[0] = b0;
-                frameBytes[1] = b1;
-                frameBytes[2] = b2;
+                utilModifyFrameLength(frameBytes, forwardLen);
                 frame.length = forwardLen;
             }
             {
                 // unset the priority bit
-                frameBytes[4] = (byte) (frameBytes[4] & 0b1101_1111);
+                frameBytes.set(4, (byte) (frameBytes.get(4) & 0b1101_1111));
                 frame.priority = false;
             }
             return frameBytes;
@@ -437,7 +428,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         }
     }
 
-    private byte[] handleSettingsFramePart(byte[] frameBytes) {
+    // NOTE: this method should only return the frameBytes object or null
+    // should not create a new object when returning
+    private ByteArray handleSettingsFramePart(ByteArray frameBytes) {
         if (connId == 0) {
             // frontend
             if (ctx.frontendHandshaking) {
@@ -490,19 +483,17 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     // concat a setting SETTINGS_HEADER_TABLE_SIZE = 0 to the frame, or change the value if it already exists
-    private byte[] handleSettings(byte[] payload) {
+    private ByteArray handleSettings(ByteArray payload) {
         // make a bigger payload
         {
-            byte[] foo = new byte[payload.length + LEN_SETTING];
-            System.arraycopy(payload, 0, foo, 0, payload.length);
-            payload = foo;
+            payload = payload.concat(ByteArray.from(new byte[LEN_SETTING]));
         }
         // try to find the SETTINGS_HEADER_TABLE_SIZE and change the value
         {
-            int offsetOfSetting = payload.length - LEN_SETTING; // default: use the added part when not provided
-            for (int i = 0; i < payload.length; i += LEN_SETTING) {
+            int offsetOfSetting = payload.length() - LEN_SETTING; // default: use the added part when not provided
+            for (int i = 0; i < payload.length(); i += LEN_SETTING) {
                 // the identifier takes 2 bytes
-                if (payload[i] == 0 && payload[i + 1] == VALUE_SETTINGS_HEADER_TABLE_SIZE) {
+                if (payload.uint16(i) == VALUE_SETTINGS_HEADER_TABLE_SIZE) {
                     offsetOfSetting = i;
                     assert Logger.lowLevelDebug("found setting for the HEADER_TABLE_SIZE");
                     break;
@@ -510,23 +501,15 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             }
             assert Logger.lowLevelDebug("writing HEADER_TABLE_SIZE at offset " + offsetOfSetting);
             // the identifier part
-            payload[offsetOfSetting] = 0;
-            payload[offsetOfSetting + 1] = VALUE_SETTINGS_HEADER_TABLE_SIZE;
+            payload.int16(offsetOfSetting, VALUE_SETTINGS_HEADER_TABLE_SIZE);
             // the value part
-            payload[offsetOfSetting + 2] = 0;
-            payload[offsetOfSetting + 3] = 0;
-            payload[offsetOfSetting + 4] = 0;
-            payload[offsetOfSetting + 5] = 0;
+            payload.int32(offsetOfSetting + 2, 0);
         }
 
         // record the handshake if it's client connection
         if (connId == 0) {
-            byte[] head = ctx.settingsFrameHeader;
-            byte[] handshake = new byte[SEQ_PREFACE_MAGIC.length + head.length + payload.length];
-            System.arraycopy(SEQ_PREFACE_MAGIC, 0, handshake, 0, SEQ_PREFACE_MAGIC.length);
-            System.arraycopy(head, 0, handshake, SEQ_PREFACE_MAGIC.length, head.length);
-            System.arraycopy(payload, 0, handshake, SEQ_PREFACE_MAGIC.length + head.length, payload.length);
-
+            ByteArray head = ctx.settingsFrameHeader;
+            ByteArray handshake = SEQ_PREFACE_MAGIC.concat(head).concat(payload).arrange();
             ctx.settingsFrameHeader = null;
             ctx.clientHandshake = handshake;
         }
@@ -534,8 +517,8 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         return payload;
     }
 
-    private void translatePromisedStreamId(byte[] data, int offset) {
-        Integer promisedStreamId = data[offset] << 24 | data[offset + 1] << 16 | data[offset + 2] << 8 | data[offset + 3];
+    private void translatePromisedStreamId(ByteArray data, int offset) {
+        Integer promisedStreamId = data.int32(offset);
         Integer translatedStreamId = ctx.nextServerStreamId();
         assert Logger.lowLevelDebug("push-promise frame > promised stream id is " + promisedStreamId +
             " translated stream id is " + translatedStreamId);
@@ -545,17 +528,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         }
     }
 
-    private static void utilModifyStreamId(byte[] data, int offset, int streamId) {
-        data[offset] = (byte) ((streamId >> 24) & 0xff);
-        data[offset + 1] = (byte) ((streamId >> 16) & 0xff);
-        data[offset + 2] = (byte) ((streamId >> 8) & 0xff);
-        data[offset + 3] = (byte) ((streamId) & 0xff);
+    private static void utilModifyStreamId(ByteArray data, int offset, int streamId) {
+        data.int32(offset, streamId);
     }
 
-    private static void utilModifyFrameLength(byte[] data, int length) {
-        data[0] = (byte) ((length >> 16) & 0xff);
-        data[1] = (byte) ((length >> 8) & 0xff);
-        data[2] = (byte) ((length) & 0xff);
+    private static void utilModifyFrameLength(ByteArray data, int length) {
+        data.int24(0, length);
     }
 
     Integer currentStreamId() {
@@ -582,7 +560,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     @Override
-    public byte[] connected() {
+    public ByteArray connected() {
         if (connId == 0) {
             return null;
         }
