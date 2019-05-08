@@ -26,8 +26,6 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     // [0] will not be used
     // I believe that 1024 connections should be enough
 
-    private ByteArrayChannel chnl = null;
-
     public ProcessorConnectionHandler(ProxyNetConfig config, NetEventLoop loop, Connection frontendConnection, Processor processor, Processor.Context topCtx, Processor.SubContext frontendSubCtx) {
         this.config = config;
         this.processor = processor;
@@ -61,47 +59,37 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                        Processor.SubContext subCtx) {
         assert Logger.lowLevelDebug("calling utilWriteData, writing from " + sourceConnection + " to " + targetConnection);
 
-        if (flow.runningProxy) {
-            assert Logger.lowLevelDebug("running proxy, flow.bytesToProxy = " + flow.bytesToProxy);
-            if (flow.bytesToProxy == 0) {
-                // nothing to write
-                return;
-            }
+        if (flow.currentSegment == null) {
+            flow.currentSegment = flow.sendingQueue.poll();
+        }
+        if (flow.currentSegment == null) {
+            return; // still null, which means no data to write now
+        }
+
+        if (flow.currentSegment.isProxy) {
+            assert Logger.lowLevelDebug("running proxy, flow.bytesToProxy = " + flow.currentSegment.bytesToProxy);
             targetConnection.runNoQuickWrite(() -> {
                 int n = sourceConnection.getInBuffer()
-                    .writeTo(targetConnection.getOutBuffer(), flow.bytesToProxy);
-                flow.bytesToProxy -= n;
-                assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.bytesToProxy + " left");
+                    .writeTo(targetConnection.getOutBuffer(), flow.currentSegment.bytesToProxy);
+                flow.currentSegment.bytesToProxy -= n;
+                assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.currentSegment.bytesToProxy + " left");
             });
-            assert flow.bytesToProxy >= 0;
+            assert flow.currentSegment.bytesToProxy >= 0;
             // proxy is done
-            if (flow.bytesToProxy == 0) {
+            if (flow.currentSegment.bytesToProxy == 0) {
                 assert Logger.lowLevelDebug("proxy done");
-                flow.runningProxy = false;
+                flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
                 processor.proxyDone(topCtx, subCtx);
             }
         } else {
-            assert Logger.lowLevelDebug("sending bytes, flow.chnl.used = " + (flow.chnl == null ? "null" : flow.chnl.used()));
-            if (flow.chnl == null) {
-                if (flow.bytesToSend.isEmpty()) {
-                    // nothing to write
-                    return;
-                }
-                ByteArray data = flow.bytesToSend.peek(); // do not remove from list for now <--#1
-                flow.chnl = data.toChannel();
-                assert Logger.lowLevelDebug("peek data from list, the length is " + data.length());
-            }
+            assert flow.currentSegment.chnl != null;
+            assert Logger.lowLevelDebug("sending bytes, flow.chnl.used = " + flow.currentSegment.chnl.used());
             targetConnection.runNoQuickWrite(() ->
-                targetConnection.getOutBuffer().storeBytesFrom(flow.chnl));
-            // sending this batch is done
-            assert flow.chnl != null;
-            assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.chnl.used());
-            if (flow.chnl.used() == 0) {
-                flow.chnl = null;
-                flow.bytesToSend.poll(); // remove from list when done <--#1
-                if (flow.bytesToSend.isEmpty()) {
-                    flow.runningProxy = true;
-                }
+                targetConnection.getOutBuffer().storeBytesFrom(flow.currentSegment.chnl));
+            // check whether this batch sending is done
+            assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.currentSegment.chnl.used());
+            if (flow.currentSegment.chnl.used() == 0) {
+                flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
             }
         }
     }
@@ -110,36 +98,51 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     // --- START backend handler ---
     class BackendConnectionHandler implements ClientConnectionHandler {
         class ByteFlow {
-            boolean runningProxy = false; // false = bytes, true = proxy
-            ByteArrayChannel chnl = null;
-            // NOTE: chnl always hold data of the first element in the list
-            // and the list will only be poped when all data is sent in this chnl
-            final LinkedList<ByteArray> bytesToSend = new LinkedList<>();
-            int bytesToProxy = 0;
-            // the bytesToSend list may be added the same time the data in the list is sent
-            // but when handling bytesToProxy, there will be no data adding to the bytesToSend list
-            // until the proxy is done
-            // This is because that the processor fetch data out from buffer and process them,
-            // then add the processed data to the bytesToSend list.
-            // However for the proxy operation, data will be directly proxied from
-            // input buffer of connection A to output buffer of connection B.
-            // Because of this, the `runningProxy` field is enough for the lib to know current running mode.
-            // Still, when writing a Processor, keep this behavior in mind and
-            // don't change mode from proxy to another until `proxyDone()` is called.
+            class Segment {
+                final boolean isProxy; // true = proxy, false = bytes
+                final ByteArrayChannel chnl;
+                int bytesToProxy;
+
+                Segment(ByteArray byteArray) {
+                    this.isProxy = false;
+                    this.chnl = byteArray.toChannel();
+                    this.bytesToProxy = 0;
+                }
+
+                Segment(int bytesToProxy) {
+                    this.isProxy = true;
+                    this.chnl = null;
+                    this.bytesToProxy = bytesToProxy;
+                }
+            }
+
+            Segment currentSegment = null;
+            final LinkedList<Segment> sendingQueue = new LinkedList<>();
 
             void write(ByteArray data) {
-                bytesToSend.add(data);
-                if (bytesToProxy == 0) {
-                    runningProxy = false;
+                if (currentSegment == null) {
+                    currentSegment = new Segment(data);
+                } else {
+                    sendingQueue.add(new Segment(data));
                 }
             }
 
             void proxy(int len) {
-                if (bytesToProxy == 0) {
-                    bytesToProxy = len;
+                {
+                    // this method might be called for the same bunch of data to be proxied
+                    // so it should not attach any proxy segment here
+                    if (currentSegment != null && currentSegment.isProxy) {
+                        return;
+                    }
+                    for (Segment seg : sendingQueue) {
+                        if (seg.isProxy)
+                            return;
+                    }
                 }
-                if (bytesToSend.isEmpty()) {
-                    runningProxy = true;
+                if (currentSegment == null) {
+                    currentSegment = new Segment(len);
+                } else {
+                    sendingQueue.add(new Segment(len));
                 }
             }
         }
@@ -191,14 +194,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 return; // it's already writing, should not call again
             }
             isWritingBackend = true;
-            while (backendByteFlow.bytesToProxy != 0 || !backendByteFlow.bytesToSend.isEmpty()) {
+            while (backendByteFlow.currentSegment != null) {
                 if (conn.getOutBuffer().free() == 0) {
                     // if the output is full, should break the writing process and wait for the next signal
                     assert Logger.lowLevelDebug("the backend output buffer is full now, break the sending loop");
                     break;
                 }
                 // if it's running proxy and the frontend connection input is empty, break the loop
-                if (backendByteFlow.runningProxy && frontendConnection.getInBuffer().used() == 0) {
+                if (backendByteFlow.currentSegment.isProxy && frontendConnection.getInBuffer().used() == 0) {
                     break;
                 }
 
@@ -206,7 +209,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             }
             isWritingBackend = false; // writing done
             // if writing is done
-            if (backendByteFlow.bytesToProxy == 0 && backendByteFlow.bytesToSend.isEmpty()) {
+            if (backendByteFlow.currentSegment == null) {
                 // let the frontend read more data because there may still have some data in buffer
                 readFrontend();
             }
@@ -367,7 +370,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
         {
             BackendConnectionHandler.ByteFlow flow = handlingConnection.frontendByteFlow;
-            while (flow.bytesToProxy != 0 || !flow.bytesToSend.isEmpty()) {
+            while (flow.currentSegment != null) {
                 if (frontendConnection.getOutBuffer().free() == 0) {
                     return; // end the method, because the out buffer has no space left
                 }
@@ -375,13 +378,13 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 utilWriteData(flow, handlingConnection.conn, frontendConnection, handlingConnection.subCtx);
 
                 // if writing done:
-                if (flow.bytesToProxy == 0 && flow.bytesToSend.isEmpty()) {
+                if (flow.currentSegment == null) {
                     // then let the backend connection read more data
                     // because the connection may be holding some data in the buffer
                     handlingConnection.readBackend();
                 } else { // writing not done yet,
                     // but if it's running proxy and the backend connection input buffer is empty
-                    if (flow.runningProxy && handlingConnection.conn.getInBuffer().used() == 0) {
+                    if (flow.currentSegment.isProxy && handlingConnection.conn.getInBuffer().used() == 0) {
                         return; // cannot handle for now, end the method
                     }
                 }
@@ -396,15 +399,17 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             BackendConnectionHandler next = null;
             for (BackendConnectionHandler b : conn2intMap.keySet()) {
                 BackendConnectionHandler.ByteFlow flow = b.frontendByteFlow;
-                if (flow.bytesToProxy != 0 || !flow.bytesToSend.isEmpty()) {
+                if (flow.currentSegment != null) {
                     next = b;
                     break;
                 }
             }
             handlingConnection = next;
-            doFrontendWrite();
+            _doFrontendWrite();
         }
     }
+
+    private ByteArrayChannel chnl = null;
 
     void readFrontend() {
         if (frontendConnection.getInBuffer().used() == 0) {
