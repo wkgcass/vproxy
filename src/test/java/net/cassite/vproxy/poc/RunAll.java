@@ -74,6 +74,11 @@ public class RunAll {
         System.out.println("==============================================");
         Http2Proxy.main(new String[0]);
 
+        System.out.println("==============================================");
+        System.out.println("             grpc over h2 proxy");
+        System.out.println("==============================================");
+        GrpcOverH2Proxy.main(new String[0]);
+
         Resolver.stopDefault();
     }
 }
