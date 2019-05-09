@@ -110,4 +110,16 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * Note: should return null for sub context with connId = 0
      */
     ByteArray connected(CTX ctx, SUB sub);
+
+    /**
+     * zero copy is not free.
+     * e.g. when processing http2 frames, the frame header is 9 bytes, and with uint24 payload length,
+     * the processor would read 9 bytes first, and decides to proxy whats left in the frame,
+     * if the payload is 7 bytes, the lib will send two tcp segments, one with 9 bytes payload and
+     * one with 7 bytes payload. It's much faster if just send one tcp segment with 16 bytes payload
+     * when zero copy is disabled.
+     *
+     * @return the threshold for enabling zero copy
+     */
+    int PROXY_ZERO_COPY_THRESHOLD();
 }

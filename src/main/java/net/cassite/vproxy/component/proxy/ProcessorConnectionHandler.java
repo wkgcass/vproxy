@@ -58,7 +58,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                        Connection sourceConnection,
                        Connection targetConnection,
                        Processor.SubContext subCtx,
-                       Runnable onProxyDone) {
+                       Runnable onZeroCopyProxyDone) {
         assert Logger.lowLevelDebug("calling utilWriteData, writing from " + sourceConnection + " to " + targetConnection);
 
         if (flow.currentSegment == null) {
@@ -73,17 +73,44 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 ((ProxyOutputRingBuffer) (targetConnection.getOutBuffer())).newDataFromProxiedBuffer();
                 return;
             }
-            flow.currentSegment.calledProxyOnBuffer = true;
+
             assert Logger.lowLevelDebug("running proxy, flow.bytesToProxy = " + flow.currentSegment.bytesToProxy);
-            ((ProxyOutputRingBuffer) (targetConnection.getOutBuffer()))
-                .proxy(
-                    sourceConnection.getInBuffer(),
-                    flow.currentSegment.bytesToProxy, () -> {
-                        assert Logger.lowLevelDebug("proxy done");
-                        flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
-                        processor.proxyDone(topCtx, subCtx);
-                        onProxyDone.run();
-                    });
+
+            if (flow.currentSegment.bytesToProxy > processor.PROXY_ZERO_COPY_THRESHOLD()) {
+                assert Logger.lowLevelDebug("choose to run with zero copy");
+                flow.currentSegment.calledProxyOnBuffer = true;
+
+                ((ProxyOutputRingBuffer) (targetConnection.getOutBuffer()))
+                    .proxy(
+                        sourceConnection.getInBuffer(),
+                        flow.currentSegment.bytesToProxy, () -> {
+                            // -----the code is copied -------1
+                            assert Logger.lowLevelDebug("proxy done");
+                            flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
+                            processor.proxyDone(topCtx, subCtx);
+                            // -----the code is copied -------1
+
+                            onZeroCopyProxyDone.run();
+                        });
+            } else {
+                assert Logger.lowLevelDebug("choose to run without zero copy");
+
+                targetConnection.runNoQuickWrite(() -> {
+                    int n = sourceConnection.getInBuffer()
+                        .writeTo(targetConnection.getOutBuffer(), flow.currentSegment.bytesToProxy);
+                    flow.currentSegment.bytesToProxy -= n;
+                    assert Logger.lowLevelDebug("proxied " + n + " bytes, still have " + flow.currentSegment.bytesToProxy + " left");
+                });
+                assert flow.currentSegment.bytesToProxy >= 0;
+                // proxy is done
+                if (flow.currentSegment.bytesToProxy == 0) {
+                    // -----the code is copied -------1
+                    assert Logger.lowLevelDebug("proxy done");
+                    flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
+                    processor.proxyDone(topCtx, subCtx);
+                    // -----the code is copied -------1
+                }
+            }
         } else {
             assert flow.currentSegment.chnl != null;
             assert Logger.lowLevelDebug("sending bytes, flow.chnl.used = " + flow.currentSegment.chnl.used());

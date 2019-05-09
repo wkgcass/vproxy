@@ -12,6 +12,10 @@ public class Config {
     // set it smaller if your environment have a smaller tcp session ttl
     public static final int tcpTimeout = 15 * 60_000;
 
+    // the recommended min payload length
+    // also, see Processor.PROXY_ZERO_COPY_THRESHOLD
+    public static final int recommendedMinPayloadLength = (int) (1.5 * (14 + 20 + 32));
+
     // service mesh mode:
     // all resources become readonly
     // and resources will be handled by smart-lb-group or sidecar
