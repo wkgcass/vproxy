@@ -3,6 +3,21 @@ package net.cassite.vproxy.util;
 import java.util.Date;
 
 public class Logger {
+    private static final boolean lowLevelDebugOn;
+    private static final boolean lowLevelNetDebugOn;
+
+    static {
+        {
+            String debug = System.getProperty("vproxy.debug");
+            lowLevelDebugOn = !"off".equals(debug);
+        }
+
+        {
+            String debug = System.getProperty("javax.net.debug");
+            lowLevelNetDebugOn = "all".equals(debug) || "vproxy".equals(debug);
+        }
+    }
+
     private Logger() {
     }
 
@@ -17,6 +32,8 @@ public class Logger {
     // use assert to print this log
     // e.g. assert Logger.lowLevelDebug("i will not be here in production environment")
     public static boolean lowLevelDebug(String msg) {
+        if (!lowLevelDebugOn)
+            return true;
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
         System.out.println(current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);
@@ -24,10 +41,8 @@ public class Logger {
     }
 
     public static boolean lowLevelNetDebug(String msg) {
-        String debug = System.getProperty("javax.net.debug");
-        if ("all".equals(debug)) {
+        if (!lowLevelNetDebugOn || !lowLevelDebugOn)
             return true;
-        }
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
         System.out.println(current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + msg);

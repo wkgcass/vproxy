@@ -30,10 +30,11 @@ public class TcpLBHolder {
                     int timeout,
                     int inBufferSize,
                     int outBufferSize,
+                    String protocol,
                     SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException();
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, securityGroup);
         map.put(alias, tcpLB);
         tcpLB.start();
     }

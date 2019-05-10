@@ -4,6 +4,7 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpVersion;
 import io.vertx.core.net.*;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
@@ -173,6 +174,7 @@ public class CI {
     private String sgs0;
 
     private WebClient socks5WebClient = null;
+    private WebClient h2WebClient = null;
     private NetClient netClient = null;
 
     @Before
@@ -246,6 +248,9 @@ public class CI {
         if (socks5WebClient != null) {
             socks5WebClient.close();
         }
+        if (h2WebClient != null) {
+            h2WebClient.close();
+        }
         if (netClient != null) {
             netClient.close();
         }
@@ -259,6 +264,13 @@ public class CI {
                 .setPort(port)
                 .setType(ProxyType.SOCKS5)
             )
+        );
+    }
+
+    private void initH2WebClient() {
+        h2WebClient = WebClient.create(vertx, new WebClientOptions()
+            .setProtocolVersion(HttpVersion.HTTP_2)
+            .setHttp2ClearTextUpgrade(false)
         );
     }
 
@@ -428,6 +440,10 @@ public class CI {
         return request(socks5WebClient, host, port);
     }
 
+    private String requestH2(int port) {
+        return request(h2WebClient, "127.0.0.1", port);
+    }
+
     @Test
     public void simpleLB() throws Exception {
         int port = 7001;
@@ -445,6 +461,7 @@ public class CI {
         assertEquals(sgs0, detail.get("backends"));
         assertEquals("16384", detail.get("in-buffer-size"));
         assertEquals("16384", detail.get("out-buffer-size"));
+        assertEquals("tcp", detail.get("protocol"));
         assertEquals("(allow-all)", detail.get("security-group"));
 
         String sg0 = randomName("sg0");
@@ -1152,5 +1169,55 @@ public class CI {
 
         // bytes-in and bytes-out are not easy to be tested
         // we just leave here a TODO
+    }
+
+    @Test
+    public void lbWithProtocol() throws Exception {
+        int lbPort = 7007;
+
+        String lbName = randomName("lb0");
+        execute(createReq(add, "tcp-lb", lbName,
+            "acceptor-elg", elg0, "event-loop-group", elg1,
+            "address", "127.0.0.1:" + lbPort,
+            "server-groups", sgs0,
+            "protocol", "h2"));
+        tlNames.add(lbName);
+        checkCreate("tcp-lb", lbName);
+        assertEquals("h2", getDetail("tcp-lb", lbName).get("protocol"));
+
+        String sg0 = "sg0";
+        execute(createReq(add, "server-group", sg0,
+            "timeout", "500", "period", "200", "up", "2", "down", "5",
+            "event-loop-group", elg0));
+        sgNames.add(sg0);
+        checkCreate("server-group", sg0);
+
+        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
+        checkCreate("server-group", sg0, "server-groups", sgs0);
+
+        execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
+        checkCreate("server", "sg7771", "server-group", sg0);
+
+        execute(createReq(add, "server", "sg7772", "to", "server-group", sg0, "address", "127.0.0.1:7772", "weight", "10"));
+        checkCreate("server", "sg7772", "server-group", sg0);
+
+        // wait for health check
+        Thread.sleep(500);
+
+        initH2WebClient();
+
+        int got1 = 0;
+        int got2 = 0;
+        for (int i = 0; i < 100; ++i) {
+            String resp = requestH2(lbPort);
+            assertTrue(resp.equals("7771") || resp.equals("7772"));
+            if (resp.equals("7771")) {
+                ++got1;
+            } else {
+                ++got2;
+            }
+        }
+        assertEquals(50, got1);
+        assertEquals(50, got2);
     }
 }

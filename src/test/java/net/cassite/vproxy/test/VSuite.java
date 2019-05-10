@@ -18,6 +18,7 @@ import org.junit.runners.Suite;
     TestSmartLBGroup.class,
     TestConnectClient.class,
     TestSSLRingBuffers.class,
+    TestProtocols.class,
 
     AfterAll.class
 })

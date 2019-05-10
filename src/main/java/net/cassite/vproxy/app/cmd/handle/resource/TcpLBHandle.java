@@ -93,6 +93,8 @@ public class TcpLBHandle {
         ServerGroups backend = Application.get().serverGroupsHolder.get(cmd.args.get(Param.sgs));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
+        String protocol = cmd.args.get(Param.protocol);
+        if (protocol == null) protocol = "tcp";
         int timeout;
         SecurityGroup secg;
         if (cmd.args.containsKey(Param.secg)) {
@@ -106,7 +108,7 @@ public class TcpLBHandle {
             timeout = Config.tcpTimeout;
         }
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, secg
+            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, secg
         );
     }
 
@@ -156,6 +158,7 @@ public class TcpLBHandle {
                 + " backends " + tcpLB.backends.alias
                 + " timeout " + tcpLB.getTimeout()
                 + " in-buffer-size " + tcpLB.getInBufferSize() + " out-buffer-size " + tcpLB.getOutBufferSize()
+                + " protocol " + tcpLB.protocol
                 + " security-group " + tcpLB.securityGroup.alias;
         }
     }

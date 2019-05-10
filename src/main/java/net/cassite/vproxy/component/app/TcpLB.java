@@ -10,6 +10,8 @@ import net.cassite.vproxy.component.proxy.*;
 import net.cassite.vproxy.component.secure.SecurityGroup;
 import net.cassite.vproxy.component.svrgroup.ServerGroups;
 import net.cassite.vproxy.connection.*;
+import net.cassite.vproxy.processor.Processor;
+import net.cassite.vproxy.processor.ProcessorProvider;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
@@ -67,6 +69,8 @@ public class TcpLB {
     private int timeout; // modifiable
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
+    public final String protocol;
+    public final Processor processor;
     public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
 
@@ -91,6 +95,18 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
+        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", securityGroup);
+    }
+
+    public TcpLB(String alias,
+                 EventLoopGroup acceptorGroup,
+                 EventLoopGroup workerGroup,
+                 InetSocketAddress bindAddress,
+                 ServerGroups backends,
+                 int timeout,
+                 int inBufferSize, int outBufferSize,
+                 String protocol,
+                 SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;
@@ -99,6 +115,8 @@ public class TcpLB {
         this.timeout = timeout;
         this.inBufferSize = inBufferSize;
         this.outBufferSize = outBufferSize;
+        this.protocol = protocol;
+        this.processor = (protocol.equals("tcp") ? null : ProcessorProvider.getInstance().get(protocol));
         this.securityGroup = securityGroup;
 
         // we do not bind or create proxy object here
@@ -112,7 +130,26 @@ public class TcpLB {
 
     // this method can override
     protected ConnectorGen provideConnectorGen() {
-        return this::connectorProvider;
+        if (protocol.equals("tcp")) {
+            return this::connectorProvider;
+        } else {
+            return new ConnectorGen() {
+                @Override
+                public Type type() {
+                    return Type.processor;
+                }
+
+                @Override
+                public Connector genConnector(Connection accepted) {
+                    return connectorProvider(accepted);
+                }
+
+                @Override
+                public Processor processor() {
+                    return processor;
+                }
+            };
+        }
     }
 
     // provide a connector

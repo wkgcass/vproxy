@@ -335,7 +335,8 @@ public class Shutdown {
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + Utils.ipport(tl.bindAddress) + " server-groups " + tl.backends.alias +
                     " timeout " + tl.getTimeout() +
-                    " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize();
+                    " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
+                    " protocol " + tl.protocol;
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + tl.securityGroup.alias;
                 }
