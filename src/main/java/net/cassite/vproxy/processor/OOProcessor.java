@@ -1,6 +1,5 @@
 package net.cassite.vproxy.processor;
 
-import net.cassite.vproxy.component.proxy.Processor;
 import net.cassite.vproxy.util.ByteArray;
 
 public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubContext> implements Processor<CTX, SUB> {

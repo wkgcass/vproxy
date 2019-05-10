@@ -8,7 +8,8 @@ import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
 import net.cassite.vproxy.connection.NetEventLoop;
-import net.cassite.vproxy.processor.http2.Http2Processor;
+import net.cassite.vproxy.processor.Processor;
+import net.cassite.vproxy.processor.ProcessorProvider;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
@@ -75,7 +76,7 @@ public class Http2Proxy {
 
                 @Override
                 public Processor processor() {
-                    return new Http2Processor();
+                    return ProcessorProvider.getInstance().get("h2");
                 }
             })
             .setHandleLoopProvider(() -> el)

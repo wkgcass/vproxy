@@ -1,6 +1,6 @@
 package net.cassite.vproxy.processor.http2;
 
-import net.cassite.vproxy.component.proxy.Processor;
+import net.cassite.vproxy.processor.Processor;
 import net.cassite.vproxy.processor.OOSubContext;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ByteArray;

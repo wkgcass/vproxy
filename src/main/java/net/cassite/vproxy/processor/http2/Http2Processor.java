@@ -13,6 +13,11 @@ public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     }
 
     @Override
+    public String name() {
+        return "h2";
+    }
+
+    @Override
     public Http2Context init() {
         return new Http2Context();
     }

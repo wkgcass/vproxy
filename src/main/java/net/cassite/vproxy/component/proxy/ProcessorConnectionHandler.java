@@ -1,6 +1,7 @@
 package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.*;
+import net.cassite.vproxy.processor.Processor;
 import net.cassite.vproxy.util.ByteArrayChannel;
 import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;

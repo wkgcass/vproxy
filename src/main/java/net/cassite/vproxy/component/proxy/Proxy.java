@@ -1,6 +1,7 @@
 package net.cassite.vproxy.component.proxy;
 
 import net.cassite.vproxy.connection.*;
+import net.cassite.vproxy.processor.Processor;
 import net.cassite.vproxy.protocol.ProtocolConnectionHandler;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.protocol.ProtocolHandlerContext;

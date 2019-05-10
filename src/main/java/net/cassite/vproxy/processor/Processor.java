@@ -1,4 +1,4 @@
-package net.cassite.vproxy.component.proxy;
+package net.cassite.vproxy.processor;
 
 import net.cassite.vproxy.util.ByteArray;
 
@@ -8,6 +8,11 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
 
     class SubContext {
     }
+
+    /**
+     * @return name of the processor
+     */
+    String name();
 
     /**
      * create a context object

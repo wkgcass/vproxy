@@ -7,7 +7,7 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import net.cassite.vproxy.component.proxy.ConnectorGen;
-import net.cassite.vproxy.component.proxy.Processor;
+import net.cassite.vproxy.processor.Processor;
 import net.cassite.vproxy.component.proxy.Proxy;
 import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.connection.BindServer;
@@ -17,7 +17,7 @@ import net.cassite.vproxy.connection.NetEventLoop;
 import net.cassite.vproxy.poc.grpc.GreeterGrpc;
 import net.cassite.vproxy.poc.grpc.HelloRequest;
 import net.cassite.vproxy.poc.grpc.HelloResponse;
-import net.cassite.vproxy.processor.http2.Http2Processor;
+import net.cassite.vproxy.processor.ProcessorProvider;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.net.InetAddress;
@@ -71,7 +71,7 @@ public class GrpcOverH2Proxy {
 
                 @Override
                 public Processor processor() {
-                    return new Http2Processor();
+                    return ProcessorProvider.getInstance().get("h2");
                 }
             })
             .setHandleLoopProvider(() -> el)

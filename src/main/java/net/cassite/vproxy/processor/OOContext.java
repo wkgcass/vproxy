@@ -1,7 +1,5 @@
 package net.cassite.vproxy.processor;
 
-import net.cassite.vproxy.component.proxy.Processor;
-
 public abstract class OOContext<SUB extends OOSubContext> extends Processor.Context {
     public OOContext() {
     }
