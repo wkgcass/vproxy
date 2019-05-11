@@ -7,7 +7,7 @@ public class ProcessorProvider {
     private static final ProcessorProvider instance = new ProcessorProvider();
 
     private final ProcessorRegistry registry;
-    private final DefaultProcessorRegistry defaultRegistry = new DefaultProcessorRegistry();
+    private final DefaultProcessorRegistry defaultRegistry = DefaultProcessorRegistry.getInstance();
 
     private ProcessorProvider() {
         ServiceLoader<ProcessorRegistry> loader = ServiceLoader.load(ProcessorRegistry.class);
@@ -30,7 +30,7 @@ public class ProcessorProvider {
             return p;
         p = defaultRegistry.get(name);
         if (p == null)
-            throw new NoSuchElementException(name);
+            throw new NoSuchElementException("cannot find processor with name: " + name);
         return p;
     }
 }
