@@ -49,15 +49,19 @@ public interface ByteArray {
     }
 
     default int uint24(int offset) {
-        return 0x00ffffff & (get(offset) << 16 | get(offset + 1) << 8 | get(offset + 2));
+        return uint8(offset) << 16 | uint8(offset + 1) << 8 | uint8(offset + 2);
     }
 
     default int int32(int offset) {
-        return get(offset) << 24 | get(offset + 1) << 16 | get(offset + 2) << 8 | get(offset + 3);
+        return uint8(offset) << 24 | uint8(offset + 1) << 16 | uint8(offset + 2) << 8 | uint8(offset + 3);
     }
 
     default int uint16(int offset) {
-        return 0x0000ffff & (get(offset) << 8 | get(offset + 1));
+        return uint8(offset) << 8 | uint8(offset + 1);
+    }
+
+    default int uint8(int offset) {
+        return get(offset) & 0xff;
     }
 
     default ByteArray int24(int offset, int val) {
