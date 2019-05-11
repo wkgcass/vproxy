@@ -32,6 +32,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 * [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): vproxy service mesh通信协议。
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
+* [using-application-layer-protocols(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md): 关于如何使用(自定义的)应用层协议。
 
 ## 贡献
 

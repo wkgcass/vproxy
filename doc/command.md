@@ -130,6 +130,7 @@ Create a loadbalancer.
 * server-groups (sgs): used as the backend servers
 * in-buffer-size: input buffer size. *optional*, default 16384 (bytes)
 * out-buffer-size: output buffer size. *optional*, default 16384 (bytes)
+* protocol: the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. *optional*, default tcp
 * security-group (secg): specify a security group for the lb. *optional*, default allow any
 
 ```
@@ -152,7 +153,7 @@ Retrieve detailed info of all tcp-loadbalancers.
 
 ```
 list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 security-group secrg0"
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
 ```
 
 #### update

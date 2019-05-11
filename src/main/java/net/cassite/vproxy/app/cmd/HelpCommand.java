@@ -394,7 +394,9 @@ public class HelpCommand {
         weight("weight", "w", "weight"),
         dft("default", null, "enum: allow or deny"),
         network("network", "net", "network: $network/$mask"),
-        protocol("protocol", null, "enum: tcp or udp"),
+        protocol("protocol", null, "" +
+            "for tcp-lb: the application layer protocol, " +
+            "for security-group: the transport layer protocol: tcp or udp"),
         portrange("port-range", null, "an integer tuple $i,$j"),
         service("service", null, "service name"),
         zone("zone", null, "zone name"),
@@ -439,6 +441,7 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
+                    , new ResActParamMan(ParamMan.protocol, "the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See doc for more info", "tcp")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
                 ),
                 Collections.singletonList(
@@ -460,7 +463,7 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail tcp-lb",
-                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 security-group secg0\""
+                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of an lb",

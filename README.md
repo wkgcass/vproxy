@@ -34,6 +34,7 @@ Questions about implementation detail are also welcome (in issues).
 * [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): The protocol which is used by vproxy service mesh impl.
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
+* [using-application-layer-protocols](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
 
 ## Contribute
 
