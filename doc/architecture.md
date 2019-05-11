@@ -43,7 +43,7 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 #### ServerGroup
 
-`ServerGroup` is a group of endpoints, each endpoint is attached with a boolean flag indicating it's currently healthy or not. The `ServerGroup` provides a `next()` method to retrieve the next healthy server. The method of determining which is the "next" is configurable (currently only `wrr` is supported, will add more in the future).
+`ServerGroup` is a group of endpoints, each endpoint is attached with a boolean flag indicating it's currently healthy or not. The `ServerGroup` provides a `next()` method to retrieve the next healthy server. The method of determining which is the "next" is configurable.
 
 #### ServerGroups
 
