@@ -16,7 +16,7 @@ Clone it, javac it, then everything is ready for running.
 * Simple: keep code simple and clear.
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
-* TCP Loadbalancer: we only support TCP for now.
+* TCP Loadbalancer: we now support TCP and TCP based protocols, also allow your own protocols.
 
 ## How to use
 
