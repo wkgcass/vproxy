@@ -19,4 +19,5 @@ public enum LogType {
     KHALA_EVENT,
     ALERT,
     SSL_ERROR,
+    SYS_ERROR,
 }

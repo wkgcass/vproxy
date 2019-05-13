@@ -1,5 +1,6 @@
 package net.cassite.vproxy.connection;
 
+import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
@@ -25,9 +26,19 @@ public class BindServer implements NetFlowRecorder {
     private boolean closed;
 
     public static BindServer create(InetSocketAddress bindAddress) throws IOException {
+        // first bind without SO_REUSEPORT to check whether this port is already used
+        try (ServerSocketChannel foo = ServerSocketChannel.open()) {
+            foo.bind(bindAddress);
+        }
+
         ServerSocketChannel channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
-        channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+        try {
+            channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+        } catch (UnsupportedOperationException ignore) {
+            Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT, " +
+                "continue with no-reuse mode for " + bindAddress);
+        }
         channel.bind(bindAddress);
         try {
             return new BindServer(channel);
