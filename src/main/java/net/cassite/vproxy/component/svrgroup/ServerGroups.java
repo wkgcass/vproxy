@@ -174,6 +174,8 @@ public class ServerGroups {
     private /*use static to prevent access local variable*/ static Connector next(InetSocketAddress source, WRR wrr, int recursion) {
         if (recursion > wrr.seq.length)
             return null;
+        if (wrr.seq.length == 0)
+            return null;
         ++recursion;
 
         int idx = wrr.cursor.getAndIncrement();
