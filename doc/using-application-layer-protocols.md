@@ -9,7 +9,9 @@ The layer 4 TCP loadbalancer transfers all data from one frontend connection to 
 
 So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backends in one connection.
 
-Now, `vproxy` already uses the interfaces to construct a built-in protcol for `HTTP/2`. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java).
+Now, `vproxy` already uses the interfaces to construct some built-in protcols for `HTTP/2`, `dubbo` and `thrift (framed)`.  
+Actually these interfaces are built for the `HTTP/2`, which uses all functionality provided by these interfaces. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java).  
+The `dubbo` and `thrift (framed)` processors are much easier comparing to the `HTTP/2` impl.
 
 ## How to use
 
@@ -18,6 +20,8 @@ When creating `tcp-lb`, specify the application level protocol to use in paramet
 Current built in protocols are:
 
 * h2: `http/2`
+* dubbo: for alibaba dubbo rpc
+* framed-int32: for framed thrift, which uses a int32 length field
 
 Input your protocol name which corresponds to your `Processor` when using a customized protocol.
 
@@ -28,6 +32,10 @@ Input your protocol name which corresponds to your `Processor` when using a cust
 We provides a processor impl example, see [here](https://github.com/wkgcass/vproxy-customized-application-layer-protocols-example). Here we defined a very simple application level protocol: the first 3 bytes represnets the payload length, and followed by the payload. See example code for more info.
 
 For more complex protocols, you may refer to the built-in http2 impl.
+
+To let vproxy load your processors, you may use the modular `provides ... with ...` in `module-info` or traditional definitions in `META-INF/services/net.cassite.vproxy.processor.ProcessorRegistry`.
+
+Or when both not working (e.g. when packing everything into one fat jar), you can also call `DefaultProcessorRegistry.getInstance().register(processor)` to register.
 
 ### Interfaces
 

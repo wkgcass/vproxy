@@ -9,7 +9,9 @@
 
 所以`vproxy`定义了一套接口，允许用户自定义应用层协议，可以自由地将不同的frame分发至不同的后端。
 
-目前，`vproxy`已经使用这套接口，在内部预置了`HTTP/2`协议的frame分发。详见[这里](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2)，主要实现放在这里：[Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java)。
+目前，`vproxy`已经使用这套接口，在内部预置了`HTTP/2`,`dubbo`,`thrift (framed)`协议的frame分发。  
+实际上，这套接口是为了`HTTP/2`协议而提供的，`HTTP/2`的processor使用了这套接口提供的所有功能。详见[这里](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2)，主要实现放在这里：[Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java)。  
+相比而言，`dubbo`和`thrift (framed)`处理器实现要简单的多。
 
 ## 使用方式
 
@@ -18,6 +20,8 @@
 目前内建支持的应用层协议有：
 
 * h2: `http/2`负载均衡
+* dubbo: 阿里的dubbo rpc
+* framed-int32: framed thrift，它使用32位int值来表示长度
 
 使用自定义协议时，只需填入你在`Processor`中规定的协议名称即可
 
@@ -28,6 +32,10 @@
 我们提供了一个processor实现的例子，见[这里](https://github.com/wkgcass/vproxy-customized-application-layer-protocols-example)。这里定义了一个非常简单的应用层协议：前3个字节表示payload长度，后面紧跟payload，请参考具体的代码。
 
 对于比较复杂的协议，可以参考内置的http2的实现。
+
+为了让vproxy读取你的处理器，你可以使用模块化`module-info`中的`provides ... with ...`语句，也可以使用传统的`META-INF/services/net.cassite.vproxy.processor.ProcessorRegistry`。
+
+当上述两者皆不可用时（比如把所有东西打成了一个大fat jar时），你可以调用`DefaultProcessorRegistry.getInstance().register(processor)`来注册你的处理器。
 
 ### 接口
 
