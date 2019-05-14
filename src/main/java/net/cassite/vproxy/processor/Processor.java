@@ -1,5 +1,6 @@
 package net.cassite.vproxy.processor;
 
+import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.util.ByteArray;
 
 public interface Processor<CTX extends Processor.Context, SUB extends Processor.SubContext> {
@@ -126,5 +127,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      *
      * @return the threshold for enabling zero copy
      */
-    int PROXY_ZERO_COPY_THRESHOLD();
+    default int PROXY_ZERO_COPY_THRESHOLD() {
+        return Config.recommendedMinPayloadLength;
+    }
 }

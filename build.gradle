@@ -19,6 +19,8 @@ dependencies {
     testCompile group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
     testCompile group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
     testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+    testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
+    testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
 }
 
 jar {

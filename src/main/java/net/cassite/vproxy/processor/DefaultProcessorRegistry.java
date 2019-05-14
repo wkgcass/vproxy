@@ -1,6 +1,8 @@
 package net.cassite.vproxy.processor;
 
+import net.cassite.vproxy.processor.dubbo.DubboProcessor;
 import net.cassite.vproxy.processor.http2.Http2Processor;
+import net.cassite.vproxy.processor.common.CommonInt32FramedProcessor;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -8,14 +10,12 @@ import java.util.Map;
 public class DefaultProcessorRegistry implements ProcessorRegistry {
     public static final DefaultProcessorRegistry instance = new DefaultProcessorRegistry();
 
-    private Map<String, Processor> registry = new HashMap<>() {{
-        {
-            Http2Processor h2 = new Http2Processor();
-            put(h2.name(), h2);
-        }
-    }};
+    private Map<String, Processor> registry = new HashMap<>();
 
     private DefaultProcessorRegistry() {
+        register(new Http2Processor());
+        register(new CommonInt32FramedProcessor());
+        register(new DubboProcessor());
     }
 
     public static DefaultProcessorRegistry getInstance() {
@@ -29,7 +29,6 @@ public class DefaultProcessorRegistry implements ProcessorRegistry {
      * @param processor the processor to register
      * @throws IllegalArgumentException the name of the processor already registered
      */
-    @SuppressWarnings("unused")
     public void register(Processor processor) throws IllegalArgumentException {
         String name = processor.name();
         if (registry.containsKey(name)) {
