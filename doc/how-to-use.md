@@ -173,11 +173,9 @@ User app is recommended to:
 Create a file, input the following:
 
 ```
-add event-loop-group elg0
 add server-groups sgs0
-add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 server-groups sgs0 in-buffer-size 256 out-buffer-size 256
-add event-loop el0 to event-loop-group elg0
-add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0
+add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0
+add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr
 add server-group sg0 to server-groups sgs0 weight 10
 add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
@@ -218,26 +216,16 @@ To create a tcp loadbalancer, you can:
 
 1. start the application via `net.cassite.vproxy.app.Main`
 2. type in the following commands or run from the redis-cli:
-3. `add event-loop-group elg0`  
-    which creates a event loop group named `elg0`, you can change the name if you want
-4. `add server-groups sgs0`  
+3. `add server-groups sgs0`  
     which creates a serverGroups named `sgs0`. The serverGroups is a resource that contains multiple server groups.
-5. `add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 server-groups sgs0 in-buffer-size 256 out-buffer-size 256`  
-    which creates a tcp loadbalancer named `lb0`, using `elg0` as its acceptor event loop group, using also `elg0` as its worker event loop group. the lb listens on `127.0.0.1:8899`, using `sgs0` as it's backend server groups. the input buffer size and output buffer size are both set to 256 bytes.
-
-> However it's recommanded to set a bigger buffer size, e.g. 16384.
-
-Now you get a tcp loadbalancer but it's not currently running.  
-A event loop should be created for it to run.
-
-1. `add event-loop el0 to event-loop-group elg0`  
-    which creates a event loop named `el0` inside `elg0`. Creating inside `elg0` is because the lb is using `elg0` as its event loop group. If your acceptor event loop group and worker event loop group are not the same, you should create event loop for both event loop groups.
+4. `add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0`  
+    which creates a tcp loadbalancer named `lb0`, using also `elg0` as its worker event loop group. the lb listens on `127.0.0.1:8899`, using `sgs0` as it's backend server groups.
 
 Now the lb is running, you can telnet, however there are no valid backends, so the connection is closed instantly.
 
 To add a backend, you can:
 
-1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0`  
+1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr`  
     which creates a server group named `sg0`; the health check configurations are: check timeout is 1 second, check every 3 seconds, consider the server UP when got 4 successful checks and consider the server DOWN when got 5 failed checks; the method of retrieving server from this group is `wrr`
 2. `add server-group sg0 to server-groups sgs0 weight 10`  
     which adds the server group `sg0` into serverGroups `sgs0`. Adding `sg0` to `sgs0` is because the tcp-lb is using `sgs0` as its backend server groups

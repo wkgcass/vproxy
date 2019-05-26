@@ -187,15 +187,24 @@ public class Shutdown {
                     continue;
                 }
 
-                String cmd = "add event-loop-group " + elg.alias;
-                commands.add(cmd);
                 eventLoopGroups.add(elg);
                 eventLoopGroupNames.add(name);
+
+                if (Application.isDefaultEventLoopGroupName(name)) {
+                    continue;
+                }
+
+                String cmd = "add event-loop-group " + elg.alias;
+                commands.add(cmd);
             }
         }
         {
             // create event-loop
             for (EventLoopGroup elg : eventLoopGroups) {
+                if (Application.isDefaultEventLoopGroupName(elg.alias)) {
+                    continue;
+                }
+
                 List<String> names = elg.names();
                 for (String name : names) {
                     EventLoopWrapper eventLoopWrapper;

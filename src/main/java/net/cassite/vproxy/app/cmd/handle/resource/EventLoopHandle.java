@@ -33,11 +33,15 @@ public class EventLoopHandle {
 
     public static void add(Command cmd) throws Exception {
         EventLoopGroup g = EventLoopGroupHandle.get(cmd.prepositionResource);
+        if (Application.isDefaultEventLoopGroupName(g.alias))
+            throw new Exception("cannot modify the default event loop group " + g.alias);
         g.add(cmd.resource.alias);
     }
 
     public static void forceRemove(Command cmd) throws Exception {
         EventLoopGroup g = EventLoopGroupHandle.get(cmd.prepositionResource);
+        if (Application.isDefaultEventLoopGroupName(g.alias))
+            throw new Exception("cannot modify the default event loop group " + g.alias);
         g.remove(cmd.resource.alias);
     }
 }

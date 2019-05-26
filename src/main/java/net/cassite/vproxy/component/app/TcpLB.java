@@ -209,6 +209,8 @@ public class TcpLB {
                 alreadyBondLoops.add(pxy.config.getAcceptLoop());
             }
 
+            // check for binding
+            BindServer.checkBind(this.bindAddress);
             for (EventLoopWrapper w : eventLoops) {
                 if (alreadyBondLoops.contains(w))
                     continue; // ignore already bond loops

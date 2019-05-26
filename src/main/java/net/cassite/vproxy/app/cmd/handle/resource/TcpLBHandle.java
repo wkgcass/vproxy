@@ -33,10 +33,6 @@ public class TcpLBHandle {
 
     @SuppressWarnings("Duplicates")
     public static void checkCreateTcpLB(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.elg))
-            throw new Exception("missing argument " + Param.elg.fullname);
-        if (!cmd.args.containsKey(Param.aelg))
-            throw new Exception("missing argument " + Param.aelg.fullname);
         if (!cmd.args.containsKey(Param.addr))
             throw new Exception("missing argument " + Param.addr.fullname);
         if (!cmd.args.containsKey(Param.sgs))
@@ -86,6 +82,13 @@ public class TcpLBHandle {
 
     @SuppressWarnings("Duplicates")
     public static void add(Command cmd) throws Exception {
+        if (!cmd.args.containsKey(Param.aelg)) {
+            cmd.args.put(Param.aelg, Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME);
+        }
+        if (!cmd.args.containsKey(Param.elg)) {
+            cmd.args.put(Param.elg, Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
+        }
+
         String alias = cmd.resource.alias;
         EventLoopGroup acceptor = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.aelg));
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));

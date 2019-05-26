@@ -40,6 +40,10 @@ public class EventLoopGroupHandle {
         String toRemoveName = cmd.resource.alias;
         EventLoopGroup g = Application.get().eventLoopGroupHolder.get(toRemoveName);
 
+        // check default
+        if (Application.isDefaultEventLoopGroupName(toRemoveName)) {
+            throw new Exception("cannot remove a default event loop " + toRemoveName);
+        }
         // check tcp lb
         for (String name : Application.get().tcpLBHolder.names()) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(name);
@@ -63,23 +67,5 @@ public class EventLoopGroupHandle {
     public static void forceRemvoe(Command cmd) throws Exception {
         String toRemoveName = cmd.resource.alias;
         Application.get().eventLoopGroupHolder.removeAndClose(toRemoveName);
-    }
-
-    public static class EventLoopGroupRef {
-        public final EventLoopGroup elg;
-
-        public EventLoopGroupRef(EventLoopGroup elg) {
-            this.elg = elg;
-        }
-
-        @Override
-        public String toString() {
-            StringBuilder sb = new StringBuilder();
-            sb.append(elg.alias);
-            for (String name : elg.names()) {
-                sb.append("\n    ").append(name);
-            }
-            return sb.toString();
-        }
     }
 }

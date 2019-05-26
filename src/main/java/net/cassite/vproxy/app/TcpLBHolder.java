@@ -35,8 +35,13 @@ public class TcpLBHolder {
         if (map.containsKey(alias))
             throw new AlreadyExistException();
         TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, securityGroup);
+        try {
+            tcpLB.start();
+        } catch (IOException e) {
+            tcpLB.destroy();
+            throw e;
+        }
         map.put(alias, tcpLB);
-        tcpLB.start();
     }
 
     public TcpLB get(String alias) throws NotFoundException {

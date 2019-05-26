@@ -173,11 +173,9 @@ srem service $your_service_domain:$protocol_port:$local_port
 创建一个文件，并且输入如下文字：
 
 ```
-add event-loop-group elg0
 add server-groups sgs0
-add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 server-groups sgs0 in-buffer-size 256 out-buffer-size 256
-add event-loop el0 to event-loop-group elg0
-add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0
+add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0
+add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr
 add server-group sg0 to server-groups sgs0 weight 10
 add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
@@ -218,26 +216,19 @@ redis-cli -p 16379 -h $vproxy主机的ip地址 -a 123456 [$你还可以直接在
 
 1. 通过 `net.cassite.vproxy.app.Main` 启动程序
 2. 输入如下命令，或者通过redis-cli执行如下命令：
-3. `add event-loop-group elg0`  
-    创建了一个名叫`elg0`的EventLoopGroup（事件循环组），当然，你也可以给它起个别的名字
-4. `add server-groups sgs0`  
+3. `add server-groups sgs0`  
     创建了一个名叫`sgs0`的ServerGroups资源。ServerGroups资源包含了多个ServerGroup（主机组）
-5. `add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 127.0.0.1:8899 server-groups sgs0 in-buffer-size 256 out-buffer-size 256`  
-    创建了一个叫做`lb0`的tcp负载均衡。它使用`elg0`作为接收器的EventLoopGroup，同样使用`elg0`作为worker EventLoopGroup。该负载均衡监听`127.0.0.1:8899`，使用`sgs0`作为它的后端服务器列表。输入buffer和输出buffer大小设置为256字节。
+5. `add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0`  
+    创建了一个叫做`lb0`的tcp负载均衡。该负载均衡监听`127.0.0.1:8899`，使用`sgs0`作为它的后端服务器列表。
 
 > 不过，推荐设置一个更大的buffer容量，例如16384。
 
 现在你有了一个tcp负载均衡，但是它现在还不可用。  
-要让他跑起来，还要创建一个EventLoop。
-
-1. `add event-loop el0 to event-loop-group elg0`  
-    在`elg0`里，创建了一个叫做`el0`的EventLoop。创建在`elg0`里是因为负载均衡正在使用这个EventLoopGroup。如果你的acceptor和worker使用的EventLoopGroup不同，那么你需要为每一个EventLoopGroup都创建一些EventLoop。
-
 现在lb跑起来了。你可以telnet它。但是现在还没有任何后端服务，所以连接将会马上断开。
 
 添加一个后端，你可以这么做：
 
-1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr event-loop-group elg0`  
+1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr`  
     这条命令创建了一个名叫`sg0`的主机组；健康检查配置为：检查超时时间为1秒，每3秒检查一次，如果有4次成功的检查则将节点视为UP，如果有5次失败则将节点视为DOWN；从组里取节点的算法为`wrr`。
 2. `add server-group sg0 to server-groups sgs0 weight 10`  
     这条命令将主机组`sg0`加入了ServerGroups `sgs0`。将`sg0`加入`sgs0`是因为tcp负载均衡使用`sgs0`作为它的后端服务器列表。

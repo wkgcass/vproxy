@@ -5,6 +5,7 @@ import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
 import java.io.IOException;
+import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.SelectableChannel;
@@ -25,12 +26,15 @@ public class BindServer implements NetFlowRecorder {
 
     private boolean closed;
 
-    public static BindServer create(InetSocketAddress bindAddress) throws IOException {
-        // first bind without SO_REUSEPORT to check whether this port is already used
+    public static void checkBind(InetSocketAddress bindAddress) throws IOException {
         try (ServerSocketChannel foo = ServerSocketChannel.open()) {
             foo.bind(bindAddress);
+        } catch (BindException ex) {
+            throw new IOException("bind failed for " + bindAddress, ex);
         }
+    }
 
+    public static BindServer create(InetSocketAddress bindAddress) throws IOException {
         ServerSocketChannel channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
         try {

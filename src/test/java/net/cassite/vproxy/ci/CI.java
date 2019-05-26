@@ -10,6 +10,7 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
+import net.cassite.vproxy.app.Application;
 import org.junit.*;
 
 import java.util.*;
@@ -1219,5 +1220,51 @@ public class CI {
         }
         assertEquals(50, got1);
         assertEquals(50, got2);
+    }
+
+    @Test
+    public void defaultEventLoops() {
+        List<String> ls = queryList(createReq(list_detail, "event-loop-group"));
+        assertEquals(3 + 2 /*two event loop groups created in the CI test*/, ls.size());
+        assertTrue(ls.contains(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
+        assertTrue(ls.contains(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
+        assertTrue(ls.contains(Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME));
+
+        ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
+        assertEquals(1, ls.size());
+        assertTrue(ls.contains(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_NAME));
+
+        ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME));
+        assertEquals(1, ls.size());
+        assertTrue(ls.contains(Application.DEFAULT_CONTROL_EVENT_LOOP_NAME));
+
+        int cnt = Runtime.getRuntime().availableProcessors();
+        ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
+        assertEquals(cnt, ls.size());
+        for (int i = 0; i < cnt; ++i) {
+            assertTrue(ls.contains(Application.DEFAULT_WORKER_EVENT_LOOP_NAME_PREFIX + i + Application.DEFAULT_WORKER_EVENT_LOOP_NAME_SUFFIX));
+        }
+
+        int lbPort = 7001;
+        String lbName = randomName("lb0");
+        execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "server-groups", sgs0));
+        tlNames.add(lbName);
+        Map<String, String> details = getDetail("tcp-lb", lbName);
+        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
+
+        int socks5Port = 7002;
+        String socks5Name = randomName("socks5-0");
+        execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "server-groups", sgs0));
+        socks5Names.add(socks5Name);
+        details = getDetail("tcp-lb", lbName);
+        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
+
+        String serverGroupName = randomName("sg0");
+        execute(createReq(add, "server-group", serverGroupName, "timeout", "1000", "period", "1000", "up", "2", "down", "3"));
+        sgNames.add(serverGroupName);
+        details = getDetail("server-group", serverGroupName);
+        assertEquals(Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME, details.get("event-loop-group"));
     }
 }

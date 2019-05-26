@@ -124,17 +124,17 @@ TCP load balancer
 
 Create a loadbalancer.
 
-* acceptor-elg (aelg): choose an event loop group as the acceptor event loop group. can be the same as worker event loop group
-* event-loop-group (elg): choose an event loop group as the worker event loop group. can be the same as acceptor event loop group
+* acceptor-elg (aelg): *optional*. choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
+* event-loop-group (elg): *optional*. choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
 * address (addr): the bind address of the loadbalancer
 * server-groups (sgs): used as the backend servers
-* in-buffer-size: input buffer size. *optional*, default 16384 (bytes)
-* out-buffer-size: output buffer size. *optional*, default 16384 (bytes)
-* protocol: the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. *optional*, default tcp
-* security-group (secg): specify a security group for the lb. *optional*, default allow any
+* in-buffer-size: *optional*. input buffer size. default 16384 (bytes)
+* out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
+* protocol: *optional*. the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
+* security-group (secg): *optional*. specify a security group for the lb. default allow any
 
 ```
-add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 server-groups sgs0 in-buffer-size 16384 out-buffer-size 16384
+add tcp-lb lb0 address 127.0.0.1:18080 server-groups sgs0
 "OK"
 ```
 
@@ -187,21 +187,21 @@ Create a socks5 server.
 All params are the same as creating `tcp-lb`.  
 See `add tcp-lb` for more info.
 
-* acceptor-elg (aelg): the acceptor event loop
-* event-loop-group (elg): the worker event loop
+* acceptor-elg (aelg): *optional*, the acceptor event loop.
+* event-loop-group (elg): *optional*. the worker event loop.
 * address (addr): the bind address
 * server-groups (sgs): used as backends, the socks5 only supports servers added into this group
-* in-buffer-size: input buffer size. *optional*
-* out-buffer-size: output buffer size. *optional*
+* in-buffer-size: *optional*. input buffer size.
+* out-buffer-size: *optional*. output buffer size.
 * security-group (secg): security group
 
 Flags:
 
-* allow-non-backend: allow to access non backend endpoints. *optional*
-* deny-non-backend: only able to access backend endpoints. *optional, is default*
+* allow-non-backend: *optional*. allow to access non backend endpoints.
+* deny-non-backend: *optional*. only able to access backend endpoints. the default flag.
 
 ```
-add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0
+add socks5-server s5 address 127.0.0.1:18081 server-groups backend-groups security-group secg0
 "OK"
 ```
 
@@ -319,11 +319,11 @@ Specify name, event loop, load balancing method, health check config and create 
 * period: do check every `${period}` milliseconds
 * up: set server status to UP after succeeded for `${up}` times
 * down: set server status to DOWN after failed for `${down}` times
-* method: loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. *optional*, default `wrr`
-* event-loop-group (elg): choose a event-loop-group for the server group. health check operations will be performed on the event loop group
+* method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
+* event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
 
 ```
-add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr elg elg0
+add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr
 "OK"
 ```
 

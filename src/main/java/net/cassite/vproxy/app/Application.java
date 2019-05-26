@@ -3,11 +3,22 @@ package net.cassite.vproxy.app;
 import net.cassite.vproxy.app.mesh.SidecarHolder;
 import net.cassite.vproxy.app.mesh.SmartLBGroupHolder;
 import net.cassite.vproxy.component.elgroup.EventLoopWrapper;
+import net.cassite.vproxy.component.exception.AlreadyExistException;
+import net.cassite.vproxy.component.exception.ClosedException;
+import net.cassite.vproxy.component.exception.NotFoundException;
 import net.cassite.vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
 
 public class Application {
+    public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME = "(acceptor-elg)";
+    public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_NAME = "(acceptor-el)";
+    public static final String DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME = "(worker-elg)";
+    public static final String DEFAULT_WORKER_EVENT_LOOP_NAME_PREFIX = "(worker-el";
+    public static final String DEFAULT_WORKER_EVENT_LOOP_NAME_SUFFIX = ")";
+    public static final String DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME = "(control-elg)";
+    public static final String DEFAULT_CONTROL_EVENT_LOOP_NAME = "(control-el)";
+
     private static Application application;
 
     public static Application get() {
@@ -46,8 +57,46 @@ public class Application {
         this.smartLBGroupHolder = new SmartLBGroupHolder();
     }
 
+    public static boolean isDefaultEventLoopGroupName(String name) {
+        return name.equals(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
+            || name.equals(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME)
+            || name.equals(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
+    }
+
     static void create() throws IOException {
         application = new Application();
+
+        // create one thread for default acceptor
+        try {
+            application.eventLoopGroupHolder.add(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME);
+            application.eventLoopGroupHolder.get(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME).add(DEFAULT_ACCEPTOR_EVENT_LOOP_NAME);
+        } catch (AlreadyExistException | NotFoundException | ClosedException e) {
+            throw new IOException("create default acceptor event loop failed", e);
+        }
+        // create one thread for controlling
+        try {
+            application.eventLoopGroupHolder.add(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
+            application.eventLoopGroupHolder.get(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME).add(DEFAULT_CONTROL_EVENT_LOOP_NAME);
+        } catch (AlreadyExistException | NotFoundException | ClosedException e) {
+            throw new IOException("create default control event loop failed", e);
+        }
+        // create event loop group for workers
+        try {
+            application.eventLoopGroupHolder.add(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
+        } catch (AlreadyExistException e) {
+            throw new IOException("create default worker event loop group failed", e);
+        }
+        // use the current core count
+        int cores = Runtime.getRuntime().availableProcessors();
+        for (int i = 0; i < cores; ++i) {
+            try {
+                application.eventLoopGroupHolder.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME).add(
+                    DEFAULT_WORKER_EVENT_LOOP_NAME_PREFIX + i + DEFAULT_WORKER_EVENT_LOOP_NAME_SUFFIX
+                );
+            } catch (AlreadyExistException | ClosedException | NotFoundException e) {
+                throw new IOException("create default worker event loop failed", e);
+            }
+        }
     }
 
     void clear() {

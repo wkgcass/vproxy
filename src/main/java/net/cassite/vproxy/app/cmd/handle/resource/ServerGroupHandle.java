@@ -59,10 +59,7 @@ public class ServerGroupHandle {
             throw new Exception("missing argument " + Param.up.fullname);
         if (!cmd.args.containsKey(Param.down))
             throw new Exception("missing argument " + Param.down.fullname);
-        if (!cmd.args.containsKey(Param.elg))
-            throw new Exception("missing argument " + Param.elg.fullname);
-        // optional - if (!cmd.args.containsKey(Param.meth))
-        // optional -     throw new Exception("missing argument " + Param.meth.fullname);
+
         try {
             HealthCheckHandle.getHealthCheckConfig(cmd);
         } catch (Exception e) {
@@ -144,6 +141,10 @@ public class ServerGroupHandle {
     public static void add(Command cmd) throws Exception {
         if (cmd.prepositionResource == null) {
             // add on top level
+            if (!cmd.args.containsKey(Param.elg)) {
+                cmd.args.put(Param.elg, Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
+            }
+
             String alias = cmd.resource.alias;
             String eventLoopGroupName = cmd.args.get(Param.elg);
             EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);

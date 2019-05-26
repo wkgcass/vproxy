@@ -1,5 +1,6 @@
 package net.cassite.vproxy.app.cmd;
 
+import net.cassite.vproxy.app.Application;
 import net.cassite.vproxy.util.Tuple;
 
 import java.util.Arrays;
@@ -435,8 +436,8 @@ public class HelpCommand {
         tcplb("tcp-lb", "tl", "TCP load balancer", Arrays.asList(
             new ResActMan(ActMan.add, "create a loadbalancer",
                 Arrays.asList(
-                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group")
-                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group")
+                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
+                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
                     , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
@@ -490,8 +491,8 @@ public class HelpCommand {
         socks5server("socks5-server", "socks5", "socks5 proxy server", Arrays.asList(
             new ResActMan(ActMan.add, "create a socks5 server",
                 Arrays.asList(
-                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group")
-                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group")
+                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
+                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
                     , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
@@ -620,7 +621,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "wrr"),
-                        new ResActParamMan(ParamMan.eventloopgroup, "choose a event-loop-group for the server group. health check operations will be performed on the event loop group")
+                        new ResActParamMan(ParamMan.eventloopgroup, "choose a event-loop-group for the server group. health check operations will be performed on the event loop group", Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME)
                     ),
                     Collections.singletonList(
                         new Tuple<>(
