@@ -60,6 +60,7 @@ The Processor interface defines the following methods:
 * `CTX init()` the context
 * `SUB initSub(CTX ctx, int id)` creating a sub context
 * `Mode mode(CTX ctx, SUB sub)` the current processing mode，maybe `handle` or `proxy`
+* `boolean expectNewFrame(CTX ctx, SUB sub)` whether the processor is expecting a new frame (i.e. the frames are already transmitted)
 * `int len(CTX ctx, SUB sub)` current expected data length
 * `ByteArray feed(CTX ctx, SUB sub, ByteArray data)` feed data from the source connection to the processor, and return the data to be sent to the target connection
 * `ByteArray produce(CTX ctx, SUB sub)` produce data to the source connection (will only be called on backend connections)
@@ -122,4 +123,6 @@ def on_backend_data():
     else:
       _proxy(from=backend_conn, to=frontend_conn, len)
     proxyDone(ctx, bctx) # 17.the proxy is done
+  if (expectNewFrame(ctx, bctx)): # 18.check whether frames of the backend are transmitted
+    _handle_another_backend()
 ```

@@ -52,6 +52,15 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     Mode mode(CTX ctx, SUB sub);
 
     /**
+     * expecting new frame
+     *
+     * @param ctx context
+     * @param sub sub context
+     * @return true if it's expecting a new frame
+     */
+    boolean expectNewFrame(CTX ctx, SUB sub);
+
+    /**
      * get current wanted length
      *
      * @param ctx context

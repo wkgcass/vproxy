@@ -44,6 +44,12 @@ class HeadPayloadSubContext extends OOSubContext<HeadPayloadContext> {
     }
 
     @Override
+    public boolean expectNewFrame() {
+        // proxy length 0 also means that the previous frame is finished
+        return expectingHead || (proxyBaseLen + parsedLength == 0);
+    }
+
+    @Override
     public int len() {
         return expectingHead ? handleLen : proxyBaseLen + parsedLength;
     }

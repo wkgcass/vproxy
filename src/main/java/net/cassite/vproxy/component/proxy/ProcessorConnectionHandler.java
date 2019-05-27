@@ -440,7 +440,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
             }
             // now nothing to be handled for this connection
-            handlingConnection = null;
+            if (processor.expectNewFrame(topCtx, handlingConnection.subCtx)) {
+                handlingConnection = null; // is done, set to null and go on
+            } else {
+                return; // no data for now, exit the method
+            }
         }
 
         // check for other connections

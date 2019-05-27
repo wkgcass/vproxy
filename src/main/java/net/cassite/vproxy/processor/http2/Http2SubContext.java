@@ -231,6 +231,25 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     @Override
+    public boolean expectNewFrame() {
+        // when this method is called, it means the frame is sent to the frontend
+        // and all types of frames are ended with a proxy (otherwise it will not be sent to frontend at all)
+        // so we return true when it's in initial states, or proxy states that has data length 0 to proxy
+
+        // initial states
+        if (state == 0 || state == 1)
+            return true;
+
+        // proxy states
+        Processor.Mode mode = mode();
+        if (mode == Processor.Mode.proxy) {
+            return len() == 0;
+        }
+
+        return false;
+    }
+
+    @Override
     public int len() {
         switch (state) {
             case 0:

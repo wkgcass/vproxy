@@ -13,6 +13,8 @@ public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubC
 
     public abstract Processor.Mode mode();
 
+    public abstract boolean expectNewFrame();
+
     public abstract int len();
 
     public abstract ByteArray feed(ByteArray data) throws Exception;

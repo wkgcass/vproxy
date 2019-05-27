@@ -60,6 +60,7 @@ Processor接口定义了如下方法：
 * `CTX init()` 创建上下文对象
 * `SUB initSub(CTX ctx, int id)` 创建子上下文
 * `Mode mode(CTX ctx, SUB sub)` 当前处理模式，可以是`handle`或是`proxy`
+* `boolean expectNewFrame(CTX ctx, SUB sub)` 处理器需要处理新的frame，换句话说也就是之前的frame已经全部处理完了
 * `int len(CTX ctx, SUB sub)` 当前期望处理的长度
 * `ByteArray feed(CTX ctx, SUB sub, ByteArray data)` 给处理器传入需要的源连接数据，并产生一组数据发往目标连接
 * `ByteArray produce(CTX ctx, SUB sub)` 产生一组数据回应源连接（仅针对后端连接会调用该方法）
@@ -124,4 +125,6 @@ def on_backend_data():
     else:
       _proxy(from=backend_conn, to=frontend_conn, len)
     proxyDone(ctx, bctx) # 17.代理完成
+  if (expectNewFrame(ctx, bctx)): #18.检查是否之前分片的传输已经完成
+    _handle_another_backend()
 ```

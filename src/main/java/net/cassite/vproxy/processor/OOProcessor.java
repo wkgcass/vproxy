@@ -9,6 +9,11 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
+    public boolean expectNewFrame(CTX ctx, SUB sub) {
+        return sub.expectNewFrame();
+    }
+
+    @Override
     public int len(CTX ctx, SUB sub) {
         return sub.len();
     }
