@@ -219,6 +219,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     //
     // this field will be used by handleSettingsFramePart()
 
+    // record the first settings frame head and send all when the whole frame is received
+    private ByteArray theSettingsFrameHead;
+
     public Http2SubContext(Http2Context ctx, int connId) {
         super(ctx, connId);
 
@@ -292,8 +295,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 // only reach here if the priority flag is set (but it's already removed by the handle method)
                 return (frame.padded ? LEN_PADDING : 0) + LEN_E_STREAMDEPENDENCY_WEIGHT;
             case 4:
-                // we will add one setting in the processor
-                return frame.length - LEN_SETTING * 2; // remember this is related to settings frame modification
+                return frame.length;
             case 5:
                 // only reach here if the priority flag is set (but it's already removed by the handle method)
                 // the frame.length already subtracted the stream dependency weight
@@ -305,6 +307,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 return frame.length - (frame.padded ? LEN_PADDING : 0) - LEN_R_PROMISED_STREAM_ID;
             case -1:
             case 2:
+                //noinspection DuplicateBranchesInSwitch
                 return frame.length; // the frame itself
             default:
                 throw new Error("should not reach here");
@@ -330,7 +333,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 }
                 handleSettingsFramePart(framePart);
                 assert state == 4;
-                return data;
+                return SEQ_PREFACE_MAGIC; // only send preface for now, ignore the frame head
             case 1:
                 parseFrame(data);
                 return handleFrame(data);
@@ -510,17 +513,10 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             if (ctx.frontendHandshaking) {
                 // we should manipulate and record the settings frame, so set to a special state
                 state = 4;
-                // add the length of a setting because we will add two in the processor
-                // one for header table and one for initial window
-                {
-                    frame.length += LEN_SETTING * 2; // remember this is related to settings frame length
-                    utilModifyFrameLength(frameBytes, frame.length);
-                    assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from frontend, " +
-                        "now the frame is " + frame);
-                }
                 ctx.settingsFrameHeader = frameBytes;
                 ctx.frontendHandshaking = false; // the frontend handshaking is considered done
-                return frameBytes;
+                theSettingsFrameHead = frameBytes;
+                return null; // do not send for now, only record
             } else if (frame.ack) { // if it's a setting frame from frontend and is ack, proxy it
                 state = 2; // proxy
                 return frameBytes;
@@ -531,17 +527,13 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 if (frame.ack) { // get SETTINGS frame with ack set for the first time, means that the backend handshake is done
                     state = 2; // proxy the settings
                     ctx.backendHandshaking = false; // handshake done
+                    return frameBytes;
                 } else {
-                    // add the length of a setting because we will add two in the processor
-                    // one for header table and one for initial window
-                    frame.length += LEN_SETTING * 2; // remember this is related to settings frame length
-                    utilModifyFrameLength(frameBytes, frame.length);
-                    assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from backend, " +
-                        "now the frame is " + frame);
                     // we should manipulate and record the settings frame, so set to a special state
                     state = 4;
+                    theSettingsFrameHead = frameBytes;
+                    return null; // do not send for now, only record
                 }
-                return frameBytes;
             }
         }
         if (syntheticAckFlag) {
@@ -561,13 +553,11 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     // concat a setting SETTINGS_HEADER_TABLE_SIZE = 0 to the frame, or change the value if it already exists
     // concat a setting SETTINGS_INITIAL_WINDOW_SIZE to the frame, or change the value if it already exists
     private ByteArray handleSettings(ByteArray payload) {
-        // make a bigger payload
-        {
-            payload = payload.concat(ByteArray.from(new byte[LEN_SETTING * 2]));
-        }
+        int extraLength = 0;
+
         // try to find the SETTINGS_HEADER_TABLE_SIZE and change the value
         {
-            int offsetOfSetting = payload.length() - LEN_SETTING * 2; // default: use the added part when not provided
+            int offsetOfSetting = payload.length(); // default: add to the end of the frames
             for (int i = 0; i < payload.length(); i += LEN_SETTING) {
                 // the identifier takes 2 bytes
                 if (payload.uint16(i) == VALUE_SETTINGS_HEADER_TABLE_SIZE) {
@@ -577,6 +567,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 }
             }
             assert Logger.lowLevelDebug("writing HEADER_TABLE_SIZE at offset " + offsetOfSetting);
+            if (offsetOfSetting == payload.length()) {
+                extraLength += LEN_SETTING;
+                assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from frontend, " +
+                    "now the frame length is " + frame.length + extraLength);
+                payload = payload.concat(ByteArray.from(new byte[LEN_SETTING]));
+            }
             // the identifier part
             payload.int16(offsetOfSetting, VALUE_SETTINGS_HEADER_TABLE_SIZE);
             // the value part
@@ -584,7 +580,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         }
         // try to find the SETTINGS_INITIAL_WINDOW_SIZE and change the value
         {
-            int offsetOfSetting = payload.length() - LEN_SETTING; // default: use the added part when not provided
+            int offsetOfSetting = payload.length(); // default: add to the end of the frames
             for (int i = 0; i < payload.length(); i += LEN_SETTING) {
                 // the identifier takes 2 bytes
                 if (payload.uint16(i) == VALUE_SETTINGS_INITIAL_WINDOW_SIZE) {
@@ -594,10 +590,20 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 }
             }
             assert Logger.lowLevelDebug("writing INITIAL_WINDOW_SIZE at offset " + offsetOfSetting);
+            if (offsetOfSetting == payload.length()) {
+                extraLength += LEN_SETTING;
+                assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from frontend, " +
+                    "now the frame length is " + frame.length + extraLength);
+                payload = payload.concat(ByteArray.from(new byte[LEN_SETTING]));
+            }
             // the identifier part
             payload.int16(offsetOfSetting, VALUE_SETTINGS_INITIAL_WINDOW_SIZE);
+            // the value part
             payload.int32(offsetOfSetting + 2, SIZE_STREAM_WINDOW);
         }
+
+        // set the length in frame head
+        utilModifyFrameLength(theSettingsFrameHead, frame.length + extraLength);
 
         // record the handshake if it's client connection
         if (connId == 0) {
@@ -607,7 +613,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             ctx.clientHandshake = handshake;
         }
 
-        return payload;
+        return theSettingsFrameHead.concat(payload);
     }
 
     private void translatePromisedStreamId(ByteArray data, int offset) {
