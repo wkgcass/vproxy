@@ -92,6 +92,10 @@ import java.util.Map;
  * -- generated one, and then proxies the frames to frontend.
  * 10. Done.
  *
+ * besides, vproxy will handle window size of both the client and the server
+ * the WINDOW_UPDATE from client and server will be ignored,
+ * vproxy will make its own WINDOW_UPDATE frames
+ *
  * You may check the Http2Proxy poc program for more info. Change the buffer sizes to a bigger one,
  * then you can use Wireshark to view the netflow (otherwise the segments would be
  * separated into very small pieces, which would be too small for Wireshark to decode).
@@ -140,13 +144,18 @@ import java.util.Map;
  *  +---------------------------------------------------------------+
  *  |                           Padding (*)                       ...
  *  +---------------------------------------------------------------+
+ * WINDOW_UPDATE: vproxy makes its own WINDOW_UPDATE frames
+ *  +-+-------------------------------------------------------------+
+ *  |R|              Window Size Increment (31)                     |
+ *  +-+-------------------------------------------------------------+
  *
- * DATA: proxy
+ * DATA: proxy, and record the window size
  * PRIORITY: ignore
  * RST_STREAM: proxy
  * PING: proxy
  * GOAWAY: proxy
- * WINDOW_UPDATE: ignore
+ * WINDOW_UPDATE: ignore, and we send our own window_update frames
+ *   (the rfc says: Intermediaries do not forward WINDOW_UPDATE frames between dependent connections.)
  * CONTINUATION: proxy
  */
 
@@ -160,7 +169,16 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     private static final int LEN_R_PROMISED_STREAM_ID = 4; // 1 + 31
     private static final int LEN_SETTING = 6; // 2 + 4
 
+    // we do not set 2^31 - 1, in case the flow control method went wrong and exceeds 2^31-1
+    // will send window increase of size SIZE_CONNECTION_WINDOW - SIZE_DEFAULT_CONNECTION_WINDOW
+    private static final int SIZE_DEFAULT_CONNECTION_WINDOW = 65536;
+    private static final int SIZE_CONNECTION_WINDOW = (int) (Math.pow(2, 30) - 1);
+    private static final int SIZE_STREAM_WINDOW = (int) (Math.pow(2, 30) - 1);
+    private static final int INCR_WINDOW_THRESHOLD = SIZE_CONNECTION_WINDOW - (int) Math.pow(2, 26); // update every 64MBytes
+    // and, we do not update the stream window size because 2^30-1 would be enough
+
     private static final byte VALUE_SETTINGS_HEADER_TABLE_SIZE = 0x1; // will be set to 0
+    private static final byte VALUE_SETTINGS_INITIAL_WINDOW_SIZE = 0x4; // will be set to SIZE_STREAM_WINDOW
 
     private Http2Frame frame;
     private Http2Frame lastFrame;
@@ -170,6 +188,8 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     // some frame process (such as the settings frame) will consume all payload from the frame, and the frame field
     // will be set to null. In this case, the streamId could not be retrieved. So we store the lastFrame when needed,
     // and set this field to null after streamId is retrieved.
+
+    private int windowSize = SIZE_DEFAULT_CONNECTION_WINDOW;
 
     private int state;
     /*
@@ -209,6 +229,18 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             state = 1;
             syntheticAckFlag = !ctx.backendHandshaking; // this field will only be used when the first backend handshaking is done
         }
+    }
+
+    private static ByteArray utilBuildWindowUpdate(int len) {
+        ByteArray SEQ_WINDOW_UPDATE = ByteArray.from(new byte[]{
+            0, 0, 4, // length
+            8, // type
+            0, // flags
+            0, 0, 0, 0, // stream id
+            0, 0, 0, 0 // payload
+        });
+        SEQ_WINDOW_UPDATE.int32(9, len);
+        return SEQ_WINDOW_UPDATE;
     }
 
     @Override
@@ -261,7 +293,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 return (frame.padded ? LEN_PADDING : 0) + LEN_E_STREAMDEPENDENCY_WEIGHT;
             case 4:
                 // we will add one setting in the processor
-                return frame.length - LEN_SETTING;
+                return frame.length - LEN_SETTING * 2; // remember this is related to settings frame modification
             case 5:
                 // only reach here if the priority flag is set (but it's already removed by the handle method)
                 // the frame.length already subtracted the stream dependency weight
@@ -335,8 +367,22 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
 
     @Override
     public ByteArray produce() {
-        ByteArray ret = syntheticAck;
-        syntheticAck = null;
+        ByteArray ret = null;
+
+        // may update window
+        if (!ctx.frontendHandshaking && !ctx.backendHandshaking && windowSize < INCR_WINDOW_THRESHOLD) {
+            ret = utilBuildWindowUpdate(SIZE_CONNECTION_WINDOW - windowSize);
+            windowSize = SIZE_CONNECTION_WINDOW;
+        }
+
+        // ack for settings
+        if (syntheticAck != null) {
+            if (ret == null) ret = syntheticAck;
+            else ret = ret.concat(syntheticAck);
+
+            syntheticAck = null;
+        }
+
         return ret;
     }
 
@@ -345,6 +391,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         frame.length = data.uint24(0);
         byte type = data.get(3);
         switch (type) {
+            case 0x0:
+                frame.type = Http2Frame.Type.DATA;
+                break;
             case 0x1:
                 frame.type = Http2Frame.Type.HEADERS;
                 break;
@@ -441,6 +490,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             assert Logger.lowLevelDebug("got an ignored frame of length " + frame.length);
             state = -1;
             return null;
+        } else if (frame.type == Http2Frame.Type.DATA) {
+            assert Logger.lowLevelDebug("got data frame of length " + frame.length + ", window before recording is " + windowSize);
+            windowSize -= frame.length;
+            // do proxy
+            state = 2;
+            return frameBytes;
         } else {
             state = 2; // default: do proxy
             return frameBytes;
@@ -455,9 +510,10 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             if (ctx.frontendHandshaking) {
                 // we should manipulate and record the settings frame, so set to a special state
                 state = 4;
-                // add the length of a setting because we will add one in the processor
+                // add the length of a setting because we will add two in the processor
+                // one for header table and one for initial window
                 {
-                    frame.length += LEN_SETTING;
+                    frame.length += LEN_SETTING * 2; // remember this is related to settings frame length
                     utilModifyFrameLength(frameBytes, frame.length);
                     assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from frontend, " +
                         "now the frame is " + frame);
@@ -476,8 +532,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                     state = 2; // proxy the settings
                     ctx.backendHandshaking = false; // handshake done
                 } else {
-                    // add the length of a setting because we will add one in the processor
-                    frame.length += LEN_SETTING;
+                    // add the length of a setting because we will add two in the processor
+                    // one for header table and one for initial window
+                    frame.length += LEN_SETTING * 2; // remember this is related to settings frame length
                     utilModifyFrameLength(frameBytes, frame.length);
                     assert Logger.lowLevelDebug("add LEN_SETTING to the frame coming from backend, " +
                         "now the frame is " + frame);
@@ -502,14 +559,15 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     // concat a setting SETTINGS_HEADER_TABLE_SIZE = 0 to the frame, or change the value if it already exists
+    // concat a setting SETTINGS_INITIAL_WINDOW_SIZE to the frame, or change the value if it already exists
     private ByteArray handleSettings(ByteArray payload) {
         // make a bigger payload
         {
-            payload = payload.concat(ByteArray.from(new byte[LEN_SETTING]));
+            payload = payload.concat(ByteArray.from(new byte[LEN_SETTING * 2]));
         }
         // try to find the SETTINGS_HEADER_TABLE_SIZE and change the value
         {
-            int offsetOfSetting = payload.length() - LEN_SETTING; // default: use the added part when not provided
+            int offsetOfSetting = payload.length() - LEN_SETTING * 2; // default: use the added part when not provided
             for (int i = 0; i < payload.length(); i += LEN_SETTING) {
                 // the identifier takes 2 bytes
                 if (payload.uint16(i) == VALUE_SETTINGS_HEADER_TABLE_SIZE) {
@@ -523,6 +581,22 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             payload.int16(offsetOfSetting, VALUE_SETTINGS_HEADER_TABLE_SIZE);
             // the value part
             payload.int32(offsetOfSetting + 2, 0);
+        }
+        // try to find the SETTINGS_INITIAL_WINDOW_SIZE and change the value
+        {
+            int offsetOfSetting = payload.length() - LEN_SETTING; // default: use the added part when not provided
+            for (int i = 0; i < payload.length(); i += LEN_SETTING) {
+                // the identifier takes 2 bytes
+                if (payload.uint16(i) == VALUE_SETTINGS_INITIAL_WINDOW_SIZE) {
+                    offsetOfSetting = i;
+                    assert Logger.lowLevelDebug("found setting for the INITIAL_WINDOW_SIZE");
+                    break;
+                }
+            }
+            assert Logger.lowLevelDebug("writing INITIAL_WINDOW_SIZE at offset " + offsetOfSetting);
+            // the identifier part
+            payload.int16(offsetOfSetting, VALUE_SETTINGS_INITIAL_WINDOW_SIZE);
+            payload.int32(offsetOfSetting + 2, SIZE_STREAM_WINDOW);
         }
 
         // record the handshake if it's client connection

@@ -82,8 +82,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
 
     /**
      * produce some data to the connection represented by the sub context<br>
-     * this method will be checked after `feed` is called,
-     * and will not be called for frontend connections
+     * this method will be checked after `feed` is called
      *
      * @param ctx context
      * @param sub sub context

@@ -4,7 +4,7 @@ public class Http2Frame {
     public int length;
 
     public enum Type {
-        // DATA, // 0x0
+        DATA, // 0x0
         HEADERS, // 0x1
         // PRIORITY, // 0x2
         // RST_STREAM, // 0x3
