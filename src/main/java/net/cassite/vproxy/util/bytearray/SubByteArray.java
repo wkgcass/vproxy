@@ -2,6 +2,8 @@ package net.cassite.vproxy.util.bytearray;
 
 import net.cassite.vproxy.util.ByteArray;
 
+import java.nio.ByteBuffer;
+
 public class SubByteArray extends AbstractByteArray implements ByteArray {
     private final ByteArray source;
     private final int from;
@@ -34,5 +36,15 @@ public class SubByteArray extends AbstractByteArray implements ByteArray {
     @Override
     public int length() {
         return len;
+    }
+
+    @Override
+    public void byteBufferPut(ByteBuffer dst, int off, int len) {
+        source.byteBufferPut(dst, off + from, len);
+    }
+
+    @Override
+    public void byteBufferGet(ByteBuffer src, int off, int len) {
+        source.byteBufferGet(src, off + from, len);
     }
 }

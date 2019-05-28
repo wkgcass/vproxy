@@ -2,6 +2,8 @@ package net.cassite.vproxy.util.bytearray;
 
 import net.cassite.vproxy.util.ByteArray;
 
+import java.nio.ByteBuffer;
+
 public class CompositeByteArray extends AbstractByteArray implements ByteArray {
     private final ByteArray first;
     private final ByteArray second;
@@ -40,5 +42,35 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
     @Override
     public int length() {
         return len;
+    }
+
+    @Override
+    public void byteBufferPut(ByteBuffer dst, int off, int len) {
+        int firstLen = first.length();
+        if (off > firstLen) {
+            second.byteBufferPut(dst, off - firstLen, len);
+            return;
+        }
+        if (len < firstLen - off) {
+            first.byteBufferPut(dst, off, len);
+            return;
+        }
+        first.byteBufferPut(dst, off, firstLen - off);
+        second.byteBufferPut(dst, 0, len - (firstLen - off));
+    }
+
+    @Override
+    public void byteBufferGet(ByteBuffer src, int off, int len) {
+        int firstLen = first.length();
+        if (off > firstLen) {
+            second.byteBufferGet(src, off - firstLen, len);
+            return;
+        }
+        if (len < firstLen - off) {
+            first.byteBufferGet(src, off, len);
+            return;
+        }
+        first.byteBufferGet(src, off, firstLen - off);
+        second.byteBufferGet(src, 0, len - (firstLen - off));
     }
 }

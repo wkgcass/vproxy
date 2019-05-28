@@ -4,6 +4,8 @@ import net.cassite.vproxy.util.bytearray.CompositeByteArray;
 import net.cassite.vproxy.util.bytearray.SimpleByteArray;
 import net.cassite.vproxy.util.bytearray.SubByteArray;
 
+import java.nio.ByteBuffer;
+
 public interface ByteArray {
     static ByteArray from(byte[] array) {
         return new SimpleByteArray(array);
@@ -45,7 +47,7 @@ public interface ByteArray {
     }
 
     default ByteArrayChannel toChannel() {
-        return ByteArrayChannel.fromFull(toJavaArray());
+        return ByteArrayChannel.fromFull(this);
     }
 
     default int uint24(int offset) {
@@ -84,4 +86,8 @@ public interface ByteArray {
         set(offset + 3, (byte) ((val) & 0xff));
         return this;
     }
+
+    void byteBufferPut(ByteBuffer dst, int off, int len);
+
+    void byteBufferGet(ByteBuffer src, int off, int len);
 }

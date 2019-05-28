@@ -5,7 +5,7 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
 public class ByteArrayChannel implements ReadableByteChannel, WritableByteChannel {
-    private final byte[] arr;
+    private final ByteArray arr;
     private int writeOff; // the current write offset
     private int writeLen; // free space left for writing into arr
     private int readOff; // the current read offset
@@ -14,15 +14,15 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     private final int initialLen;
     private final int initialReadOff;
 
-    private ByteArrayChannel(byte[] arr, int readOff, int writeOff, int writeLen) {
+    private ByteArrayChannel(ByteArray arr, int readOff, int writeOff, int writeLen) {
         this.arr = arr;
-        if (arr.length == 0 ||
-            readOff >= arr.length ||
+        if (arr.length() == 0 ||
+            readOff >= arr.length() ||
             readOff < 0 ||
             writeOff < 0 ||
-            writeOff > arr.length ||
+            writeOff > arr.length() ||
             writeLen < 0 ||
-            writeOff + writeLen > arr.length)
+            writeOff + writeLen > arr.length())
             throw new IllegalArgumentException();
         this.initialOff = writeOff;
         this.initialLen = writeLen;
@@ -32,22 +32,26 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public static ByteArrayChannel fromEmpty(byte[] arr) {
-        return new ByteArrayChannel(arr, 0, 0, arr.length);
+        return new ByteArrayChannel(ByteArray.from(arr), 0, 0, arr.length);
     }
 
     public static ByteArrayChannel fromFull(byte[] arr) {
-        return new ByteArrayChannel(arr, 0, arr.length, 0);
+        return new ByteArrayChannel(ByteArray.from(arr), 0, arr.length, 0);
     }
 
     public static ByteArrayChannel from(byte[] arr, int readOff, int writeOff, int writeLen) {
-        return new ByteArrayChannel(arr, readOff, writeOff, writeLen);
+        return new ByteArrayChannel(ByteArray.from(arr), readOff, writeOff, writeLen);
+    }
+
+    public static ByteArrayChannel fromFull(ByteArray arr) {
+        return new ByteArrayChannel(arr, 0, arr.length(), 0);
     }
 
     @Override
     public int read(ByteBuffer dst) {
         int readLen = writeOff - readOff;
         int readBytes = Math.min(readLen, dst.limit() - dst.position());
-        dst.put(arr, readOff, readBytes);
+        arr.byteBufferPut(dst, readOff, readBytes);
         readOff += readBytes;
         return readBytes;
     }
@@ -55,7 +59,7 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     @Override
     public int write(ByteBuffer src) {
         int writeBytes = Math.min(writeLen, src.limit() - src.position());
-        src.get(arr, writeOff, writeBytes);
+        arr.byteBufferGet(src, writeOff, writeBytes);
         writeOff += writeBytes;
         writeLen -= writeBytes;
         return writeBytes;
@@ -86,6 +90,6 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public byte[] get() {
-        return arr;
+        return arr.toJavaArray();
     }
 }
