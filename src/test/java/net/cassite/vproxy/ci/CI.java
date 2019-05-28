@@ -482,6 +482,13 @@ public class CI {
 
         Thread.sleep(500);
 
+        {
+            Map<String, String> details = getDetail("server", "sg7771", "server-group", sg0);
+            assertEquals("10", details.get("weight"));
+            assertEquals("127.0.0.1:7771", details.get("connect-to"));
+            assertEquals("UP", details.get("currently"));
+        }
+
         String resp1 = request(7001);
         String resp2 = request(7001);
         if (resp1.equals("7772")) {
