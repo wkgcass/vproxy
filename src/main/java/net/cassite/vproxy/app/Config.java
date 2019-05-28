@@ -14,7 +14,9 @@ public class Config {
 
     // the recommended min payload length
     // also, see Processor.PROXY_ZERO_COPY_THRESHOLD
-    public static final int recommendedMinPayloadLength = (int) (1.5 * (14 + 20 + 32));
+    public static final int recommendedMinPayloadLength = 1400;
+    // usually mtu is set to 1500, but some routers might set the value to 1480, 1440 or lower
+    // we use 1400 here
 
     // service mesh mode:
     // all resources become readonly
