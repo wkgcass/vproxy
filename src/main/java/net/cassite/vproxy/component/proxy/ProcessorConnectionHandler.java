@@ -384,7 +384,32 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     // --- END backend handler ---
     // ---------------------------
 
+    private boolean frontendIsHandlingConnection = false; // true: consider handlingConnection, false: consider frontendByteFlow
     private BackendConnectionHandler handlingConnection;
+    private FrontendByteFlow frontendByteFlow = new FrontendByteFlow();
+
+    class FrontendByteFlow {
+        class Segment {
+            public final ByteArrayChannel chnl;
+
+            Segment(ByteArray byteArray) {
+                this.chnl = byteArray.toChannel();
+            }
+        }
+
+        Segment currentSegment;
+        final LinkedList<Segment> sendingQueue = new LinkedList<>();
+
+        void write(ByteArray byteArray) {
+            Segment seg = new Segment(byteArray);
+            if (currentSegment == null) {
+                currentSegment = seg;
+            } else {
+                sendingQueue.add(seg);
+            }
+            frontendWrite(null);
+        }
+    }
 
     void frontendWrite(BackendConnectionHandler handlingConnection) {
         if (this.handlingConnection == null) {
@@ -410,10 +435,18 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     }
 
     private void _doFrontendWrite() {
-        if (handlingConnection == null) {
+        if (frontendIsHandlingConnection && handlingConnection == null) {
+            frontendIsHandlingConnection = false;
+        }
+        if (!frontendIsHandlingConnection && frontendByteFlow.currentSegment == null && frontendByteFlow.sendingQueue.isEmpty()) {
+            frontendIsHandlingConnection = true;
+        }
+        if (frontendIsHandlingConnection && handlingConnection == null) {
             return; // nothing to write
         }
-        {
+
+        if (frontendIsHandlingConnection) {
+
             BackendConnectionHandler.ByteFlow flow = handlingConnection.frontendByteFlow;
             while (flow.currentSegment != null) {
                 if (!flow.currentSegment.calledProxyOnBuffer && frontendConnection.getOutBuffer().free() == 0) {
@@ -447,9 +480,44 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             }
         }
 
+        // check whether to handle the frontendByteFlow
+        if (frontendByteFlow.currentSegment != null || !frontendByteFlow.sendingQueue.isEmpty()) {
+            frontendIsHandlingConnection = false;
+        }
+
+        // check and handle the frontendByteFlow
+        if (!frontendIsHandlingConnection) {
+            FrontendByteFlow flow = frontendByteFlow;
+            while (true) {
+                if (flow.currentSegment != null) {
+                    if (flow.currentSegment.chnl.used() == 0) {
+                        flow.currentSegment = null;
+                    }
+                }
+                if (flow.currentSegment == null) {
+                    if (!flow.sendingQueue.isEmpty()) {
+                        flow.currentSegment = flow.sendingQueue.poll();
+                    }
+                }
+                if (flow.currentSegment == null) {
+                    break;
+                }
+                int n = frontendConnection.getOutBuffer().storeBytesFrom(flow.currentSegment.chnl);
+                if (n == 0) {
+                    break; // break when the frontend connection buffer is full
+                    // wait until the buffer is not full (writable)
+                }
+            }
+        }
+
+        // check whether to handle the connection
+        if (frontendByteFlow.currentSegment == null && frontendByteFlow.sendingQueue.isEmpty()) {
+            frontendIsHandlingConnection = true;
+        }
+
         // check for other connections
         // and keep writing if have some data to write in other connections
-        {
+        if (frontendIsHandlingConnection) {
             BackendConnectionHandler next = null;
             for (BackendConnectionHandler b : conn2intMap.keySet()) {
                 BackendConnectionHandler.ByteFlow flow = b.frontendByteFlow;
@@ -507,6 +575,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                         frontendConnection.close();
                         return;
                     }
+                    {
+                        ByteArray producedBytes = processor.produce(topCtx, frontendSubCtx);
+                        if (producedBytes != null && producedBytes.length() != 0) {
+                            frontendByteFlow.write(producedBytes);
+                        }
+                    }
                     readFrontend(); // recursively try to handle more data
                     return;
                 }
@@ -529,6 +603,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
                 frontendConnection.close();
                 return;
+            }
+            {
+                ByteArray produced = processor.produce(topCtx, frontendSubCtx);
+                if (produced != null && produced.length() != 0) {
+                    frontendByteFlow.write(produced);
+                }
             }
 
             int connId = processor.connection(topCtx, frontendSubCtx);
