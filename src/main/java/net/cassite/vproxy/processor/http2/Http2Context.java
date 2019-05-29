@@ -13,7 +13,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
     ByteArray clientHandshake = null; // PRI * ..... and SETTINGS frame as well
 
     // the streamMap keys are the ids seen by the frontend
-    private Map<Integer, Http2SubContext> streamMap = new HashMap<>();
+    private Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
 
     private int backendStreamId = 0;
     // the streamIdBack2Front is recorded in subCtx of the backend connection sub context
@@ -33,7 +33,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     @Override
     public void chosen(Http2SubContext front, Http2SubContext subCtx) {
-        int streamId = front.currentStreamId();
+        Integer streamId = front.currentStreamId();
         assert Logger.lowLevelDebug("recording a stream " + streamId + " => " + subCtx.connId);
         streamMap.put(streamId, subCtx);
     }
@@ -42,12 +42,6 @@ public class Http2Context extends OOContext<Http2SubContext> {
         Integer streamId = subCtx.currentStreamId();
         if (subCtx.connId != 0 /* not the frontend connection */ && !streamMap.containsKey(streamId)) {
             assert Logger.lowLevelDebug("recording a new stream from sub context (backend)" + streamId + " => " + subCtx.connId);
-            streamMap.put(streamId, subCtx);
-        }
-    }
-
-    void tryRecordStream(Integer streamId, Http2SubContext subCtx) {
-        if (!streamMap.containsKey(streamId)) {
             streamMap.put(streamId, subCtx);
         }
     }

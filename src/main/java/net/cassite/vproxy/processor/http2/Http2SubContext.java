@@ -426,10 +426,6 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
 
     private ByteArray handleFrame(ByteArray frameBytes) throws Exception {
         // check (and modify) the stream id
-        // if it's from frontend, we should try to record it first before modifying
-        if (connId == 0) {
-            ctx.tryRecordStream(this);
-        }
         // translate the streamIdentifier
         if (frame.streamIdentifier != 0 && frame.streamIdentifier % 2 == 0) {
             // not 0 and is even
@@ -463,10 +459,8 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 frame.streamIdentifier = translatedStreamId;
             }
         }
-        // we try to record the stream for backend after translated the streamId
-        if (connId != 0) {
-            ctx.tryRecordStream(this);
-        }
+        // record the stream after translated the streamId
+        ctx.tryRecordStream(this);
 
         if (frame.type == Http2Frame.Type.HEADERS && frame.priority) {
             assert Logger.lowLevelDebug("got HEADERS frame with priority, we should remove the priority");
