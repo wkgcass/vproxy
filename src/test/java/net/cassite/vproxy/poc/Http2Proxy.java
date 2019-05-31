@@ -22,7 +22,9 @@ public class Http2Proxy {
         Vertx vertx = Vertx.vertx();
         Handler<HttpServerRequest> handler = req -> {
             final int thisPort = req.localAddress().port();
-            System.out.println("server " + req.localAddress() + " get request " + req.method() + " " + req.uri());
+            System.out.println("server " + req.localAddress() +
+                " get request " + req.method() + " " + req.uri() +
+                " headers " + req.headers().entries());
             String reqFlag = req.uri().substring(1);
 
             // we send the second response before the first one to see what will happen
@@ -109,6 +111,7 @@ public class Http2Proxy {
         {
             System.out.println("send http/2 request: second");
             HttpClientRequest req = client.get(7890, "127.0.0.1", "/second");
+            req.headers().add("X-Forwarded-For", "my-test");
             req.handler(resp -> resp.bodyHandler(buf -> {
                 System.out.println("client 2 get response: " + buf);
                 ++steps[0];

@@ -15,13 +15,13 @@ public class Http2Context extends OOContext<Http2SubContext> {
     ByteArray clientHandshake = null; // PRI * ..... and SETTINGS frame as well
 
     // the streamMap keys are the ids seen by the frontend
-    private Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
+    private final Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
 
     private int backendStreamId = 0;
     // the streamIdBack2Front is recorded in subCtx of the backend connection sub context
-    Map<Integer, Integer> streamIdFront2Back = new HashMap<>();
+    final Map<Integer, Integer> streamIdFront2Back = new HashMap<>();
 
-    HPackTransformer hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE);
+    final HPackTransformer hPackTransformer;
 
     ByteArray settingsFrameHeader = null; // this is a temporary field
 
@@ -29,6 +29,10 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     public Http2Context(InetSocketAddress clientAddress) {
         clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
+        hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE,
+            new Header[]{
+                new Header("x-forwarded-for", clientIpStr)
+            });
     }
 
     @Override

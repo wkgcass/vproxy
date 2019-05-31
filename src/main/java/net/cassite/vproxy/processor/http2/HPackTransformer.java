@@ -15,18 +15,22 @@ class HPackTransformer {
     private final SyncOutputListener lsn;
     private final ArrayOutputStream outBuffer = ArrayOutputStream.to(ByteArray.from(new byte[BUFFER_SIZE]));
 
-    HPackTransformer(int maxHeaderTableSize) {
+    HPackTransformer(int maxHeaderTableSize, Header[] headers) {
         this.decoder = new Decoder(BUFFER_SIZE, maxHeaderTableSize);
         Encoder encoder = new Encoder(0);
-        this.lsn = new SyncOutputListener(encoder, outBuffer);
+        this.lsn = new SyncOutputListener(encoder, outBuffer, headers);
     }
 
-    ByteArray transform(ByteArray array) throws IOException {
+    ByteArray transform(ByteArray array, boolean addHeaders) throws IOException {
         decoder.decode(ArrayInputStream.from(array), lsn);
+        if (addHeaders) {
+            lsn.addHeaders();
+        }
         return outBuffer.get();
     }
 
     public void endHeaders() {
+        lsn.endHeaders();
         decoder.endHeaderBlock();
     }
 }
