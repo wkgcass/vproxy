@@ -472,7 +472,7 @@ public final class Decoder {
     }
   }
 
-  private void insertHeader(HeaderListener headerListener, byte[] name, byte[] value, IndexType indexType) {
+  private void insertHeader(HeaderListener headerListener, byte[] name, byte[] value, IndexType indexType) throws IOException {
     addHeader(headerListener, name, value, indexType == IndexType.NEVER);
 
     switch (indexType) {
@@ -489,7 +489,7 @@ public final class Decoder {
     }
   }
 
-  private void addHeader(HeaderListener headerListener, byte[] name, byte[] value, boolean sensitive) {
+  private void addHeader(HeaderListener headerListener, byte[] name, byte[] value, boolean sensitive) throws IOException {
     if (name.length == 0) {
       throw new AssertionError("name is empty");
     }
@@ -516,7 +516,8 @@ public final class Decoder {
 
   private byte[] readStringLiteral(InputStream in, int length) throws IOException {
     byte[] buf = new byte[length];
-    if (in.read(buf) != length) {
+    int x = in.read(buf);
+    if (x != length) {
       throw DECOMPRESSION_EXCEPTION;
     }
 
