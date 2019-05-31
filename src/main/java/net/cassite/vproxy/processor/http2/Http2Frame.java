@@ -13,13 +13,14 @@ public class Http2Frame {
         // PING, // 0x6
         // GOAWAY, // 0x7
         // WINDOW_UPDATE, // 0x8
-        // CONTINUATION, // 0x9
+        CONTINUATION, // 0x9
         PROXY, // the frames that should be proxied
         IGNORE, // the frames that should be ignored
     }
 
     public Type type;
 
+    boolean endHeaders; // 0x4
     boolean padded; // 0x8
     boolean priority; // 0x20
     boolean ack; // 0x1

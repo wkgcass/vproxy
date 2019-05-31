@@ -2,19 +2,21 @@ package net.cassite.vproxy.processor.http2;
 
 import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.processor.OOProcessor;
-import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 
 public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     private static final int HTTP2_ZERO_COPY_THRESHOLD;
 
     static {
-        String thresholdStr = System.getProperty("HTTP2_ZERO_COPY_THRESHOLD");
-        if (thresholdStr == null) {
-            HTTP2_ZERO_COPY_THRESHOLD = Config.recommendedMinPayloadLength;
-        } else {
-            HTTP2_ZERO_COPY_THRESHOLD = Integer.parseInt(thresholdStr);
-            Logger.info(LogType.ALERT, "HTTP2_ZERO_COPY_THRESHOLD is set to " + HTTP2_ZERO_COPY_THRESHOLD);
+        // this is only for debug purpose
+        {
+            String thresholdStr = System.getProperty("HTTP2_ZERO_COPY_THRESHOLD");
+            if (thresholdStr == null) {
+                HTTP2_ZERO_COPY_THRESHOLD = Config.recommendedMinPayloadLength;
+            } else {
+                HTTP2_ZERO_COPY_THRESHOLD = Integer.parseInt(thresholdStr);
+                Logger.alert("HTTP2_ZERO_COPY_THRESHOLD is set to " + HTTP2_ZERO_COPY_THRESHOLD);
+            }
         }
     }
 

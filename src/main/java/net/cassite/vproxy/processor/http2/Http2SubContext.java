@@ -24,10 +24,9 @@ import java.util.Map;
  *
  * Cannot do (limitations):
  * 1. stream dependency and priority
- * 2. header compression
- * 3. window upgrade frames
- * 4. exchange settings (except the first exchange, which is forced according to rfc)
- * 5. http clear text upgrade
+ * 2. header dynamic table for backend (however, dynamic table for frontend is supported)
+ * 3. exchange settings (except the first exchange, which is forced according to rfc)
+ * 4. http clear text upgrade
  * These limitations will not affect how user uses http/2.
  * The not-supported-frames will be modified, dropped, or faked
  * and will not affect the application level code.
@@ -41,20 +40,19 @@ import java.util.Map;
  * the PRIORITY frames will be dropped. In this way, both client and server
  * can use implementation with stream dependency and priority.
  *
- * 2. header compression
- * The header compression is not supported, so vproxy will attach a setting
- * to the first SETTINGS frame which must be sent by both client and server.
- * SETTINGS_HEADER_TABLE_SIZE would be set to 0. In this way, the client and backend
- * will not compress the headers, and can work well with vproxy.
+ * 2. header dynamic table for backend
+ * We only support to decompress headers from frontend connection, and
+ * the header (de)compression for backend connection is not supported.
+ * So vproxy will attach a setting to the first SETTINGS frame
+ * which must be sent by both client and server.
+ * SETTINGS_HEADER_TABLE_SIZE would be set to 0 for backend connections.
+ * In this way, the backend will not compress the headers, and can work well with vproxy.
  *
- * 3. window upgrade frames
- * This is optional according to rfc, so vproxy just drops the frame.
+ * 3. exchange settings
+ * The first exchange is forced according to rfc, so it's supported.
+ * And vproxy will drop SETTINGS frames after the first exchange.
  *
- * 4. exchange settings
- * The first exchange is forced according to rfc, so it's supported.See the implementation detail
- * for how it's supported. And will drop SETTINGS frames after the first exchange.
- *
- * 5. http clear text upgrade
+ * 4. http clear text upgrade
  * The user can use "with-prior-knowledge" way to connect to vproxy.
  * e.g. for curl, add the "--http2 --http2-prior-knowledge" flags.
  * ---- for vertx, call httpClientOptions.setHttp2ClearTextUpgrade(false)
@@ -64,23 +62,26 @@ import java.util.Map;
  *
  * 1. Client sends preface and SETTINGS frame (maybe along with the first request HEADERS frame,
  * -- but we discuss it later).
- * 2. Vproxy parses the preface and SETTINGS frame, and add SETTINGS_HEADER_TABLE_SIZE=0
- * -- to the SETTINGS frame, then proxy the whole bunch of data to the first selected backend A.
+ * 2. Vproxy parses the preface and SETTINGS frame, and add two settings to the SETTINGS frame:
+ * -- SETTINGS_HEADER_TABLE_SIZE=0
+ * -- SETTINGS_INITIAL_WINDOW_SIZE=2^30-1
+ * -- then proxy the whole bunch of data to the first selected backend A.
  * -- Also, at the same time, vproxy would record the preface and the SETTINGS frame (after
  * -- modified), let's call it the "clientHandshake".
  * 3. The backend A returns a SETTINGS frame, and an "ack-SETTINGS" frame.
- * 4. Vproxy parses the first SETTINGS frame from backend A, and add SETTINGS_HEADER_TABLE_SIZE=0
- * -- to the frame, then proxy the whole bunch of data (including the "ack-SETTINGS" frame) to
- * -- the client.
+ * 4. Vproxy parses the first SETTINGS frame from backend A, and add two settings to the frame:
+ * -- SETTINGS_HEADER_TABLE_SIZE=4096
+ * -- SETTINGS_INITIAL_WINDOW_SIZE=2^30-1
+ * -- then proxy the whole bunch of data (including the "ack-SETTINGS" frame) to the client.
  * 5. The client sends an "ack-SETTINGS" frame, and vproxy proxies it to the backend A.
  * -- Now, the handshake part is done, and no SETTINGS frame would be allowed between frontend and backend.
  * 6. The client would have sent a HEADERS frame, so vproxy would try to proxy the frame.
  * -- Vproxy selects a new backend B (might be the same as A if there's only one available backend)
- * -- and sends the previously recorded "clientHandshake" data to the backend B, as well as the
- * -- HEADERS frame from client.
+ * -- and sends the previously recorded "clientHandshake" data to the backend B.
+ * -- Then, vproxy would parse the frontend headers frame, decompress and encode it, and sent to B.
  * 7. The backend B returns a SETTINGS frame and an "ack-SETTINGS" frame, vproxy will send an
  * -- "ack-SETTINGS" frame to the backend B when receiving the first SETTINGS frame from backend B,
- * -- and drop these SETTINGS frames.
+ * -- and drop these received SETTINGS frames.
  * 8. The backend B responds with the following frames: "PUSH_PROMISE", "HEADERS", "DATA", where the
  * -- HEADERS frame is the response headers, and data frame is the response data. The stream id in
  * -- these frames are the request stream id, so vproxy simply proxies the HEADERS and DATA frames,
@@ -115,7 +116,8 @@ import java.util.Map;
  *  +=+=============================================================+
  *  |                   Frame Payload (0...)                      ...
  *  +---------------------------------------------------------------+
- * HEADERS: remove priority
+ * HEADERS: remove priority for both frontend and backend,
+ *          and handle hpack for frontend
  *  +---------------+
  *  |Pad Length? (8)|
  *  +-+-------------+-----------------------------------------------+
@@ -126,6 +128,10 @@ import java.util.Map;
  *  |                   Header Block Fragment (*)                 ...
  *  +---------------------------------------------------------------+
  *  |                           Padding (*)                       ...
+ *  +---------------------------------------------------------------+
+ * CONTINUATION: proxy for backend, handle hpack for frontend
+ *  +---------------------------------------------------------------+
+ *  |                   Header Block Fragment (*)                 ...
  *  +---------------------------------------------------------------+
  * SETTINGS: proxy and record for the handshake, then simply ignore
  * --------- NOTE: SETTINGS_HEADER_TABLE_SIZE will be set to 0
@@ -156,7 +162,6 @@ import java.util.Map;
  * GOAWAY: proxy
  * WINDOW_UPDATE: ignore, and we send our own window_update frames
  *   (the rfc says: Intermediaries do not forward WINDOW_UPDATE frames between dependent connections.)
- * CONTINUATION: proxy
  */
 
 public class Http2SubContext extends OOSubContext<Http2Context> {
@@ -177,8 +182,25 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     private static final int INCR_WINDOW_THRESHOLD = SIZE_CONNECTION_WINDOW - (int) Math.pow(2, 26); // update every 64MBytes
     // and, we do not update the stream window size because 2^30-1 would be enough
 
+    static final int SIZE_DEFAULT_HEADER_TABLE_SIZE;
+
     private static final byte VALUE_SETTINGS_HEADER_TABLE_SIZE = 0x1; // will be set to 0
     private static final byte VALUE_SETTINGS_INITIAL_WINDOW_SIZE = 0x4; // will be set to SIZE_STREAM_WINDOW
+
+    static {
+        // this is only for debug purpose
+        {
+            int headerTableSize = 4096;
+            String tableSizeStr = System.getProperty("HTTP2_DEFAULT_HEADER_TABLE_SIZE");
+            if (tableSizeStr != null) {
+                headerTableSize = Integer.parseInt(tableSizeStr);
+                Logger.alert("HTTP2_DEFAULT_HEADER_TABLE_SIZE is set to " + headerTableSize);
+            }
+            if (headerTableSize < 0)
+                throw new RuntimeException("-DHTTP2_DEFAULT_HEADER_TABLE_SIZE value < 0");
+            SIZE_DEFAULT_HEADER_TABLE_SIZE = headerTableSize;
+        }
+    }
 
     private Http2Frame frame;
     private Http2Frame lastFrame;
@@ -193,6 +215,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
 
     private int state;
     /*
+     * -1 -> ignore the frame -> 1
      * 0 -> frontend handshake -> 1
      * 1 -> (idle) reading stream and length -> 2/3/4/-1
      * 2 -> proxy -> 1
@@ -201,7 +224,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
      * 5 -> (headers) the header part after stream dependency -> 1
      * 6 -> (push-promise) the first few bits of a push-promise frame -> 7
      * 7 -> (push-promise) proxy the bits after first few bits -> 1
-     * -1 -> ignore the frame -> 1
+     * 8 -> (hpack) content of headers or continuation for hpack to process -> 1
      */
 
     private Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
@@ -254,6 +277,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             case 3:
             case 4:
             case 6:
+            case 8:
             case -1:
                 return Processor.Mode.handle;
             case 2:
@@ -305,6 +329,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 return (frame.padded ? LEN_PADDING : 0) + LEN_R_PROMISED_STREAM_ID;
             case 7:
                 return frame.length - (frame.padded ? LEN_PADDING : 0) - LEN_R_PROMISED_STREAM_ID;
+            case 8:
+                //noinspection DuplicateBranchesInSwitch
+                return frame.length;
             case -1:
             case 2:
                 //noinspection DuplicateBranchesInSwitch
@@ -361,8 +388,11 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 frame = null;
                 state = 1;
                 return null; // ignore
+            case 8:
+                return handleHeaderHPack(data);
             case 2:
             case 5:
+            case 7:
             default:
                 throw new Error("should not reach here");
         }
@@ -406,6 +436,9 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             case 0x5: // PUSH_PROMISE
                 frame.type = Http2Frame.Type.PUSH_PROMISE;
                 break;
+            case 0x9:
+                frame.type = Http2Frame.Type.CONTINUATION;
+                break;
             case 0x2: // PRIORITY
             case 0x8: // WINDOW_UPDATE
                 frame.type = Http2Frame.Type.IGNORE;
@@ -415,6 +448,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 break;
         }
         byte flags = data.get(4);
+        if (0 != (flags & 0x4)) frame.endHeaders = true;
         if (0 != (flags & 0x8)) frame.padded = true;
         if (0 != (flags & 0x20)) frame.priority = true;
         if (0 != (flags & 0x1)) frame.ack = true; // maybe it means "end stream", but we don't care
@@ -462,7 +496,14 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         // record the stream after translated the streamId
         ctx.tryRecordStream(this);
 
-        if (frame.type == Http2Frame.Type.HEADERS && frame.priority) {
+        if (connId == 0 // frontend
+            && (frame.type == Http2Frame.Type.HEADERS || frame.type == Http2Frame.Type.CONTINUATION) // headers/continuation
+            && SIZE_DEFAULT_HEADER_TABLE_SIZE != 0 // would be compressed
+        ) {
+            assert Logger.lowLevelDebug("got HEADERS frame from frontend");
+            state = 8;
+            return null; // send nothing for now
+        } else if (frame.type == Http2Frame.Type.HEADERS && frame.priority) {
             assert Logger.lowLevelDebug("got HEADERS frame with priority, we should remove the priority");
             state = 3;
             {
@@ -570,7 +611,11 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             // the identifier part
             payload.int16(offsetOfSetting, VALUE_SETTINGS_HEADER_TABLE_SIZE);
             // the value part
-            payload.int32(offsetOfSetting + 2, 0);
+            payload.int32(offsetOfSetting + 2,
+                connId == 0 // connId == 0 means the data is transferred from frontend to backend
+                    ? 0 // the backend do not use dynamic table
+                    : SIZE_DEFAULT_HEADER_TABLE_SIZE // the frontend uses dynamic table
+            );
         }
         // try to find the SETTINGS_INITIAL_WINDOW_SIZE and change the value
         {
@@ -619,6 +664,45 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         if (!promisedStreamId.equals(translatedStreamId)) {
             utilModifyStreamId(data, offset, translatedStreamId);
         }
+    }
+
+    private ByteArray handleHeaderHPack(ByteArray data) throws Exception {
+        byte frameType;
+        ByteArray transformed;
+        if (frame.type == Http2Frame.Type.HEADERS) {
+            frameType = 1;
+            // get the actual data part
+            if (frame.padded && frame.priority) {
+                data = data.sub(1 + 5, data.length() - (1 + 5) - data.get(0));
+            } else if (frame.padded) {
+                data = data.sub(1, data.length() - 1 - data.get(0));
+            } else if (frame.priority) {
+                data = data.sub(5, data.length() - 5);
+            }
+            transformed = ctx.hPackTransformer.transform(data);
+        } else {
+            assert frame.type == Http2Frame.Type.CONTINUATION;
+            frameType = 9; // type = continuation
+            // data is simple and can be directly transformed for continuation frames
+            transformed = ctx.hPackTransformer.transform(data);
+        }
+        ByteArray result = ByteArray.from(new byte[]{
+            0, 0, 0, // length, will be set later
+            frameType,
+            (byte) (frame.endHeaders ? 4 : 0), // flags
+            0, 0, 0, 0 // stream id, will be set later
+        }).concat(transformed);
+        result.int24(0, transformed.length());
+        result.int32(5, frame.streamIdentifier);
+
+        // set header end before return the result
+        if (frame.endHeaders) {
+            ctx.hPackTransformer.endHeaders();
+        }
+        // set state to idle
+        state = 1;
+
+        return result;
     }
 
     private static void utilModifyStreamId(ByteArray data, int offset, int streamId) {

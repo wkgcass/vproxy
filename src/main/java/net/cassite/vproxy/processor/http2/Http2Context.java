@@ -19,6 +19,8 @@ public class Http2Context extends OOContext<Http2SubContext> {
     // the streamIdBack2Front is recorded in subCtx of the backend connection sub context
     Map<Integer, Integer> streamIdFront2Back = new HashMap<>();
 
+    HPackTransformer hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE);
+
     ByteArray settingsFrameHeader = null; // this is a temporary field
 
     @Override

@@ -46,6 +46,10 @@ public interface ByteArray {
         return new SimpleByteArray(toJavaArray());
     }
 
+    default ByteArray copy() {
+        return ByteArray.from(toJavaArray());
+    }
+
     default ByteArrayChannel toChannel() {
         return ByteArrayChannel.fromFull(this);
     }
