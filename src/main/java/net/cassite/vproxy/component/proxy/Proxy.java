@@ -216,8 +216,8 @@ public class Proxy {
         @SuppressWarnings("unchecked")
         private void handleProcessor(Connection frontendConnection) {
             Processor processor = config.connGen.processor();
-            Processor.Context topCtx = processor.init();
-            Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0);
+            Processor.Context topCtx = processor.init(frontendConnection.remote);
+            Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0, frontendConnection.remote);
             {
                 ByteArray data = processor.connected(topCtx, frontendSubCtx);
                 assert data == null || data.length() == 0; // nothing should be directly written to the frontend

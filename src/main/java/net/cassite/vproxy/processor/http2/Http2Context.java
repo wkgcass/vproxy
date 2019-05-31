@@ -3,7 +3,9 @@ package net.cassite.vproxy.processor.http2;
 import net.cassite.vproxy.processor.OOContext;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.ByteArray;
+import net.cassite.vproxy.util.Utils;
 
+import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -22,6 +24,12 @@ public class Http2Context extends OOContext<Http2SubContext> {
     HPackTransformer hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE);
 
     ByteArray settingsFrameHeader = null; // this is a temporary field
+
+    final String clientIpStr;
+
+    public Http2Context(InetSocketAddress clientAddress) {
+        clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
+    }
 
     @Override
     public int connection(Http2SubContext front) {

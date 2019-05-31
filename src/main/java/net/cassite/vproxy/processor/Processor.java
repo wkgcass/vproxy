@@ -3,6 +3,8 @@ package net.cassite.vproxy.processor;
 import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.util.ByteArray;
 
+import java.net.InetSocketAddress;
+
 public interface Processor<CTX extends Processor.Context, SUB extends Processor.SubContext> {
     class Context {
     }
@@ -20,7 +22,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      *
      * @return the context
      */
-    CTX init();
+    CTX init(InetSocketAddress clientAddress);
 
     /**
      * create a sub context object
@@ -29,7 +31,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @param id  connection id attached to the sub context, 0 for the frontend connection
      * @return the sub context
      */
-    SUB initSub(CTX ctx, int id);
+    SUB initSub(CTX ctx, int id, InetSocketAddress associatedAddress);
 
     enum Mode {
         /**

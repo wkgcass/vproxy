@@ -2,6 +2,8 @@ package net.cassite.vproxy.processor;
 
 import net.cassite.vproxy.util.ByteArray;
 
+import java.net.InetSocketAddress;
+
 class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
     int nextConnId = -1;
 
@@ -129,12 +131,12 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadContex
     }
 
     @Override
-    public HeadPayloadContext init() {
+    public HeadPayloadContext init(InetSocketAddress ignore) {
         return new HeadPayloadContext();
     }
 
     @Override
-    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id) {
+    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, InetSocketAddress ignore) {
         return new HeadPayloadSubContext(headPayloadContext, id, head, off, len, maxLen);
     }
 

@@ -4,6 +4,8 @@ import net.cassite.vproxy.app.Config;
 import net.cassite.vproxy.processor.OOProcessor;
 import net.cassite.vproxy.util.Logger;
 
+import java.net.InetSocketAddress;
+
 public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     private static final int HTTP2_ZERO_COPY_THRESHOLD;
 
@@ -26,12 +28,12 @@ public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     }
 
     @Override
-    public Http2Context init() {
-        return new Http2Context();
+    public Http2Context init(InetSocketAddress clientAddress) {
+        return new Http2Context(clientAddress);
     }
 
     @Override
-    public Http2SubContext initSub(Http2Context ctx, int id) {
+    public Http2SubContext initSub(Http2Context ctx, int id, InetSocketAddress associatedAddress) {
         return new Http2SubContext(ctx, id);
     }
 

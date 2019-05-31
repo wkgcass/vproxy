@@ -673,7 +673,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         // record in collections
         int newConnId = ++cursor;
         BackendConnectionHandler bh =
-            new BackendConnectionHandler(processor.initSub(topCtx, newConnId), clientConnection);
+            new BackendConnectionHandler(processor.initSub(topCtx, newConnId, connector.remote), clientConnection);
         recordBackend(bh, newConnId);
         // register
         try {
