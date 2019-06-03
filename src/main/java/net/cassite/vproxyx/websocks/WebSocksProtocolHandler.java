@@ -191,15 +191,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 sb.append("server: nginx/1.14.2\r\n");
                 sb.append("date: ").append(new Date().toString()).append("\r\n");
                 sb.append("content-type: text/html\r\n");
-                msg = "" +
-                    "<html>\n" +
-                    "<head><title>" + statusCode + " " + statusMsg + "</title></head>\n" +
-                    "<body bgcolor=\"white\">\n" +
-                    "<center><h1>" + statusCode + " " + statusMsg + "</h1></center>\n" +
-                    "<center>" + msg + "</center>\n" +
-                    "<hr><center>nginx/1.14.2</center>\n" +
-                    "</body>\n" +
-                    "</html>\n";
+                msg = ErrorPages.build(statusCode, statusMsg, msg);
                 sb.append("Content-Length: ").append(msg.getBytes().length).append("\r\n");
                 sb.append("\r\n"); // end headers
                 sb.append(msg);
