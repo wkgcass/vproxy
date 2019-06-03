@@ -41,7 +41,7 @@ public class Application {
     public final SmartLBGroupHolder smartLBGroupHolder;
 
     private Application() throws IOException {
-        this.version = "1.0.0-BETA-1"; // _THE_VERSION_
+        this.version = "1.0.0-BETA-2"; // _THE_VERSION_
 
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();
