@@ -15,7 +15,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
     ByteArray clientHandshake = null; // PRI * ..... and SETTINGS frame as well
 
     // the streamMap keys are the ids seen by the frontend
-    private final Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
+    final Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
 
     private int backendStreamId = 0;
     // the streamIdBack2Front is recorded in subCtx of the backend connection sub context

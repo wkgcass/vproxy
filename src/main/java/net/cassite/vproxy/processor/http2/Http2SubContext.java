@@ -228,6 +228,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
      */
 
     private Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
+    private Integer backendIdForStreamToRemove = null;
 
     // the ack of settings frame
     private ByteArray syntheticAck = null;
@@ -423,6 +424,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         Http2Frame frame = new Http2Frame();
         frame.length = data.uint24(0);
         byte type = data.get(3);
+        frame.typeNum = type;
         switch (type) {
             case 0x0:
                 frame.type = Http2Frame.Type.DATA;
@@ -451,50 +453,65 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         if (0 != (flags & 0x4)) frame.endHeaders = true;
         if (0 != (flags & 0x8)) frame.padded = true;
         if (0 != (flags & 0x20)) frame.priority = true;
-        if (0 != (flags & 0x1)) frame.ack = true; // maybe it means "end stream", but we don't care
+        if (0 != (flags & 0x1)) frame.ack = true; // maybe it means "end stream"
+        frame.endStream = (frame.ack && (frame.type == Http2Frame.Type.DATA || frame.type == Http2Frame.Type.HEADERS));
         frame.streamIdentifier = data.int32(5);
+
+        // check whether the stream is about to end
+        //noinspection ConstantConditions
+        if (frame.endStream &&
+            (frame.type == Http2Frame.Type.DATA
+                || (frame.type == Http2Frame.Type.HEADERS && frame.endHeaders))
+            && connId != 0) {
+            // record the stream to be removed
+            // for now, we only handle the DATA frames and headers frames that are marked with endHeaders
+            // those headers with continuation frames are not handled, let it leak, will be GC-ed when connection closes
+            backendIdForStreamToRemove = frame.streamIdentifier;
+        }
 
         this.frame = frame;
         assert Logger.lowLevelDebug("get http2 frame: " + frame + " in connection = " + connId);
     }
 
     private ByteArray handleFrame(ByteArray frameBytes) throws Exception {
-        // check (and modify) the stream id
-        // translate the streamIdentifier
-        if (frame.streamIdentifier != 0 && frame.streamIdentifier % 2 == 0) {
-            // not 0 and is even
-            // so it's started by a backend
-            assert Logger.lowLevelDebug("modify streamIdentifier of the frame. " +
-                "streamId=" + frame.streamIdentifier + ", connId=" + connId);
+        if (frame.type != Http2Frame.Type.IGNORE) { // only transform and record if it's not ignored
+            // check (and modify) the stream id
+            // translate the streamIdentifier
+            if (frame.streamIdentifier != 0 && frame.streamIdentifier % 2 == 0) {
+                // not 0 and is even
+                // so it's started by a backend
+                assert Logger.lowLevelDebug("modify streamIdentifier of the frame. " +
+                    "streamId=" + frame.streamIdentifier + ", connId=" + connId);
 
-            Integer translatedStreamId;
-            if (connId == 0) {
-                translatedStreamId = ctx.streamIdFront2Back.get(frame.streamIdentifier);
-            } else {
-                translatedStreamId = this.streamIdBack2Front.get(frame.streamIdentifier);
-            }
-            if (translatedStreamId == null) {
-                assert Logger.lowLevelDebug("the translatedStreamId is null, which is invalid." +
-                    "The HTTP/2 protocol does not allow a server start new streams before push-promise, " +
-                    "and the streamId should already been recorded when parsing the push-promise frame. " +
-                    "But we allow this condition for possible 'HTTP/2-like' protocols.");
-                if (connId != 0) {
-                    // this will only happen when data is coming from backend
-                    // otherwise, it's invalid
-                    throw new Exception("cannot get translated stream id for " + frame.streamIdentifier);
+                Integer translatedStreamId;
+                if (connId == 0) {
+                    translatedStreamId = ctx.streamIdFront2Back.get(frame.streamIdentifier);
+                } else {
+                    translatedStreamId = this.streamIdBack2Front.get(frame.streamIdentifier);
                 }
-                translatedStreamId = ctx.nextServerStreamId();
-                recordStreamMapping(translatedStreamId, frame.streamIdentifier);
-            }
+                if (translatedStreamId == null) {
+                    assert Logger.lowLevelDebug("the translatedStreamId is null, which is invalid." +
+                        "The HTTP/2 protocol does not allow a server start new streams before push-promise, " +
+                        "and the streamId should already been recorded when parsing the push-promise frame. " +
+                        "But we allow this condition for possible 'HTTP/2-like' protocols.");
+                    if (connId != 0) {
+                        // this will only happen when data is coming from backend
+                        // otherwise, it's invalid
+                        throw new Exception("cannot get translated stream id for " + frame.streamIdentifier);
+                    }
+                    translatedStreamId = ctx.nextServerStreamId();
+                    recordStreamMapping(translatedStreamId, frame.streamIdentifier);
+                }
 
-            assert Logger.lowLevelDebug("the translatedStreamId is " + translatedStreamId);
-            if (!translatedStreamId.equals(frame.streamIdentifier)) {
-                utilModifyStreamId(frameBytes, 5, translatedStreamId);
-                frame.streamIdentifier = translatedStreamId;
+                assert Logger.lowLevelDebug("the translatedStreamId is " + translatedStreamId);
+                if (!translatedStreamId.equals(frame.streamIdentifier)) {
+                    utilModifyStreamId(frameBytes, 5, translatedStreamId);
+                    frame.streamIdentifier = translatedStreamId;
+                }
             }
+            // record the stream after translated the streamId
+            ctx.tryRecordStream(this);
         }
-        // record the stream after translated the streamId
-        ctx.tryRecordStream(this);
 
         if (connId == 0 // frontend
             && (frame.type == Http2Frame.Type.HEADERS || frame.type == Http2Frame.Type.CONTINUATION) // headers/continuation
@@ -728,8 +745,24 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         ctx.streamIdFront2Back.put(front, back);
     }
 
+    void removeStreamMappingByBackendId(Integer back) {
+        Integer front = this.streamIdBack2Front.remove(back);
+        ctx.streamIdFront2Back.remove(front); // it's ok to remove a non-exist element
+        if (front == null) {
+            front = back;
+        }
+        ctx.streamMap.remove(front);
+    }
+
     @Override
     public void proxyDone() {
+        // check whether the stream can be removed
+        // NOTE: the removal is placed before resetting state and frame
+        // is because that it's easier when debugging to see the old status
+        if (backendIdForStreamToRemove != null) {
+            removeStreamMappingByBackendId(backendIdForStreamToRemove);
+            backendIdForStreamToRemove = null;
+        }
         // all proxy states goes to state 1
         // so simply set the frame to null and state 1 here
         state = 1;
