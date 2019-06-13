@@ -8,12 +8,11 @@ import net.cassite.vproxy.component.proxy.ProxyNetConfig;
 import net.cassite.vproxy.connection.BindServer;
 import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.connection.Connector;
+import net.cassite.vproxy.http.connect.HttpConnectProtocolHandler;
 import net.cassite.vproxy.protocol.ProtocolHandler;
 import net.cassite.vproxy.protocol.ProtocolServerConfig;
 import net.cassite.vproxy.protocol.ProtocolServerHandler;
-import net.cassite.vproxy.socks.Socks5ProxyContext;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
-import net.cassite.vproxy.util.Callback;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
 import net.cassite.vproxy.util.ringbuffer.SSLUtils;
@@ -22,9 +21,10 @@ import net.cassite.vproxyx.websocks.PACHandler;
 import net.cassite.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
 import net.cassite.vproxyx.websocks.WebSocksUtils;
 
-import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
@@ -82,54 +82,70 @@ public class WebSocksProxyAgent {
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false);
 
-        // let's create a server, if bind failed, error would be thrown
-        BindServer server = BindServer.create(
-            new InetSocketAddress(InetAddress.getByName(
-                configProcessor.isGateway()
-                    ? "0.0.0.0"
-                    : "127.0.0.1"
-            ), configProcessor.getListenPort()));
-
+        // initiate pool (it's inside the connector provider)
+        WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor);
         // initiate the agent
-        ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>>
-            handler =
-            new Socks5ProxyProtocolHandler(
-                new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor)
-            );
-        ConnectorGen<Socks5ProxyContext> connGen = new ConnectorGen<Socks5ProxyContext>() {
-            @Override
-            public Type type() {
-                return Type.handler;
-            }
+        List<Tuple<Integer, ProtocolHandler>> handlers = new LinkedList<>();
+        handlers.add(new Tuple<>(
+            configProcessor.getListenPort(),
+            new Socks5ProxyProtocolHandler(connectorProvider)
+        ));
+        if (configProcessor.getHttpConnectListenPort() != 0) {
+            handlers.add(new Tuple<>(
+                configProcessor.getHttpConnectListenPort(),
+                new HttpConnectProtocolHandler(connectorProvider)
+            ));
+        }
 
-            @Override
-            public ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>> handler() {
-                return handler;
-            }
+        for (Tuple<Integer, ProtocolHandler> entry : handlers) {
+            int port = entry.left;
+            ProtocolHandler handler = entry.right;
+            ConnectorGen connGen = new ConnectorGen() {
+                @Override
+                public Type type() {
+                    return Type.handler;
+                }
 
-            @Override
-            public Connector genConnector(Connection accepted) {
-                return null; // will not be called because type is `handler`
-            }
-        };
-        Proxy proxy = new Proxy(
-            new ProxyNetConfig()
-                .setAcceptLoop(acceptor.next())
-                .setInBufferSize(SSLUtils.PLAIN_TEXT_SIZE)
-                .setOutBufferSize(65536)
-                .setHandleLoopProvider(worker::next)
-                .setServer(server)
-                .setConnGen(connGen),
-            s -> {
-                // do nothing, won't happen
-                // when terminating, user should simply kill this process and won't close server
-            });
+                @Override
+                public ProtocolHandler handler() {
+                    return handler;
+                }
 
-        // start the agent
-        proxy.handle();
+                @Override
+                public Connector genConnector(Connection accepted) {
+                    return null; // will not be called because type is `handler`
+                }
+            };
+
+            // let's create a server, if bind failed, error would be thrown
+            BindServer server = BindServer.create(
+                new InetSocketAddress(InetAddress.getByName(
+                    configProcessor.isGateway()
+                        ? "0.0.0.0"
+                        : "127.0.0.1"
+                ), port));
+
+            Proxy proxy = new Proxy(
+                new ProxyNetConfig()
+                    .setAcceptLoop(acceptor.next())
+                    .setInBufferSize(SSLUtils.PLAIN_TEXT_SIZE)
+                    .setOutBufferSize(65536)
+                    .setHandleLoopProvider(worker::next)
+                    .setServer(server)
+                    .setConnGen(connGen),
+                s -> {
+                    // do nothing, won't happen
+                    // when terminating, user should simply kill this process and won't close server
+                });
+
+            // start the agent
+            proxy.handle();
+
+            Logger.alert("agent started on " + port);
+        }
 
         // maybe we can start the pac server
-        if (configProcessor.getListenPort() != 0) {
+        if (configProcessor.getPacServerPort() != 0) {
             assert Logger.lowLevelDebug("start pac server");
             BindServer lsn = BindServer.create(new InetSocketAddress(
                 InetAddress.getByName("0.0.0.0"),
@@ -139,11 +155,10 @@ public class WebSocksProxyAgent {
                 new ProtocolServerConfig().setInBufferSize(256).setOutBufferSize(256),
                 new PACHandler(
                     configProcessor.getPacServerIp(),
-                    configProcessor.getListenPort() // this port is for responding to clients
+                    configProcessor.getListenPort(), // this port is socks5 port
+                    configProcessor.getHttpConnectListenPort() // this port is http connect port
                 ));
             Logger.alert("pac server started on " + configProcessor.getPacServerPort());
         }
-
-        Logger.alert("agent started on " + configProcessor.getListenPort());
     }
 }

@@ -396,7 +396,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             if (connect5Bytes[0] != 5 || connect5Bytes[1] != 0) {
                 // version != 5 or resp != success
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
-                    "response version is wrong or resp is not success: " + connect5Bytes[0] + "," + connect5Bytes[1]);
+                    "response version is wrong or resp is not success: " + connect5Bytes[0] + "," + connect5Bytes[1] +
+                        ". handling " + domain + ":" + port);
                 utilAlertFail(ctx);
                 return;
             }

@@ -22,6 +22,7 @@ public class ConfigProcessor {
     public final String fileName;
     public final EventLoopGroup hcLoopGroup;
     private int listenPort = 1080;
+    private int httpConnectListenPort = 0;
     private boolean gateway = false;
     private Map<String, ServerGroup> servers = new HashMap<>();
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
@@ -42,6 +43,10 @@ public class ConfigProcessor {
 
     public int getListenPort() {
         return listenPort;
+    }
+
+    public int getHttpConnectListenPort() {
+        return httpConnectListenPort;
     }
 
     public boolean isGateway() {
@@ -136,6 +141,16 @@ public class ConfigProcessor {
                     }
                     if (listenPort < 1 || listenPort > 65535) {
                         throw new Exception("invalid agent.listen, port number out of range");
+                    }
+                } else if (line.startsWith("agent.httpconnect.listen ")) {
+                    String port = line.substring("agent.httpconnect.listen ".length()).trim();
+                    try {
+                        httpConnectListenPort = Integer.parseInt(port);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.httpconnect.listen, expecting an integer");
+                    }
+                    if (httpConnectListenPort < 1 || httpConnectListenPort > 65535) {
+                        throw new Exception("invalid agent.httpconnect.listen, port number out of range");
                     }
                 } else if (line.startsWith("agent.gateway ")) {
                     String val = line.substring("agent.gateway ".length());
@@ -332,6 +347,10 @@ public class ConfigProcessor {
         for (String k : domains.keySet()) {
             if (!servers.containsKey(k))
                 throw new Exception(k + " is defined in domain list, but not in server list");
+        }
+        // check for listening ports
+        if (listenPort == httpConnectListenPort) {
+            throw new Exception("agent.listen and agent.httpconnect.listen are the same");
         }
     }
 }

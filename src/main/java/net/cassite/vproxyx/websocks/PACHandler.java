@@ -1,5 +1,6 @@
 package net.cassite.vproxyx.websocks;
 
+import net.cassite.vproxy.connection.Connection;
 import net.cassite.vproxy.http.HttpContext;
 import net.cassite.vproxy.http.HttpProtocolHandler;
 import net.cassite.vproxy.http.HttpReq;
@@ -8,29 +9,44 @@ import net.cassite.vproxy.util.LogType;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Utils;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.net.SocketException;
+import java.io.IOException;
+import java.net.*;
+import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.stream.Collectors;
 
 public class PACHandler extends HttpProtocolHandler {
-    private static final String prefix = "function FindProxyForURL(url,host){return 'SOCKS5 ";
-    private static final String suffix = "';}";
+    private static final String template = Arrays.stream(("" +
+        "  function FindProxyForURL(url, host) {" +
+        "\n    if (url && url.indexOf('http://') === 0) {" +
+        "\n        return '${SOCKS5};DIRECT';" +
+        "\n    }" +
+        "\n    return '${SOCKS5};${PROXY}';" +
+        "\n}"
+    ).split("\n")).map(String::trim).collect(Collectors.joining());
 
     private final String host;
     private final int port;
+    private final int httpConnectPort;
 
-    public PACHandler(String host, int port) {
+    public PACHandler(String host, int socksPort, int httpConnectPort) {
         super(false);
         this.host = host;
-        this.port = port;
+        this.port = socksPort;
+        this.httpConnectPort = httpConnectPort;
     }
 
-    private String getIp() {
+    private String getIp(Connection conn) {
         if (!host.equals("*"))
             return host;
 
+        // try to get local address from connection
+        try {
+            return Utils.ipStr(((InetSocketAddress) conn.channel.getLocalAddress()).getAddress().getAddress());
+        } catch (IOException ignore) {
+        }
+
+        // try to get an address from nics
         Enumeration<NetworkInterface> nics;
         try {
             nics = NetworkInterface.getNetworkInterfaces();
@@ -86,7 +102,14 @@ public class PACHandler extends HttpProtocolHandler {
             return;
         }
         assert Logger.lowLevelDebug("got valid req, let's write response back");
-        String resp = prefix + getIp() + ":" + port + suffix;
+        String ip = getIp(ctx.connection);
+        String socks5 = "SOCKS5 " + ip + ":" + port;
+        String proxy = "";
+        if (httpConnectPort != 0) {
+            proxy = "PROXY " + ip + ":" + httpConnectPort;
+        }
+        String resp = template.replace("${SOCKS5}", socks5).replace("${PROXY}", proxy);
+        Logger.alert("respond pac string to " + ctx.connection.remote + ":\n" + resp);
         assert Logger.lowLevelDebug("respond with " + resp);
         ctx.write(("" +
             "HTTP/1.1 200 OK\r\n" +
