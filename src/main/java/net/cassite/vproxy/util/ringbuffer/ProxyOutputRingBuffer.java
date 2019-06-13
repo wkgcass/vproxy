@@ -19,11 +19,6 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
         public void writableET() {
             // dose not care, because this buffer is only used as output buffer
         }
-
-        @Override
-        public boolean flushAware() {
-            return false;
-        }
     }
 
     private class ProxiedETHandler implements RingBufferETHandler {
@@ -37,11 +32,6 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
         @Override
         public void writableET() {
             // does not care, because this buffer is only used as output buffer
-        }
-
-        @Override
-        public boolean flushAware() {
-            return false;
         }
     }
 

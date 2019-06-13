@@ -486,9 +486,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             SSLEngine engine;
             String hostname = connector.getHostName();
             if (hostname == null) {
-                engine = WebSocksUtils.getSslContext().createSSLEngine();
+                engine = WebSocksUtils.createEngine();
             } else {
-                engine = WebSocksUtils.getSslContext().createSSLEngine(hostname, connector.remote.getPort());
+                engine = WebSocksUtils.createEngine(hostname, connector.remote.getPort());
             }
             SSLParameters params = new SSLParameters();
             {
@@ -506,17 +506,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 assert Logger.lowLevelDebug("event loop not specified, so we ignore the resumer for the ssl buffer pair");
                 pair = SSLUtils.genbuf(
                     engine,
-                    RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
-                    RingBuffer.allocate(16384),
-                    32768,
-                    32768);
+                    RingBuffer.allocate(24576),
+                    RingBuffer.allocate(24576));
             } else {
                 pair = SSLUtils.genbuf(
                     engine,
-                    RingBuffer.allocate(SSLUtils.PLAIN_TEXT_SIZE),
-                    RingBuffer.allocate(16384),
-                    32768,
-                    32768,
+                    RingBuffer.allocate(24576),
+                    RingBuffer.allocate(24576),
                     loop);
             }
             return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);

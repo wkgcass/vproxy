@@ -44,17 +44,23 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
     public static SimpleRingBuffer allocateDirect(int cap) {
-        return new SimpleRingBuffer(true, ByteBuffer.allocateDirect(cap));
+        return new SimpleRingBuffer(true, ByteBuffer.allocateDirect(cap), 0, 0);
     }
 
     public static SimpleRingBuffer allocate(int cap) {
-        return new SimpleRingBuffer(false, ByteBuffer.allocate(cap));
+        return new SimpleRingBuffer(false, ByteBuffer.allocate(cap), 0, 0);
     }
 
-    private SimpleRingBuffer(boolean isDirect, ByteBuffer buffer) {
+    public static SimpleRingBuffer wrap(ByteBuffer b) {
+        return new SimpleRingBuffer(false, b, b.position(), b.limit());
+    }
+
+    private SimpleRingBuffer(boolean isDirect, ByteBuffer buffer, int sPos, int ePos) {
         this.isDirect = isDirect;
         this.buffer = buffer;
         this.cap = buffer.capacity();
+        this.sPos = sPos;
+        this.ePos = ePos;
     }
 
     private int storeLimit() {
@@ -234,7 +240,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         operatingBuffer = true;
 
         boolean triggerWritable = false;
-        int bytesBeforeOperating = used();
 
         assert Logger.lowLevelNetDebug("before operate write out, sPos=" + sPos);
 
@@ -307,20 +312,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         } finally { // do trigger here
             assert Logger.lowLevelNetDebug("after operate write out, sPos=" + sPos);
 
-            // was > 0 and now nothing
-            // which means all data had been flushed out
-            boolean flushAwareCondition = bytesBeforeOperating > 0 && used() == 0;
-
             operatingBuffer = false;
-            if (triggerWritable || flushAwareCondition /*precondition, would check whether the handler is aware of*/) {
+            if (triggerWritable) {
                 assert Logger.lowLevelNetDebug("trigger writable for " + handler.size() + " times");
                 for (RingBufferETHandler aHandler : handler) {
-                    // because the preconditions are checked, so
-                    // if not triggerWritable, then flushAwareCondition is definitely true
-                    // no need to check for it again here
-                    if (triggerWritable || aHandler.flushAware()) {
-                        aHandler.writableET();
-                    }
+                    aHandler.writableET();
                 }
             }
             resetFirst(firstOperator);
@@ -363,15 +359,16 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             }
             int read = buffer.position() - ePos;
             ePos += read;
+            if (ePos == cap) {
+                ePos = 0;
+                ePosIsAfterSPos = false;
+            }
+
             if (!succeeded)
                 return -1; // some error occurred, maybe EOF
 
             triggerReadable = triggerReadablePre && read > 0;
 
-            if (ePos == cap) {
-                ePos = 0;
-                ePosIsAfterSPos = false;
-            }
             if (read == lim) {
                 // maybe have more bytes to read
                 lim = storeLimit();
@@ -455,6 +452,10 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         sPos = 0;
         ePos = newBuffer.position();
         ePosIsAfterSPos = true;
+        if (ePos == cap) {
+            ePos = 0;
+            ePosIsAfterSPos = false;
+        }
         buffer = newBuffer;
     }
 }

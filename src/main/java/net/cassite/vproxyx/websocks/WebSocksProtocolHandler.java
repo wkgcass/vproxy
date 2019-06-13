@@ -167,7 +167,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             return Base64.getEncoder().encodeToString(sha1.digest());
         }
 
-        private final Map<Integer, String> STATUS_MSG = new HashMap<Integer, String>() {{
+        private final Map<Integer, String> STATUS_MSG = new HashMap<>() {{
             put(101, "Switching Protocols");
             put(400, "Bad Request");
             put(401, "Unauthorized");
@@ -221,8 +221,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine,
             // we can allocate new buffer here, but it's ok to use the original allocated buffers
             (ByteBufferRingBuffer) ctx.connection.getInBuffer(),
-            (ByteBufferRingBuffer) ctx.connection.getOutBuffer(),
-            32768, 32768);
+            (ByteBufferRingBuffer) ctx.connection.getOutBuffer());
         try {
             // when init, there should have not read any data yet
             // so we should safely replace the buffers
@@ -247,7 +246,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         ctx.data.left.socks5Context.data = new Tuple<>(
             ctx.data.left.socks5Context.data.left,
             // simply proxy the values of the Proxy lib
-            new Callback<Connector, IOException>() {
+            new Callback<>() {
                 @Override
                 protected void onSucceeded(Connector connector) {
                     String id = ctx.connection.remote + "->" + connector.remote;

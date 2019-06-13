@@ -307,7 +307,7 @@ public class Connection implements NetFlowRecorder {
             in = inBuffer.switchBuffer(in);
             out = outBuffer.switchBuffer(out);
         } catch (RingBuffer.RejectSwitchException e) {
-            throw new IOException("cannot replace buffers when they are not empty");
+            throw new IOException("cannot replace buffers when they are not empty", e);
         }
 
         // remove handler from the buffers

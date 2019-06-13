@@ -332,7 +332,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     public void writable(HandlerContext<SelectableChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
         if (cctx.connection.getOutBuffer().used() == 0) {
-            if (cctx.connection.remoteClosed) {
+            if (cctx.connection.remoteClosed || cctx.connection.isClosed()) {
                 // no bytes to write, then the connection can be closed now
                 cctx.connection.close();
                 cctx.handler.closed(cctx);

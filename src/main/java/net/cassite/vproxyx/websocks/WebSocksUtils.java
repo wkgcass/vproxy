@@ -194,6 +194,18 @@ public class WebSocksUtils {
         return sslContext;
     }
 
+    public static SSLEngine createEngine() {
+        SSLEngine engine = getSslContext().createSSLEngine();
+        engine.setEnabledProtocols(new String[]{"TLSv1.2"});
+        return engine;
+    }
+
+    public static SSLEngine createEngine(String host, int port) {
+        SSLEngine engine = getSslContext().createSSLEngine(host, port);
+        engine.setEnabledProtocols(new String[]{"TLSv1.2"});
+        return engine;
+    }
+
     public static void initSslContext(String path, String pass, String format, boolean isServer) throws Exception {
         if (sslContext != null) {
             throw new Exception("ssl context already initiated");
@@ -233,7 +245,7 @@ public class WebSocksUtils {
         }
 
         try {
-            sslContext = SSLContext.getInstance("TLSv1.2");
+            sslContext = SSLContext.getInstance("TLS");
             sslContext.init(kms, tms, null);
         } catch (KeyManagementException e) {
             sslContext = null;
