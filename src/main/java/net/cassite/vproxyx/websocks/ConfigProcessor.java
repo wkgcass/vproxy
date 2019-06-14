@@ -258,6 +258,23 @@ public class ConfigProcessor {
                 boolean useSSL = line.startsWith("websockss");
                 line = line.substring(useSSL ? "websockss://".length() : "websocks://".length());
 
+                String program = null;
+                int programPort = 0;
+                {
+                    String[] split = line.split(" ");
+                    if (split.length > 1) {
+                        line = split[0];
+                        StringBuilder sb = new StringBuilder(split[1]);
+                        for (int i = 2; i < split.length; ++i) {
+                            sb.append(" ").append(split[i]);
+                        }
+                        program = sb.toString();
+                        program = program.replace("~", System.getProperty("user.home"));
+                        programPort = (int) (30000 + 10000 * Math.random());
+                        program = program.replace("$LOCAL_PORT", "" + programPort);
+                    }
+                }
+
                 int colonIdx = line.lastIndexOf(':');
                 if (colonIdx == -1)
                     throw new Exception("invalid address:port for proxy.server.list: " + line);
@@ -274,8 +291,29 @@ public class ConfigProcessor {
                 if (port < 1 || port > 65535) {
                     throw new Exception("invalid port: " + line);
                 }
+
+                if (program != null) {
+                    program = program.replace("$SERVER_IP", hostPart);
+                    program = program.replace("$SERVER_PORT", portPart);
+
+                    final var finalProgram = program;
+
+                    System.out.println("running program: [" + program + "]");
+                    Process p = Utils.runSubProcess(program);
+                    p.onExit().thenAccept(pp -> System.err.println("sub process [" + finalProgram + "] exits with " + pp.exitValue()));
+                    Utils.proxyProcessOutput(p);
+                }
+
                 ServerGroup.ServerHandle handle;
-                if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
+                if (program != null) {
+                    InetAddress inet;
+                    if (Utils.isIpLiteral(hostPart)) {
+                        inet = InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
+                    } else {
+                        inet = InetAddress.getByAddress(hostPart, new byte[]{127, 0, 0, 1});
+                    }
+                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, programPort), 10);
+                } else if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
                     InetAddress inet = InetAddress.getByName(hostPart);
                     handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), 10);
                 } else if (Utils.isIpv6(hostPart)) {

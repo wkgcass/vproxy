@@ -6,6 +6,8 @@ import net.cassite.vproxy.socks.AddressType;
 import sun.misc.Unsafe;
 
 import java.io.IOException;
+import java.io.InputStream;
+import java.io.PrintStream;
 import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -30,6 +32,7 @@ public class Utils {
         if (s.length() >= len)
             return s;
         StringBuilder sb = new StringBuilder();
+        //noinspection StringRepeatCanBeUsed
         for (int i = s.length(); i < len; ++i) {
             sb.append("0");
         }
@@ -644,5 +647,34 @@ public class Utils {
 
     public static boolean isReset(IOException t) {
         return RESET_MSG.equals(t.getMessage());
+    }
+
+    public static Process runSubProcess(String program) throws IOException {
+        return Runtime.getRuntime().exec(program);
+    }
+
+    private static void proxyProcessOutput(InputStream subProcess, PrintStream output) {
+        new Thread(() -> {
+            while (true) {
+                int intB;
+                try {
+                    intB = subProcess.read();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                    break;
+                }
+                if (intB == -1) {
+                    // EOF, so break
+                    break;
+                }
+                byte b = (byte) intB;
+                output.write(b);
+            }
+        }).start();
+    }
+
+    public static void proxyProcessOutput(Process process) {
+        proxyProcessOutput(process.getInputStream(), System.out);
+        proxyProcessOutput(process.getErrorStream(), System.err);
     }
 }

@@ -36,7 +36,14 @@ public class SvrHandleConnector extends Connector {
     }
 
     public String getHostName() {
-        return serverHandle.hostName;
+        String hostname = serverHandle.hostName;
+        if (hostname == null) {
+            String h = remote.getAddress().toString().split("/")[0].trim();
+            if (!h.isEmpty()) {
+                hostname = h;
+            }
+        }
+        return hostname;
     }
 
     public Object getData() {
