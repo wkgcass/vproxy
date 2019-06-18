@@ -24,6 +24,8 @@ dependencies {
 }
 
 jar {
+    baseName = "vproxy"
+    archiveName = "${jar.baseName}.${jar.extension}"
     manifest {
         attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
     }
