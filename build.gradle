@@ -2,7 +2,7 @@ plugins {
     id 'java'
 }
 
-group 'net.cassite'
+group 'vproxy'
 version loadVersion()
 
 sourceCompatibility = 11.0
@@ -24,17 +24,16 @@ dependencies {
 }
 
 jar {
-    baseName = "vproxy"
-    archiveName = "${jar.baseName}.${jar.extension}"
+    archiveName = "vproxy.jar"
     manifest {
-        attributes 'Main-Class': 'net.cassite.vproxy.app.Main'
+        attributes 'Main-Class': 'vproxy.app.Main'
     }
 }
 
 def loadVersion() {
     def PREFIX = "this.version = \""
     def SUFFIX = "\"; // _THE_VERSION_"
-    def ver = file(sourceSets.main.java.srcDirs[0].path + "/net/cassite/vproxy/app/Application.java")
+    def ver = file(sourceSets.main.java.srcDirs[0].path + "/vproxy/app/Application.java")
     def lines = ver.getText().split("\n")
     for (def line : lines) {
         line = line.trim()
