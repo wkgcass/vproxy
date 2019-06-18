@@ -36,7 +36,7 @@ Use `load ${filename}` to load a configuration file when the vproxy instance sta
 e.g.
 
 ```
-java net.cassite.vproxy.app.Main load ~/vproxy.conf
+java vproxy.app.Main load ~/vproxy.conf
 ```
 
 > Multiple config files can be specified, will be executed in parallel.  
@@ -47,7 +47,7 @@ java net.cassite.vproxy.app.Main load ~/vproxy.conf
 Start the vproxy instance:
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 Then type in:
@@ -62,7 +62,7 @@ Then type in:
 Start the vproxy instance:
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 Then the StdIOController starts, you can type in commands via standard input.
@@ -87,7 +87,7 @@ Use `resp-controller ${address} ${password}` arguments to start the RESPControll
 
 e.g.
 ```
-java net.cassite.vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
+java vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
 ```
 
 then you can use `redis-cli` to connect to the vproxy instance.
@@ -102,7 +102,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 Start the vproxy instance:
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 To create a RESPController, you can type in:
@@ -132,7 +132,7 @@ To stop a RESPController, you can type in:
 Specify the service mesh config file when starting:
 
 ```
-java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
+java vproxy.app.Main serviceMeshConfig $path_to_config
 ```
 
 When service mesh config is specified, the process launches into service mesh mode.  
@@ -182,10 +182,10 @@ add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 
 and save it, perhaps you can save it into `~/vproxy.conf`.
 
-Start the application via `net.cassite.vproxy.app.Main`
+Start the application via `vproxy.app.Main`
 
 ```
-java net.cassite.vproxy.app.Main load ~/vproxy.conf
+java vproxy.app.Main load ~/vproxy.conf
 ```
 
 Then everything is done.
@@ -214,7 +214,7 @@ You should know that the `help` is trapped by `redis-cli` (which will return red
 
 To create a tcp loadbalancer, you can:
 
-1. start the application via `net.cassite.vproxy.app.Main`
+1. start the application via `vproxy.app.Main`
 2. type in the following commands or run from the redis-cli:
 3. `add server-groups sgs0`  
     which creates a serverGroups named `sgs0`. The serverGroups is a resource that contains multiple server groups.

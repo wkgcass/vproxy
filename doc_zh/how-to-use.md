@@ -36,7 +36,7 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 例如：
 
 ```
-java net.cassite.vproxy.app.Main load ~/vproxy.conf
+java vproxy.app.Main load ~/vproxy.conf
 ```
 
 #### 1.3. System call 指令
@@ -44,7 +44,7 @@ java net.cassite.vproxy.app.Main load ~/vproxy.conf
 启动一个vproxy实例：
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 然后输入：
@@ -59,7 +59,7 @@ java net.cassite.vproxy.app.Main
 启动vproxy实例：
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 这样，StdIOController就启动了。你可以通过stdin输入命令。
@@ -85,7 +85,7 @@ java net.cassite.vproxy.app.Main
 例如：
 
 ```
-java net.cassite.vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
+java vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
 ```
 
 然后你就可以使用 `redis-cli` 来连入vproxy实例了。
@@ -100,7 +100,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 启动vproxy实例：
 
 ```
-java net.cassite.vproxy.app.Main
+java vproxy.app.Main
 ```
 
 你可以输入如下命令来启动RESPController：
@@ -130,7 +130,7 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 在启动时指定service mesh配置文件：
 
 ```
-java net.cassite.vproxy.app.Main serviceMeshConfig $path_to_config
+java vproxy.app.Main serviceMeshConfig $path_to_config
 ```
 
 如果指定了service mesh配置文件，该进程将进入service mesh模式。  
@@ -182,10 +182,10 @@ add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 
 保存之，比如说保存到`~/vproxy.conf`。
 
-通过 `net.cassite.vproxy.app.Main` 启动程序
+通过 `vproxy.app.Main` 启动程序
 
 ```
-java net.cassite.vproxy.app.Main load ~/vproxy.conf
+java vproxy.app.Main load ~/vproxy.conf
 ```
 
 一切配置都完成了。
@@ -214,7 +214,7 @@ redis-cli -p 16379 -h $vproxy主机的ip地址 -a 123456 [$你还可以直接在
 
 如果要创建一个tcp负载均衡，你可以：
 
-1. 通过 `net.cassite.vproxy.app.Main` 启动程序
+1. 通过 `vproxy.app.Main` 启动程序
 2. 输入如下命令，或者通过redis-cli执行如下命令：
 3. `add server-groups sgs0`  
     创建了一个名叫`sgs0`的ServerGroups资源。ServerGroups资源包含了多个ServerGroup（主机组）

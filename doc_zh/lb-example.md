@@ -43,7 +43,7 @@ tmux
 
 ## 之后在tmux的终端里启动vproxy
 
-java net.cassite.vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
+java vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
 ```
 
 启动vproxy，并且启动了一个resp-controller，绑定了`10.0.3.10:16379`，这样`ADMIN`就可以访问它了。

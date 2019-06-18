@@ -28,7 +28,7 @@ import java.util.concurrent.Executors;
 public class GrpcOverH2Proxy {
     public static void main(String[] args) throws Exception {
         // see hello_world.proto in resources folder
-        // compiled into net.cassite.vproxy.poc.grpc using protobuf 3.6.0 and grpc 1.12.0
+        // compiled into vproxy.poc.grpc using protobuf 3.6.0 and grpc 1.12.0
 
         // server1
         Server server17890 = ServerBuilder.forPort(17890)

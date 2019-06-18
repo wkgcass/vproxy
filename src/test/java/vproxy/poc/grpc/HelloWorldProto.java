@@ -37,7 +37,7 @@ public final class HelloWorldProto {
       "Request\022\014\n\004name\030\001 \001(\t\" \n\rHelloResponse\022\017" +
       "\n\007message\030\001 \001(\t2L\n\007Greeter\022A\n\010SayHello\022\030" +
       ".helloworld.HelloRequest\032\031.helloworld.He" +
-      "lloResponse\"\000B0\n\033net.cassite.vproxy.poc." +
+      "lloResponse\"\000B0\n\033vproxy.poc." +
       "grpcB\017HelloWorldProtoP\001b\006proto3"
     };
     com.google.protobuf.Descriptors.FileDescriptor.InternalDescriptorAssigner assigner =

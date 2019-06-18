@@ -298,7 +298,7 @@ private static final long serialVersionUID = 0L;
               vproxy.poc.grpc.HelloResponse.class, vproxy.poc.grpc.HelloResponse.Builder.class);
     }
 
-    // Construct using net.cassite.vproxy.poc.grpc.HelloResponse.newBuilder()
+    // Construct using vproxy.poc.grpc.HelloResponse.newBuilder()
     private Builder() {
       maybeForceBuilderInitialization();
     }
