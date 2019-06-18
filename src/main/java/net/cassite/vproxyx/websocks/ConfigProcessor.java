@@ -30,6 +30,7 @@ public class ConfigProcessor {
     private String pass;
     private String cacertsPath;
     private String cacertsPswd;
+    private boolean verifyCert = true;
     private boolean strictMode = false;
     private int poolSize = 10;
 
@@ -75,6 +76,10 @@ public class ConfigProcessor {
 
     public String getCacertsPswd() {
         return cacertsPswd;
+    }
+
+    public boolean isVerifyCert() {
+        return verifyCert;
     }
 
     public boolean isStrictMode() {
@@ -185,6 +190,18 @@ public class ConfigProcessor {
                     if (pswd.isEmpty())
                         throw new Exception("cacert path not specified");
                     cacertsPswd = pswd;
+                } else if (line.startsWith("agent.cert.verify ")) {
+                    String val = line.substring("agent.cert.verify ".length()).trim();
+                    switch (val) {
+                        case "on":
+                            verifyCert = true;
+                            break;
+                        case "off":
+                            verifyCert = false;
+                            break;
+                        default:
+                            throw new Exception("invalid value for agent.cert.verify: " + val);
+                    }
                 } else if (line.startsWith("agent.strict ")) {
                     String val = line.substring("agent.strict ".length()).trim();
                     switch (val) {

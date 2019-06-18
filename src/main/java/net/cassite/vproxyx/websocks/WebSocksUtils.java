@@ -203,10 +203,15 @@ public class WebSocksUtils {
     public static SSLEngine createEngine(String host, int port) {
         SSLEngine engine = getSslContext().createSSLEngine(host, port);
         engine.setEnabledProtocols(new String[]{"TLSv1.2"});
+        {
+            SSLParameters params = new SSLParameters();
+            params.setEndpointIdentificationAlgorithm("HTTPS");
+            engine.setSSLParameters(params);
+        }
         return engine;
     }
 
-    public static void initSslContext(String path, String pass, String format, boolean isServer) throws Exception {
+    public static void initSslContext(String path, String pass, String format, boolean isServer, boolean needVerify) throws Exception {
         if (sslContext != null) {
             throw new Exception("ssl context already initiated");
         }
@@ -242,6 +247,11 @@ public class WebSocksUtils {
                 tmf.init(store);
                 tms = tmf.getTrustManagers();
             }
+        }
+
+        // for client and set noVerify flag
+        if (!isServer && !needVerify) {
+            tms = new TrustManager[]{new TrustAllX509Manager()};
         }
 
         try {
@@ -284,4 +294,5 @@ public class WebSocksUtils {
     public static ConnectionOpts getConnectionOpts() {
         return new ConnectionOpts().setTimeout(60_000);
     }
+
 }

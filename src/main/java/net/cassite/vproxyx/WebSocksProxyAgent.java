@@ -79,7 +79,7 @@ public class WebSocksProxyAgent {
 
         // init the ssl context
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
-            , "JKS", false);
+            , "JKS", false, configProcessor.isVerifyCert());
 
         // initiate pool (it's inside the connector provider)
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor);

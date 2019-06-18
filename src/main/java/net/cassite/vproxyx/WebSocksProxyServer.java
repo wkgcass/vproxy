@@ -140,7 +140,7 @@ public class WebSocksProxyServer {
         if (ssl) {
             // init the ssl context
             WebSocksUtils.initSslContext(pkcs12, pkcs12pswd,
-                "PKCS12", true);
+                "PKCS12", true, false);
 
             // ssl params
             SSLParameters params = new SSLParameters();
