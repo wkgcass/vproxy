@@ -5,7 +5,7 @@ VProxy 提供了一个简单的 Dockerfile。
 ## 打镜像
 
 ```
-docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/vproxy/Dockerfile
+docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 ```
 
 因为Dockerfile使用完全相同的RUN语句动态地获取最新版本vproxy jar，所以打镜像时候需要使用`--no-cache`标志。

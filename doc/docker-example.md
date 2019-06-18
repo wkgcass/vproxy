@@ -5,7 +5,7 @@ VProxy provides a simple Dockerfile, you can use it to make an images and run.
 ## Build
 
 ```
-docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/vproxy/Dockerfile
+docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 ```
 
 Use the `--no-cache` flag because the Dockerfile dynamically retrieves the latest vproxy jar with the same RUN statements.
