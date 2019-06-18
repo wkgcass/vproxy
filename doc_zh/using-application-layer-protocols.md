@@ -10,7 +10,7 @@
 所以`vproxy`定义了一套接口，允许用户自定义应用层协议，可以自由地将不同的frame分发至不同的后端。
 
 目前，`vproxy`已经使用这套接口，在内部预置了`HTTP/2`,`dubbo`,`thrift (framed)`协议的frame分发。  
-实际上，这套接口是为了`HTTP/2`协议而提供的，`HTTP/2`的processor使用了这套接口提供的所有功能。详见[这里](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2)，主要实现放在这里：[Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java)。  
+实际上，这套接口是为了`HTTP/2`协议而提供的，`HTTP/2`的processor使用了这套接口提供的所有功能。详见[这里](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor/http2)，主要实现放在这里：[Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/http2/Http2SubContext.java)。  
 相比而言，`dubbo`和`thrift (framed)`处理器实现要简单的多。
 
 ## 使用方式
@@ -33,16 +33,16 @@
 
 对于比较复杂的协议，可以参考内置的http2的实现。
 
-为了让vproxy读取你的处理器，你可以使用模块化`module-info`中的`provides ... with ...`语句，也可以使用传统的`META-INF/services/net.cassite.vproxy.processor.ProcessorRegistry`。
+为了让vproxy读取你的处理器，你可以使用模块化`module-info`中的`provides ... with ...`语句，也可以使用传统的`META-INF/services/vproxy.processor.ProcessorRegistry`。
 
 当上述两者皆不可用时（比如把所有东西打成了一个大fat jar时），你可以调用`DefaultProcessorRegistry.getInstance().register(processor)`来注册你的处理器。
 
 ### 接口
 
-package [net.cassite.vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor);
+package [vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor);
 
-* [ProcessorRegistry](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/ProcessorRegistry.java) 用于将自定义的协议实现注册到`vproxy`中。
-* [Processor](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/Processor.java) 协议处理器。
+* [ProcessorRegistry](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/ProcessorRegistry.java) 用于将自定义的协议实现注册到`vproxy`中。
+* [Processor](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/Processor.java) 协议处理器。
 
 ### 概念
 

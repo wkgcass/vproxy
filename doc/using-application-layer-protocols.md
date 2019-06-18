@@ -10,7 +10,7 @@ The layer 4 TCP loadbalancer transfers all data from one frontend connection to 
 So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backends in one connection.
 
 Now, `vproxy` already uses the interfaces to construct some built-in protcols for `HTTP/2`, `dubbo` and `thrift (framed)`.  
-Actually these interfaces are built for the `HTTP/2`, which uses all functionality provided by these interfaces. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/http2/Http2SubContext.java).  
+Actually these interfaces are built for the `HTTP/2`, which uses all functionality provided by these interfaces. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/http2/Http2SubContext.java).  
 The `dubbo` and `thrift (framed)` processors are much easier comparing to the `HTTP/2` impl.
 
 ## How to use
@@ -33,16 +33,16 @@ We provides a processor impl example, see [here](https://github.com/wkgcass/vpro
 
 For more complex protocols, you may refer to the built-in http2 impl.
 
-To let vproxy load your processors, you may use the modular `provides ... with ...` in `module-info` or traditional definitions in `META-INF/services/net.cassite.vproxy.processor.ProcessorRegistry`.
+To let vproxy load your processors, you may use the modular `provides ... with ...` in `module-info` or traditional definitions in `META-INF/services/vproxy.processor.ProcessorRegistry`.
 
 Or when both not working (e.g. when packing everything into one fat jar), you can also call `DefaultProcessorRegistry.getInstance().register(processor)` to register.
 
 ### Interfaces
 
-package [net.cassite.vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/main/java/net/cassite/vproxy/processor);
+package [vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor);
 
-* [ProcessorRegistry](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/ProcessorRegistry.java) To register customized protocol into the `vproxy`.
-* [Processor](https://github.com/wkgcass/vproxy/blob/master/src/main/java/net/cassite/vproxy/processor/Processor.java) The processor of your protocol
+* [ProcessorRegistry](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/ProcessorRegistry.java) To register customized protocol into the `vproxy`.
+* [Processor](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/Processor.java) The processor of your protocol
 
 ### Concepts
 

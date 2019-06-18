@@ -14,7 +14,7 @@ RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-ALPHA-4/vp
     rm -f vproxy-runtime-musl.tar.gz
 
 ## download the latest vproxy
-RUN curl https://raw.githubusercontent.com/wkgcass/vproxy/master/src/main/java/net/cassite/vproxy/app/Application.java 2>/dev/null \
+RUN curl https://raw.githubusercontent.com/wkgcass/vproxy/master/src/main/java/vproxy/app/Application.java 2>/dev/null \
     | grep '_THE_VERSION_' \
     | awk '{print $3}' \
     | cut -d '"' -f 2 \
