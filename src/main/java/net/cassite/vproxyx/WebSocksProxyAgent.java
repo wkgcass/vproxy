@@ -15,11 +15,9 @@ import net.cassite.vproxy.protocol.ProtocolServerHandler;
 import net.cassite.vproxy.socks.Socks5ProxyProtocolHandler;
 import net.cassite.vproxy.util.Logger;
 import net.cassite.vproxy.util.Tuple;
-import net.cassite.vproxyx.websocks.ConfigProcessor;
-import net.cassite.vproxyx.websocks.PACHandler;
-import net.cassite.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
-import net.cassite.vproxyx.websocks.WebSocksUtils;
+import net.cassite.vproxyx.websocks.*;
 
+import java.io.File;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
@@ -28,8 +26,10 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class WebSocksProxyAgent {
+    private static final String defaultConfigName = "vproxy-websocks-agent.conf";
+
     public static void main0(String[] args) throws Exception {
-        String configFile = "~/vproxy-websocks-agent.conf";
+        String configFile = System.getProperty("user.home") + File.separator + defaultConfigName;
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
             System.out.println("If not specified, the config will be read from " + configFile);
@@ -38,6 +38,11 @@ public class WebSocksProxyAgent {
         }
         if (args.length == 0) {
             System.err.println("Warning: reading config from " + configFile);
+
+            File file = new File(configFile);
+            if (!file.exists()) {
+                ConfigGenerator.interactive(System.getProperty("user.home"), defaultConfigName);
+            }
         } else {
             configFile = args[0];
         }
