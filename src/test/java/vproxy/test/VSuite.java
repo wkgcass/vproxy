@@ -19,6 +19,7 @@ import org.junit.runners.Suite;
     TestConnectClient.class,
     TestSSLRingBuffers.class,
     TestProtocols.class,
+    TestHttp1Parser.class,
 
     AfterAll.class
 })

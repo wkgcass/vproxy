@@ -1,12 +1,27 @@
 package vproxy.util;
 
 import vproxy.util.bytearray.CompositeByteArray;
+import vproxy.util.bytearray.OneByteArray;
 import vproxy.util.bytearray.SimpleByteArray;
 import vproxy.util.bytearray.SubByteArray;
 
 import java.nio.ByteBuffer;
 
 public interface ByteArray {
+    static ByteArray allocate(int len) {
+        if (len == 0) {
+            throw new IllegalArgumentException();
+        } else if (len == 1) {
+            return new OneByteArray();
+        } else {
+            return from(new byte[len]);
+        }
+    }
+
+    static ByteArray from(byte b) {
+        return new OneByteArray(b);
+    }
+
     static ByteArray from(byte[] array) {
         return new SimpleByteArray(array);
     }

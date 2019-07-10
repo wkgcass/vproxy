@@ -571,7 +571,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private final boolean strictMode;
-    private final Map<String, List<DomainChecker>> proxyDomains;
+    private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;

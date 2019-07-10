@@ -12,10 +12,7 @@ import vproxy.util.Utils;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.HashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.regex.Pattern;
 
 public class ConfigProcessor {
@@ -58,8 +55,18 @@ public class ConfigProcessor {
         return servers;
     }
 
-    public Map<String, List<DomainChecker>> getDomains() {
-        return domains;
+    public LinkedHashMap<String, List<DomainChecker>> getDomains() {
+        LinkedHashMap<String, List<DomainChecker>> ret = new LinkedHashMap<>();
+        for (String key : domains.keySet()) {
+            if (!key.equals("DEFAULT")) {
+                ret.put(key, domains.get(key));
+            }
+        }
+        // put DEFAULT to the last
+        if (domains.containsKey("DEFAULT")) {
+            ret.put("DEFAULT", domains.get("DEFAULT"));
+        }
+        return ret;
     }
 
     public String getUser() {

@@ -155,7 +155,7 @@ public class WebSocksUtils {
                     return false;
                 }
             } else if (headerKey.equalsIgnoreCase("connection")) {
-                if (headerVal.equals("Upgrade")) {
+                if (headerVal.equalsIgnoreCase("Upgrade")) {
                     foundConnection = true;
                     if (foundSec && foundUpgrade) {
                         break;
@@ -214,20 +214,6 @@ public class WebSocksUtils {
     public static void initSslContext(String path, String pass, String format, boolean isServer, boolean needVerify) throws Exception {
         if (sslContext != null) {
             throw new Exception("ssl context already initiated");
-        }
-
-        // directly load sunec here for error report
-        try {
-            System.loadLibrary("sunec");
-        } catch (UnsatisfiedLinkError e) {
-            String msg = e.getMessage();
-            // ignore the exception if the cause is that the lib is already loaded
-            if (!msg.endsWith(" already loaded in another classloader")) {
-                throw new Exception("the dynamic lib for sunec not found\n" +
-                    "Did you forget to move the libsunec.so(linux)/libsunec.dylib(macos) " +
-                    "to your current directory?\n" +
-                    "Or you might want to set the lib's directory in -Djava.library.path", e);
-            }
         }
 
         KeyManager[] kms = null;

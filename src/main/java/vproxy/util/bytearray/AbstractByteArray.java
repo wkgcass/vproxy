@@ -11,7 +11,7 @@ public abstract class AbstractByteArray implements ByteArray {
             return false;
         ByteArray o = (ByteArray) obj;
 
-        int len = this.length();
+        final int len = this.length();
 
         if (len != o.length())
             return false;
@@ -21,6 +21,16 @@ public abstract class AbstractByteArray implements ByteArray {
                 return false;
         }
         return true;
+    }
+
+    @Override
+    public int hashCode() {
+        final int len = length();
+        int ret = 0;
+        for (int i = 0; i < len; ++i) {
+            ret = (ret << 31) | get(i);
+        }
+        return ret;
     }
 
     @Override
