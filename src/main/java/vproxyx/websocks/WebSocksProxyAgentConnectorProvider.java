@@ -3,11 +3,11 @@ package vproxyx.websocks;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.SvrHandleConnector;
 import vproxy.connection.*;
-import vproxy.http.HttpResp;
 import vproxy.http.HttpRespParser;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
 import vproxy.pool.PoolCallback;
+import vproxy.processor.http.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
@@ -550,11 +550,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return;
             }
 
-            HttpResp resp = httpRespParser.getResult();
+            Response resp = httpRespParser.getResult();
             assert Logger.lowLevelDebug("got http response: " + resp);
 
             // status code should be 101
-            if (!resp.statusCode.toString().trim().equals("101")) {
+            if (resp.statusCode != 101) {
                 // the server refused to upgrade to WebSocket
                 failCallback.run();
                 return;

@@ -108,6 +108,10 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return state == 0;
     }
 
+    public boolean isBeforeBody() {
+        return state == 10 || state == 11;
+    }
+
     @Override
     public Processor.Mode mode() {
         switch (state) {

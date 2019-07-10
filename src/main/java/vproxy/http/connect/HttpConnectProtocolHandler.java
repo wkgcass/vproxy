@@ -4,7 +4,7 @@ import vproxy.component.proxy.ConnectorProvider;
 import vproxy.connection.Connector;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.http.HttpReq;
+import vproxy.processor.http.entity.Request;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
@@ -31,14 +31,14 @@ public class HttpConnectProtocolHandler
             protected void request(ProtocolHandlerContext<HttpContext> ctx) {
                 // fetch data from method and url
                 // it should be CONNECT host:port
-                HttpReq req = ctx.data.result;
+                Request req = ctx.data.result;
 
                 boolean isConnect;
                 // check method
                 {
-                    String method = req.method.toString();
+                    String method = req.method;
                     isConnect = method.equalsIgnoreCase("connect");
-                    String url = req.url.toString();
+                    String url = req.uri;
                     if (!isConnect && !url.startsWith("http://")) {
                         Logger.warn(LogType.INVALID_EXTERNAL_DATA, "method is wrong! expecting CONNECT or proxying for http, " +
                             "but got " + method + " " + url + ", " +
@@ -52,7 +52,7 @@ public class HttpConnectProtocolHandler
                     int port;
                     // check url for connect
                     {
-                        String url = ctx.data.result.url.toString();
+                        String url = ctx.data.result.uri;
                         if (!url.contains(":")) {
                             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "url is wrong! no `:` in " + url + ", " +
                                 "connection: " + ctx.connectionId);

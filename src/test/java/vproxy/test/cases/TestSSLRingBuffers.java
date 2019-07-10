@@ -2,8 +2,8 @@ package vproxy.test.cases;
 
 import vproxy.connection.*;
 import vproxy.dns.Resolver;
-import vproxy.http.HttpResp;
 import vproxy.http.HttpRespParser;
+import vproxy.processor.http.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.ByteArrayChannel;
@@ -106,7 +106,7 @@ public class TestSSLRingBuffers {
                 "Host: ip.cn\r\n" +
                 "User-Agent: vproxy\r\n" + // add an agent, otherwise it will return 403
                 "\r\n").getBytes());
-            parser = new HttpRespParser(false);
+            parser = new HttpRespParser(true);
         }
 
         @Override
@@ -124,8 +124,9 @@ public class TestSSLRingBuffers {
                 return;
             }
             // headers done
-            HttpResp resp = parser.getResult();
-            assertEquals("failed: " + resp.toString(), "200", resp.statusCode.toString().trim());
+            Response resp = parser.getResult();
+            assertEquals("failed: " + resp.toString(), 200, resp.statusCode);
+            System.out.println("===============\n" + resp + "\n=============");
             // the body is truncated
             // we actually do not need that
             // successfully parsing the status and headers means that

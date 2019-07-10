@@ -3,7 +3,7 @@ package vproxyx.websocks;
 import vproxy.connection.Connection;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.http.HttpReq;
+import vproxy.processor.http.entity.Request;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -92,8 +92,8 @@ public class PACHandler extends HttpProtocolHandler {
 
     @Override
     protected void request(ProtocolHandlerContext<HttpContext> ctx) {
-        HttpReq req = ctx.data.result;
-        if (!req.method.toString().equals("GET")) {
+        Request req = ctx.data.result;
+        if (!req.method.equals("GET")) {
             sendError(ctx, "invalid method for retrieving pac");
             return;
         }

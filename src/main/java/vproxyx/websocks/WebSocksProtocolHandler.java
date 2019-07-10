@@ -2,9 +2,9 @@ package vproxyx.websocks;
 
 import vproxy.connection.Connector;
 import vproxy.http.HttpContext;
-import vproxy.http.HttpHeader;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.http.HttpReq;
+import vproxy.processor.http.entity.Header;
+import vproxy.processor.http.entity.Request;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.Socks5ProxyProtocolHandler;
@@ -23,9 +23,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     private final HttpProtocolHandler httpProtocolHandler = new HttpProtocolHandler(false) {
         @Override
         protected void request(ProtocolHandlerContext<HttpContext> ctx) {
-            HttpReq req = ctx.data.result;
+            Request req = ctx.data.result;
             assert Logger.lowLevelDebug("receive new request " + req);
-            if (!req.method.toString().equals("GET")) {
+            if (!req.method.equals("GET")) {
                 fail(ctx, 400, "invalid http method for upgrading to WebSocket");
                 return;
             }
@@ -51,9 +51,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             }
 
             String key = null;
-            for (HttpHeader header : req.headers) {
-                if (header.key.toString().trim().equalsIgnoreCase("sec-websocket-key")) {
-                    key = header.value.toString().trim();
+            for (Header header : req.headers) {
+                if (header.key.trim().equalsIgnoreCase("sec-websocket-key")) {
+                    key = header.value.trim();
                 }
             }
             assert key != null;
@@ -77,11 +77,11 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         // it's ordered with `-priority`, smaller the index is, higher priority it has
         private final List<String> supportedProtocols = Collections.singletonList("socks5");
 
-        private String selectProtocol(List<HttpHeader> headers) {
+        private String selectProtocol(List<Header> headers) {
             List<String> protocols = new ArrayList<>();
-            for (HttpHeader h : headers) {
-                if (h.key.toString().trim().equalsIgnoreCase("sec-websocket-protocol")) {
-                    protocols.add(h.value.toString().trim());
+            for (Header h : headers) {
+                if (h.key.trim().equalsIgnoreCase("sec-websocket-protocol")) {
+                    protocols.add(h.value.trim());
                 }
             }
             if (protocols.isEmpty())
@@ -102,10 +102,10 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             // the client may make another http request
         }
 
-        private boolean checkAuth(List<HttpHeader> headers) {
-            for (HttpHeader h : headers) {
-                if (h.key.toString().trim().equalsIgnoreCase("authorization")) {
-                    String v = h.value.toString().trim();
+        private boolean checkAuth(List<Header> headers) {
+            for (Header h : headers) {
+                if (h.key.trim().equalsIgnoreCase("authorization")) {
+                    String v = h.value.trim();
                     if (!v.startsWith("Basic ")) {
                         assert Logger.lowLevelDebug("Authorization header not Basic: " + v);
                         return false;

@@ -1,7 +1,7 @@
 package vproxyx.websocks;
 
 import vproxy.connection.ConnectionOpts;
-import vproxy.http.HttpHeader;
+import vproxy.processor.http.entity.Header;
 import vproxy.util.ByteArrayChannel;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -106,13 +106,13 @@ public class WebSocksUtils {
     //
     // return true if pass, false if fail
     @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-    public static boolean checkUpgradeToWebSocketHeaders(List<HttpHeader> headers, boolean isClient) {
+    public static boolean checkUpgradeToWebSocketHeaders(List<Header> headers, boolean isClient) {
         boolean foundUpgrade = false;
         boolean foundSec = false;
         boolean foundConnection = false;
-        for (HttpHeader header : headers) {
-            String headerKey = header.key.toString().trim();
-            String headerVal = header.value.toString().trim();
+        for (Header header : headers) {
+            String headerKey = header.key.trim();
+            String headerVal = header.value.trim();
             if (headerKey.equalsIgnoreCase("upgrade")) {
                 if (headerVal.equals("websocket")) {
                     foundUpgrade = true;
@@ -168,8 +168,8 @@ public class WebSocksUtils {
                 }
             }
         }
-        for (HttpHeader header : headers) {
-            if (header.key.toString().equalsIgnoreCase("content-length")) {
+        for (Header header : headers) {
+            if (header.key.equalsIgnoreCase("content-length")) {
                 Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                     "the upgrade handshake should not contain body");
                 return false;

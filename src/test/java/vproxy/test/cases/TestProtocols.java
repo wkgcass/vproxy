@@ -51,8 +51,6 @@ public class TestProtocols {
     private static final int port3dubbo = 17893;
     private static final int port4dubbo = 17894;
 
-    private ServerGroup sg;
-
     private TcpLB lb;
     private EventLoopGroup elg;
     private ServerGroups sgs;
@@ -63,7 +61,7 @@ public class TestProtocols {
         elg = new EventLoopGroup("elg0");
         elg.add("el0");
 
-        sg = new ServerGroup("sg0", elg,
+        ServerGroup sg = new ServerGroup("sg0", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
         sg.add("svr1", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port1), 10);
         sg.add("svr2", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port2), 10);
@@ -92,7 +90,14 @@ public class TestProtocols {
         lb.start();
     }
 
-    private void addDubboBackends() throws Exception {
+    private void initDubboLb() throws Exception {
+        ServerGroups sgs = new ServerGroups("dubboSgs");
+        ServerGroup sg = new ServerGroup("dubboSg", elg, new HealthCheckConfig(1000, 10000, 1, 3), Method.wrr);
+        sgs.add(sg, 10);
+        lb = new TcpLB(
+            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, "dubbo", SecurityGroup.allowAll()
+        );
+        lb.start();
         sg.add("svr3", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port3dubbo), 10);
         sg.add("svr4", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port4dubbo), 10);
     }
@@ -389,8 +394,7 @@ public class TestProtocols {
         }
 
         // lb
-        initLb("dubbo");
-        addDubboBackends();
+        initDubboLb();
 
         // client
         ReferenceConfig<GreetingsService> reference = new ReferenceConfig<>();
