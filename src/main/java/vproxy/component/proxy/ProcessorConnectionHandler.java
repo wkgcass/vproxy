@@ -359,7 +359,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection);
+            Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
             frontendConnection.close();
             closeAll();
         }

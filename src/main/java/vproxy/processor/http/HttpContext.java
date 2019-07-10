@@ -16,6 +16,11 @@ public class HttpContext extends OOContext<HttpSubContext> {
 
     @Override
     public int connection(HttpSubContext front) {
+        if (front.isIdle()) {
+            int foo = currentBackend;
+            currentBackend = -1;
+            return foo;
+        }
         return currentBackend;
     }
 

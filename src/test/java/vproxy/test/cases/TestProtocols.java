@@ -64,9 +64,12 @@ public class TestProtocols {
         elg.add("el0");
 
         sg = new ServerGroup("sg0", elg,
-            new HealthCheckConfig(1000, 200, 2, 3, CheckProtocol.tcpDelay), Method.wrr);
+            new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
         sg.add("svr1", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port1), 10);
         sg.add("svr2", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port2), 10);
+
+        // set to up
+        sg.getServerHandles().forEach(h -> h.healthy = true);
 
         sgs = new ServerGroups("sgs0");
         sgs.add(sg, 10);
@@ -92,10 +95,6 @@ public class TestProtocols {
     private void addDubboBackends() throws Exception {
         sg.add("svr3", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port3dubbo), 10);
         sg.add("svr4", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port4dubbo), 10);
-    }
-
-    private void waitForHealthCheck() throws Exception {
-        Thread.sleep(1200);
     }
 
     @SuppressWarnings("deprecation")
@@ -125,7 +124,6 @@ public class TestProtocols {
             vertx.createHttpServer().requestHandler(handler).listen(port2);
 
             initLb("h2");
-            waitForHealthCheck();
 
             int[] conn = {0};
             HttpClient client = vertx.createHttpClient(new HttpClientOptions()
@@ -223,7 +221,6 @@ public class TestProtocols {
             .start();
 
         initLb("h2");
-        waitForHealthCheck();
 
         // client
         ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", lbPort)
@@ -298,7 +295,6 @@ public class TestProtocols {
 
         // lb
         initLb("framed-int32");
-        waitForHealthCheck();
 
         // client
         TSocket clientSock;
@@ -395,7 +391,6 @@ public class TestProtocols {
         // lb
         initLb("dubbo");
         addDubboBackends();
-        waitForHealthCheck();
 
         // client
         ReferenceConfig<GreetingsService> reference = new ReferenceConfig<>();
@@ -422,5 +417,73 @@ public class TestProtocols {
         // check
         assertEquals(5, resp1);
         assertEquals(5, resp2);
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void h1() throws Throwable {
+        Vertx vertx = Vertx.vertx();
+        try {
+            Throwable[] err = new Throwable[]{null};
+
+            Handler<HttpServerRequest> handler = req -> {
+                try {
+                    assertEquals("/", req.uri());
+                } catch (Throwable t) {
+                    err[0] = t;
+                }
+                String resp = "" + req.localAddress().port();
+                req.response().end("resp-" + resp);
+            };
+            vertx.createHttpServer().requestHandler(handler).listen(port1);
+            vertx.createHttpServer().requestHandler(handler).listen(port2);
+
+            initLb("http");
+
+            int[] conn = {0};
+            HttpClient client = vertx.createHttpClient(new HttpClientOptions()
+                .setMaxPoolSize(1)
+                .setKeepAlive(true));
+            client.connectionHandler(connV -> ++conn[0]);
+
+            int[] svr1 = {0};
+            int[] svr2 = {0};
+            Consumer<HttpClientRequest> doWithReq = req -> {
+                req.handler(resp -> resp.bodyHandler(buf -> {
+                    try {
+                        String expect = buf.toString().substring("resp-".length());
+                        if (expect.equals("" + port1)) {
+                            ++svr1[0];
+                        } else {
+                            ++svr2[0];
+                        }
+                        ++step;
+                    } catch (Throwable t) {
+                        err[0] = t;
+                    }
+                }));
+                req.end();
+            };
+
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+
+            while (step != 2 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(2, step);
+            assertEquals(1, svr1[0]);
+            assertEquals(1, svr2[0]);
+            assertEquals(1, conn[0]);
+        } finally {
+            boolean[] closeDone = {false};
+            vertx.close(v -> closeDone[0] = true);
+            while (!closeDone[0]) {
+                Thread.sleep(1);
+            }
+            Thread.sleep(200);
+        }
     }
 }
