@@ -103,7 +103,7 @@ public class WebSocksProxyServer {
                 ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
-                    "argument: listen {} auth {} [ssl pkcs12 {} pkcs12pswd {}] [domain {} [redirectport {}]]\n" +
+                    "argument: listen {} auth {} [ssl pkcs12 {} pkcs12pswd {}] [domain {}] [redirectport {}]\n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     " [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd");
         }
@@ -126,9 +126,6 @@ public class WebSocksProxyServer {
         }
         if (pkcs12 != null && pkcs12.startsWith("~")) {
             pkcs12 = System.getProperty("user.home") + pkcs12.substring(1);
-        }
-        if (redirectPort != -1 && domain == null) {
-            throw new IllegalArgumentException("redirectport specified but `domain` not set.");
         }
         if (port == redirectPort) {
             throw new IllegalArgumentException("listen port and redirectport are the same.");
