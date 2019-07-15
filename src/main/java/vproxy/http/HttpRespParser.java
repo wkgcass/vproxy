@@ -43,6 +43,6 @@ public class HttpRespParser extends AbstractParser<Response> {
             result = ctx.getResp();
             return 2;
         }
-        return 0;
+        return state;
     }
 }

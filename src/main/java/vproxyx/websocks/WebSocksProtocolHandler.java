@@ -5,6 +5,7 @@ import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http.entity.Header;
 import vproxy.processor.http.entity.Request;
+import vproxy.processor.http.entity.Response;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.Socks5ProxyProtocolHandler;
@@ -176,27 +177,29 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
 
         private byte[] response(int statusCode, String msg) {
             String statusMsg = STATUS_MSG.get(statusCode);
-            StringBuilder sb = new StringBuilder();
-            sb.append("HTTP/1.1 ").append(statusCode).append(" ").append(statusMsg).append("\r\n");
+            Response resp = new Response();
+            resp.version = "HTTP/1.1";
+            resp.statusCode = statusCode;
+            resp.reason = statusMsg;
+            resp.headers = new LinkedList<>();
             if (statusCode == 101) {
-                sb.append("Upgrade: websocket\r\n");
-                sb.append("Connection: Upgrade\r\n");
-                sb.append("Sec-Websocket-Accept: ").append(msg).append("\r\n");
-                sb.append("Sec-WebSocket-Protocol: socks5\r\n"); // for now we only support socks5
-                sb.append("\r\n"); // end headers (and also the resp)
+                resp.headers.add(new Header("Upgrade", "websocket"));
+                resp.headers.add(new Header("Connection", "Upgrade"));
+                resp.headers.add(new Header("Sec-Websocket-Accept", msg));
+                resp.headers.add(new Header("Sec-WebSocket-Protocol", "socks5"));
             } else {
                 if (statusCode == 401) {
-                    sb.append("WWW-Authenticate: Basic\r\n");
+                    resp.headers.add(new Header("WWW-Authenticate", "Basic"));
                 }
-                sb.append("server: nginx/1.14.2\r\n");
-                sb.append("date: ").append(new Date().toString()).append("\r\n");
-                sb.append("content-type: text/html\r\n");
+                resp.headers.add(new Header("server", "nginx/1.14.2"));
+                resp.headers.add(new Header("date", new Date().toString()));
+                resp.headers.add(new Header("content-type", "text/html"));
                 msg = ErrorPages.build(statusCode, statusMsg, msg);
-                sb.append("Content-Length: ").append(msg.getBytes().length).append("\r\n");
-                sb.append("\r\n"); // end headers
-                sb.append(msg);
+                ByteArray body = ByteArray.from(msg.getBytes());
+                resp.headers.add(new Header("Content-Length", "" + body.length()));
+                resp.body = body;
             }
-            return sb.toString().getBytes();
+            return resp.toByteArray().toJavaArray();
         }
     };
 

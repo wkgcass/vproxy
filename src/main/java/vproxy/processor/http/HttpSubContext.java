@@ -32,7 +32,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
      * 8 => end-one-header ~> -> 5 or \r\n -> 9
      * 9 => end-all-headers ~> (if content-length) -> 10 or (if transfer-encoding:chunked) -> 11 or end -> 0
      * 10 => body ~> end -> 0
-     * 11 => chunk ~> ":" -> 12 or \r\n -> 14
+     * 11 => chunk ~> ";" -> 12 or \r\n -> 14
      * 12 => chunk-extension-split ~> -> 13 or \r\n -> 14
      * 13 => chunk-extension ~> \r\n -> 14
      * 14 => end-chunk-size ~> (if chunk-size) -> 15 or (if !chunk-size) -> 17 or \r\n -> 21
@@ -378,7 +378,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             chunk = new ChunkBuilder();
         }
         int b = data.uint8(0);
-        if (b == ':') {
+        if (b == ';') {
             state = 12;
         } else if (b == '\r') {
             // ignore

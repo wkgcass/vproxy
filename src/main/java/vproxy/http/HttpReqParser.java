@@ -43,6 +43,6 @@ public class HttpReqParser extends AbstractParser<Request> {
             result = ctx.getReq();
             state = 2;
         }
-        return -1;
+        return state;
     }
 }
