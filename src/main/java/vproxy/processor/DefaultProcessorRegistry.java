@@ -1,7 +1,7 @@
 package vproxy.processor;
 
 import vproxy.processor.dubbo.DubboProcessor;
-import vproxy.processor.http.HttpProcessor;
+import vproxy.processor.http1.HttpProcessor;
 import vproxy.processor.http2.Http2Processor;
 import vproxy.processor.common.CommonInt32FramedProcessor;
 

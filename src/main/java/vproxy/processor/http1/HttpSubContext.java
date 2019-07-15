@@ -1,13 +1,13 @@
-package vproxy.processor.http;
+package vproxy.processor.http1;
 
 import vproxy.processor.OOSubContext;
 import vproxy.processor.Processor;
-import vproxy.processor.http.builder.ChunkBuilder;
-import vproxy.processor.http.builder.HeaderBuilder;
-import vproxy.processor.http.builder.RequestBuilder;
-import vproxy.processor.http.builder.ResponseBuilder;
-import vproxy.processor.http.entity.Request;
-import vproxy.processor.http.entity.Response;
+import vproxy.processor.http1.builder.ChunkBuilder;
+import vproxy.processor.http1.builder.HeaderBuilder;
+import vproxy.processor.http1.builder.RequestBuilder;
+import vproxy.processor.http1.builder.ResponseBuilder;
+import vproxy.processor.http1.entity.Request;
+import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 

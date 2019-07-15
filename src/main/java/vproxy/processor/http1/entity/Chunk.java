@@ -1,4 +1,4 @@
-package vproxy.processor.http.entity;
+package vproxy.processor.http1.entity;
 
 import vproxy.util.ByteArray;
 

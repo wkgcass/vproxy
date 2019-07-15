@@ -1,6 +1,6 @@
-package vproxy.processor.http.builder;
+package vproxy.processor.http1.builder;
 
-import vproxy.processor.http.entity.Response;
+import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
 
 import java.util.LinkedList;

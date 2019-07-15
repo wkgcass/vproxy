@@ -1,4 +1,4 @@
-package vproxy.processor.http;
+package vproxy.processor.http1;
 
 import vproxy.processor.OOProcessor;
 

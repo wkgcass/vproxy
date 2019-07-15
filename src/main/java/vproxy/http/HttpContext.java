@@ -1,6 +1,6 @@
 package vproxy.http;
 
-import vproxy.processor.http.entity.Request;
+import vproxy.processor.http1.entity.Request;
 
 public class HttpContext {
     public HttpReqParser parser;

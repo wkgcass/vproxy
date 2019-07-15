@@ -1,4 +1,4 @@
-package vproxy.processor.http.entity;
+package vproxy.processor.http1.entity;
 
 public class Header {
     public String key; // notnull

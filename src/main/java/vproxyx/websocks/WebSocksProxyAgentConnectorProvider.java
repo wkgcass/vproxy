@@ -7,7 +7,7 @@ import vproxy.http.HttpRespParser;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
 import vproxy.pool.PoolCallback;
-import vproxy.processor.http.entity.Response;
+import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;

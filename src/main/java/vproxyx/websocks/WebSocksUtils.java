@@ -1,7 +1,7 @@
 package vproxyx.websocks;
 
 import vproxy.connection.ConnectionOpts;
-import vproxy.processor.http.entity.Header;
+import vproxy.processor.http1.entity.Header;
 import vproxy.util.ByteArrayChannel;
 import vproxy.util.LogType;
 import vproxy.util.Logger;

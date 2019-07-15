@@ -2,8 +2,8 @@ package vproxy.http;
 
 import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
-import vproxy.processor.http.HttpSubContext;
-import vproxy.processor.http.entity.Request;
+import vproxy.processor.http1.HttpSubContext;
+import vproxy.processor.http1.entity.Request;
 import vproxy.util.*;
 
 import java.util.Arrays;

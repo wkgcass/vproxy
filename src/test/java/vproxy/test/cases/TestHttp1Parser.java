@@ -2,8 +2,8 @@ package vproxy.test.cases;
 
 import org.junit.Test;
 import vproxy.processor.Processor;
-import vproxy.processor.http.*;
-import vproxy.processor.http.entity.*;
+import vproxy.processor.http1.*;
+import vproxy.processor.http1.entity.*;
 import vproxy.util.ByteArray;
 
 import java.util.LinkedHashMap;

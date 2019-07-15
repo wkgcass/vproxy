@@ -4,7 +4,7 @@ import vproxy.component.proxy.ConnectorProvider;
 import vproxy.connection.Connector;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.processor.http.entity.Request;
+import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;

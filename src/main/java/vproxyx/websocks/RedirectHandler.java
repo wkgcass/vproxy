@@ -2,9 +2,9 @@ package vproxyx.websocks;
 
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.processor.http.entity.Header;
-import vproxy.processor.http.entity.Request;
-import vproxy.processor.http.entity.Response;
+import vproxy.processor.http1.entity.Header;
+import vproxy.processor.http1.entity.Request;
+import vproxy.processor.http1.entity.Response;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;

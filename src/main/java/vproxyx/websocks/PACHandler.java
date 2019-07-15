@@ -3,7 +3,7 @@ package vproxyx.websocks;
 import vproxy.connection.Connection;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
-import vproxy.processor.http.entity.Request;
+import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.LogType;
 import vproxy.util.Logger;

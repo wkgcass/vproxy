@@ -3,7 +3,7 @@ package vproxy.test.cases;
 import vproxy.connection.*;
 import vproxy.dns.Resolver;
 import vproxy.http.HttpRespParser;
-import vproxy.processor.http.entity.Response;
+import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.ByteArrayChannel;

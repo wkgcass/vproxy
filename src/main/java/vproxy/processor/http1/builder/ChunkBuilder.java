@@ -1,6 +1,6 @@
-package vproxy.processor.http.builder;
+package vproxy.processor.http1.builder;
 
-import vproxy.processor.http.entity.Chunk;
+import vproxy.processor.http1.entity.Chunk;
 import vproxy.util.ByteArray;
 
 public class ChunkBuilder {
