@@ -96,7 +96,7 @@ public class SelectorEventLoop {
                 //noinspection UnnecessaryContinue
                 continue;
             } else if (!channel.isOpen()) {
-                Logger.stderr("channel is closed but still firing");
+                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing");
             } else {
                 int readyOps = key.readyOps();
                 // handle read first because it's most likely to happen

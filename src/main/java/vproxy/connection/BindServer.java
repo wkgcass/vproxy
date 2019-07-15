@@ -106,7 +106,7 @@ public class BindServer implements NetFlowRecorder {
             channel.close();
         } catch (IOException e) {
             // we can do nothing about it
-            Logger.stderr("got error when closing server channel " + e);
+            Logger.error(LogType.CONN_ERROR, "got error when closing server channel " + e);
         }
     }
 
