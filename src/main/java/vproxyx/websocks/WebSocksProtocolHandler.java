@@ -191,9 +191,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 if (statusCode == 401) {
                     resp.headers.add(new Header("WWW-Authenticate", "Basic"));
                 }
-                resp.headers.add(new Header("server", "nginx/1.14.2"));
-                resp.headers.add(new Header("date", new Date().toString()));
-                resp.headers.add(new Header("content-type", "text/html"));
+                resp.headers.add(new Header("Server", "nginx/1.14.2"));
+                resp.headers.add(new Header("Date", new Date().toString()));
+                resp.headers.add(new Header("Content-Type", "text/html"));
                 msg = ErrorPages.build(statusCode, statusMsg, msg);
                 ByteArray body = ByteArray.from(msg.getBytes());
                 resp.headers.add(new Header("Content-Length", "" + body.length()));

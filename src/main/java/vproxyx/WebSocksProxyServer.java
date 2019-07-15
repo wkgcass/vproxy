@@ -8,9 +8,12 @@ import vproxy.connection.BindServer;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.protocol.ProtocolHandler;
+import vproxy.protocol.ProtocolServerConfig;
+import vproxy.protocol.ProtocolServerHandler;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
+import vproxyx.websocks.RedirectHandler;
 import vproxyx.websocks.WebSocksProtocolHandler;
 import vproxyx.websocks.WebSocksProxyContext;
 import vproxyx.websocks.WebSocksUtils;
@@ -35,6 +38,7 @@ public class WebSocksProxyServer {
         String pkcs12 = null;
         String pkcs12pswd = null;
         String domain = null;
+        int redirectPort = -1;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -84,10 +88,23 @@ public class WebSocksProxyServer {
                 }
                 domain = next;
                 ++i;
+            } else if (arg.equals("redirectport")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`redirectport` should be followed with a port argument");
+                }
+                try {
+                    redirectPort = Integer.parseInt(next);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("redirectport is not a number");
+                }
+                if (redirectPort < 1 || redirectPort > 65535) {
+                    throw new IllegalArgumentException("redirectport is not valid");
+                }
+                ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
-                    "argument: listen {} auth {} [ssl pkcs12 {} pkcs12pswd {}] [domain {}]\n" +
-                    "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com\n" +
+                    "argument: listen {} auth {} [ssl pkcs12 {} pkcs12pswd {}] [domain {} [redirectport {}]]\n" +
+                    "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     " [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd");
         }
         if (port == -1)
@@ -110,15 +127,27 @@ public class WebSocksProxyServer {
         if (pkcs12 != null && pkcs12.startsWith("~")) {
             pkcs12 = System.getProperty("user.home") + pkcs12.substring(1);
         }
+        if (redirectPort != -1 && domain == null) {
+            throw new IllegalArgumentException("redirectport specified but `domain` not set.");
+        }
+        if (port == redirectPort) {
+            throw new IllegalArgumentException("listen port and redirectport are the same.");
+        }
 
         assert Logger.lowLevelDebug("listen: " + port);
         assert Logger.lowLevelDebug("auth: " + auth);
         assert Logger.lowLevelDebug("ssl: " + ssl);
         assert Logger.lowLevelDebug("pkcs12: " + pkcs12);
         assert Logger.lowLevelDebug("pkcs12pswd: " + pkcs12pswd);
+        assert Logger.lowLevelDebug("domain: " + domain);
+        assert Logger.lowLevelDebug("redirectport: " + redirectPort);
 
         // init the listening server
         BindServer server = BindServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port));
+        BindServer redirectServer = null;
+        if (redirectPort != -1) {
+            redirectServer = BindServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort));
+        }
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -207,6 +236,15 @@ public class WebSocksProxyServer {
         // start the proxy server
         proxy.handle();
 
+        if (redirectServer != null) {
+            ProtocolServerHandler.apply(acceptor.get("acceptor-loop"), redirectServer,
+                new ProtocolServerConfig().setInBufferSize(512).setOutBufferSize(512),
+                new RedirectHandler(ssl ? "https" : "http", domain, port));
+        }
+
         Logger.alert("server started on " + port);
+        if (redirectPort != -1) {
+            Logger.alert("redirect server started on " + redirectPort);
+        }
     }
 }
