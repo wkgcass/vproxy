@@ -28,6 +28,11 @@ public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     }
 
     @Override
+    public String[] alpn() {
+        return new String[]{"h2"};
+    }
+
+    @Override
     public Http2Context init(InetSocketAddress clientAddress) {
         return new Http2Context(clientAddress);
     }

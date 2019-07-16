@@ -18,6 +18,16 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
     }
 
     @Override
+    public String[] alpn() {
+        String[] h2 = http2Processor.alpn();
+        String[] h1 = httpProcessor.alpn();
+        String[] ret = new String[h1.length + h2.length];
+        System.arraycopy(h2, 0, ret, 0, h2.length);
+        System.arraycopy(h1, 0, ret, h2.length, h1.length);
+        return ret;
+    }
+
+    @Override
     public GeneralHttpContext init(InetSocketAddress clientAddress) {
         return new GeneralHttpContext(httpProcessor.init(clientAddress), http2Processor.init(clientAddress));
     }

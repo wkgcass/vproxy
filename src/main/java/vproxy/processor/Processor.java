@@ -18,8 +18,16 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     String name();
 
     /**
+     * @return null or a list of alpn strings
+     */
+    default String[] alpn() {
+        return null;
+    }
+
+    /**
      * create a context object
      *
+     * @param clientAddress the client address
      * @return the context
      */
     CTX init(InetSocketAddress clientAddress);
@@ -27,8 +35,9 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     /**
      * create a sub context object
      *
-     * @param ctx context
-     * @param id  connection id attached to the sub context, 0 for the frontend connection
+     * @param ctx               context
+     * @param id                connection id attached to the sub context, 0 for the frontend connection
+     * @param associatedAddress associated address, frontend address for frontend, backend address for backend
      * @return the sub context
      */
     SUB initSub(CTX ctx, int id, InetSocketAddress associatedAddress);

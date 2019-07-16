@@ -11,6 +11,11 @@ public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     }
 
     @Override
+    public String[] alpn() {
+        return new String[]{"http/1.1", "http/1.0"};
+    }
+
+    @Override
     public HttpContext init(InetSocketAddress clientAddress) {
         return new HttpContext(clientAddress);
     }
