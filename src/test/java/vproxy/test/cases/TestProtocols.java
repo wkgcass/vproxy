@@ -442,7 +442,7 @@ public class TestProtocols {
             vertx.createHttpServer().requestHandler(handler).listen(port1);
             vertx.createHttpServer().requestHandler(handler).listen(port2);
 
-            initLb("http");
+            initLb("http/1.x");
 
             int[] conn = {0};
             HttpClient client = vertx.createHttpClient(new HttpClientOptions()
@@ -481,6 +481,90 @@ public class TestProtocols {
             assertEquals(1, svr1[0]);
             assertEquals(1, svr2[0]);
             assertEquals(1, conn[0]);
+        } finally {
+            boolean[] closeDone = {false};
+            vertx.close(v -> closeDone[0] = true);
+            while (!closeDone[0]) {
+                Thread.sleep(1);
+            }
+            Thread.sleep(200);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void generalHttp() throws Throwable {
+        Vertx vertx = Vertx.vertx();
+        try {
+            Throwable[] err = new Throwable[]{null};
+
+            int[] ver1 = {0};
+            int[] ver2 = {0};
+            Handler<HttpServerRequest> handler = req -> {
+                try {
+                    assertEquals("/", req.uri());
+                } catch (Throwable t) {
+                    err[0] = t;
+                }
+                if (req.version() == HttpVersion.HTTP_2) {
+                    ++ver2[0];
+                } else {
+                    ++ver1[0];
+                }
+                String resp = "" + req.localAddress().port();
+                req.response().end("resp-" + resp);
+            };
+            vertx.createHttpServer().requestHandler(handler).listen(port1);
+            vertx.createHttpServer().requestHandler(handler).listen(port2);
+
+            initLb("http");
+
+            int[] conn = {0};
+            HttpClient h1client = vertx.createHttpClient(new HttpClientOptions()
+                .setMaxPoolSize(1)
+                .setKeepAlive(true));
+            h1client.connectionHandler(connV -> ++conn[0]);
+            HttpClient h2client = vertx.createHttpClient(new HttpClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setHttp2ClearTextUpgrade(false));
+            h2client.connectionHandler(connV -> ++conn[0]);
+
+            int[] svr1 = {0};
+            int[] svr2 = {0};
+            Consumer<HttpClientRequest> doWithReq = req -> {
+                req.handler(resp -> resp.bodyHandler(buf -> {
+                    try {
+                        String expect = buf.toString().substring("resp-".length());
+                        if (expect.equals("" + port1)) {
+                            ++svr1[0];
+                        } else {
+                            ++svr2[0];
+                        }
+                        ++step;
+                    } catch (Throwable t) {
+                        err[0] = t;
+                    }
+                }));
+                req.end();
+            };
+
+            doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
+            Thread.sleep(50);
+            doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
+
+            while (step != 4 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(4, step);
+            assertEquals(2, svr1[0]);
+            assertEquals(2, svr2[0]);
+            assertEquals(2, conn[0]);
+            assertEquals(2, ver1[0]);
+            assertEquals(2, ver2[0]);
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);

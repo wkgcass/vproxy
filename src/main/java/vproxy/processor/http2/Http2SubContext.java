@@ -165,10 +165,10 @@ import java.util.Map;
  */
 
 public class Http2SubContext extends OOSubContext<Http2Context> {
-    private static final ByteArray SEQ_PREFACE_MAGIC = ByteArray.from("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes());
+    public static final ByteArray SEQ_PREFACE_MAGIC = ByteArray.from("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n".getBytes());
     private static final ByteArray SEQ_SETTINGS_ACK = ByteArray.from(0, 0, 0, 4, 1, 0, 0, 0, 0);
 
-    private static final int LEN_FRAME_HEAD = 9; // 72
+    public static final int LEN_FRAME_HEAD = 9; // 72
     private static final int LEN_PADDING = 1; // 8
     private static final int LEN_E_STREAMDEPENDENCY_WEIGHT = 5; // 1 + 31 + 8
     private static final int LEN_R_PROMISED_STREAM_ID = 4; // 1 + 31

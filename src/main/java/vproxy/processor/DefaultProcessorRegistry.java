@@ -1,6 +1,7 @@
 package vproxy.processor;
 
 import vproxy.processor.dubbo.DubboProcessor;
+import vproxy.processor.http.GeneralHttpProcessor;
 import vproxy.processor.http1.HttpProcessor;
 import vproxy.processor.http2.Http2Processor;
 import vproxy.processor.common.CommonInt32FramedProcessor;
@@ -18,6 +19,7 @@ public class DefaultProcessorRegistry implements ProcessorRegistry {
         register(new CommonInt32FramedProcessor());
         register(new DubboProcessor());
         register(new HttpProcessor());
+        register(new GeneralHttpProcessor());
     }
 
     public static DefaultProcessorRegistry getInstance() {

@@ -7,7 +7,7 @@ import java.net.InetSocketAddress;
 public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     @Override
     public String name() {
-        return "http";
+        return "http/1.x";
     }
 
     @Override
