@@ -14,6 +14,7 @@ import vproxy.component.exception.NoException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
+import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.util.*;
@@ -158,6 +159,8 @@ public class Shutdown {
 
         Application app = Application.get();
 
+        Set<String> certKeyNames = new HashSet<>();
+
         List<EventLoopGroup> eventLoopGroups = new LinkedList<>();
         Set<String> eventLoopGroupNames = new HashSet<>();
 
@@ -173,6 +176,43 @@ public class Shutdown {
 
         List<SmartLBGroup> smartLBGroups = new LinkedList<>();
 
+        {
+            // create cert-key
+            CertKeyHolder ckh = app.certKeyHolder;
+            List<String> names = ckh.names();
+            for (String name : names) {
+                CertKey ck;
+                try {
+                    ck = ckh.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("ck not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+
+                if (ck.keyPath == null) {
+                    Logger.shouldNotHappen("cert-key keyPath is null: " + ck);
+                    continue;
+                }
+                if (ck.certPaths == null) {
+                    Logger.shouldNotHappen("cert-key certPath is null: " + ck);
+                    continue;
+                }
+                if (ck.certPaths.length == 0) {
+                    Logger.shouldNotHappen("cert-key certPath is empty: " + ck);
+                    continue;
+                }
+                certKeyNames.add(ck.alias);
+
+                StringBuilder cmd = new StringBuilder();
+                cmd.append("add cert-key cert ").append(ck.certPaths[0]);
+                for (int i = 1; i < ck.certPaths.length; ++i) {
+                    cmd.append(",").append(ck.certPaths[i]);
+                }
+                cmd.append(" ").append("key ").append(ck.keyPath);
+                commands.add(cmd.toString());
+            }
+        }
         {
             // create event-loop-group
             EventLoopGroupHolder elgh = app.eventLoopGroupHolder;
@@ -315,6 +355,7 @@ public class Shutdown {
             // create tcp-lb
             TcpLBHolder tlh = app.tcpLBHolder;
             List<String> names = tlh.names();
+            tl:
             for (String name : names) {
                 TcpLB tl;
                 try {
@@ -340,16 +381,30 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the secg " + tl.securityGroup.alias + " already removed");
                     continue;
                 }
-                String cmd = "add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
+                if (tl.certKeys != null) {
+                    for (CertKey ck : tl.certKeys) {
+                        if (!certKeyNames.contains(ck.alias)) {
+                            Logger.warn(LogType.IMPROPER_USE, "the cert-key " + ck.alias + " already removed");
+                            continue tl;
+                        }
+                    }
+                }
+                StringBuilder cmd = new StringBuilder("add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
                     " address " + Utils.ipport(tl.bindAddress) + " server-groups " + tl.backends.alias +
                     " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
-                    " protocol " + tl.protocol;
+                    " protocol " + tl.protocol);
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
-                    cmd += " security-group " + tl.securityGroup.alias;
+                    cmd.append(" security-group ").append(tl.securityGroup.alias);
                 }
-                commands.add(cmd);
+                if (tl.certKeys != null) {
+                    cmd.append(" cert-key ").append(tl.certKeys[0].alias);
+                    for (int i = 1; i < tl.certKeys.length; ++i) {
+                        cmd.append(",").append(tl.certKeys[i].alias);
+                    }
+                }
+                commands.add(cmd.toString());
                 tcpLbs.add(tl);
             }
         }

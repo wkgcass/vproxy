@@ -15,6 +15,9 @@ public class CertKeyHolder {
     }
 
     private List<String> readFile(String path) throws Exception {
+        if (path.startsWith("~")) {
+            path = System.getProperty("user.home") + path.substring(1);
+        }
         File f = new File(path);
         if (!f.exists())
             throw new FileNotFoundException("file not found: " + path);
@@ -101,18 +104,18 @@ public class CertKeyHolder {
     }
 
     @SuppressWarnings("DuplicateThrows")
-    public void add(String alias, String[] certFilePthList, String keyFilePath) throws AlreadyExistException, Exception {
+    public void add(String alias, String[] certFilePathList, String keyFilePath) throws AlreadyExistException, Exception {
         if (map.containsKey(alias)) {
             throw new AlreadyExistException();
         }
         List<String> certs = new ArrayList<>();
-        for (String certFilePath : certFilePthList) {
+        for (String certFilePath : certFilePathList) {
             certs.addAll(getCertsFrom(certFilePath));
         }
         //noinspection ToArrayCallWithZeroLengthArrayArgument
         String[] certsArray = certs.toArray(new String[certs.size()]);
         String key = getKeyFrom(keyFilePath);
-        CertKey ck = new CertKey(alias, certsArray, key);
+        CertKey ck = new CertKey(alias, certsArray, key, certFilePathList, keyFilePath);
         ck.validate();
         map.put(alias, ck);
     }

@@ -8,6 +8,7 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.proxy.*;
 import vproxy.component.secure.SecurityGroup;
+import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
@@ -73,6 +74,7 @@ public class TcpLB {
     public final String protocol;
     public final Processor processor;
     public final SSLContext sslContext;
+    public final CertKey[] certKeys;
     public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
 
@@ -97,7 +99,7 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
-        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", null, securityGroup);
+        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", null, null, securityGroup);
     }
 
     public TcpLB(String alias,
@@ -109,6 +111,7 @@ public class TcpLB {
                  int inBufferSize, int outBufferSize,
                  String protocol,
                  SSLContext sslContext,
+                 CertKey[] certKeys,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
@@ -121,6 +124,7 @@ public class TcpLB {
         this.protocol = protocol;
         this.processor = (protocol.equals("tcp") ? null : ProcessorProvider.getInstance().get(protocol));
         this.sslContext = sslContext;
+        this.certKeys = certKeys;
         this.securityGroup = securityGroup;
 
         // we do not bind or create proxy object here

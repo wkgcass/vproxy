@@ -8,17 +8,26 @@ import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
+import java.util.Arrays;
 import java.util.Base64;
 
 public class CertKey {
     public final String alias;
     public final String[] certs;
     public final String key;
+    public final String[] certPaths;
+    public final String keyPath;
 
     public CertKey(String alias, String[] certs, String key) {
+        this(alias, certs, key, null, null);
+    }
+
+    public CertKey(String alias, String[] certs, String key, String[] certPaths, String keyPath) {
         this.alias = alias;
         this.certs = certs;
         this.key = key;
+        this.certPaths = certPaths;
+        this.keyPath = keyPath;
     }
 
     public void validate() throws Exception {
@@ -51,5 +60,16 @@ public class CertKey {
             keystore.setCertificateEntry("cert" + i + ":" + alias, cert);
             keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), new Certificate[]{cert});
         }
+    }
+
+    @Override
+    public String toString() {
+        return "CertKey{" +
+            "alias='" + alias + '\'' +
+            ", certs=" + Arrays.toString(certs) +
+            ", key='" + "******" + '\'' +
+            ", certPaths=" + Arrays.toString(certPaths) +
+            ", keyPath='" + keyPath + '\'' +
+            '}';
     }
 }

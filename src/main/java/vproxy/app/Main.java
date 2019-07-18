@@ -12,6 +12,7 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 import vproxyx.Sidecar;
+import vproxyx.Simple;
 import vproxyx.WebSocksProxyAgent;
 import vproxyx.WebSocksProxyServer;
 
@@ -58,6 +59,10 @@ public class Main {
                     break;
                 case "Sidecar":
                     Sidecar.main0(args);
+                    break;
+                case "Simple":
+                    Application.create();
+                    Simple.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);

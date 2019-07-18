@@ -71,7 +71,7 @@ public class TcpLBHolder {
             sslContext = null;
         }
 
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, sslContext, securityGroup);
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, sslContext, sslCertKeys, securityGroup);
         try {
             tcpLB.start();
         } catch (IOException e) {

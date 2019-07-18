@@ -972,6 +972,7 @@ public class Command {
                         List<String> names = CertKeyHandle.names();
                         return new CmdResult(names, names, utilJoinList(names));
                     case r:
+                        CertKeyHandle.preCheck(this);
                     case R:
                         CertKeyHandle.forceRemove(this);
                         return new CmdResult();

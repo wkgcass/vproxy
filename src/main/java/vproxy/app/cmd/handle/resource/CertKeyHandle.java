@@ -4,6 +4,9 @@ import vproxy.app.Application;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
+import vproxy.app.cmd.ResourceType;
+import vproxy.component.app.TcpLB;
+import vproxy.component.ssl.CertKey;
 
 import java.util.List;
 
@@ -33,6 +36,19 @@ public class CertKeyHandle {
 
     public static List<String> names() {
         return Application.get().certKeyHolder.names();
+    }
+
+    public static void preCheck(Command cmd) throws Exception {
+        String toRemove = cmd.resource.alias;
+        List<String> names = Application.get().tcpLBHolder.names();
+        for (String name : names) {
+            TcpLB tcpLB = Application.get().tcpLBHolder.get(name);
+            for (CertKey ck : tcpLB.certKeys) {
+                if (ck.alias.equals(toRemove)) {
+                    throw new Exception(ResourceType.ck.fullname + " " + toRemove + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
+                }
+            }
+        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {
