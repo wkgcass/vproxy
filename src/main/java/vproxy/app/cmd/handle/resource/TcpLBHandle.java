@@ -15,6 +15,7 @@ import vproxy.component.auto.SmartLBGroup;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
+import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.util.Utils;
 
@@ -110,8 +111,16 @@ public class TcpLBHandle {
         } else {
             timeout = Config.tcpTimeout;
         }
+        CertKey[] certKeys = null;
+        if (cmd.args.containsKey(Param.ck)) {
+            String[] cks = cmd.args.get(Param.ck).split(",");
+            certKeys = new CertKey[cks.length];
+            for (int i = 0; i < cks.length; ++i) {
+                certKeys[i] = Application.get().certKeyHolder.get(cks[i]);
+            }
+        }
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, null /*TODO*/, secg
+            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, certKeys, secg
         );
     }
 

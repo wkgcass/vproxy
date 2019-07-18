@@ -26,6 +26,10 @@ public enum Param {
     port("port"),
 
     pass("password"),
+
+    cert("cert"),
+    key("key"),
+    ck("cert-key"),
     ;
     public final String fullname;
 

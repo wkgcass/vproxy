@@ -12,7 +12,10 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
 import vproxy.app.Application;
 import org.junit.*;
+import vproxy.test.cases.TestSSL;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -169,6 +172,7 @@ public class CI {
     private List<String> sgNames = new ArrayList<>();
     private List<String> securgNames = new ArrayList<>();
     private List<String> slgNames = new ArrayList<>();
+    private List<String> certKeyNames = new ArrayList<>();
 
     private String elg0;
     private String elg1;
@@ -177,6 +181,7 @@ public class CI {
     private WebClient socks5WebClient = null;
     private WebClient h2WebClient = null;
     private NetClient netClient = null;
+    private WebClient sslWebClient = null;
 
     @Before
     public void setUp() {
@@ -245,6 +250,11 @@ public class CI {
             execute(createReq(remove, "security-group", securg));
             checkRemove("security-group", securg);
         }
+        // remove cert-key
+        for (String ck : certKeyNames) {
+            execute(createReq(remove, "cert-key", ck));
+            checkRemove("cert-key", ck);
+        }
 
         if (socks5WebClient != null) {
             socks5WebClient.close();
@@ -254,6 +264,9 @@ public class CI {
         }
         if (netClient != null) {
             netClient.close();
+        }
+        if (sslWebClient != null) {
+            sslWebClient.close();
         }
     }
 
@@ -273,6 +286,13 @@ public class CI {
             .setProtocolVersion(HttpVersion.HTTP_2)
             .setHttp2ClearTextUpgrade(false)
         );
+    }
+
+    private void initSSLWebClient() {
+        sslWebClient = WebClient.create(vertx, new WebClientOptions()
+            .setSsl(true)
+            .setTrustAll(true)
+            .setVerifyHost(false));
     }
 
     private void initNetClient() {
@@ -443,6 +463,10 @@ public class CI {
 
     private String requestH2(int port) {
         return request(h2WebClient, "127.0.0.1", port);
+    }
+
+    private String requestSSL(int port) {
+        return request(sslWebClient, "127.0.0.1", port);
     }
 
     @Test
@@ -1273,5 +1297,63 @@ public class CI {
         sgNames.add(serverGroupName);
         details = getDetail("server-group", serverGroupName);
         assertEquals(Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME, details.get("event-loop-group"));
+    }
+
+    @Test
+    public void sslTcpLB() throws Exception {
+        int lbPort = 7008;
+
+        // add cert-key
+        File tmpCertFile = File.createTempFile("cert", ".pem");
+        tmpCertFile.deleteOnExit();
+        File tmpKeyFile = File.createTempFile("key", ".pem");
+        tmpKeyFile.deleteOnExit();
+
+        FileOutputStream fos = new FileOutputStream(tmpCertFile);
+        fos.write(TestSSL.TEST_CERT.getBytes());
+        fos.flush();
+        fos.close();
+        fos = new FileOutputStream(tmpKeyFile);
+        fos.write(TestSSL.TEST_KEY.getBytes());
+        fos.flush();
+        fos.close();
+
+        String certKeyName = randomName("cert-key");
+
+        execute(createReq(add, "cert-key", certKeyName, "cert", tmpCertFile.getAbsolutePath(), "key", tmpKeyFile.getAbsolutePath()));
+        certKeyNames.add(certKeyName);
+        checkCreate("cert-key", certKeyName);
+
+        // init lb
+        String lbName = randomName("sslLB");
+        execute(createReq(add, "tcp-lb", lbName,
+            "acceptor-elg", elg0, "event-loop-group", elg1,
+            "address", "127.0.0.1:" + lbPort,
+            "server-groups", sgs0,
+            "protocol", "http",
+            "cert-key", certKeyName));
+        tlNames.add(lbName);
+        checkCreate("tcp-lb", lbName);
+
+        String sg0 = "sg0";
+        execute(createReq(add, "server-group", sg0,
+            "timeout", "500", "period", "200", "up", "2", "down", "5",
+            "event-loop-group", elg0));
+        sgNames.add(sg0);
+        checkCreate("server-group", sg0);
+
+        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
+        checkCreate("server-group", sg0, "server-groups", sgs0);
+
+        execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
+        checkCreate("server", "sg7771", "server-group", sg0);
+
+        // wait for health check
+        Thread.sleep(500);
+
+        initSSLWebClient();
+
+        String res = requestSSL(lbPort);
+        assertEquals("7771", res);
     }
 }

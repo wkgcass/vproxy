@@ -19,6 +19,7 @@ public enum ResourceType {
     resolver("resolver"),
     dnscache("dns-cache"),
     slg("smart-lb-group"),
+    ck("cert-key"),
 
     respcontroller("resp-controller"),
     ;

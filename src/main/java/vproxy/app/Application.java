@@ -33,6 +33,7 @@ public class Application {
     public final TcpLBHolder tcpLBHolder;
     public final Socks5ServerHolder socks5ServerHolder;
     public final SecurityGroupHolder securityGroupHolder;
+    public final CertKeyHolder certKeyHolder;
 
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
@@ -48,6 +49,7 @@ public class Application {
         this.serverGroupsHolder = new ServerGroupsHolder();
         this.tcpLBHolder = new TcpLBHolder();
         this.securityGroupHolder = new SecurityGroupHolder();
+        this.certKeyHolder = new CertKeyHolder();
         SelectorEventLoop _controlEventLoop = SelectorEventLoop.open();
         this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
         this.respControllerHolder = new RESPControllerHolder();

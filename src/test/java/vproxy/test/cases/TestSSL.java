@@ -38,7 +38,7 @@ import java.util.concurrent.ConcurrentLinkedQueue;
 import static org.junit.Assert.*;
 
 public class TestSSL {
-    private final String cert = "-----BEGIN CERTIFICATE-----\n" +
+    public static final String TEST_CERT = "-----BEGIN CERTIFICATE-----\n" +
         "MIIDrDCCApQCCQDO2qFtjzwFWzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC\n" +
         "Q04xETAPBgNVBAgMCFpoZWppYW5nMREwDwYDVQQHDAhIYW5nemhvdTEPMA0GA1UE\n" +
         "CgwGdnByb3h5MQ8wDQYDVQQLDAZ2cHJveHkxGzAZBgNVBAMMEnZwcm94eS5jYXNz\n" +
@@ -60,7 +60,7 @@ public class TestSSL {
         "kkv6/Fh8BOQT3IMHTh31tfdDJuA0lCs9o9Kc66AaZxTYm8SyNh5L1doYHXoptphI\n" +
         "gAAa3BEO21XanlNRU1927oxt6mwNp+WeU1xvyoxCWeE=\n" +
         "-----END CERTIFICATE-----\n";
-    private final String rsa = "-----BEGIN PRIVATE KEY-----\n" +
+    public static final String TEST_KEY = "-----BEGIN PRIVATE KEY-----\n" +
         "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCgTHZBQNzCeuTc\n" +
         "N4s5Cc7uKg/iLWwobByGrTTVHAYSpUe0ygaHCAWV4nblf0pSW5uPhhxTGEZFJomj\n" +
         "t2EKFkSYEJXpT2C3abQwJw8lZM8gfeqeC/9Xng8c2nffcu8Cy0PcNq1O6B9vXiKQ\n" +
@@ -361,7 +361,7 @@ public class TestSSL {
 
     @Test
     public void certKey() throws Exception {
-        CertKey key = new CertKey("test", cert, rsa);
+        CertKey key = new CertKey("test", new String[]{TEST_CERT}, TEST_KEY);
         KeyStore keyStore = KeyStore.getInstance("JKS");
         keyStore.load(null);
         key.setInto(keyStore);
@@ -393,7 +393,7 @@ public class TestSSL {
             KeyStore keyStore = KeyStore.getInstance("JKS");
             keyStore.load(null);
             // init keystore
-            CertKey ck = new CertKey("ck", cert, rsa);
+            CertKey ck = new CertKey("ck", new String[]{TEST_CERT}, TEST_KEY);
             ck.setInto(keyStore);
             // retrieve key manager array
             KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");

@@ -12,12 +12,12 @@ import java.util.Base64;
 
 public class CertKey {
     public final String alias;
-    public final String cert;
+    public final String[] certs;
     public final String key;
 
-    public CertKey(String alias, String cert, String key) {
+    public CertKey(String alias, String[] certs, String key) {
         this.alias = alias;
-        this.cert = cert;
+        this.certs = certs;
         this.key = key;
     }
 
@@ -28,7 +28,6 @@ public class CertKey {
     }
 
     public void setInto(KeyStore keystore) throws Exception {
-        byte[] certBytes = cert.getBytes();
         String[] keysplit = this.key
             .replace("-----BEGIN PRIVATE KEY-----", "")
             .replace("-----END PRIVATE KEY-----", "").split("\n");
@@ -39,13 +38,18 @@ public class CertKey {
         String keyStr = keyBuilder.toString();
         byte[] keyBytes = Base64.getDecoder().decode(keyStr);
 
-        CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
-        X509Certificate cert = (X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(certBytes));
-
         PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
         PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(pkcs8EncodedKeySpec);
 
-        keystore.setCertificateEntry("cert:" + alias, cert);
-        keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), new Certificate[]{cert});
+        for (int i = 0; i < certs.length; i++) {
+            String strCert = certs[i];
+            byte[] certBytes = strCert.getBytes();
+
+            CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
+            X509Certificate cert = (X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(certBytes));
+
+            keystore.setCertificateEntry("cert" + i + ":" + alias, cert);
+            keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), new Certificate[]{cert});
+        }
     }
 }

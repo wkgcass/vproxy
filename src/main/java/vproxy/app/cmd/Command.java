@@ -649,6 +649,22 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case ck:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                    case L:
+                    case l:
+                        CertKeyHandle.checkCertKey(cmd.resource);
+                        if (cmd.action == Action.a) {
+                            CertKeyHandle.checkAddCertKey(cmd);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             default:
                 throw new Exception("unknown resource type " + cmd.resource.type.fullname);
         }
@@ -947,6 +963,20 @@ public class Command {
                         return new CmdResult();
                     case a:
                         SmartLBGroupHandle.add(this);
+                        return new CmdResult();
+                }
+            case ck:
+                switch (action) {
+                    case l:
+                    case L:
+                        List<String> names = CertKeyHandle.names();
+                        return new CmdResult(names, names, utilJoinList(names));
+                    case r:
+                    case R:
+                        CertKeyHandle.forceRemove(this);
+                        return new CmdResult();
+                    case a:
+                        CertKeyHandle.add(this);
                         return new CmdResult();
                 }
             default:
