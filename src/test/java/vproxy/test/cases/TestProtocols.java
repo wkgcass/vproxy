@@ -85,7 +85,7 @@ public class TestProtocols {
 
     private void initLb(String protocol) throws Exception {
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, protocol, null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
         );
         lb.start();
     }
@@ -95,7 +95,7 @@ public class TestProtocols {
         ServerGroup sg = new ServerGroup("dubboSg", elg, new HealthCheckConfig(1000, 10000, 1, 3), Method.wrr);
         sgs.add(sg, 10);
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, "dubbo", null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
         );
         lb.start();
         sg.add("svr3", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port3dubbo), 10);

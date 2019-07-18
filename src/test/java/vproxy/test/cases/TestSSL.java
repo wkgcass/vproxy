@@ -422,6 +422,7 @@ public class TestSSL {
                 4096,
                 "http",
                 sslContext,
+                null,
                 SecurityGroup.allowAll()
             );
             tl.start();
