@@ -111,7 +111,7 @@ public class TcpLBHandle {
             timeout = Config.tcpTimeout;
         }
         Application.get().tcpLBHolder.add(
-            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, secg
+            alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, null /*TODO*/, secg
         );
     }
 

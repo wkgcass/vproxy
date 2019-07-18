@@ -318,7 +318,7 @@ public class TestHttp1Parser {
         }
         LinkedHashMap<byte[], ByteArray> chunks = new LinkedHashMap<>() {{
             put("1a  \r\n".getBytes(), ByteArray.from("01234567890123456789012345".getBytes()));
-            put("3 : some-extension\r\n".getBytes(), ByteArray.from("012".getBytes()));
+            put("3 ; some-extension\r\n".getBytes(), ByteArray.from("012".getBytes()));
         }};
         for (byte[] chunk : chunks.keySet()) {
             ByteArray content = chunks.get(chunk);
@@ -397,7 +397,7 @@ public class TestHttp1Parser {
         }
         LinkedHashMap<byte[], ByteArray> chunks = new LinkedHashMap<>() {{
             put("1a  \r\n".getBytes(), ByteArray.from("01234567890123456789012345".getBytes()));
-            put("3 : some-extension\r\n".getBytes(), ByteArray.from("012".getBytes()));
+            put("3 ; some-extension\r\n".getBytes(), ByteArray.from("012".getBytes()));
         }};
         for (byte[] chunk : chunks.keySet()) {
             ByteArray content = chunks.get(chunk);

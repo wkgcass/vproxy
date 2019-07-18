@@ -1,5 +1,17 @@
 package vproxy.test.cases;
 
+import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.http.HttpClientOptions;
+import vproxy.component.app.TcpLB;
+import vproxy.component.check.CheckProtocol;
+import vproxy.component.check.HealthCheckConfig;
+import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.secure.SecurityGroup;
+import vproxy.component.ssl.CertKey;
+import vproxy.component.svrgroup.Method;
+import vproxy.component.svrgroup.ServerGroup;
+import vproxy.component.svrgroup.ServerGroups;
 import vproxy.connection.*;
 import vproxy.dns.Resolver;
 import vproxy.http.HttpRespParser;
@@ -17,29 +29,80 @@ import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.TrustManagerFactory;
+import javax.net.ssl.*;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.Socket;
-import java.net.UnknownHostException;
+import java.net.*;
 import java.security.KeyStore;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
 import static org.junit.Assert.*;
 
-public class TestSSLRingBuffers {
+public class TestSSL {
+    private final String cert = "-----BEGIN CERTIFICATE-----\n" +
+        "MIIDrDCCApQCCQDO2qFtjzwFWzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC\n" +
+        "Q04xETAPBgNVBAgMCFpoZWppYW5nMREwDwYDVQQHDAhIYW5nemhvdTEPMA0GA1UE\n" +
+        "CgwGdnByb3h5MQ8wDQYDVQQLDAZ2cHJveHkxGzAZBgNVBAMMEnZwcm94eS5jYXNz\n" +
+        "aXRlLm5ldDEiMCAGCSqGSIb3DQEJARYTd2tnY2Fzc0Bob3RtYWlsLmNvbTAgFw0x\n" +
+        "OTA3MTYwODAxNDNaGA8yMTE5MDYyMjA4MDE0M1owgZYxCzAJBgNVBAYTAkNOMREw\n" +
+        "DwYDVQQIDAhaaGVqaWFuZzERMA8GA1UEBwwISGFuZ3pob3UxDzANBgNVBAoMBnZw\n" +
+        "cm94eTEPMA0GA1UECwwGdnByb3h5MRswGQYDVQQDDBJ2cHJveHkuY2Fzc2l0ZS5u\n" +
+        "ZXQxIjAgBgkqhkiG9w0BCQEWE3drZ2Nhc3NAaG90bWFpbC5jb20wggEiMA0GCSqG\n" +
+        "SIb3DQEBAQUAA4IBDwAwggEKAoIBAQCgTHZBQNzCeuTcN4s5Cc7uKg/iLWwobByG\n" +
+        "rTTVHAYSpUe0ygaHCAWV4nblf0pSW5uPhhxTGEZFJomjt2EKFkSYEJXpT2C3abQw\n" +
+        "Jw8lZM8gfeqeC/9Xng8c2nffcu8Cy0PcNq1O6B9vXiKQ6JtRHnQeGUIGWWW8cMUT\n" +
+        "H6FSyk4C/nB64F+bjYeG8bJBNeziUFVBZSeOhE7Pjf42HkotqIpuMzBEhnNWlpY3\n" +
+        "pkgbCZaMNkaeCAW63XveDxj2YaFByLAAoAhtLO9mqcX44e7HILg1POL8rIwNy/l8\n" +
+        "kkoPu1UHyzOS/f6WaddBjZqtjjls4Ph8xD0ZBwfd27TywGZCOaz/AgMBAAEwDQYJ\n" +
+        "KoZIhvcNAQELBQADggEBAEC+cvEiSrnZQZRQG+vS4VGnpnerllxfUQxn+JU+B529\n" +
+        "fJWlacY1TlVxkrAN/33m0xoK5KhyN0ML/OPGcCGQbh36QjZGnFREsDn+xMvs8Kfh\n" +
+        "ufW67kDNh0GTJWHseAI/MXzwVUrfOrEHGEhYat4QjVNtrqQVtsR18f+z+k3pfTED\n" +
+        "e1C8zyKbbjeCNybOuuGOxc2HHuBFZveDpB3sCyUIW2iS1tCBXvI9u2cLo/QsjsAz\n" +
+        "kkv6/Fh8BOQT3IMHTh31tfdDJuA0lCs9o9Kc66AaZxTYm8SyNh5L1doYHXoptphI\n" +
+        "gAAa3BEO21XanlNRU1927oxt6mwNp+WeU1xvyoxCWeE=\n" +
+        "-----END CERTIFICATE-----\n";
+    private final String rsa = "-----BEGIN PRIVATE KEY-----\n" +
+        "MIIEvwIBADANBgkqhkiG9w0BAQEFAASCBKkwggSlAgEAAoIBAQCgTHZBQNzCeuTc\n" +
+        "N4s5Cc7uKg/iLWwobByGrTTVHAYSpUe0ygaHCAWV4nblf0pSW5uPhhxTGEZFJomj\n" +
+        "t2EKFkSYEJXpT2C3abQwJw8lZM8gfeqeC/9Xng8c2nffcu8Cy0PcNq1O6B9vXiKQ\n" +
+        "6JtRHnQeGUIGWWW8cMUTH6FSyk4C/nB64F+bjYeG8bJBNeziUFVBZSeOhE7Pjf42\n" +
+        "HkotqIpuMzBEhnNWlpY3pkgbCZaMNkaeCAW63XveDxj2YaFByLAAoAhtLO9mqcX4\n" +
+        "4e7HILg1POL8rIwNy/l8kkoPu1UHyzOS/f6WaddBjZqtjjls4Ph8xD0ZBwfd27Ty\n" +
+        "wGZCOaz/AgMBAAECggEBAJiyXY+pVuHXqXzxWCj8Y+dRoBHHTRlwavgLtKEw8cP/\n" +
+        "N8BLFk644IE32iShzc2IQDZG/WJWZFHo9QJEZCb0sWDdo8A9AheVlLSt8GqhjgEY\n" +
+        "kU7+hL0U7raAkeIEHRPfRwRV/V+GFLPEy06YlaN/TAOD8fYUYKpSDhk6bzVrS0bj\n" +
+        "UYi0MdQqV89Y4JOMf9fSiJR3kf4H1zW6FViOMhbZegzLKfJcpDDZRQuf/cRm2+z3\n" +
+        "OJX+XoJsHdGmY42sTHGidDLFjRxVjMwrUtL6lFt/lREFsScvKB2OTVWw7nHZ4MVs\n" +
+        "d8e/kAsSQ3PaEWn7CQmPG1pcTV0u6vDPC+g2acO25tECgYEAzhnBDYi5FFkgdfuu\n" +
+        "ejWouJmNL2XLtnDEi68I2zS1P/TuUMhAZ3DHk4pGWTGLCKXtb1hQfMat85hfDQF6\n" +
+        "TAXZ9b8Dm1atEKd8TGuIU/Gzo9eglApw69SO99LFcr+L6qnUuClKEJTAzYi2xz7N\n" +
+        "klhxlhim5lZd/Tp/QpA4KeH54FcCgYEAxxvgKgd2T6slo7zXbwxSUQw18kWsIuvF\n" +
+        "O0oH6TV0CA/712FhDAsV+QhuAU5X53zC/j+KoXXSQfvZsj4AqYgYL5dzfmv9zQAS\n" +
+        "/A3qkvKjsaPMZnKWGw1BzPUh3AWMPVL9DO2P7UHv1nnCvWMlVgci1WeIKHhdChkU\n" +
+        "KmnFynm+j5kCgYEAvBmLNTP0XtrdInD6k7UHcLtLvNd2LeMLrsSoG5AmX+HF41pw\n" +
+        "VTf8He7UN7FcyB7P7ZA3nTmjJzCIh5EysdGhVITp4MshlpKVghWeTabJoh45AwPo\n" +
+        "fYP4m7v00r55D0nCx/V/EFUDBlLhJkVuT0ODH08OfCiVDXlnDjQb3jXM3W8CgYA8\n" +
+        "8QhEdPI+YjjsC9G4mIHdcqpUVATiz10Xz4nqVEUGbrX7bz+/6ui3x1+8IJmBLcuU\n" +
+        "/CfXUXOgZJB2IModGZ2le2qLKEyPYVVuNmg0v/VgWq0mMi5Fa2JXdDP/3ubUokD3\n" +
+        "owKpcMQS1kPHqb/0u8xqmvyuvmBjxddJQASc+3RbCQKBgQC3MC+MpFimu6Ig3sLN\n" +
+        "W9y83ww4KHyjsNzNJSFMOUn1zLLoVeQ2VpfRCxqxUfU0gfeJmn8It7WtkG87bmVW\n" +
+        "jsLm2X0GsXQsLqLY9iKXUhJHslad+7xS91Mc81K9YJhRpHpl5UFd/hGhoJdN5mpF\n" +
+        "5wonEzCuFqzz1ASiYQWtbeWSBA==\n" +
+        "-----END PRIVATE KEY-----\n";
+
+    private static String javaxnetdebug;
+
     @BeforeClass
     public static void setUpClass() {
-        System.setProperty("javax.net.debug", "all");
+        javaxnetdebug = System.getProperty("javax.net.debug");
+        // System.setProperty("javax.net.debug", "all");
+        if (javaxnetdebug == null) {
+            javaxnetdebug = "";
+        }
     }
 
     @AfterClass
     public static void tearDownClass() {
-        System.setProperty("javax.net.debug", "");
+        System.setProperty("javax.net.debug", javaxnetdebug);
     }
 
     SelectorEventLoop selectorEventLoop;
@@ -187,8 +250,8 @@ public class TestSSLRingBuffers {
 
         char[] passphrase = "passphrase".toCharArray();
 
-        ks.load(TestSSLRingBuffers.class.getResourceAsStream("/" + keyStoreFile), passphrase);
-        ts.load(TestSSLRingBuffers.class.getResourceAsStream("/" + trustStoreFile), passphrase);
+        ks.load(TestSSL.class.getResourceAsStream("/" + keyStoreFile), passphrase);
+        ts.load(TestSSL.class.getResourceAsStream("/" + trustStoreFile), passphrase);
 
         KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
         kmf.init(ks, passphrase);
@@ -294,5 +357,95 @@ public class TestSSLRingBuffers {
         System.out.println("================");
         System.out.println("server reads: " + storeBytes);
         System.out.println("================");
+    }
+
+    @Test
+    public void certKey() throws Exception {
+        CertKey key = new CertKey("test", cert, rsa);
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(null);
+        key.setInto(keyStore);
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(keyStore, "changeit".toCharArray());
+
+        KeyManager[] km = kmf.getKeyManagers();
+
+        SSLContext context = SSLContext.getInstance("TLS");
+        context.init(km, null, null);
+        ServerSocket socket = context.getServerSocketFactory().createServerSocket(54321);
+        socket.close();
+    }
+
+    @SuppressWarnings("deprecation")
+    @Test
+    public void sslProxy() throws Exception {
+        Vertx vertx = Vertx.vertx();
+        EventLoopGroup elg = new EventLoopGroup("elg0");
+
+        try {
+            // start backend
+            vertx.createHttpServer().requestHandler(req -> req.response().end("hello")).listen(49999);
+
+            // build ssl context if needed
+            // create ctx
+            SSLContext sslContext = SSLContext.getInstance("TLS");
+            // create empty key store
+            KeyStore keyStore = KeyStore.getInstance("JKS");
+            keyStore.load(null);
+            // init keystore
+            CertKey ck = new CertKey("ck", cert, rsa);
+            ck.setInto(keyStore);
+            // retrieve key manager array
+            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+            kmf.init(keyStore, "changeit".toCharArray());
+            KeyManager[] km = kmf.getKeyManagers();
+            // init ctx
+            sslContext.init(km, null, null);
+
+            elg.add("el");
+            ServerGroups sgs = new ServerGroups("sgs");
+            ServerGroup sg = new ServerGroup("sg", elg, new HealthCheckConfig(400, 2000, 1, 2, CheckProtocol.tcpDelay), Method.wrr);
+            sgs.add(sg, 10);
+
+            Thread.sleep(1000);
+
+            sg.add("svr", new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 49999), 10);
+
+            TcpLB tl = new TcpLB(
+                "testSslProxy",
+                elg,
+                elg,
+                new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 19999),
+                sgs,
+                1000,
+                4096,
+                4096,
+                "http",
+                sslContext,
+                SecurityGroup.allowAll()
+            );
+            tl.start();
+
+            String[] body = {null};
+
+            HttpClient cli = vertx.createHttpClient(new HttpClientOptions()
+                .setSsl(true)
+                .setTrustAll(true)
+                .setVerifyHost(false));
+            cli.get(19999, "127.0.0.1", "/").handler(resp ->
+                resp.bodyHandler(_body -> {
+                    body[0] = _body.toString().trim();
+                })
+            ).end();
+
+            while (body[0] == null) {
+                Thread.sleep(1);
+            }
+
+            assertEquals("hello", body[0]);
+        } finally {
+            vertx.close();
+            elg.close();
+        }
     }
 }

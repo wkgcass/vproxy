@@ -19,7 +19,7 @@ public class HttpReqParser extends AbstractParser<Request> {
         result = null;
         this.parseBody = parseBody;
 
-        Processor p = ProcessorProvider.getInstance().get("http");
+        Processor p = ProcessorProvider.getInstance().get("http/1.x");
         Processor.Context c = p.init(null);
         //noinspection unchecked
         Processor.SubContext s = p.initSub(c, 0, null);

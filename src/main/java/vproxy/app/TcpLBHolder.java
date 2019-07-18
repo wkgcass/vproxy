@@ -6,10 +6,16 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
+import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroups;
+import vproxy.util.Logger;
 
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -31,10 +37,41 @@ public class TcpLBHolder {
                     int inBufferSize,
                     int outBufferSize,
                     String protocol,
-                    SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
+                    CertKey[] sslCertKeys,
+                    SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException, Exception {
         if (map.containsKey(alias))
             throw new AlreadyExistException();
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, securityGroup);
+
+        SSLContext sslContext;
+        if (sslCertKeys != null) {
+            try {
+                // build ssl context if needed
+                // create ctx
+                SSLContext ctx = SSLContext.getInstance("TLS");
+                // create empty key store
+                KeyStore keyStore = KeyStore.getInstance("JKS");
+                keyStore.load(null);
+                // init keystore
+                for (CertKey ck : sslCertKeys) {
+                    ck.setInto(keyStore);
+                }
+                // retrieve key manager array
+                KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+                kmf.init(keyStore, "changeit".toCharArray());
+                KeyManager[] km = kmf.getKeyManagers();
+                // init ctx
+                ctx.init(km, null, null);
+                // assign
+                sslContext = ctx;
+            } catch (Exception e) {
+                Logger.shouldNotHappen("initiate ssl context for lb failed", e);
+                throw e;
+            }
+        } else {
+            sslContext = null;
+        }
+
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, protocol, sslContext, securityGroup);
         try {
             tcpLB.start();
         } catch (IOException e) {

@@ -77,7 +77,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
             assert Logger.lowLevelDebug("running proxy, flow.bytesToProxy = " + flow.currentSegment.bytesToProxy);
 
-            if (flow.currentSegment.bytesToProxy > processor.PROXY_ZERO_COPY_THRESHOLD()) {
+            if (flow.currentSegment.bytesToProxy > processor.PROXY_ZERO_COPY_THRESHOLD()
+                && targetConnection.getOutBuffer() instanceof ProxyOutputRingBuffer
+            ) {
                 assert Logger.lowLevelDebug("choose to run with zero copy");
                 flow.currentSegment.calledProxyOnBuffer = true;
 

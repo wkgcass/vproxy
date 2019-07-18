@@ -15,6 +15,7 @@ import vproxy.processor.ProcessorProvider;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 
+import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -71,6 +72,7 @@ public class TcpLB {
     private int outBufferSize; // modifiable
     public final String protocol;
     public final Processor processor;
+    public final SSLContext sslContext;
     public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
 
@@ -95,7 +97,7 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
-        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", securityGroup);
+        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", null, securityGroup);
     }
 
     public TcpLB(String alias,
@@ -106,6 +108,7 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  String protocol,
+                 SSLContext sslContext,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.acceptorGroup = acceptorGroup;
@@ -117,6 +120,7 @@ public class TcpLB {
         this.outBufferSize = outBufferSize;
         this.protocol = protocol;
         this.processor = (protocol.equals("tcp") ? null : ProcessorProvider.getInstance().get(protocol));
+        this.sslContext = sslContext;
         this.securityGroup = securityGroup;
 
         // we do not bind or create proxy object here
@@ -184,7 +188,8 @@ public class TcpLB {
             .setInBufferSize(inBufferSize)
             .setOutBufferSize(outBufferSize)
             .setServer(server)
-            .setAcceptLoop(eventLoop);
+            .setAcceptLoop(eventLoop)
+            .setSslContext(sslContext);
     }
 
     public void start() throws IOException {

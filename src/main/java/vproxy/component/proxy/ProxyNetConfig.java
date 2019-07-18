@@ -4,6 +4,8 @@ import vproxy.app.Config;
 import vproxy.connection.BindServer;
 import vproxy.connection.NetEventLoop;
 
+import javax.net.ssl.SSLContext;
+
 public class ProxyNetConfig {
     NetEventLoop acceptLoop;
     BindServer server;
@@ -13,6 +15,8 @@ public class ProxyNetConfig {
 
     int inBufferSize = 128;
     int outBufferSize = 128;
+
+    SSLContext sslContext = null;
 
     public ProxyNetConfig setAcceptLoop(NetEventLoop acceptLoop) {
         this.acceptLoop = acceptLoop;
@@ -44,6 +48,16 @@ public class ProxyNetConfig {
         return this;
     }
 
+    public ProxyNetConfig setTimeout(int timeout) {
+        this.timeout = timeout;
+        return this;
+    }
+
+    public ProxyNetConfig setSslContext(SSLContext sslContext) {
+        this.sslContext = sslContext;
+        return this;
+    }
+
     public NetEventLoop getAcceptLoop() {
         return acceptLoop;
     }
@@ -72,8 +86,7 @@ public class ProxyNetConfig {
         return timeout;
     }
 
-    public ProxyNetConfig setTimeout(int timeout) {
-        this.timeout = timeout;
-        return this;
+    public SSLContext getSslContext() {
+        return sslContext;
     }
 }

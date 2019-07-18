@@ -17,7 +17,7 @@ import org.junit.runners.Suite;
     TestKhala.class,
     TestSmartLBGroup.class,
     TestConnectClient.class,
-    TestSSLRingBuffers.class,
+    TestSSL.class,
     TestProtocols.class,
     TestHttp1Parser.class,
 
