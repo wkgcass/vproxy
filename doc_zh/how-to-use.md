@@ -5,12 +5,32 @@
 
 vproxy有许多种使用方式：
 
+* 简易模式：用一行命令启动一个简单的负载均衡
 * 配置文件：在启动时或者运行中读取一个预先配置好的配置文件。
 * StdIOController: 在vproxy中输入命令，并从标准输出中读取信息。
 * RESPController: 使用`redis-cli`或者`telnet`来操作vproxy实例。
 * Service Mesh: 让集群中的节点自动互相识别以及处理网络流量。
 
-## 1. 配置文件
+## 1. 简易模式
+
+You can start a simple loadbalancer in one command:
+你可以用一行命令启动一个简单的负载均衡：
+
+例如：
+
+```
+java -Deploy=Simple -jar vproxy.jar \
+                bind 8888 \
+                backend 127.0.0.1:80,127.0.0.1:8080 \
+                ssl ~/cert.pem ~/rsa.pem \
+                protocol http
+```
+
+负载均衡监听`8888`端口，使用http(s)协议，TLS证书使用`~/cert.pem`，私钥使用`~/rsa.pem`，流量分别转发到`127.0.0.1:80`和`127.0.0.1:8080`。
+
+你可以使用`gen`来生成与参数相符的配置文件，详情可见`配置文件`一节。
+
+## 2. 配置文件
 
 vproxy配置文件是一个文本文件，每一行都是一条vproxy指令。  
 vproxy实例会解析每一行并一个一个的执行命令。  
@@ -20,7 +40,7 @@ vproxy实例会解析每一行并一个一个的执行命令。
 
 有三种方式来使用配置文件：
 
-#### 1.1. 最后一次自动保存的配置文件
+#### 2.1. 最后一次自动保存的配置文件
 
 vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。  
 如果使用`sigint`，`sighup`关闭或者手动关闭，配置文件也会自动保存。
@@ -29,7 +49,7 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 
 总体来说，你只需要配置一次，然后就不用再关心配置文件了。
 
-#### 1.2. 启动参数
+#### 2.2. 启动参数
 
 在启动时附带参数 `load ${filename}` 来加载配置文件:
 
@@ -39,7 +59,7 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 java vproxy.app.Main load ~/vproxy.conf
 ```
 
-#### 1.3. System call 指令
+#### 2.3. System call 指令
 
 启动一个vproxy实例：
 
@@ -54,7 +74,7 @@ java vproxy.app.Main
 > System call: load ~/vproxy.conf             --- 从文件中读取配置
 ```
 
-## 2. 使用 StdIOController
+## 3. 使用 StdIOController
 
 启动vproxy实例：
 
@@ -66,7 +86,7 @@ java vproxy.app.Main
 
 如果你经常使用StdIOController，那么推荐在tmux或者screen里启动vproxy实例。
 
-## 3. 使用 RESPController
+## 4. 使用 RESPController
 
 `RESPController` 监听一个端口，并且使用 REdis Serialization Protocol 来传输命令和结果。  
 通过该Controller，你就可以使用`redis-cli`来操作vproxy实例了。
@@ -78,7 +98,7 @@ java vproxy.app.Main
 
 你可以在启动时开启RESPController，或者在StdIOController中输入命令来启动。
 
-#### 3.1 启动参数
+#### 4.1 启动参数
 
 使用 `resp-controller ${address} ${password}` 启动参数来启动 RESPController。
 
@@ -95,7 +115,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 127.0.0.1:16379> man
 ```
 
-#### 3.2. System call 命令
+#### 4.2. System call 命令
 
 启动vproxy实例：
 
@@ -125,7 +145,7 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 >
 ```
 
-## 4. Service Mesh
+## 5. Service Mesh
 
 在启动时指定service mesh配置文件：
 
@@ -166,7 +186,7 @@ srem service $your_service_domain:$protocol_port:$local_port
 
 关于本节内容，可以参考[service-mesh-example](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。
 
-## 5. 例子和解释
+## 6. 例子和解释
 
 ### 配置文件
 

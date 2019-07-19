@@ -403,6 +403,9 @@ public class HelpCommand {
         zone("zone", null, "zone name"),
         tcplb("tcp-lb", "tl", "tcp loadbalancer"),
         servergroup("server-group", "sg", "a group of servers"),
+        certkey("cert-key", "ck", "cert-key resource"),
+        cert("cert", null, "the certificate file path"),
+        key("key", null, "the key file path"),
         ;
         public final String param;
         public final String shortVer;
@@ -442,7 +445,8 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
-                    , new ResActParamMan(ParamMan.protocol, "the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See doc for more info", "tcp")
+                    , new ResActParamMan(ParamMan.protocol, "the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See doc for more info", "tcp")
+                    , new ResActParamMan(ParamMan.certkey, "the certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
                 ),
                 Collections.singletonList(
@@ -871,6 +875,36 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "remove security-group-rule secgr0 from security-group secg0",
+                            "\"OK\""
+                        )
+                    ))
+            )),
+        certkey("cert-key", "ck", "Some certificates and one key",
+            Arrays.asList(
+                new ResActMan(ActMan.add, "Load certificates and key from file",
+                    Arrays.asList(
+                        new ResActParamMan(ParamMan.cert, "the cert file path. Multiple files are separated with `,`"),
+                        new ResActParamMan(ParamMan.key, "the key file path")
+                    ),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem",
+                            "\"OK\""
+                        )
+                    )),
+                new ResActMan(ActMan.list, "View loaded cert-key resources",
+                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "list cert-key",
+                            "1) \"vproxy.cassite.net\""
+                        )
+                    )),
+                new ResActMan(ActMan.remove, "Remove a cert-key resource",
+                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "remove cert-key vproxy.cassite.net",
                             "\"OK\""
                         )
                     ))

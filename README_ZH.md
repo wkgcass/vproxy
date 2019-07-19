@@ -18,6 +18,22 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 ## 如何使用
 
+### 简易模式
+
+你可以用一行命令启动一个简单的负载均衡:
+
+```
+java -Deploy=Simple -jar vproxy.jar \  
+                bind {port} \
+                backend {host1:port1,host2:port2} \
+                [ssl {path of cert1,cert2} {path of key} \]
+                [protocol {...} \]
+```
+
+可以输入`help`检查参数列表。
+
+### 标准模式
+
 请参考如下文档。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。
 

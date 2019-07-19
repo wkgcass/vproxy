@@ -48,6 +48,9 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ security-group (secg)
 |        |
 |        +---+ security-group-rule (secgr)
+|
++---+ cert-key (ck)
+|
 +---+ smart-lb-group /* only available in service mesh mode */
 
    bind-server (bs) --+
@@ -130,7 +133,7 @@ Create a loadbalancer.
 * server-groups (sgs): used as the backend servers
 * in-buffer-size: *optional*. input buffer size. default 16384 (bytes)
 * out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
-* protocol: *optional*. the protocol used by tcp-lb. available options: tcp, h2, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
+* protocol: *optional*. the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
 * security-group (secg): *optional*. specify a security group for the lb. default allow any
 
 ```
@@ -581,6 +584,40 @@ Remove a rule from a security group.
 
 ```
 remove security-group-rule secgr0 from security-group secg0
+"OK"
+```
+
+## Resource: cert-key
+
+A resource corresponds to certificates and a key.
+
+#### add
+
+Load certificates and a key from file.
+
+* cert: the certificate files, separated with `,`
+* key: the key file. only `-----BEGINE PRIVATE KEY-----` format is supported for now
+
+```
+add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem
+"OK"
+```
+
+#### list
+
+Get names of cert-key info.
+
+```
+list cert-key
+1) vproxy.cassite.net
+```
+
+#### remove
+
+Remove a cert-key.
+
+```
+remove cert-key vproxy.cassite.net
 "OK"
 ```
 

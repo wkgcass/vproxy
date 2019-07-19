@@ -19,9 +19,11 @@ When creating `tcp-lb`, specify the application level protocol to use in paramet
 
 Current built in protocols are:
 
+* http: adaptive protocol for h2 and http/1.x
 * h2: `http/2`
+* http/1.x: `http/1.1` and `http/1.0`
 * dubbo: for alibaba dubbo rpc
-* framed-int32: for framed thrift, which uses a int32 length field
+* framed-int32: could be used with framed thrift, which uses an int32 length field
 
 Input your protocol name which corresponds to your `Processor` when using a customized protocol.
 
@@ -57,6 +59,7 @@ package [vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/mai
 The Processor interface defines the following methods:
 
 * `String name()` name of the protocol
+* `String[] alpn()` the alpn strings when using tls, ordered by priority desc
 * `CTX init()` the context
 * `SUB initSub(CTX ctx, int id)` creating a sub context
 * `Mode mode(CTX ctx, SUB sub)` the current processing mode，maybe `handle` or `proxy`

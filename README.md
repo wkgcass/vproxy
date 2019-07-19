@@ -20,6 +20,22 @@ Clone it, javac it, then everything is ready for running.
 
 ## How to use
 
+### Simple mode
+
+You can start a simple loadbalancer in one command:
+
+```
+java -Deploy=Simple -jar vproxy.jar \  
+                bind {port} \
+                backend {host1:port1,host2:port2} \
+                [ssl {path of cert1,cert2} {path of key} \]
+                [protocol {...} \]
+```
+
+Use `help` to view the parameters.
+
+### Standard mode
+
 See docs for help.  
 Questions about implementation detail are also welcome (in issues).
 

@@ -19,9 +19,11 @@
 
 目前内建支持的应用层协议有：
 
+* http: 自适应的`h2`和`http/1.x`
 * h2: `http/2`负载均衡
+* http/1.x: `http/1.1`和`http/1.0`
 * dubbo: 阿里的dubbo rpc
-* framed-int32: framed thrift，它使用32位int值来表示长度
+* framed-int32: 可用于framed thrift，它使用32位int值来表示长度
 
 使用自定义协议时，只需填入你在`Processor`中规定的协议名称即可
 
@@ -57,6 +59,7 @@ package [vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/mai
 Processor接口定义了如下方法：
 
 * `String name()` 协议名称
+* `String[] alpn()` 使用ssl时支持的alpn字符串，越靠前越优先
 * `CTX init()` 创建上下文对象
 * `SUB initSub(CTX ctx, int id)` 创建子上下文
 * `Mode mode(CTX ctx, SUB sub)` 当前处理模式，可以是`handle`或是`proxy`
