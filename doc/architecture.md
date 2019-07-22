@@ -65,4 +65,4 @@ VProxy provides you with multiple ways of configuring the vproxy instance.
 
 #### RESPController
 
-`RESPController` listens on a port and uses the REdis Serialization Protocol for transporting commands and results. You can use `redis-cli` to manage the vproxy instance.
+`RESPController` listens on a port and uses the Redis Serialization Protocol for transporting commands and results. You can use `redis-cli` to manage the vproxy instance.
