@@ -18,9 +18,7 @@ import java.util.Map;
  * 3. standard http2 protocol for both frontend and backend
  * 4. raw tcp, handshake with prior knowledge
  * 5. any application level interaction between a client and a server
- *
- * Can do with the help of other software, or may be supported in the future:
- * 1. handshake with tls alpn
+ * 6. handshake with tls alpn
  *
  * Cannot do (limitations):
  * 1. stream dependency and priority
