@@ -249,11 +249,21 @@ public class Proxy {
 
         @Override
         public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
-            ByteBufferRingBuffer inBuffer = RingBuffer.allocateDirect(config.inBufferSize);
+            int inBufferSize, outBufferSize;
+            if (config.sslContext == null) {
+                inBufferSize = config.inBufferSize;
+                outBufferSize = config.outBufferSize;
+            } else {
+                // using ssl
+                // make the buffer large enough to hold one packet
+                inBufferSize = Math.max(config.inBufferSize, 24576);
+                outBufferSize = Math.max(config.outBufferSize, 24576);
+            }
+            ByteBufferRingBuffer inBuffer = RingBuffer.allocateDirect(inBufferSize);
             RingBuffer outBuffer =
                 (config.connGen.type() == ConnectorGen.Type.processor && config.sslContext == null)
-                    ? ProxyOutputRingBuffer.allocateDirect(config.outBufferSize)
-                    : RingBuffer.allocateDirect(config.outBufferSize);
+                    ? ProxyOutputRingBuffer.allocateDirect(outBufferSize)
+                    : RingBuffer.allocateDirect(outBufferSize);
 
             if (config.sslContext == null) {
                 return new Tuple<>(inBuffer, outBuffer);
