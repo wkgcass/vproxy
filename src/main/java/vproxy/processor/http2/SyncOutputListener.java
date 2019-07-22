@@ -40,11 +40,10 @@ public class SyncOutputListener implements HeaderListener {
             }
             if (h.keyStr.equals(new String(key).toLowerCase())) {
                 // header keys are the same
-                assert Logger.lowLevelDebug("replacing header " +
-                    "new header: " + h.keyStr + ": " + new String(h.value) + " " +
+                assert Logger.lowLevelDebug("see target header " +
                     "old header: " + new String(key) + ": " + new String(value));
                 added[i] = true;
-                return h.value;
+                return value; // do not replace
             }
         }
         // not found

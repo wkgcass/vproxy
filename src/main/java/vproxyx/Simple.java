@@ -26,7 +26,7 @@ public class Simple {
         StringBuilder sb = new StringBuilder();
         sb.append(supportedProtocols.get(0));
         for (int i = 1; i < supportedProtocols.size(); ++i) {
-            sb.append("|").append(supportedProtocols.get(1));
+            sb.append("|").append(supportedProtocols.get(i));
         }
         supportedProtocolsStr = sb.toString();
     }

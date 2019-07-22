@@ -7,11 +7,13 @@ import java.net.InetSocketAddress;
 
 public class HttpContext extends OOContext<HttpSubContext> {
     final String clientAddress;
+    final String clientPort;
 
     int currentBackend = -1;
 
     public HttpContext(InetSocketAddress clientSock) {
         clientAddress = clientSock == null ? null : Utils.ipStr(clientSock.getAddress().getAddress());
+        clientPort = clientSock == null ? null : "" + clientSock.getPort();
     }
 
     @Override

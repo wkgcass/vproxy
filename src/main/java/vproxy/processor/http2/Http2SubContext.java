@@ -696,12 +696,12 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             } else if (frame.priority) {
                 data = data.sub(5, data.length() - 5);
             }
-            transformed = ctx.hPackTransformer.transform(data, frame.endHeaders);
+            transformed = ctx.hPackTransformer.transform(data, frame.endHeaders && connId == 0);
         } else {
             assert frame.type == Http2Frame.Type.CONTINUATION;
             frameType = 9; // type = continuation
             // data is simple and can be directly transformed for continuation frames
-            transformed = ctx.hPackTransformer.transform(data, frame.endHeaders);
+            transformed = ctx.hPackTransformer.transform(data, frame.endHeaders && connId == 0);
         }
         ByteArray result = ByteArray.from(new byte[]{
             0, 0, 0, // length, will be set later

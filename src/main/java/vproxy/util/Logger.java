@@ -102,6 +102,11 @@ public class Logger {
         System.out.println(WARN_COLOR + current() + logType + " - " + RESET_COLOR + err);
     }
 
+    public static void warn(LogType logType, String err, Throwable t) {
+        System.out.println(WARN_COLOR + current() + logType + " - " + RESET_COLOR + err);
+        t.printStackTrace();
+    }
+
     // expected condition
     public static void info(LogType logType, String msg) {
         System.out.println(INFO_COLOR + current() + logType + " - " + RESET_COLOR + msg);

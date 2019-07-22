@@ -25,13 +25,12 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     ByteArray settingsFrameHeader = null; // this is a temporary field
 
-    final String clientIpStr;
-
     public Http2Context(InetSocketAddress clientAddress) {
-        clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
+        String clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
         hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE,
             new Header[]{
-                new Header("x-forwarded-for", clientIpStr)
+                new Header("x-forwarded-for", clientIpStr),
+                new Header("x-client-port", "" + clientAddress.getPort())
             });
     }
 

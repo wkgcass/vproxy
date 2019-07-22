@@ -296,7 +296,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                         try {
                             processor.feed(topCtx, subCtx, ByteArray.from(new byte[0]));
                         } catch (Exception e) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ". err=" + e);
+                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
                             frontendConnection.close();
                             return;
                         }
@@ -326,7 +326,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 try {
                     dataToSend = processor.feed(topCtx, subCtx, data);
                 } catch (Exception e) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ". err=" + e);
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
                     frontendConnection.close();
                     return;
                 }
@@ -363,7 +363,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
             frontendConnection.close();
-            closeAll();
+            closeAll(true);
         }
 
         @Override
@@ -373,14 +373,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             } else {
                 Logger.warn(LogType.CONN_ERROR, "backend connection " + ctx.connection + " closed before frontend connection " + frontendConnection);
             }
-            closeAll();
+            closeAll(true);
         }
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
             if (!ctx.connection.isClosed())
                 Logger.error(LogType.IMPROPER_USE, "backend connection " + ctx.connection + " removed from event loop " + loop);
-            closeAll();
+            closeAll(true);
         }
     }
     // --- END backend handler ---
@@ -708,27 +708,34 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
         Logger.error(LogType.CONN_ERROR, "connection got exception", err);
-        closeAll();
+        closeAll(false);
     }
 
     @Override
     public void closed(ConnectionHandlerContext ctx) {
         assert Logger.lowLevelDebug("frontend connection is closed: " + frontendConnection);
-        closeAll();
+        closeAll(false);
     }
 
     @Override
     public void removed(ConnectionHandlerContext ctx) {
         if (!frontendConnection.isClosed())
             Logger.error(LogType.IMPROPER_USE, "frontend connection " + frontendConnection + " removed from event loop " + loop);
-        closeAll();
+        closeAll(false);
     }
 
     private boolean closed = false;
 
-    void closeAll() {
+    void closeAll(boolean backendClose) {
         if (closed) {
-            return; // ignore if already closed
+            if (frontendConnection.isClosed()) {
+                return; // ignore if already closed
+            } else if (!backendClose) {
+                // frontend connection closes
+                frontendConnection.close();
+                frontendConnection.getInBuffer().clean();
+                frontendConnection.getOutBuffer().clean();
+            }
         }
         closed = true;
 
@@ -741,6 +748,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             be.conn.getInBuffer().clean();
             be.conn.getOutBuffer().clean();
         }
+        if (backendClose && frontendConnection.getOutBuffer().used() != 0) {
+            // the frontend still got data to write
+            return;
+        }
+        // the frontend closed, or nothing to write. so we close the frontend connection
         frontendConnection.close();
         frontendConnection.getInBuffer().clean();
         frontendConnection.getOutBuffer().clean();

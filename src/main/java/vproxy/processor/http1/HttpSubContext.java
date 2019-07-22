@@ -156,12 +156,53 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return proxyLen == -1 ? 1 : proxyLen;
     }
 
+    private boolean passParam_TryFillAdditionalHeaders = false;
+
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
         Handler handler = handers.get(state);
         if (handler == null)
             throw new IllegalStateException("BUG: unexpected state " + state);
         handler.handle(data);
+        if (passParam_TryFillAdditionalHeaders) {
+            boolean noForwardedFor = true;
+            boolean noClientPort = true;
+
+            for (HeaderBuilder h : headers) {
+                String hv = h.key.toString().trim();
+                if (hv.equalsIgnoreCase("x-forwarded-for")) {
+                    noForwardedFor = false;
+                } else if (hv.equalsIgnoreCase("x-client-port")) {
+                    noClientPort = false;
+                }
+                if (!noForwardedFor && !noClientPort) {
+                    break;
+                }
+            }
+            ByteArray appendData = null;
+            if (noForwardedFor) {
+                ByteArray b = ByteArray.from(("" +
+                    "x-forwarded-for: " + ctx.clientAddress + "\r\n" +
+                    "").getBytes());
+                assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
+                appendData = b;
+            }
+            if (noClientPort) {
+                ByteArray b = ByteArray.from(("" +
+                    "x-client-port: " + ctx.clientPort + "\r\n" +
+                    "").getBytes()).concat(data);
+                assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
+                if (appendData == null) {
+                    appendData = b;
+                } else {
+                    appendData = appendData.concat(b);
+                }
+            }
+            if (appendData != null) {
+                data = appendData.concat(data);
+            }
+            passParam_TryFillAdditionalHeaders = false;
+        }
         return data;
     }
 
@@ -306,6 +347,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         int b = data.uint8(0);
         if (b == '\r') {
             // ignore
+            passParam_TryFillAdditionalHeaders = frontend; // only add header if it's from frontend
         } else if (b == '\n') {
             state = 9;
             state9(null);
