@@ -5,16 +5,36 @@ import vproxy.processor.Processor;
 import vproxy.processor.http1.*;
 import vproxy.processor.http1.entity.*;
 import vproxy.util.ByteArray;
+import vproxy.util.Utils;
 
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
+import java.util.Objects;
 
 import static org.junit.Assert.*;
 
 public class TestHttp1Parser {
+    private static final String forwardedFor = "1.2.3.4";
+    private static final String clientPort = "1122";
+    private static final InetSocketAddress address;
+
+    static {
+        try {
+            address = new InetSocketAddress(
+                InetAddress.getByAddress(Objects.requireNonNull(Utils.parseIpv4String(forwardedFor))),
+                Integer.parseInt(clientPort)
+            );
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+    }
+
     @Test
     public void simpleRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
 
         String reqHead = "" +
@@ -29,7 +49,15 @@ public class TestHttp1Parser {
             int len = front.len();
             assertEquals(1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            ByteArray r = front.feed(a);
+            if (r.length() == 1) {
+                assertEquals(a, r);
+            } else {
+                assertEquals(ByteArray.from(("" +
+                    "x-forwarded-for: " + forwardedFor + "\r\n" +
+                    "x-client-port: " + clientPort + "\r\n" +
+                    "").getBytes()).concat(a), r);
+            }
         }
         Request req = front.getReq();
         {
@@ -136,7 +164,7 @@ public class TestHttp1Parser {
     @Test
     public void noVersionRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
 
         String reqHead = "" +
@@ -151,7 +179,15 @@ public class TestHttp1Parser {
             int len = front.len();
             assertEquals(1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            ByteArray r = front.feed(a);
+            if (r.length() == 1) {
+                assertEquals(a, r);
+            } else {
+                assertEquals(ByteArray.from(("" +
+                    "x-forwarded-for: " + forwardedFor + "\r\n" +
+                    "x-client-port: " + clientPort + "\r\n" +
+                    "").getBytes()).concat(a), r);
+            }
         }
         Request req = front.getReq();
         {
@@ -200,7 +236,7 @@ public class TestHttp1Parser {
     @Test
     public void normalRequest() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
 
         String reqHead = "" +
@@ -216,7 +252,15 @@ public class TestHttp1Parser {
             int len = front.len();
             assertEquals(1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            ByteArray r = front.feed(a);
+            if (r.length() == 1) {
+                assertEquals(a, r);
+            } else {
+                assertEquals(ByteArray.from(("" +
+                    "x-forwarded-for: " + forwardedFor + "\r\n" +
+                    "x-client-port: " + clientPort + "\r\n" +
+                    "").getBytes()).concat(a), r);
+            }
         }
         Request req = front.getReq();
         {
@@ -283,7 +327,7 @@ public class TestHttp1Parser {
 
     private HttpSubContext chunkRequestNoEnd() throws Exception {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
-        HttpContext ctx = p.init(null);
+        HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
 
         String reqHead = "" +
@@ -299,7 +343,15 @@ public class TestHttp1Parser {
             int len = front.len();
             assertEquals(1, len);
             ByteArray a = ByteArray.from(b);
-            assertEquals(a, front.feed(a));
+            ByteArray r = front.feed(a);
+            if (r.length() == 1) {
+                assertEquals(a, r);
+            } else {
+                assertEquals(ByteArray.from(("" +
+                    "x-forwarded-for: " + forwardedFor + "\r\n" +
+                    "x-client-port: " + clientPort + "\r\n" +
+                    "").getBytes()).concat(a), r);
+            }
         }
         Request req = front.getReq();
         {

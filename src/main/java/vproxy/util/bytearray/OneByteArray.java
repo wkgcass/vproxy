@@ -40,9 +40,12 @@ public class OneByteArray extends AbstractByteArray {
         if (len > 1) {
             throw new ArrayIndexOutOfBoundsException("" + len);
         }
+        if (off != 0) {
+            throw new ArrayIndexOutOfBoundsException("" + off);
+        }
         if (len == 0)
             return;
-        dst.put(off, b);
+        dst.put(b);
     }
 
     @Override
@@ -50,8 +53,11 @@ public class OneByteArray extends AbstractByteArray {
         if (len > 1) {
             throw new ArrayIndexOutOfBoundsException("" + len);
         }
+        if (off != 0) {
+            throw new ArrayIndexOutOfBoundsException("" + off);
+        }
         if (len == 0)
             return;
-        b = src.get(off);
+        b = src.get();
     }
 }

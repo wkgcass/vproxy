@@ -31,6 +31,10 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
         reset();
     }
 
+    public static ByteArrayChannel fromEmpty(int len) {
+        return new ByteArrayChannel(ByteArray.allocate(len), 0, 0, len);
+    }
+
     public static ByteArrayChannel fromEmpty(byte[] arr) {
         return new ByteArrayChannel(ByteArray.from(arr), 0, 0, arr.length);
     }

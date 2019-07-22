@@ -190,7 +190,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             if (noClientPort) {
                 ByteArray b = ByteArray.from(("" +
                     "x-client-port: " + ctx.clientPort + "\r\n" +
-                    "").getBytes()).concat(data);
+                    "").getBytes());
                 assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
                 if (appendData == null) {
                     appendData = b;
