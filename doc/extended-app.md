@@ -32,6 +32,12 @@ java -Deploy=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0r
 
 ## Available apps
 
+### Deploy=Simple
+
+The vproxy simple loadbalancer. You can start a fully functional loadbalancer in one shell command.
+
+See [how-to-use](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) for more info.
+
 ### Deploy=WebSocksProxyServer
 
 A proxy server that can proxy raw tcp flow even when it's behind a websocket gateway.
@@ -42,16 +48,25 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 
 * `listen`: an integer indicating which port the server should listen.
 * `auth`: a sequence of `user:password` pairs split by `,`.
-* `ssl`: a flag, indicating using tls connections. When this option is set, `pkcs12` and `pkcs12pswd` should also be given.
+* `ssl`: a flag, indicating using tls connections. When this option is set, (`pkcs12` and `pkcs12pswd`) or (`certpem` and `keypem`) should also be given. Only one of pkcs and pem can be set.
 * `pkcs12`: the path to pkcs12 file, which should contain certificates and a private key.
 * `pkcs12pswd`: the password of the pkcs12 file.
+* `certpem`: the certificate file path. Multiple certificates are separated with `,`.
+* `keypem`: the private key file path.
 * `domain`: the domain name of current host (optional).
+* `redirectport`: bind a port and return http 3xx to redirect the client(browser) to the `listen` port.
 
 e.g.
 
 ```
 listen 80 auth alice:pasSw0rD,bob:PaSsw0Rd
 listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl pkcs12 ~/mycertkey.p12 pkcs12pswd myPassWord domain example.com
+
+listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
+        certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \
+        keypem /etc/letsencrypt/live/example.com/privkey.pem \
+        domain example.com \
+        redirectport 80
 ```
 
 ### Deploy=WebSocksProxyAgent

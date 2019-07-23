@@ -4,7 +4,6 @@ import java.io.ByteArrayInputStream;
 import java.security.KeyFactory;
 import java.security.KeyStore;
 import java.security.PrivateKey;
-import java.security.cert.Certificate;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.PKCS8EncodedKeySpec;
@@ -50,16 +49,18 @@ public class CertKey {
         PKCS8EncodedKeySpec pkcs8EncodedKeySpec = new PKCS8EncodedKeySpec(keyBytes);
         PrivateKey key = KeyFactory.getInstance("RSA").generatePrivate(pkcs8EncodedKeySpec);
 
+        X509Certificate[] x509certs = new X509Certificate[certs.length];
         for (int i = 0; i < certs.length; i++) {
             String strCert = certs[i];
             byte[] certBytes = strCert.getBytes();
 
             CertificateFactory certificateFactory = CertificateFactory.getInstance("X.509");
             X509Certificate cert = (X509Certificate) certificateFactory.generateCertificate(new ByteArrayInputStream(certBytes));
+            x509certs[i] = cert;
 
             keystore.setCertificateEntry("cert" + i + ":" + alias, cert);
-            keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), new Certificate[]{cert});
         }
+        keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), x509certs);
     }
 
     @Override

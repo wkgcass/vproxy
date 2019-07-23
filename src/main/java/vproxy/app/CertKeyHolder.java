@@ -14,7 +14,7 @@ public class CertKeyHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    private List<String> readFile(String path) throws Exception {
+    private static List<String> readFile(String path) throws Exception {
         if (path.startsWith("~")) {
             path = System.getProperty("user.home") + path.substring(1);
         }
@@ -39,7 +39,7 @@ public class CertKeyHolder {
         return lines;
     }
 
-    private List<String> getCertsFrom(String path) throws Exception {
+    private static List<String> getCertsFrom(String path) throws Exception {
         List<String> lines = readFile(path);
         if (lines.isEmpty()) {
             throw new Exception("file is blank or empty: " + path);
@@ -71,7 +71,7 @@ public class CertKeyHolder {
         return ret;
     }
 
-    private String getKeyFrom(String path) throws Exception {
+    private static String getKeyFrom(String path) throws Exception {
         List<String> lines = readFile(path);
         if (lines.isEmpty()) {
             throw new Exception("file is blank or empty: " + path);
@@ -103,11 +103,7 @@ public class CertKeyHolder {
         return key.toString();
     }
 
-    @SuppressWarnings("DuplicateThrows")
-    public void add(String alias, String[] certFilePathList, String keyFilePath) throws AlreadyExistException, Exception {
-        if (map.containsKey(alias)) {
-            throw new AlreadyExistException();
-        }
+    public static CertKey readFile(String alias, String[] certFilePathList, String keyFilePath) throws Exception {
         List<String> certs = new ArrayList<>();
         for (String certFilePath : certFilePathList) {
             certs.addAll(getCertsFrom(certFilePath));
@@ -117,6 +113,15 @@ public class CertKeyHolder {
         String key = getKeyFrom(keyFilePath);
         CertKey ck = new CertKey(alias, certsArray, key, certFilePathList, keyFilePath);
         ck.validate();
+        return ck;
+    }
+
+    @SuppressWarnings("DuplicateThrows")
+    public void add(String alias, String[] certFilePathList, String keyFilePath) throws AlreadyExistException, Exception {
+        if (map.containsKey(alias)) {
+            throw new AlreadyExistException();
+        }
+        CertKey ck = readFile(alias, certFilePathList, keyFilePath);
         map.put(alias, ck);
     }
 

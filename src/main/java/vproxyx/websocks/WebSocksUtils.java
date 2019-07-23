@@ -1,5 +1,7 @@
 package vproxyx.websocks;
 
+import vproxy.app.CertKeyHolder;
+import vproxy.component.ssl.CertKey;
 import vproxy.connection.ConnectionOpts;
 import vproxy.processor.http1.entity.Header;
 import vproxy.util.ByteArrayChannel;
@@ -14,6 +16,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.function.Predicate;
 
@@ -110,6 +113,9 @@ public class WebSocksUtils {
         boolean foundUpgrade = false;
         boolean foundSec = false;
         boolean foundConnection = false;
+        if (headers == null) { // the headers may be null (e.g. GET /\r\n\r\n)
+            headers = new LinkedList<>();
+        }
         for (Header header : headers) {
             String headerKey = header.key.trim();
             String headerVal = header.value.trim();
@@ -209,6 +215,32 @@ public class WebSocksUtils {
             engine.setSSLParameters(params);
         }
         return engine;
+    }
+
+    public static void initServerSslContextWithPem(String[] certpem, String keypem) throws Exception {
+        if (sslContext != null) {
+            throw new Exception("ssl context already initiated");
+        }
+
+        CertKey ck = CertKeyHolder.readFile("websocks-proxy-server-cert-key", certpem, keypem);
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null);
+        ck.setInto(ks);
+
+        KeyManagerFactory kmf;
+        KeyManager[] kms;
+        kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, "changeit".toCharArray());
+        kms = kmf.getKeyManagers();
+
+        try {
+            sslContext = SSLContext.getInstance("TLS");
+            sslContext.init(kms, null, null);
+        } catch (KeyManagementException e) {
+            sslContext = null;
+            throw e;
+        }
     }
 
     public static void initSslContext(String path, String pass, String format, boolean isServer, boolean needVerify) throws Exception {

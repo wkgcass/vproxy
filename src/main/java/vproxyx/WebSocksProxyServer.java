@@ -37,6 +37,8 @@ public class WebSocksProxyServer {
         boolean ssl = false;
         String pkcs12 = null;
         String pkcs12pswd = null;
+        String certpem = null;
+        String keypem = null;
         String domain = null;
         int redirectPort = -1;
         for (int i = 0; i < args.length; i++) {
@@ -82,6 +84,18 @@ public class WebSocksProxyServer {
                 }
                 pkcs12pswd = next;
                 ++i;
+            } else if (arg.equals("certpem")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`certpem` should be followed with the cert file path, separated with `,`");
+                }
+                certpem = next;
+                ++i;
+            } else if (arg.equals("keypem")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`keypem` should be followed with the key file path");
+                }
+                keypem = next;
+                ++i;
             } else if (arg.equals("domain")) {
                 if (next == null) {
                     throw new IllegalArgumentException("`domain` should be followed with the domain name");
@@ -103,8 +117,12 @@ public class WebSocksProxyServer {
                 ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
-                    "argument: listen {} auth {} [ssl pkcs12 {} pkcs12pswd {}] [domain {}] [redirectport {}]\n" +
+                    "argument: listen {} auth {} [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] [redirectport {}]\n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
+                    "          listen 443 auth alice:pasSw0rD ssl \\\n" +
+                    "                  certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\\n" +
+                    "                  keypem /etc/letsencrypt/live/example.com/privkey.pem \\\n" +
+                    "                  domain example.com redirectport 80\n" +
                     " [no ssl] listen 80 auth alice:pasSw0rD,bob:pAssW0Rd");
         }
         if (port == -1)
@@ -114,18 +132,35 @@ public class WebSocksProxyServer {
             throw new IllegalArgumentException("authentication not specified. `auth $USER:$PASS[,$USER2:$PASS2[,...]]`, " +
                 "example: auth alice:pasSw0rD,bob:PaSsw0Rd");
         if (ssl) {
-            if (pkcs12 == null)
-                throw new IllegalArgumentException("ssl mode is enabled, but pkcs12 cert+key file not specified. " +
-                    "`pkcs12 $file_path`, example: pkcs12 ~/mycertandkey.p12");
-            if (pkcs12pswd == null)
-                throw new IllegalArgumentException("ssl mode is enabled, but password of pkcs12 file not specified. " +
-                    "`pkcs12pswd $password`, example: pkcs12pswd pasSw0rD");
+            if (pkcs12 != null) {
+                if (pkcs12pswd == null)
+                    throw new IllegalArgumentException("ssl mode is enabled and pkcs12 is set, but password of pkcs12 file not specified. " +
+                        "`pkcs12pswd $password`, example: pkcs12pswd pasSw0rD");
+            } else if (certpem != null) {
+                if (keypem == null)
+                    throw new IllegalArgumentException("ssl mode is enabled and keypem is set, but keypem file not specified. " +
+                        "`keypem $file_path`, example: keypem /etc/letsencrypt/live/example.com/privkey.pem");
+            } else {
+                throw new IllegalArgumentException("ssl mode is enabled, but neither pkcs12 and certpem not specified. " +
+                    "`pkcs12 $file_path`, or, `certpem $file1,$file2,...`");
+            }
         } else {
-            if (pkcs12 != null || pkcs12pswd != null)
-                throw new IllegalArgumentException("pkcs12 info specified but no `ssl` flag set.");
+            if (pkcs12 != null || pkcs12pswd != null || certpem != null || keypem != null)
+                throw new IllegalArgumentException("pkcs12 or pem info specified but no `ssl` flag set.");
         }
         if (pkcs12 != null && pkcs12.startsWith("~")) {
             pkcs12 = System.getProperty("user.home") + pkcs12.substring(1);
+        }
+        if (pkcs12 != null) {
+            if (certpem != null || keypem != null) {
+                throw new IllegalArgumentException("pkcs12 and pem cannot be used together");
+            }
+        }
+        if (certpem != null) {
+            //noinspection ConstantConditions
+            if (pkcs12 != null || pkcs12pswd != null) {
+                throw new IllegalArgumentException("pkcs12 and pem cannot be used together");
+            }
         }
         if (port == redirectPort) {
             throw new IllegalArgumentException("listen port and redirectport are the same.");
@@ -136,6 +171,8 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("ssl: " + ssl);
         assert Logger.lowLevelDebug("pkcs12: " + pkcs12);
         assert Logger.lowLevelDebug("pkcs12pswd: " + pkcs12pswd);
+        assert Logger.lowLevelDebug("certpem: " + certpem);
+        assert Logger.lowLevelDebug("keypem: " + keypem);
         assert Logger.lowLevelDebug("domain: " + domain);
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
 
@@ -165,8 +202,18 @@ public class WebSocksProxyServer {
         Supplier<SSLEngine> engineSupplier = null;
         if (ssl) {
             // init the ssl context
-            WebSocksUtils.initSslContext(pkcs12, pkcs12pswd,
-                "PKCS12", true, false);
+            if (certpem == null) {
+                WebSocksUtils.initSslContext(pkcs12, pkcs12pswd,
+                    "PKCS12", true, false);
+            } else {
+                String[] certs = certpem.split(",");
+                for (String c : certs) {
+                    if (c.isBlank()) {
+                        throw new IllegalArgumentException("invalid input: cert file path is empty");
+                    }
+                }
+                WebSocksUtils.initServerSslContextWithPem(certs, keypem);
+            }
 
             // ssl params
             SSLParameters params = new SSLParameters();
