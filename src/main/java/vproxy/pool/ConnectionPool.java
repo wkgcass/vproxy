@@ -47,6 +47,12 @@ public class ConnectionPool {
         }
 
         @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            ctx.connection.close();
+            closed(ctx);
+        }
+
+        @Override
         public void closed(ConnectionHandlerContext ctx) {
             Logger.warn(LogType.CONN_ERROR, "pooled connection " + ctx.connection + " closed");
             removeConnection(ctx.connection);

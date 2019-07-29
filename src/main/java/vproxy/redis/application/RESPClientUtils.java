@@ -21,7 +21,7 @@ public class RESPClientUtils {
                              int timeout,
                              int retryTimes,
                              Callback<Object, IOException> cb) {
-        oneReq(loop, remote, toSend, timeout, new Callback<Object, IOException>() {
+        oneReq(loop, remote, toSend, timeout, new Callback<>() {
             @Override
             protected void onSucceeded(Object value) {
                 cb.succeeded(value);
@@ -92,6 +92,12 @@ public class RESPClientUtils {
                 public void exception(ConnectionHandlerContext ctx, IOException err) {
                     cb.failed(err);
                     ctx.connection.close();
+                }
+
+                @Override
+                public void remoteClosed(ConnectionHandlerContext ctx) {
+                    ctx.connection.close();
+                    closed(ctx);
                 }
 
                 @Override

@@ -36,6 +36,14 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
     }
 
     @Override
+    public void remoteClosed(ConnectionHandlerContext ctx) {
+        // the connection is closed
+        // we directly close the connection here regardless of data loss
+        ctx.connection.close();
+        closed(ctx);
+    }
+
+    @Override
     public void closed(ConnectionHandlerContext ctx) {
         // do nothing since the `removed` callback will be called just follow the closed event
     }

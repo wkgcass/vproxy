@@ -80,6 +80,12 @@ class MyConnectionHandler implements ConnectionHandler {
     }
 
     @Override
+    public void remoteClosed(ConnectionHandlerContext ctx) {
+        System.out.println("remote closed called " + ctx.connection);
+        ctx.connection.close();
+    }
+
+    @Override
     public void closed(ConnectionHandlerContext ctx) {
         // the event loop and channel handling is done by the lib
         // we only do log here

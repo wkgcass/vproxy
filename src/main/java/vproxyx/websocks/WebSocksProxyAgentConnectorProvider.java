@@ -62,6 +62,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
 
             @Override
+            public void remoteClosed(ConnectionHandlerContext ctx) {
+                ctx.connection.close();
+                closed(ctx);
+            }
+
+            @Override
             public void closed(ConnectionHandlerContext ctx) {
                 Logger.error(LogType.CONN_ERROR, "conn " + ctx.connection +
                     " closed when handshaking for the pool");
@@ -463,6 +469,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             Logger.error(LogType.CONN_ERROR, "connection " + ctx.connection + " got exception", err);
             utilAlertFail(ctx);
+        }
+
+        @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            ctx.connection.close();
+            closed(ctx);
         }
 
         @Override

@@ -24,7 +24,6 @@ public class ConnectClient {
             this.connectionTimeoutEvent = connectionTimeoutEvent;
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public void connected(ClientConnectionHandlerContext ctx) {
             cancelTimers(); // cancel timer if possible
@@ -57,7 +56,6 @@ public class ConnectClient {
             // will never fire
         }
 
-        @SuppressWarnings("unchecked")
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             cancelTimers(); // cancel timer if possible
@@ -66,6 +64,12 @@ public class ConnectClient {
             assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
 
             if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.failed(err);
+        }
+
+        @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            ctx.connection.close();
+            closed(ctx);
         }
 
         @Override

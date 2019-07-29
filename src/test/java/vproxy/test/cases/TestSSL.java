@@ -212,6 +212,12 @@ public class TestSSL {
         }
 
         @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            ctx.connection.close();
+            closed(ctx);
+        }
+
+        @Override
         public void closed(ConnectionHandlerContext ctx) {
             // ignore
         }
