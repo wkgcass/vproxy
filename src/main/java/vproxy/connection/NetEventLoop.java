@@ -299,9 +299,16 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         assert Logger.lowLevelNetDebug("read " + read + " bytes from " + cctx.connection);
         if (read < 0) {
             // EOF, the remote write is closed
-            cctx.connection.remoteClosed = true;
-            assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
-            cctx.handler.remoteClosed(cctx);
+            // the event may fire multiple times (when buffer writable fires, OP_READ will be added)
+            // so add the check here, let remoteClosed event fire only once
+            if (!cctx.connection.remoteClosed) {
+                cctx.connection.remoteClosed = true;
+                assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
+                cctx.handler.remoteClosed(cctx);
+            }
+            if (!cctx.connection.isClosed()) {
+                ctx.rmOps(SelectionKey.OP_READ); // do not read anymore, it will always fire OP_READ with EOF
+            }
             return;
         }
         if (read == 0) {
@@ -352,7 +359,14 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
             ctx.rmOps(SelectionKey.OP_WRITE);
             if (cctx.connection.isWriteClosed()) {
-                cctx.connection.closeWrite();
+                if (cctx.connection.remoteClosed) {
+                    // both directions closed
+                    // close the connection
+                    cctx.connection.close();
+                    cctx.handler.closed(cctx);
+                } else {
+                    cctx.connection.closeWrite();
+                }
             }
         }
     }

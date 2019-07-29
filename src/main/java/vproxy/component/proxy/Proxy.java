@@ -343,6 +343,27 @@ public class Proxy {
         }
 
         @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("now the connection sent FIN, we should close output for the passive one");
+            // now the active connection is closed
+            if (session.isClosed()) // do nothing if the session is already closed
+                return;
+            // the frontend connection closed
+            // we need to shutdownOutput for backend connection
+            session.passive.closeWrite();
+
+            // check whether need to close the session
+            if (session.passive.getOutBuffer().used() == 0) {
+                if (session.passive.isRemoteClosed()) {
+                    // nothing to write anymore
+                    // close the passive connection
+                    assert Logger.lowLevelDebug("nothing to write for passive connection, do close");
+                    utilCloseConnectionAndReleaseBuffers(session.passive);
+                }
+            }
+        }
+
+        @Override
         public void closed(ConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("now the connection is closed, we should close the session");
             // now the active connection is closed
@@ -353,13 +374,6 @@ public class Proxy {
                 // close the passive connection
                 assert Logger.lowLevelDebug("nothing to write for passive connection, do close");
                 utilCloseConnectionAndReleaseBuffers(session.passive);
-            } else {
-                assert Logger.lowLevelDebug("we should close the passive connection after everything wrote");
-                // and we close the active conn's output buffer, i.e. passive's input buffer
-                // then the passive will not be able to write anything to active
-
-                // the passive can still read from the active conn's in-buffer if still got some bytes
-                session.passive.getInBuffer().close();
             }
         }
 
@@ -426,6 +440,26 @@ public class Proxy {
         }
 
         @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("now the passive connection is closed, we should close output of the active one");
+            // now the passive connection is closed
+            if (session.isClosed()) // do nothing if the session is already closed
+                return;
+            // the connection to backend is closed
+            // so we close the write direction of the frontend connection
+            session.active.closeWrite();
+
+            // check whether need to close the session
+            if (session.active.getOutBuffer().used() == 0) {
+                if (session.active.isRemoteClosed()) {
+                    // nothing to write anymore
+                    // close the active connection
+                    utilCloseConnectionAndReleaseBuffers(session.active);
+                }
+            }
+        }
+
+        @Override
         public void closed(ConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("now the passive connection is closed, we should close the session");
             // now the passive connection is closed
@@ -435,13 +469,6 @@ public class Proxy {
                 // nothing to write anymore
                 // close the active connection
                 utilCloseConnectionAndReleaseBuffers(session.active);
-            } else {
-                assert Logger.lowLevelDebug("we should close the active connection after everything wrote");
-                // and we close the passive conn's output buffer, i.e. active's input buffer
-                // then the active will not be able to write anything to passive
-
-                // the active can still read from the passive conn's in-buffer if still got some bytes
-                session.active.getInBuffer().close();
             }
         }
 

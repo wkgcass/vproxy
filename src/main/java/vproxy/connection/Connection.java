@@ -263,6 +263,11 @@ public class Connection implements NetFlowRecorder {
             // will be closed when the data flushes
         }
 
+        if (!channel.isConnected()) {
+            // the connection may not connected yet
+            return;
+        }
+
         realWriteClosed = true; // will do real shutdown, so set real write closed flag to true
 
         // call jdk to close the write end of the connection

@@ -363,7 +363,21 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
             frontendConnection.close();
-            closeAll(true);
+            closeAll();
+        }
+
+        @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            // backend FIN
+            // we should send FIN to frontend
+            frontendConnection.closeWrite();
+            // check whether we should close the session now
+            if (frontendConnection.getOutBuffer().used() == 0) {
+                if (frontendConnection.isRemoteClosed()) {
+                    ctx.connection.close();
+                    closed(ctx);
+                }
+            }
         }
 
         @Override
@@ -373,14 +387,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             } else {
                 Logger.warn(LogType.CONN_ERROR, "backend connection " + ctx.connection + " closed before frontend connection " + frontendConnection);
             }
-            closeAll(true);
+            closeAll();
         }
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
             if (!ctx.connection.isClosed())
                 Logger.error(LogType.IMPROPER_USE, "backend connection " + ctx.connection + " removed from event loop " + loop);
-            closeAll(true);
+            closeAll();
         }
     }
     // --- END backend handler ---
@@ -708,34 +722,63 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
         Logger.error(LogType.CONN_ERROR, "connection got exception", err);
-        closeAll(false);
+        closeAll();
+    }
+
+    @Override
+    public void remoteClosed(ConnectionHandlerContext ctx) {
+        // frontend FIN
+        // we should send FIN to current backend
+        int connId = processor.connection(topCtx, frontendSubCtx);
+        if (connId == -1) {
+            // no current backend connection
+            // send FIN to all backend
+            List<Integer> ints = new ArrayList<>(conn2intMap.values());
+            boolean allBackendRemoteClosed = true;
+            for (int i : ints) {
+                BackendConnectionHandler be = conns[i];
+                be.conn.closeWrite();
+                if (be.conn.getOutBuffer().used() != 0 || !be.conn.isRemoteClosed()) {
+                    allBackendRemoteClosed = false;
+                }
+            }
+            if (allBackendRemoteClosed) {
+                // close the session
+                ctx.connection.close();
+                closed(ctx);
+            }
+        } else {
+            // only send FIN to the selected backend
+            BackendConnectionHandler be = conns[connId];
+            be.conn.closeWrite();
+            if (be.conn.getOutBuffer().used() == 0) {
+                if (be.conn.isRemoteClosed()) {
+                    // close the session
+                    ctx.connection.close();
+                    closed(ctx);
+                }
+            }
+        }
     }
 
     @Override
     public void closed(ConnectionHandlerContext ctx) {
         assert Logger.lowLevelDebug("frontend connection is closed: " + frontendConnection);
-        closeAll(false);
+        closeAll();
     }
 
     @Override
     public void removed(ConnectionHandlerContext ctx) {
         if (!frontendConnection.isClosed())
             Logger.error(LogType.IMPROPER_USE, "frontend connection " + frontendConnection + " removed from event loop " + loop);
-        closeAll(false);
+        closeAll();
     }
 
     private boolean closed = false;
 
-    void closeAll(boolean backendClose) {
+    void closeAll() {
         if (closed) {
-            if (frontendConnection.isClosed()) {
-                return; // ignore if already closed
-            } else if (!backendClose) {
-                // frontend connection closes
-                frontendConnection.close();
-                frontendConnection.getInBuffer().clean();
-                frontendConnection.getOutBuffer().clean();
-            }
+            return;
         }
         closed = true;
 
@@ -748,11 +791,6 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             be.conn.getInBuffer().clean();
             be.conn.getOutBuffer().clean();
         }
-        if (backendClose && frontendConnection.getOutBuffer().used() != 0) {
-            // the frontend still got data to write
-            return;
-        }
-        // the frontend closed, or nothing to write. so we close the frontend connection
         frontendConnection.close();
         frontendConnection.getInBuffer().clean();
         frontendConnection.getOutBuffer().clean();
