@@ -171,17 +171,17 @@ public class Simple {
 
         // load key
         if (certpath != null) {
-            Application.get().certKeyHolder.add("cert-key", certpath, keypath);
+            Application.get().certKeyHolder.add("crt", certpath, keypath);
         }
         // create group
-        Application.get().serverGroupsHolder.add("server-groups");
-        ServerGroup group = Application.get().serverGroupHolder.add("server-group",
+        Application.get().serverGroupsHolder.add("collection");
+        ServerGroup group = Application.get().serverGroupHolder.add("backend",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr);
         int svrCnt = 0;
         for (HostPort svr : backendList) {
             if (Utils.isIpLiteral(svr.host)) {
-                group.add("svr" + (++svrCnt), new InetSocketAddress(InetAddress.getByName(svr.host), svr.port), 10);
+                group.add("backend" + (++svrCnt), new InetSocketAddress(InetAddress.getByName(svr.host), svr.port), 10);
             } else {
                 InetAddress addr;
                 try {
@@ -189,25 +189,25 @@ public class Simple {
                 } catch (UnknownHostException e) {
                     throw new Exception("unknown host in `backend {host:port}`: " + svr.host);
                 }
-                group.add("svr" + (++svrCnt), svr.host, new InetSocketAddress(addr, svr.port), 10);
+                group.add("backend" + (++svrCnt), svr.host, new InetSocketAddress(addr, svr.port), 10);
             }
         }
-        Application.get().serverGroupsHolder.get("server-groups").add(group, 10);
+        Application.get().serverGroupsHolder.get("collection").add(group, 10);
         // create lb
-        Application.get().tcpLBHolder.add("lb",
+        Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port),
-            Application.get().serverGroupsHolder.get("server-groups"),
+            Application.get().serverGroupsHolder.get("collection"),
             60_000,
             4096,
             4096,
             protocol,
-            certpath == null ? null : new CertKey[]{Application.get().certKeyHolder.get("cert-key")},
+            certpath == null ? null : new CertKey[]{Application.get().certKeyHolder.get("crt")},
             SecurityGroup.allowAll());
         // done
 
-        System.err.println(Shutdown.currentConfig());
+        System.err.print(Shutdown.currentConfig());
 
         // check for `gen`
         if (gen) {

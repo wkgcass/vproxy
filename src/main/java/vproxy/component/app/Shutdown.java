@@ -205,7 +205,7 @@ public class Shutdown {
                 certKeyNames.add(ck.alias);
 
                 StringBuilder cmd = new StringBuilder();
-                cmd.append("add cert-key cert ").append(ck.certPaths[0]);
+                cmd.append("add cert-key " + ck.alias + " cert ").append(ck.certPaths[0]);
                 for (int i = 1; i < ck.certPaths.length; ++i) {
                     cmd.append(",").append(ck.certPaths[i]);
                 }
