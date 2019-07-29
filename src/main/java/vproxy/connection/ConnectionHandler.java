@@ -9,6 +9,8 @@ public interface ConnectionHandler {
 
     void exception(ConnectionHandlerContext ctx, IOException err);
 
+    void remoteClosed(ConnectionHandlerContext ctx);
+
     void closed(ConnectionHandlerContext ctx);
 
     void removed(ConnectionHandlerContext ctx);

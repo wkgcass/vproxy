@@ -70,6 +70,11 @@ public class EventLoopWrapper extends NetEventLoop {
         }
 
         @Override
+        public void remoteClosed(ConnectionHandlerContext ctx) {
+            handler.remoteClosed(ctx);
+        }
+
+        @Override
         public void closed(ConnectionHandlerContext ctx) {
             handler.closed(ctx);
         }

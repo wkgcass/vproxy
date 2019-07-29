@@ -301,15 +301,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             // EOF, the remote write is closed
             cctx.connection.remoteClosed = true;
             assert Logger.lowLevelDebug("connection " + cctx.connection + " remote closed");
-            if (cctx.connection.getOutBuffer().used() == 0) {
-                // directly close here if no data needs to be sent
-                cctx.connection.close();
-                cctx.handler.closed(cctx);
-            } else {
-                // remove read event add write event (maybe more bytes to write)
-                ctx.modify(SelectionKey.OP_WRITE);
-                // the connection will be closed after write
-            }
+            cctx.handler.remoteClosed(cctx);
             return;
         }
         if (read == 0) {
@@ -332,13 +324,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     public void writable(HandlerContext<SelectableChannel> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
         if (cctx.connection.getOutBuffer().used() == 0) {
-            if (cctx.connection.remoteClosed || cctx.connection.isClosed()) {
-                // no bytes to write, then the connection can be closed now
-                cctx.connection.close();
-                cctx.handler.closed(cctx);
-            } else {
-                Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
-            }
+            Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
             return;
         }
 
@@ -362,12 +348,11 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         // NOTE: should also record in Quick Write impl in Connection.java
         cctx.handler.writable(cctx); // the out buffer definitely have some free space, let client code write
         if (cctx.connection.getOutBuffer().used() == 0) {
-            if (!cctx.connection.remoteClosed) {
-                // all bytes flushed, and no client bytes for now, remove write event
-                assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
-                ctx.rmOps(SelectionKey.OP_WRITE);
-            } else {
-                assert Logger.lowLevelDebug("the remote write is closed, so we keep the WRITE event for " + cctx.connection);
+            // all bytes flushed, and no client bytes for now, remove write event
+            assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
+            ctx.rmOps(SelectionKey.OP_WRITE);
+            if (cctx.connection.isWriteClosed()) {
+                cctx.connection.closeWrite();
             }
         }
     }

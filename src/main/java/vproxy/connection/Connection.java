@@ -155,12 +155,14 @@ public class Connection implements NetFlowRecorder {
     private /*only modified in UNSAFE methods*/ RingBuffer outBuffer;
     /*private let ClientConnection have access*/ final InBufferETHandler inBufferETHandler;
     private final OutBufferETHandler outBufferETHandler;
-    boolean remoteClosed = false;
 
     private NetEventLoop _eventLoop = null;
     private ConnectionHandlerContext _cctx = null;
 
     private boolean closed = false;
+    boolean remoteClosed = false;
+    private boolean writeClosed = false;
+    private boolean realWriteClosed = false;
 
     private boolean noQuickWrite = false;
 
@@ -234,6 +236,43 @@ public class Connection implements NetFlowRecorder {
 
     public boolean isClosed() {
         return closed;
+    }
+
+    public boolean isWriteClosed() {
+        return writeClosed;
+    }
+
+    public boolean isRemoteClosed() {
+        return remoteClosed;
+    }
+
+    public void closeWrite() {
+        if (realWriteClosed || closed)
+            return; // do not close again if already closed
+
+        writeClosed = true; // set write close flag to true
+
+        // check whether output buffer still got data
+        if (outBuffer.used() != 0) {
+            // NOTE: no need to check for writeClosed in QuickWrite method
+            // the method should be called without concurrency
+            // so when it reaches here, the OP_WRITE event must be added
+            // the closeWrite will be called again in NetEventLoop
+            return;
+            // do not do real close if got data to write
+            // will be closed when the data flushes
+        }
+
+        realWriteClosed = true; // will do real shutdown, so set real write closed flag to true
+
+        // call jdk to close the write end of the connection
+        try {
+            channel.shutdownOutput();
+        } catch (IOException e) {
+            // we can do nothing about it
+        }
+
+        // here we do not release buffers
     }
 
     // make it synchronized to prevent inside fields inconsistent
