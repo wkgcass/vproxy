@@ -259,11 +259,6 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
     }
 
     @Override
-    public void close() {
-        plainBufferForApp.close();
-    }
-
-    @Override
     public void clean() {
         plainBufferForApp.clean();
         encryptedBufferForOutput.clean();

@@ -148,11 +148,6 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
     }
 
     @Override
-    public void close() {
-        defaultBuffer.close();
-    }
-
-    @Override
     public void clean() {
         if (proxied != null) {
             proxied.removeHandler(proxiedETHandler);

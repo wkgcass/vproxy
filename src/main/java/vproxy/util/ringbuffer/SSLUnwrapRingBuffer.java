@@ -53,7 +53,6 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     // only used when resume if resumer not specified
     private SelectorEventLoop lastLoop = null;
-    private boolean closed = false;
 
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,
@@ -72,9 +71,6 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
 
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
-        if (closed) {
-            return -1; // don't store anything it's already closed
-        }
         int read = encryptedBufferForInput.storeBytesFrom(channel);
         if (read == 0) {
             return 0; // maybe the buffer is full
@@ -327,11 +323,6 @@ public class SSLUnwrapRingBuffer extends AbstractRingBuffer implements RingBuffe
     public int capacity() {
         // capacity of the plain buffer and encrypted buffer are the same
         return plainBufferForApp.capacity();
-    }
-
-    @Override
-    public void close() {
-        closed = true;
     }
 
     @Override

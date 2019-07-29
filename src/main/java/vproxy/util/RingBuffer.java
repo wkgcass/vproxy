@@ -80,8 +80,6 @@ public interface RingBuffer {
 
     Set<RingBufferETHandler> getHandlers();
 
-    void close();
-
     void clean();
 
     void clear();

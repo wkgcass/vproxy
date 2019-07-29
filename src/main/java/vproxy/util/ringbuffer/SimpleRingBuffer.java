@@ -34,7 +34,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private int sPos; // start pos
     private final int cap;
     private boolean ePosIsAfterSPos = true; // true then end is limit, otherwise start is limit
-    private boolean closed = false;
 
     private boolean notFirstOperator = false;
     private boolean operating = false;
@@ -173,11 +172,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         return new HashSet<>(handler);
     }
 
-    @Override
-    public void close() {
-        closed = true;
-    }
-
     private boolean cleaned = false;
 
     /**
@@ -230,8 +224,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     @Override
     public int operateOnByteBufferWriteOut(int maxBytesToWrite, ByteBufferRingBuffer.WriteOutOp op) throws IOException {
-        if (closed)
-            return 0; // handle nothing because it's closed
         if (operatingBuffer) {
             throw new IllegalStateException("this buffer is operating");
         }
@@ -325,8 +317,6 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     @Override
     public int operateOnByteBufferStoreIn(ByteBufferRingBuffer.StoreInOp op) throws IOException {
-        if (closed)
-            return -1; // handle nothing because it's already closed
         if (operatingBuffer) {
             throw new IllegalStateException("this buffer is operating");
         }
