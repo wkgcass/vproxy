@@ -216,7 +216,7 @@ public class ServerGroup {
                 return;
             }
             healthCheckClient.start();
-            Logger.lowLevelDebug("health check for " +
+            assert Logger.lowLevelDebug("health check for " +
                 ServerHandle.this.alias + "(" + server + ") " +
                 "is started on loop " + el.alias);
 
@@ -232,7 +232,7 @@ public class ServerGroup {
 
         @Override
         public void onClose() {
-            Logger.lowLevelDebug("event loop closed, health check for " +
+            assert Logger.lowLevelDebug("event loop closed, health check for " +
                 ServerHandle.this.alias + "(" + server + ") is trying to restart");
             restart(); // try to restart
         }
@@ -240,7 +240,7 @@ public class ServerGroup {
         void stop() {
             if (el == null)
                 return;
-            Logger.lowLevelDebug("stop health check for " + ServerHandle.this.alias + "(" + server + ")");
+            assert Logger.lowLevelDebug("stop health check for " + ServerHandle.this.alias + "(" + server + ")");
             try {
                 el.detachResource(this);
             } catch (NotFoundException e) {

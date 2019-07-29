@@ -160,7 +160,7 @@ public class SSLWrapRingBuffer extends AbstractRingBuffer implements RingBuffer 
                         // reset the position first in case it's changed
                         bufferPlain.position(positionBeforeHandling);
 
-                        Logger.lowLevelDebug("buffer overflow, so make a bigger buffer and try again");
+                        assert Logger.lowLevelDebug("buffer overflow, so make a bigger buffer and try again");
                         bufferEncrypted = ByteBuffer.allocate(engine.getSession().getPacketBufferSize());
                         try {
                             result = engine.wrap(bufferPlain, bufferEncrypted);
