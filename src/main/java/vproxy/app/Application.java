@@ -18,6 +18,7 @@ public class Application {
     public static final String DEFAULT_WORKER_EVENT_LOOP_NAME_SUFFIX = ")";
     public static final String DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME = "(control-elg)";
     public static final String DEFAULT_CONTROL_EVENT_LOOP_NAME = "(control-el)";
+    public static final String VERSION = "1.0.0-BETA-5-DEV"; // _THE_VERSION_
 
     private static Application application;
 
@@ -42,7 +43,7 @@ public class Application {
     public final SmartLBGroupHolder smartLBGroupHolder;
 
     private Application() throws IOException {
-        this.version = "1.0.0-BETA-5-DEV"; // _THE_VERSION_
+        this.version = VERSION;
 
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();

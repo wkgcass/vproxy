@@ -31,7 +31,7 @@ jar {
 }
 
 def loadVersion() {
-    def PREFIX = "this.version = \""
+    def PREFIX = "public static final String VERSION = \""
     def SUFFIX = "\"; // _THE_VERSION_"
     def ver = file(sourceSets.main.java.srcDirs[0].path + "/vproxy/app/Application.java")
     def lines = ver.getText().split("\n")

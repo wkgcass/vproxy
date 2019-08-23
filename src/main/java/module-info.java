@@ -14,4 +14,9 @@ module vproxy {
 
     // export the main class for user to start
     exports vproxy.app;
+
+    // export json components
+    exports vjson;
+    // export vserver components
+    exports vserver;
 }
