@@ -17,6 +17,7 @@ module vproxy {
 
     // export json components
     exports vjson;
-    // export vserver components
+    // export vserver|vclient components
     exports vserver;
+    exports vclient;
 }

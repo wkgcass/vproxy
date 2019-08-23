@@ -14,9 +14,11 @@ public class Response {
     public List<Chunk> chunks; // nullable
     public List<Header> trailers; // nullable
 
+    @SuppressWarnings("DuplicatedCode")
     public ByteArray toByteArray() {
         StringBuilder textPart = new StringBuilder();
         textPart.append(version).append(" ").append(statusCode).append(" ").append(reason).append("\r\n");
+        // the following should be the same as Request
         if (headers != null) {
             for (Header h : headers) {
                 textPart.append(h.key).append(":").append(h.value).append("\r\n");

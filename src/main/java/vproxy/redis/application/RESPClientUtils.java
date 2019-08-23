@@ -102,7 +102,9 @@ public class RESPClientUtils {
 
                 @Override
                 public void closed(ConnectionHandlerContext ctx) {
-                    // ignore
+                    if (!cb.isCalled()) {
+                        cb.failed(new IOException("connection closed before receiving the response"));
+                    }
                 }
 
                 @Override

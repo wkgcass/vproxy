@@ -1,5 +1,7 @@
 package vproxy.poc;
 
+import vclient.HttpClient;
+import vclient.HttpResponse;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vjson.util.Transformer;
@@ -9,6 +11,7 @@ import vserver.RoutingContext;
 import vserver.HttpServer;
 import vserver.Tool;
 
+import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Optional;
@@ -16,7 +19,11 @@ import java.util.UUID;
 
 public class ApplicationLevelHttpServer {
     public static void main(String[] args) throws Exception {
-        new ApplicationLevelHttpServer().run();
+        System.out.println("Start server");
+        new ApplicationLevelHttpServer().runServer();
+        Thread.sleep(1_000);
+        System.out.println("Start client to build initial data");
+        new ApplicationLevelHttpServer().runClient();
     }
 
     private static class Service {
@@ -42,7 +49,53 @@ public class ApplicationLevelHttpServer {
             .put("ingressPort", s.port)
             .build());
 
-    private void run() throws Exception {
+    private void runClient() throws Exception {
+        HttpClient client = HttpClient.to("127.0.0.1", 8080);
+        client.pst("/api/v1/services").send(new ObjectBuilder()
+                .put("name", "myservice1")
+                .put("address", "192.168.0.1")
+                .put("port", 80)
+                .build(),
+            (err, resp) -> printResponse("myservice1", err, resp));
+
+        client.pst("/api/v1/services").send(new ObjectBuilder()
+                .put("name", "myservice2")
+                .put("address", "192.168.0.2")
+                .put("port", 80)
+                .build(),
+            (err, resp) -> printResponse("myservice2", err, resp));
+
+        Thread.sleep(500);
+        client.get("/api/v1/services").send((err, resp) -> {
+            if (err != null) {
+                System.out.println("Request to fetch services failed: " + err);
+                err.printStackTrace();
+                return;
+            }
+            if (resp.status() != 200) {
+                System.out.println("Request to fetch services failed: " + resp.bodyAsString());
+                return;
+            }
+            JSON.Instance inst = resp.bodyAsJson();
+            System.out.println("Fetch services result:");
+            System.out.println(inst.pretty());
+        });
+    }
+
+    private void printResponse(String name, IOException err, HttpResponse resp) {
+        if (err != null) {
+            System.out.println("Request failed for " + name + ": " + err);
+            err.printStackTrace();
+            return;
+        }
+        if (resp.status() != 200) {
+            System.out.println("Request failed for " + name + ": " + resp.bodyAsString());
+        } else {
+            System.out.println("Request succeeded for " + name);
+        }
+    }
+
+    private void runServer() throws Exception {
         HttpServer.create()
             .all("/api/v1/*", Tool.bodyJsonHandler)
             .get("/api/v1/services/:serviceId", this::getService)
