@@ -22,6 +22,7 @@ public enum ResourceType {
     ck("cert-key"),
 
     respcontroller("resp-controller"),
+    httpcontroller("http-controller"),
     ;
     public final String fullname;
 

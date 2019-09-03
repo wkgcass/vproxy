@@ -61,4 +61,6 @@ public interface HttpServer {
     }
 
     void listen(InetSocketAddress addr) throws IOException;
+
+    void stop();
 }

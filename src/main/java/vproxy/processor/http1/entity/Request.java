@@ -25,7 +25,7 @@ public class Request {
         // the following should be the same as Response
         if (headers != null) {
             for (Header h : headers) {
-                textPart.append(h.key).append(":").append(h.value).append("\r\n");
+                textPart.append(h.key).append(": ").append(h.value).append("\r\n");
             }
         }
         textPart.append("\r\n");
@@ -46,7 +46,7 @@ public class Request {
         if (trailers != null) {
             textPart = new StringBuilder();
             for (Header h : trailers) {
-                textPart.append(h.key).append(":").append(h.value).append("\r\n");
+                textPart.append(h.key).append(": ").append(h.value).append("\r\n");
             }
         }
         if (chunks != null || trailers != null) {

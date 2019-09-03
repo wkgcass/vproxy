@@ -1,8 +1,10 @@
 package vproxy.app.cmd;
 
 import vproxy.app.Application;
+import vproxy.app.HttpControllerHolder;
 import vproxy.app.RESPControllerHolder;
 import vproxy.app.cmd.handle.param.AddrHandle;
+import vproxy.component.app.HttpController;
 import vproxy.component.app.RESPController;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
@@ -35,6 +37,11 @@ public class SystemCommand {
         "\n        System call: remove resp-controller        stop resp controller" +
         "\n                               ${name}" +
         "\n        System call: list-detail resp-controller   check resp controller" +
+        "\n        System call: add http-controller           start http controller" +
+        "\n                               ${alias}" +
+        "\n                               address ${bind addr}" +
+        "\n        System call: remove http-controller        stop http controller" +
+        "\n        System call: list-detail http-controller   check http controller" +
         "\n        System call: list config                   show current config";
 
     public static boolean allowNonStdIOController = false;
@@ -80,7 +87,7 @@ public class SystemCommand {
                         filename.append(split[i]);
                     }
                     try {
-                        Shutdown.load(filename.toString(), new Callback<String, Throwable>() {
+                        Shutdown.load(filename.toString(), new Callback<>() {
                             @Override
                             protected void onSucceeded(String value) {
                                 cb.succeeded(new CmdResult());
@@ -128,7 +135,12 @@ public class SystemCommand {
                     switch (arr[1]) {
                         case "resp-controller":
                             if (arr.length == 7) {
-                                handleAddRespController(arr, cb);
+                                handleAddController("resp", arr, cb);
+                                break outswitch;
+                            }
+                        case "http-controller":
+                            if (arr.length == 5) {
+                                handleAddController("http", arr, cb);
                                 break outswitch;
                             }
                     }
@@ -141,7 +153,12 @@ public class SystemCommand {
                     switch (arr[1]) {
                         case "resp-controller":
                             if (arr.length == 3) {
-                                handleRemoveController(arr, cb);
+                                handleRemoveRespController(arr, cb);
+                                break outswitch;
+                            }
+                        case "http-controller":
+                            if (arr.length == 3) {
+                                handleRemoveHttpController(arr, cb);
                                 break outswitch;
                             }
                     }
@@ -154,8 +171,12 @@ public class SystemCommand {
                     switch (arr[1]) {
                         case "resp-controller":
                             if (arr.length == 2) {
-                                handleListController(false, cb);
+                                handleListController("resp", false, cb);
                                 break outswitch;
+                            }
+                        case "http-controller":
+                            if (arr.length == 2) {
+                                handleListController("http", false, cb);
                             }
                         case "config":
                             if (arr.length == 2) {
@@ -172,7 +193,12 @@ public class SystemCommand {
                     switch (arr[1]) {
                         case "resp-controller":
                             if (arr.length == 2) {
-                                handleListController(true, cb);
+                                handleListController("resp", true, cb);
+                                break outswitch;
+                            }
+                        case "http-controller":
+                            if (arr.length == 2) {
+                                handleListController("http", true, cb);
                                 break outswitch;
                             }
                     }
@@ -187,7 +213,7 @@ public class SystemCommand {
         cb.succeeded(new CmdResult(config, lines, config));
     }
 
-    private static void handleAddRespController(String[] arr, Callback<CmdResult, ? super XException> cb) {
+    private static void handleAddController(String type, String[] arr, Callback<CmdResult, ? super XException> cb) {
         Command cmd;
         try {
             cmd = Command.statm(Arrays.asList(arr));
@@ -199,9 +225,12 @@ public class SystemCommand {
             cb.failed(new XException("missing address"));
             return;
         }
-        if (!cmd.args.containsKey(Param.pass)) {
-            cb.failed(new XException("missing password"));
-            return;
+        if (type.equals("resp")) {
+            // resp-controller needs password
+            if (!cmd.args.containsKey(Param.pass)) {
+                cb.failed(new XException("missing password"));
+                return;
+            }
         }
         try {
             AddrHandle.check(cmd);
@@ -218,11 +247,19 @@ public class SystemCommand {
             cb.failed(new XException("invalid system call"));
             return;
         }
-        byte[] pass = cmd.args.get(Param.pass).getBytes();
+        byte[] pass = null;
+        if (type.equals("resp")) {
+            pass = cmd.args.get(Param.pass).getBytes();
+        }
 
         // start
         try {
-            Application.get().respControllerHolder.add(cmd.resource.alias, addr, pass);
+            if (type.equals("resp")) {
+                Application.get().respControllerHolder.add(cmd.resource.alias, addr, pass);
+            } else {
+                assert type.equals("http");
+                Application.get().httpControllerHolder.add(cmd.resource.alias, addr);
+            }
         } catch (AlreadyExistException e) {
             cb.failed(new XException("the RESPController is already started"));
         } catch (IOException e) {
@@ -231,7 +268,7 @@ public class SystemCommand {
         cb.succeeded(new CmdResult());
     }
 
-    private static void handleRemoveController(String[] arr, Callback<CmdResult, ? super XException> cb) {
+    private static void handleRemoveRespController(String[] arr, Callback<CmdResult, ? super XException> cb) {
         try {
             Application.get().respControllerHolder.removeAndStop(arr[2]);
         } catch (NotFoundException e) {
@@ -240,26 +277,62 @@ public class SystemCommand {
         cb.succeeded(new CmdResult());
     }
 
-    private static void handleListController(boolean detail, Callback<CmdResult, ? super XException> cb) {
-        RESPControllerHolder h = Application.get().respControllerHolder;
-        List<String> names = h.names();
-        List<RESPController> controllers = new LinkedList<>();
+    private static void handleRemoveHttpController(String[] arr, Callback<CmdResult, ? super XException> cb) {
+        try {
+            Application.get().httpControllerHolder.removeAndStop(arr[2]);
+        } catch (NotFoundException e) {
+            cb.failed(new XException("not found"));
+        }
+        cb.succeeded(new CmdResult());
+    }
+
+    private static void handleListController(String type, boolean detail, Callback<CmdResult, ? super XException> cb) {
+        List<String> names;
+        if (type.equals("resp")) {
+            RESPControllerHolder h = Application.get().respControllerHolder;
+            names = h.names();
+        } else {
+            assert type.equals("http");
+            HttpControllerHolder h = Application.get().httpControllerHolder;
+            names = h.names();
+        }
+        List<Object> controllers = new LinkedList<>();
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
         for (String name : names) {
             if (isFirst) isFirst = false;
             else sb.append("\n");
-            RESPController c;
-            try {
-                c = h.get(name);
-            } catch (NotFoundException e) {
-                // should not happen if no concurrency. just ignore
-                continue;
-            }
-            controllers.add(c);
-            sb.append(c.alias);
-            if (detail) {
-                sb.append(" -> ").append(c.server.id());
+
+            if (type.equals("resp")) {
+                RESPController c;
+                try {
+                    RESPControllerHolder h = Application.get().respControllerHolder;
+                    c = h.get(name);
+                } catch (NotFoundException e) {
+                    // should not happen if no concurrency. just ignore
+                    continue;
+                }
+                controllers.add(c);
+                sb.append(c.alias);
+                if (detail) {
+                    sb.append(" -> ").append(c.server.id());
+                }
+            } else {
+                //noinspection ConstantConditions
+                assert type.equals("http");
+                HttpController c;
+                try {
+                    HttpControllerHolder h = Application.get().httpControllerHolder;
+                    c = h.get(name);
+                } catch (NotFoundException e) {
+                    // should not happen if no concurrency. just ignore
+                    continue;
+                }
+                controllers.add(c);
+                sb.append(c.alias);
+                if (detail) {
+                    sb.append(" -> ").append(Utils.l4addrStr(c.address));
+                }
             }
         }
         String resps = sb.toString();

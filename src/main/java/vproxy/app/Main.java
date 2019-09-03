@@ -1,16 +1,13 @@
 package vproxy.app;
 
+import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.SystemCommand;
-import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.mesh.ServiceMeshMain;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
-import vproxy.component.exception.AlreadyExistException;
+import vproxy.component.exception.XException;
 import vproxy.dns.Resolver;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Utils;
+import vproxy.util.*;
 import vproxyx.Sidecar;
 import vproxyx.Simple;
 import vproxyx.WebSocksProxyAgent;
@@ -18,7 +15,6 @@ import vproxyx.WebSocksProxyServer;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.security.Security;
 
 public class Main {
@@ -30,6 +26,8 @@ public class Main {
         "\n" +
         "\n\t\tresp-controller ${address} ${password}       Start the resp-controller, will" +
         "\n\t\t                                             be named as `resp-controller`" +
+        "\n\t\thttp-controller ${address}                   Start the http-controller, will" +
+        "\n\t\t                                             be named as `http-controller`" +
         "\n\t\tallowSystemCallInNonStdIOController          Allow system call in all controllers" +
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
@@ -145,30 +143,28 @@ public class Main {
                     }
                     break;
                 case "resp-controller":
-                    if (next == null || next2 == null) {
-                        System.err.println("invalid system call for `resp-controller`: should specify an address and a password");
+                case "http-controller":
+                    if (next == null || (arg.equals("resp-controller") && next2 == null)) {
+                        System.err.println("invalid system call for `" + arg + "`: should specify an address"
+                            + (arg.equals("resp-controller") ? " and a password" : ""));
                         System.exit(1);
                         return;
                     }
-                    // handle resp-controller, so increase the cursor
-                    i += 2;
-                    InetSocketAddress respCtrlAddr;
-                    try {
-                        respCtrlAddr = AddrHandle.get(next, true, true);
-                    } catch (Exception e) {
-                        System.err.println("invalid address: " + next);
-                        System.exit(1);
-                        return;
+                    // handle controller, so increase the cursor
+                    i += (arg.equals("resp-controller") ? 2 : 1);
+
+                    StringBuilder call = new StringBuilder();
+                    call.append("System call: add ").append(arg).append(" (").append(arg).append(") address ").append(next);
+                    if (arg.equals("resp-controller")) {
+                        call.append(" password ").append(next2);
                     }
-                    byte[] pass = next2.getBytes();
+                    BlockCallback<CmdResult, XException> cb = new BlockCallback<>();
+                    SystemCommand.handleSystemCall(call.toString(), cb);
                     try {
-                        Application.get().respControllerHolder.add("resp-controller", respCtrlAddr, pass);
-                    } catch (AlreadyExistException e) {
-                        // should not happen
-                        throw new RuntimeException(e);
-                    } catch (IOException e) {
-                        System.err.println("start resp-controller failed");
-                        System.exit(1);
+                        cb.block();
+                    } catch (XException e) {
+                        System.err.println("start " + arg + " failed");
+                        e.printStackTrace();
                         return;
                     }
                     break;

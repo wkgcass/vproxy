@@ -188,6 +188,10 @@ public class Connection implements NetFlowRecorder {
         // if buffer did not wrote all content, simply ignore the left part
     }
 
+    public InetSocketAddress getLocal() {
+        return local;
+    }
+
     // --- START statistics ---
     public long getFromRemoteBytes() {
         return fromRemoteBytes;

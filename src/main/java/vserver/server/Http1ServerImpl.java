@@ -15,6 +15,7 @@ import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.ByteArray;
+import vproxy.util.Logger;
 import vserver.*;
 
 import java.io.IOException;
@@ -22,7 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.stream.Collectors;
 
-import static vserver.HttpMethod.*;
+import static vserver.HttpMethod.ALL_METHODS;
 
 public class Http1ServerImpl implements HttpServer {
     private static class RouteEntry {
@@ -40,6 +41,8 @@ public class Http1ServerImpl implements HttpServer {
     private boolean started = false;
     private final List<RouteEntry> routes = new LinkedList<>();
     private NetEventLoop loop;
+    private final boolean noInputLoop;
+    private BindServer server;
 
     public Http1ServerImpl() {
         this(null);
@@ -47,6 +50,7 @@ public class Http1ServerImpl implements HttpServer {
 
     public Http1ServerImpl(NetEventLoop loop) {
         this.loop = loop;
+        noInputLoop = loop == null;
     }
 
     @Override
@@ -68,7 +72,8 @@ public class Http1ServerImpl implements HttpServer {
 
         initLoop();
 
-        ProtocolServerHandler.apply(loop, BindServer.create(addr),
+        server = BindServer.create(addr);
+        ProtocolServerHandler.apply(loop, server,
             new ProtocolServerConfig().setInBufferSize(4096).setOutBufferSize(4096),
             new HttpProtocolHandler(true) {
                 @Override
@@ -76,6 +81,23 @@ public class Http1ServerImpl implements HttpServer {
                     handle(ctx);
                 }
             });
+    }
+
+    @Override
+    public void stop() {
+        if (noInputLoop) {
+            // should stop the event loop because it's created from inside
+            if (loop != null) {
+                try {
+                    loop.getSelectorEventLoop().close();
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("got error when closing the event loop", e);
+                }
+            }
+        }
+        if (server != null) {
+            server.close();
+        }
     }
 
     private void handle404(RoutingContext ctx) {
@@ -129,13 +151,21 @@ public class Http1ServerImpl implements HttpServer {
         {
             final HttpMethod method;
             final Map<String, String> headers = new HashMap<>();
-            final String uri = request.uri;
+            final String uri = unescape(request.uri);
             final ByteArray body;
             final HttpResponse response;
             final HandlerChain chain;
 
             final List<String> paths;
             { // paths
+                if (uri == null) {
+                    Response resp = new Response();
+                    resp.statusCode = 400;
+                    resp.reason = "Bad Request";
+                    resp.body = ByteArray.from("Bad Request: invalid uri\r\n".getBytes());
+                    sendResponse(_pctx, resp);
+                    return;
+                }
                 String path = uri;
                 if (path.contains("?")) {
                     path = path.substring(0, path.indexOf('?'));
@@ -262,6 +292,45 @@ public class Http1ServerImpl implements HttpServer {
             ctx[0] = new RoutingContext(method, uri, headers, body, response, chain);
         }
         ctx[0].next();
+    }
+
+    private static String unescape(String uri) {
+        byte[] input = uri.getBytes();
+        int idx = 0;
+        byte[] result = new byte[input.length];
+        int state = 0; // 0 -> normal, 1 -> %[x]x, 2 -> %x[x]
+        int a = 0;
+        for (byte b : input) {
+            char c = (char) b; // safe
+            if (state == 0) {
+                if (c == '%') {
+                    state = 1;
+                } else {
+                    result[idx++] = b;
+                }
+            } else {
+                int n;
+                try {
+                    n = Integer.parseInt("" + c, 16);
+                } catch (NumberFormatException ignore) {
+                    assert Logger.lowLevelDebug("escaped uri part not number: " + c);
+                    return null;
+                }
+                if (state == 1) {
+                    a = n;
+                    state = 2;
+                } else {
+                    n = a * 16 + n;
+                    result[idx++] = (byte) n;
+                    state = 0;
+                }
+            }
+        }
+        if (state == 0) {
+            return new String(result, 0, idx);
+        } else {
+            return null;
+        }
     }
 
     private RoutingHandler nextHandler(RoutingContext ctx, List<String> paths, int[] index) {

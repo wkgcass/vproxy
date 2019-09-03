@@ -60,6 +60,10 @@ public class Utils {
         return positive(ip[0]) + "." + positive(ip[1]) + "." + positive(ip[2]) + "." + positive(ip[3]);
     }
 
+    public static String l4addrStr(InetSocketAddress l4addr) {
+        return ipStr(l4addr.getAddress().getAddress()) + ":" + l4addr.getPort();
+    }
+
     public static String ipStr(byte[] ip) {
         { // return 0.0.0.0 if all zero (instead of ipv6 ::)
             boolean allZero = true;

@@ -27,7 +27,7 @@ public class SimpleArray extends AbstractSimpleInstance<List<Object>> implements
         this(Arrays.asList(list));
     }
 
-    public SimpleArray(List<JSON.Instance> list) throws NullPointerException, IllegalArgumentException {
+    public SimpleArray(List<? extends JSON.Instance> list) throws NullPointerException, IllegalArgumentException {
         if (list == null) {
             throw new NullPointerException();
         }

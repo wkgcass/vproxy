@@ -38,6 +38,7 @@ public class Application {
 
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
+    public final HttpControllerHolder httpControllerHolder;
 
     public final SidecarHolder sidecarHolder;
     public final SmartLBGroupHolder smartLBGroupHolder;
@@ -55,6 +56,7 @@ public class Application {
         this.controlEventLoop = new EventLoopWrapper("ControlEventLoop", _controlEventLoop);
         this.respControllerHolder = new RESPControllerHolder();
         this.socks5ServerHolder = new Socks5ServerHolder();
+        this.httpControllerHolder = new HttpControllerHolder();
 
         this.sidecarHolder = new SidecarHolder();
         this.smartLBGroupHolder = new SmartLBGroupHolder();

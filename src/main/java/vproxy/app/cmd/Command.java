@@ -40,18 +40,14 @@ public class Command {
     }
 
     public static Command parseStrCmd(List<String> _cmd) throws Exception {
+        // this string builder is only used for log, not the parsing process
         StringBuilder sb = new StringBuilder();
-        boolean isFirst = true;
         for (String c : _cmd) {
-            if (isFirst) {
-                isFirst = false;
-            } else {
-                sb.append(" ");
-            }
             sb.append(c);
+            sb.append(" "); // the last space is not visible, print it any way
         }
-
         assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + sb.toString());
+
         Command cmd = statm(_cmd);
         semantic(cmd);
         assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
