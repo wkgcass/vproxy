@@ -45,9 +45,8 @@ public class ServerGroupHandle {
     }
 
     public static void checkAttachServerGroup(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.w))
-            throw new Exception("missing argument " + Param.w.fullname);
-        WeightHandle.check(cmd);
+        if (cmd.args.containsKey(Param.w))
+            WeightHandle.check(cmd);
     }
 
     public static void checkCreateServerGroup(Command cmd) throws Exception {

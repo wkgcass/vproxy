@@ -235,7 +235,7 @@ public class SystemCommand {
         try {
             AddrHandle.check(cmd);
         } catch (Exception e) {
-            cb.failed(new XException("invalid system call"));
+            cb.failed(new XException("invalid system call, address is invalid"));
             return;
         }
 

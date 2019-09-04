@@ -672,10 +672,10 @@ public class Command {
             try {
                 res = runThrow();
             } catch (AlreadyExistException e) {
-                cb.failed(new XException("the resource already exists"));
+                cb.failed(new XException("the resource already exists", e));
                 return;
             } catch (NotFoundException e) {
-                cb.failed(new XException("the resource could not be found"));
+                cb.failed(new XException("the resource could not be found", e));
                 return;
             } catch (Throwable t) {
                 cb.failed(t);

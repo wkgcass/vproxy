@@ -19,6 +19,9 @@ public class WeightHandle {
     }
 
     public static int get(Command cmd) {
-        return Integer.parseInt(cmd.args.get(Param.w));
+        if (cmd.args.containsKey(Param.w))
+            return Integer.parseInt(cmd.args.get(Param.w));
+        else
+            return 10;
     }
 }

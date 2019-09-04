@@ -4,18 +4,25 @@ import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
+import io.vertx.core.http.HttpMethod;
 import io.vertx.core.http.HttpVersion;
 import io.vertx.core.net.*;
+import io.vertx.ext.web.client.HttpRequest;
 import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
+import vjson.JSON;
+import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import org.junit.*;
 import vproxy.test.cases.TestSSL;
+import vproxy.util.Logger;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.lang.reflect.Field;
+import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -23,6 +30,7 @@ import java.util.stream.Collectors;
 
 import static org.junit.Assert.*;
 
+@SuppressWarnings("ALL")
 public class CI {
     static class ReqIntervalCheckServer {
         private List<Integer> intervals = new ArrayList<>();
@@ -117,14 +125,28 @@ public class CI {
     private static WebClient webClient;
     private static ReqIntervalCheckServer reqIntervalCheckServer;
 
+    private static int vproxyRESPPort;
+    private static int vproxyHTTPPort;
+
     @BeforeClass
     public static void setUpClass() {
-        String strPort = System.getProperty("vproxy_port");
-        if (strPort == null)
-            strPort = System.getenv("vproxy_port");
-        if (strPort == null)
-            strPort = "16379";
-        int port = Integer.parseInt(strPort);
+        {
+            String strPort = System.getProperty("vproxy_port");
+            if (strPort == null)
+                strPort = System.getenv("vproxy_port");
+            if (strPort == null)
+                strPort = "16379";
+            int port = Integer.parseInt(strPort);
+            vproxyRESPPort = port;
+
+            strPort = System.getProperty("vproxy_http_port");
+            if (strPort == null)
+                strPort = System.getenv("vproxy_http_port");
+            if (strPort == null)
+                strPort = "18080";
+            port = Integer.parseInt(strPort);
+            vproxyHTTPPort = port;
+        }
 
         String password = System.getProperty("vproxy_password");
         if (password == null)
@@ -134,7 +156,8 @@ public class CI {
 
         if (System.getProperty("vproxy_exists") == null && System.getenv("vproxy_exists") == null) {
             vproxy.app.Main.main(new String[]{
-                "resp-controller", "localhost:" + port, password,
+                "resp-controller", "localhost:" + vproxyRESPPort, password,
+                "http-controller", "localhost:" + vproxyHTTPPort,
                 "allowSystemCallInNonStdIOController",
                 "noStdIOController",
                 "noLoadLast",
@@ -144,7 +167,7 @@ public class CI {
 
         vertx = Vertx.vertx();
         redis = Redis.createClient(vertx, new RedisOptions()
-            .setEndpoint(SocketAddress.inetSocketAddress(port, "127.0.0.1"))
+            .setEndpoint(SocketAddress.inetSocketAddress(vproxyRESPPort, "127.0.0.1"))
         );
         CI.<Redis>block(f -> redis.connect(f));
         execute(Request.cmd(Command.AUTH).arg(password));
@@ -1355,5 +1378,515 @@ public class CI {
 
         String res = requestSSL(lbPort);
         assertEquals("7771", res);
+    }
+
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // ====================================
+    // HttpController api
+
+    private static void getMetaData(boolean isUpdate, Field[] fields, Map<String, Class> requiredKeys, Map<String, Class> optionalKeys, Map<String, List<String>> _stickyKeys) {
+        Map<Integer, List<String>> stickyKeys = new HashMap<>();
+        for (Field f : fields) {
+            String key = f.getName();
+            if (isUpdate) {
+                if (!f.isAnnotationPresent(Entities.Modifiable.class)) {
+                    continue;
+                }
+            }
+            if (isUpdate) {
+                optionalKeys.put(f.getName(), f.getType());
+            } else {
+                if (f.isAnnotationPresent(Entities.Optional.class)) {
+                    optionalKeys.put(f.getName(), f.getType());
+                } else {
+                    requiredKeys.put(f.getName(), f.getType());
+                }
+            }
+            if (f.isAnnotationPresent(Entities.Sticky.class)) {
+                Entities.Sticky s = f.getAnnotation(Entities.Sticky.class);
+                int v = s.value();
+                List<String> keys = stickyKeys.get(v);
+                if (keys == null) {
+                    keys = new LinkedList<>();
+                    stickyKeys.put(v, keys);
+                }
+                keys.add(f.getName());
+            }
+        }
+
+        for (List<String> keys : stickyKeys.values()) {
+            for (String key : keys) {
+                _stickyKeys.put(key, keys);
+            }
+        }
+    }
+
+    private static void putValue(ObjectBuilder ob, String key, Class<?> valueType, Object value) {
+        if (valueType == String.class) {
+            ob.put(key, (String) value);
+        } else if (valueType == int.class) {
+            ob.put(key, (int) value);
+        } else if (valueType == String[].class) {
+            ob.putArray(key, a -> {
+                String[] foo = (String[]) value;
+                for (int i = 0; i < foo.length; ++i) {
+                    a.add(foo[i]);
+                }
+            });
+        } else if (valueType == boolean.class) {
+            ob.put(key, (boolean) value);
+        } else if (valueType.isEnum() || valueType == InetSocketAddress.class) {
+            ob.put(key, value.toString());
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static void putRandom(ObjectBuilder ob, String key, Class<?> valueType) {
+        if (valueType == String.class) {
+            var sb = new StringBuilder();
+            int len = (int) (Math.random() * 17) + 3;
+            char[] sample = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-$".toCharArray();
+            for (int i = 0; i < len; ++i) {
+                sb.append(sample[(int) (Math.random() * sample.length)]);
+            }
+            String input = sb.toString();
+            putValue(ob, key, valueType, input);
+        } else if (valueType == int.class) {
+            int input = (int) (Math.random() * 100) + 1;
+            putValue(ob, key, valueType, input);
+        } else if (valueType.isEnum()) {
+            Object[] enums = valueType.getEnumConstants();
+            Object v = enums[(int) (Math.random() * enums.length)];
+            putValue(ob, key, valueType, v);
+        } else if (valueType == InetSocketAddress.class) {
+            int port = (int) (Math.random() * 10000) + 50000;
+            putValue(ob, key, valueType, "0.0.0.0:" + port);
+        } else if (valueType == boolean.class) {
+            putValue(ob, key, valueType, (Math.random() < 0.5) ? true : false);
+        } else {
+            throw new UnsupportedOperationException();
+        }
+    }
+
+    private static void initValue(Case c, ObjectBuilder ob, String key, Map<String, Class> typeMap, Map<String, Object> params, Set<String> alreadyAddedStickyKeys, Map<String, List<String>> stickyKeys) {
+        if (stickyKeys.containsKey(key)) {
+            var keys = stickyKeys.get(key);
+            for (var sk : keys) {
+                var type = typeMap.get(sk);
+                if (params.containsKey(sk)) {
+                    putValue(ob, sk, type, params.get(sk));
+                } else {
+                    putRandom(ob, sk, type);
+                }
+                alreadyAddedStickyKeys.add(sk);
+            }
+        } else {
+            var type = typeMap.get(key);
+            if (params.containsKey(key)) {
+                putValue(ob, key, type, params.get(key));
+            } else {
+                putRandom(ob, key, type);
+            }
+        }
+    }
+
+    private static class Case {
+        JSON.Object body;
+    }
+
+    private static void helper(List<int[]> combinations, int data[], int start, int end, int index) {
+        if (index == data.length) {
+            int[] combination = data.clone();
+            combinations.add(combination);
+        } else if (start <= end) {
+            data[index] = start;
+            helper(combinations, data, start + 1, end, index + 1);
+            helper(combinations, data, start + 1, end, index);
+        }
+    }
+
+    private static List<int[]> comb(int n, int r) {
+        List<int[]> combinations = new ArrayList<>();
+        helper(combinations, new int[r], 0, n - 1, 0);
+        return combinations;
+    }
+
+    private static List<Case> buildCreateList(Field[] fields, Map<String, Object> params) {
+        Map<String, Class> requiredKeys = new HashMap<>();
+        Map<String, Class> optionalKeys = new HashMap<>();
+        Map<String, List<String>> stickyKeys = new HashMap<>();
+        getMetaData(false, fields, requiredKeys, optionalKeys, stickyKeys);
+
+        String[] optionalKeysArray = new String[optionalKeys.size()];
+        {
+            int i = 0;
+            for (String key : optionalKeys.keySet()) {
+                optionalKeysArray[i++] = key;
+            }
+        }
+
+        List<Case> ret = new LinkedList<>();
+        {
+            var c = new Case();
+            var ob = new ObjectBuilder();
+            var addedStickyKeys = new HashSet<String>();
+            for (String key : requiredKeys.keySet()) {
+                initValue(c, ob, key, requiredKeys, params, addedStickyKeys, stickyKeys);
+            }
+            c.body = ob.build();
+            ret.add(c);
+        }
+
+        for (int optionalKeyCnt = 1; optionalKeyCnt <= optionalKeysArray.length; ++optionalKeyCnt) {
+            List<int[]> comb = comb(optionalKeysArray.length, optionalKeyCnt);
+            for (int[] seq : comb) {
+                var c = new Case();
+                var ob = new ObjectBuilder();
+                var addedStickyKeys = new HashSet<String>();
+                for (String key : requiredKeys.keySet()) {
+                    initValue(c, ob, key, requiredKeys, params, addedStickyKeys, stickyKeys);
+                }
+                for (int i : seq) {
+                    String key = optionalKeysArray[i];
+                    initValue(c, ob, key, optionalKeys, params, addedStickyKeys, stickyKeys);
+                }
+                c.body = ob.build();
+                ret.add(c);
+            }
+        }
+
+        return ret;
+    }
+
+    private static List<Case> buildUpdateList(Field[] fields, Map<String, Object> params) {
+        Map<String, Class> optionalKeys = new HashMap<>();
+        Map<String, List<String>> stickyKeys = new HashMap<>();
+        getMetaData(true, fields, null, optionalKeys, stickyKeys);
+
+        String[] optionalKeysArray = new String[optionalKeys.size()];
+        {
+            int i = 0;
+            for (String key : optionalKeys.keySet()) {
+                optionalKeysArray[i++] = key;
+            }
+        }
+
+        List<Case> foo = new LinkedList<>();
+
+        for (int optionalKeyCnt = 0; optionalKeyCnt <= optionalKeysArray.length; ++optionalKeyCnt) {
+            List<int[]> comb = comb(optionalKeysArray.length, optionalKeyCnt);
+            for (int[] seq : comb) {
+                var c = new Case();
+                var ob = new ObjectBuilder();
+                var addedStickyKeys = new HashSet<String>();
+                for (int i : seq) {
+                    String key = optionalKeysArray[i];
+                    initValue(c, ob, key, optionalKeys, params, addedStickyKeys, stickyKeys);
+                }
+                c.body = ob.build();
+                foo.add(c);
+            }
+        }
+
+        List<Case> ret = new ArrayList<>(foo.size());
+        Set<Set<String>> bar = new HashSet<>();
+        for (Case c : foo) {
+            var keySet = c.body.keySet();
+            if (bar.contains(keySet)) {
+                continue;
+            }
+            bar.add(keySet);
+            ret.add(c);
+        }
+        return ret;
+    }
+
+    private JSON.Instance requestApi(HttpMethod method, String uri) {
+        return requestApi(method, uri, null);
+    }
+
+    int postCnt = 0;
+    int putCnt = 0;
+
+    private JSON.Instance requestApi(HttpMethod method, String uri, JSON.Object body) {
+        if (method == HttpMethod.POST) {
+            ++postCnt;
+        } else if (method == HttpMethod.PUT) {
+            ++putCnt;
+        }
+
+        Logger.lowLevelDebug("api http request is " + method + " " + uri + " " + body);
+        HttpResponse<Buffer> resp = block(f -> {
+            HttpRequest<Buffer> req = webClient.request(method, vproxyHTTPPort, "127.0.0.1", "/api/v1/module" + uri);
+            if (body != null) {
+                req.sendBuffer(Buffer.buffer(body.stringify()), f);
+            } else {
+                req.send(f);
+            }
+        });
+        Logger.lowLevelDebug("api http response is " + resp.statusCode() + " " + resp.bodyAsString());
+        assertTrue(resp.bodyAsString(), 200 == resp.statusCode() || 204 == resp.statusCode());
+        String respContent = resp.bodyAsString();
+        JSON.Instance ret;
+        if (respContent == null) {
+            ret = null;
+        } else {
+            ret = JSON.parse(respContent);
+        }
+        return ret;
+    }
+
+    private void run(String uriBase, Class<?> entityType, Object... _params) throws Exception {
+        run0(uriBase, entityType, true, _params);
+    }
+
+    private void runNoUpdate(String uriBase, Class<?> entityType, Object... _params) throws Exception {
+        run0(uriBase, entityType, false, _params);
+    }
+
+    private void run0(String uriBase, Class<?> entityType, boolean needUpdate, Object... _params) throws Exception {
+        List<Case> createCases;
+        List<Case> updateCases;
+
+        {
+            Map<String, Object> params = new HashMap<>();
+            for (int i = 0; i < _params.length; i += 2) {
+                params.put((String) _params[i], _params[i + 1]);
+            }
+            Field[] fields = entityType.getDeclaredFields();
+            createCases = buildCreateList(fields, params);
+            updateCases = buildUpdateList(fields, params);
+        }
+
+        // list
+        var initialArray = (JSON.Array) requestApi(HttpMethod.GET, uriBase);
+        // create
+        for (Case c : createCases) {
+            Logger.lowLevelDebug("create case: " + c.body);
+            final String name = c.body.getString("name");
+
+            var ret = requestApi(HttpMethod.POST, uriBase, c.body);
+            assertNull(ret);
+            // list again
+            {
+                var arrayAfterCreate = (JSON.Array) requestApi(HttpMethod.GET, uriBase);
+                assertEquals(initialArray.length() + 1, arrayAfterCreate.length());
+                {
+                    boolean found = false;
+                    for (int i = 0; i < arrayAfterCreate.length(); ++i) {
+                        if (((JSON.Object) arrayAfterCreate.get(i)).getString("name").equals(name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    assertTrue(found);
+                }
+            }
+            // get
+            var item = (JSON.Object) requestApi(HttpMethod.GET, uriBase + "/" + name);
+            assertNotNull(item);
+            for (String key : c.body.keySet()) {
+                assertEquals("value of key " + key + " mismatch", c.body.get(key), item.get(key));
+            }
+            if (needUpdate) {
+                // (update+get) * n
+                for (Case uc : updateCases) {
+                    Logger.lowLevelDebug("update case: " + uc.body);
+                    // update
+                    ret = requestApi(HttpMethod.PUT, uriBase + "/" + name, uc.body);
+                    assertNull(ret);
+                    // get
+                    item = (JSON.Object) requestApi(HttpMethod.GET, uriBase + "/" + name);
+                    assertNotNull(item);
+                    for (String key : uc.body.keySet()) {
+                        assertEquals("value of key " + key + " mismatch", uc.body.get(key), item.get(key));
+                    }
+                }
+            }
+            // delete
+            ret = requestApi(HttpMethod.DELETE, uriBase + "/" + name);
+            assertNull(ret);
+            // list
+            {
+                var arrayAfterDelete = (JSON.Array) requestApi(HttpMethod.GET, uriBase);
+                assertEquals(initialArray.length(), arrayAfterDelete.length());
+                {
+                    boolean found = false;
+                    for (int i = 0; i < arrayAfterDelete.length(); ++i) {
+                        if (((JSON.Object) arrayAfterDelete.get(i)).getString("name").equals(name)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    assertFalse(found);
+                }
+            }
+        }
+    }
+
+    private String randomServerGroups() {
+        String n = randomName("sgs");
+        execute(createReq(add, "server-groups", n));
+        return n;
+    }
+
+    private String randomEventLoopGroup() {
+        String n = randomName("elg");
+        execute(createReq(add, "event-loop-group", n));
+        elgNames.add(n);
+        return n;
+    }
+
+    private String randomSecurityGroup() {
+        String n = randomName("secg");
+        execute(createReq(add, "security-group", n, "default", "allow"));
+        securgNames.add(n);
+        return n;
+    }
+
+    private String randomServerGroup() {
+        String n = randomName("sg");
+        execute(createReq(add, "server-group", n, "timeout", "1000", "period", "1000", "up", "2", "down", "3"));
+        sgNames.add(n);
+        return n;
+    }
+
+    private static int factorial(int n) {
+        int ret = 1;
+        while (n > 1) {
+            ret *= n;
+            --n;
+        }
+        return ret;
+    }
+
+    private static int C(int n, int r) {
+        return factorial(n) / (factorial(n - r) * factorial(r));
+    }
+
+    private static int CC(int n) {
+        final int m = n;
+        int ret = 0;
+        while (n >= 0) {
+            ret += C(m, n);
+            --n;
+        }
+        return ret;
+    }
+
+    @Test
+    public void apiV1TcpLB() throws Exception {
+        run("/tcp-lb", Entities.TcpLB.class,
+            "backend", randomServerGroups(),
+            "acceptorLoopGroup", randomEventLoopGroup(),
+            "workerLoopGroup", randomEventLoopGroup(),
+            "securityGroup", randomSecurityGroup());
+        assertEquals(CC(6), postCnt);
+        assertEquals(CC(6) * CC(3), putCnt);
+    }
+
+    @Test
+    public void apiV1Socks5Server() throws Exception {
+        run("/socks5-server", Entities.Socks5Server.class,
+            "backend", randomServerGroups(),
+            "acceptorLoopGroup", randomEventLoopGroup(),
+            "workerLoopGroup", randomEventLoopGroup(),
+            "securityGroup", randomSecurityGroup());
+        assertEquals(CC(6), postCnt);
+        assertEquals(CC(6) * CC(4), putCnt);
+    }
+
+    @Test
+    public void apiV1EventLoop() throws Exception {
+        var elg = randomEventLoopGroup();
+        runNoUpdate("/event-loop-group/" + elg + "/event-loop", Entities.EventLoop.class);
+        assertEquals(1, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1ServerGroupInServerGroups() throws Exception {
+        var sgs = randomServerGroups();
+        var sg = randomServerGroup();
+        run("/server-groups/" + sgs + "/server-group", Entities.ServerGroupInServerGroups.class,
+            "name", sg);
+        assertEquals(CC(1), postCnt);
+        assertEquals(CC(1) * CC(1), putCnt);
+    }
+
+    @Test
+    public void apiV1ServerGroups() throws Exception {
+        runNoUpdate("/server-groups", Entities.ServerGroups.class);
+        assertEquals(1, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1Server() throws Exception {
+        var sg = randomServerGroup();
+        run("/server-group/" + sg + "/server", Entities.Server.class);
+        assertEquals(CC(1), postCnt);
+        assertEquals(CC(1) * CC(1), putCnt);
+    }
+
+    @Test
+    public void apiV1ServerGroup() throws Exception {
+        run("/server-group", Entities.ServerGroup.class,
+            "eventLoopGroup", randomEventLoopGroup());
+        assertEquals(CC(2), postCnt);
+        assertEquals(CC(2) * CC(2), putCnt);
+    }
+
+    @Test
+    public void apiV1SecurityGroupRule() throws Exception {
+        var secg = randomSecurityGroup();
+        runNoUpdate("/security-group/" + secg + "/security-group-rule", Entities.SecurityGroupRule.class,
+            "clientNetwork", "192.168.0.0/24",
+            "serverPortMin", 0);
+        assertEquals(1, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1SecurityGroup() throws Exception {
+        run("/security-group", Entities.SecurityGroup.class);
+        assertEquals(1, postCnt);
+        assertEquals(1 * CC(1), putCnt);
+    }
+
+    @Test
+    public void apiV1CertKey() throws Exception {
+        // add cert-key
+        File tmpCertFile = File.createTempFile("cert", ".pem");
+        tmpCertFile.deleteOnExit();
+        File tmpKeyFile = File.createTempFile("key", ".pem");
+        tmpKeyFile.deleteOnExit();
+
+        FileOutputStream fos = new FileOutputStream(tmpCertFile);
+        fos.write(TestSSL.TEST_CERT.getBytes());
+        fos.flush();
+        fos.close();
+        fos = new FileOutputStream(tmpKeyFile);
+        fos.write(TestSSL.TEST_KEY.getBytes());
+        fos.flush();
+        fos.close();
+
+        runNoUpdate("/cert-key", Entities.CertKey.class,
+            "certs", new String[]{tmpCertFile.getAbsolutePath()},
+            "key", tmpKeyFile.getAbsolutePath());
     }
 }

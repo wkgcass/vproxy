@@ -103,7 +103,7 @@ public class Http1ServerImpl implements HttpServer {
     private void handle404(RoutingContext ctx) {
         ctx.response()
             .status(404)
-            .end(ByteArray.from(("Cannot GET " + ctx.uri() + "\r\n").getBytes()));
+            .end(ByteArray.from(("Cannot " + ctx.method() + " " + ctx.uri() + "\r\n").getBytes()));
     }
 
     private void initLoop() throws IOException {

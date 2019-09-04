@@ -178,7 +178,7 @@ public class HttpController {
                 .put("defaultRule", "allow or deny access if no match in the rule list")
                 .build(),
             "name", "defaultRule"));
-        server.put(moduleBase + "/security-group", wrapAsync(this::updateSecurityGroup, new ObjectBuilder()
+        server.put(moduleBase + "/security-group/:secg", wrapAsync(this::updateSecurityGroup, new ObjectBuilder()
             .put("defaultRule", "allow or deny access if no match in the rule list")
             .build()));
         server.del(moduleBase + "/security-group/:secg", wrapAsync(this::deleteSecurityGroup));
@@ -428,7 +428,7 @@ public class HttpController {
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         var name = body.getString("name");
         utils.execute(cb,
-            "add", "event-loop", name, "into", "event-loop-group", rctx.param("elg"));
+            "add", "event-loop", name, "to", "event-loop-group", rctx.param("elg"));
     }
 
     private void deleteEventLoop(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
@@ -499,7 +499,7 @@ public class HttpController {
         var sg = rctx.param("sg");
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         List<String> options = new LinkedList<>(Arrays.asList(
-            "update", "server-group", sg, "in", "servers-groups", sgs
+            "update", "server-group", sg, "in", "server-groups", sgs
         ));
         if (body.containsKey("weight")) {
             options.add("weight");
@@ -621,12 +621,12 @@ public class HttpController {
         options.add("up");
         options.add("" + body.getInt("up"));
         options.add("down");
-        options.add("" + body.getInt("up"));
-        if (options.contains("method")) {
+        options.add("" + body.getInt("down"));
+        if (body.containsKey("method")) {
             options.add("method");
             options.add(body.getString("method"));
         }
-        if (options.contains("eventLoopGroup")) {
+        if (body.containsKey("eventLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("eventLoopGroup"));
         }
@@ -749,7 +749,7 @@ public class HttpController {
 
     private void deleteSecurityGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
-            "delete", "security-group", rctx.param("secg"));
+            "remove", "security-group", rctx.param("secg"));
     }
 
     private void getCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -773,11 +773,11 @@ public class HttpController {
         var certs = body.getArray("certs");
         var key = body.getString("key");
         StringBuilder cert = new StringBuilder();
-        for (int i = 0; i < cert.length(); ++i) {
+        for (int i = 0; i < certs.length(); ++i) {
             if (i != 0) {
                 cert.append(",");
             }
-            cert.append(certs.get(i));
+            cert.append(certs.get(i).toJavaObject());
         }
         utils.execute(cb,
             "add", "cert-key", name, "cert", cert.toString(), "key", key);

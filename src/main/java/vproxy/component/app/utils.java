@@ -199,14 +199,28 @@ class utils {
         ));
     }
 
+    private static String typeName(Class<?> type) {
+        Class[] interfaces = type.getInterfaces();
+        for (Class c : interfaces) {
+            if (JSON.Instance.class.isAssignableFrom(c)) {
+                return "JSON." + c.getSimpleName();
+            }
+        }
+        return typeName(type.getSuperclass());
+    }
+
+    private static boolean typeEq(Class<?> expected, Class<?> actual) {
+        return typeName(expected).equals(typeName(actual));
+    }
+
     public static String validateBody(JSON.Object bodyTemplate, List<String> requiredKeys, JSON.Object input) {
         Set<String> checkKeys = bodyTemplate.keySet();
         for (String key : checkKeys) {
             JSON.Instance expected = bodyTemplate.get(key);
             if (input.containsKey(key)) {
                 JSON.Instance actual = input.get(key);
-                if (!expected.getClass().equals(actual.getClass())) {
-                    return "value type is wrong for " + key + ", expecting " + expected.getClass().getSimpleName();
+                if (!typeEq(expected.getClass(), actual.getClass())) {
+                    return "value type is wrong for " + key + ", expecting " + typeName(expected.getClass());
                 }
                 if (key.equals("name") && expected instanceof JSON.String) {
                     String nameValue = ((JSON.String) actual).toJavaObject();
@@ -220,8 +234,8 @@ class utils {
                     JSON.Instance expectedElem = ((JSON.Array) expected).get(0);
                     JSON.Array actualArr = (JSON.Array) actual;
                     for (int i = 0; i < actualArr.length(); ++i) {
-                        if (!actualArr.get(i).getClass().equals(expectedElem.getClass())) {
-                            return "value type is wrong for " + key + "[" + i + "], expecting " + expectedElem.getClass().getSimpleName();
+                        if (!typeEq(actualArr.get(i).getClass(), expectedElem.getClass())) {
+                            return "value type is wrong for " + key + "[" + i + "], expecting " + typeName(expectedElem.getClass());
                         }
                     }
                 }
