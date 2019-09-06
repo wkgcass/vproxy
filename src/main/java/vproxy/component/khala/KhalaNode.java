@@ -2,7 +2,7 @@ package vproxy.component.khala;
 
 import java.util.Objects;
 
-public class KhalaNode {
+public class KhalaNode implements Comparable<KhalaNode> {
     public final String service;
     public final String zone;
     public final String address;
@@ -39,5 +39,14 @@ public class KhalaNode {
             ", address='" + address + '\'' +
             ", port=" + port +
             '}';
+    }
+
+    @Override
+    public int compareTo(KhalaNode that) {
+        if (!this.service.equals(that.service)) return this.service.compareTo(that.service);
+        if (!this.zone.equals(that.zone)) return this.zone.compareTo(that.zone);
+        if (!this.address.equals(that.address)) return this.address.compareTo(that.address);
+        if (this.port != that.port) return this.port - that.port;
+        return 0;
     }
 }

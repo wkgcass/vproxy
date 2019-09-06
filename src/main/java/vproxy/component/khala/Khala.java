@@ -28,7 +28,7 @@ import java.util.stream.Collectors;
 /**
  * the service network
  * protocol:
- * request types: khala.add | khala.remove | khala.local | khala.sync
+ * request types: khala.add | khala.remove | khala.local | khala.sync | khala.hash
  * -- khala.add || khala.remove:
  * ---- {
  * ------ node: { // identifier of a discovery node
@@ -56,6 +56,8 @@ import java.util.stream.Collectors;
  * -------- node: { nodeName, address, udpPort, tcpPort, }
  * ------ ]
  * ---- }
+ * -- khala.hash
+ * ---- { hash }
  * <p>
  * triggers:
  * 1. when a node is discovered, record the node, and send khala-local message to the discovered node
@@ -368,12 +370,25 @@ public class Khala {
         discovery.addExternalHandler(new NodeDataHandler() {
             @Override
             public boolean canHandle(String type) {
-                return type.equals("khala.sync") || type.equals("khala.add") || type.equals("khala.remove") || type.equals("khala.local");
+                return type.equals("khala.sync")
+                    || type.equals("khala.add")
+                    || type.equals("khala.remove")
+                    || type.equals("khala.local")
+                    || type.equals("khala.hash");
             }
 
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             @Override
             public void handle(int version, String type, JSON.Instance data, Callback<JSON.Instance, Throwable> cb) {
+                if (type.equals("khala.hash")) {
+                    // khala.hash format is different from others
+                    // so handle it first
+
+                    // do not check, simply respond with local hash
+                    cb.succeeded(new ObjectBuilder().put("hash", calcHash()).build());
+                    return;
+                }
+
                 Tuple<KhalaMsg, XException> tup = utilValidateResponse(version, type, data);
                 if (tup.right != null) {
                     cb.failed(tup.right);
@@ -508,6 +523,8 @@ public class Khala {
 
     // handle khala response
     private JSON.Instance handleFullKhala(Map<Node, List<KhalaNode>> remoteNodeMap) {
+        // no need to check for remote if it's a new node
+        boolean needToCheckRemote = remoteNodeMap.size() > 1;
         Set<Node> diff = new HashSet<>();
         for (Node n : remoteNodeMap.keySet()) {
             List<KhalaNode> remote = remoteNodeMap.get(n);
@@ -523,7 +540,9 @@ public class Khala {
             }
             Logger.warn(LogType.KHALA_EVENT, "khala data mismatch on node " + n);
             // not same, so we make a direct check on the remote discovery node
-            checkRemote(n);
+            if (needToCheckRemote) {
+                checkRemote(n);
+            }
             diff.add(n);
         }
         for (Node n : nodes.getNodes()) {
@@ -643,6 +662,62 @@ public class Khala {
     // ---------------------
     // START khala notification
     // ---------------------
+
+    private String calcHash() {
+        PriorityQueue<Node> p = new PriorityQueue<>(Node::compareTo);
+        p.addAll(nodes.getNodes());
+        StringBuilder sb = new StringBuilder();
+        Node n;
+        while ((n = p.poll()) != null) {
+            sb.append(n.nodeName).append(",")
+                .append(n.address).append(",")
+                .append(n.udpPort).append(",")
+                .append(n.tcpPort).append(",");
+            PriorityQueue<KhalaNode> pp = new PriorityQueue<>(KhalaNode::compareTo);
+            pp.addAll(khalaNodes.getKhalaNodes(n));
+            KhalaNode kn;
+            while ((kn = pp.poll()) != null) {
+                sb.append(kn.service).append(",")
+                    .append(kn.zone).append(",")
+                    .append(kn.address).append(",")
+                    .append(kn.port).append(",");
+            }
+        }
+        byte[] data = sb.toString().getBytes();
+        return Base64.getEncoder().encodeToString(data);
+    }
+
+    private void notifyNetworkKhalaHash(Node node) {
+        String hash = calcHash();
+        JSON.Object reqBody = new ObjectBuilder().put("hash", hash).build();
+        HttpClient client = new Http1ClientImpl(new InetSocketAddress(node.inetAddress, node.tcpPort), discovery.loop, 3000);
+        client.put("/discovery/api/v1/exchange/khala.hash").send(reqBody, (err, resp) -> {
+            if (utilLogResponseErr(node, "khala.hash", err, resp)) {
+                return;
+            }
+            JSON.Instance inst = resp.bodyAsJson();
+            if (!(inst instanceof JSON.Object)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.hash response is not JSON.Object: " + inst);
+                return;
+            }
+            JSON.Object body = (JSON.Object) inst;
+            if (!body.containsKey("hash")) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response should contain key `hash`: " + body);
+                return;
+            }
+            if (!(body.get("hash") instanceof JSON.String)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "value of khala.sync response key `hash` should be string: " + body);
+                return;
+            }
+            String remoteHash = body.getString("hash");
+            if (remoteHash.equals(hash)) {
+                assert Logger.lowLevelDebug("remote hash and local hash are the same, no need to sync");
+                return;
+            }
+            // do sync
+            notifyNetworkFullKhala(node);
+        });
+    }
 
     private void notifyNetworkFullKhala(Node node) {
         JSON.Array reqBody = buildFullKhalaMsg();
@@ -790,7 +865,7 @@ public class Khala {
         if (ns.isEmpty())
             return;
         Node n = ns.get(rand.nextInt(ns.size()));
-        notifyNetworkFullKhala(n);
+        notifyNetworkKhalaHash(n);
     }
 
     public void sync() {

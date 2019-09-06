@@ -1,5 +1,10 @@
 package vproxy.test.cases;
 
+import vclient.HttpClient;
+import vclient.HttpResponse;
+import vjson.JSON;
+import vjson.util.ArrayBuilder;
+import vjson.util.ObjectBuilder;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.khala.Khala;
 import vproxy.component.khala.KhalaConfig;
@@ -9,18 +14,20 @@ import vproxy.discovery.DiscoveryConfig;
 import vproxy.discovery.Node;
 import vproxy.discovery.TimeConfig;
 import vproxy.test.tool.DiscoveryHolder;
+import vproxy.util.BlockCallback;
 import vproxy.util.IPType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import vserver.HttpServer;
 
+import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
+import static org.junit.Assert.*;
 
 public class TestKhala {
     private DiscoveryHolder holder;
@@ -334,5 +341,136 @@ public class TestKhala {
         assertEquals(1, nodes2.get(d0.localNode).size());
         assertFalse(nodes2.containsKey(d1.localNode));
         assertEquals(1, nodes2.get(d2.localNode).size());
+    }
+
+    @Test
+    public void sync() throws Exception {
+        Discovery d0 = new Discovery("d0", new DiscoveryConfig(
+            "lo0", IPType.v4,
+            17080, 18080, 18080,
+            32, 18080, 18082,
+            new TimeConfig(
+                200, Integer.MAX_VALUE,
+                200, Integer.MAX_VALUE,
+                3000),
+            new HealthCheckConfig(200, 1000, 2, 3)
+        ));
+        holder.add(d0);
+        Khala k0 = new Khala(d0, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
+        Discovery d1 = new Discovery("d1", new DiscoveryConfig(
+            "lo0", IPType.v4,
+            17081, 18081, 18081,
+            32, 18080, 18082,
+            new TimeConfig(
+                200, Integer.MAX_VALUE,
+                200, Integer.MAX_VALUE,
+                3000),
+            new HealthCheckConfig(200, 1000, 2, 3)
+        ));
+        holder.add(d1);
+        Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
+        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991));
+
+        Thread.sleep(2500); // wait for sync
+
+        // start http client to get hash and snyc
+        HttpClient client1 = HttpClient.to("127.0.0.1", 18080);
+        HttpClient client2 = HttpClient.to("127.0.0.1", 18081);
+
+        String hash1;
+        {
+            var cb = new BlockCallback<HttpResponse, IOException>();
+            client1.put("/discovery/api/v1/exchange/khala.hash").send(new ObjectBuilder().build(), (err, resp) -> {
+                if (err != null) cb.failed(err);
+                else cb.succeeded(resp);
+            });
+            var resp = cb.block();
+            assertEquals(200, resp.status());
+            hash1 = ((JSON.Object) resp.bodyAsJson()).getString("hash");
+        }
+
+        String hash2;
+        {
+            var cb = new BlockCallback<HttpResponse, IOException>();
+            client2.put("/discovery/api/v1/exchange/khala.hash").send(new ObjectBuilder().build(), (err, resp) -> {
+                if (err != null) cb.failed(err);
+                else cb.succeeded(resp);
+            });
+            var resp = cb.block();
+            assertEquals(200, resp.status());
+            hash2 = ((JSON.Object) resp.bodyAsJson()).getString("hash");
+        }
+
+        assertEquals(hash1, hash2);
+
+        JSON.Object nodes1Json;
+        HashMap<String, Object> nodes1;
+        {
+            var cb = new BlockCallback<HttpResponse, IOException>();
+            client1.put("/discovery/api/v1/exchange/khala.sync").send(new ArrayBuilder().build(), (err, resp) -> {
+                if (err != null) cb.failed(err);
+                else cb.succeeded(resp);
+            });
+            var resp = cb.block();
+            assertEquals(200, resp.status());
+            nodes1Json = (JSON.Object) resp.bodyAsJson();
+            nodes1 = nodes1Json.toJavaObject();
+
+            assertTrue(nodes1Json.containsKey("diff"));
+        }
+
+        HashMap<String, Object> nodes2;
+        {
+            var cb = new BlockCallback<HttpResponse, IOException>();
+            client2.put("/discovery/api/v1/exchange/khala.sync").send(new ArrayBuilder().build(), (err, resp) -> {
+                if (err != null) cb.failed(err);
+                else cb.succeeded(resp);
+            });
+            var resp = cb.block();
+            assertEquals(200, resp.status());
+            nodes2 = ((JSON.Object) resp.bodyAsJson()).toJavaObject();
+        }
+
+        assertEquals(nodes1, nodes2);
+
+        // use reflect to close the http server inside d1
+        // close the d1 socket but do not close it, use reflect
+        Field httpServerF = Discovery.class.getDeclaredField("httpServer");
+        httpServerF.setAccessible(true);
+        HttpServer httpServer = (HttpServer) httpServerF.get(d1);
+        httpServer.close();
+
+        // and start another one at once
+        HttpServer server = HttpServer.create();
+        String[] respHash = {hash1}; // initially set to hash1, in this case, the hash req will end without a further sync request
+        int[] hashCnt = {0};
+        int[] syncCnt = {0};
+        server.put("/discovery/api/v1/exchange/khala.hash", rctx -> {
+            ++hashCnt[0];
+            rctx.response().end(new ObjectBuilder().put("hash", respHash[0]).build());
+        });
+        server.put("/discovery/api/v1/exchange/khala.sync", rctx -> {
+            ++syncCnt[0];
+            rctx.response().end(new ObjectBuilder().putArray("diff", a -> {
+            }).build());
+        });
+        server.listen(18081);
+
+        Thread.sleep(1000);
+
+        k0.sync();
+        Thread.sleep(1000);
+        assertEquals(1, hashCnt[0]);
+        assertEquals(0, syncCnt[0]);
+
+        hashCnt[0] = 0;
+        syncCnt[0] = 0;
+
+        respHash[0] = "abc";
+        k0.sync();
+        Thread.sleep(1000);
+        assertEquals(1, hashCnt[0]);
+        assertEquals(1, syncCnt[0]);
     }
 }
