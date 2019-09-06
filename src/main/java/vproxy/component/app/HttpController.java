@@ -244,7 +244,7 @@ public class HttpController {
     }
 
     public void stop() {
-        server.stop();
+        server.close();
     }
 
     private void getTcpLb(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

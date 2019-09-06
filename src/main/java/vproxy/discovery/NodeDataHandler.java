@@ -1,15 +1,10 @@
 package vproxy.discovery;
 
-import vproxy.redis.application.RESPApplication;
-import vproxy.redis.application.RESPApplicationContext;
+import vjson.JSON;
 import vproxy.util.Callback;
 
-public interface NodeDataHandler extends RESPApplication<RESPApplicationContext> {
+public interface NodeDataHandler {
     boolean canHandle(String type);
 
-    default RESPApplicationContext context() {
-        return null; // will not fire
-    }
-
-    void handle(Object o, RESPApplicationContext ctx, Callback<Object, Throwable> cb);
+    void handle(int version, String type, JSON.Instance data, Callback<JSON.Instance, Throwable> cb);
 }

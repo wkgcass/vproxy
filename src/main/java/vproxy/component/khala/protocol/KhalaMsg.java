@@ -1,8 +1,8 @@
 package vproxy.component.khala.protocol;
 
+import vjson.JSON;
 import vproxy.component.exception.XException;
 import vproxy.component.khala.KhalaNode;
-import vproxy.component.khala.KhalaNodeType;
 import vproxy.discovery.Node;
 
 import java.net.UnknownHostException;
@@ -19,66 +19,122 @@ public class KhalaMsg {
         this.nodes = Collections.unmodifiableMap(nodes);
     }
 
-    public static KhalaMsg parse(List msg) throws XException {
-        if (msg.size() < 3)
-            throw new XException("invalid message, list too short");
-        int version = (int) msg.get(0);
-        String type = (String) msg.get(1);
-        if (!(msg.get(2) instanceof List))
-            throw new XException("invalid message, wrong format");
-        List nodes = (List) msg.get(2);
+    private static KhalaNode getKhalaNode(JSON.Object o) throws XException {
+        if (!o.containsKey("service")
+            || !o.containsKey("zone")
+            || !o.containsKey("address")
+            || !o.containsKey("port")) {
+            throw new XException("invalid message, missing khalaNode keys");
+        }
+        if (!(o.get("service") instanceof JSON.String)
+            || !(o.get("zone") instanceof JSON.String)
+            || !(o.get("address") instanceof JSON.String)
+            || !(o.get("port") instanceof JSON.Integer)) {
+            throw new XException("invalid message, wrong khalaNode value type");
+        }
+        return new KhalaNode(o.getString("service"), o.getString("zone"), o.getString("address"), o.getInt("port"));
+    }
 
-        Map<Node, List<KhalaNode>> nodeMap = new HashMap<>();
-        for (Object e : nodes) {
-            if (!(e instanceof List))
-                throw new XException("invalid message, element wrong format");
-            List nNodes = (List) e;
-            if (nNodes.size() < 5)
-                throw new XException("invalid message, element list too short");
-            if (!(nNodes.get(0) instanceof String) || !(nNodes.get(1) instanceof String)
-                || !(nNodes.get(2) instanceof Integer) || !(nNodes.get(3) instanceof Integer)
-                || !(nNodes.get(4) instanceof List))
-                throw new XException("invalid message, element list wrong format");
-            String nodeName = (String) nNodes.get(0);
-            String address = (String) nNodes.get(1);
-            int udpPort = (int) nNodes.get(2);
-            int tcpPort = (int) nNodes.get(3);
-            Node n;
-            try {
-                n = new Node(nodeName, address, udpPort, tcpPort);
-            } catch (UnknownHostException e1) {
-                throw new XException(address + " is not a valid address");
-            }
-            List<KhalaNode> list = new LinkedList<>();
-            nodeMap.put(n, list);
+    private static Node getNode(JSON.Object o) throws XException {
+        if (!o.containsKey("nodeName")
+            || !o.containsKey("address")
+            || !o.containsKey("udpPort")
+            || !o.containsKey("tcpPort")) {
+            throw new XException("invalid message, missing node keys");
+        }
+        if (!(o.get("nodeName") instanceof JSON.String)
+            || !(o.get("address") instanceof JSON.String)
+            || !(o.get("udpPort") instanceof JSON.Integer)
+            || !(o.get("tcpPort") instanceof JSON.Integer)) {
+            throw new XException("invalid message, wrong node value type");
+        }
+        try {
+            return new Node(o.getString("nodeName"), o.getString("address"), o.getInt("udpPort"), o.getInt("tcpPort"));
+        } catch (UnknownHostException e) {
+            throw new XException(o.getString("address") + " is not a valid address");
+        }
+    }
 
-            List kNodes = (List) nNodes.get(4);
-            for (Object ee : kNodes) {
-                if (!(ee instanceof List))
-                    throw new XException("invalid message, khala-node is not a list");
+    private static void validateKhalaLocal(JSON.Instance data) throws XException {
+        if (!(data instanceof JSON.Object)) {
+            throw new XException("invalid body type");
+        }
+        JSON.Object body = (JSON.Object) data;
 
-                List kNode = (List) ee;
-                if (kNode.size() < 5)
-                    throw new XException("invalid message, khala-node list too short");
-                if (!(kNode.get(0) instanceof String)
-                    || !(kNode.get(1) instanceof String)
-                    || !(kNode.get(2) instanceof String)
-                    || !(kNode.get(3) instanceof String)
-                    || !(kNode.get(4) instanceof Integer))
-                    throw new XException("invalid message, khala-node wrong format");
-                String kType = (String) kNode.get(0);
-                if (!kType.equals("nexus") && !kType.equals("pylon"))
-                    throw new XException("invalid message, khala-node type is wrong");
-                String service = (String) kNode.get(1);
-                String zone = (String) kNode.get(2);
-                String kNAddress = (String) kNode.get(3);
-                int port = (int) kNode.get(4);
-
-                KhalaNode kn = new KhalaNode(KhalaNodeType.valueOf(kType), service, zone, kNAddress, port);
-                list.add(kn);
+        if (!body.containsKey("node") || !body.containsKey("khalaNodes")) {
+            throw new XException("missing node or khalaNodes in request body");
+        }
+        if (!(body.get("node") instanceof JSON.Object)
+            || !(body.get("khalaNodes") instanceof JSON.Array)) {
+            throw new XException("wrong value type of node or khalaNodes");
+        }
+        var arr = body.getArray("khalaNodes");
+        for (int i = 0; i < arr.length(); ++i) {
+            JSON.Instance inst = arr.get(i);
+            if (!(inst instanceof JSON.Object)) {
+                throw new XException("wrong value type of khalaNodes[" + i + "]");
             }
         }
-        return new KhalaMsg(version, type, nodeMap);
+    }
+
+    public static KhalaMsg parse(int version, String type, JSON.Instance data) throws XException {
+        switch (type) {
+            case "khala.add":
+            case "khala.remove": {
+                if (!(data instanceof JSON.Object)) {
+                    throw new XException("invalid body type");
+                }
+                JSON.Object body = (JSON.Object) data;
+
+                if (!body.containsKey("node") || !body.containsKey("khalaNode")) {
+                    throw new XException("missing node or khalaNode in request body");
+                }
+                if (!(body.get("node") instanceof JSON.Object)
+                    || !(body.get("khalaNode") instanceof JSON.Object)) {
+                    throw new XException("wrong value type of node or khalaNode");
+                }
+                Node n = getNode(body.getObject("node"));
+                KhalaNode kn = getKhalaNode(body.getObject("khalaNode"));
+                return new KhalaMsg(version, type, new HashMap<>() {{
+                    put(n, Collections.singletonList(kn));
+                }});
+            }
+            case "khala.local": {
+                validateKhalaLocal(data);
+                JSON.Object body = (JSON.Object) data;
+                Node n = getNode(body.getObject("node"));
+                List<KhalaNode> kns = new LinkedList<>();
+                var arr = body.getArray("khalaNodes");
+                for (int i = 0; i < arr.length(); ++i) {
+                    kns.add(getKhalaNode(arr.getObject(i)));
+                }
+                return new KhalaMsg(version, type, new HashMap<>() {{
+                    put(n, kns);
+                }});
+            }
+            case "khala.sync":
+                if (!(data instanceof JSON.Array)) {
+                    throw new XException("invalid body type");
+                }
+                JSON.Array array = (JSON.Array) data;
+
+                var map = new HashMap<Node, List<KhalaNode>>();
+                for (int i = 0; i < array.length(); ++i) {
+                    JSON.Instance inst = array.get(i);
+                    validateKhalaLocal(inst);
+                    JSON.Object o = (JSON.Object) inst;
+                    Node n = getNode(o.getObject("node"));
+                    List<KhalaNode> kns = new LinkedList<>();
+                    var arr = o.getArray("khalaNodes");
+                    for (int j = 0; j < arr.length(); ++j) {
+                        kns.add(getKhalaNode(arr.getObject(j)));
+                    }
+                    map.put(n, kns);
+                }
+                return new KhalaMsg(version, type, map);
+            default:
+                throw new XException("unknown type " + type);
+        }
     }
 
     @Override

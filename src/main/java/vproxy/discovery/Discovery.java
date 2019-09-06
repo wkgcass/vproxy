@@ -1,26 +1,29 @@
 package vproxy.discovery;
 
+import vclient.HttpClient;
+import vclient.impl.Http1ClientImpl;
+import vjson.JSON;
+import vjson.ex.JsonParseException;
+import vjson.simple.SimpleArray;
+import vjson.util.ObjectBuilder;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.*;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerListener;
-import vproxy.connection.BindServer;
 import vproxy.connection.ConnectionHandler;
 import vproxy.connection.ConnectionHandlerContext;
 import vproxy.connection.NetEventLoop;
 import vproxy.discovery.protocol.NodeDataMsg;
 import vproxy.discovery.protocol.NodeExistenceMsg;
-import vproxy.protocol.ProtocolServerConfig;
-import vproxy.protocol.ProtocolServerHandler;
-import vproxy.redis.RESPConfig;
 import vproxy.redis.RESPParser;
-import vproxy.redis.RESPProtocolHandler;
 import vproxy.redis.Serializer;
-import vproxy.redis.application.*;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
 import vproxy.util.*;
+import vserver.HttpServer;
+import vserver.Tool;
+import vserver.server.Http1ServerImpl;
 
 import java.io.IOException;
 import java.net.*;
@@ -43,15 +46,16 @@ import java.util.stream.Collectors;
  * 4. the server will send a udp packet to the sender's bindAddress:udpPort
  * ******** version=1, type=inform, nodeName, udpPort, tcpPort, SHA512(sort(nodeName+address+udpPort+tcpPort (only healthy))) ********
  * 5. when a discovery instance receives the `inform` packet, it checks the SHA512, and if doesn't match:
- * 6. make a tcp connection to the server bindAddress:tcpPort, and send the full info of vproxy nodes:
- * ******** version=1, type=nodes, list:[nodeName,address,tcpPort,status] ********
+ * 6. make an http request to the server bindAddress:tcpPort, and send the full info of vproxy nodes:
+ * ******** PUT /discovery/api/v1/exchange/node body=[nodeName,address,tcpPort,status] ********
  * 7. then the remote server will send back its vproxy nodes info
- * ******** version=1, type=nodes, list:[nodeName,address,udpPort,tcpPort,status] ********
+ * ******** [nodeName,address,udpPort,tcpPort,status] ********
  * 8. all missing nodes will be added to the nodes list, initially down, will be up when health check succeeds
  * 9. when health check is down for 5 minutes, it will be removed from the node list
  * 10. when the node leaves, it sends the following udp packet to all known nodes
- * ******** version=1, type=leave, nodeName, udpPort, tcpPort, (empty string) ********
+ * ******** version=1, type=leave, nodeName, udpPort, tcpPort, "" ********
  * 11. when receiving the packet, they will remove the left node
+ * NOTE: all payloads are sent in the form of JSON. For udp, the content json is serialized with RESP Bulk String
  */
 public class Discovery {
     class NodeExistenceConnectionHandler implements ConnectionHandler {
@@ -97,9 +101,33 @@ public class Discovery {
                 return;
             }
             Object o = parser.getResult().getJavaObject();
+            if (!(o instanceof String)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid data, not in string format");
+                clearBuffer(buffer);
+                return;
+            }
+            String s = (String) o;
+            assert Logger.lowLevelDebug("received external data, expected to be node existence msg: " + s);
+            JSON.Object json;
+            {
+                JSON.Instance inst;
+                try {
+                    inst = JSON.parse(s);
+                } catch (JsonParseException e) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid data, not in json format: " + e.getMessage());
+                    clearBuffer(buffer);
+                    return;
+                }
+                if (!(inst instanceof JSON.Object)) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid data, not json object: " + s);
+                    clearBuffer(buffer);
+                    return;
+                }
+                json = (JSON.Object) inst;
+            }
             NodeExistenceMsg msg;
             try {
-                msg = NodeExistenceMsg.parse(o);
+                msg = NodeExistenceMsg.parse(json);
             } catch (XException e) {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, e.getMessage());
                 return;
@@ -132,7 +160,7 @@ public class Discovery {
                     try {
                         node = new Node(msg.nodeName, remote, msg.udpPort, msg.tcpPort);
                     } catch (UnknownHostException e) {
-                        Logger.shouldNotHappen("the remote read from connection is wrong " + e);
+                        Logger.shouldNotHappen("the remote endpoint read from connection is wrong " + e);
                         return;
                     }
                     informNode(node);
@@ -149,7 +177,7 @@ public class Discovery {
                     try {
                         node = new Node(msg.nodeName, remote, msg.udpPort, msg.tcpPort);
                     } catch (UnknownHostException e) {
-                        Logger.shouldNotHappen("the remote read from connection is wrong " + e);
+                        Logger.shouldNotHappen("the remote endpoint read from connection is wrong " + e);
                         return;
                     }
 
@@ -197,50 +225,6 @@ public class Discovery {
         }
     }
 
-    class NodeDataApplication implements RESPApplication<RESPApplicationContext> {
-        @Override
-        public RESPApplicationContext context() {
-            return new RESPApplicationContext();
-        }
-
-        @Override
-        public void handle(Object o, RESPApplicationContext ctx, Callback<Object, Throwable> cb) {
-            if (o instanceof List && ((List) o).size() > 2
-                && (((List) o).get(0).equals(1)) // version == 1
-                && !(((List) o).get(1).equals("nodes")) // type != nodes
-            ) {
-                // not `nodes` message
-                // maybe an upper level message
-                // so let's try to handle it in external application handler
-                String type = (String) ((List) o).get(1);
-                boolean found = false;
-                for (NodeDataHandler h : externalHandlers) {
-                    if (h.canHandle(type)) {
-                        found = true;
-                        h.handle(o, ctx, cb);
-                        break;
-                    }
-                }
-                if (!found) {
-                    cb.failed(new XException("unknown message type " + type));
-                }
-                return;
-            }
-            handleReceivedNodeData(o, new Callback<Void, XException>() {
-                @Override
-                protected void onSucceeded(Void value) {
-                    // return this node messages
-                    cb.succeeded(getNodeDataToSend());
-                }
-
-                @Override
-                protected void onFailed(XException err) {
-                    // ignore, messages are logged in `handleReceivedNodeData()`
-                }
-            });
-        }
-    }
-
     class NodeDetach {
         public final String keyName;
         public final Node node;
@@ -264,7 +248,7 @@ public class Discovery {
         void startTimer() {
             if (detachTimer != null)
                 return; // already started
-            detachTimer = loop.getSelectorEventLoop().delay(config.timeoutConfig.detachTimeout, () -> {
+            detachTimer = loop.getSelectorEventLoop().delay(config.timeConfig.detachTimeout, () -> {
                 removeNode(keyName);
                 detachTimer = null;
             });
@@ -327,7 +311,7 @@ public class Discovery {
     }
 
     private static void utilByteArrayInc(byte[] arr) {
-        for (int i = arr.length - 1; i >= 0; ++i) {
+        for (int i = arr.length - 1; i >= 0; --i) {
             byte b = arr[i];
             arr[i] += 1;
             if (b != -1) {
@@ -366,14 +350,13 @@ public class Discovery {
     private final SelectorEventLoop blockingUDPRecvThread;
     private final DatagramSocket udpBlockingSock;
     private final DatagramSocket udpBlockingServer;
-    private final BindServer tcpServer;
+    private final HttpServer httpServer;
 
     private boolean intoInterval = false; // should go into a long interval
     private boolean isInInterval = false; // is already into the interval
     private boolean closed = false;
 
     private final NodeExistenceConnectionHandler nodeExistenceConnectionHandler = new NodeExistenceConnectionHandler();
-    private final NodeDataApplication nodeDataApplication = new NodeDataApplication();
 
     private Set<NodeListener> nodeListeners = new HashSet<>();
     private Set<NodeDataHandler> externalHandlers = new HashSet<>();
@@ -389,7 +372,7 @@ public class Discovery {
         ByteBuffer informBuffer = null;
         DatagramSocket udpBlockingSock = null;
         DatagramSocket udpBlockingServer = null;
-        BindServer tcpServer = null;
+        HttpServer tcpServer = null;
 
         try {
             blockingUDPSendThread = SelectorEventLoop.open();
@@ -428,7 +411,7 @@ public class Discovery {
 
             udpBlockingSock = startUdpBlockingSock();
             udpBlockingServer = createUdpBlockingServer();
-            tcpServer = startTcpServer();
+            tcpServer = startHttpServer();
         } catch (Throwable t) {
             // release
             if (blockingUDPSendThread != null)
@@ -468,7 +451,7 @@ public class Discovery {
         this.informBuffer = informBuffer;
         this.udpBlockingSock = udpBlockingSock;
         this.udpBlockingServer = udpBlockingServer;
-        this.tcpServer = tcpServer;
+        this.httpServer = tcpServer;
 
         // calc
         calcAll();
@@ -476,7 +459,7 @@ public class Discovery {
 
         // start
         startUdpBlockingServer();
-        loop.getSelectorEventLoop().delay(config.timeoutConfig.delayWhenNotJoined, this::startSearch);
+        loop.getSelectorEventLoop().delay(config.timeConfig.delayWhenNotJoined, this::startSearch);
     }
 
     private void alertNodeListeners(Consumer<NodeListener> f) {
@@ -485,10 +468,13 @@ public class Discovery {
         }
     }
 
-    private void handleReceivedNodeData(Object o, Callback<Void, XException> cb) {
+    private void handleReceivedNodeData(@SuppressWarnings("SameParameterValue") int version,
+                                        String type,
+                                        JSON.Array array,
+                                        Callback<Void, XException> cb) {
         NodeDataMsg msg;
         try {
-            msg = NodeDataMsg.parse(o);
+            msg = NodeDataMsg.parse(version, type, array);
         } catch (XException e) {
             Logger.error(LogType.INVALID_EXTERNAL_DATA, e.getMessage());
             cb.failed(e);
@@ -499,7 +485,7 @@ public class Discovery {
             cb.failed(new XException("version mismatch"));
             return;
         }
-        if (!msg.type.equals("nodes")) {
+        if (!msg.type.equals("node")) {
             Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid message, type mismatch: " + msg);
             cb.failed(new XException("type mismatch"));
             return;
@@ -515,23 +501,18 @@ public class Discovery {
         }
     }
 
-    private Object[] getNodeDataToSend() {
-        List<Object[]> nodeList = new LinkedList<>();
+    private JSON.Array getNodeDataToSend() {
+        List<JSON.Object> nodeList = new LinkedList<>();
         for (NodeDetach n : nodes.values()) {
-            Object[] e = {
-                n.node.nodeName,
-                n.node.address,
-                n.node.udpPort,
-                n.node.tcpPort,
-                n.node.healthy ? 1 : 0 // resp doesn't support boolean
-            };
-            nodeList.add(e);
+            ObjectBuilder e = new ObjectBuilder()
+                .put("nodeName", n.node.nodeName)
+                .put("address", n.node.address)
+                .put("udpPort", n.node.udpPort)
+                .put("tcpPort", n.node.tcpPort)
+                .put("healthy", n.node.healthy);
+            nodeList.add(e.build());
         }
-        return new Object[]{
-            1 /*version*/,
-            "nodes" /*type*/,
-            nodeList,
-        };
+        return new SimpleArray(nodeList);
     }
 
     private void resetSearchAddressBytes() {
@@ -571,27 +552,81 @@ public class Discovery {
         });
     }
 
-    private BindServer startTcpServer() throws IOException {
-        BindServer tcp = BindServer.create(new InetSocketAddress(config.bindInetAddress, config.tcpPort));
-        ProtocolServerHandler.apply(loop, tcp,
-            // protocol scope
-            new ProtocolServerConfig().setOutBufferSize(16384).setInBufferSize(16384),
-            new RESPProtocolHandler(
-                // (protocol=resp) handler scope
-                new RESPConfig().setMaxParseLen(16384),
-                new RESPApplicationHandler(
-                    // (protocol=resp) (handler=application) scope
-                    new RESPApplicationConfig().setPassword(null),
-                    // the application impl
-                    nodeDataApplication
-                )));
-        return tcp;
+    private HttpServer startHttpServer() throws IOException {
+        HttpServer server = new Http1ServerImpl(loop);
+        server.all("/*", Tool.bodyJsonHandler);
+        server.put("/discovery/api/v1/exchange/:type", rctx -> {
+            assert Logger.lowLevelDebug("received exchange request: " + rctx.param("type") + " " + rctx.get(Tool.bodyJson));
+            JSON.Instance inst = rctx.get(Tool.bodyJson);
+            if (inst == null) {
+                rctx.response().status(400).end("{\"code\":400,\"message\":\"request body should not be null\"}");
+            }
+            String type = rctx.param("type");
+
+            if (!type.equals("node")) {
+                // not `nodes` message
+                // maybe an upper level message
+                // so let's try to handle it in external application handler
+                boolean found = false;
+                for (NodeDataHandler h : externalHandlers) {
+                    if (h.canHandle(type)) {
+                        found = true;
+                        h.handle(1, type, inst, new Callback<>() {
+                            @Override
+                            protected void onSucceeded(JSON.Instance value) {
+                                if (value == null) {
+                                    rctx.response().status(204).end();
+                                } else {
+                                    rctx.response().status(200).end(value);
+                                }
+                            }
+
+                            @Override
+                            protected void onFailed(Throwable err) {
+                                rctx.response().status(400).end(new ObjectBuilder()
+                                    .put("code", 400)
+                                    .put("message", err.getMessage())
+                                    .build());
+                            }
+                        });
+                        break;
+                    }
+                }
+                if (!found) {
+                    rctx.response().status(400).end(new ObjectBuilder()
+                        .put("code", 400)
+                        .put("message", "unknown message type " + type)
+                        .build());
+                }
+                return;
+            }
+
+            if (!(inst instanceof JSON.Array)) {
+                rctx.response().status(400).end("request body is invalid, expecting JSON.Array");
+                return;
+            }
+            JSON.Array array = (JSON.Array) inst;
+            handleReceivedNodeData(1, type, array, new Callback<>() {
+                @Override
+                protected void onSucceeded(Void value) {
+                    // return this node messages
+                    rctx.response().status(200).end(getNodeDataToSend());
+                }
+
+                @Override
+                protected void onFailed(XException err) {
+                    // ignore, messages are logged in `handleReceivedNodeData()`
+                    rctx.response().status(400).end("{\"code\":400,\"message\":\"invalid request\"}");
+                }
+            });
+        });
+        server.listen(new InetSocketAddress(config.bindInetAddress, config.tcpPort));
+        return server;
     }
 
     private void recordNode(Node node) {
         String groupServerName = buildGroupServerName(node);
         if (!nodes.containsKey(groupServerName)) {
-            Logger.info(LogType.DISCOVERY_EVENT, "recording new node: " + node);
             try {
                 hcGroup.add(groupServerName, node.address, new InetSocketAddress(node.address, node.tcpPort), 10);
             } catch (AlreadyExistException e) {
@@ -599,6 +634,7 @@ public class Discovery {
             }
             node.healthy = false; // default is false
             nodes.put(groupServerName, new NodeDetach(node));
+            Logger.info(LogType.DISCOVERY_EVENT, "new node is recorded: " + node);
             // no need to calculate hash for now
             // calculate when the node goes UP
         }
@@ -638,7 +674,7 @@ public class Discovery {
                 Logger.shouldNotHappen("send udp pkt failed", e);
             }
         });
-        assert Logger.lowLevelDebug("udpSock.send wrote " + lim + " bytes");
+        assert Logger.lowLevelDebug("udpSock.send wrote " + (lim - pos) + " bytes");
         buffer.position(pos).limit(lim);
     }
 
@@ -653,9 +689,9 @@ public class Discovery {
         if (intoInterval && !isInInterval) {
             intoInterval = false; // reset the flag
             isInInterval = true;
-            int delay = nodes.size() == 1 /*1 means the node itself*/
-                ? config.timeoutConfig.intervalWhenNotJoined
-                : config.timeoutConfig.intervalWhenJoined;
+            int delay = nodes.size() <= 1 /*1 means the node itself*/
+                ? config.timeConfig.intervalWhenNotJoined
+                : config.timeConfig.intervalWhenJoined;
             loop.getSelectorEventLoop().delay(delay, this::startSearch);
             return;
         }
@@ -668,8 +704,8 @@ public class Discovery {
         }
 
         int delay = nodes.size() == 1 /*1 means the node itself*/
-            ? config.timeoutConfig.delayWhenNotJoined
-            : config.timeoutConfig.delayWhenJoined;
+            ? config.timeConfig.delayWhenNotJoined
+            : config.timeConfig.delayWhenJoined;
         loop.getSelectorEventLoop().delay(delay, this::startSearch);
     }
 
@@ -726,28 +762,39 @@ public class Discovery {
     }
 
     private void requestForNodes(Node target) {
-        RESPClientUtils.oneReq(loop, new InetSocketAddress(target.inetAddress, target.tcpPort),
-            getNodeDataToSend(), 3000, new Callback<Object, IOException>() {
+        assert Logger.lowLevelDebug("request for nodes, target = " + target);
+        HttpClient client = new Http1ClientImpl(new InetSocketAddress(target.inetAddress, target.tcpPort), loop, 3_000);
+        client.put("/discovery/api/v1/exchange/node").send(getNodeDataToSend(), (err, resp) -> {
+            if (err != null) {
+                Logger.error(LogType.CONN_ERROR, "failed to send node-exchange request", err);
+                return;
+            }
+            if (resp.status() != 200) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "the node-exchange request failed");
+                return;
+            }
+            JSON.Instance inst = resp.bodyAsJson();
+            if (inst == null) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "the node-exchange response body is empty");
+                return;
+            }
+            if (!(inst instanceof JSON.Array)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "the node-exchange response body is not an array");
+                return;
+            }
+            JSON.Array array = (JSON.Array) inst;
+            handleReceivedNodeData(1, "node", array, new Callback<>() {
                 @Override
-                protected void onSucceeded(Object value) {
-                    handleReceivedNodeData(value, new Callback<Void, XException>() {
-                        @Override
-                        protected void onSucceeded(Void value) {
-                            // do nothing, everything is done
-                        }
-
-                        @Override
-                        protected void onFailed(XException err) {
-                            // do nothing, msg is logged in `handleReceivedNodeData()`
-                        }
-                    });
+                protected void onSucceeded(Void value) {
+                    // do nothing, everything is done
                 }
 
                 @Override
-                protected void onFailed(IOException err) {
-                    Logger.error(LogType.DISCOVERY_EVENT, "request for nodes failed", err);
+                protected void onFailed(XException err) {
+                    // do nothing, msg is logged in `handleReceivedNodeData()`
                 }
             });
+        });
     }
 
     private void calcAll() {
@@ -780,28 +827,20 @@ public class Discovery {
         }
         md.update(sb.toString().getBytes());
         byte[] bytes = md.digest();
-        StringBuilder strHexString = new StringBuilder();
-        for (byte aByte : bytes) {
-            String hex = Integer.toHexString(Utils.positive(aByte));
-            if (hex.length() == 1) {
-                strHexString.append('0');
-            }
-            strHexString.append(hex);
-        }
-        return strHexString.toString();
+        return Base64.getEncoder().encodeToString(bytes);
     }
 
     private void calcSearchBuffer() {
         searchBuffer.position(0).limit(searchBuffer.capacity());
         // build the message
-        Object[] message = {
-            1 /*version*/,
-            "search" /*type*/,
-            nodeName,
-            config.udpPort,
-            config.tcpPort,
-            hash,
-        };
+        String message = new ObjectBuilder()
+            .put("version", 1)
+            .put("type", "search")
+            .put("nodeName", nodeName)
+            .put("udpPort", config.udpPort)
+            .put("tcpPort", config.tcpPort)
+            .put("hash", hash)
+            .build().stringify();
         byte[] bytes = Serializer.from(message);
         searchBuffer.put(bytes);
         searchBuffer.flip();
@@ -810,14 +849,14 @@ public class Discovery {
     private void calcInformBuffer() {
         informBuffer.position(0).limit(informBuffer.capacity());
         // build the message
-        Object[] message = {
-            1 /*version*/,
-            "inform" /*type*/,
-            nodeName,
-            config.udpPort,
-            config.tcpPort,
-            hash,
-        };
+        String message = new ObjectBuilder()
+            .put("version", 1)
+            .put("type", "inform")
+            .put("nodeName", nodeName)
+            .put("udpPort", config.udpPort)
+            .put("tcpPort", config.tcpPort)
+            .put("hash", hash)
+            .build().stringify();
         byte[] bytes = Serializer.from(message);
         informBuffer.put(bytes);
         informBuffer.flip();
@@ -859,19 +898,19 @@ public class Discovery {
         // close the udp server to stop receiving packets
         udpBlockingServer.close();
         // send `leave` message to all nodes
-        Object[] messageToSend = {
-            1 /*version*/,
-            "leave" /*type*/,
-            nodeName,
-            config.udpPort,
-            config.tcpPort,
-            "",
-        };
+        String messageToSend = new ObjectBuilder()
+            .put("version", 1)
+            .put("type", "leave")
+            .put("nodeName", nodeName)
+            .put("udpPort", config.udpPort)
+            .put("tcpPort", config.tcpPort)
+            .put("hash", "")
+            .build().stringify();
         byte[] bytesToSend = Serializer.from(messageToSend);
         ByteBuffer byteBuffer = ByteBuffer.allocate(bytesToSend.length);
         byteBuffer.put(bytesToSend);
         byteBuffer.flip();
-        leave(byteBuffer, nodes.values().iterator(), new Callback<Void, NoException>() {
+        leave(byteBuffer, nodes.values().iterator(), new Callback<>() {
             @Override
             protected void onSucceeded(Void value) {
                 // then release
@@ -904,11 +943,11 @@ public class Discovery {
             return;
         }
         sendBuffer(leaveMsg, new InetSocketAddress(n.node.address, n.node.udpPort));
-        loop.getSelectorEventLoop().delay(config.timeoutConfig.ppsLimitWhenNotJoined, () -> leave(leaveMsg, nodes, cb));
+        loop.getSelectorEventLoop().delay(config.timeConfig.ppsLimitWhenNotJoined, () -> leave(leaveMsg, nodes, cb));
     }
 
     private void releaseAfterLeave(Callback<Void, NoException> cb) {
-        tcpServer.close();
+        httpServer.close();
         try {
             eventLoopGroup.remove("EventLoop:" + nodeName);
         } catch (NotFoundException e) {

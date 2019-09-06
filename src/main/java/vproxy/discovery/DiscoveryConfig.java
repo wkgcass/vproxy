@@ -18,7 +18,7 @@ public class DiscoveryConfig {
     public final int searchMask;
     public final int searchMinUDPPort;
     public final int searchMaxUDPPort;
-    public final TimeoutConfig timeoutConfig;
+    public final TimeConfig timeConfig;
     public final HealthCheckConfig healthCheckConfig;
     final long searchNetworkCursorMaxExclusive;
     final byte[] searchNetworkByte;
@@ -35,7 +35,7 @@ public class DiscoveryConfig {
                            int tcpPort,
                            int searchMask,
                            int searchMinUDPPort, int searchMaxUDPPort,
-                           TimeoutConfig timeoutConfig,
+                           TimeConfig timeConfig,
                            HealthCheckConfig healthCheckConfig) throws SocketException {
         this.nic = nicName;
         this.udpSockPort = udpSockPort;
@@ -44,7 +44,7 @@ public class DiscoveryConfig {
         this.searchMask = searchMask;
         this.searchMinUDPPort = searchMinUDPPort;
         this.searchMaxUDPPort = searchMaxUDPPort;
-        this.timeoutConfig = timeoutConfig;
+        this.timeConfig = timeConfig;
         this.healthCheckConfig = healthCheckConfig;
 
         bindInetAddress = Utils.getInetAddressFromNic(nicName, ipType);

@@ -34,4 +34,9 @@ public class HttpResponseImpl implements HttpResponse {
     public ByteArray body() {
         return response.body;
     }
+
+    @Override
+    public String toString() {
+        return response.toString();
+    }
 }

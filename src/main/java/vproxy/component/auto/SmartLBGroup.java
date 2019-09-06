@@ -5,7 +5,6 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.khala.KhalaNode;
 import vproxy.component.khala.KhalaNodeListener;
-import vproxy.component.khala.KhalaNodeType;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.discovery.Node;
@@ -17,7 +16,7 @@ public class SmartLBGroup {
     class SmartLBGroupKhalaNodeListener implements KhalaNodeListener {
         @Override
         public void add(Node n, KhalaNode node) {
-            if (!node.zone.equals(zone) || node.type == KhalaNodeType.nexus || !node.service.equals(service)) {
+            if (!node.zone.equals(zone) || !node.service.equals(service)) {
                 return; // ignore the node event if don't care
             }
 
@@ -34,7 +33,7 @@ public class SmartLBGroup {
 
         @Override
         public void remove(Node n, KhalaNode node) {
-            if (!node.zone.equals(zone) || node.type == KhalaNodeType.nexus || !node.service.equals(service)) {
+            if (!node.zone.equals(zone) || !node.service.equals(service)) {
                 return; // ignore the node event if don't care
             }
 
@@ -106,7 +105,7 @@ public class SmartLBGroup {
         }
 
         config.khala.addKhalaNodeListener(smartLBGroupKhalaNodeListener);
-        KhalaNode kn = new KhalaNode(KhalaNodeType.nexus, service, zone, config.bindAddress, lb.bindAddress.getPort());
+        KhalaNode kn = new KhalaNode(service, zone, config.bindAddress, lb.bindAddress.getPort());
         config.khala.addLocal(kn);
         khalaNode = kn;
     }

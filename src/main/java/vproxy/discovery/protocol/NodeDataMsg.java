@@ -1,5 +1,6 @@
 package vproxy.discovery.protocol;
 
+import vjson.JSON;
 import vproxy.component.exception.XException;
 import vproxy.discovery.Node;
 
@@ -19,45 +20,34 @@ public class NodeDataMsg {
         this.nodes = Collections.unmodifiableList(nodes);
     }
 
-    public static NodeDataMsg parse(Object o) throws XException {
-        if (!(o instanceof List)) {
-            throw new XException("invalid message, not list");
-        }
-        List l = (List) o;
-        if (l.size() < 3) {
-            throw new XException("invalid message, list too short");
-        }
-        if (!(l.get(0) instanceof Integer)
-            || !(l.get(1) instanceof String)
-            || !(l.get(2) instanceof List)) {
-            throw new XException("invalid message, list data type wrong");
-        }
-
-        int version = (int) l.get(0);
-        String type = (String) l.get(1);
-        List nodesL = (List) l.get(2);
+    public static NodeDataMsg parse(int version, String type, JSON.Array array) throws XException {
         List<Node> nodes = new LinkedList<>();
-        for (Object n : nodesL) {
-            if (!(n instanceof List)) {
-                throw new XException("invalid message, node element not list");
+        for (int i = 0; i < array.length(); ++i) {
+            JSON.Instance inst = array.get(i);
+            if (!(inst instanceof JSON.Object)) {
+                throw new XException("invalid message, element not json object");
             }
-            List nl = (List) n;
-            if (nl.size() < 5) {
-                throw new XException("invalid message, node list too short");
+            JSON.Object nl = (JSON.Object) inst;
+            if (!nl.containsKey("nodeName")
+                || !nl.containsKey("address")
+                || !nl.containsKey("udpPort")
+                || !nl.containsKey("tcpPort")
+                || !nl.containsKey("healthy")) {
+                throw new XException("invalid message, missing keys");
             }
-            if (!(nl.get(0) instanceof String)
-                || !(nl.get(1) instanceof String)
-                || !(nl.get(2) instanceof Integer)
-                || !(nl.get(3) instanceof Integer)
-                || !(nl.get(4) instanceof Integer)) {
-                throw new XException("invalid message, node list data type wrong");
+            if (!(nl.get("nodeName") instanceof JSON.String)
+                || !(nl.get("address") instanceof JSON.String)
+                || !(nl.get("udpPort") instanceof JSON.Integer)
+                || !(nl.get("tcpPort") instanceof JSON.Integer)
+                || !(nl.get("healthy") instanceof JSON.Bool)) {
+                throw new XException("invalid message, value type wrong");
             }
 
-            String nodeName = (String) nl.get(0);
-            String address = (String) nl.get(1);
-            int udpPort = (int) nl.get(2);
-            int tcpPort = (int) nl.get(3);
-            boolean healthy = ((int) nl.get(4)) != 0;
+            String nodeName = nl.getString("nodeName");
+            String address = nl.getString("address");
+            int udpPort = nl.getInt("udpPort");
+            int tcpPort = nl.getInt("tcpPort");
+            boolean healthy = nl.getBool("healthy");
 
             Node node;
             try {

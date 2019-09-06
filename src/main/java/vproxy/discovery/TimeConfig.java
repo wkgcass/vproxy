@@ -3,7 +3,7 @@ package vproxy.discovery;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
 
-public class TimeoutConfig {
+public class TimeConfig {
     public final int ppsLimitWhenNotJoined;// = 250; // when nodes.size() == 0, send udp packet in this speed
     public final int intervalWhenNotJoined;// = 10500; // when nodes.size() == 0, the interval between two searches, bigger than hc.period * hc.up
     public final int ppsLimitWhenJoined;// = 20; // when nodes.size() <> 0, send udp packet in this speed
@@ -13,11 +13,11 @@ public class TimeoutConfig {
     final int delayWhenNotJoined;// = 1000 / ppsLimitWhenNotJoined;
     final int delayWhenJoined;// = 1000 / ppsLimitWhenJoined;
 
-    public TimeoutConfig(int ppsLimitWhenNotJoined,
-                         int intervalWhenNotJoined,
-                         int ppsLimitWhenJoined,
-                         int intervalWhenJoined,
-                         int detachTimeout) {
+    public TimeConfig(int ppsLimitWhenNotJoined,
+                      int intervalWhenNotJoined,
+                      int ppsLimitWhenJoined,
+                      int intervalWhenJoined,
+                      int detachTimeout) {
         this.ppsLimitWhenNotJoined = ppsLimitWhenNotJoined;
         this.intervalWhenNotJoined = intervalWhenNotJoined;
         this.ppsLimitWhenJoined = ppsLimitWhenJoined;
@@ -28,8 +28,8 @@ public class TimeoutConfig {
         this.delayWhenJoined = 1000 / ppsLimitWhenJoined;
     }
 
-    public static TimeoutConfig getDefault() {
-        return new TimeoutConfig(
+    public static TimeConfig getDefault() {
+        return new TimeConfig(
             250,
             10500,
             50,

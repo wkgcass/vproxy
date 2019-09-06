@@ -41,4 +41,6 @@ public interface HttpClient {
     }
 
     HttpRequest request(HttpMethod method, String uri);
+
+    void close();
 }

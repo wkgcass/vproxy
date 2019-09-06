@@ -6,7 +6,6 @@ import vproxy.component.app.TcpLB;
 import vproxy.component.exception.*;
 import vproxy.component.khala.KhalaNode;
 import vproxy.component.khala.KhalaNodeListener;
-import vproxy.component.khala.KhalaNodeType;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
@@ -25,7 +24,7 @@ public class Sidecar {
     class SidecarKhalaNodeListener implements KhalaNodeListener {
         @Override
         public void add(Node n, KhalaNode node) {
-            if (!node.zone.equals(zone) || node.type == KhalaNodeType.pylon) {
+            if (!node.zone.equals(zone)) {
                 return; // ignore the node event if don't care
             }
 
@@ -67,7 +66,7 @@ public class Sidecar {
 
         @Override
         public void remove(Node n, KhalaNode node) {
-            if (!node.zone.equals(zone) || node.type == KhalaNodeType.pylon) {
+            if (!node.zone.equals(zone)) {
                 return; // ignore the node event if don't care
             }
 
@@ -207,8 +206,7 @@ public class Sidecar {
         }
 
         // add into khala
-        KhalaNode kn = new KhalaNode(KhalaNodeType.pylon, service, zone,
-            config.bindAddress, tcpLB.bindAddress.getPort());
+        KhalaNode kn = new KhalaNode(service, zone, config.bindAddress, tcpLB.bindAddress.getPort());
         config.khala.addLocal(kn);
         khalaNodes.add(kn);
     }
@@ -247,8 +245,7 @@ public class Sidecar {
         lbs[idx] = null;
 
         // remove from khala
-        KhalaNode kn = new KhalaNode(KhalaNodeType.pylon, service, zone,
-            config.bindAddress, tcpLB.bindAddress.getPort());
+        KhalaNode kn = new KhalaNode(service, zone, config.bindAddress, tcpLB.bindAddress.getPort());
         config.khala.removeLocal(kn);
         khalaNodes.remove(kn);
     }
@@ -278,8 +275,7 @@ public class Sidecar {
             // this is the only server in the group
 
             // so should remove from khala
-            KhalaNode kn = new KhalaNode(KhalaNodeType.pylon, service, zone,
-                config.bindAddress, tcpLB.bindAddress.getPort());
+            KhalaNode kn = new KhalaNode(service, zone, config.bindAddress, tcpLB.bindAddress.getPort());
             config.khala.removeLocal(kn);
             khalaNodes.remove(kn);
 

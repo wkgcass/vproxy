@@ -1,20 +1,25 @@
 package vproxy.component.khala;
 
+import vclient.HttpClient;
+import vclient.HttpResponse;
+import vclient.impl.Http1ClientImpl;
+import vjson.JSON;
+import vjson.simple.SimpleArray;
+import vjson.util.ArrayBuilder;
+import vjson.util.ObjectBuilder;
 import vproxy.component.exception.XException;
 import vproxy.component.khala.protocol.KhalaMsg;
 import vproxy.discovery.Discovery;
 import vproxy.discovery.Node;
 import vproxy.discovery.NodeDataHandler;
 import vproxy.discovery.NodeListener;
-import vproxy.redis.application.RESPApplicationContext;
-import vproxy.redis.application.RESPClientUtils;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
 
-import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -23,34 +28,34 @@ import java.util.stream.Collectors;
 /**
  * the service network
  * protocol:
- * data type:
- * [
- * --version
- * --type
- * --list:
- * --[
- * ----[
- * ------nodeName
- * ------address
- * ------udpPort
- * ------tcpPort
- * ------list:
- * ------[
- * --------[
- * ----------khalaNodeType
- * ----------service
- * ----------zone
- * ----------address
- * ----------port
- * --------]
- * ------]
- * ----]
- * --]
- * ]
- * type: khala-add | khala-remove | khala-local | khala
- * -- khala-add and khala-remove msg.list.size should -eq 1, msg.list[0].list.size should -eq 1
- * -- khala-local msg.list.size should -eq 1
- * -- khala message should contain all local cached nodes
+ * request types: khala.add | khala.remove | khala.local | khala.sync
+ * -- khala.add || khala.remove:
+ * ---- {
+ * ------ node: { // identifier of a discovery node
+ * -------- nodeName, address, udpPort, tcpPort,
+ * ------ },
+ * ------ khalaNode: {
+ * -------- service, zone, address, port,
+ * ------ }
+ * ---- }
+ * -- khala.local
+ * ---- {
+ * ------ node: { // identifier of a discovery node
+ * -------- nodeName, address, udpPort, tcpPort,
+ * ------ },
+ * ------ khalaNodes: [ {
+ * -------- service, zone, address, port,
+ * ------ } ]
+ * ---- }
+ * -- khala.local-response, same as khala.local
+ * -- khala.sync
+ * ----- [ khala-local format ]
+ * -- khala.sync-response
+ * ---- {
+ * ------ diff: [
+ * -------- node: { nodeName, address, udpPort, tcpPort, }
+ * ------ ]
+ * ---- }
  * <p>
  * triggers:
  * 1. when a node is discovered, record the node, and send khala-local message to the discovered node
@@ -63,19 +68,18 @@ import java.util.stream.Collectors;
  * -- 2) if kNode.type is pylon, should alert only nexus nodes
  * 5. for every few minutes, the node should randomly pick a nexus node and send a khala message
  * server:
- * 1. when receiving a khala-add message,
- * -- the node should record the node, then respond with a khala message
- * 2. when receiving a khala-remove message,
- * -- the node should remove the node, then respond with a khala message
- * 3. when receiving a khala-local message,
- * -- the node should change the local cache to the message content, and respond with a khala-local message
- * 4. when receiving a khala message,
- * -- first directly respond with a khala message
- * -- if the message doesn't contain any discovery node or have only one discovery node, then do not run a diff.
- * -- otherwise: the node checks each discovery node in the message and compare with local cache
- * -- when a diff is found, the node should request the differed nodes with khala-local message and store the latest config
+ * 1. when receiving a khala.add message,
+ * -- the node should record the node, then respond with 204
+ * 2. when receiving a khala.remove message,
+ * -- the node should remove the node, then respond with 204
+ * 3. when receiving a khala.local message,
+ * -- the node should change the local cache to the message content, and respond with 204
+ * 4. when receiving a khala.sync message,
+ * -- the node checks each discovery node in the message and compare with local cache
+ * -- when a diff is found, the node should request the differed nodes with khala.local message and store the latest config
+ * -- finally respond with a khala.sync-response message, containing missing nodes differed from of the request
  * client:
- * same handling with server, but does not respond
+ * -- when receiving khala.sync-response message, sync with diff nodes
  */
 public class Khala {
     enum NodeState {
@@ -84,7 +88,7 @@ public class Khala {
         deleted,
     }
 
-    class NodeWrap {
+    static class NodeWrap {
         public final Node node;
         public NodeState state = NodeState.init;
         public NodeState targetState = NodeState.stable;
@@ -117,7 +121,12 @@ public class Khala {
                 throw new IllegalStateException("node " + node + " already exists");
             }
             // should init the node
-            checkRemote(node, new Callback<Void, Throwable>() {
+
+            // here, we sleep for a few millis
+            // the two discovery nodes might find each other at the same time
+            // and remote discovery node health check might not turned to up yet
+            // wait for a few millis can solve this problem
+            discovery.loop.getSelectorEventLoop().delay(100, () -> checkRemote(node, new Callback<>() {
                 @Override
                 protected void onSucceeded(Void value) {
                     NodeWrap wrap = nodes.get(node);
@@ -135,7 +144,7 @@ public class Khala {
                     // we remove the node
                     removeNode(node);
                 }
-            });
+            }));
         }
 
         /**
@@ -166,7 +175,7 @@ public class Khala {
     }
 
     class KhalaNodeRecorder {
-        private final Map<Node, Set<KhalaNode>> khalaNodes = new ConcurrentHashMap<>();
+        private final Map<Node, Set<KhalaNode>> n2knsMap = new ConcurrentHashMap<>();
 
         /**
          * specify a remote discovery node and init khala nodes with a list.
@@ -178,7 +187,7 @@ public class Khala {
          * @throws IllegalStateException throw if already exists
          */
         public void add(Node node) {
-            Set<KhalaNode> set = khalaNodes.put(node, new HashSet<>());
+            Set<KhalaNode> set = n2knsMap.put(node, new HashSet<>());
             if (set != null) {
                 // the khala node set should not be recorded multiple times
                 // we cannot handle the situation, it must be a bug
@@ -193,10 +202,10 @@ public class Khala {
          * @param kn the node to add
          */
         public void addLocal(KhalaNode kn) {
-            if (!khalaNodes.containsKey(discovery.localNode)) {
-                khalaNodes.put(discovery.localNode, new HashSet<>());
+            if (!n2knsMap.containsKey(discovery.localNode)) {
+                n2knsMap.put(discovery.localNode, new HashSet<>());
             }
-            if (khalaNodes.get(discovery.localNode).add(kn)) {
+            if (n2knsMap.get(discovery.localNode).add(kn)) {
                 // successfully added
                 // then should notify others about the added node
                 notifyNetworkAddKhalaNode(kn);
@@ -213,11 +222,11 @@ public class Khala {
          * @param khalaNode khala node
          */
         public void add(Node node, KhalaNode khalaNode) {
-            Set<KhalaNode> set = khalaNodes.get(node);
+            Set<KhalaNode> set = n2knsMap.get(node);
             if (set == null) { // init with a set if not exists
                 Logger.alert("khala nodes in " + node + " should exist");
                 set = new HashSet<>();
-                khalaNodes.put(node, set);
+                n2knsMap.put(node, set);
             }
             if (!set.add(khalaNode)) {
                 return; // already recorded
@@ -235,11 +244,11 @@ public class Khala {
          * @param khalaNode khala node
          */
         public void remove(Node node, KhalaNode khalaNode) {
-            Set<KhalaNode> set = khalaNodes.get(node);
+            Set<KhalaNode> set = n2knsMap.get(node);
             if (set == null) { // init with a set if not exists
                 Logger.alert("khala nodes in " + node + " should exist");
                 set = new HashSet<>();
-                khalaNodes.put(node, set);
+                n2knsMap.put(node, set);
             }
             if (!set.remove(khalaNode)) {
                 // already removed, do nothing
@@ -254,10 +263,10 @@ public class Khala {
          * @param kn the node to remove
          */
         public void removeLocal(KhalaNode kn) {
-            if (!khalaNodes.containsKey(discovery.localNode)) {
-                khalaNodes.put(discovery.localNode, new HashSet<>());
+            if (!n2knsMap.containsKey(discovery.localNode)) {
+                n2knsMap.put(discovery.localNode, new HashSet<>());
             }
-            if (khalaNodes.get(discovery.localNode).remove(kn)) {
+            if (n2knsMap.get(discovery.localNode).remove(kn)) {
                 // successfully removed
                 // then should notify others about the removal
                 notifyNetworkRemoveKhalaNode(kn);
@@ -274,7 +283,7 @@ public class Khala {
          * @throws IllegalStateException throw if already exists
          */
         public void remove(Node node) {
-            Set<KhalaNode> set = khalaNodes.remove(node);
+            Set<KhalaNode> set = n2knsMap.remove(node);
             if (set == null) {
                 // the node not recorded, ignore
                 return;
@@ -285,11 +294,11 @@ public class Khala {
         }
 
         public Set<KhalaNode> getKhalaNodes(Node node) {
-            if (!khalaNodes.containsKey(node)) {
+            if (!n2knsMap.containsKey(node)) {
                 Logger.alert("khala node list of node " + node + " not exists");
-                khalaNodes.put(node, new HashSet<>());
+                n2knsMap.put(node, new HashSet<>());
             }
-            return khalaNodes.get(node);
+            return n2knsMap.get(node);
         }
 
         // alert listeners for node adding
@@ -312,11 +321,11 @@ public class Khala {
         // the result is a tuple:
         // < in remote not in local (toAdd), in local not in remote (toRemove)>
         public Tuple<Set<KhalaNode>, Set<KhalaNode>> runDiff(Node node, List<KhalaNode> remote) {
-            Set<KhalaNode> local = khalaNodes.get(node);
+            Set<KhalaNode> local = n2knsMap.get(node);
             if (local == null) {
                 Logger.alert("khala nodes in " + node + " not exist");
                 local = new HashSet<>();
-                khalaNodes.put(node, local);
+                n2knsMap.put(node, local);
             }
 
             Set<KhalaNode> toAdd = new HashSet<>();
@@ -350,7 +359,7 @@ public class Khala {
         // use private field to record the node
         // because they are local nodes and should not be handled as the remote nodes
         nodes.nodes.put(discovery.localNode, localNodeWrap);
-        khalaNodes.khalaNodes.put(discovery.localNode, new HashSet<>());
+        khalaNodes.n2knsMap.put(discovery.localNode, new HashSet<>());
 
         // init periodic event
         discovery.loop.getSelectorEventLoop().period(config.syncPeriod, this::doSync);
@@ -359,13 +368,13 @@ public class Khala {
         discovery.addExternalHandler(new NodeDataHandler() {
             @Override
             public boolean canHandle(String type) {
-                return type.equals("khala") || type.equals("khala-add") || type.equals("khala-remove") || type.equals("khala-local");
+                return type.equals("khala.sync") || type.equals("khala.add") || type.equals("khala.remove") || type.equals("khala.local");
             }
 
             @SuppressWarnings("OptionalGetWithoutIsPresent")
             @Override
-            public void handle(Object o, RESPApplicationContext respApplicationContext, Callback<Object, Throwable> cb) {
-                Tuple<KhalaMsg, XException> tup = utilValidateResponse(o, "khala", "khala-add", "khala-remove", "khala-local");
+            public void handle(int version, String type, JSON.Instance data, Callback<JSON.Instance, Throwable> cb) {
+                Tuple<KhalaMsg, XException> tup = utilValidateResponse(version, type, data);
                 if (tup.right != null) {
                     cb.failed(tup.right);
                     return;
@@ -374,38 +383,22 @@ public class Khala {
                 Node n;
                 List<KhalaNode> nodes;
                 switch (msg.type) {
-                    case "khala":
-                        cb.succeeded(buildFullKhalaMsg());
-                        handleFullKhala(msg.nodes);
+                    case "khala.sync":
+                        cb.succeeded(handleFullKhala(msg.nodes));
                         break;
-                    case "khala-add":
-                        if (msg.nodes.size() != 1 || msg.nodes.get(msg.nodes.keySet().stream().findFirst().get()).size() != 1) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "khala-add node list size is wrong: " + msg);
-                            cb.failed(new XException("node list size is wrong"));
-                            break;
-                        }
+                    case "khala.add":
                         n = msg.nodes.keySet().stream().findFirst().get();
                         nodes = msg.nodes.get(n);
                         handleAdd(n, nodes.get(0));
-                        cb.succeeded(buildFullKhalaMsg());
+                        cb.succeeded(null);
                         break;
-                    case "khala-remove":
-                        if (msg.nodes.size() != 1 || msg.nodes.get(msg.nodes.keySet().stream().findFirst().get()).size() != 1) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "khala-add node list size is wrong: " + msg);
-                            cb.failed(new XException("node list size is wrong"));
-                            break;
-                        }
+                    case "khala.remove":
                         n = msg.nodes.keySet().stream().findFirst().get();
                         nodes = msg.nodes.get(n);
                         handleRemove(n, nodes.get(0));
-                        cb.succeeded(buildFullKhalaMsg());
+                        cb.succeeded(null);
                         break;
-                    case "khala-local":
-                        if (msg.nodes.size() != 1) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "khala-add node list size is wrong: " + msg);
-                            cb.failed(new XException("node list size is wrong"));
-                            break;
-                        }
+                    case "khala.local":
                         n = msg.nodes.keySet().stream().findFirst().get();
                         nodes = msg.nodes.get(n);
                         handleLocal(n, nodes);
@@ -440,15 +433,23 @@ public class Khala {
         });
     }
 
-    private Tuple<KhalaMsg, XException> utilValidateResponse(Object o, String... expectedType) {
-        if (!(o instanceof List)) {
-            Logger.error(LogType.KHALA_EVENT, "invalid message");
-            return new Tuple<>(null, new XException("invalid message"));
+    private boolean utilLogResponseErr(Node n, String type, Throwable err, HttpResponse resp) {
+        if (err != null) {
+            Logger.error(LogType.CONN_ERROR, "failed to send " + type + " to " + n, err);
+            return true;
         }
-        List rawMsg = (List) o;
+        final int expectedRespStatus = ((type.equals("khala.add") || type.equals("khala.remove")) ? 204 : 200);
+        if (resp.status() != expectedRespStatus) {
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "response of " + type + " from " + n + " is invalid");
+            return true;
+        }
+        return false;
+    }
+
+    private Tuple<KhalaMsg, XException> utilValidateResponse(int version, String type, JSON.Instance data) {
         KhalaMsg msg;
         try {
-            msg = KhalaMsg.parse(rawMsg);
+            msg = KhalaMsg.parse(version, type, data);
         } catch (XException e) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, e.getMessage());
             return new Tuple<>(null, e);
@@ -456,10 +457,6 @@ public class Khala {
         if (msg.version != 1) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "version mismatch: " + msg);
             return new Tuple<>(null, new XException("version mismatch"));
-        }
-        if (!Arrays.asList(expectedType).contains(msg.type)) {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "unexpected type: " + msg);
-            return new Tuple<>(null, new XException("unexpected type"));
         }
         return new Tuple<>(msg, null);
     }
@@ -510,15 +507,14 @@ public class Khala {
     }
 
     // handle khala response
-    private void handleFullKhala(Map<Node, List<KhalaNode>> remoteNodeMap) {
-        if (remoteNodeMap.isEmpty()) {
-            // ignore if the remote has no node data
-            return;
-        }
+    private JSON.Instance handleFullKhala(Map<Node, List<KhalaNode>> remoteNodeMap) {
+        Set<Node> diff = new HashSet<>();
         for (Node n : remoteNodeMap.keySet()) {
             List<KhalaNode> remote = remoteNodeMap.get(n);
-            if (discoveryNodeNotExist(n))
+            if (discoveryNodeNotExist(n)) {
+                diff.add(n);
                 continue;
+            }
 
             Tuple<Set<KhalaNode>, Set<KhalaNode>> wantAddRemove = khalaNodes.runDiff(n, remote);
             if (wantAddRemove.left.isEmpty() && wantAddRemove.right.isEmpty()) {
@@ -528,7 +524,25 @@ public class Khala {
             Logger.warn(LogType.KHALA_EVENT, "khala data mismatch on node " + n);
             // not same, so we make a direct check on the remote discovery node
             checkRemote(n);
+            diff.add(n);
         }
+        for (Node n : nodes.getNodes()) {
+            if (remoteNodeMap.containsKey(n)) {
+                continue; // already checked
+            }
+            // missing in remote
+            diff.add(n);
+        }
+        return new ObjectBuilder()
+            .putInst("diff", new SimpleArray(
+                diff.stream().map(n -> new ObjectBuilder()
+                    .put("nodeName", n.nodeName)
+                    .put("address", n.address)
+                    .put("udpPort", n.udpPort)
+                    .put("tcpPort", n.tcpPort)
+                    .build()).collect(Collectors.toList())
+            ))
+            .build();
     }
 
     // ---------------------
@@ -541,7 +555,7 @@ public class Khala {
 
     // make a khala-local request and handle the response
     private void checkRemote(Node n) {
-        checkRemote(n, new Callback<Void, Throwable>() {
+        checkRemote(n, new Callback<>() {
             @Override
             protected void onSucceeded(Void value) {
                 // ignore
@@ -561,39 +575,27 @@ public class Khala {
             return;
         }
 
-        Object[] msg = buildLocalKhalaMsg();
-        RESPClientUtils.retry(
-            discovery.loop,
-            new InetSocketAddress(n.inetAddress, n.tcpPort),
-            msg,
-            3000,
-            3,
-            new Callback<Object, IOException>() {
-                @Override
-                protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala-local");
-                    if (tup.right != null) {
-                        cb.failed(tup.right);
-                        return;
-                    }
-                    KhalaMsg resp = tup.left;
-                    if (!resp.nodes.containsKey(n)) {
-                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "request khala-local on " + n + " failed, invalid nodes, do not contain the node " + n + ": " + resp);
-                        cb.failed(new XException("invalid external data"));
-                        return;
-                    }
-                    handleLocal(n, resp.nodes.get(n));
-                    cb.succeeded(null);
-                }
-
-                @Override
-                protected void onFailed(IOException err) {
-                    // ignore the error, but log
-                    Logger.error(LogType.KHALA_EVENT, "request khala-local on " + n + " failed");
-                    cb.failed(err);
-                    // if the remote node is down, it will be removed by discovery lib
-                }
-            });
+        JSON.Instance msg = buildLocalKhalaMsg();
+        HttpClient client = new Http1ClientImpl(new InetSocketAddress(n.inetAddress, n.tcpPort), discovery.loop, 3000);
+        client.put("/discovery/api/v1/exchange/khala.local").send(msg, (err, resp) -> {
+            if (utilLogResponseErr(n, "khala.local", err, resp)) {
+                return;
+            }
+            var tup = utilValidateResponse(1, "khala.local", resp.bodyAsJson());
+            if (tup.right != null) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "response of khala.local from " + n + " is invalid: " + resp);
+                cb.failed(tup.right);
+                return;
+            }
+            var respMsg = tup.left;
+            if (!respMsg.nodes.containsKey(n)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "response of khala-local from " + n + " is invalid, invalid nodes, do not contain the node " + n + ": " + resp);
+                cb.failed(new XException("invalid external data"));
+                return;
+            }
+            handleLocal(n, respMsg.nodes.get(n));
+            cb.succeeded(null);
+        });
     }
 
     // ---------------------
@@ -604,46 +606,34 @@ public class Khala {
     // START khala msg builders
     // ---------------------
 
-    private Object[] buildFullKhalaMsg() {
-        return buildKhalaMsgByNodes("khala", nodes.getNodes());
+    private JSON.Object buildLocalKhalaMsg() {
+        Node n = discovery.localNode;
+        return buildStandardKhalaMsg(n);
     }
 
-    private Object[] buildLocalKhalaMsg() {
-        return buildKhalaMsgByNodes("khala-local", Collections.singleton(discovery.localNode));
-    }
-
-    private Object[] buildKhalaMsgByNodes(String type, Collection<Node> discoveryNodes) {
-        List<List<Object>> list = new LinkedList<>();
-        Object[] msg = {
-            1 /*version*/,
-            type,
-            list
-        };
-        for (Node n : discoveryNodes) {
-            List<Object> nodeList = new ArrayList<>(5);
-            list.add(nodeList);
-
-            List<Object> khalaNodeList = new LinkedList<>();
-
-            nodeList.add(n.nodeName);
-            nodeList.add(n.address);
-            nodeList.add(n.udpPort);
-            nodeList.add(n.tcpPort);
-            nodeList.add(khalaNodeList);
-
-            Set<KhalaNode> kNodes = khalaNodes.getKhalaNodes(n);
-            for (KhalaNode kn : kNodes) {
-                List<Object> kNode = new ArrayList<>(4);
-                kNode.add(kn.type.name());
-                kNode.add(kn.service);
-                kNode.add(kn.zone);
-                kNode.add(kn.address);
-                kNode.add(kn.port);
-                khalaNodeList.add(kNode);
-            }
+    private JSON.Array buildFullKhalaMsg() {
+        ArrayBuilder arr = new ArrayBuilder();
+        for (Node n : nodes.getNodes()) {
+            arr.addInst(buildStandardKhalaMsg(n));
         }
+        return arr.build();
+    }
 
-        return msg;
+    private JSON.Object buildStandardKhalaMsg(Node n) {
+        return new ObjectBuilder()
+            .putObject("node", o -> o
+                .put("nodeName", n.nodeName)
+                .put("address", n.address)
+                .put("udpPort", n.udpPort)
+                .put("tcpPort", n.tcpPort)
+            )
+            .putArray("khalaNodes", arr -> khalaNodes.getKhalaNodes(n).forEach(kn -> arr.addObject(o -> o
+                .put("service", kn.service)
+                .put("zone", kn.zone)
+                .put("address", kn.address)
+                .put("port", kn.port)
+            )))
+            .build();
     }
 
     // ---------------------
@@ -655,96 +645,96 @@ public class Khala {
     // ---------------------
 
     private void notifyNetworkFullKhala(Node node) {
-        Object[] msg = buildFullKhalaMsg();
-        RESPClientUtils.retry(
-            discovery.loop,
-            new InetSocketAddress(node.inetAddress, node.tcpPort),
-            msg,
-            3000,
-            3,
-            new Callback<Object, IOException>() {
-                @Override
-                protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala");
-                    if (tup.right != null) {
-                        return;
-                    }
-                    KhalaMsg msg = tup.left;
-                    handleFullKhala(msg.nodes);
+        JSON.Array reqBody = buildFullKhalaMsg();
+        HttpClient client = new Http1ClientImpl(new InetSocketAddress(node.inetAddress, node.tcpPort), discovery.loop, 3000);
+        client.put("/discovery/api/v1/exchange/khala.sync").send(reqBody, (err, resp) -> {
+            if (utilLogResponseErr(node, "khala.sync", err, resp)) {
+                return;
+            }
+            JSON.Instance inst = resp.bodyAsJson();
+            if (!(inst instanceof JSON.Object)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response is not JSON.Object: " + inst);
+                return;
+            }
+            JSON.Object body = (JSON.Object) inst;
+            if (!body.containsKey("diff")) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response should contain key `diff`: " + body);
+                return;
+            }
+            if (!(body.get("diff") instanceof JSON.Array)) {
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "value of khala.sync response key `diff` should be array: " + body);
+                return;
+            }
+            JSON.Array diff = body.getArray("diff");
+            for (int i = 0; i < diff.length(); ++i) {
+                JSON.Instance ins = diff.get(i);
+                if (!(ins instanceof JSON.Object)) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response `diff[" + i + "]` should be object: " + body);
+                    return;
                 }
-
-                @Override
-                protected void onFailed(IOException err) {
-                    // ignore if got error
+                JSON.Object n = (JSON.Object) ins;
+                if (!n.containsKey("nodeName")
+                    || !n.containsKey("address")
+                    || !n.containsKey("udpPort")
+                    || !n.containsKey("tcpPort")) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response `diff[" + i + "]` missing keys: " + body);
+                    return;
                 }
-            });
+                if (!(n.get("nodeName") instanceof JSON.String)
+                    || !(n.get("address") instanceof JSON.String)
+                    || !(n.get("udpPort") instanceof JSON.Integer)
+                    || !(n.get("tcpPort") instanceof JSON.Integer)) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "wrong value type for khala.sync response `diff[" + i + "]`: " + body);
+                    return;
+                }
+                Node extNode;
+                try {
+                    extNode = new Node(n.getString("nodeName"), n.getString("address"), n.getInt("udpPort"), n.getInt("tcpPort"));
+                } catch (UnknownHostException e) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "khala.sync response `diff[" + i + "]` address is invalid: " + n.getString("address"));
+                    return;
+                }
+                checkRemote(extNode);
+            }
+        });
     }
 
     private void notifyNetworkAddKhalaNode(KhalaNode node) {
-        boolean notifyAll = node.type == KhalaNodeType.nexus;
-        for (Node n : khalaNodes.khalaNodes.keySet()) {
+        for (Node n : khalaNodes.n2knsMap.keySet()) {
             if (n.equals(discovery.localNode))
                 continue; // don't send to local node
-            if (notifyAll || khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
-                notifyNetwork("khala-add", n, node);
-            }
+            notifyNetwork("khala.add", n, node);
         }
     }
 
     private void notifyNetworkRemoveKhalaNode(KhalaNode node) {
-        boolean notifyAll = node.type == KhalaNodeType.nexus;
-        for (Node n : khalaNodes.khalaNodes.keySet()) {
+        for (Node n : khalaNodes.n2knsMap.keySet()) {
             if (n.equals(discovery.localNode))
                 continue; // don't send to local node
-            if (notifyAll || khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus)) {
-                notifyNetwork("khala-remove", n, node);
-            }
+            notifyNetwork("khala.remove", n, node);
         }
     }
 
-    private void notifyNetwork(String type, Node remoteNode, KhalaNode node) {
-        Object[] msg = {
-            1 /*version*/,
-            type,
-            new Object[]{ // list of discovery node
-                new Object[]{
-                    discovery.localNode.nodeName,
-                    discovery.localNode.address,
-                    discovery.localNode.udpPort,
-                    discovery.localNode.tcpPort,
-                    new Object[]{ // list of khala-nodes
-                        new Object[]{
-                            node.type.name(),
-                            node.service,
-                            node.zone,
-                            node.address,
-                            node.port
-                        }
-                    }
-                }
-            }
-        };
-        RESPClientUtils.retry(discovery.loop,
-            new InetSocketAddress(remoteNode.inetAddress, remoteNode.tcpPort),
-            msg,
-            3000,
-            3,
-            new Callback<Object, IOException>() {
-                @Override
-                protected void onSucceeded(Object value) {
-                    Tuple<KhalaMsg, XException> tup = utilValidateResponse(value, "khala");
-                    if (tup.right != null) {
-                        return;
-                    }
-                    KhalaMsg msg = tup.left;
-                    handleFullKhala(msg.nodes);
-                }
-
-                @Override
-                protected void onFailed(IOException err) {
-                    Logger.error(LogType.KHALA_EVENT, "notify " + type + " " + remoteNode + " failed", err);
-                }
-            });
+    private void notifyNetwork(String type, Node remoteNode, KhalaNode kn) {
+        Node n = discovery.localNode;
+        JSON.Object reqBody = new ObjectBuilder()
+            .putObject("node", o -> o
+                .put("nodeName", n.nodeName)
+                .put("address", n.address)
+                .put("udpPort", n.udpPort)
+                .put("tcpPort", n.tcpPort)
+            )
+            .putObject("khalaNode", o -> o
+                .put("service", kn.service)
+                .put("zone", kn.zone)
+                .put("address", kn.address)
+                .put("port", kn.port)
+            )
+            .build();
+        HttpClient client = new Http1ClientImpl(new InetSocketAddress(remoteNode.inetAddress, remoteNode.tcpPort), discovery.loop, 3000);
+        client.put("/discovery/api/v1/exchange/" + type).send(reqBody, (err, resp) ->
+            utilLogResponseErr(remoteNode, type, err, resp)
+        );
     }
 
     // ---------------------
@@ -763,8 +753,8 @@ public class Khala {
         discovery.loop.getSelectorEventLoop().runOnLoop(() -> this.khalaNodes.removeLocal(khalaNode));
     }
 
-    public Map<Node, Set<KhalaNode>> getKhalaNodes() {
-        return new HashMap<>(khalaNodes.khalaNodes);
+    public Map<Node, Set<KhalaNode>> getNodeToKhalaNodesMap() {
+        return new HashMap<>(khalaNodes.n2knsMap);
     }
 
     public void addKhalaNodeListener(KhalaNodeListener lsn) {
@@ -772,7 +762,7 @@ public class Khala {
         // so run the process on discovery event loop
         discovery.loop.getSelectorEventLoop().runOnLoop(() -> {
             // alert add() event for all nodes
-            for (Node n : khalaNodes.khalaNodes.keySet()) {
+            for (Node n : khalaNodes.n2knsMap.keySet()) {
                 for (KhalaNode kn : khalaNodes.getKhalaNodes(n)) {
                     lsn.add(n, kn);
                 }
@@ -795,8 +785,7 @@ public class Khala {
             .stream()
             .filter(n ->
                 !n.equals(discovery.localNode) && // not local node
-                    khalaNodes.khalaNodes.containsKey(n) && // valid
-                    khalaNodes.khalaNodes.get(n).stream().anyMatch(kn -> kn.type == KhalaNodeType.nexus) /*only check nexus*/)
+                    khalaNodes.n2knsMap.containsKey(n))
             .collect(Collectors.toList());
         if (ns.isEmpty())
             return;

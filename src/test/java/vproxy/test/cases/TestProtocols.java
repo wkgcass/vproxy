@@ -550,7 +550,7 @@ public class TestProtocols {
 
             doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
             doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
-            Thread.sleep(50);
+            Thread.sleep(1000);
             doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
             doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
 

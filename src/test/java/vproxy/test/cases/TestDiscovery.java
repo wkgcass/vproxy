@@ -2,7 +2,6 @@ package vproxy.test.cases;
 
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.exception.NoException;
-import vproxy.connection.BindServer;
 import vproxy.discovery.*;
 import vproxy.test.tool.DiscoveryHolder;
 import vproxy.util.BlockCallback;
@@ -10,6 +9,7 @@ import vproxy.util.IPType;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import vserver.HttpServer;
 
 import java.lang.reflect.Field;
 
@@ -35,16 +35,16 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17080, 18080, 18080,
                 32, 18080, 18081,
-                new TimeoutConfig(5, 1050, 5, 1050, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, 2100, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d0);
         Discovery d1 = new Discovery("d1",
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17081, 18081, 18081,
                 32, 18080, 18081,
-                new TimeoutConfig(5, 30, 5, 30, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, 2100, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d1);
         // now d0 and d1 not discovered each other
@@ -52,8 +52,8 @@ public class TestDiscovery {
         assertEquals("d0", d0.getNodes().get(0).nodeName);
         assertEquals(1, d1.getNodes().size());
         assertEquals("d1", d1.getNodes().get(0).nodeName);
-        // sleep for 500ms, then they found each other, but not healthy yet
-        Thread.sleep(500);
+        // sleep for 1000ms, then they found each other, but not healthy yet
+        Thread.sleep(1000);
         assertEquals(2, d0.getNodes().size());
         assertEquals(2, d1.getNodes().size());
         boolean d0Exists = d0.getNodes().stream().anyMatch(n -> n.nodeName.equals("d0") && n.healthy);
@@ -62,8 +62,8 @@ public class TestDiscovery {
         d0Exists = d1.getNodes().stream().anyMatch(n -> n.nodeName.equals("d0") && !n.healthy);
         d1Exists = d1.getNodes().stream().anyMatch(n -> n.nodeName.equals("d1") && n.healthy);
         assertTrue("all nodes found and unhealthy", d0Exists && d1Exists);
-        // sleep for 500ms (totally 1s), they should be healthy
-        Thread.sleep(550);
+        // sleep for 1000ms (totally 1s), they should be healthy
+        Thread.sleep(1100);
         assertEquals(2, d0.getNodes().size());
         assertEquals(2, d1.getNodes().size());
         d0Exists = d0.getNodes().stream().anyMatch(n -> n.nodeName.equals("d0") && n.healthy);
@@ -79,7 +79,7 @@ public class TestDiscovery {
         cb.block();
 
         // the d1 should receive leave event
-        Thread.sleep(50);
+        Thread.sleep(500);
         assertEquals(1, d1.getNodes().size());
         assertEquals("d1", d1.getNodes().get(0).nodeName);
 
@@ -96,20 +96,20 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17080, 18080, 18080,
                 32, 18080, 18081,
-                new TimeoutConfig(5, 1050, 5, 1050, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, 2100, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d0);
         Discovery d1 = new Discovery("d1",
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17081, 18081, 18081,
                 32, 18080, 18081,
-                new TimeoutConfig(5, 30, 5, 30, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, /*make it very long that won't happen*/ Integer.MAX_VALUE, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d1);
         // let them find each other
-        Thread.sleep(1100);
+        Thread.sleep(2100);
         assertEquals(2, d0.getNodes().stream().filter(n -> n.healthy).count());
         assertEquals(2, d1.getNodes().stream().filter(n -> n.healthy).count());
 
@@ -118,23 +118,29 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17082, 18082, 18082,
                 32, 18080, 18082,
-                new TimeoutConfig(/*only one packet in 500 ms*/3, /*make it very long that won't happen*/Integer.MAX_VALUE, /*only send one packet*/1, /*make it very long that won't happen*/Integer.MAX_VALUE, 2000),
-                new HealthCheckConfig(1000, /*1200 > d0/d1 interval*/600, 2, 3)
+                new TimeConfig(/*only one packet*/1, /*make it very long that won't happen*/Integer.MAX_VALUE, /*only send one packet*/1, /*make it very long that won't happen*/Integer.MAX_VALUE, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d2);
         // currently know nothing
         assertEquals(1, d2.getNodes().size());
-        Thread.sleep(500); // shorter than d0/d1 interval
+        Thread.sleep(1500); // shorter than d0/d1 interval
         // now d2 should have joined
         assertEquals(3, d2.getNodes().size());
         assertEquals("d0 is first visited by d2, so it knows who d2 is", 3, d0.getNodes().size());
         assertEquals("d1 is not alerted, so it doesn't knows who d2 is", 2, d1.getNodes().size());
-        // wait for another 500 ms (1000total) to let d0 notify d1
-        Thread.sleep(550);
+        // wait for another 800 ms (2300total) to let d0 notify d1
+        Thread.sleep(800);
         assertEquals("now d1 is notified by d0", 3, d1.getNodes().size());
-        // wait for another 200 ms (1200 total) to let them all become healthy
-        assertEquals(3, d2.getNodes().size());
+        // wait for another 2100 ms to let them all become healthy
+        Thread.sleep(2100);
         assertEquals(3, d2.getNodes().stream().filter(n -> n.healthy).count());
+        assertEquals(3, d1.getNodes().stream().filter(n -> n.healthy).count());
+        assertEquals(3, d0.getNodes().stream().filter(n -> n.healthy).count());
+
+        // now they all know d0
+        assertEquals(1, d1.getNodes().stream().filter(n -> n.nodeName.equals("d0")).count());
+        assertEquals(1, d2.getNodes().stream().filter(n -> n.nodeName.equals("d0")).count());
 
         // close d0
         BlockCallback<Void, NoException> cb = new BlockCallback<>();
@@ -153,16 +159,16 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v6, 17080, 18080, 18080,
                 128, 18080, 18081,
-                new TimeoutConfig(5, 1050, 5, 1050, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, 2100, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d0);
         Discovery d1 = new Discovery("d1",
             new DiscoveryConfig(
                 "lo0", IPType.v6, 17081, 18081, 18081,
                 128, 18080, 18081,
-                new TimeoutConfig(5, 30, 5, 30, 2000),
-                new HealthCheckConfig(1000, 500, 2, 3)
+                new TimeConfig(5, 2100, 5, 2100, 2000),
+                new HealthCheckConfig(1000, 1000, 2, 3)
             ));
         holder.add(d1);
         // now d0 and d1 not discovered each other
@@ -170,8 +176,8 @@ public class TestDiscovery {
         assertEquals("d0", d0.getNodes().get(0).nodeName);
         assertEquals(1, d1.getNodes().size());
         assertEquals("d1", d1.getNodes().get(0).nodeName);
-        // sleep for 500ms, then they found each other
-        Thread.sleep(500);
+        // sleep for 2000ms, then they found each other
+        Thread.sleep(2100);
         assertEquals(2, d0.getNodes().size());
         assertEquals(2, d1.getNodes().size());
     }
@@ -186,7 +192,7 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17080, 18080, 18080,
                 32, 18080, 18081,
-                new TimeoutConfig(5, Integer.MAX_VALUE, 5, Integer.MAX_VALUE, 2000),
+                new TimeConfig(5, Integer.MAX_VALUE, 5, Integer.MAX_VALUE, 2000),
                 new HealthCheckConfig(1000, 500, 2, 3)
             ));
         holder.add(d0);
@@ -214,7 +220,7 @@ public class TestDiscovery {
             new DiscoveryConfig(
                 "lo0", IPType.v4, 17081, 18081, 18081,
                 32, 18080, 18081,
-                new TimeoutConfig(5, Integer.MAX_VALUE, 5, Integer.MAX_VALUE, 2000),
+                new TimeConfig(5, Integer.MAX_VALUE, 5, Integer.MAX_VALUE, 2000),
                 new HealthCheckConfig(1000, 500, 2, 3)
             ));
         holder.add(d1);
@@ -226,16 +232,16 @@ public class TestDiscovery {
         assertEquals(0, downAlert[0]);
         assertEquals(0, removeAlert[0]);
         // sleep for another 500ms, then the server is up
-        Thread.sleep(550);
+        Thread.sleep(600);
         assertEquals("should be up", 1, upAlert[0]);
         assertEquals(0, downAlert[0]);
         assertEquals(0, removeAlert[0]);
         Thread.sleep(100);
         // close the d1 socket but do not close it, use reflect
-        Field tcpServerF = Discovery.class.getDeclaredField("tcpServer");
-        tcpServerF.setAccessible(true);
-        BindServer tcpServer = (BindServer) tcpServerF.get(d1);
-        tcpServer.close();
+        Field httpServerF = Discovery.class.getDeclaredField("httpServer");
+        httpServerF.setAccessible(true);
+        HttpServer httpServer = (HttpServer) httpServerF.get(d1);
+        httpServer.close();
         // wait for 1500 ms, d1 should be down
         Thread.sleep(1550);
         assertEquals(1, upAlert[0]);

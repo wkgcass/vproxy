@@ -39,6 +39,7 @@ public class Http1ServerImpl implements HttpServer {
     }
 
     private boolean started = false;
+    private boolean closed = false;
     private final List<RouteEntry> routes = new LinkedList<>();
     private NetEventLoop loop;
     private final boolean noInputLoop;
@@ -84,7 +85,12 @@ public class Http1ServerImpl implements HttpServer {
     }
 
     @Override
-    public void stop() {
+    public void close() {
+        if (closed) {
+            return;
+        }
+        closed = true;
+
         if (noInputLoop) {
             // should stop the event loop because it's created from inside
             if (loop != null) {

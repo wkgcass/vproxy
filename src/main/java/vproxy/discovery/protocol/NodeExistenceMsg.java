@@ -1,8 +1,7 @@
 package vproxy.discovery.protocol;
 
+import vjson.JSON;
 import vproxy.component.exception.XException;
-
-import java.util.List;
 
 public class NodeExistenceMsg {
     public final int version;
@@ -21,29 +20,30 @@ public class NodeExistenceMsg {
         this.hash = hash;
     }
 
-    public static NodeExistenceMsg parse(Object o) throws XException {
-        if (!(o instanceof List)) {
-            throw new XException("invalid message, not list");
+    public static NodeExistenceMsg parse(JSON.Object o) throws XException {
+        if (!o.containsKey("version")
+            || !o.containsKey("type")
+            || !o.containsKey("nodeName")
+            || !o.containsKey("udpPort")
+            || !o.containsKey("tcpPort")
+            || !o.containsKey("hash")) {
+            throw new XException("invalid message, missing some keys: " + o);
         }
-        List l = (List) o;
-        if (l.size() < 6) {
-            throw new XException("invalid message, list too short");
-        }
-        if (!(l.get(0) instanceof Integer)
-            || !(l.get(1) instanceof String)
-            || !(l.get(2) instanceof String)
-            || !(l.get(3) instanceof Integer)
-            || !(l.get(4) instanceof Integer)
-            || !(l.get(5) instanceof String)) {
-            throw new XException("invalid message, list data type wrong");
+        if (!(o.get("version") instanceof JSON.Integer)
+            || !(o.get("type") instanceof JSON.String)
+            || !(o.get("nodeName") instanceof JSON.String)
+            || !(o.get("udpPort") instanceof JSON.Integer)
+            || !(o.get("tcpPort") instanceof JSON.Integer)
+            || !(o.get("hash") instanceof JSON.String)) {
+            throw new XException("invalid message, value type wrong: " + o);
         }
 
-        int version = (int) l.get(0);
-        String type = (String) l.get(1);
-        String nodeName = (String) l.get(2);
-        int udpPort = (int) l.get(3);
-        int tcpPort = (int) l.get(4);
-        String hash = (String) l.get(5);
+        int version = o.getInt("version");
+        String type = o.getString("type");
+        String nodeName = o.getString("nodeName");
+        int udpPort = o.getInt("udpPort");
+        int tcpPort = o.getInt("tcpPort");
+        String hash = o.getString("hash");
 
         return new NodeExistenceMsg(version, type, nodeName, udpPort, tcpPort, hash);
     }

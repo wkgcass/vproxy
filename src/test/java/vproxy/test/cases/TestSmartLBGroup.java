@@ -11,14 +11,13 @@ import vproxy.component.exception.StillRunningException;
 import vproxy.component.khala.Khala;
 import vproxy.component.khala.KhalaConfig;
 import vproxy.component.khala.KhalaNode;
-import vproxy.component.khala.KhalaNodeType;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.discovery.Discovery;
 import vproxy.discovery.DiscoveryConfig;
-import vproxy.discovery.TimeoutConfig;
+import vproxy.discovery.TimeConfig;
 import vproxy.test.tool.DiscoveryHolder;
 import vproxy.util.IPType;
 import org.junit.After;
@@ -71,7 +70,7 @@ public class TestSmartLBGroup {
             new DiscoveryConfig(
                 "lo0", IPType.v4, port - 1000, port, port,
                 32, 18080, 18082,
-                new TimeoutConfig(
+                new TimeConfig(
                     20, 1000,
                     20, 1000,
                     3000),
@@ -97,7 +96,7 @@ public class TestSmartLBGroup {
         assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
         // add a node
-        k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "z0", "127.0.0.1", 19080));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 19080));
 
         Thread.sleep(3000 /*wait long enough*/);
         // now the smartLBGroup should have created an lb named s0, with group named s0, with a svr s0@127.0.0.1:19080
@@ -119,11 +118,11 @@ public class TestSmartLBGroup {
         ));
 
         // same zone different service
-        k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "sx", "z0", "127.0.0.1", 12345));
+        k1.addLocal(new KhalaNode("sx", "z0", "127.0.0.1", 12345));
         // same service different zone
-        k1.addLocal(new KhalaNode(KhalaNodeType.pylon, "s0", "zx", "127.0.0.1", 12346));
+        k1.addLocal(new KhalaNode("s0", "zx", "127.0.0.1", 12346));
         // same service same zone but is nexus
-        k1.addLocal(new KhalaNode(KhalaNodeType.nexus, "s0", "z0", "127.0.0.1", 12347));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 12347));
 
         Thread.sleep(3000 /*wait long enough*/);
 

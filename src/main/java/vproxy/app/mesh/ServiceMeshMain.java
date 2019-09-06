@@ -9,7 +9,7 @@ import vproxy.component.khala.Khala;
 import vproxy.component.khala.KhalaConfig;
 import vproxy.component.svrgroup.Method;
 import vproxy.discovery.DiscoveryConfig;
-import vproxy.discovery.TimeoutConfig;
+import vproxy.discovery.TimeConfig;
 import vproxy.util.IPType;
 import vproxy.util.Utils;
 
@@ -159,12 +159,12 @@ public class ServiceMeshMain {
                 new DiscoveryConfig(
                     discovery.nic, discovery.ipType, discovery.udpSockPort, discovery.udpPort, discovery.tcpPort,
                     discovery.search.mask, discovery.search.minUDPPort, discovery.search.maxUDPPort,
-                    TimeoutConfig.getDefault(), TimeoutConfig.getDefaultHc()
+                    TimeConfig.getDefault(), TimeConfig.getDefaultHc()
                 ));
             Khala khala = new Khala(dis, KhalaConfig.getDefault());
 
             this.autoConfig = new AutoConfig(aelg, workerGroup, khala,
-                nic, ipType, TimeoutConfig.getDefaultHc(), Method.wrr);
+                nic, ipType, TimeConfig.getDefaultHc(), Method.wrr);
         } catch (Exception e) {
             e.printStackTrace();
             return exit("got exception: " + Utils.formatErr(e));
