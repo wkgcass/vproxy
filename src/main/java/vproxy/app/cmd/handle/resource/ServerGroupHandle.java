@@ -9,7 +9,7 @@ import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.HealthCheckHandle;
 import vproxy.app.cmd.handle.param.MethHandle;
 import vproxy.app.cmd.handle.param.WeightHandle;
-import vproxy.component.auto.SmartLBGroup;
+import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
@@ -170,11 +170,11 @@ public class ServerGroupHandle {
                 throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgs.fullname + " " + groups.alias);
             }
         }
-        // check smart-lb-group
-        for (String slgName : Application.get().smartLBGroupHolder.names()) {
-            SmartLBGroup slg = Application.get().smartLBGroupHolder.get(slgName);
+        // check smart-group-delegate
+        for (String slgName : Application.get().smartGroupDelegateHolder.names()) {
+            SmartGroupDelegate slg = Application.get().smartGroupDelegateHolder.get(slgName);
             if (slg.handledGroup.equals(serverGroup)) {
-                throw new Exception(ResourceType.slg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.slg.fullname + " " + slg.alias);
+                throw new Exception(ResourceType.sgd.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgd.fullname + " " + slg.alias);
             }
         }
     }
@@ -213,7 +213,7 @@ public class ServerGroupHandle {
         private final ServerGroups.ServerGroupHandle h;
 
         public ServerGroupRef(String alias, ServerGroup g) {
-            this.alias = alias; // serverGroup alias may not be the same as g.alias (see ServiceMeshResourceSynchronizer)
+            this.alias = alias;
             this.g = g;
             this.h = null;
         }

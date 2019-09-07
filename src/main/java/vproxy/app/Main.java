@@ -2,13 +2,12 @@ package vproxy.app;
 
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.SystemCommand;
-import vproxy.app.mesh.ServiceMeshMain;
+import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.component.exception.XException;
 import vproxy.dns.Resolver;
 import vproxy.util.*;
-import vproxyx.Sidecar;
 import vproxyx.Simple;
 import vproxyx.WebSocksProxyAgent;
 import vproxyx.WebSocksProxyServer;
@@ -34,7 +33,7 @@ public class Main {
         "\n\t\t                                             if the flag is set" +
         "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
         "\n" +
-        "\n\t\tserviceMeshConfig ${filename}                Specify config file and launch into service mesh mode" +
+        "\n\t\tdiscoveryConfig ${filename}                  Specify discovery config file" +
         "\n" +
         "\n\t\tpidFile                                      Set the pid file path" +
         "\n" +
@@ -54,9 +53,6 @@ public class Main {
                     break;
                 case "WebSocksProxyServer":
                     WebSocksProxyServer.main0(args);
-                    break;
-                case "Sidecar":
-                    Sidecar.main0(args);
                     break;
                 case "Simple":
                     Application.create();
@@ -79,16 +75,8 @@ public class Main {
         // apps can be found in vproxyx package
         String appClass = Config.appClass;
         if (appClass != null) {
-            if (appClass.equals("Sidecar")) {
-                // SPECIAL HANDLE for Sidecar app
-                // process the input args the same as Main app, but will run the Sidecar app instead
-                // also, disable the config loading and saving here
-                Config.configLoadingDisabled = true;
-                Config.configSavingDisabled = true;
-            } else {
-                runApp(appClass, args);
-                return;
-            }
+            runApp(appClass, args);
+            return;
         }
 
         try {
@@ -124,23 +112,7 @@ public class Main {
                     System.exit(0);
                     return;
                 case "load":
-                    loaded = true;
-                    // if error occurred, the program will exit
-                    // so set loaded flag here is ok
-                    if (next == null) {
-                        System.err.println("invalid system call for `load`: should specify a file name to load");
-                        System.exit(1);
-                        return;
-                    }
-                    // handle load, so increase the cursor
-                    ++i;
-                    try {
-                        Shutdown.load(next, new CallbackInMain());
-                    } catch (Exception e) {
-                        System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
-                        System.exit(1);
-                        return;
-                    }
+                    // try load after all other configs are processed
                     break;
                 case "resp-controller":
                 case "http-controller":
@@ -177,37 +149,32 @@ public class Main {
                 case "sigIntDirectlyShutdown":
                     Shutdown.sigIntBeforeTerminate = 1;
                     break;
-                case "serviceMeshConfig":
+                case "discoveryConfig":
                     if (next == null) {
                         System.err.println("config file path required");
                         System.exit(1);
                         return;
                     }
-                    if (loaded) {
-                        System.err.println("cannot run `load` and `serviceMeshConfig` at the same time");
-                        System.exit(1);
-                        return;
-                    }
-                    System.out.println("loading service mesh config from: " + next);
+                    System.out.println("loading discovery config from: " + next);
                     // handle config, so increase the cursor
                     ++i;
-                    ServiceMeshMain serviceMesh = ServiceMeshMain.getInstance();
-                    int exitCode = serviceMesh.load(next);
+                    DiscoveryConfigLoader discoveryMain = DiscoveryConfigLoader.getInstance();
+                    int exitCode = discoveryMain.load(next);
                     if (exitCode != 0) {
                         System.exit(exitCode);
                         return;
                     }
-                    exitCode = serviceMesh.check();
+                    exitCode = discoveryMain.check();
                     if (exitCode != 0) {
                         System.exit(exitCode);
                         return;
                     }
-                    exitCode = serviceMesh.gen();
+                    exitCode = discoveryMain.gen();
                     if (exitCode != 0) {
                         System.exit(exitCode);
                         return;
                     }
-                    Config.serviceMeshConfigProvided = true;
+                    Config.discoveryConfigProvided = true;
                     break;
                 case "pidFile":
                     if (next == null) {
@@ -229,6 +196,29 @@ public class Main {
                     System.err.println("unknown argument `" + arg + "`");
                     System.exit(1);
                     return;
+            }
+        }
+        for (int i = 0; i < args.length; ++i) {
+            String arg = args[i];
+            String next = i + 1 < args.length ? args[i + 1] : null;
+            if ("load".equals(arg)) {
+                loaded = true;
+                // if error occurred, the program will exit
+                // so set loaded flag here is ok
+                if (next == null) {
+                    System.err.println("invalid system call for `load`: should specify a file name to load");
+                    System.exit(1);
+                    return;
+                }
+                // handle load, so increase the cursor
+                ++i;
+                try {
+                    Shutdown.load(next, new CallbackInMain());
+                } catch (Exception e) {
+                    System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
+                    System.exit(1);
+                    return;
+                }
             }
         }
         if (!loaded && !Config.configLoadingDisabled) {
@@ -262,18 +252,11 @@ public class Main {
             new Thread(controller::start, "StdIOControllerThread").start();
         }
 
-        // run main app or sidecar
-        if (appClass == null) {
-            // init signal hooks
-            Shutdown.initSignal();
-            // start scheduled saving task
-            Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
-        } else if (appClass.equals("Sidecar")) {
-            // run side car app
-            runApp(appClass, args);
-        } else {
-            throw new IllegalArgumentException("trying to deploy a `" + appClass + "` app but it's not valid");
-        }
+        // run main app
+        // init signal hooks
+        Shutdown.initSignal();
+        // start scheduled saving task
+        Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
     }
 
     private static void saveConfig() {

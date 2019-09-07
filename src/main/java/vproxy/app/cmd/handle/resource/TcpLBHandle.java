@@ -11,7 +11,7 @@ import vproxy.app.cmd.handle.param.InBufferSizeHandle;
 import vproxy.app.cmd.handle.param.OutBufferSizeHandle;
 import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.app.TcpLB;
-import vproxy.component.auto.SmartLBGroup;
+import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
@@ -122,17 +122,6 @@ public class TcpLBHandle {
         Application.get().tcpLBHolder.add(
             alias, acceptor, worker, addr, backend, timeout, inBufferSize, outBufferSize, protocol, certKeys, secg
         );
-    }
-
-    public static void preCheckRemove(Command cmd) throws Exception {
-        TcpLB tcpLB = Application.get().tcpLBHolder.get(cmd.resource.alias);
-
-        for (String slgName : Application.get().smartLBGroupHolder.names()) {
-            SmartLBGroup slg = Application.get().smartLBGroupHolder.get(slgName);
-            if (slg.handledLb.equals(tcpLB)) {
-                throw new Exception(ResourceType.tl.fullname + " " + tcpLB.alias + " is used by " + ResourceType.slg.fullname + " " + slg.alias);
-            }
-        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {

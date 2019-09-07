@@ -18,7 +18,8 @@ public enum ResourceType {
     secgr("security-group-rule"),
     resolver("resolver"),
     dnscache("dns-cache"),
-    slg("smart-lb-group"),
+    sgd("smart-group-delegate"),
+    ssd("smart-service-delegate"),
     ck("cert-key"),
 
     respcontroller("resp-controller"),

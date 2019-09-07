@@ -3,7 +3,8 @@ package vproxy.app.cmd;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.*;
-import vproxy.component.auto.SmartLBGroup;
+import vproxy.component.auto.SmartGroupDelegate;
+import vproxy.component.auto.SmartServiceDelegate;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
@@ -55,6 +56,7 @@ public class Command {
         return cmd;
     }
 
+    @SuppressWarnings("DuplicateBranchesInSwitch")
     public static Command statm(List<String> _cmd) throws Exception {
         _cmd = _cmd.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
         Command cmd = new Command();
@@ -629,16 +631,32 @@ public class Command {
             case resolver:
                 // disallow all operations on resolver
                 throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
-            case slg:
+            case sgd:
                 switch (cmd.action) {
                     case a:
                     case r:
                     case R:
                     case L:
                     case l:
-                        SmartLBGroupHandle.check(targetResource);
+                        SmartGroupDelegateHandle.check(targetResource);
                         if (cmd.action == Action.a) {
-                            SmartLBGroupHandle.checkCreate(cmd);
+                            SmartGroupDelegateHandle.checkCreate(cmd);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
+            case ssd:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                    case L:
+                    case l:
+                        SmartServiceDelegateHandle.check(targetResource);
+                        if (cmd.action == Action.a) {
+                            SmartServiceDelegateHandle.checkCreate(cmd);
                         }
                         break;
                     default:
@@ -857,7 +875,6 @@ public class Command {
                         TcpLBHandle.add(this);
                         return new CmdResult();
                     case r:
-                        TcpLBHandle.preCheckRemove(this);
                     case R:
                         TcpLBHandle.forceRemove(this);
                         return new CmdResult();
@@ -942,23 +959,47 @@ public class Command {
                         DnsCacheHandle.remove(this);
                         return new CmdResult();
                 }
-            case slg:
+            case sgd:
                 switch (action) {
                     case l:
-                        List<String> names = SmartLBGroupHandle.names();
+                        List<String> names = SmartGroupDelegateHandle.names();
                         return new CmdResult(names, names, utilJoinList(names));
                     case L:
-                        List<SmartLBGroup> slgList = SmartLBGroupHandle.detail();
+                        List<SmartGroupDelegate> slgList = SmartGroupDelegateHandle.detail();
                         List<String> slgStrList = slgList.stream().map(l ->
-                            l.alias + " -> service " + l.service + " zone " + l.zone + " tcp-lb " + l.handledLb.alias + " server-group " + l.handledGroup.alias)
+                            l.alias + " -> service " + l.service + " zone " + l.zone + " server-group " + l.handledGroup.alias)
                             .collect(Collectors.toList());
                         return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
                     case r:
                     case R:
-                        SmartLBGroupHandle.remove(this);
+                        SmartGroupDelegateHandle.remove(this);
                         return new CmdResult();
                     case a:
-                        SmartLBGroupHandle.add(this);
+                        SmartGroupDelegateHandle.add(this);
+                        return new CmdResult();
+                }
+            case ssd:
+                switch (action) {
+                    case l:
+                        List<String> names = SmartServiceDelegateHandle.names();
+                        return new CmdResult(names, names, utilJoinList(names));
+                    case L:
+                        List<SmartServiceDelegate> slgList = SmartServiceDelegateHandle.detail();
+                        List<String> slgStrList = slgList.stream().map(l ->
+                            l.alias + " ->" +
+                                " service " + l.service +
+                                " zone " + l.zone +
+                                " nic " + l.nic +
+                                " ip-type " + l.ipType +
+                                " port " + l.exposedPort)
+                            .collect(Collectors.toList());
+                        return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
+                    case r:
+                    case R:
+                        SmartServiceDelegateHandle.remove(this);
+                        return new CmdResult();
+                    case a:
+                        SmartServiceDelegateHandle.add(this);
                         return new CmdResult();
                 }
             case ck:

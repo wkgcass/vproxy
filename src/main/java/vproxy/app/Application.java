@@ -1,7 +1,7 @@
 package vproxy.app;
 
-import vproxy.app.mesh.SidecarHolder;
-import vproxy.app.mesh.SmartLBGroupHolder;
+import vproxy.app.mesh.SmartGroupDelegateHolder;
+import vproxy.app.mesh.SmartServiceDelegateHolder;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
@@ -10,6 +10,7 @@ import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
 
+@SuppressWarnings("ClassEscapesDefinedScope")
 public class Application {
     public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME = "(acceptor-elg)";
     public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_NAME = "(acceptor-el)";
@@ -40,8 +41,8 @@ public class Application {
     public final RESPControllerHolder respControllerHolder;
     public final HttpControllerHolder httpControllerHolder;
 
-    public final SidecarHolder sidecarHolder;
-    public final SmartLBGroupHolder smartLBGroupHolder;
+    public final SmartGroupDelegateHolder smartGroupDelegateHolder;
+    public final SmartServiceDelegateHolder smartServiceDelegateHolder;
 
     private Application() throws IOException {
         this.version = VERSION;
@@ -58,8 +59,8 @@ public class Application {
         this.socks5ServerHolder = new Socks5ServerHolder();
         this.httpControllerHolder = new HttpControllerHolder();
 
-        this.sidecarHolder = new SidecarHolder();
-        this.smartLBGroupHolder = new SmartLBGroupHolder();
+        this.smartGroupDelegateHolder = new SmartGroupDelegateHolder();
+        this.smartServiceDelegateHolder = new SmartServiceDelegateHolder();
     }
 
     public static boolean isDefaultEventLoopGroupName(String name) {
@@ -102,13 +103,5 @@ public class Application {
                 throw new IOException("create default worker event loop failed", e);
             }
         }
-    }
-
-    void clear() {
-        Application.get().eventLoopGroupHolder.clear();
-        Application.get().serverGroupHolder.clear();
-        Application.get().serverGroupsHolder.clear();
-        Application.get().tcpLBHolder.clear();
-        Application.get().socks5ServerHolder.clear();
     }
 }

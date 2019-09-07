@@ -1,13 +1,9 @@
 package vproxy.app.mesh;
 
-import vproxy.app.Application;
-import vproxy.app.Config;
 import vproxy.component.auto.AutoConfig;
-import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.XException;
 import vproxy.component.khala.Khala;
 import vproxy.component.khala.KhalaConfig;
-import vproxy.component.svrgroup.Method;
 import vproxy.discovery.DiscoveryConfig;
 import vproxy.discovery.TimeConfig;
 import vproxy.util.IPType;
@@ -20,26 +16,9 @@ import java.net.*;
 import java.util.Enumeration;
 import java.util.Properties;
 
-public class ServiceMeshMain {
-    class Sidecar {
-        private String zone;
-        private int localPort;
-        private int minExportPort;
-        private int maxExportPort;
-
-        @Override
-        public String toString() {
-            return "Sidecar{" +
-                "zone='" + zone + '\'' +
-                ", localPort=" + localPort +
-                ", minExportPort=" + minExportPort +
-                ", maxExportPort=" + maxExportPort +
-                '}';
-        }
-    }
-
-    class Discovery {
-        class Search {
+public class DiscoveryConfigLoader {
+    static class Discovery {
+        static class Search {
             int mask;
             int minUDPPort;
             int maxUDPPort;
@@ -76,21 +55,17 @@ public class ServiceMeshMain {
         }
     }
 
-    private static final ServiceMeshMain instance = new ServiceMeshMain();
+    private static final DiscoveryConfigLoader instance = new DiscoveryConfigLoader();
 
-    public static ServiceMeshMain getInstance() {
+    public static DiscoveryConfigLoader getInstance() {
         return instance;
     }
 
-    private int workers;
-    private String nic;
-    private IPType ipType;
-    private Sidecar sidecar;
     private Discovery discovery;
 
     private AutoConfig autoConfig;
 
-    private ServiceMeshMain() {
+    private DiscoveryConfigLoader() {
     }
 
     public AutoConfig getAutoConfig() {
@@ -99,12 +74,8 @@ public class ServiceMeshMain {
 
     @Override
     public String toString() {
-        return "ServiceMeshMain{" +
-            "workers=" + workers +
-            ", nic='" + nic + '\'' +
-            ", ipType=" + ipType +
-            ", sidecar=" + sidecar +
-            ", discovery=" + discovery +
+        return "DiscoveryMain{" +
+            "discovery=" + discovery +
             '}';
     }
 
@@ -115,7 +86,7 @@ public class ServiceMeshMain {
         }
         File f = new File(filepath);
         if (!f.exists()) {
-            return exit("specified service mesh config file not exists");
+            return exit("specified discovery config file not exists");
         }
         Properties p = new Properties();
         try {
@@ -147,13 +118,6 @@ public class ServiceMeshMain {
 
     public int gen() {
         try {
-            EventLoopGroup aelg = new EventLoopGroup(discovery.name + ":acceptor");
-            aelg.add("acceptor0");
-
-            EventLoopGroup workerGroup = new EventLoopGroup(discovery.name + ":worker");
-            for (int i = 0; i < workers; ++i) {
-                workerGroup.add("worker" + i);
-            }
             vproxy.discovery.Discovery dis = new vproxy.discovery.Discovery(
                 discovery.name,
                 new DiscoveryConfig(
@@ -163,8 +127,7 @@ public class ServiceMeshMain {
                 ));
             Khala khala = new Khala(dis, KhalaConfig.getDefault());
 
-            this.autoConfig = new AutoConfig(aelg, workerGroup, khala,
-                nic, ipType, TimeConfig.getDefaultHc(), Method.wrr);
+            this.autoConfig = new AutoConfig(khala);
         } catch (Exception e) {
             e.printStackTrace();
             return exit("got exception: " + Utils.formatErr(e));
@@ -172,26 +135,7 @@ public class ServiceMeshMain {
         return 0;
     }
 
-    public int start() {
-        try {
-            launchSidecar();
-        } catch (Exception e) {
-            return exit("got exception when launching. " + e.getClass().getSimpleName() + " " + e.getMessage());
-        }
-        return 0;
-    }
-
-    private void launchSidecar() throws Exception {
-        Application.get().sidecarHolder.sidecar = new vproxy.component.auto.Sidecar(
-            "sidecar", sidecar.zone, sidecar.localPort, getAutoConfig(), sidecar.minExportPort, sidecar.maxExportPort
-        );
-    }
-
     private void checkWithException() throws XException {
-        checkNull("workers", workers);
-        checkNull("nic", nic);
-        checkNull("ip_type", ipType);
-
         checkNull("discovery", discovery);
         checkNull("discovery.nic", discovery.nic);
         checkNull("discovery.ip_type", discovery.ipType);
@@ -207,14 +151,6 @@ public class ServiceMeshMain {
         checkNull("discovery.search.mask", discovery.search.mask);
         checkNull("discovery.search.min_udp_port", discovery.search.minUDPPort);
         checkNull("discovery.search.max_udp_port", discovery.search.maxUDPPort);
-
-        if ("Sidecar".equals(Config.appClass)) {
-            checkNull("sidecar", sidecar);
-            checkNull("sidecar.zone", sidecar.zone);
-            checkNull("sidecar.local_port", sidecar.localPort);
-            checkNull("sidecar.min_export_port", sidecar.minExportPort);
-            checkNull("sidecar.max_export_port", sidecar.maxExportPort);
-        }
     }
 
     private void checkNull(String key, Object value) throws XException {
@@ -237,35 +173,7 @@ public class ServiceMeshMain {
     }
 
     private void load(String key, String value) throws XException {
-        if (key.equals("workers")) {
-            workers = loadPositiveInt(value);
-        } else if (key.equals("nic")) {
-            nic = loadNic(value);
-        } else if (key.equals("ip_type")) {
-            ipType = loadIPType(value);
-        } else if (key.startsWith("sidecar.")) {
-            Sidecar sidecar = constructSidecar();
-            String[] arr = key.split("\\.");
-            if (arr.length != 2)
-                throw new XException("invalid key");
-            String k = arr[1];
-            switch (k) {
-                case "zone":
-                    sidecar.zone = loadString(value);
-                    break;
-                case "local_port":
-                    sidecar.localPort = loadPort(value);
-                    break;
-                case "min_export_port":
-                    sidecar.minExportPort = loadPort(value);
-                    break;
-                case "max_export_port":
-                    sidecar.maxExportPort = loadPort(value);
-                    break;
-                default:
-                    throw new XException("unknown config");
-            }
-        } else if (key.startsWith("discovery.search.")) {
+        if (key.startsWith("discovery.search.")) {
             Discovery.Search search = constructSearch(constructDiscovery());
             String[] arr = key.split("\\.");
             if (arr.length != 3)
@@ -314,13 +222,6 @@ public class ServiceMeshMain {
         }
     }
 
-    private Sidecar constructSidecar() {
-        if (sidecar == null) {
-            sidecar = new Sidecar();
-        }
-        return sidecar;
-    }
-
     private Discovery constructDiscovery() {
         if (discovery == null) {
             discovery = new Discovery();
@@ -330,21 +231,9 @@ public class ServiceMeshMain {
 
     private Discovery.Search constructSearch(Discovery discovery) {
         if (discovery.search == null) {
-            discovery.search = discovery.new Search();
+            discovery.search = new Discovery.Search();
         }
         return discovery.search;
-    }
-
-    private int loadPositiveInt(String value) throws XException {
-        int i;
-        try {
-            i = Integer.parseInt(value);
-        } catch (NumberFormatException e) {
-            throw new XException("not integer");
-        }
-        if (i <= 0)
-            throw new XException("is not positive");
-        return i;
     }
 
     private int loadPort(String value) throws XException {
@@ -419,12 +308,6 @@ public class ServiceMeshMain {
         } catch (Exception e) {
             throw new XException("unknown ip_type " + value);
         }
-    }
-
-    private String loadString(String s) throws XException {
-        if (s.isEmpty())
-            throw new XException("empty string");
-        return s;
     }
 
     private int exit(String msg) {

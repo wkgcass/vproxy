@@ -23,6 +23,8 @@ public enum Param {
 
     service("service"),
     zone("zone"),
+    nic("nic"),
+    iptype("ip-type"),
     port("port"),
 
     pass("password"),

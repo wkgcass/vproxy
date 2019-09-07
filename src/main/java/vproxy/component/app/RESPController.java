@@ -99,7 +99,7 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
         }
 
         boolean[] isListAction = {false}; // use array to change the variable captured by the inner class
-        Callback<CmdResult, Throwable> callback = new Callback<CmdResult, Throwable>() {
+        Callback<CmdResult, Throwable> callback = new Callback<>() {
             @Override
             protected void onSucceeded(CmdResult value) {
                 if (value.processedResult == null) {
@@ -125,8 +125,6 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
                 return;
             }
             SystemCommand.handleSystemCall(line, callback);
-        } else if (ServiceMeshCommand.isServiceMeshCommand(line)) {
-            ServiceMeshCommand.handleCommand(line, callback);
         } else {
             Command cmd;
             try {

@@ -18,10 +18,8 @@ public class Config {
     // usually mtu is set to 1500, but some routers might set the value to 1480, 1440 or lower
     // we use 1400 here
 
-    // service mesh mode:
-    // all resources become readonly
-    // and resources will be handled by smart-lb-group or sidecar
-    public static boolean serviceMeshConfigProvided = false;
+    // smart-group-delegate or smart-service-delegate will be enabled
+    public static boolean discoveryConfigProvided = false;
 
     // whether the loading of configuration is disabled
     // true = disabled, false = enabled

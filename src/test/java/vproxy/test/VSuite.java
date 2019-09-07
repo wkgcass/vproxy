@@ -15,6 +15,7 @@ import org.junit.runners.Suite;
     TestSocks5.class,
     TestDiscovery.class,
     TestKhala.class,
+    TestSmart.class,
     TestConnectClient.class,
     TestSSL.class,
     TestProtocols.class,

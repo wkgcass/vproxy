@@ -211,6 +211,7 @@ public class Khala {
                 // successfully added
                 // then should notify others about the added node
                 notifyNetworkAddKhalaNode(kn);
+                listenerNodeAdd(discovery.localNode, kn);
             }
         }
 
@@ -272,6 +273,7 @@ public class Khala {
                 // successfully removed
                 // then should notify others about the removal
                 notifyNetworkRemoveKhalaNode(kn);
+                listenerNodeRemove(discovery.localNode, kn);
             }
         }
 

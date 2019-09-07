@@ -8,9 +8,8 @@ import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.ServiceHandle;
 import vproxy.app.cmd.handle.param.ZoneHandle;
-import vproxy.app.mesh.SmartLBGroupHolder;
-import vproxy.component.app.TcpLB;
-import vproxy.component.auto.SmartLBGroup;
+import vproxy.app.mesh.SmartGroupDelegateHolder;
+import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.component.svrgroup.ServerGroup;
@@ -18,59 +17,56 @@ import vproxy.component.svrgroup.ServerGroup;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SmartLBGroupHandle {
-    private SmartLBGroupHandle() {
+public class SmartGroupDelegateHandle {
+    private SmartGroupDelegateHandle() {
     }
 
     public static void check(Resource parent) throws XException {
         if (parent != null)
-            throw new XException(ResourceType.slg.fullname + " is on top level");
+            throw new XException(ResourceType.sgd.fullname + " is on top level");
     }
 
     public static void checkCreate(Command cmd) throws XException {
-        if (!Config.serviceMeshConfigProvided) {
-            throw new XException("service mesh config not provided, so the smart-lb-group cannot be created");
+        if (!Config.discoveryConfigProvided) {
+            throw new XException("discovery config not provided, so the smart-group-delegate cannot be created");
         }
         if (!cmd.args.containsKey(Param.service))
             throw new XException("missing argument " + Param.service.fullname);
         if (!cmd.args.containsKey(Param.zone))
             throw new XException("missing argument " + Param.zone.fullname);
-        if (!cmd.args.containsKey(Param.tl))
-            throw new XException("missing argument " + Param.tl.fullname);
         if (!cmd.args.containsKey(Param.sg))
             throw new XException("missing argument " + Param.sg.fullname);
     }
 
     public static List<String> names() {
-        return Application.get().smartLBGroupHolder.names();
+        return Application.get().smartGroupDelegateHolder.names();
     }
 
-    public static List<SmartLBGroup> detail() {
-        SmartLBGroupHolder holder = Application.get().smartLBGroupHolder;
+    public static List<SmartGroupDelegate> detail() {
+        SmartGroupDelegateHolder holder = Application.get().smartGroupDelegateHolder;
         List<String> names = holder.names();
-        List<SmartLBGroup> smartLBGroups = new LinkedList<>();
+        List<SmartGroupDelegate> smartGroupDelegates = new LinkedList<>();
         for (String name : names) {
             try {
-                SmartLBGroup s = holder.get(name);
-                smartLBGroups.add(s);
+                SmartGroupDelegate s = holder.get(name);
+                smartGroupDelegates.add(s);
             } catch (NotFoundException ignore) {
             }
         }
-        return smartLBGroups;
+        return smartGroupDelegates;
     }
 
     public static void remove(Command cmd) throws NotFoundException {
         String alias = cmd.resource.alias;
-        Application.get().smartLBGroupHolder.remove(alias);
+        Application.get().smartGroupDelegateHolder.remove(alias);
     }
 
     public static void add(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
         String service = ServiceHandle.get(cmd);
         String zone = ZoneHandle.get(cmd);
-        TcpLB tl = Application.get().tcpLBHolder.get(cmd.args.get(Param.tl));
         ServerGroup sg = Application.get().serverGroupHolder.get(cmd.args.get(Param.sg));
 
-        Application.get().smartLBGroupHolder.add(alias, service, zone, tl, sg);
+        Application.get().smartGroupDelegateHolder.add(alias, service, zone, sg);
     }
 }

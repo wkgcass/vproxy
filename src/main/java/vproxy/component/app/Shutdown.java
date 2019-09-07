@@ -3,10 +3,10 @@ package vproxy.component.app;
 import vproxy.app.*;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.Command;
-import vproxy.app.mesh.ServiceMeshMain;
-import vproxy.app.mesh.SmartLBGroupHolder;
+import vproxy.app.mesh.DiscoveryConfigLoader;
+import vproxy.app.mesh.SmartGroupDelegateHolder;
 import vproxy.component.auto.AutoConfig;
-import vproxy.component.auto.SmartLBGroup;
+import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
@@ -81,7 +81,7 @@ public class Shutdown {
     }
 
     private static void end() {
-        AutoConfig autoConfig = ServiceMeshMain.getInstance().getAutoConfig();
+        AutoConfig autoConfig = DiscoveryConfigLoader.getInstance().getAutoConfig();
         if (autoConfig != null) {
             BlockCallback<Void, NoException> cb = new BlockCallback<>();
             autoConfig.khala.discovery.close(cb);
@@ -172,9 +172,7 @@ public class Shutdown {
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
 
-        List<TcpLB> tcpLbs = new LinkedList<>();
-
-        List<SmartLBGroup> smartLBGroups = new LinkedList<>();
+        List<SmartGroupDelegate> smartGroupDelegates = new LinkedList<>();
 
         {
             // create cert-key
@@ -205,7 +203,7 @@ public class Shutdown {
                 certKeyNames.add(ck.alias);
 
                 StringBuilder cmd = new StringBuilder();
-                cmd.append("add cert-key " + ck.alias + " cert ").append(ck.certPaths[0]);
+                cmd.append("add cert-key ").append(ck.alias).append(" cert ").append(ck.certPaths[0]);
                 for (int i = 1; i < ck.certPaths.length; ++i) {
                     cmd.append(",").append(ck.certPaths[i]);
                 }
@@ -405,7 +403,6 @@ public class Shutdown {
                     }
                 }
                 commands.add(cmd.toString());
-                tcpLbs.add(tl);
             }
         }
         {
@@ -450,38 +447,34 @@ public class Shutdown {
             }
         }
         {
-            // create smart-lb-group
-            SmartLBGroupHolder slgh = app.smartLBGroupHolder;
+            // create smart-group-delegate
+            SmartGroupDelegateHolder slgh = app.smartGroupDelegateHolder;
             List<String> names = slgh.names();
             for (String name : names) {
-                SmartLBGroup s;
+                SmartGroupDelegate s;
                 try {
                     s = slgh.get(name);
                 } catch (NotFoundException e) {
-                    assert Logger.lowLevelDebug("smart-lb-group not found " + name);
+                    assert Logger.lowLevelDebug("smart-group-delegate not found " + name);
                     assert Logger.printStackTrace(e);
-                    continue;
-                }
-                if (!tcpLbs.contains(s.handledLb)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the tl " + s.handledLb.alias + " already removed");
                     continue;
                 }
                 if (!serverGroups.contains(s.handledGroup)) {
                     Logger.warn(LogType.IMPROPER_USE, "the sg " + s.handledGroup.alias + " already removed");
                     continue;
                 }
-                String cmd = "add smart-lb-group " + s.alias +
+                String cmd = "add smart-group-delegate " + s.alias +
                     " service " + s.service + " zone " + s.zone +
-                    " tcp-lb " + s.handledLb.alias + " server-group " + s.handledGroup.alias;
+                    " server-group " + s.handledGroup.alias;
                 commands.add(cmd);
-                smartLBGroups.add(s);
+                smartGroupDelegates.add(s);
             }
         }
         {
             // create server
             for (ServerGroup sg : serverGroups) {
-                if (smartLBGroups.stream().anyMatch(s -> s.handledGroup.equals(sg))) {
-                    // do not init servers if it's attached to a smartLBGroup
+                if (smartGroupDelegates.stream().anyMatch(s -> s.handledGroup.equals(sg))) {
+                    // do not init servers if it's attached to a smartGroupDelegate
                     continue;
                 }
                 for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
