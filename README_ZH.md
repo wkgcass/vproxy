@@ -45,7 +45,7 @@ java -Deploy=Simple -jar vproxy.jar \
 * [service-mesh-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/service-mesh-example.md): 关于service mesh的一个例子。
 * [docker-example.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/docker-example.md): 关于构建镜像以及在docker中运行vproxy的一个例子。
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): 架构相关。
-* [service-mesh-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-protocol.md): vproxy service mesh通信协议。
+* [discovery-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/discovery-protocol.md): vproxy自动节点发现通信协议。
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
 * [using-application-layer-protocols(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md): 关于如何使用(自定义的)应用层协议。

@@ -145,46 +145,47 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 >
 ```
 
-## 5. Service Mesh
+## 5. 自动节点发现
 
-在启动时指定service mesh配置文件：
-
-```
-java vproxy.app.Main serviceMeshConfig $path_to_config
-```
-
-如果指定了service mesh配置文件，该进程将进入service mesh模式。  
-
-vproxy提供两种service mesh的角色。
-
-* sidecar: 在应用主机上部署。一台主机一个sidecar。用户app应当使用socks5，并使用域名来访问集群内的服务，网络流量会自动定向至对应的端点。用户app应当只监听在localhost上，sidecar会帮你将服务发布出去。
-* smart-lb-group: 指定一个tcp-lb和一个server-group。group将自动学习集群中节点的变化，并相应增加或移除列表中的节点。并且自动将tcp-lb的端口发布出去，供集群中其他节点访问。
-
-用户app可以使用任何一种redis客户端，来让sidecar知道何种服务在本地运行。
-
-使用如下命令来 添加/查看/移除 sidecar中的服务。  
-看起来和操作redis的集合(SET)指令一样：
+在启动时指定discovery配置文件：
 
 ```
-sadd service $your_service_domain:$protocol_port:$local_port
-# 返回 1 或 0
-
-smembers service
-# 返回service列表
-
-srem service $your_service_domain:$protocol_port:$local_port
-# 返回 1 或 0
+java vproxy.app.Main discoveryConfig $path_to_config
 ```
 
-建议用户app：
+如果指定了discovery配置文件，vproxy会自动搜索节点，也会将本节点中的变化通知给其他节点。  
 
-1. 使用socks5和域名来发送请求，域名也应当由代理（也就是sidecar）来解析。如果使用curl，需要设置`--socks5 'socks5h://'`，其中`h`表示让socks5代理来解析域名。
-2. 当服务启动后，立即使用redis客户端来注册服务。
-3. 服务名称应当为 `域名:协议端口号`，例如 `myservice.com:80`，访问url和它一致，例如 `http://myservice.com`。
-4. 在app关闭前，使用redis客户端来注销服务，并且等待流量跑完。
-5. 注意: 外部流量不应当经过sidecar（socks5代理），因为vproxy网络并不知道如何访问外部资源。
+如果指定了discovery配置文件，vproxy提供额外两种配置模块。
 
-关于本节内容，可以参考[service-mesh-example](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。
+* smart-group-delegate: 监控节点变化，并更新托管的server-group资源
+* smart-service-delegate: 向discovery网络中注册一个服务，并通知其他节点
+
+用户app可以用http客户端来操作vproxy配置
+
+例如：你可以使用http请求注册或者移除一个服务：
+
+```
+POST /api/v1/module/smart-service-delegate
+{
+  "name": "my-test-service",
+  "service": "my-service,
+  "zone": "test",
+  "nic": "eth0",
+  "exposedPort": 8080
+}
+成功时返回204
+
+DELETE /api/v1/module/smart-service-delegate/my-test-service
+成功时返回204
+```
+
+你也可以检查注册在当前vproxy实例上的服务列表：
+
+```
+GET /api/v1/module/smart-service-delegate
+```
+
+关于本节内容，可以参考[service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。
 
 ## 6. 例子和解释
 

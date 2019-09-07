@@ -1,12 +1,12 @@
-# Service Mesh Protocol
+# Discovery Protocol
 
-The vproxy supports node discovery and auto configuring, which are the base of vproxy service mesh. This doc explains what the service mesh can do and how it works.
+The vproxy supports node discovery and auto configuring. This doc explains what the vproxy node discovery can do and how it works.
 
-> NOTE: all data structure is transfered via RESP (the protocol of redis).
+> NOTE: all data structure is transfered via JSON (wrapped into RESP or HTTP).
 
 ## Usage
 
-The service mesh protocol gives vproxy the ability to scale without any host-unique configuration.
+The discovery protocol gives vproxy the ability to scale without any host-unique configuration.
 
 This solution is suitable for an idc that:
 
@@ -33,6 +33,8 @@ And each node should make health checks to all nodes it knows on the tcp port. W
 
 UDP packet.
 
+Wrapped into RESP.
+
 ```
 {
   version: an integer. the version of the protocol. currently 1.
@@ -40,35 +42,18 @@ UDP packet.
   nodeName: a string. name of node who sent this message.
   udpPort: an integer. the udp port that the sender is listening.
   tcpPort: an integer. the tcp port that the sender is listening.
-  hash: a string. the hash value of the nodes info cached by the sender.
+  hash: a string. the hash value of the nodes info cached by the sender, encoded into base64.
 }
-```
-
-example:
-
-```
-*6\r\n
-:1\r\n
-$6\r\n
-search\r\n
-$10\r\n
-mynodename\r\n
-:12300\r\n
-:12300\r\n
-$128\r\n
-32b2eb.......24e1\r\n
 ```
 
 The udp packet carries the sender's ip address, so the receiver will know which address to write back to. Sender will get the sender's receiving port via the message, and will `NOT` use the udp packet src port because they might be different.
 
 ### Discovery data message
 
-TCP stream.
+HTTP request.
 
 ```
 {
-  version: an integer. the version of the protocol. currently 1.
-  type: enum {nodes}. the type of this message. currently only "type=nodes" supported.
   nodes: an array of nodes. [
     nodeName: a string. name of the node.
     address: a string. ip address of the node.
@@ -79,25 +64,7 @@ TCP stream.
 }
 ```
 
-example:
-
-```
-*3\r\n
-:1\r\n
-$5\r\n
-nodes\r\n
-*1\r\n
-*5\r\n
-$10\r\n
-mynodename\r\n
-$9\r\n
-127.0.0.1\r\n
-:12300\r\n
-:12300\r\n
-:1\r\n
-```
-
-Request and response will be handled in the same connection. The connection will be closed after all the response bytes are transfered.
+Request and response will be handled in the same connection. The connection will be closed after all the response bytes are transferred.
 
 ### Procedure
 
@@ -184,89 +151,64 @@ VProxy builds a higher level network above the discvoery network, which is named
 
 The khala network lib let user code focus on service handling. Any khala node changes in local will be synchronized to remote automatically, and any remote changes will be known by user code via callback methods.
 
-There are two kinds of nodes in a khala network:
-
-1. Nexus: the traffic dispatcher node, usually used by a `smart-lb-group`, will alert all remote endpoints on any modification.
-2. Pylon: the normal node, usually used by a sidecar, will only alert endpoints with at least one nexus node on modification, and synchronization is periodic.
-
 One discovery node can carry multiple khala nodes.
 
 ### Khala message
 
-Khala messages use the same tcp server of discovery, but changes the req/resp message content.
+Khala messages use the same http server of discovery, but uri not same.
+
+* A `type=khala.hash` message should carry hash of all cached khala nodes.
+* A `type=khala.sync` message should carry all cached khala nodes. If the message contains no node data, the message will not have any effect on the local cache. Othersie, the differed nodes (missing and redundant) will be extracted and requests of `type=khala.local` will be made to those discovery nodes and sync data.
+* A `type=khala.add` message should carry only local discovery node and the added khala node.
+* A `type=khala.remove` message should carry only local discovery node and the removed khala node.
+* A `type=khala.local` message should carry local discovery node and all "local" khala nodes.
+
+Message type:
 
 ```
+khala.hash
 {
-  version: the protocol version. currently 1.
-  type: enum {khala, khala-add, khala-remove, khala-local}.
-  nodes: a list of discovery node and khala nodes on it [
-    {
-      nodeName: discovery node name
-      address: discovery node address
-      udpPort: discovery node udp port
-      tcpPort: discovery node tcp port
-      kNodes: a list of khala nodes [
-        {
-          type: enum {nexus, pylon}. the khala node type.
-          service: a string. the service name of the node.
-          zone: a string. the zone name of the node.
-          address: an ip string. the listening address. might not be the same as discovery node address.
-          port: an integer. the listening port.
-        }
-      ]
-    }
-  ]
+  hash: base64 of hash
+}
+
+khala.sync
+[
+  {
+    node: { nodeName, address, udpPort, tcpPort, }
+    khalaNodes: [ { service, zone, address, port, } ]
+  }
+]
+
+response of khala.sync
+{
+  diff: [ { node: nodeName, address, udpPort, tcpPort, } ]
+}
+
+khala.add and khala.remove
+{
+  node: { nodeName, address, udpPort, tcpPort, }
+  khalaNode: { service, zone, address, port, }
+}
+
+khala.local
+{
+  node: { nodeName, address, udpPort, tcpPort, }
+  khalaNodes: [ { service, zone, address, port, } ]
 }
 ```
-
-e.g.
-
-```
-*3\r\n
-:1\r\n
-$11\r\n
-khala-local\r\n
-*1\r\n
-
-*5\r\n
-$10\r\n
-mynodename\r\n
-$9\r\n
-127.0.0.1\r\n
-:12300\r\n
-:12300\r\n
-*1\r\n
-
-*5\r\n
-$5\r\n
-nexus\r\n
-$16\r\n
-myservice.com:80\r\n
-$10\r\n
-cn-east-1a\r\n
-$9\r\n
-127.0.0.1\r\n
-:8080
-```
-
-* A `type=khala` message should carry all cached khala nodes. If the message contains no node data, the message will not have any effect on the local cache. Othersie, the differed nodes (missing and redundant) will be extracted and requests of `type=khala-local` will be made to those discovery nodes and sync data.
-* A `type=khala-add` message should carry only one element in `msg.nodes` list (the discovery node it self), and only one element in `msg.nodes[0].kNodes` list (the added khala node).
-* A `type=khala-remove` message should carry only one element in `msg.nodes` list (the discovery node it self), and only one element in `msg.nodes[0].kNodes` list (the removed khala node).
-* A `type=khala-local` message should carry all "local" khala nodes. And the `msg.nodes` list should have only one element (the discovery node it self).
 
 ### Procedure
 
 The khala is based on vproxy discovery lib. So it knows when a discovery node is UP or DOWN or left. As a result, it can synchronize data with the new node as soon as possible, or drop nodes of a dead node.
 
-1. When a new node joins, a `type=khala-local` message will be sent to the new node, and the new node will respond with a `type=khala-local` message.
-2. When receiving a `type=khala-local` message, the lib will cover corresponding discovery node data with the data in message.
+1. When a new node joins, a `type=khala.local` message will be sent to the new node, and the new node will respond with a `type=khala-local` message.
+2. When receiving a `type=khala.local` message, the lib will cover corresponding discovery node data with the data in message.
 3. When a node is down or left, the lib will remove all data related to the discovery node.
-4. When a node is added locally, the lib will send a `type=khala-add` message to inform other nodes about the new node:  
-    1) if the added node is `nexus`, then all known nodes will be informed.  
-    2) if the added node is `pylon`, then only discovery nodes with at least one nexus node will be informed.
-5. When a node is removed locally, the lib will send a `type=khala-remove` message to inform other nodes about the removed node. Sending rules are the same as `type=khala-add` message.
-6. For every 2 minutes, the lib chooses a nexus node randomly, and send a `type=khala` message to sync node data.
-7. When receiving `type=khala` message, the node will reply a `type=khala` data, and differ the message nodes and local cached nodes. When a mismatch found, the lib will request the mismatched node with `type=khala-local` message, to fetch the remote khala nodes.
+4. When a node is added locally, the lib will send a `type=khala.add` message to inform other nodes about the new node.
+5. When a node is removed locally, the lib will send a `type=khala.remove` message to inform other nodes about the removed node. Sending rules are the same as `type=khala-add` message.
+6. For every 2 minutes, the lib chooses a nexus node randomly, and send a `type=khala.hash` and `type=khala.sync` message to sync node data.
+7. When receiving `type=khala.hash` message, the node will reply a `type=khala.hash` data.
+8. When receiving `type=khala.sync` message, the node will reply a `type=khala.sync` data, and differ the message nodes and local cached nodes. When a mismatch found, the lib will request the mismatched node with `type=khala-local` message, to fetch the remote khala nodes.
 
 ### Interfaces
 

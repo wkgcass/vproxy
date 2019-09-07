@@ -51,7 +51,8 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 |
 +---+ cert-key (ck)
 |
-+---+ smart-lb-group /* only available in service mesh mode */
++---+ smart-group-delegate   /* only available when discovery config is specified */
++---+ smart-service-delegate /* only available when discovery config is specified */
 
    bind-server (bs) --+
   connection (conn)   +-- /* channel */
@@ -850,47 +851,93 @@ list accepted-conn-count in bind-server 127.0.0.1:6380 in tl lb0
 (integer) 2
 ```
 
-## Resource: smart-lb-group
+## Resource: smart-group-delegate
 
-A binding for an lb and a server-group with info from service mesh network.
+A binding for a server-group with info from vproxy discovery network.
 
 #### add
 
-Create a new smart-lb-group binding.
+Create a new smart-group-delegate binding.
 
-* service: the service watched by the auto lb
-* zone: the zone watched by the auto lb
-* tcp-lb: the tcp lb to bind
+* service: the service watched by the delegate
+* zone: the zone watched by the delegate
 * server-group: the server group to bind
 
 ```
-add smart-lb-group slg0 service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0
+add smart-group-delegate sgd0 service myservice zone z0 server-group sg0
 "OK"
 ```
 
 #### list
 
-Get names of smart-lb-group bindings.
+Get names of smart-group-delegate bindings.
 
 ```
-list smart-lb-group
-1) "slg0"
+list smart-group-delegate
+1) "sgd0"
 ```
 
 #### list-detail
 
-Get detailed info about smart-lb-group bindings.
+Get detailed info about smart-group-delegate bindings.
 
 ```
-list-detail smart-lb-group
-1) "slg0 -> service myservice.com:443 zone z0 tcp-lb tl0 server-group sg0"
+list-detail smart-group-delegate
+1) "sgd0 -> service myservice zone z0 server-group sg0"
 ```
 
 #### remove
 
-Remove the smart-lb-group binding.
+Remove the smart-group-delegate binding.
 
 ```
-remove smart-lb-group slg0
+remove smart-group-delegate sgd0
 "OK"
 ```
+
+## Resource: smart-service-delegate
+
+A delegate for a service registered to the vproxy discovery network.
+
+#### add
+
+Create a new smart-service-delegate.
+
+* service: the service watched by the delegate
+* zone: the zone watched by the delegate
+* nic: which nic the service listens on
+* port: which port the service listens on
+* ip-type: *optional* which ip type the service listens on, enum: v4 or v6, default v4
+
+```
+add smart-service-delegate ssd0 service myservice zone z0 nic eth0 port 8080
+"OK"
+```
+
+#### list
+
+Get names of smart-service-delegate.
+
+```
+list smart-group-delegate
+1) "ssd0"
+```
+
+#### list-detail
+
+Get detailed info about smart-service-delegate bindings.
+
+```
+list-detail smart-group-delegate
+1) "ssd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080"
+```
+
+#### remove
+
+Remove the smart-service-delegate binding.
+
+```
+remove smart-service-delegate ssd0
+"OK"
+```
+

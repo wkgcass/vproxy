@@ -14,7 +14,6 @@ CONTAINER ID        IMAGE                         COMMAND                  CREAT
 8fb9da85c979        vproxy-service-mesh-example   "/bin/bash /service-…"   4 hours ago         Up 4 hours                                   example-service-b
 55d019262156        vproxy-service-mesh-example   "/bin/bash /service-…"   4 hours ago         Up 4 hours                                   example-service-a
 2e5000eba219        vproxy-service-mesh-example   "/bin/bash /frontend…"   4 hours ago         Up 4 hours          0.0.0.0:8080->8080/tcp   example-frontend
-4a583c0804df        vproxy-service-mesh-example   "/bin/bash /lb.sh"       4 hours ago         Up 4 hours                                   example-lb
 ```
 
 These containers form a network like this:
@@ -22,41 +21,27 @@ These containers form a network like this:
 ```
                                                                           +-----------------+
                                                                           |                 |
-                                   +-.---.---.---.---.---.---.---.---.--->|   Service A 1   |
+                                   +------------------------------------->|   Service A 1   |
                                    |                                      |                 |
-                                   |                                      +-----------------+
-                                   .                                      |     sidecar     |
            +--------------+        |                                      +-----------------+
-           |              |        .                                              ^
-client---->|   Frontend   |-.--.---+                                              |
-           |              |        ,                                              |
-           +--------------+        |       +---------------+                      |
-           |    sidecar   |        |       |               |                      +------------------+
-           +--------------+        +.--.-->|   Service B   |                                         |
-                  |                .       |               |                                         |
-                  |                |       +---------------+                                         |
-                  |                |       |    sidecar    |              +-----------------+        |
-                  |                |       +---------------+              |                 |        |
-                  |                .              ^                       |   Service A 2   |        |
-                  |                +--.---.---.---|---.---.---.---.---.-->|                 |        |
-                  |                               |                       +-----------------+        |
-                  |                               |                       |     sidecar     |        |
-                  |                               |                       +-----------------+        |
-                  |                               |                                ^                 |
-                  |                               |                                |                 |
-                  |                               |                                |                 |
-                  |                               +--------------------------------+-----------------+
-                  |                               |
-                  |                               |
-                  |                               |
-                  |                        +--------------+
-                  |                        |              |
-                  +----------------------->| SmartLBGroup |
-                                           |              |
-                                           +--------------+
-
-line --------> is real netflow
-line --.--.--> is logic netflow
+           |              |        |                                      |     sidecar     |
+client---->|   Frontend   |        |                                      +-----------------+
+           |              |        |
+           +--------------+        |
+           |    sidecar   |------->+
+           +--------------+        |       +---------------+
+                                   |       |               |
+                                   +------>|   Service B   |
+                                   |       |               |
+                                   |       +---------------+
+                                   |       |    sidecar    |
+                                   |       +---------------+              +-----------------+
+                                   |                                      |                 |
+                                   +------------------------------------->|   Service A 2   |
+                                                                          |                 |
+                                                                          +-----------------+
+                                                                          |     sidecar     |
+                                                                          +-----------------+
 ```
 
 The client requests `Frontend`. The `Frontend` will fetch data from `Service (A 1/2)/(B)` and respond to the client.
@@ -79,8 +64,4 @@ Details can be found in example code.
 
 ## Another Usage
 
-You can use vproxy exactly same as the example code (lb and socks5), but you can also only use the lb part and ignore the socks5 part.
-
-The lb port is specified in config, so, you can fix the lb ip (or a virtual ip of the lb) and port into you app's config.  
-When a service starts, it should register it self into the sidecar. Requests sent by the service can be directly sent to the lb address instead of being proxied by the sidecar.  
-New nodes will be automatically learned by the lb just like the example.
+You may also use lb instead of socks5 on the sidecar. When using lb, you should directly request the lb port of sidecar exposed on 127.0.0.1.

@@ -146,44 +146,47 @@ To stop a RESPController, you can type in:
 >
 ```
 
-## 5. Service Mesh
+## 5. Auto Node Discovery
 
-Specify the service mesh config file when starting:
-
-```
-java vproxy.app.Main serviceMeshConfig $path_to_config
-```
-
-When service mesh config is specified, the process launches into service mesh mode.  
-
-There are two roles provided by vproxy.
-
-* sidecar: Deployed on application host. One sidecar per host. The user application should use socks5 and use domain names to request cluster services, traffic will be automatically directed to correct endpoints. And user app should listen on localhost, the sidecar will help export the service.
-* smart-lb-group: Used as a tcp loadbalancer. The lb will automatically learn node changes in the cluster, and add or remove nodes in backend list.
-
-The user application should use any kind of redis client to let sidecar know what service is running locally.
-
-Use the following redis command to add/check/remove services of a sidecar.  
-They behave just like redis SET commands:
+Specify the discovery config file when starting:
 
 ```
-sadd service $your_service_domain:$protocol_port:$local_port
-# return 1 or 0
-
-smembers service
-# return a list of services you just added
-
-srem service $your_service_domain:$protocol_port:$local_port
-# return 1 or 0
+java vproxy.app.Main discoveryConfig $path_to_config
 ```
 
-User app is recommended to:
+When discovery config is specified, the vproxy instance will try to search or inform other nodes about local node info.  
 
-1. Use socks5 and domain to make requests, domains should be resolved on the proxy(sidecar) side.
-2. Use redis client to register the service when just the app just launched.
-3. The service name should be `domain:protocol_port`, e.g. `myservice.com:80`, requesting urls are the same, e.g. `http://myservice.com`.
-4. Use redis client to deregister the service and wait for traffic to end before the app stops.
-5. Note that: external traffic should not go through the sidecar(socks5 proxy) (because the vproxy network does not know how to make requests to external resources).
+There are two additional modules provided by vproxy if discovery config is available.
+
+* smart-group-delegate: watches the discovery network for node changes, and update the handled server-group resource.
+* smart-service-delegate: register a service into the discovery network for others to know.
+
+The user application may use an http client to manipulate the vproxy configuration.
+
+For example: you can register/deregister a service using the http request to http-controller:
+
+```
+POST /api/v1/module/smart-service-delegate
+{
+  "name": "my-test-service",
+  "service": "my-service,
+  "zone": "test",
+  "nic": "eth0",
+  "exposedPort": 8080
+}
+respond 204 for success
+
+DELETE /api/v1/module/smart-service-delegate/my-test-service
+respond 204 for success
+```
+
+Or you may check the service list registered on the vproxy instance:
+
+```
+GET /api/v1/module/smart-service-delegate
+```
+
+You may refer to example code in [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md).
 
 ## 6. Example and Explanation
 
