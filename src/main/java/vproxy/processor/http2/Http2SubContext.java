@@ -764,6 +764,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         // all proxy states goes to state 1
         // so simply set the frame to null and state 1 here
         state = 1;
+        lastFrame = frame;
         frame = null;
     }
 
