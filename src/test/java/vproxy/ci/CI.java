@@ -2026,5 +2026,24 @@ public class CI {
         runNoUpdate("/cert-key", Entities.CertKey.class,
             "certs", new String[]{tmpCertFile.getAbsolutePath()},
             "key", tmpKeyFile.getAbsolutePath());
+        assertEquals(1, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1SmartGroupDelegate() throws Exception {
+        var sg = randomServerGroup();
+        runNoUpdate("/smart-group-delegate", Entities.SmartGroupDelegate.class,
+            "handledGroup", sg);
+        assertEquals(1, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1SmartServiceDelegate() throws Exception {
+        runNoUpdate("/smart-service-delegate", Entities.SmartServiceDelegate.class,
+            "nic", TestSmart.loopbackNic());
+        assertEquals(2, postCnt);
+        assertEquals(0, putCnt);
     }
 }

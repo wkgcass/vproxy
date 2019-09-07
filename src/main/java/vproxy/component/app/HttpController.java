@@ -182,6 +182,30 @@ public class HttpController {
             .put("defaultRule", "allow or deny access if no match in the rule list")
             .build()));
         server.del(moduleBase + "/security-group/:secg", wrapAsync(this::deleteSecurityGroup));
+        // smart-group-delegate
+        server.get(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::getSmartGroupDelegate));
+        server.get(moduleBase + "/smart-group-delegate", wrapAsync(this::listSmartGroupDelegate));
+        server.pst(moduleBase + "/smart-group-delegate", wrapAsync(this::createSmartGroupDelegate, new ObjectBuilder()
+                .put("name", "alias of the smart-group-delegate")
+                .put("service", "watched service name")
+                .put("zone", "watched zone name")
+                .put("handledGroup", "name of the handled server-group")
+                .build(),
+            "name", "service", "zone", "handledGroup"));
+        server.del(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::deleteSmartGroupDelegate));
+        // smart-service-delegate
+        server.get(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::getSmartServiceDelegate));
+        server.get(moduleBase + "/smart-service-delegate", wrapAsync(this::listSmartServiceDelegate));
+        server.pst(moduleBase + "/smart-service-delegate", wrapAsync(this::createSmartServiceDelegate, new ObjectBuilder()
+                .put("name", "alias of the smart-service-delegate")
+                .put("service", "handled service name")
+                .put("zone", "handled zone name")
+                .put("nic", "nic name")
+                .put("ipType", "ip type: v4 or v6")
+                .put("exposedPort", 8080)
+                .build(),
+            "name", "service", "zone", "nic", "exposedPort"));
+        server.del(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::deleteSmartServiceDelegate));
         // cert-key
         server.get(moduleBase + "/cert-key/:ck", wrapAsync(this::getCertKey));
         server.get(moduleBase + "/cert-key", wrapAsync(this::listCertKey));
@@ -192,7 +216,6 @@ public class HttpController {
                 .build(),
             "name", "certs", "key"));
         server.del(moduleBase + "/cert-key/:ck", wrapAsync(this::deleteCertKey));
-        // TODO smart-lb-group
         // bind-server
         server.get(channelBase + "/event-loop-groups/:elgs/event-loop/:el/bind", wrapAsync(this::listBindServersInEl));
         server.get(channelBase + "/tcp-lb/:tl/bind", wrapAsync(this::listBindServersInTl));
@@ -750,6 +773,69 @@ public class HttpController {
     private void deleteSecurityGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
             "remove", "security-group", rctx.param("secg"));
+    }
+
+    private void getSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var sgd = Application.get().smartGroupDelegateHolder.get(rctx.param("sgd"));
+        cb.succeeded(utils.formatSmartGroupDelegate(sgd));
+    }
+
+    private void listSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var holder = Application.get().smartGroupDelegateHolder;
+        var names = holder.names();
+        var list = new LinkedList<JSON.Object>();
+        for (var name : names) {
+            list.add(utils.formatSmartGroupDelegate(holder.get(name)));
+        }
+        cb.succeeded(new SimpleArray(list));
+    }
+
+    private void createSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var body = (JSON.Object) rctx.get(Tool.bodyJson);
+        utils.execute(cb,
+            "add", "smart-group-delegate", body.getString("name"),
+            "service", body.getString("service"),
+            "zone", body.getString("zone"),
+            "server-group", body.getString("handledGroup"));
+    }
+
+    private void deleteSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        utils.execute(cb, "remove", "smart-group-delegate", rctx.param("sgd"));
+    }
+
+    private void getSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var ssd = Application.get().smartServiceDelegateHolder.get(rctx.param("ssd"));
+        cb.succeeded(utils.formatSmartServiceDelegate(ssd));
+    }
+
+    private void listSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var holder = Application.get().smartServiceDelegateHolder;
+        var names = holder.names();
+        var list = new LinkedList<JSON.Object>();
+        for (var name : names) {
+            list.add(utils.formatSmartServiceDelegate(holder.get(name)));
+        }
+        cb.succeeded(new SimpleArray(list));
+    }
+
+    private void createSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var body = (JSON.Object) rctx.get(Tool.bodyJson);
+        var options = new LinkedList<>(Arrays.asList(
+            "add", "smart-service-delegate", body.getString("name"),
+            "service", body.getString("service"),
+            "zone", body.getString("zone"),
+            "nic", body.getString("nic"),
+            "port", "" + body.getInt("exposedPort")
+        ));
+        if (body.containsKey("ipType")) {
+            options.add("ip-type");
+            options.add(body.getString("ipType"));
+        }
+        utils.execute(cb, options);
+    }
+
+    private void deleteSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        utils.execute(cb, "remove", "smart-service-delegate", rctx.param("ssd"));
     }
 
     private void getCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

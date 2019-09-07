@@ -45,6 +45,11 @@ public class Entities {
         deny,
     }
 
+    enum IPType {
+        v4,
+        v6,
+    }
+
     @Retention(RetentionPolicy.RUNTIME)
     @interface Sticky {
         int value();
@@ -129,5 +134,21 @@ public class Entities {
         String name;
         String[] certs;
         String key;
+    }
+
+    static class SmartGroupDelegate {
+        String name;
+        String service;
+        String zone;
+        String handledGroup;
+    }
+
+    static class SmartServiceDelegate {
+        String name;
+        String service;
+        String zone;
+        String nic;
+        @Optional IPType ipType;
+        int exposedPort;
     }
 }

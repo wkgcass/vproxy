@@ -6,6 +6,8 @@ import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.Command;
+import vproxy.component.auto.SmartGroupDelegate;
+import vproxy.component.auto.SmartServiceDelegate;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.NotFoundException;
@@ -352,6 +354,26 @@ class utils {
             .put("serverPortMin", secgr.minPort)
             .put("serverPortMax", secgr.maxPort)
             .put("rule", secgr.allow ? "allow" : "deny")
+            .build();
+    }
+
+    static JSON.Object formatSmartGroupDelegate(SmartGroupDelegate sgd) {
+        return new ObjectBuilder()
+            .put("name", sgd.alias)
+            .put("service", sgd.service)
+            .put("zone", sgd.zone)
+            .put("handledGroup", sgd.handledGroup.alias)
+            .build();
+    }
+
+    static JSON.Object formatSmartServiceDelegate(SmartServiceDelegate ssd) {
+        return new ObjectBuilder()
+            .put("name", ssd.alias)
+            .put("service", ssd.service)
+            .put("zone", ssd.zone)
+            .put("nic", ssd.nic)
+            .put("ipType", ssd.ipType.name())
+            .put("exposedPort", ssd.exposedPort)
             .build();
     }
 }
