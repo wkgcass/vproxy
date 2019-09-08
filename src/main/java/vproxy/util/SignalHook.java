@@ -20,4 +20,8 @@ public class SignalHook {
     public void sigHup(Runnable r) {
         registerSignal("HUP", r);
     }
+
+    public void sigTerm(Runnable r) {
+        registerSignal("TERM", r);
+    }
 }

@@ -54,6 +54,12 @@ public class Shutdown {
         } catch (Exception e) {
             System.err.println("SIGHUP not handled");
         }
+        try {
+            SignalHook.getInstance().sigTerm(() -> endSaveAndQuit(128 + 1));
+            assert Logger.lowLevelDebug("SIGTERM handled");
+        } catch (Exception e) {
+            System.err.println("SIGTERM not handled");
+        }
         new Thread(() -> {
             while (true) {
                 sigIntTimes = 0;
