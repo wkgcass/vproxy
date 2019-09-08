@@ -113,6 +113,12 @@ public class Main {
                     return;
                 case "load":
                     // try load after all other configs are processed
+                    if (next == null) {
+                        System.err.println("invalid system call for `load`: should specify a file name to load");
+                        System.exit(1);
+                        return;
+                    }
+                    ++i;
                     break;
                 case "resp-controller":
                 case "http-controller":
@@ -205,11 +211,8 @@ public class Main {
                 loaded = true;
                 // if error occurred, the program will exit
                 // so set loaded flag here is ok
-                if (next == null) {
-                    System.err.println("invalid system call for `load`: should specify a file name to load");
-                    System.exit(1);
-                    return;
-                }
+
+                // no need to check whether `next` exists, already check
                 // handle load, so increase the cursor
                 ++i;
                 try {
