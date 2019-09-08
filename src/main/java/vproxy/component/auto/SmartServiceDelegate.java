@@ -1,11 +1,11 @@
 package vproxy.component.auto;
 
+import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.khala.KhalaNode;
 import vproxy.util.IPType;
 import vproxy.util.Utils;
 
 import java.net.InetAddress;
-import java.net.SocketException;
 
 public class SmartServiceDelegate {
     public final String alias;
@@ -24,7 +24,7 @@ public class SmartServiceDelegate {
                                 String nic,
                                 IPType ipType,
                                 int exposedPort,
-                                AutoConfig config) throws SocketException {
+                                AutoConfig config) throws Exception {
         this.alias = alias;
         this.service = service;
         this.zone = zone;
@@ -36,6 +36,14 @@ public class SmartServiceDelegate {
         InetAddress address = Utils.getInetAddressFromNic(nic, ipType);
 
         kNode = new KhalaNode(service, zone, Utils.ipStr(address.getAddress()), exposedPort);
+        var localKNodes = config.khala.getNodeToKhalaNodesMap().get(config.discovery.localNode);
+        if (localKNodes != null) {
+            for (var kn : localKNodes) {
+                if (kn.equals(kNode)) {
+                    throw new AlreadyExistException("service " + service + " zone " + zone);
+                }
+            }
+        }
         this.config.khala.addLocal(kNode);
     }
 
