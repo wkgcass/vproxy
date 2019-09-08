@@ -175,6 +175,11 @@ public class Shutdown {
         List<SmartGroupDelegate> smartGroupDelegates = new LinkedList<>();
 
         {
+            // NOTE
+            // NOTE: smart-service-delegate MUST not be saved
+            // NOTE
+        }
+        {
             // create cert-key
             CertKeyHolder ckh = app.certKeyHolder;
             List<String> names = ckh.names();
