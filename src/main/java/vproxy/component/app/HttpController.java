@@ -6,7 +6,9 @@ import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.connection.BindServer;
 import vproxy.dns.Resolver;
 import vproxy.util.Callback;
@@ -486,11 +488,12 @@ public class HttpController {
     }
 
     private void getServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgs = Application.get().serverGroupsHolder.get(rctx.param("sgs"));
+        var sgsName = rctx.param("sgs");
+        var sgs = Application.get().serverGroupsHolder.get(sgsName);
         var sgName = rctx.param("sg");
         var opt = sgs.getServerGroups().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
         if (opt.isEmpty()) {
-            throw new NotFoundException();
+            throw new NotFoundException("server-group in server-groups " + sgsName, sgName);
         } else {
             cb.succeeded(utils.formatServerGroupInGroups(opt.get()));
         }
@@ -566,11 +569,12 @@ public class HttpController {
     }
 
     private void getServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sg = Application.get().serverGroupHolder.get(rctx.param("sg"));
+        var sgName = rctx.param("sg");
+        var sg = Application.get().serverGroupHolder.get(sgName);
         var alias = rctx.param("svr");
         var opt = sg.getServerHandles().stream().filter(h -> h.alias.equals(alias)).findAny();
         if (opt.isEmpty()) {
-            throw new NotFoundException();
+            throw new NotFoundException("server in server-group " + sgName, alias);
         } else {
             cb.succeeded(utils.formatServer(opt.get()));
         }
@@ -699,11 +703,12 @@ public class HttpController {
     }
 
     private void getSecurityGroupRules(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var secg = Application.get().securityGroupHolder.get(rctx.param("secg"));
+        var secgName = rctx.param("secg");
+        var secg = Application.get().securityGroupHolder.get(secgName);
         var rName = rctx.param("secgr");
         var opt = secg.getRules().stream().filter(r -> r.alias.equals(rName)).findAny();
         if (opt.isEmpty()) {
-            throw new NotFoundException();
+            throw new NotFoundException("security-group-rule in security-group " + secgName, rName);
         } else {
             cb.succeeded(utils.formatSecurityGroupRule(opt.get()));
         }
@@ -1116,7 +1121,17 @@ public class HttpController {
             } else if (err instanceof NotFoundException) {
                 rctx.response().status(404).end(new ObjectBuilder()
                     .put("code", 404)
-                    .put("message", "the requested resource is not available")
+                    .put("message", err.getMessage())
+                    .build());
+            } else if (err instanceof AlreadyExistException) {
+                rctx.response().status(409).end(new ObjectBuilder()
+                    .put("code", 409)
+                    .put("message", err.getMessage())
+                    .build());
+            } else if (err instanceof XException) {
+                rctx.response().status(400).end(new ObjectBuilder()
+                    .put("code", 400)
+                    .put("message", err.getMessage())
                     .build());
             } else {
                 String errId = UUID.randomUUID().toString();
@@ -1168,7 +1183,7 @@ public class HttpController {
                 if (!(body instanceof JSON.Object)) {
                     rctx.response().status(400).end(new ObjectBuilder()
                         .put("code", 400)
-                        .put("message", "this api only accept json object from http body: " + bodyTemplate.stringify())
+                        .put("message", "this api only accepts json object from http body: " + bodyTemplate.stringify())
                         .build());
                     return;
                 }

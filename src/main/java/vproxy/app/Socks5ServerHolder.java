@@ -32,7 +32,7 @@ public class Socks5ServerHolder {
                             int outBufferSize,
                             SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("socks5-server", alias);
         Socks5Server socks5Server = new Socks5Server(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
         try {
             socks5Server.start();
@@ -47,14 +47,14 @@ public class Socks5ServerHolder {
     public Socks5Server get(String alias) throws NotFoundException {
         Socks5Server socks5Server = map.get(alias);
         if (socks5Server == null)
-            throw new NotFoundException();
+            throw new NotFoundException("socks5-server", alias);
         return socks5Server;
     }
 
     public void removeAndStop(String alias) throws NotFoundException {
         Socks5Server socks5Server = map.remove(alias);
         if (socks5Server == null)
-            throw new NotFoundException();
+            throw new NotFoundException("socks5-server", alias);
         socks5Server.destroy();
     }
 

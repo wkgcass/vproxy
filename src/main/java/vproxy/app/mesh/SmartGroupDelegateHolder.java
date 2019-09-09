@@ -19,7 +19,7 @@ public class SmartGroupDelegateHolder {
 
     public void add(String alias, String service, String zone, ServerGroup group) throws Exception {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("smart-group-delegate", alias);
         SmartGroupDelegate smartGroupDelegate = new SmartGroupDelegate(alias, service, zone, group, DiscoveryConfigLoader.getInstance().getAutoConfig());
         map.put(alias, smartGroupDelegate);
     }
@@ -27,14 +27,14 @@ public class SmartGroupDelegateHolder {
     public SmartGroupDelegate get(String alias) throws NotFoundException {
         SmartGroupDelegate smartGroupDelegate = map.get(alias);
         if (smartGroupDelegate == null)
-            throw new NotFoundException();
+            throw new NotFoundException("smart-group-delegate", alias);
         return smartGroupDelegate;
     }
 
     public void remove(String alias) throws NotFoundException {
         SmartGroupDelegate smartGroupDelegate = map.remove(alias);
         if (smartGroupDelegate == null)
-            throw new NotFoundException();
+            throw new NotFoundException("smart-group-delegate", alias);
         smartGroupDelegate.destroy();
     }
 }

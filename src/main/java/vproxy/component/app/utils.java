@@ -84,13 +84,17 @@ class utils {
         });
     }
 
+    private static String nameOfTl(TcpLB tl) {
+        return (tl instanceof Socks5Server ? "socks5-server" : "tcp-lb") + " " + tl.alias;
+    }
+
     static void respondBytesInFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         InetSocketAddress l4addr = tl.bindAddress;
         if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
             long sum = tl.servers.keySet().stream().mapToLong(BindServer::getFromRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
-            throw new NotFoundException();
+            throw new NotFoundException("l4addr in " + nameOfTl(tl), l4addrStr);
         }
     }
 
@@ -100,7 +104,7 @@ class utils {
             long sum = tl.servers.keySet().stream().mapToLong(BindServer::getToRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
-            throw new NotFoundException();
+            throw new NotFoundException("l4addr in " + nameOfTl(tl), l4addrStr);
         }
     }
 
@@ -147,18 +151,20 @@ class utils {
     }
 
     static Connection getConnectionFromList(RoutingContext rctx, List<Connection> conns) throws NotFoundException {
-        String requested = rctx.param("conn-act") + "/" + rctx.param("l4addr-pas");
+        String requested = rctx.param("l4addr-act") + "/" + rctx.param("l4addr-pas");
         var connOpt = conns.stream().filter(c -> c.id().equals(requested)).findAny();
         if (connOpt.isEmpty())
-            throw new NotFoundException();
+            throw new NotFoundException("session", requested);
         return connOpt.get();
     }
 
     static ServerGroup.ServerHandle getServer(RoutingContext rctx) throws NotFoundException {
-        Optional<ServerGroup.ServerHandle> svr = Application.get().serverGroupHolder.get(rctx.param("sg")).getServerHandles().stream()
-            .filter(s -> !s.isLogicDelete() && s.alias.equals(rctx.param("svr"))).findAny();
+        var sgName = rctx.param("sg");
+        var svrName = rctx.param("svr");
+        Optional<ServerGroup.ServerHandle> svr = Application.get().serverGroupHolder.get(sgName).getServerHandles().stream()
+            .filter(s -> !s.isLogicDelete() && s.alias.equals(svrName)).findAny();
         if (svr.isEmpty())
-            throw new NotFoundException();
+            throw new NotFoundException("server in server-group " + sgName, svrName);
         return svr.get();
     }
 
@@ -168,7 +174,7 @@ class utils {
             long sum = tl.servers.keySet().stream().mapToLong(BindServer::getHistoryAcceptedConnectionCount).sum();
             respondWithTotal(sum, cb);
         } else {
-            throw new NotFoundException();
+            throw new NotFoundException("l4addr " + nameOfTl(tl), l4addrStr);
         }
     }
 
@@ -211,8 +217,8 @@ class utils {
         return typeName(type.getSuperclass());
     }
 
-    private static boolean typeEq(Class<?> expected, Class<?> actual) {
-        return typeName(expected).equals(typeName(actual));
+    private static boolean typeNe(Class<?> expected, Class<?> actual) {
+        return !typeName(expected).equals(typeName(actual));
     }
 
     public static String validateBody(JSON.Object bodyTemplate, List<String> requiredKeys, JSON.Object input) {
@@ -221,7 +227,7 @@ class utils {
             JSON.Instance expected = bodyTemplate.get(key);
             if (input.containsKey(key)) {
                 JSON.Instance actual = input.get(key);
-                if (!typeEq(expected.getClass(), actual.getClass())) {
+                if (typeNe(expected.getClass(), actual.getClass())) {
                     return "value type is wrong for " + key + ", expecting " + typeName(expected.getClass());
                 }
                 if (key.equals("name") && expected instanceof JSON.String) {
@@ -236,7 +242,7 @@ class utils {
                     JSON.Instance expectedElem = ((JSON.Array) expected).get(0);
                     JSON.Array actualArr = (JSON.Array) actual;
                     for (int i = 0; i < actualArr.length(); ++i) {
-                        if (!typeEq(actualArr.get(i).getClass(), expectedElem.getClass())) {
+                        if (typeNe(actualArr.get(i).getClass(), expectedElem.getClass())) {
                             return "value type is wrong for " + key + "[" + i + "], expecting " + typeName(expectedElem.getClass());
                         }
                     }

@@ -25,7 +25,7 @@ public class ServerGroupHolder {
                            HealthCheckConfig healthCheckConfig,
                            Method method) throws AlreadyExistException, ClosedException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("server-group", alias);
         ServerGroup serverGroup = new ServerGroup(alias, eventLoopGroup, healthCheckConfig, method);
         map.put(alias, serverGroup);
         return serverGroup;
@@ -34,14 +34,14 @@ public class ServerGroupHolder {
     public ServerGroup get(String alias) throws NotFoundException {
         ServerGroup group = map.get(alias);
         if (group == null)
-            throw new NotFoundException();
+            throw new NotFoundException("server-group", alias);
         return group;
     }
 
     public void removeAndClear(String alias) throws NotFoundException {
         ServerGroup g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("server-group", alias);
         g.destroy();
     }
 

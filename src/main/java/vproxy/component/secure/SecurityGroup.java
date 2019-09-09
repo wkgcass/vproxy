@@ -55,7 +55,7 @@ public class SecurityGroup {
 
     public void addRule(SecurityGroupRule rule) throws AlreadyExistException {
         if (getRules().stream().anyMatch(r -> r.alias.equals(rule.alias)))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("security-group-rule in security-group " + this.alias, rule.alias);
 
         LinkedList<SecurityGroupRule> rules;
         if (rule.protocol == Protocol.TCP) {
@@ -70,7 +70,7 @@ public class SecurityGroup {
                 r.protocol == rule.protocol &&
                 r.minPort == rule.minPort &&
                 r.maxPort == rule.maxPort)
-                throw new AlreadyExistException();
+                throw new AlreadyExistException("security-group-rule " + r + " already exists in security-group " + this.alias);
         }
         rules.add(rule);
         if (rule.protocol == Protocol.TCP) {
@@ -91,7 +91,7 @@ public class SecurityGroup {
         oldRules.addAll(udpRules);
         Optional<SecurityGroupRule> optRule = oldRules.stream().filter(r -> r.alias.equals(name)).findFirst();
         if (optRule.isEmpty())
-            throw new NotFoundException();
+            throw new NotFoundException("security-group-rule in security-group " + this.alias, name);
         if (optRule.get().protocol == Protocol.TCP) {
             tcpRules.remove(optRule.get());
             this.tcpRules = tcpRules;

@@ -695,7 +695,7 @@ public class ServerGroup {
             }
         }
         if (toReplace == null)
-            throw new NotFoundException();
+            throw new NotFoundException("server in server-group " + ServerGroup.this.alias, alias);
         // do replace
         try {
             add(alias, toReplace.hostName, true,
@@ -742,7 +742,7 @@ public class ServerGroup {
                 if (c.logicDelete) // ignore logic deleted servers
                     continue;
                 if (!replace) // raise error if replace flag is disabled
-                    throw new AlreadyExistException();
+                    throw new AlreadyExistException("server in server-group" + ServerGroup.this.alias, alias);
                 toLogicDelete = c;
                 // directly set the flag
                 c.logicDelete = true;
@@ -767,7 +767,7 @@ public class ServerGroup {
     public synchronized void remove(String alias) throws NotFoundException {
         ArrayList<ServerHandle> ls = servers;
         if (ls.isEmpty())
-            throw new NotFoundException();
+            throw new NotFoundException("server in server-group " + ServerGroup.this.alias, alias);
         ArrayList<ServerHandle> newLs = new ArrayList<>(servers.size() - 1);
         boolean found = false;
         for (ServerHandle c : ls) {
@@ -781,7 +781,7 @@ public class ServerGroup {
             }
         }
         if (!found)
-            throw new NotFoundException();
+            throw new NotFoundException("server in server-group " + ServerGroup.this.alias, alias);
         servers = newLs;
         resetMethodRelatedFields();
 

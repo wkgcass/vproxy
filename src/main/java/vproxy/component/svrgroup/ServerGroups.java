@@ -134,7 +134,7 @@ public class ServerGroups {
     public void add(ServerGroup group, int weight) throws AlreadyExistException {
         List<ServerGroupHandle> groups = serverGroups;
         if (groups.stream().anyMatch(g -> g.group.equals(group)))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("server-group in server-groups " + this.alias, group.alias);
         ArrayList<ServerGroupHandle> newLs = new ArrayList<>(groups.size() + 1);
         newLs.addAll(groups);
         newLs.add(new ServerGroupHandle(group, weight));
@@ -145,7 +145,7 @@ public class ServerGroups {
     public synchronized void remove(ServerGroup group) throws NotFoundException {
         List<ServerGroupHandle> groups = serverGroups;
         if (groups.isEmpty())
-            throw new NotFoundException();
+            throw new NotFoundException("server-group in server-groups " + this.alias, group.alias);
         boolean found = false;
         ArrayList<ServerGroupHandle> newLs = new ArrayList<>(groups.size() - 1);
         for (ServerGroupHandle g : groups) {
@@ -156,7 +156,7 @@ public class ServerGroups {
             }
         }
         if (!found) {
-            throw new NotFoundException();
+            throw new NotFoundException("server-group in server-groups " + this.alias, group.alias);
         }
         serverGroups = newLs;
         recalculateWRR();

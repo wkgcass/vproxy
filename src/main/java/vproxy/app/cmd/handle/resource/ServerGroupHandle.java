@@ -32,7 +32,7 @@ public class ServerGroupHandle {
             if (s.alias.equals(resource.alias))
                 return s.group;
         }
-        throw new NotFoundException();
+        throw new NotFoundException("server-group in server-groups " + resource.parentResource.alias, resource.alias);
     }
 
     public static ServerGroups.ServerGroupHandle getHandle(Resource resource) throws Exception {
@@ -41,7 +41,7 @@ public class ServerGroupHandle {
             if (s.alias.equals(resource.alias))
                 return s;
         }
-        throw new NotFoundException();
+        throw new NotFoundException("server-group in server-groups " + resource.parentResource.alias, resource.alias);
     }
 
     public static void checkAttachServerGroup(Command cmd) throws Exception {

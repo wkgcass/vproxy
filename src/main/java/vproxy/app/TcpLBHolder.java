@@ -40,7 +40,7 @@ public class TcpLBHolder {
                     CertKey[] sslCertKeys,
                     SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException, Exception {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("tcp-lb", alias);
 
         SSLContext sslContext;
         if (sslCertKeys != null) {
@@ -84,14 +84,14 @@ public class TcpLBHolder {
     public TcpLB get(String alias) throws NotFoundException {
         TcpLB tcpLB = map.get(alias);
         if (tcpLB == null)
-            throw new NotFoundException();
+            throw new NotFoundException("tcp-lb", alias);
         return tcpLB;
     }
 
     public void removeAndStop(String alias) throws NotFoundException {
         TcpLB tl = map.remove(alias);
         if (tl == null)
-            throw new NotFoundException();
+            throw new NotFoundException("tcp-lb", alias);
         tl.destroy();
     }
 

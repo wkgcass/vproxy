@@ -18,7 +18,7 @@ public class EventLoopGroupHolder {
 
     public void add(String alias) throws AlreadyExistException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("event-loop-group", alias);
         EventLoopGroup group = new EventLoopGroup(alias);
         map.put(alias, group);
     }
@@ -26,14 +26,14 @@ public class EventLoopGroupHolder {
     public EventLoopGroup get(String alias) throws NotFoundException {
         EventLoopGroup group = map.get(alias);
         if (group == null)
-            throw new NotFoundException();
+            throw new NotFoundException("event-loop-group", alias);
         return group;
     }
 
     public void removeAndClose(String alias) throws NotFoundException {
         EventLoopGroup g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("event-loop-group", alias);
         g.close();
     }
 

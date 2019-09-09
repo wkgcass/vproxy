@@ -50,14 +50,14 @@ public class EventLoopGroup {
     @ThreadSafe
     public EventLoopWrapper get(String alias) throws NotFoundException {
         if (closed) {
-            throw new NotFoundException();
+            throw new NotFoundException("event-loop in event-loop-group " + this.alias, alias);
         }
         ArrayList<EventLoopWrapper> ls = eventLoops;
         for (EventLoopWrapper w : ls) {
             if (w.alias.equals(alias))
                 return w;
         }
-        throw new NotFoundException();
+        throw new NotFoundException("event-loop in event-loop-group " + this.alias, alias);
     }
 
     @ThreadSafe
@@ -68,7 +68,7 @@ public class EventLoopGroup {
         ArrayList<EventLoopWrapper> ls = eventLoops;
         for (EventLoopWrapper w : ls) {
             if (w.alias.equals(alias))
-                throw new AlreadyExistException();
+                throw new AlreadyExistException("event-loop in event-loop-group " + this.alias, alias);
         }
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         EventLoopWrapper el = new EventLoopWrapper(alias, selectorEventLoop);
@@ -111,7 +111,7 @@ public class EventLoopGroup {
             }
         }
         if (!found)
-            throw new NotFoundException();
+            throw new NotFoundException("event-loop in event-loop-group " + this.alias, alias);
 
         eventLoops = newLs;
     }
@@ -133,7 +133,7 @@ public class EventLoopGroup {
         if (closed)
             throw new ClosedException();
         if (!attaches.add(resource)) {
-            throw new AlreadyExistException();
+            throw new AlreadyExistException(resource.getClass().getSimpleName(), resource.id());
         }
     }
 
@@ -142,7 +142,7 @@ public class EventLoopGroup {
         if (closed)
             return;
         if (!attaches.remove(resource)) {
-            throw new NotFoundException();
+            throw new NotFoundException(resource.getClass().getSimpleName(), resource.id());
         }
     }
 

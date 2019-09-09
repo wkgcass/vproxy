@@ -39,7 +39,10 @@ public class ConnectionHandle {
             .stream()
             .filter(c -> c.id().equals(resource.alias))
             .findFirst()
-            .orElseThrow(NotFoundException::new);
+            .orElseThrow(() -> new NotFoundException(
+                "connection in " + resource.parentResource.type.fullname + " " + resource.parentResource.alias,
+                resource.alias
+            ));
     }
 
     public static int count(Resource parent) throws Exception {

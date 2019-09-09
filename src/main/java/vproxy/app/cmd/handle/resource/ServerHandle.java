@@ -39,7 +39,7 @@ public class ServerHandle {
         String alias = server.alias;
         ServerGroup grp = ServerGroupHandle.get(server.parentResource);
         Optional<ServerGroup.ServerHandle> opt = grp.getServerHandles().stream().filter(s -> s.alias.equals(alias)).findFirst();
-        return opt.orElseThrow(NotFoundException::new);
+        return opt.orElseThrow(() -> new NotFoundException("server in server-group " + server.parentResource.alias, server.alias));
     }
 
     public static List<String> names(Resource parent) throws Exception {
@@ -80,7 +80,7 @@ public class ServerHandle {
                 return;
             }
         }
-        throw new NotFoundException();
+        throw new NotFoundException("server in server-group " + cmd.resource.parentResource.alias, cmd.resource.alias);
     }
 
     public static class ServerRef {

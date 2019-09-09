@@ -19,7 +19,7 @@ public class SmartServiceDelegateHolder {
 
     public void add(String alias, String service, String zone, String nic, IPType ipType, int exposedPort) throws Exception {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("smart-service-delegate", alias);
         SmartServiceDelegate smartServiceDelegate = new SmartServiceDelegate(
             alias, service, zone, nic, ipType, exposedPort, DiscoveryConfigLoader.getInstance().getAutoConfig()
         );
@@ -29,14 +29,14 @@ public class SmartServiceDelegateHolder {
     public SmartServiceDelegate get(String alias) throws NotFoundException {
         SmartServiceDelegate smartServiceDelegate = map.get(alias);
         if (smartServiceDelegate == null)
-            throw new NotFoundException();
+            throw new NotFoundException("smart-service-delegate", alias);
         return smartServiceDelegate;
     }
 
     public void remove(String alias) throws NotFoundException {
         SmartServiceDelegate smartServiceDelegate = map.remove(alias);
         if (smartServiceDelegate == null)
-            throw new NotFoundException();
+            throw new NotFoundException("smart-service-delegate", alias);
         smartServiceDelegate.destroy();
     }
 }

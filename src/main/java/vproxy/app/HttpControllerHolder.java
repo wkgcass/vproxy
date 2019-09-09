@@ -21,7 +21,7 @@ public class HttpControllerHolder {
     public HttpController add(String alias,
                               InetSocketAddress address) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("http-controller", alias);
         HttpController rc = new HttpController(alias, address);
         map.put(alias, rc);
         return rc;
@@ -30,14 +30,14 @@ public class HttpControllerHolder {
     public HttpController get(String alias) throws NotFoundException {
         HttpController rc = map.get(alias);
         if (rc == null)
-            throw new NotFoundException();
+            throw new NotFoundException("http-controller", alias);
         return rc;
     }
 
     public void removeAndStop(String alias) throws NotFoundException {
         HttpController g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("http-controller", alias);
         g.stop();
     }
 }

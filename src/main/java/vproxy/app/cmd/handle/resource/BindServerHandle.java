@@ -32,7 +32,9 @@ public class BindServerHandle {
             .stream()
             .filter(bs -> bs.id().equals(svr.alias))
             .findFirst()
-            .orElseThrow(NotFoundException::new);
+            .orElseThrow(() -> new NotFoundException(
+                "bind-server in " + svr.parentResource.type.fullname + " " + svr.parentResource.alias,
+                svr.alias));
     }
 
     public static int count(Resource parent) throws Exception {

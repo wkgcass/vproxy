@@ -151,7 +151,7 @@ public class EventLoopWrapper extends NetEventLoop {
             throw new ClosedException();
         }
         if (!attaches.add(resource)) {
-            throw new AlreadyExistException();
+            throw new AlreadyExistException(resource.getClass().getSimpleName(), resource.id());
         }
     }
 
@@ -160,7 +160,7 @@ public class EventLoopWrapper extends NetEventLoop {
         if (selectorEventLoop.isClosed())
             return;
         if (!attaches.remove(resource)) {
-            throw new NotFoundException();
+            throw new NotFoundException(resource.getClass().getSimpleName(), resource.id());
         }
     }
 

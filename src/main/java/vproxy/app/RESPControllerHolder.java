@@ -22,7 +22,7 @@ public class RESPControllerHolder {
                               InetSocketAddress address,
                               byte[] password) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("resp-controller", alias);
         RESPController rc = new RESPController(alias, address, password);
         map.put(alias, rc);
         return rc;
@@ -31,14 +31,14 @@ public class RESPControllerHolder {
     public RESPController get(String alias) throws NotFoundException {
         RESPController rc = map.get(alias);
         if (rc == null)
-            throw new NotFoundException();
+            throw new NotFoundException("resp-controller", alias);
         return rc;
     }
 
     public void removeAndStop(String alias) throws NotFoundException {
         RESPController g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("resp-controller", alias);
         g.stop();
     }
 }

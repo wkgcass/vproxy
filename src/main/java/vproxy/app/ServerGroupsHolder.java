@@ -18,7 +18,7 @@ public class ServerGroupsHolder {
 
     public void add(String alias) throws AlreadyExistException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("server-groups", alias);
         ServerGroups serverGroups = new ServerGroups(alias);
         map.put(alias, serverGroups);
     }
@@ -26,14 +26,14 @@ public class ServerGroupsHolder {
     public ServerGroups get(String alias) throws NotFoundException {
         ServerGroups groups = map.get(alias);
         if (groups == null)
-            throw new NotFoundException();
+            throw new NotFoundException("server-groups", alias);
         return groups;
     }
 
     public void remove(String alias) throws NotFoundException {
         ServerGroups g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("server-groups", alias);
     }
 
     void clear() {

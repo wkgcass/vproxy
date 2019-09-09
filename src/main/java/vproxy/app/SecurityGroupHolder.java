@@ -18,7 +18,7 @@ public class SecurityGroupHolder {
 
     public void add(String alias, boolean defaultAllow) throws AlreadyExistException {
         if (map.containsKey(alias))
-            throw new AlreadyExistException();
+            throw new AlreadyExistException("security-group", alias);
         SecurityGroup secg = new SecurityGroup(alias, defaultAllow);
         map.put(alias, secg);
     }
@@ -29,13 +29,13 @@ public class SecurityGroupHolder {
         }
         SecurityGroup secg = map.get(alias);
         if (secg == null)
-            throw new NotFoundException();
+            throw new NotFoundException("security-group", alias);
         return secg;
     }
 
     public void remove(String alias) throws NotFoundException {
         SecurityGroup g = map.remove(alias);
         if (g == null)
-            throw new NotFoundException();
+            throw new NotFoundException("security-group", alias);
     }
 }
