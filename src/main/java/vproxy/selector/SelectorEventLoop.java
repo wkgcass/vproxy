@@ -31,8 +31,6 @@ public class SelectorEventLoop {
     // see comments in loop() and close()
     private final Object CLOSE_LOCK = new Object();
     private List<Tuple<SelectableChannel, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
-    // see comments in add()/modify()/remove() and loop()
-    private final Object OPERATE_SELECTOR_LOCK = new Object();
 
     private SelectorEventLoop() throws IOException {
         this.selector = Selector.open();
@@ -57,13 +55,11 @@ public class SelectorEventLoop {
     }
 
     private void handleRunOnLoopEvents() {
-        Runnable r;
-        List<Runnable> toRun = new LinkedList<>();
-        while ((r = runOnLoopEvents.poll()) != null) {
-            toRun.add(r);
-        }
-        for (Runnable rr : toRun) {
-            tryRunnable(rr);
+        int len = runOnLoopEvents.size();
+        // only run available events when entering this function
+        for (int i = 0; i < len; ++i) {
+            Runnable r = runOnLoopEvents.poll();
+            tryRunnable(r);
         }
     }
 
@@ -194,12 +190,6 @@ public class SelectorEventLoop {
                 continue;
             }
 
-            // we lock the OPERATE_SELECTOR_LOCK
-            // to make sure the add() is finished
-            // and the selectionKeys will be working in the next loop
-            synchronized (OPERATE_SELECTOR_LOCK) { // do nothing, just wait for lock to release
-            }
-
             // here we lock again
             // because we need to handle something
             // and at this time the selector might be closed
@@ -221,7 +211,7 @@ public class SelectorEventLoop {
         release();
     }
 
-    private boolean needLockAndWake() {
+    private boolean needWake() {
         return runningThread != null && Thread.currentThread() != runningThread;
     }
 
@@ -265,18 +255,15 @@ public class SelectorEventLoop {
         RegisterData registerData = new RegisterData();
         registerData.att = attachment;
         registerData.handler = handler;
-        if (needLockAndWake()) {
-            synchronized (OPERATE_SELECTOR_LOCK) { // lock it to make sure register is done
+        if (add0(channel, ops, registerData)) {
+            if (needWake()) {
                 selector.wakeup();
-                add0(channel, ops, registerData);
             }
-        } else {
-            add0(channel, ops, registerData);
         }
     }
 
     // a helper function for adding a channel into the selector
-    private void add0(SelectableChannel channel, int ops, Object registerData) throws IOException {
+    private boolean add0(SelectableChannel channel, int ops, Object registerData) throws IOException {
         try {
             channel.register(selector, ops, registerData);
         } catch (CancelledKeyException e) {
@@ -297,20 +284,15 @@ public class SelectorEventLoop {
                     throw new RuntimeException(e1);
                 }
             }));
+            return false;
         }
+        return true;
     }
 
     private void doModify(SelectionKey key, int ops) {
-        // the document says whether interestOps() blocks or not
-        // is implementation dependent
-        // so we consider a lock and wake
-        if (needLockAndWake()) {
-            synchronized (OPERATE_SELECTOR_LOCK) {
-                selector.wakeup();
-                key.interestOps(ops);
-            }
-        } else {
-            key.interestOps(ops);
+        key.interestOps(ops);
+        if (needWake()) {
+            selector.wakeup();
         }
     }
 
@@ -344,13 +326,9 @@ public class SelectorEventLoop {
                 return;
         }
         RegisterData att = (RegisterData) key.attachment();
-        if (needLockAndWake()) {
-            synchronized (OPERATE_SELECTOR_LOCK) { // lock it to make sure cancel is done
-                selector.wakeup();
-                key.cancel();
-            }
-        } else {
-            key.cancel();
+        key.cancel();
+        if (needWake()) {
+            selector.wakeup();
         }
         triggerRemovedCallback(channel, att);
     }
