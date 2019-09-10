@@ -45,7 +45,7 @@ public class HttpController {
         server = new Http1ServerImpl(loop);
 
         // json
-        server.all(apiBase, Tool.bodyJsonHandler);
+        server.all(apiBase + "/*", Tool.bodyJsonHandler);
         // tcp-lb
         server.get(moduleBase + "/tcp-lb/:tl", wrapAsync(this::getTcpLb));
         server.get(moduleBase + "/tcp-lb", wrapAsync(this::listTcpLb));

@@ -17,6 +17,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 import vserver.*;
+import vserver.route.WildcardRoute;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -69,7 +70,7 @@ public class Http1ServerImpl implements HttpServer {
             throw new IllegalStateException("This http server is already started");
         }
         started = true;
-        routes.add(new RouteEntry(ALL_METHODS, Route.create("/"), this::handle404));
+        routes.add(new RouteEntry(ALL_METHODS, Route.create("/*"), this::handle404));
 
         initLoop();
 
@@ -348,6 +349,7 @@ public class Http1ServerImpl implements HttpServer {
             }
             Route r = entry.route;
             int idx = 0;
+            boolean lastIsWildcard = false;
             while (r != null) {
                 if (idx >= paths.size()) {
                     continue routeEntryLoop;
@@ -357,8 +359,12 @@ public class Http1ServerImpl implements HttpServer {
                     continue routeEntryLoop;
                 }
                 r.fill(ctx, p);
+                lastIsWildcard = (r instanceof WildcardRoute);
                 r = r.next();
                 ++idx;
+            }
+            if (!lastIsWildcard && idx < paths.size()) {
+                continue; // the route too short
             }
             index[0] = i;
             return entry.handler;
