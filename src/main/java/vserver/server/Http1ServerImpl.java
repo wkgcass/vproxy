@@ -159,12 +159,13 @@ public class Http1ServerImpl implements HttpServer {
             final HttpMethod method;
             final Map<String, String> headers = new HashMap<>();
             final String uri = unescape(request.uri);
+            final Map<String, String> query = new HashMap<>();
             final ByteArray body;
             final HttpResponse response;
             final HandlerChain chain;
 
             final List<String> paths;
-            { // paths
+            { // paths and query
                 if (uri == null) {
                     Response resp = new Response();
                     resp.statusCode = 400;
@@ -174,10 +175,21 @@ public class Http1ServerImpl implements HttpServer {
                     return;
                 }
                 String path = uri;
+                String queryPart = "";
                 if (path.contains("?")) {
+                    queryPart = path.substring(path.indexOf('?') + 1);
                     path = path.substring(0, path.indexOf('?'));
                 }
                 paths = Arrays.stream(path.split("/")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+                var queryList = Arrays.stream(queryPart.split("&")).filter(s -> !s.isBlank()).collect(Collectors.toList());
+                for (var qkv : queryList) {
+                    if (qkv.indexOf('=') == -1) {
+                        query.put(qkv, "");
+                    } else {
+                        int idx = qkv.indexOf('=');
+                        query.put(qkv.substring(0, idx), qkv.substring(idx + 1));
+                    }
+                }
             }
 
             { // method
@@ -296,7 +308,7 @@ public class Http1ServerImpl implements HttpServer {
             }
 
             // build ctx
-            ctx[0] = new RoutingContext(method, uri, headers, body, response, chain);
+            ctx[0] = new RoutingContext(method, uri, query, headers, body, response, chain);
         }
         ctx[0].next();
     }

@@ -554,7 +554,7 @@ public class Discovery {
 
     private HttpServer startHttpServer() throws IOException {
         HttpServer server = new Http1ServerImpl(loop);
-        server.all("/*", Tool.bodyJsonHandler);
+        server.all("/*", Tool.bodyJsonHandler());
         server.put("/discovery/api/v1/exchange/:type", rctx -> {
             assert Logger.lowLevelDebug("received exchange request: " + rctx.param("type") + " " + rctx.get(Tool.bodyJson));
             JSON.Instance inst = rctx.get(Tool.bodyJson);

@@ -72,6 +72,7 @@ public class Entities {
         @Optional String workerLoopGroup;
         @Optional @Modifiable int inBufferSize;
         @Optional @Modifiable int outBufferSize;
+        @Optional String[] listOfCertKey;
         @Optional @Modifiable String securityGroup;
     }
 

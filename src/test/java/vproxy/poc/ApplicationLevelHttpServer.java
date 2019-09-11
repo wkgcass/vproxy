@@ -97,7 +97,7 @@ public class ApplicationLevelHttpServer {
 
     private void runServer() throws Exception {
         HttpServer.create()
-            .all("/api/v1/*", Tool.bodyJsonHandler)
+            .all("/api/v1/*", Tool.bodyJsonHandler())
             .get("/api/v1/services/:serviceId", this::getService)
             .get("/api/v1/services", this::listServices)
             .pst("/api/v1/services", this::createService)

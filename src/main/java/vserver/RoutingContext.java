@@ -2,12 +2,14 @@ package vserver;
 
 import vproxy.util.ByteArray;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RoutingContext {
     private final HttpMethod method;
     private final String uri;
+    private final Map<String, String> query;
     private final Map<String, String> headers;
     private final ByteArray body;
     private final Map<String, String> params = new HashMap<>();
@@ -21,13 +23,15 @@ public class RoutingContext {
 
     public RoutingContext(HttpMethod method,
                           String uri,
+                          Map<String, String> query,
                           Map<String, String> headers,
                           ByteArray body,
                           HttpResponse response,
                           HandlerChain chain) {
         this.method = method;
         this.uri = uri;
-        this.headers = headers;
+        this.query = Collections.unmodifiableMap(query);
+        this.headers = Collections.unmodifiableMap(headers);
         this.body = body;
         this.response = response;
         this.chain = chain;
@@ -60,8 +64,12 @@ public class RoutingContext {
         return uri;
     }
 
+    public String query(String key) {
+        return query.get(key);
+    }
+
     public String header(String key) {
-        return headers.get(key);
+        return headers.get(key.toLowerCase());
     }
 
     public ByteArray body() {

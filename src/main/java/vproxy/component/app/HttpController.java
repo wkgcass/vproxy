@@ -45,8 +45,9 @@ public class HttpController {
         server = new Http1ServerImpl(loop);
 
         // json
-        server.all(apiBase + "/*", Tool.bodyJsonHandler);
+        server.all(apiBase + "/*", Tool.bodyJsonHandler());
         // tcp-lb
+        server.get(moduleBase + "/tcp-lb/:tl/detail", wrapAsync(this::getTcpLbDetail));
         server.get(moduleBase + "/tcp-lb/:tl", wrapAsync(this::getTcpLb));
         server.get(moduleBase + "/tcp-lb", wrapAsync(this::listTcpLb));
         server.pst(moduleBase + "/tcp-lb", wrapAsync(this::createTcpLb, new ObjectBuilder()
@@ -58,6 +59,7 @@ public class HttpController {
                 .put("workerLoopGroup", "the worker event loop")
                 .put("inBufferSize", 16384)
                 .put("outBufferSize", 16384)
+                .putArray("listOfCertKey", arr -> arr.add("alias of the cert-key to be used"))
                 .put("securityGroup", "alias of the security group")
                 .build(),
             "name", "address", "backend"));
@@ -68,6 +70,7 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/tcp-lb/:tl", wrapAsync(this::deleteTcpLb));
         // socks5-server
+        server.get(moduleBase + "/socks5-server/:socks5/detail", wrapAsync(this::getSocks5ServerDetail));
         server.get(moduleBase + "/socks5-server/:socks5", wrapAsync(this::getSocks5Server));
         server.get(moduleBase + "/socks5-server", wrapAsync(this::listSocks5Server));
         server.pst(moduleBase + "/socks5-server", wrapAsync(this::createSocks5Server, new ObjectBuilder()
@@ -90,6 +93,7 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/socks5-server/:socks5", wrapAsync(this::deleteSocks5Server));
         // event-loop
+        server.get(moduleBase + "/event-loop-group/:elg/event-loop/:el/detail", wrapAsync(this::getEventLoop));
         server.get(moduleBase + "/event-loop-group/:elg/event-loop/:el", wrapAsync(this::getEventLoop));
         server.get(moduleBase + "/event-loop-group/:elg/event-loop", wrapAsync(this::listEventLoop));
         server.pst(moduleBase + "/event-loop-group/:elg/event-loop", wrapAsync(this::createEventLoop, new ObjectBuilder()
@@ -98,6 +102,7 @@ public class HttpController {
             "name"));
         server.del(moduleBase + "/event-loop-group/:elg/event-loop/:el", wrapAsync(this::deleteEventLoop));
         // event-loop-group
+        server.get(moduleBase + "/event-loop-group/:elg/detail", wrapAsync(this::getEventLoopGroupDetail));
         server.get(moduleBase + "/event-loop-group/:elg", wrapAsync(this::getEventLoopGroup));
         server.get(moduleBase + "/event-loop-group", wrapAsync(this::listEventLoopGroup));
         server.pst(moduleBase + "/event-loop-group", wrapAsync(this::createEventLoopGroup, new ObjectBuilder()
@@ -106,6 +111,7 @@ public class HttpController {
             "name"));
         server.del(moduleBase + "/event-loop-group/:elg", wrapAsync(this::deleteEventLoopGroup));
         // server-group in server-groups
+        server.get(moduleBase + "/server-groups/:sgs/server-group/:sg/detail", wrapAsync(this::getServerGroupInGroupsDetail));
         server.get(moduleBase + "/server-groups/:sgs/server-group/:sg", wrapAsync(this::getServerGroupInGroups));
         server.get(moduleBase + "/server-groups/:sgs/server-group", wrapAsync(this::listServerGroupInGroups));
         server.pst(moduleBase + "/server-groups/:sgs/server-group", wrapAsync(this::createServerGroupInGroups, new ObjectBuilder()
@@ -118,6 +124,7 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/server-groups/:sgs/server-group/:sg", wrapAsync(this::deleteServerGroupInGroups));
         // server-groups
+        server.get(moduleBase + "/server-groups/:sgs/detail", wrapAsync(this::getServerGroupsDetail));
         server.get(moduleBase + "/server-groups/:sgs", wrapAsync(this::getServerGroups));
         server.get(moduleBase + "/server-groups", wrapAsync(this::listServerGroups));
         server.pst(moduleBase + "/server-groups", wrapAsync(this::createServerGroups, new ObjectBuilder()
@@ -126,6 +133,7 @@ public class HttpController {
             "name"));
         server.del(moduleBase + "/server-groups/:sgs", wrapAsync(this::deleteServerGroups));
         // server
+        server.get(moduleBase + "/server-group/:sg/server/:svr/detail", wrapAsync(this::getServer));
         server.get(moduleBase + "/server-group/:sg/server/:svr", wrapAsync(this::getServer));
         server.get(moduleBase + "/server-group/:sg/server", wrapAsync(this::listServer));
         server.pst(moduleBase + "/server-group/:sg/server", wrapAsync(this::createServer, new ObjectBuilder()
@@ -139,6 +147,7 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/server-group/:sg/server/:svr", wrapAsync(this::deleteServer));
         // server-group
+        server.get(moduleBase + "/server-group/:sg/detail", wrapAsync(this::getServerGroupDetail));
         server.get(moduleBase + "/server-group/:sg", wrapAsync(this::getServerGroup));
         server.get(moduleBase + "/server-group", wrapAsync(this::listServerGroup));
         server.pst(moduleBase + "/server-group", wrapAsync(this::createServerGroup, new ObjectBuilder()
@@ -160,7 +169,8 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/server-group/:sg", wrapAsync(this::deleteServerGroup));
         // security-group-rule
-        server.get(moduleBase + "/security-group/:secg/security-group-rule/:secgr", wrapAsync(this::getSecurityGroupRules));
+        server.get(moduleBase + "/security-group/:secg/security-group-rule/:secgr/detail", wrapAsync(this::getSecurityGroupRule));
+        server.get(moduleBase + "/security-group/:secg/security-group-rule/:secgr", wrapAsync(this::getSecurityGroupRule));
         server.get(moduleBase + "/security-group/:secg/security-group-rule", wrapAsync(this::listSecurityGroupRule));
         server.pst(moduleBase + "/security-group/:secg/security-group-rule", wrapAsync(this::createSecurityGroupRule, new ObjectBuilder()
                 .put("name", "alias of the security group rule")
@@ -173,6 +183,7 @@ public class HttpController {
             "name", "clientNetwork", "protocol", "serverPortMin", "serverPortMax", "rule"));
         server.del(moduleBase + "/security-group/:secg/security-group-rule/:secgr", wrapAsync(this::deleteSecurityGroupRule));
         // security-group
+        server.get(moduleBase + "/security-group/:secg/detail", wrapAsync(this::getSecurityGroupDetail));
         server.get(moduleBase + "/security-group/:secg", wrapAsync(this::getSecurityGroup));
         server.get(moduleBase + "/security-group", wrapAsync(this::listSecurityGroup));
         server.pst(moduleBase + "/security-group", wrapAsync(this::createSecurityGroup, new ObjectBuilder()
@@ -185,6 +196,7 @@ public class HttpController {
             .build()));
         server.del(moduleBase + "/security-group/:secg", wrapAsync(this::deleteSecurityGroup));
         // smart-group-delegate
+        server.get(moduleBase + "/smart-group-delegate/:sgd/detail", wrapAsync(this::getSmartGroupDelegateDetail));
         server.get(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::getSmartGroupDelegate));
         server.get(moduleBase + "/smart-group-delegate", wrapAsync(this::listSmartGroupDelegate));
         server.pst(moduleBase + "/smart-group-delegate", wrapAsync(this::createSmartGroupDelegate, new ObjectBuilder()
@@ -196,6 +208,7 @@ public class HttpController {
             "name", "service", "zone", "handledGroup"));
         server.del(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::deleteSmartGroupDelegate));
         // smart-service-delegate
+        server.get(moduleBase + "/smart-service-delegate/:ssd/detail", wrapAsync(this::getSmartServiceDelegate));
         server.get(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::getSmartServiceDelegate));
         server.get(moduleBase + "/smart-service-delegate", wrapAsync(this::listSmartServiceDelegate));
         server.pst(moduleBase + "/smart-service-delegate", wrapAsync(this::createSmartServiceDelegate, new ObjectBuilder()
@@ -209,6 +222,7 @@ public class HttpController {
             "name", "service", "zone", "nic", "exposedPort"));
         server.del(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::deleteSmartServiceDelegate));
         // cert-key
+        server.get(moduleBase + "/cert-key/:ck/detail", wrapAsync(this::getCertKeyDetail));
         server.get(moduleBase + "/cert-key/:ck", wrapAsync(this::getCertKey));
         server.get(moduleBase + "/cert-key", wrapAsync(this::listCertKey));
         server.pst(moduleBase + "/cert-key", wrapAsync(this::createCertKey, new ObjectBuilder()
@@ -272,6 +286,11 @@ public class HttpController {
         server.close();
     }
 
+    private void getTcpLbDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var tl = Application.get().tcpLBHolder.get(rctx.param("tl"));
+        cb.succeeded(utils.formatTcpLbDetail(tl));
+    }
+
     private void getTcpLb(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var tl = Application.get().tcpLBHolder.get(rctx.param("tl"));
         cb.succeeded(utils.formatTcpLb(tl));
@@ -316,6 +335,18 @@ public class HttpController {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
         }
+        if (body.containsKey("listOfCertKey")) {
+            options.add("cert-key");
+            var arr = body.getArray("listOfCertKey");
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < arr.length(); ++i) {
+                if (i != 0) {
+                    sb.append(",");
+                }
+                sb.append(arr.getString(i));
+            }
+            options.add(sb.toString());
+        }
         if (body.containsKey("securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
@@ -346,6 +377,11 @@ public class HttpController {
     private void deleteTcpLb(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
             "remove", "tcp-lb", rctx.param("tl"));
+    }
+
+    private void getSocks5ServerDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var s = Application.get().socks5ServerHolder.get(rctx.param("socks5"));
+        cb.succeeded(utils.formatSocks5ServerDetail(s));
     }
 
     private void getSocks5Server(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -461,8 +497,14 @@ public class HttpController {
             "remove", "event-loop", rctx.param("el"), "from", "event-loop-group", rctx.param("elg"));
     }
 
+    private void getEventLoopGroupDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var elg = Application.get().eventLoopGroupHolder.get(rctx.param("elg"));
+        cb.succeeded(utils.formatEventLoopGroupDetail(elg));
+    }
+
     private void getEventLoopGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        cb.succeeded(utils.formatEventLoopGroup(Application.get().eventLoopGroupHolder.get(rctx.param("elg"))));
+        var elg = Application.get().eventLoopGroupHolder.get(rctx.param("elg"));
+        cb.succeeded(utils.formatEventLoopGroup(elg));
     }
 
     private void listEventLoopGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -485,6 +527,18 @@ public class HttpController {
 
     private void deleteEventLoopGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb, "remove", "event-loop-group", rctx.param("elg"));
+    }
+
+    private void getServerGroupInGroupsDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var sgsName = rctx.param("sgs");
+        var sgs = Application.get().serverGroupsHolder.get(sgsName);
+        var sgName = rctx.param("sg");
+        var opt = sgs.getServerGroups().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
+        if (opt.isEmpty()) {
+            throw new NotFoundException("server-group in server-groups " + sgsName, sgName);
+        } else {
+            cb.succeeded(utils.formatServerGroupInGroupsDetail(opt.get()));
+        }
     }
 
     private void getServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -539,6 +593,11 @@ public class HttpController {
         var sg = rctx.param("sg");
         utils.execute(cb,
             "remove", "server-group", sg, "from", "server-groups", sgs);
+    }
+
+    private void getServerGroupsDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var sgs = Application.get().serverGroupsHolder.get(rctx.param("sgs"));
+        cb.succeeded(utils.formatServerGroupsDetail(sgs));
     }
 
     private void getServerGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -621,8 +680,14 @@ public class HttpController {
             "remove", "server", rctx.param("svr"), "from", "server-group", rctx.param("sg"));
     }
 
+    private void getServerGroupDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var sg = Application.get().serverGroupHolder.get(rctx.param("sg"));
+        cb.succeeded(utils.formatServerGroupDetail(sg));
+    }
+
     private void getServerGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        cb.succeeded(utils.formatServerGroup(Application.get().serverGroupHolder.get(rctx.param("sg"))));
+        var sg = Application.get().serverGroupHolder.get(rctx.param("sg"));
+        cb.succeeded(utils.formatServerGroup(sg));
     }
 
     private void listServerGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -702,7 +767,7 @@ public class HttpController {
             "remove", "server-group", rctx.param("sg"));
     }
 
-    private void getSecurityGroupRules(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+    private void getSecurityGroupRule(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var secgName = rctx.param("secg");
         var secg = Application.get().securityGroupHolder.get(secgName);
         var rName = rctx.param("secgr");
@@ -742,6 +807,11 @@ public class HttpController {
             "remove", "security-group-rule", secgr, "from", "security-group", secg);
     }
 
+    private void getSecurityGroupDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var secg = Application.get().securityGroupHolder.get(rctx.param("secg"));
+        cb.succeeded(utils.formatSecurityGroupDetail(secg));
+    }
+
     private void getSecurityGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var secg = Application.get().securityGroupHolder.get(rctx.param("secg"));
         cb.succeeded(utils.formatSecurityGroup(secg));
@@ -778,6 +848,11 @@ public class HttpController {
     private void deleteSecurityGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
             "remove", "security-group", rctx.param("secg"));
+    }
+
+    private void getSmartGroupDelegateDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var sgd = Application.get().smartGroupDelegateHolder.get(rctx.param("sgd"));
+        cb.succeeded(utils.formatSmartGroupDelegateDetail(sgd));
     }
 
     private void getSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
@@ -843,8 +918,14 @@ public class HttpController {
         utils.execute(cb, "remove", "smart-service-delegate", rctx.param("ssd"));
     }
 
+    private void getCertKeyDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var ck = Application.get().certKeyHolder.get(rctx.param("ck"));
+        cb.succeeded(utils.formatCertKeyDetail(ck));
+    }
+
     private void getCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        cb.succeeded(utils.formatCertKey(Application.get().certKeyHolder.get(rctx.param("ck"))));
+        var ck = Application.get().certKeyHolder.get(rctx.param("ck"));
+        cb.succeeded(utils.formatCertKey(ck));
     }
 
     private void listCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

@@ -2,6 +2,8 @@ package vproxy.component.app;
 
 import vjson.JSON;
 import vjson.simple.SimpleArray;
+import vjson.simple.SimpleNull;
+import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.cmd.CmdResult;
@@ -25,6 +27,8 @@ import vproxy.util.Utils;
 import vserver.RoutingContext;
 
 import java.net.InetSocketAddress;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -270,6 +274,25 @@ class utils {
             .build();
     }
 
+    static JSON.Object formatCertKeyDetail(CertKey certKey) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            Logger.shouldNotHappen("SHA-1 not found");
+            throw new RuntimeException(e);
+        }
+        md.update(certKey.key.getBytes());
+        byte[] bytes = md.digest();
+        return new ObjectBuilder()
+            .put("name", certKey.alias)
+            .putArray("certs", arr -> Arrays.asList(certKey.certPaths).forEach(arr::add))
+            .putArray("certPemList", arr -> Arrays.asList(certKey.certs).forEach(arr::add))
+            .put("key", certKey.keyPath)
+            .put("keySHA1", Base64.getEncoder().encodeToString(bytes))
+            .build();
+    }
+
     static JSON.Object formatServerGroup(ServerGroup sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
@@ -279,6 +302,19 @@ class utils {
             .put("down", sg.getHealthCheckConfig().down)
             .put("method", sg.getMethod().toString())
             .put("eventLoopGroup", sg.eventLoopGroup.alias)
+            .build();
+    }
+
+    static JSON.Object formatServerGroupDetail(ServerGroup sg) {
+        return new ObjectBuilder()
+            .put("name", sg.alias)
+            .put("timeout", sg.getHealthCheckConfig().timeout)
+            .put("period", sg.getHealthCheckConfig().period)
+            .put("up", sg.getHealthCheckConfig().up)
+            .put("down", sg.getHealthCheckConfig().down)
+            .put("method", sg.getMethod().toString())
+            .putInst("eventLoopGroup", formatEventLoopGroupDetail(sg.eventLoopGroup))
+            .putArray("serverList", arr -> sg.getServerHandles().forEach(svr -> arr.addInst(utils.formatServer(svr))))
             .build();
     }
 
@@ -298,6 +334,13 @@ class utils {
             .build();
     }
 
+    static JSON.Object formatServerGroupsDetail(ServerGroups sgs) {
+        return new ObjectBuilder()
+            .put("name", sgs.alias)
+            .putArray("serverGroupList", arr -> sgs.getServerGroups().forEach(sg -> arr.addInst(formatServerGroupInGroupsDetail(sg))))
+            .build();
+    }
+
     static JSON.Object formatServerGroupInGroups(ServerGroups.ServerGroupHandle sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
@@ -305,9 +348,24 @@ class utils {
             .build();
     }
 
+    static JSON.Object formatServerGroupInGroupsDetail(ServerGroups.ServerGroupHandle sg) {
+        return new ObjectBuilder()
+            .put("name", sg.alias)
+            .put("weight", sg.getWeight())
+            .putInst("serverGroup", formatServerGroupDetail(sg.group))
+            .build();
+    }
+
     static JSON.Object formatEventLoopGroup(EventLoopGroup elg) {
         return new ObjectBuilder()
             .put("name", elg.alias)
+            .build();
+    }
+
+    static JSON.Object formatEventLoopGroupDetail(EventLoopGroup elg) {
+        return new ObjectBuilder()
+            .put("name", elg.alias)
+            .putArray("eventLoopList", arr -> elg.list().forEach(el -> arr.addInst(formatEventLoop(el))))
             .build();
     }
 
@@ -331,7 +389,31 @@ class utils {
             .build();
     }
 
+    static JSON.Object formatSocks5ServerDetail(Socks5Server socks5) {
+        return new ObjectBuilder()
+            .put("name", socks5.alias)
+            .put("address", Utils.l4addrStr(socks5.bindAddress))
+            .putInst("backend", formatServerGroupsDetail(socks5.backends))
+            .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(socks5.acceptorGroup))
+            .putInst("workerLoopGroup", formatEventLoopGroupDetail(socks5.workerGroup))
+            .put("inBufferSize", socks5.getInBufferSize())
+            .put("outBufferSize", socks5.getOutBufferSize())
+            .putInst("securityGroup", formatSecurityGroupDetail(socks5.securityGroup))
+            .put("allowNonBackend", socks5.allowNonBackend)
+            .build();
+    }
+
     static JSON.Object formatTcpLb(TcpLB tl) {
+        JSON.Instance listOfCertKey;
+        if (tl.certKeys == null) {
+            listOfCertKey = new SimpleNull();
+        } else {
+            var arr = new ArrayBuilder();
+            for (var ck : tl.certKeys) {
+                arr.add(ck.alias);
+            }
+            listOfCertKey = arr.build();
+        }
         return new ObjectBuilder()
             .put("name", tl.alias)
             .put("address", Utils.l4addrStr(tl.bindAddress))
@@ -341,7 +423,33 @@ class utils {
             .put("workerLoopGroup", tl.workerGroup.alias)
             .put("inBufferSize", tl.getInBufferSize())
             .put("outBufferSize", tl.getOutBufferSize())
+            .putInst("listOfCertKey", listOfCertKey)
             .put("securityGroup", tl.securityGroup.alias)
+            .build();
+    }
+
+    static JSON.Object formatTcpLbDetail(TcpLB tl) {
+        JSON.Instance listOfCertKey;
+        if (tl.certKeys == null) {
+            listOfCertKey = new SimpleNull();
+        } else {
+            var arr = new ArrayBuilder();
+            for (var ck : tl.certKeys) {
+                arr.addInst(formatCertKeyDetail(ck));
+            }
+            listOfCertKey = arr.build();
+        }
+        return new ObjectBuilder()
+            .put("name", tl.alias)
+            .put("address", Utils.l4addrStr(tl.bindAddress))
+            .put("protocol", tl.protocol)
+            .putInst("backend", formatServerGroupsDetail(tl.backends))
+            .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(tl.acceptorGroup))
+            .putInst("workerLoopGroup", formatEventLoopGroupDetail(tl.workerGroup))
+            .put("inBufferSize", tl.getInBufferSize())
+            .put("outBufferSize", tl.getOutBufferSize())
+            .putInst("listOfCertKey", listOfCertKey)
+            .putInst("securityGroup", formatSecurityGroupDetail(tl.securityGroup))
             .build();
     }
 
@@ -349,6 +457,14 @@ class utils {
         return new ObjectBuilder()
             .put("name", secg.alias)
             .put("defaultRule", secg.defaultAllow ? "allow" : "deny")
+            .build();
+    }
+
+    static JSON.Object formatSecurityGroupDetail(SecurityGroup secg) {
+        return new ObjectBuilder()
+            .put("name", secg.alias)
+            .put("defaultRule", secg.defaultAllow ? "allow" : "deny")
+            .putArray("ruleList", arr -> secg.getRules().forEach(r -> arr.addInst(utils.formatSecurityGroupRule(r))))
             .build();
     }
 
@@ -369,6 +485,15 @@ class utils {
             .put("service", sgd.service)
             .put("zone", sgd.zone)
             .put("handledGroup", sgd.handledGroup.alias)
+            .build();
+    }
+
+    static JSON.Object formatSmartGroupDelegateDetail(SmartGroupDelegate sgd) {
+        return new ObjectBuilder()
+            .put("name", sgd.alias)
+            .put("service", sgd.service)
+            .put("zone", sgd.zone)
+            .putInst("handledGroup", formatServerGroupDetail(sgd.handledGroup))
             .build();
     }
 

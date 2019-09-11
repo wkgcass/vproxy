@@ -21,6 +21,7 @@ import vproxy.component.khala.KhalaNode;
 import vproxy.test.cases.TestSSL;
 import vproxy.test.cases.TestSmart;
 import vproxy.util.Logger;
+import vproxy.util.Tuple;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -1903,6 +1904,14 @@ public class CI {
         return n;
     }
 
+    private String randomCertKey() throws Exception {
+        var tup = addCertKeyFiles();
+        String n = randomName("ck");
+        execute(createReq(add, "cert-key", n, "cert", tup.left, "key", tup.right));
+        certKeyNames.add(n);
+        return n;
+    }
+
     private static int factorial(int n) {
         int ret = 1;
         while (n > 1) {
@@ -1932,9 +1941,10 @@ public class CI {
             "backend", randomServerGroups(),
             "acceptorLoopGroup", randomEventLoopGroup(),
             "workerLoopGroup", randomEventLoopGroup(),
+            "listOfCertKey", new String[]{randomCertKey()},
             "securityGroup", randomSecurityGroup());
-        assertEquals(CC(6), postCnt);
-        assertEquals(CC(6) * CC(3), putCnt);
+        assertEquals(CC(7), postCnt);
+        assertEquals(CC(7) * CC(3), putCnt);
     }
 
     @Test
@@ -2006,9 +2016,7 @@ public class CI {
         assertEquals(1 * CC(1), putCnt);
     }
 
-    @Test
-    public void apiV1CertKey() throws Exception {
-        // add cert-key
+    private Tuple<String, String> addCertKeyFiles() throws Exception {
         File tmpCertFile = File.createTempFile("cert", ".pem");
         tmpCertFile.deleteOnExit();
         File tmpKeyFile = File.createTempFile("key", ".pem");
@@ -2023,9 +2031,16 @@ public class CI {
         fos.flush();
         fos.close();
 
+        return new Tuple<>(tmpCertFile.getAbsolutePath(), tmpKeyFile.getAbsolutePath());
+    }
+
+    @Test
+    public void apiV1CertKey() throws Exception {
+        var tup = addCertKeyFiles();
+
         runNoUpdate("/cert-key", Entities.CertKey.class,
-            "certs", new String[]{tmpCertFile.getAbsolutePath()},
-            "key", tmpKeyFile.getAbsolutePath());
+            "certs", new String[]{tup.left},
+            "key", tup.right);
         assertEquals(1, postCnt);
         assertEquals(0, putCnt);
     }
@@ -2045,5 +2060,595 @@ public class CI {
             "nic", TestSmart.loopbackNic());
         assertEquals(2, postCnt);
         assertEquals(0, putCnt);
+    }
+
+    @Test
+    public void apiV1detail() throws Exception {
+        var aelg = randomName("aelg");
+        execute(createReq(add, "event-loop-group", aelg));
+        elgNames.add(aelg);
+        var elg = randomName("elg");
+        execute(createReq(add, "event-loop-group", elg));
+        elgNames.add(elg);
+        var ael0 = randomName("ael0");
+        execute(createReq(add, "event-loop", ael0, "to", "event-loop-group", aelg));
+        var el0 = randomName("el0");
+        var el1 = randomName("el1");
+        execute(createReq(add, "event-loop", el0, "to", "event-loop-group", elg));
+        execute(createReq(add, "event-loop", el1, "to", "event-loop-group", elg));
+        var sgs = randomName("sgs");
+        execute(createReq(add, "server-groups", sgs));
+        sgsNames.add(sgs);
+        var sg0 = randomName("sg0");
+        var sg1 = randomName("sg1");
+        execute(createReq(add, "server-group", sg0, "timeout", "1000", "period", "5000", "up", "2", "down", "3", "method", "wlc", "event-loop-group", elg));
+        execute(createReq(add, "server-group", sg1, "timeout", "2000", "period", "2500", "up", "3", "down", "4", "method", "wrr", "event-loop-group", elg));
+        sgNames.add(sg0);
+        sgNames.add(sg1);
+        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs, "weight", "10"));
+        execute(createReq(add, "server-group", sg1, "to", "server-groups", sgs, "weight", "20"));
+        var svr00 = randomName("svr00");
+        var svr01 = randomName("svr01");
+        execute(createReq(add, "server", svr00, "to", "server-group", sg0, "address", "127.0.0.1:8080", "weight", "10"));
+        execute(createReq(add, "server", svr01, "to", "server-group", sg0, "address", "127.0.0.1:8081", "weight", "10"));
+        var svr10 = randomName("svr10");
+        var svr11 = randomName("svr11");
+        execute(createReq(add, "server", svr10, "to", "server-group", sg1, "address", "127.0.0.1:8082", "weight", "10"));
+        execute(createReq(add, "server", svr11, "to", "server-group", sg1, "address", "127.0.0.1:8083", "weight", "10"));
+        var secg = randomName("secg");
+        execute(createReq(add, "security-group", secg, "default", "deny"));
+        securgNames.add(secg);
+        var secgr0 = randomName("secgr-22");
+        var secgr1 = randomName("secgr-80");
+        execute(createReq(add, "security-group-rule", secgr0, "to", "security-group", secg,
+            "network", "127.0.0.1/32", "protocol", "TCP", "port-range", 22 + "," + 22, "default", "allow"));
+        execute(createReq(add, "security-group-rule", secgr1, "to", "security-group", secg,
+            "network", "127.0.0.1/32", "protocol", "TCP", "port-range", 80 + "," + 80, "default", "allow"));
+        var ck = randomName("ck");
+        var ckTup = addCertKeyFiles();
+        execute(createReq(add, "cert-key", ck, "cert", ckTup.left, "key", ckTup.right));
+        certKeyNames.add(ck);
+        var tl = randomName("tl");
+        execute(createReq(add, "tcp-lb", tl, "address", "0.0.0.0:18080", "server-groups", sgs,
+            "protocol", "http",
+            "acceptor-elg", aelg, "event-loop-group", elg,
+            "in-buffer-size", "32768", "out-buffer-size", "32768",
+            "cert-key", ck,
+            "security-group", secg));
+        tlNames.add(tl);
+        var socks5 = randomName("socks5");
+        execute(createReq(add, "socks5-server", socks5, "address", "0.0.0.0:18081", "server-groups", sgs,
+            "acceptor-elg", aelg, "event-loop-group", elg,
+            "in-buffer-size", "32768", "out-buffer-size", "32768",
+            "security-group", secg,
+            "allow-non-backend"));
+        socks5Names.add(socks5);
+
+        var tlResp = "{\n" +
+            "    \"name\": \"" + tl + "\",\n" +
+            "    \"address\": \"0.0.0.0:18080\",\n" +
+            "    \"protocol\": \"http\",\n" +
+            "    \"backend\": {\n" +
+            "        \"name\": \"" + sgs + "\",\n" +
+            "        \"serverGroupList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg0 + "\",\n" +
+            "                \"weight\": 10,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg0 + "\",\n" +
+            "                    \"timeout\": 1000,\n" +
+            "                    \"period\": 5000,\n" +
+            "                    \"up\": 2,\n" +
+            "                    \"down\": 3,\n" +
+            "                    \"method\": \"wlc\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr00 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8080\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr01 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8081\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg1 + "\",\n" +
+            "                \"weight\": 20,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg1 + "\",\n" +
+            "                    \"timeout\": 2000,\n" +
+            "                    \"period\": 2500,\n" +
+            "                    \"up\": 3,\n" +
+            "                    \"down\": 4,\n" +
+            "                    \"method\": \"wrr\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr10 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8082\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr11 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8083\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    }," +
+            "    \"acceptorLoopGroup\": {\n" +
+            "        \"name\": \"" + aelg + "\",\n" +
+            "        \"eventLoopList\": [ { \"name\": \"" + ael0 + "\" } ]\n" +
+            "    },\n" +
+            "    \"workerLoopGroup\": {\n" +
+            "        \"name\": \"" + elg + "\",\n" +
+            "        \"eventLoopList\": [\n" +
+            "            { \"name\": \"" + el0 + "\" },\n" +
+            "            { \"name\": \"" + el1 + "\" }\n" +
+            "        ]\n" +
+            "    },\n" +
+            "    \"inBufferSize\": 32768,\n" +
+            "    \"outBufferSize\": 32768,\n" +
+            "    \"listOfCertKey\": [ {\n" +
+            "        \"name\": \"" + ck + "\",\n" +
+            "        \"certs\": [ \"" + ckTup.left + "\" ],\n" +
+            "        \"certPemList\": [ \"-----BEGIN CERTIFICATE-----\\nMIIDrDCCApQCCQDO2qFtjzwFWzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC\\nQ04xETAPBgNVBAgMCFpoZWppYW5nMREwDwYDVQQHDAhIYW5nemhvdTEPMA0GA1UE\\nCgwGdnByb3h5MQ8wDQYDVQQLDAZ2cHJveHkxGzAZBgNVBAMMEnZwcm94eS5jYXNz\\naXRlLm5ldDEiMCAGCSqGSIb3DQEJARYTd2tnY2Fzc0Bob3RtYWlsLmNvbTAgFw0x\\nOTA3MTYwODAxNDNaGA8yMTE5MDYyMjA4MDE0M1owgZYxCzAJBgNVBAYTAkNOMREw\\nDwYDVQQIDAhaaGVqaWFuZzERMA8GA1UEBwwISGFuZ3pob3UxDzANBgNVBAoMBnZw\\ncm94eTEPMA0GA1UECwwGdnByb3h5MRswGQYDVQQDDBJ2cHJveHkuY2Fzc2l0ZS5u\\nZXQxIjAgBgkqhkiG9w0BCQEWE3drZ2Nhc3NAaG90bWFpbC5jb20wggEiMA0GCSqG\\nSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCgTHZBQNzCeuTcN4s5Cc7uKg/iLWwobByG\\nrTTVHAYSpUe0ygaHCAWV4nblf0pSW5uPhhxTGEZFJomjt2EKFkSYEJXpT2C3abQw\\nJw8lZM8gfeqeC/9Xng8c2nffcu8Cy0PcNq1O6B9vXiKQ6JtRHnQeGUIGWWW8cMUT\\nH6FSyk4C/nB64F+bjYeG8bJBNeziUFVBZSeOhE7Pjf42HkotqIpuMzBEhnNWlpY3\\npkgbCZaMNkaeCAW63XveDxj2YaFByLAAoAhtLO9mqcX44e7HILg1POL8rIwNy/l8\\nkkoPu1UHyzOS/f6WaddBjZqtjjls4Ph8xD0ZBwfd27TywGZCOaz/AgMBAAEwDQYJ\\nKoZIhvcNAQELBQADggEBAEC+cvEiSrnZQZRQG+vS4VGnpnerllxfUQxn+JU+B529\\nfJWlacY1TlVxkrAN/33m0xoK5KhyN0ML/OPGcCGQbh36QjZGnFREsDn+xMvs8Kfh\\nufW67kDNh0GTJWHseAI/MXzwVUrfOrEHGEhYat4QjVNtrqQVtsR18f+z+k3pfTED\\ne1C8zyKbbjeCNybOuuGOxc2HHuBFZveDpB3sCyUIW2iS1tCBXvI9u2cLo/QsjsAz\\nkkv6/Fh8BOQT3IMHTh31tfdDJuA0lCs9o9Kc66AaZxTYm8SyNh5L1doYHXoptphI\\ngAAa3BEO21XanlNRU1927oxt6mwNp+WeU1xvyoxCWeE=\\n-----END CERTIFICATE-----\" ],\n" +
+            "        \"key\": \"" + ckTup.right + "\",\n" +
+            "        \"keySHA1\": \"5K+BFxVJBzNFmjds1fSab7gyI9k=\"\n" +
+            "    } ],\n" +
+            "    \"securityGroup\": {\n" +
+            "        \"name\": \"" + secg + "\",\n" +
+            "        \"defaultRule\": \"deny\",\n" +
+            "        \"ruleList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + secgr0 + "\",\n" +
+            "                \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "                \"protocol\": \"TCP\",\n" +
+            "                \"serverPortMin\": 22,\n" +
+            "                \"serverPortMax\": 22,\n" +
+            "                \"rule\": \"allow\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + secgr1 + "\",\n" +
+            "                \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "                \"protocol\": \"TCP\",\n" +
+            "                \"serverPortMin\": 80,\n" +
+            "                \"serverPortMax\": 80,\n" +
+            "                \"rule\": \"allow\"\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    }\n" +
+            "}";
+        String pretty;
+        pretty = requestApi(HttpMethod.GET, "/tcp-lb/" + tl + "/detail").pretty();
+        System.out.println("tcp-lb: " + pretty);
+        assertEquals(JSON.parse(tlResp).pretty(), pretty);
+
+        var socks5Resp = "{\n" +
+            "    \"name\": \"" + socks5 + "\",\n" +
+            "    \"address\": \"0.0.0.0:18081\",\n" +
+            "    \"backend\": {\n" +
+            "        \"name\": \"" + sgs + "\",\n" +
+            "        \"serverGroupList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg0 + "\",\n" +
+            "                \"weight\": 10,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg0 + "\",\n" +
+            "                    \"timeout\": 1000,\n" +
+            "                    \"period\": 5000,\n" +
+            "                    \"up\": 2,\n" +
+            "                    \"down\": 3,\n" +
+            "                    \"method\": \"wlc\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr00 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8080\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr01 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8081\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg1 + "\",\n" +
+            "                \"weight\": 20,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg1 + "\",\n" +
+            "                    \"timeout\": 2000,\n" +
+            "                    \"period\": 2500,\n" +
+            "                    \"up\": 3,\n" +
+            "                    \"down\": 4,\n" +
+            "                    \"method\": \"wrr\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr10 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8082\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr11 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8083\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    }," +
+            "    \"acceptorLoopGroup\": {\n" +
+            "        \"name\": \"" + aelg + "\",\n" +
+            "        \"eventLoopList\": [ { \"name\": \"" + ael0 + "\" } ]\n" +
+            "    },\n" +
+            "    \"workerLoopGroup\": {\n" +
+            "        \"name\": \"" + elg + "\",\n" +
+            "        \"eventLoopList\": [\n" +
+            "            { \"name\": \"" + el0 + "\" },\n" +
+            "            { \"name\": \"" + el1 + "\" }\n" +
+            "        ]\n" +
+            "    },\n" +
+            "    \"inBufferSize\": 32768,\n" +
+            "    \"outBufferSize\": 32768,\n" +
+            "    \"securityGroup\": {\n" +
+            "        \"name\": \"" + secg + "\",\n" +
+            "        \"defaultRule\": \"deny\",\n" +
+            "        \"ruleList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + secgr0 + "\",\n" +
+            "                \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "                \"protocol\": \"TCP\",\n" +
+            "                \"serverPortMin\": 22,\n" +
+            "                \"serverPortMax\": 22,\n" +
+            "                \"rule\": \"allow\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + secgr1 + "\",\n" +
+            "                \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "                \"protocol\": \"TCP\",\n" +
+            "                \"serverPortMin\": 80,\n" +
+            "                \"serverPortMax\": 80,\n" +
+            "                \"rule\": \"allow\"\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    },\n" +
+            "    \"allowNonBackend\": true\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/socks5-server/" + socks5 + "/detail").pretty();
+        System.out.println("socks5-server: " + pretty);
+        assertEquals(JSON.parse(socks5Resp).pretty(), pretty);
+
+        var elResp = "{ \"name\": \"" + el0 + "\" }";
+        pretty = requestApi(HttpMethod.GET, "/event-loop-group/" + elg + "/event-loop/" + el0 + "/detail").pretty();
+        System.out.println("event-loop: " + pretty);
+        assertEquals(JSON.parse(elResp).pretty(), pretty);
+
+        var elgResp = "{\n" +
+            "    \"name\": \"" + elg + "\",\n" +
+            "    \"eventLoopList\": [\n" +
+            "        { \"name\": \"" + el0 + "\" },\n" +
+            "        { \"name\": \"" + el1 + "\" }\n" +
+            "    ]\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/event-loop-group/" + elg + "/detail").pretty();
+        System.out.println("event-loop-group: " + pretty);
+        assertEquals(JSON.parse(elgResp).pretty(), pretty);
+
+        var sgInSgsResp = "{\n" +
+            "    \"name\": \"" + sg0 + "\",\n" +
+            "    \"weight\": 10,\n" +
+            "    \"serverGroup\": {\n" +
+            "        \"name\": \"" + sg0 + "\",\n" +
+            "        \"timeout\": 1000,\n" +
+            "        \"period\": 5000,\n" +
+            "        \"up\": 2,\n" +
+            "        \"down\": 3,\n" +
+            "        \"method\": \"wlc\",\n" +
+            "        \"eventLoopGroup\": {\n" +
+            "            \"name\": \"" + elg + "\",\n" +
+            "            \"eventLoopList\": [\n" +
+            "                { \"name\": \"" + el0 + "\" },\n" +
+            "                { \"name\": \"" + el1 + "\" }\n" +
+            "            ]\n" +
+            "        },\n" +
+            "        \"serverList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + svr00 + "\",\n" +
+            "                \"address\": \"127.0.0.1:8080\",\n" +
+            "                \"weight\": 10,\n" +
+            "                \"currentIp\": \"127.0.0.1\",\n" +
+            "                \"status\": \"DOWN\"\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + svr01 + "\",\n" +
+            "                \"address\": \"127.0.0.1:8081\",\n" +
+            "                \"weight\": 10,\n" +
+            "                \"currentIp\": \"127.0.0.1\",\n" +
+            "                \"status\": \"DOWN\"\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    }\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/server-groups/" + sgs + "/server-group/" + sg0 + "/detail").pretty();
+        System.out.println("server-group in server-groups: " + pretty);
+        assertEquals(JSON.parse(sgInSgsResp).pretty(), pretty);
+
+        var sgsResp = "{\n" +
+            "    \"name\": \"" + sgs + "\",\n" +
+            "    \"serverGroupList\": [\n" +
+            "        {\n" +
+            "            \"name\": \"" + sg0 + "\",\n" +
+            "            \"weight\": 10,\n" +
+            "            \"serverGroup\": {\n" +
+            "                \"name\": \"" + sg0 + "\",\n" +
+            "                \"timeout\": 1000,\n" +
+            "                \"period\": 5000,\n" +
+            "                \"up\": 2,\n" +
+            "                \"down\": 3,\n" +
+            "                \"method\": \"wlc\",\n" +
+            "                \"eventLoopGroup\": {\n" +
+            "                    \"name\": \"" + elg + "\",\n" +
+            "                    \"eventLoopList\": [\n" +
+            "                        { \"name\": \"" + el0 + "\" },\n" +
+            "                        { \"name\": \"" + el1 + "\" }\n" +
+            "                    ]\n" +
+            "                },\n" +
+            "                \"serverList\": [\n" +
+            "                    {\n" +
+            "                        \"name\": \"" + svr00 + "\",\n" +
+            "                        \"address\": \"127.0.0.1:8080\",\n" +
+            "                        \"weight\": 10,\n" +
+            "                        \"currentIp\": \"127.0.0.1\",\n" +
+            "                        \"status\": \"DOWN\"\n" +
+            "                    },\n" +
+            "                    {\n" +
+            "                        \"name\": \"" + svr01 + "\",\n" +
+            "                        \"address\": \"127.0.0.1:8081\",\n" +
+            "                        \"weight\": 10,\n" +
+            "                        \"currentIp\": \"127.0.0.1\",\n" +
+            "                        \"status\": \"DOWN\"\n" +
+            "                    }\n" +
+            "                ]\n" +
+            "            }\n" +
+            "        },\n" +
+            "        {\n" +
+            "            \"name\": \"" + sg1 + "\",\n" +
+            "            \"weight\": 20,\n" +
+            "            \"serverGroup\": {\n" +
+            "                \"name\": \"" + sg1 + "\",\n" +
+            "                \"timeout\": 2000,\n" +
+            "                \"period\": 2500,\n" +
+            "                \"up\": 3,\n" +
+            "                \"down\": 4,\n" +
+            "                \"method\": \"wrr\",\n" +
+            "                \"eventLoopGroup\": {\n" +
+            "                    \"name\": \"" + elg + "\",\n" +
+            "                    \"eventLoopList\": [\n" +
+            "                        { \"name\": \"" + el0 + "\" },\n" +
+            "                        { \"name\": \"" + el1 + "\" }\n" +
+            "                    ]\n" +
+            "                },\n" +
+            "                \"serverList\": [\n" +
+            "                    {\n" +
+            "                        \"name\": \"" + svr10 + "\",\n" +
+            "                        \"address\": \"127.0.0.1:8082\",\n" +
+            "                        \"weight\": 10,\n" +
+            "                        \"currentIp\": \"127.0.0.1\",\n" +
+            "                        \"status\": \"DOWN\"\n" +
+            "                    },\n" +
+            "                    {\n" +
+            "                        \"name\": \"" + svr11 + "\",\n" +
+            "                        \"address\": \"127.0.0.1:8083\",\n" +
+            "                        \"weight\": 10,\n" +
+            "                        \"currentIp\": \"127.0.0.1\",\n" +
+            "                        \"status\": \"DOWN\"\n" +
+            "                    }\n" +
+            "                ]\n" +
+            "            }\n" +
+            "        }\n" +
+            "    ]\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/server-groups/" + sgs + "/detail").pretty();
+        System.out.println("server-groups: " + pretty);
+        assertEquals(JSON.parse(sgsResp).pretty(), pretty);
+
+        var serverResp = "{\n" +
+            "    \"name\": \"" + svr00 + "\",\n" +
+            "    \"address\": \"127.0.0.1:8080\",\n" +
+            "    \"weight\": 10,\n" +
+            "    \"currentIp\": \"127.0.0.1\",\n" +
+            "    \"status\": \"DOWN\"\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/server-group/" + sg0 + "/server/" + svr00 + "/detail").pretty();
+        System.out.println("server: " + pretty);
+        assertEquals(JSON.parse(serverResp).pretty(), pretty);
+
+        var sgResp = "{\n" +
+            "    \"name\": \"" + sg0 + "\",\n" +
+            "    \"timeout\": 1000,\n" +
+            "    \"period\": 5000,\n" +
+            "    \"up\": 2,\n" +
+            "    \"down\": 3,\n" +
+            "    \"method\": \"wlc\",\n" +
+            "    \"eventLoopGroup\": {\n" +
+            "        \"name\": \"" + elg + "\",\n" +
+            "        \"eventLoopList\": [\n" +
+            "            { \"name\": \"" + el0 + "\" },\n" +
+            "            { \"name\": \"" + el1 + "\" }\n" +
+            "        ]\n" +
+            "    },\n" +
+            "    \"serverList\": [\n" +
+            "        {\n" +
+            "            \"name\": \"" + svr00 + "\",\n" +
+            "            \"address\": \"127.0.0.1:8080\",\n" +
+            "            \"weight\": 10,\n" +
+            "            \"currentIp\": \"127.0.0.1\",\n" +
+            "            \"status\": \"DOWN\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "            \"name\": \"" + svr01 + "\",\n" +
+            "            \"address\": \"127.0.0.1:8081\",\n" +
+            "            \"weight\": 10,\n" +
+            "            \"currentIp\": \"127.0.0.1\",\n" +
+            "            \"status\": \"DOWN\"\n" +
+            "        }\n" +
+            "    ]\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/server-group/" + sg0 + "/detail").pretty();
+        System.out.println("server-group: " + pretty);
+        assertEquals(JSON.parse(sgResp).pretty(), pretty);
+
+        var secgrResp = "{\n" +
+            "    \"name\": \"" + secgr0 + "\",\n" +
+            "    \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "    \"protocol\": \"TCP\",\n" +
+            "    \"serverPortMin\": 22,\n" +
+            "    \"serverPortMax\": 22,\n" +
+            "    \"rule\": \"allow\"\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/security-group/" + secg + "/security-group-rule/" + secgr0 + "/detail").pretty();
+        System.out.println("security-group-rule: " + pretty);
+        assertEquals(JSON.parse(secgrResp).pretty(), pretty);
+
+        var secgResp = "{\n" +
+            "    \"name\": \"" + secg + "\",\n" +
+            "    \"defaultRule\": \"deny\",\n" +
+            "    \"ruleList\": [\n" +
+            "        {\n" +
+            "            \"name\": \"" + secgr0 + "\",\n" +
+            "            \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "            \"protocol\": \"TCP\",\n" +
+            "            \"serverPortMin\": 22,\n" +
+            "            \"serverPortMax\": 22,\n" +
+            "            \"rule\": \"allow\"\n" +
+            "        },\n" +
+            "        {\n" +
+            "            \"name\": \"" + secgr1 + "\",\n" +
+            "            \"clientNetwork\": \"127.0.0.1/32\",\n" +
+            "            \"protocol\": \"TCP\",\n" +
+            "            \"serverPortMin\": 80,\n" +
+            "            \"serverPortMax\": 80,\n" +
+            "            \"rule\": \"allow\"\n" +
+            "        }\n" +
+            "    ]\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/security-group/" + secg + "/detail").pretty();
+        System.out.println("security-group: " + pretty);
+        assertEquals(JSON.parse(secgResp).pretty(), pretty);
+
+        var sg2 = randomName("sg2");
+        execute(createReq(add, "server-group", sg2, "timeout", "2000", "period", "5000", "up", "2", "down", "3",
+            "event-loop-group", elg, "method", "source"));
+        sgNames.add(sg2);
+        var sgd = randomName("sgd");
+        execute(createReq(add, "smart-group-delegate", sgd,
+            "service", "foo-service",
+            "zone", "bar-zone",
+            "server-group", sg2));
+        sgdNames.add(sgd);
+        var sgdResp = "{\n" +
+            "    \"name\": \"" + sgd + "\",\n" +
+            "    \"service\": \"foo-service\",\n" +
+            "    \"zone\": \"bar-zone\",\n" +
+            "    \"handledGroup\": " + "{\n" +
+            "        \"name\": \"" + sg2 + "\",\n" +
+            "        \"timeout\": 2000,\n" +
+            "        \"period\": 5000,\n" +
+            "        \"up\": 2,\n" +
+            "        \"down\": 3,\n" +
+            "        \"method\": \"source\",\n" +
+            "        \"eventLoopGroup\": {\n" +
+            "            \"name\": \"" + elg + "\",\n" +
+            "            \"eventLoopList\": [\n" +
+            "                { \"name\": \"" + el0 + "\" },\n" +
+            "                { \"name\": \"" + el1 + "\" }\n" +
+            "            ]\n" +
+            "        },\n" +
+            "        \"serverList\": []\n" +
+            "    }" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/smart-group-delegate/" + sgd + "/detail").pretty();
+        System.out.println("smart-group-delegate: " + pretty);
+        assertEquals(JSON.parse(sgdResp).pretty(), pretty);
+
+        var nic = loopbackNic();
+        var ssd = randomName("ssd");
+        execute(createReq(add, "smart-service-delegate", ssd, "service", "bar-service", "zone", "foo-zone",
+            "nic", nic, "ip-type", "v4", "port", "11223"));
+        ssdNames.add(ssd);
+        var ssdResp = "{\n" +
+            "    \"name\": \"" + ssd + "\",\n" +
+            "    \"service\": \"bar-service\",\n" +
+            "    \"zone\": \"foo-zone\",\n" +
+            "    \"nic\": \"" + nic + "\",\n" +
+            "    \"ipType\": \"v4\",\n" +
+            "    \"exposedPort\": 11223\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/smart-service-delegate/" + ssd + "/detail").pretty();
+        System.out.println("smart-service-delegate: " + pretty);
+        assertEquals(JSON.parse(ssdResp).pretty(), pretty);
+
+        var ckResp = "{\n" +
+            "    \"name\": \"" + ck + "\",\n" +
+            "    \"certs\": [ \"" + ckTup.left + "\" ],\n" +
+            "    \"certPemList\": [ \"-----BEGIN CERTIFICATE-----\\nMIIDrDCCApQCCQDO2qFtjzwFWzANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMC\\nQ04xETAPBgNVBAgMCFpoZWppYW5nMREwDwYDVQQHDAhIYW5nemhvdTEPMA0GA1UE\\nCgwGdnByb3h5MQ8wDQYDVQQLDAZ2cHJveHkxGzAZBgNVBAMMEnZwcm94eS5jYXNz\\naXRlLm5ldDEiMCAGCSqGSIb3DQEJARYTd2tnY2Fzc0Bob3RtYWlsLmNvbTAgFw0x\\nOTA3MTYwODAxNDNaGA8yMTE5MDYyMjA4MDE0M1owgZYxCzAJBgNVBAYTAkNOMREw\\nDwYDVQQIDAhaaGVqaWFuZzERMA8GA1UEBwwISGFuZ3pob3UxDzANBgNVBAoMBnZw\\ncm94eTEPMA0GA1UECwwGdnByb3h5MRswGQYDVQQDDBJ2cHJveHkuY2Fzc2l0ZS5u\\nZXQxIjAgBgkqhkiG9w0BCQEWE3drZ2Nhc3NAaG90bWFpbC5jb20wggEiMA0GCSqG\\nSIb3DQEBAQUAA4IBDwAwggEKAoIBAQCgTHZBQNzCeuTcN4s5Cc7uKg/iLWwobByG\\nrTTVHAYSpUe0ygaHCAWV4nblf0pSW5uPhhxTGEZFJomjt2EKFkSYEJXpT2C3abQw\\nJw8lZM8gfeqeC/9Xng8c2nffcu8Cy0PcNq1O6B9vXiKQ6JtRHnQeGUIGWWW8cMUT\\nH6FSyk4C/nB64F+bjYeG8bJBNeziUFVBZSeOhE7Pjf42HkotqIpuMzBEhnNWlpY3\\npkgbCZaMNkaeCAW63XveDxj2YaFByLAAoAhtLO9mqcX44e7HILg1POL8rIwNy/l8\\nkkoPu1UHyzOS/f6WaddBjZqtjjls4Ph8xD0ZBwfd27TywGZCOaz/AgMBAAEwDQYJ\\nKoZIhvcNAQELBQADggEBAEC+cvEiSrnZQZRQG+vS4VGnpnerllxfUQxn+JU+B529\\nfJWlacY1TlVxkrAN/33m0xoK5KhyN0ML/OPGcCGQbh36QjZGnFREsDn+xMvs8Kfh\\nufW67kDNh0GTJWHseAI/MXzwVUrfOrEHGEhYat4QjVNtrqQVtsR18f+z+k3pfTED\\ne1C8zyKbbjeCNybOuuGOxc2HHuBFZveDpB3sCyUIW2iS1tCBXvI9u2cLo/QsjsAz\\nkkv6/Fh8BOQT3IMHTh31tfdDJuA0lCs9o9Kc66AaZxTYm8SyNh5L1doYHXoptphI\\ngAAa3BEO21XanlNRU1927oxt6mwNp+WeU1xvyoxCWeE=\\n-----END CERTIFICATE-----\" ],\n" +
+            "    \"key\": \"" + ckTup.right + "\",\n" +
+            "    \"keySHA1\": \"5K+BFxVJBzNFmjds1fSab7gyI9k=\"\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/cert-key/" + ck + "/detail").pretty();
+        System.out.println("cert-key: " + pretty);
+        assertEquals(JSON.parse(ckResp).pretty(), pretty);
     }
 }
