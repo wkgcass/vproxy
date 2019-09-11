@@ -991,7 +991,8 @@ public class Command {
                                 " zone " + l.zone +
                                 " nic " + l.nic +
                                 " ip-type " + l.ipType +
-                                " port " + l.exposedPort)
+                                " port " + l.exposedPort +
+                                " currently " + (l.isHealthy() ? "UP" : "DOWN"))
                             .collect(Collectors.toList());
                         return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
                     case r:

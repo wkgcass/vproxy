@@ -219,7 +219,7 @@ public class HttpController {
                 .put("ipType", "ip type: v4 or v6")
                 .put("exposedPort", 8080)
                 .build(),
-            "name", "service", "zone", "nic", "exposedPort"));
+            "name", "service", "zone", "nic"));
         server.del(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::deleteSmartServiceDelegate));
         // cert-key
         server.get(moduleBase + "/cert-key/:ck/detail", wrapAsync(this::getCertKeyDetail));
@@ -904,12 +904,15 @@ public class HttpController {
             "add", "smart-service-delegate", body.getString("name"),
             "service", body.getString("service"),
             "zone", body.getString("zone"),
-            "nic", body.getString("nic"),
-            "port", "" + body.getInt("exposedPort")
+            "nic", body.getString("nic")
         ));
         if (body.containsKey("ipType")) {
             options.add("ip-type");
             options.add(body.getString("ipType"));
+        }
+        if (body.containsKey("exposedPort")) {
+            options.add("port");
+            options.add("" + body.getInt("exposedPort"));
         }
         utils.execute(cb, options);
     }

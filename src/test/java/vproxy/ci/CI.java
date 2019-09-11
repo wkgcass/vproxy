@@ -1483,17 +1483,20 @@ public class CI {
     @Test
     public void smartServiceDelegate() throws Exception {
         String ssd = randomName("ssd");
-        execute(createReq(add, "smart-service-delegate", ssd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "12345"));
+        execute(createReq(add, "smart-service-delegate", ssd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771"));
         checkCreate("smart-service-delegate", ssd);
         ssdNames.add(ssd);
 
+        Thread.sleep(100);
+
         var detail = getDetail("smart-service-delegate", ssd);
-        assertEquals(5, detail.size());
+        assertEquals(6, detail.size());
         assertEquals("myservice", detail.get("service"));
         assertEquals("ci", detail.get("zone"));
         assertEquals(TestSmart.loopbackNic(), detail.get("nic"));
         assertEquals("v4", detail.get("ip-type"));
-        assertEquals("12345", detail.get("port"));
+        assertEquals("7771", detail.get("port"));
+        assertEquals("UP", detail.get("currently"));
 
         Thread.sleep(100);
 
@@ -1506,7 +1509,7 @@ public class CI {
         assertEquals("myservice", kn.service);
         assertEquals("ci", kn.zone);
         assertEquals("127.0.0.1", kn.address);
-        assertEquals(12345, kn.port);
+        assertEquals(7771, kn.port);
 
         execute(createReq(remove, "smart-service-delegate", ssd));
         checkRemove("smart-service-delegate", ssd);
@@ -2058,7 +2061,7 @@ public class CI {
     public void apiV1SmartServiceDelegate() throws Exception {
         runNoUpdate("/smart-service-delegate", Entities.SmartServiceDelegate.class,
             "nic", TestSmart.loopbackNic());
-        assertEquals(2, postCnt);
+        assertEquals(CC(2), postCnt);
         assertEquals(0, putCnt);
     }
 
@@ -2634,7 +2637,8 @@ public class CI {
             "    \"zone\": \"foo-zone\",\n" +
             "    \"nic\": \"" + nic + "\",\n" +
             "    \"ipType\": \"v4\",\n" +
-            "    \"exposedPort\": 11223\n" +
+            "    \"exposedPort\": 11223,\n" +
+            "    \"status\": \"DOWN\"\n" +
             "}";
         pretty = requestApi(HttpMethod.GET, "/smart-service-delegate/" + ssd + "/detail").pretty();
         System.out.println("smart-service-delegate: " + pretty);

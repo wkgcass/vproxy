@@ -75,18 +75,26 @@ public class SmartServiceDelegateHandle {
             throw new XException("missing argument " + Param.service.fullname);
         if (!cmd.args.containsKey(Param.zone))
             throw new XException("missing argument " + Param.zone.fullname);
-        if (!cmd.args.containsKey(Param.iptype)) {
+        if (!cmd.args.containsKey(Param.nic))
+            throw new XException("missing argument " + Param.nic.fullname);
+        if (!cmd.args.containsKey(Param.iptype))
             cmd.args.put(Param.iptype, IPType.v4.name());
-        }
-        if (!cmd.args.containsKey(Param.port))
-            throw new XException("missing argument " + Param.port.fullname);
 
         checkNicAndIPType(cmd.args.get(Param.nic), cmd.args.get(Param.iptype));
+        // set the port after nic check is done
+        if (!cmd.args.containsKey(Param.port)) {
+            cmd.args.put(Param.port, "0");
+        }
         String portStr = cmd.args.get(Param.port);
+        int port;
         try {
-            Integer.parseInt(portStr);
+            port = Integer.parseInt(portStr);
         } catch (NumberFormatException e) {
             throw new XException("invalid format for " + Param.port.fullname);
+        }
+        // 0 means randomly choose a port
+        if (port < 0 || port > 65535) {
+            throw new XException("invalid port range");
         }
     }
 

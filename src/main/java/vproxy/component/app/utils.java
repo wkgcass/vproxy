@@ -505,6 +505,7 @@ class utils {
             .put("nic", ssd.nic)
             .put("ipType", ssd.ipType.name())
             .put("exposedPort", ssd.exposedPort)
+            .put("status", ssd.isHealthy() ? "UP" : "DOWN")
             .build();
     }
 }

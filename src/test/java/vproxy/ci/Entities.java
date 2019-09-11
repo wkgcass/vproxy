@@ -150,6 +150,6 @@ public class Entities {
         String zone;
         String nic;
         @Optional IPType ipType;
-        int exposedPort;
+        @Optional int exposedPort;
     }
 }

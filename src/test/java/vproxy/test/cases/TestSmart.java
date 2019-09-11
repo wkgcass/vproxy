@@ -1,5 +1,6 @@
 package vproxy.test.cases;
 
+import io.vertx.core.Vertx;
 import vproxy.component.auto.AutoConfig;
 import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.auto.SmartServiceDelegate;
@@ -75,22 +76,37 @@ public class TestSmart {
 
     @Test
     public void learnBackends() throws Exception {
-        Khala k0 = getKhala("d0", 18080);
-        Khala k1 = getKhala("d1", 18081);
+        Vertx vertx = Vertx.vertx();
+        try {
+            var httpServer = vertx.createHttpServer().requestHandler(req -> req.response().end("hello")).listen(19080);
 
-        SmartGroupDelegate smartGroupDelegate = new SmartGroupDelegate("alb", "s0", "z0", serverGroup1, new AutoConfig(k0));
-        assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
+            Khala k0 = getKhala("d0", 18080);
+            Khala k1 = getKhala("d1", 18081);
 
-        // add service
-        SmartServiceDelegate smartServiceDelegate = new SmartServiceDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, new AutoConfig(k1));
+            SmartGroupDelegate smartGroupDelegate = new SmartGroupDelegate("alb", "s0", "z0", serverGroup1, new AutoConfig(k0));
+            assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
-        Thread.sleep(3000 /*wait long enough*/);
-        // now the smartGroupDelegate should have created an lb named s0, with group named s0, with a svr s0@127.0.0.1:19080
-        assertEquals("have one svr now", 1, serverGroup1.getServerHandles().size());
-        assertEquals("name pattern `$service@$addr:$port`", "s0@127.0.0.1:19080", serverGroup1.getServerHandles().get(0).alias);
+            // add service
+            SmartServiceDelegate smartServiceDelegate = new SmartServiceDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, new AutoConfig(k1));
 
-        smartGroupDelegate.destroy();
-        smartServiceDelegate.destroy();
+            Thread.sleep(3000 /*wait long enough*/);
+            // now the smartGroupDelegate should expose the service
+            assertEquals("have one svr now", 1, serverGroup1.getServerHandles().size());
+            assertEquals("name pattern `$service@$addr:$port`", "s0@127.0.0.1:19080", serverGroup1.getServerHandles().get(0).alias);
+
+            // stop server
+            httpServer.close();
+            System.out.println("sleep for about 10 seconds");
+            Thread.sleep(12_000);
+            System.out.println("awake");
+            // now the smartGroupDelegate should deregister the service
+            assertEquals("have zero svr now", 0, serverGroup1.getServerHandles().size());
+
+            smartGroupDelegate.destroy();
+            smartServiceDelegate.destroy();
+        } finally {
+            vertx.close();
+        }
     }
 
     @Test

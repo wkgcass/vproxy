@@ -1,11 +1,19 @@
 package vproxy.component.auto;
 
+import vproxy.component.check.HealthCheckConfig;
+import vproxy.component.check.HealthCheckHandler;
+import vproxy.component.check.TCPHealthCheckClient;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.khala.KhalaNode;
+import vproxy.connection.BindServer;
 import vproxy.util.IPType;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
+import java.io.IOException;
+import java.net.*;
+import java.util.Enumeration;
 
 public class SmartServiceDelegate {
     public final String alias;
@@ -15,8 +23,80 @@ public class SmartServiceDelegate {
     public final IPType ipType;
     public final int exposedPort;
     public final AutoConfig config;
+    private final TCPHealthCheckClient hcClient;
+    private boolean healthy = false;
 
     private final KhalaNode kNode;
+
+    private static InetAddress getAddressByNicAndIPType(String nicName, IPType ipType) throws Exception {
+        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            if (nic.getName().equals(nicName)) {
+                Enumeration<InetAddress> addrs = nic.getInetAddresses();
+                while (addrs.hasMoreElements()) {
+                    InetAddress addr = addrs.nextElement();
+                    if (ipType == IPType.v4) {
+                        if (addr instanceof Inet4Address) {
+                            return addr;
+                        }
+                    } else {
+                        assert ipType == IPType.v6;
+                        if (addr instanceof Inet6Address) {
+                            return addr;
+                        }
+                    }
+                }
+                throw new Exception("ip" + ipType + " not found in nic " + nicName);
+            }
+        }
+        throw new Exception("ip" + ipType + " not found in nic " + nicName);
+    }
+
+    private static int allocatePort(String nic, IPType ipType) throws Exception {
+        InetAddress l3addr = getAddressByNicAndIPType(nic, ipType);
+        while (true) {
+            int port = (int) ((Math.random() * 20000) + 10000); // 10000 ~ 30000
+            InetSocketAddress l4addr = new InetSocketAddress(l3addr, port);
+            try {
+                BindServer.checkBind(l4addr);
+            } catch (IOException e) {
+                // bind failed, try another port
+                continue;
+            }
+            return port;
+        }
+    }
+
+    private class HcHandler implements HealthCheckHandler {
+        @Override
+        public void up(SocketAddress remote) {
+            // ignore
+        }
+
+        @Override
+        public void down(SocketAddress remote) {
+            // ignore
+        }
+
+        @Override
+        public void upOnce(SocketAddress remote) {
+            if (healthy)
+                return;
+            Logger.alert("health check up for " + alias + ", register " + kNode);
+            healthy = true;
+            config.khala.addLocal(kNode);
+        }
+
+        @Override
+        public void downOnce(SocketAddress remote) {
+            if (!healthy)
+                return;
+            Logger.warn(LogType.KHALA_EVENT, "health check down for " + alias + ", deregister " + kNode);
+            healthy = false;
+            config.khala.removeLocal(kNode);
+        }
+    }
 
     public SmartServiceDelegate(String alias,
                                 String service,
@@ -25,6 +105,10 @@ public class SmartServiceDelegate {
                                 IPType ipType,
                                 int exposedPort,
                                 AutoConfig config) throws Exception {
+        if (exposedPort == 0) {
+            exposedPort = allocatePort(nic, ipType);
+        }
+
         this.alias = alias;
         this.service = service;
         this.zone = zone;
@@ -44,10 +128,22 @@ public class SmartServiceDelegate {
                 }
             }
         }
-        this.config.khala.addLocal(kNode);
+
+        // init hc
+        hcClient = new TCPHealthCheckClient(
+            config.discovery.loop, new InetSocketAddress(address, exposedPort),
+            new HealthCheckConfig(1000, 10_000, 1, 1), true,
+            new HcHandler()
+        );
+        hcClient.start();
+    }
+
+    public boolean isHealthy() {
+        return healthy;
     }
 
     public void destroy() {
         this.config.khala.removeLocal(kNode);
+        hcClient.stop();
     }
 }
