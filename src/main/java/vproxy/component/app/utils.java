@@ -509,4 +509,81 @@ class utils {
             .put("status", snd.isHealthy() ? "UP" : "DOWN")
             .build();
     }
+
+    static JSON.Object all() throws NotFoundException {
+        var ret = new ObjectBuilder();
+        {
+            var arr = new ArrayBuilder();
+            var tlHolder = Application.get().tcpLBHolder;
+            for (var name : tlHolder.names()) {
+                arr.addInst(utils.formatTcpLbDetail(tlHolder.get(name)));
+            }
+            ret.putInst("tcpLbList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var socks5Holder = Application.get().socks5ServerHolder;
+            for (var name : socks5Holder.names()) {
+                arr.addInst(utils.formatSocks5ServerDetail(socks5Holder.get(name)));
+            }
+            ret.putInst("socks5ServerList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var elgHolder = Application.get().eventLoopGroupHolder;
+            for (var name : elgHolder.names()) {
+                arr.addInst(utils.formatEventLoopGroupDetail(elgHolder.get(name)));
+            }
+            ret.putInst("eventLoopGroupList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var sgsHolder = Application.get().serverGroupsHolder;
+            for (var name : sgsHolder.names()) {
+                arr.addInst(utils.formatServerGroupsDetail(sgsHolder.get(name)));
+            }
+            ret.putInst("serverGroupsList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var sgHolder = Application.get().serverGroupHolder;
+            for (var name : sgHolder.names()) {
+                arr.addInst(utils.formatServerGroupDetail(sgHolder.get(name)));
+            }
+            ret.putInst("serverGroupList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var secgHolder = Application.get().securityGroupHolder;
+            for (var name : secgHolder.names()) {
+                arr.addInst(utils.formatSecurityGroupDetail(secgHolder.get(name)));
+            }
+            ret.putInst("securityGroupList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var sgdHolder = Application.get().smartGroupDelegateHolder;
+            for (var name : sgdHolder.names()) {
+                arr.addInst(utils.formatSmartGroupDelegateDetail(sgdHolder.get(name)));
+            }
+            ret.putInst("smartGroupDelegateList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var sndHolder = Application.get().smartNodeDelegateHolder;
+            for (var name : sndHolder.names()) {
+                arr.addInst(utils.formatSmartNodeDelegate(sndHolder.get(name)));
+            }
+            ret.putInst("smartNodeDelegate", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var ckHolder = Application.get().certKeyHolder;
+            for (var name : ckHolder.names()) {
+                arr.addInst(utils.formatCertKeyDetail(ckHolder.get(name)));
+            }
+            ret.putInst("certKeyHolder", arr.build());
+        }
+        return ret.build();
+    }
 }

@@ -46,6 +46,8 @@ public class HttpController {
 
         // json
         server.all(apiBase + "/*", Tool.bodyJsonHandler());
+        // all
+        server.get(moduleBase + "/all", wrapAsync(this::getAll));
         // tcp-lb
         server.get(moduleBase + "/tcp-lb/:tl/detail", wrapAsync(this::getTcpLbDetail));
         server.get(moduleBase + "/tcp-lb/:tl", wrapAsync(this::getTcpLb));
@@ -285,6 +287,10 @@ public class HttpController {
 
     public void stop() {
         server.close();
+    }
+
+    private void getAll(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        cb.succeeded(utils.all());
     }
 
     private void getTcpLbDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
