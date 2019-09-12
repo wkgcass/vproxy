@@ -3,6 +3,7 @@ package vproxy.test.cases;
 import vclient.HttpClient;
 import vclient.HttpResponse;
 import vjson.JSON;
+import vjson.simple.SimpleObject;
 import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.component.check.HealthCheckConfig;
@@ -23,6 +24,7 @@ import vserver.HttpServer;
 
 import java.io.IOException;
 import java.lang.reflect.Field;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
@@ -89,7 +91,7 @@ public class TestKhala {
         assertEquals(0, nodes1.get(d0.localNode).size());
 
         // add khala node
-        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990));
+        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990, new SimpleObject(Collections.emptyMap())));
         Thread.sleep(1000 /*wait long enough*/);
         nodes0 = k0.getNodeToKhalaNodesMap();
         nodes1 = k1.getNodeToKhalaNodesMap();
@@ -101,7 +103,7 @@ public class TestKhala {
         assertEquals("khala nodes will be learned by other nodes", 1, nodes1.get(d0.localNode).size());
 
         // add khala node
-        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991, new SimpleObject(Collections.emptyMap())));
         Thread.sleep(1000 /*wait long enough*/);
         nodes0 = k0.getNodeToKhalaNodesMap();
         nodes1 = k1.getNodeToKhalaNodesMap();
@@ -182,11 +184,11 @@ public class TestKhala {
         assertEquals(0, nodes2.get(d2.localNode).size());
 
         // add three khala nodes
-        KhalaNode kn1 = new KhalaNode("s0", "z0", "127.0.0.1", 9990);
+        KhalaNode kn1 = new KhalaNode("s0", "z0", "127.0.0.1", 9990, new SimpleObject(Collections.emptyMap()));
         k0.addLocal(kn1);
-        KhalaNode kn2 = new KhalaNode("s0", "z0", "127.0.0.2", 9991);
+        KhalaNode kn2 = new KhalaNode("s0", "z0", "127.0.0.2", 9991, new SimpleObject(Collections.emptyMap()));
         k1.addLocal(kn2);
-        KhalaNode kn3 = new KhalaNode("s0", "z0", "127.0.0.3", 9992);
+        KhalaNode kn3 = new KhalaNode("s0", "z0", "127.0.0.3", 9992, new SimpleObject(Collections.emptyMap()));
         k2.addLocal(kn3);
 
         // wait until the data sync
@@ -225,7 +227,7 @@ public class TestKhala {
         assertEquals(1, nodes2.get(d2.localNode).size());
 
         // let's add a new khala node
-        KhalaNode kn1a = new KhalaNode("s0", "z0", "127.0.0.1", 9890);
+        KhalaNode kn1a = new KhalaNode("s0", "z0", "127.0.0.1", 9890, new SimpleObject(Collections.emptyMap()));
         k0.addLocal(kn1a);
         Thread.sleep(1000 /*wait long enough*/);
 
@@ -271,8 +273,8 @@ public class TestKhala {
         ));
         holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
-        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990));
-        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991));
+        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990, new SimpleObject(Collections.emptyMap())));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991, new SimpleObject(Collections.emptyMap())));
 
         // wait for d0 d1 find each other and sync-ed khala
         Thread.sleep(2500);
@@ -298,7 +300,7 @@ public class TestKhala {
         ));
         holder.add(d2);
         Khala k2 = new Khala(d2, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
-        k2.addLocal(new KhalaNode("s0", "z0", "127.0.0.2", 9992));
+        k2.addLocal(new KhalaNode("s0", "z0", "127.0.0.2", 9992, new SimpleObject(Collections.emptyMap())));
 
         Thread.sleep(2500); // wait for sync
         nodes0 = k0.getNodeToKhalaNodesMap();
@@ -369,8 +371,8 @@ public class TestKhala {
         ));
         holder.add(d1);
         Khala k1 = new Khala(d1, new KhalaConfig(Integer.MAX_VALUE /*disable the periodic sync for test*/));
-        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990));
-        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991));
+        k0.addLocal(new KhalaNode("s0", "z0", "127.0.0.0", 9990, new SimpleObject(Collections.emptyMap())));
+        k1.addLocal(new KhalaNode("s0", "z0", "127.0.0.1", 9991, new SimpleObject(Collections.emptyMap())));
 
         Thread.sleep(2500); // wait for sync
 

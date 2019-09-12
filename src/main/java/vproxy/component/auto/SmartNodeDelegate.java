@@ -1,5 +1,6 @@
 package vproxy.component.auto;
 
+import vjson.util.ObjectBuilder;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.check.HealthCheckHandler;
 import vproxy.component.check.TCPHealthCheckClient;
@@ -22,6 +23,7 @@ public class SmartNodeDelegate {
     public final String nic;
     public final IPType ipType;
     public final int exposedPort;
+    public final int weight;
     public final AutoConfig config;
     private final TCPHealthCheckClient hcClient;
     private boolean healthy = false;
@@ -104,6 +106,7 @@ public class SmartNodeDelegate {
                              String nic,
                              IPType ipType,
                              int exposedPort,
+                             int weight,
                              AutoConfig config) throws Exception {
         if (exposedPort == 0) {
             exposedPort = allocatePort(nic, ipType);
@@ -115,11 +118,13 @@ public class SmartNodeDelegate {
         this.nic = nic;
         this.ipType = ipType;
         this.exposedPort = exposedPort;
+        this.weight = weight;
         this.config = config;
 
         InetAddress address = Utils.getInetAddressFromNic(nic, ipType);
 
-        kNode = new KhalaNode(service, zone, Utils.ipStr(address.getAddress()), exposedPort);
+        kNode = new KhalaNode(service, zone, Utils.ipStr(address.getAddress()), exposedPort,
+            new ObjectBuilder().put("weight", weight).build());
         var localKNodes = config.khala.getNodeToKhalaNodesMap().get(config.discovery.localNode);
         if (localKNodes != null) {
             for (var kn : localKNodes) {

@@ -151,5 +151,6 @@ public class Entities {
         String nic;
         @Optional IPType ipType;
         @Optional int exposedPort;
+        @Optional int weight;
     }
 }

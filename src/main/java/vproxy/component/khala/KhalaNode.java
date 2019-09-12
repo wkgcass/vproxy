@@ -1,5 +1,7 @@
 package vproxy.component.khala;
 
+import vjson.JSON;
+
 import java.util.Objects;
 
 public class KhalaNode implements Comparable<KhalaNode> {
@@ -8,11 +10,15 @@ public class KhalaNode implements Comparable<KhalaNode> {
     public final String address;
     public final int port;
 
-    public KhalaNode(String service, String zone, String address, int port) {
+    // this field will NOT be checked when doing equals or hashCode
+    public final JSON.Object meta;
+
+    public KhalaNode(String service, String zone, String address, int port, JSON.Object meta) {
         this.service = service;
         this.zone = zone;
         this.address = address;
         this.port = port;
+        this.meta = meta;
     }
 
     @Override
@@ -24,11 +30,13 @@ public class KhalaNode implements Comparable<KhalaNode> {
             Objects.equals(service, khalaNode.service) &&
             Objects.equals(zone, khalaNode.zone) &&
             Objects.equals(address, khalaNode.address);
+        // should NOT check `meta` field
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(service, zone, address, port);
+        // should NOT check `meta` field
     }
 
     @Override
@@ -38,6 +46,7 @@ public class KhalaNode implements Comparable<KhalaNode> {
             ", zone='" + zone + '\'' +
             ", address='" + address + '\'' +
             ", port=" + port +
+            ", meta=" + meta.stringify() +
             '}';
     }
 
@@ -48,5 +57,6 @@ public class KhalaNode implements Comparable<KhalaNode> {
         if (!this.address.equals(that.address)) return this.address.compareTo(that.address);
         if (this.port != that.port) return this.port - that.port;
         return 0;
+        // should NOT check `meta` field
     }
 }

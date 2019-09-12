@@ -1184,7 +1184,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.zone, "exposed zone name"),
                         new ResActParamMan(ParamMan.nic, "nic name"),
                         new ResActParamMan(ParamMan.iptype, "exposed ip type, v4 or v6", "v4"),
-                        new ResActParamMan(ParamMan.port, "exposed port")
+                        new ResActParamMan(ParamMan.port, "exposed port"),
+                        new ResActParamMan(ParamMan.weight, "weight of the node", "10")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1205,7 +1206,7 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "list-detail smart-node-delegate",
-                            "1) \"snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080\""
+                            "1) \"snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080 weight 10\""
                         )
                     )),
                 new ResActMan(ActMan.remove, "remove the smart-node-delegate binding",

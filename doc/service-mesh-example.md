@@ -48,16 +48,19 @@ The client requests `Frontend`. The `Frontend` will fetch data from `Service (A 
 
 ```
 curl localhost:8080/service-b
-{"service":"b","host":"8fb9da85c979","port":17729}
+{"service":"b","host":"8fb9da85c979","port":17729,"weight":10}
 
 curl localhost:8080/service-a
-{"service":"a","host":"74b454845559","port":28168}
+{"service":"a","host":"74b454845559","port":28168,"weight":15}
 
 curl localhost:8080/service-a
-{"service":"a","host":"55d019262156","port":29315}
+{"service":"a","host":"55d019262156","port":29315,"weight":10}
 ```
 
-The `service` field is service name, the `host` field is the container id, and the `port` field is the listening port allocated by the sidecar.
+* the `service` field is the service name
+* the `host` field is the container id
+* the `port` field is the listening port allocated by the sidecar
+* the `weight` field is the weight of the node
 
 When the service A and B launches, each service registers itself on local sidecar, and the frontend uses socks5 (provided by sidecar) to proxy the netflow.  
 Details can be found in example code.

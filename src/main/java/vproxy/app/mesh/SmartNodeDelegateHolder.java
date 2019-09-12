@@ -17,11 +17,11 @@ public class SmartNodeDelegateHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    public void add(String alias, String service, String zone, String nic, IPType ipType, int exposedPort) throws Exception {
+    public void add(String alias, String service, String zone, String nic, IPType ipType, int exposedPort, int weight) throws Exception {
         if (map.containsKey(alias))
             throw new AlreadyExistException("smart-node-delegate", alias);
         SmartNodeDelegate smartNodeDelegate = new SmartNodeDelegate(
-            alias, service, zone, nic, ipType, exposedPort, DiscoveryConfigLoader.getInstance().getAutoConfig()
+            alias, service, zone, nic, ipType, exposedPort, weight, DiscoveryConfigLoader.getInstance().getAutoConfig()
         );
         map.put(alias, smartNodeDelegate);
     }

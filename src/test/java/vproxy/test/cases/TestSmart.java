@@ -87,12 +87,13 @@ public class TestSmart {
             assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
             // add service
-            SmartNodeDelegate smartNodeDelegate = new SmartNodeDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, new AutoConfig(k1));
+            SmartNodeDelegate smartNodeDelegate = new SmartNodeDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, 123, new AutoConfig(k1));
 
             Thread.sleep(3000 /*wait long enough*/);
             // now the smartGroupDelegate should expose the service
             assertEquals("have one svr now", 1, serverGroup1.getServerHandles().size());
             assertEquals("name pattern `$service@$addr:$port`", "s0@127.0.0.1:19080", serverGroup1.getServerHandles().get(0).alias);
+            assertEquals("weight is learned", 123, serverGroup1.getServerHandles().get(0).getWeight());
 
             // stop server
             httpServer.close();
@@ -117,9 +118,9 @@ public class TestSmart {
         SmartGroupDelegate smartGroupDelegate = new SmartGroupDelegate("alb", "s0", "z0", serverGroup1, new AutoConfig(k0));
 
         // same zone different service
-        SmartNodeDelegate smartNodeDelegate0 = new SmartNodeDelegate("myservice0", "sx", "z0", loopbackNic(), IPType.v4, 12345, new AutoConfig(k1));
+        SmartNodeDelegate smartNodeDelegate0 = new SmartNodeDelegate("myservice0", "sx", "z0", loopbackNic(), IPType.v4, 12345, 10, new AutoConfig(k1));
         // same service different zone
-        SmartNodeDelegate smartNodeDelegate1 = new SmartNodeDelegate("myservice1", "s0", "zx", loopbackNic(), IPType.v4, 12346, new AutoConfig(k1));
+        SmartNodeDelegate smartNodeDelegate1 = new SmartNodeDelegate("myservice1", "s0", "zx", loopbackNic(), IPType.v4, 12346, 10, new AutoConfig(k1));
 
         Thread.sleep(3000 /*wait long enough*/);
 

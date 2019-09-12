@@ -13,6 +13,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
 import vjson.JSON;
+import vjson.simple.SimpleObject;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import org.junit.*;
@@ -1460,7 +1461,7 @@ public class CI {
         assertEquals(sg0, detail.get("server-group"));
 
         var khala = DiscoveryConfigLoader.getInstance().getAutoConfig().khala;
-        var kn = new KhalaNode("myservice", "ci", "127.0.0.1", 12345);
+        var kn = new KhalaNode("myservice", "ci", "127.0.0.1", 12345, new SimpleObject(Collections.emptyMap()));
         khala.addLocal(kn);
 
         Thread.sleep(100);
@@ -1483,19 +1484,20 @@ public class CI {
     @Test
     public void smartNodeDelegate() throws Exception {
         String snd = randomName("snd");
-        execute(createReq(add, "smart-node-delegate", snd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771"));
+        execute(createReq(add, "smart-node-delegate", snd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771", "weight", "123"));
         checkCreate("smart-node-delegate", snd);
         sndNames.add(snd);
 
         Thread.sleep(100);
 
         var detail = getDetail("smart-node-delegate", snd);
-        assertEquals(6, detail.size());
+        assertEquals(7, detail.size());
         assertEquals("myservice", detail.get("service"));
         assertEquals("ci", detail.get("zone"));
         assertEquals(TestSmart.loopbackNic(), detail.get("nic"));
         assertEquals("v4", detail.get("ip-type"));
         assertEquals("7771", detail.get("port"));
+        assertEquals("123", detail.get("weight"));
         assertEquals("UP", detail.get("currently"));
 
         Thread.sleep(100);
@@ -2061,7 +2063,7 @@ public class CI {
     public void apiV1SmartNodeDelegate() throws Exception {
         runNoUpdate("/smart-node-delegate", Entities.SmartNodeDelegate.class,
             "nic", TestSmart.loopbackNic());
-        assertEquals(CC(2), postCnt);
+        assertEquals(CC(3), postCnt);
         assertEquals(0, putCnt);
     }
 
@@ -2638,6 +2640,7 @@ public class CI {
             "    \"nic\": \"" + nic + "\",\n" +
             "    \"ipType\": \"v4\",\n" +
             "    \"exposedPort\": 11223,\n" +
+            "    \"weight\": 10," +
             "    \"status\": \"DOWN\"\n" +
             "}";
         pretty = requestApi(HttpMethod.GET, "/smart-node-delegate/" + snd + "/detail").pretty();

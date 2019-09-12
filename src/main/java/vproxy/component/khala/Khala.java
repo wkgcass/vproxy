@@ -653,6 +653,7 @@ public class Khala {
                 .put("zone", kn.zone)
                 .put("address", kn.address)
                 .put("port", kn.port)
+                .putInst("meta", kn.meta)
             )))
             .build();
     }
@@ -806,6 +807,7 @@ public class Khala {
                 .put("zone", kn.zone)
                 .put("address", kn.address)
                 .put("port", kn.port)
+                .putInst("meta", kn.meta)
             )
             .build();
         HttpClient client = new Http1ClientImpl(new InetSocketAddress(remoteNode.inetAddress, remoteNode.tcpPort), discovery.loop, 3000);

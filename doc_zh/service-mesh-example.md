@@ -48,16 +48,19 @@ client---->|   Frontend   |        |                                      +-----
 
 ```
 curl localhost:8080/service-b
-{"service":"b","host":"8fb9da85c979","port":17729}
+{"service":"b","host":"8fb9da85c979","port":17729,"weight":10}
 
 curl localhost:8080/service-a
-{"service":"a","host":"74b454845559","port":28168}
+{"service":"a","host":"74b454845559","port":28168,"weight":15}
 
 curl localhost:8080/service-a
-{"service":"a","host":"55d019262156","port":29315}
+{"service":"a","host":"55d019262156","port":29315,"weight":10}
 ```
 
-其中，`service`指的是服务名，`host`内容是容器id，`port`是由sidecar分配的本地监听端口。
+* `service`指的是服务名
+* `host`内容是容器id
+* `port`是由sidecar分配的本地监听端口
+* `weight`是节点的权重
 
 当A服务和B服务启动时，它们分别向各自的sidecar注册服务。前端服务使用sidecar提供的socks5功能来代理网络流量。  
 更多细节可见例子代码。

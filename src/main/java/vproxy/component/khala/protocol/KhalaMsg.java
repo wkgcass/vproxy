@@ -23,16 +23,18 @@ public class KhalaMsg {
         if (!o.containsKey("service")
             || !o.containsKey("zone")
             || !o.containsKey("address")
-            || !o.containsKey("port")) {
+            || !o.containsKey("port")
+            || !o.containsKey("meta")) {
             throw new XException("invalid message, missing khalaNode keys");
         }
         if (!(o.get("service") instanceof JSON.String)
             || !(o.get("zone") instanceof JSON.String)
             || !(o.get("address") instanceof JSON.String)
-            || !(o.get("port") instanceof JSON.Integer)) {
+            || !(o.get("port") instanceof JSON.Integer)
+            || !(o.get("meta") instanceof JSON.Object)) {
             throw new XException("invalid message, wrong khalaNode value type");
         }
-        return new KhalaNode(o.getString("service"), o.getString("zone"), o.getString("address"), o.getInt("port"));
+        return new KhalaNode(o.getString("service"), o.getString("zone"), o.getString("address"), o.getInt("port"), o.getObject("meta"));
     }
 
     private static Node getNode(JSON.Object o) throws XException {

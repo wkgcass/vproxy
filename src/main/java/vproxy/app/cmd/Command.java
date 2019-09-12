@@ -992,6 +992,7 @@ public class Command {
                                 " nic " + l.nic +
                                 " ip-type " + l.ipType +
                                 " port " + l.exposedPort +
+                                " weight " + l.weight +
                                 " currently " + (l.isHealthy() ? "UP" : "DOWN"))
                             .collect(Collectors.toList());
                         return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));

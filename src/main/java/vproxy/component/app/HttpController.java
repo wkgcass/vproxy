@@ -218,6 +218,7 @@ public class HttpController {
                 .put("nic", "nic name")
                 .put("ipType", "ip type: v4 or v6")
                 .put("exposedPort", 8080)
+                .put("weight", 10)
                 .build(),
             "name", "service", "zone", "nic"));
         server.del(moduleBase + "/smart-node-delegate/:snd", wrapAsync(this::deleteSmartNodeDelegate));
@@ -913,6 +914,10 @@ public class HttpController {
         if (body.containsKey("exposedPort")) {
             options.add("port");
             options.add("" + body.getInt("exposedPort"));
+        }
+        if (body.containsKey("weight")) {
+            options.add("weight");
+            options.add("" + body.getInt("weight"));
         }
         utils.execute(cb, options);
     }

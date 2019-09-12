@@ -7,6 +7,7 @@ import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.ServiceHandle;
+import vproxy.app.cmd.handle.param.WeightHandle;
 import vproxy.app.cmd.handle.param.ZoneHandle;
 import vproxy.app.mesh.SmartNodeDelegateHolder;
 import vproxy.component.auto.SmartNodeDelegate;
@@ -67,7 +68,7 @@ public class SmartNodeDelegateHandle {
         }
     }
 
-    public static void checkCreate(Command cmd) throws XException {
+    public static void checkCreate(Command cmd) throws Exception {
         if (!Config.discoveryConfigProvided) {
             throw new XException("discovery config not provided, so the smart-node-delegate cannot be created");
         }
@@ -79,6 +80,7 @@ public class SmartNodeDelegateHandle {
             throw new XException("missing argument " + Param.nic.fullname);
         if (!cmd.args.containsKey(Param.iptype))
             cmd.args.put(Param.iptype, IPType.v4.name());
+        WeightHandle.check(cmd);
 
         checkNicAndIPType(cmd.args.get(Param.nic), cmd.args.get(Param.iptype));
         // set the port after nic check is done
@@ -128,7 +130,8 @@ public class SmartNodeDelegateHandle {
         String nic = cmd.args.get(Param.nic);
         IPType ipType = IPType.valueOf(cmd.args.get(Param.iptype));
         int port = Integer.parseInt(cmd.args.get(Param.port));
+        int weight = WeightHandle.get(cmd);
 
-        Application.get().smartNodeDelegateHolder.add(alias, service, zone, nic, ipType, port);
+        Application.get().smartNodeDelegateHolder.add(alias, service, zone, nic, ipType, port, weight);
     }
 }

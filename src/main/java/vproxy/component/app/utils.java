@@ -505,6 +505,7 @@ class utils {
             .put("nic", snd.nic)
             .put("ipType", snd.ipType.name())
             .put("exposedPort", snd.exposedPort)
+            .put("weight", snd.weight)
             .put("status", snd.isHealthy() ? "UP" : "DOWN")
             .build();
     }
