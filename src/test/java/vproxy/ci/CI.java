@@ -234,7 +234,7 @@ public class CI {
     private List<String> sgNames = new ArrayList<>();
     private List<String> securgNames = new ArrayList<>();
     private List<String> sgdNames = new ArrayList<>();
-    private List<String> ssdNames = new ArrayList<>();
+    private List<String> sndNames = new ArrayList<>();
     private List<String> certKeyNames = new ArrayList<>();
 
     private String elg0;
@@ -283,10 +283,10 @@ public class CI {
             execute(createReq(remove, "smart-group-delegate", slg));
             checkRemove("smart-group-delegate", slg);
         }
-        // remove smart-service-delegate
-        for (String ssd : ssdNames) {
-            execute(createReq(remove, "smart-service-delegate", ssd));
-            checkRemove("smart-service-delegate", ssd);
+        // remove smart-node-delegate
+        for (String snd : sndNames) {
+            execute(createReq(remove, "smart-node-delegate", snd));
+            checkRemove("smart-node-delegate", snd);
         }
         // remove tl
         for (String tl : tlNames) {
@@ -1481,15 +1481,15 @@ public class CI {
     }
 
     @Test
-    public void smartServiceDelegate() throws Exception {
-        String ssd = randomName("ssd");
-        execute(createReq(add, "smart-service-delegate", ssd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771"));
-        checkCreate("smart-service-delegate", ssd);
-        ssdNames.add(ssd);
+    public void smartNodeDelegate() throws Exception {
+        String snd = randomName("snd");
+        execute(createReq(add, "smart-node-delegate", snd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771"));
+        checkCreate("smart-node-delegate", snd);
+        sndNames.add(snd);
 
         Thread.sleep(100);
 
-        var detail = getDetail("smart-service-delegate", ssd);
+        var detail = getDetail("smart-node-delegate", snd);
         assertEquals(6, detail.size());
         assertEquals("myservice", detail.get("service"));
         assertEquals("ci", detail.get("zone"));
@@ -1511,9 +1511,9 @@ public class CI {
         assertEquals("127.0.0.1", kn.address);
         assertEquals(7771, kn.port);
 
-        execute(createReq(remove, "smart-service-delegate", ssd));
-        checkRemove("smart-service-delegate", ssd);
-        ssdNames.remove(ssd);
+        execute(createReq(remove, "smart-node-delegate", snd));
+        checkRemove("smart-node-delegate", snd);
+        sndNames.remove(snd);
 
         Thread.sleep(100);
 
@@ -2058,8 +2058,8 @@ public class CI {
     }
 
     @Test
-    public void apiV1SmartServiceDelegate() throws Exception {
-        runNoUpdate("/smart-service-delegate", Entities.SmartServiceDelegate.class,
+    public void apiV1SmartNodeDelegate() throws Exception {
+        runNoUpdate("/smart-node-delegate", Entities.SmartNodeDelegate.class,
             "nic", TestSmart.loopbackNic());
         assertEquals(CC(2), postCnt);
         assertEquals(0, putCnt);
@@ -2627,12 +2627,12 @@ public class CI {
         assertEquals(JSON.parse(sgdResp).pretty(), pretty);
 
         var nic = loopbackNic();
-        var ssd = randomName("ssd");
-        execute(createReq(add, "smart-service-delegate", ssd, "service", "bar-service", "zone", "foo-zone",
+        var snd = randomName("snd");
+        execute(createReq(add, "smart-node-delegate", snd, "service", "bar-service", "zone", "foo-zone",
             "nic", nic, "ip-type", "v4", "port", "11223"));
-        ssdNames.add(ssd);
-        var ssdResp = "{\n" +
-            "    \"name\": \"" + ssd + "\",\n" +
+        sndNames.add(snd);
+        var sndResp = "{\n" +
+            "    \"name\": \"" + snd + "\",\n" +
             "    \"service\": \"bar-service\",\n" +
             "    \"zone\": \"foo-zone\",\n" +
             "    \"nic\": \"" + nic + "\",\n" +
@@ -2640,9 +2640,9 @@ public class CI {
             "    \"exposedPort\": 11223,\n" +
             "    \"status\": \"DOWN\"\n" +
             "}";
-        pretty = requestApi(HttpMethod.GET, "/smart-service-delegate/" + ssd + "/detail").pretty();
-        System.out.println("smart-service-delegate: " + pretty);
-        assertEquals(JSON.parse(ssdResp).pretty(), pretty);
+        pretty = requestApi(HttpMethod.GET, "/smart-node-delegate/" + snd + "/detail").pretty();
+        System.out.println("smart-node-delegate: " + pretty);
+        assertEquals(JSON.parse(sndResp).pretty(), pretty);
 
         var ckResp = "{\n" +
             "    \"name\": \"" + ck + "\",\n" +

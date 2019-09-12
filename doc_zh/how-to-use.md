@@ -158,14 +158,14 @@ java vproxy.app.Main discoveryConfig $path_to_config
 如果指定了discovery配置文件，vproxy提供额外两种配置模块。
 
 * smart-group-delegate: 监控节点变化，并更新托管的server-group资源
-* smart-service-delegate: 向discovery网络中注册一个服务，并通知其他节点
+* smart-node-delegate: 向discovery网络中注册一个服务，并通知其他节点
 
 用户app可以用http客户端来操作vproxy配置
 
 例如：你可以使用http请求注册或者移除一个服务：
 
 ```
-POST /api/v1/module/smart-service-delegate
+POST /api/v1/module/smart-node-delegate
 {
   "name": "my-test-service",
   "service": "my-service,
@@ -175,17 +175,18 @@ POST /api/v1/module/smart-service-delegate
 }
 成功时返回204
 
-DELETE /api/v1/module/smart-service-delegate/my-test-service
+DELETE /api/v1/module/smart-node-delegate/my-test-service
 成功时返回204
 ```
 
 你也可以检查注册在当前vproxy实例上的服务列表：
 
 ```
-GET /api/v1/module/smart-service-delegate
+GET /api/v1/module/smart-node-delegate
 ```
 
-关于本节内容，可以参考[service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。
+关于本节内容，可以参考[service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。  
+此外，例子中还提供了一个帮助你注册节点的工具类。
 
 ## 6. 例子和解释
 

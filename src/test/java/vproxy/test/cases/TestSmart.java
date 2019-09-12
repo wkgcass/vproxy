@@ -3,7 +3,7 @@ package vproxy.test.cases;
 import io.vertx.core.Vertx;
 import vproxy.component.auto.AutoConfig;
 import vproxy.component.auto.SmartGroupDelegate;
-import vproxy.component.auto.SmartServiceDelegate;
+import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.khala.Khala;
@@ -87,7 +87,7 @@ public class TestSmart {
             assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
             // add service
-            SmartServiceDelegate smartServiceDelegate = new SmartServiceDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, new AutoConfig(k1));
+            SmartNodeDelegate smartNodeDelegate = new SmartNodeDelegate("myservice0", "s0", "z0", loopbackNic(), IPType.v4, 19080, new AutoConfig(k1));
 
             Thread.sleep(3000 /*wait long enough*/);
             // now the smartGroupDelegate should expose the service
@@ -103,7 +103,7 @@ public class TestSmart {
             assertEquals("have zero svr now", 0, serverGroup1.getServerHandles().size());
 
             smartGroupDelegate.destroy();
-            smartServiceDelegate.destroy();
+            smartNodeDelegate.destroy();
         } finally {
             vertx.close();
         }
@@ -117,16 +117,16 @@ public class TestSmart {
         SmartGroupDelegate smartGroupDelegate = new SmartGroupDelegate("alb", "s0", "z0", serverGroup1, new AutoConfig(k0));
 
         // same zone different service
-        SmartServiceDelegate smartServiceDelegate0 = new SmartServiceDelegate("myservice0", "sx", "z0", loopbackNic(), IPType.v4, 12345, new AutoConfig(k1));
+        SmartNodeDelegate smartNodeDelegate0 = new SmartNodeDelegate("myservice0", "sx", "z0", loopbackNic(), IPType.v4, 12345, new AutoConfig(k1));
         // same service different zone
-        SmartServiceDelegate smartServiceDelegate1 = new SmartServiceDelegate("myservice1", "s0", "zx", loopbackNic(), IPType.v4, 12346, new AutoConfig(k1));
+        SmartNodeDelegate smartNodeDelegate1 = new SmartNodeDelegate("myservice1", "s0", "zx", loopbackNic(), IPType.v4, 12346, new AutoConfig(k1));
 
         Thread.sleep(3000 /*wait long enough*/);
 
         assertEquals("have no svr", 0, serverGroup1.getServerHandles().size());
 
         smartGroupDelegate.destroy();
-        smartServiceDelegate0.destroy();
-        smartServiceDelegate1.destroy();
+        smartNodeDelegate0.destroy();
+        smartNodeDelegate1.destroy();
     }
 }

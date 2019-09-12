@@ -52,7 +52,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ cert-key (ck)
 |
 +---+ smart-group-delegate   /* only available when discovery config is specified */
-+---+ smart-service-delegate /* only available when discovery config is specified */
++---+ smart-node-delegate /* only available when discovery config is specified */
 
    bind-server (bs) --+
   connection (conn)   +-- /* channel */
@@ -895,49 +895,49 @@ remove smart-group-delegate sgd0
 "OK"
 ```
 
-## Resource: smart-service-delegate
+## Resource: smart-node-delegate
 
-A delegate for a service registered to the vproxy discovery network.
+A delegate for a node registered to the vproxy discovery network.
 
 #### add
 
-Create a new smart-service-delegate.
+Create a new smart-node-delegate.
 
-* service: the service watched by the delegate
-* zone: the zone watched by the delegate
-* nic: which nic the service listens on
-* port: which port the service listens on
-* ip-type: *optional* which ip type the service listens on, enum: v4 or v6, default v4
+* service: the service handled by the delegate
+* zone: the zone handled by the delegate
+* nic: which nic the node listens on
+* port: which port the node listens on
+* ip-type: *optional* which ip type the node listens on, enum: v4 or v6, default v4
 
 ```
-add smart-service-delegate ssd0 service myservice zone z0 nic eth0 port 8080
+add smart-node-delegate snd0 service myservice zone z0 nic eth0 port 8080
 "OK"
 ```
 
 #### list
 
-Get names of smart-service-delegate.
+Get names of smart-node-delegate.
 
 ```
-list smart-group-delegate
-1) "ssd0"
+list smart-node-delegate
+1) "snd0"
 ```
 
 #### list-detail
 
-Get detailed info about smart-service-delegate bindings.
+Get detailed info about smart-node-delegate bindings.
 
 ```
-list-detail smart-group-delegate
-1) "ssd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080"
+list-detail smart-node-delegate
+1) "snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080"
 ```
 
 #### remove
 
-Remove the smart-service-delegate binding.
+Remove the smart-node-delegate binding.
 
 ```
-remove smart-service-delegate ssd0
+remove smart-node-delegate snd0
 "OK"
 ```
 

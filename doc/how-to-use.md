@@ -159,14 +159,14 @@ When discovery config is specified, the vproxy instance will try to search or in
 There are two additional modules provided by vproxy if discovery config is available.
 
 * smart-group-delegate: watches the discovery network for node changes, and update the handled server-group resource.
-* smart-service-delegate: register a service into the discovery network for others to know.
+* smart-node-delegate: register a node into the discovery network for others to know.
 
 The user application may use an http client to manipulate the vproxy configuration.
 
-For example: you can register/deregister a service using the http request to http-controller:
+For example: you can register/deregister a node using the http request to http-controller:
 
 ```
-POST /api/v1/module/smart-service-delegate
+POST /api/v1/module/smart-node-delegate
 {
   "name": "my-test-service",
   "service": "my-service,
@@ -176,17 +176,18 @@ POST /api/v1/module/smart-service-delegate
 }
 respond 204 for success
 
-DELETE /api/v1/module/smart-service-delegate/my-test-service
+DELETE /api/v1/module/smart-node-delegate/my-test-service
 respond 204 for success
 ```
 
 Or you may check the service list registered on the vproxy instance:
 
 ```
-GET /api/v1/module/smart-service-delegate
+GET /api/v1/module/smart-node-delegate
 ```
 
-You may refer to example code in [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md).
+You may refer to example code in [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md).  
+A client helps you register nodes is also provided in the example.
 
 ## 6. Example and Explanation
 

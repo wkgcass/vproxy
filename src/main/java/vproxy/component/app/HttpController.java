@@ -207,12 +207,12 @@ public class HttpController {
                 .build(),
             "name", "service", "zone", "handledGroup"));
         server.del(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::deleteSmartGroupDelegate));
-        // smart-service-delegate
-        server.get(moduleBase + "/smart-service-delegate/:ssd/detail", wrapAsync(this::getSmartServiceDelegate));
-        server.get(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::getSmartServiceDelegate));
-        server.get(moduleBase + "/smart-service-delegate", wrapAsync(this::listSmartServiceDelegate));
-        server.pst(moduleBase + "/smart-service-delegate", wrapAsync(this::createSmartServiceDelegate, new ObjectBuilder()
-                .put("name", "alias of the smart-service-delegate")
+        // smart-node-delegate
+        server.get(moduleBase + "/smart-node-delegate/:snd/detail", wrapAsync(this::getSmartNodeDelegate));
+        server.get(moduleBase + "/smart-node-delegate/:snd", wrapAsync(this::getSmartNodeDelegate));
+        server.get(moduleBase + "/smart-node-delegate", wrapAsync(this::listSmartNodeDelegate));
+        server.pst(moduleBase + "/smart-node-delegate", wrapAsync(this::createSmartNodeDelegate, new ObjectBuilder()
+                .put("name", "alias of the smart-node-delegate")
                 .put("service", "handled service name")
                 .put("zone", "handled zone name")
                 .put("nic", "nic name")
@@ -220,7 +220,7 @@ public class HttpController {
                 .put("exposedPort", 8080)
                 .build(),
             "name", "service", "zone", "nic"));
-        server.del(moduleBase + "/smart-service-delegate/:ssd", wrapAsync(this::deleteSmartServiceDelegate));
+        server.del(moduleBase + "/smart-node-delegate/:snd", wrapAsync(this::deleteSmartNodeDelegate));
         // cert-key
         server.get(moduleBase + "/cert-key/:ck/detail", wrapAsync(this::getCertKeyDetail));
         server.get(moduleBase + "/cert-key/:ck", wrapAsync(this::getCertKey));
@@ -883,25 +883,25 @@ public class HttpController {
         utils.execute(cb, "remove", "smart-group-delegate", rctx.param("sgd"));
     }
 
-    private void getSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var ssd = Application.get().smartServiceDelegateHolder.get(rctx.param("ssd"));
-        cb.succeeded(utils.formatSmartServiceDelegate(ssd));
+    private void getSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var snd = Application.get().smartNodeDelegateHolder.get(rctx.param("snd"));
+        cb.succeeded(utils.formatSmartNodeDelegate(snd));
     }
 
-    private void listSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var holder = Application.get().smartServiceDelegateHolder;
+    private void listSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var holder = Application.get().smartNodeDelegateHolder;
         var names = holder.names();
         var list = new LinkedList<JSON.Object>();
         for (var name : names) {
-            list.add(utils.formatSmartServiceDelegate(holder.get(name)));
+            list.add(utils.formatSmartNodeDelegate(holder.get(name)));
         }
         cb.succeeded(new SimpleArray(list));
     }
 
-    private void createSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+    private void createSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         var options = new LinkedList<>(Arrays.asList(
-            "add", "smart-service-delegate", body.getString("name"),
+            "add", "smart-node-delegate", body.getString("name"),
             "service", body.getString("service"),
             "zone", body.getString("zone"),
             "nic", body.getString("nic")
@@ -917,8 +917,8 @@ public class HttpController {
         utils.execute(cb, options);
     }
 
-    private void deleteSmartServiceDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        utils.execute(cb, "remove", "smart-service-delegate", rctx.param("ssd"));
+    private void deleteSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        utils.execute(cb, "remove", "smart-node-delegate", rctx.param("snd"));
     }
 
     private void getCertKeyDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

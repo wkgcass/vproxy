@@ -18,7 +18,7 @@ public class Config {
     // usually mtu is set to 1500, but some routers might set the value to 1480, 1440 or lower
     // we use 1400 here
 
-    // smart-group-delegate or smart-service-delegate will be enabled
+    // smart-group-delegate or smart-node-delegate will be enabled
     public static boolean discoveryConfigProvided = false;
 
     // whether the loading of configuration is disabled

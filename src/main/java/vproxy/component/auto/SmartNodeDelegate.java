@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Enumeration;
 
-public class SmartServiceDelegate {
+public class SmartNodeDelegate {
     public final String alias;
     public final String service;
     public final String zone;
@@ -98,13 +98,13 @@ public class SmartServiceDelegate {
         }
     }
 
-    public SmartServiceDelegate(String alias,
-                                String service,
-                                String zone,
-                                String nic,
-                                IPType ipType,
-                                int exposedPort,
-                                AutoConfig config) throws Exception {
+    public SmartNodeDelegate(String alias,
+                             String service,
+                             String zone,
+                             String nic,
+                             IPType ipType,
+                             int exposedPort,
+                             AutoConfig config) throws Exception {
         if (exposedPort == 0) {
             exposedPort = allocatePort(nic, ipType);
         }

@@ -19,7 +19,7 @@ public enum ResourceType {
     resolver("resolver"),
     dnscache("dns-cache"),
     sgd("smart-group-delegate"),
-    ssd("smart-service-delegate"),
+    snd("smart-node-delegate"),
     ck("cert-key"),
 
     respcontroller("resp-controller"),

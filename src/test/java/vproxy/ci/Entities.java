@@ -144,7 +144,7 @@ public class Entities {
         String handledGroup;
     }
 
-    static class SmartServiceDelegate {
+    static class SmartNodeDelegate {
         String name;
         String service;
         String zone;

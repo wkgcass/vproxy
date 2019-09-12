@@ -9,7 +9,7 @@ import vproxy.app.Application;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.Command;
 import vproxy.component.auto.SmartGroupDelegate;
-import vproxy.component.auto.SmartServiceDelegate;
+import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.NotFoundException;
@@ -497,15 +497,15 @@ class utils {
             .build();
     }
 
-    static JSON.Object formatSmartServiceDelegate(SmartServiceDelegate ssd) {
+    static JSON.Object formatSmartNodeDelegate(SmartNodeDelegate snd) {
         return new ObjectBuilder()
-            .put("name", ssd.alias)
-            .put("service", ssd.service)
-            .put("zone", ssd.zone)
-            .put("nic", ssd.nic)
-            .put("ipType", ssd.ipType.name())
-            .put("exposedPort", ssd.exposedPort)
-            .put("status", ssd.isHealthy() ? "UP" : "DOWN")
+            .put("name", snd.alias)
+            .put("service", snd.service)
+            .put("zone", snd.zone)
+            .put("nic", snd.nic)
+            .put("ipType", snd.ipType.name())
+            .put("exposedPort", snd.exposedPort)
+            .put("status", snd.isHealthy() ? "UP" : "DOWN")
             .build();
     }
 }

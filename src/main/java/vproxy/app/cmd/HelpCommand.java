@@ -1137,7 +1137,7 @@ public class HelpCommand {
                         )
                     ))
             )),
-        sgd("smart-group-delegate", null, "A binding for a server-group with info from discovery network",
+        sgd("smart-group-delegate", "sgd", "A binding for a server-group with info from discovery network",
             Arrays.asList(
                 new ResActMan(ActMan.add, "create a new smart-group-delegate binding",
                     Arrays.asList(
@@ -1176,9 +1176,9 @@ public class HelpCommand {
                         )
                     ))
             )),
-        ssd("smart-service-delegate", null, "A binding for service registered into the vproxy discovery network",
+        snd("smart-node-delegate", "snd", "A binding for node registered into the vproxy discovery network",
             Arrays.asList(
-                new ResActMan(ActMan.add, "create a new smart-service-delegate binding",
+                new ResActMan(ActMan.add, "create a new smart-node-delegate binding",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.service, "exposed service name"),
                         new ResActParamMan(ParamMan.zone, "exposed zone name"),
@@ -1188,31 +1188,31 @@ public class HelpCommand {
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add smart-service-delegate ssd0 service myservice zone z0 nic eth0 port 8080",
+                            "add smart-node-delegate snd0 service myservice zone z0 nic eth0 port 8080",
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.list, "get names of smart-service-delegate bindings",
+                new ResActMan(ActMan.list, "get names of smart-node-delegate bindings",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list smart-group-delegate",
-                            "1) \"sgd0\""
+                            "list smart-node-delegate",
+                            "1) \"snd0\""
                         )
                     )),
-                new ResActMan(ActMan.listdetail, "get detailed info about smart-group-delegate bindings",
+                new ResActMan(ActMan.listdetail, "get detailed info about smart-node-delegate bindings",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list-detail smart-group-delegate",
-                            "1) \"sgd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080\""
+                            "list-detail smart-node-delegate",
+                            "1) \"snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080\""
                         )
                     )),
-                new ResActMan(ActMan.remove, "remove the smart-group-delegate binding",
+                new ResActMan(ActMan.remove, "remove the smart-node-delegate binding",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "remove smart-group-delegate sgd0",
+                            "remove smart-node-delegate snd0",
                             "\"OK\""
                         )
                     ))

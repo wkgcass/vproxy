@@ -4,7 +4,7 @@ import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.*;
 import vproxy.component.auto.SmartGroupDelegate;
-import vproxy.component.auto.SmartServiceDelegate;
+import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
@@ -647,16 +647,16 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
-            case ssd:
+            case snd:
                 switch (cmd.action) {
                     case a:
                     case r:
                     case R:
                     case L:
                     case l:
-                        SmartServiceDelegateHandle.check(targetResource);
+                        SmartNodeDelegateHandle.check(targetResource);
                         if (cmd.action == Action.a) {
-                            SmartServiceDelegateHandle.checkCreate(cmd);
+                            SmartNodeDelegateHandle.checkCreate(cmd);
                         }
                         break;
                     default:
@@ -978,13 +978,13 @@ public class Command {
                         SmartGroupDelegateHandle.add(this);
                         return new CmdResult();
                 }
-            case ssd:
+            case snd:
                 switch (action) {
                     case l:
-                        List<String> names = SmartServiceDelegateHandle.names();
+                        List<String> names = SmartNodeDelegateHandle.names();
                         return new CmdResult(names, names, utilJoinList(names));
                     case L:
-                        List<SmartServiceDelegate> slgList = SmartServiceDelegateHandle.detail();
+                        List<SmartNodeDelegate> slgList = SmartNodeDelegateHandle.detail();
                         List<String> slgStrList = slgList.stream().map(l ->
                             l.alias + " ->" +
                                 " service " + l.service +
@@ -997,10 +997,10 @@ public class Command {
                         return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
                     case r:
                     case R:
-                        SmartServiceDelegateHandle.remove(this);
+                        SmartNodeDelegateHandle.remove(this);
                         return new CmdResult();
                     case a:
-                        SmartServiceDelegateHandle.add(this);
+                        SmartNodeDelegateHandle.add(this);
                         return new CmdResult();
                 }
             case ck:

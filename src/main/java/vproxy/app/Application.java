@@ -1,7 +1,7 @@
 package vproxy.app;
 
 import vproxy.app.mesh.SmartGroupDelegateHolder;
-import vproxy.app.mesh.SmartServiceDelegateHolder;
+import vproxy.app.mesh.SmartNodeDelegateHolder;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
@@ -42,7 +42,7 @@ public class Application {
     public final HttpControllerHolder httpControllerHolder;
 
     public final SmartGroupDelegateHolder smartGroupDelegateHolder;
-    public final SmartServiceDelegateHolder smartServiceDelegateHolder;
+    public final SmartNodeDelegateHolder smartNodeDelegateHolder;
 
     private Application() throws IOException {
         this.version = VERSION;
@@ -60,7 +60,7 @@ public class Application {
         this.httpControllerHolder = new HttpControllerHolder();
 
         this.smartGroupDelegateHolder = new SmartGroupDelegateHolder();
-        this.smartServiceDelegateHolder = new SmartServiceDelegateHolder();
+        this.smartNodeDelegateHolder = new SmartNodeDelegateHolder();
     }
 
     public static boolean isDefaultEventLoopGroupName(String name) {

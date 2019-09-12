@@ -8,8 +8,8 @@ import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.ServiceHandle;
 import vproxy.app.cmd.handle.param.ZoneHandle;
-import vproxy.app.mesh.SmartServiceDelegateHolder;
-import vproxy.component.auto.SmartServiceDelegate;
+import vproxy.app.mesh.SmartNodeDelegateHolder;
+import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.util.IPType;
@@ -22,8 +22,8 @@ import java.util.Enumeration;
 import java.util.LinkedList;
 import java.util.List;
 
-public class SmartServiceDelegateHandle {
-    private SmartServiceDelegateHandle() {
+public class SmartNodeDelegateHandle {
+    private SmartNodeDelegateHandle() {
     }
 
     public static void check(Resource parent) throws XException {
@@ -69,7 +69,7 @@ public class SmartServiceDelegateHandle {
 
     public static void checkCreate(Command cmd) throws XException {
         if (!Config.discoveryConfigProvided) {
-            throw new XException("discovery config not provided, so the smart-service-delegate cannot be created");
+            throw new XException("discovery config not provided, so the smart-node-delegate cannot be created");
         }
         if (!cmd.args.containsKey(Param.service))
             throw new XException("missing argument " + Param.service.fullname);
@@ -99,26 +99,26 @@ public class SmartServiceDelegateHandle {
     }
 
     public static List<String> names() {
-        return Application.get().smartServiceDelegateHolder.names();
+        return Application.get().smartNodeDelegateHolder.names();
     }
 
-    public static List<SmartServiceDelegate> detail() {
-        SmartServiceDelegateHolder holder = Application.get().smartServiceDelegateHolder;
+    public static List<SmartNodeDelegate> detail() {
+        SmartNodeDelegateHolder holder = Application.get().smartNodeDelegateHolder;
         List<String> names = holder.names();
-        List<SmartServiceDelegate> smartServiceDelegates = new LinkedList<>();
+        List<SmartNodeDelegate> smartNodeDelegates = new LinkedList<>();
         for (String name : names) {
             try {
-                SmartServiceDelegate s = holder.get(name);
-                smartServiceDelegates.add(s);
+                SmartNodeDelegate s = holder.get(name);
+                smartNodeDelegates.add(s);
             } catch (NotFoundException ignore) {
             }
         }
-        return smartServiceDelegates;
+        return smartNodeDelegates;
     }
 
     public static void remove(Command cmd) throws NotFoundException {
         String alias = cmd.resource.alias;
-        Application.get().smartServiceDelegateHolder.remove(alias);
+        Application.get().smartNodeDelegateHolder.remove(alias);
     }
 
     public static void add(Command cmd) throws Exception {
@@ -129,6 +129,6 @@ public class SmartServiceDelegateHandle {
         IPType ipType = IPType.valueOf(cmd.args.get(Param.iptype));
         int port = Integer.parseInt(cmd.args.get(Param.port));
 
-        Application.get().smartServiceDelegateHolder.add(alias, service, zone, nic, ipType, port);
+        Application.get().smartNodeDelegateHolder.add(alias, service, zone, nic, ipType, port);
     }
 }

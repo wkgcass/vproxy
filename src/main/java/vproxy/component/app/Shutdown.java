@@ -182,7 +182,7 @@ public class Shutdown {
 
         {
             // NOTE
-            // NOTE: smart-service-delegate MUST not be saved
+            // NOTE: smart-node-delegate MUST not be saved
             // NOTE
         }
         {
