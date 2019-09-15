@@ -13,6 +13,8 @@ import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.LongAdder;
 
 public class BindServer implements NetFlowRecorder {
+    private static int supportReusePort = -1; // 1:true 0:false -1:not decided yet
+
     public final InetSocketAddress bind;
     private final String _id;
     public final SelectableChannel channel;
@@ -26,6 +28,38 @@ public class BindServer implements NetFlowRecorder {
 
     private boolean closed;
 
+    public static boolean supportReusePort() {
+        if (supportReusePort == 1) return true;
+        if (supportReusePort == 0) return false;
+        ServerSocketChannel chnl;
+        try {
+            chnl = ServerSocketChannel.open();
+        } catch (IOException e) {
+            // should not happen
+            Logger.shouldNotHappen("creating channel failed", e);
+            return false; // return false as default
+        }
+        try {
+            chnl.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+        } catch (UnsupportedOperationException ignore) {
+            Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT");
+            supportReusePort = 0;
+            return false;
+        } catch (IOException e) {
+            // should not happen
+            Logger.shouldNotHappen("setting SO_REUSEPORT throws IOException", e);
+            return false; // return false as default
+        } finally {
+            try {
+                chnl.close();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("closing channel failed", e);
+            }
+        }
+        supportReusePort = 1;
+        return true;
+    }
+
     public static void checkBind(InetSocketAddress bindAddress) throws IOException {
         try (ServerSocketChannel foo = ServerSocketChannel.open()) {
             foo.bind(bindAddress);
@@ -37,11 +71,8 @@ public class BindServer implements NetFlowRecorder {
     public static BindServer create(InetSocketAddress bindAddress) throws IOException {
         ServerSocketChannel channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
-        try {
+        if (supportReusePort()) {
             channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-        } catch (UnsupportedOperationException ignore) {
-            Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT, " +
-                "continue with no-reuse mode for " + bindAddress);
         }
         channel.bind(bindAddress);
         try {

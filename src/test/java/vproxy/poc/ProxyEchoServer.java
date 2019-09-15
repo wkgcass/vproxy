@@ -29,7 +29,7 @@ public class ProxyEchoServer {
                 // connect to localhost 19080
                 return new Connector(new InetSocketAddress("127.0.0.1", 19080));
             })
-            .setHandleLoopProvider(() -> netEventLoop) // use same event loop as the acceptor for demonstration
+            .setHandleLoopProvider(ignore -> netEventLoop) // use same event loop as the acceptor for demonstration
             .setServer(server)
             .setInBufferSize(8) // make it small to see how it acts when read buffer is full
             .setOutBufferSize(4); // make it even smaller to see how it acts when write buffer is full

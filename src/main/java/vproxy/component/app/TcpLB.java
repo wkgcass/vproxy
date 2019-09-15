@@ -180,9 +180,9 @@ public class TcpLB {
     private ProxyNetConfig getProxyNetConfig(BindServer server, NetEventLoop eventLoop) {
         return new ProxyNetConfig()
             .setConnGen(provideConnectorGen())
-            .setHandleLoopProvider(() -> {
+            .setHandleLoopProvider(acceptLoop -> {
                 // get a event loop from group
-                EventLoopWrapper w = workerGroup.next();
+                EventLoopWrapper w = workerGroup.next(acceptLoop);
                 if (w == null)
                     return null; // return null if cannot get any
                 assert Logger.lowLevelDebug("use event loop: " + w.alias);

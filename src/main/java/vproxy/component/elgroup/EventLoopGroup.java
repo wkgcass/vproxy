@@ -3,6 +3,7 @@ package vproxy.component.elgroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
@@ -185,10 +186,21 @@ public class EventLoopGroup {
 
     @ThreadSafe
     public EventLoopWrapper next() {
+        return next(null);
+    }
+
+    @ThreadSafe
+    public EventLoopWrapper next(NetEventLoop hint) {
         if (closed)
             return null;
 
         ArrayList<EventLoopWrapper> ls = eventLoops;
+        //noinspection SuspiciousMethodCalls
+        if (hint != null && ls.contains(hint)) {
+            assert Logger.lowLevelDebug("caller loop is contained in the event loop group, directly return");
+            return (EventLoopWrapper) hint;
+        }
+        assert Logger.lowLevelDebug("caller loop is not contained in the event loop group, choose one");
         return next(ls, 0);
     }
 

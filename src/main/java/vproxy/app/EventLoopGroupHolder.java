@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Map;
 
 public class EventLoopGroupHolder {
-    private final Map<String, EventLoopGroup> map = new HashMap<>();
+    final Map<String, EventLoopGroup> map = new HashMap<>();
 
     public List<String> names() {
         return new ArrayList<>(map.keySet());

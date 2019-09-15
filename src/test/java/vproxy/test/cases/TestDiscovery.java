@@ -232,7 +232,7 @@ public class TestDiscovery {
         assertEquals(0, downAlert[0]);
         assertEquals(0, removeAlert[0]);
         // sleep for another 500ms, then the server is up
-        Thread.sleep(600);
+        Thread.sleep(1000);
         assertEquals("should be up", 1, upAlert[0]);
         assertEquals(0, downAlert[0]);
         assertEquals(0, removeAlert[0]);

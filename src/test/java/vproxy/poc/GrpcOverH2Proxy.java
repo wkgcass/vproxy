@@ -74,7 +74,7 @@ public class GrpcOverH2Proxy {
                     return ProcessorProvider.getInstance().get("h2");
                 }
             })
-            .setHandleLoopProvider(() -> el)
+            .setHandleLoopProvider(ignore -> el)
             .setServer(svr),
             server -> {
             });

@@ -81,7 +81,7 @@ public class Http2Proxy {
                     return ProcessorProvider.getInstance().get("h2");
                 }
             })
-            .setHandleLoopProvider(() -> el)
+            .setHandleLoopProvider(ignore -> el)
             .setServer(svr),
             server -> {
             });

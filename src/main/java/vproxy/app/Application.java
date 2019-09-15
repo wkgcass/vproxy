@@ -6,7 +6,9 @@ import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.connection.BindServer;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.Logger;
 
 import java.io.IOException;
 
@@ -72,13 +74,6 @@ public class Application {
     static void create() throws IOException {
         application = new Application();
 
-        // create one thread for default acceptor
-        try {
-            application.eventLoopGroupHolder.add(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME);
-            application.eventLoopGroupHolder.get(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME).add(DEFAULT_ACCEPTOR_EVENT_LOOP_NAME);
-        } catch (AlreadyExistException | NotFoundException | ClosedException e) {
-            throw new IOException("create default acceptor event loop failed", e);
-        }
         // create one thread for controlling
         try {
             application.eventLoopGroupHolder.add(DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
@@ -101,6 +96,18 @@ public class Application {
                 );
             } catch (AlreadyExistException | ClosedException | NotFoundException e) {
                 throw new IOException("create default worker event loop failed", e);
+            }
+        }
+        if (BindServer.supportReusePort()) {
+            assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
+            application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, application.eventLoopGroupHolder.map.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
+        } else {
+            assert Logger.lowLevelDebug("create one thread for default acceptor");
+            try {
+                application.eventLoopGroupHolder.add(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME);
+                application.eventLoopGroupHolder.get(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME).add(DEFAULT_ACCEPTOR_EVENT_LOOP_NAME);
+            } catch (AlreadyExistException | NotFoundException | ClosedException e) {
+                throw new IOException("create default acceptor event loop failed", e);
             }
         }
     }

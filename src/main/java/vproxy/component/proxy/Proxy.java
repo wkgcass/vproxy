@@ -44,26 +44,27 @@ public class Proxy {
 
         @Override
         public void connection(ServerHandlerContext ctx, Connection connection) {
+            NetEventLoop acceptLoop = ctx.eventLoop;
             switch (config.connGen.type()) {
                 case processor:
-                    handleProcessor(connection);
+                    handleProcessor(acceptLoop, connection);
                     break;
                 case handler:
-                    handleHandler(connection);
+                    handleHandler(acceptLoop, connection);
                     break;
                 case direct:
                 default:
-                    handleDirect(connection);
+                    handleDirect(acceptLoop, connection);
             }
         }
 
-        private void handleDirect(Connection connection) {
+        private void handleDirect(NetEventLoop acceptLoop, Connection connection) {
             // make connection to another end point
             Connector connector = config.connGen.genConnector(connection);
-            handleDirect(connection, connector);
+            handleDirect(acceptLoop, connection, connector);
         }
 
-        private void handleDirect(Connection connection, Connector connector) {
+        private void handleDirect(NetEventLoop acceptLoop, Connection connection, Connector connector) {
             // check whether address tuple is null
             // null means the user code fail to provide a new connection
             // maybe user think that the backend is not working, or the source ip is forbidden
@@ -104,7 +105,7 @@ public class Proxy {
                 NetEventLoop foo = connector.loop();
                 if (foo == null) {
                     assert Logger.lowLevelDebug("connector did not provide any loop, retrieve a new one");
-                    loop = config.handleLoopProvider.get();
+                    loop = config.handleLoopProvider.getHandleLoop(acceptLoop);
                 } else {
                     assert Logger.lowLevelDebug("connector provided a loop");
                     loop = foo;
@@ -132,10 +133,12 @@ public class Proxy {
         }
 
         class HandlerCallback extends Callback<Connector, IOException> {
+            private final NetEventLoop acceptLoop;
             private final NetEventLoop loop;
             private final Connection active;
 
-            HandlerCallback(NetEventLoop loop, Connection active) {
+            HandlerCallback(NetEventLoop acceptLoop, NetEventLoop loop, Connection active) {
+                this.acceptLoop = acceptLoop;
                 this.loop = loop;
                 this.active = active;
             }
@@ -158,7 +161,7 @@ public class Proxy {
                 // will be checked in the following method
 
                 // handle like a normal proxy:
-                handleDirect(active, connector);
+                handleDirect(acceptLoop, active, connector);
             }
 
             @Override
@@ -166,17 +169,17 @@ public class Proxy {
                 Logger.error(LogType.NO_CLIENT_CONN, "the user code got an exception", err);
                 // we cannot handle the connection anymore
                 // return an empty connector
-                handleDirect(active, null);
+                handleDirect(acceptLoop, active, null);
             }
         }
 
         @SuppressWarnings(/*ignore generics here*/"unchecked")
-        private void handleHandler(Connection connection) {
+        private void handleHandler(NetEventLoop acceptLoop, Connection connection) {
             // retrieve the handler
             ProtocolHandler pHandler = config.connGen.handler();
             // retrieve an event loop provided by user code
             // the net flow will be handled here
-            NetEventLoop loop = config.handleLoopProvider.get();
+            NetEventLoop loop = config.handleLoopProvider.getHandleLoop(acceptLoop);
             if (loop == null) {
                 // the loop not exist
                 Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for handler");
@@ -197,7 +200,7 @@ public class Proxy {
                 connection.close();
                 return;
             }
-            tup = new Tuple<>(tup.left, new HandlerCallback(loop, connection));
+            tup = new Tuple<>(tup.left, new HandlerCallback(acceptLoop, loop, connection));
             pctx.data = tup;
 
             // the following code should be same as in ProtocolServerHandler
@@ -215,7 +218,7 @@ public class Proxy {
         }
 
         @SuppressWarnings("unchecked")
-        private void handleProcessor(Connection frontendConnection) {
+        private void handleProcessor(NetEventLoop acceptLoop, Connection frontendConnection) {
             Processor processor = config.connGen.processor();
             Processor.Context topCtx = processor.init(frontendConnection.remote);
             Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0, frontendConnection.remote);
@@ -225,7 +228,7 @@ public class Proxy {
             }
 
             // retrieve an event loop
-            NetEventLoop loop = config.handleLoopProvider.get();
+            NetEventLoop loop = config.handleLoopProvider.getHandleLoop(acceptLoop);
 
             // initiate the handler
             ConnectionHandler handler =
@@ -308,7 +311,7 @@ public class Proxy {
         }
     }
 
-    class SessionConnectionHandler implements ConnectionHandler {
+    static class SessionConnectionHandler implements ConnectionHandler {
         private final Session session;
 
         SessionConnectionHandler(Session session) {

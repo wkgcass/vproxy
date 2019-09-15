@@ -1,13 +1,11 @@
 package vproxy.connection;
 
 import vproxy.selector.TimerEvent;
-import vproxy.util.Logger;
-import vproxy.util.RingBuffer;
-import vproxy.util.RingBufferETHandler;
-import vproxy.util.Utils;
+import vproxy.util.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.List;
@@ -170,6 +168,12 @@ public class Connection implements NetFlowRecorder {
                InetSocketAddress remote, InetSocketAddress local,
                ConnectionOpts opts,
                RingBuffer inBuffer, RingBuffer outBuffer) {
+        // set TCP_NODELAY
+        try {
+            channel.setOption(StandardSocketOptions.TCP_NODELAY, true);
+        } catch (Throwable t) {
+            Logger.error(LogType.SYS_ERROR, "set TCP_NODELAY failed", t);
+        }
 
         this.channel = channel;
         this.timeout = opts.timeout;
