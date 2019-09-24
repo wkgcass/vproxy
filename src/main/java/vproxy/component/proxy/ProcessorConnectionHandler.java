@@ -368,12 +368,18 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
+            assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed, send FIN to frontend");
             // backend FIN
             // we should send FIN to frontend
             frontendConnection.closeWrite();
             // check whether we should close the session now
             if (frontendConnection.getOutBuffer().used() == 0) {
                 if (frontendConnection.isRemoteClosed()) {
+                    // frontend data already flushed
+                    // and is already closed
+                    // so no data will be received from frontend
+                    // it's safe to close the session now
+                    assert Logger.lowLevelDebug("frontend data flushed and remote closed, close the session");
                     ctx.connection.close();
                     closed(ctx);
                 }
@@ -727,12 +733,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     @Override
     public void remoteClosed(ConnectionHandlerContext ctx) {
+        assert Logger.lowLevelDebug("frontend connection " + ctx.connection + " remoteClosed");
         // frontend FIN
         // we should send FIN to current backend
         int connId = processor.connection(topCtx, frontendSubCtx);
         if (connId == -1) {
-            // no current backend connection
-            // send FIN to all backend
+            assert Logger.lowLevelDebug("" +
+                "no current backend connection, " +
+                "send FIN to all backend");
+
             List<Integer> ints = new ArrayList<>(conn2intMap.values());
             boolean allBackendRemoteClosed = true;
             for (int i : ints) {
@@ -743,17 +752,27 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
             }
             if (allBackendRemoteClosed) {
+                assert Logger.lowLevelDebug("" +
+                    "all backend remote closed, " +
+                    "and no current backend, " +
+                    "so close the session");
                 // close the session
                 ctx.connection.close();
                 closed(ctx);
             }
         } else {
-            // only send FIN to the selected backend
+            assert Logger.lowLevelDebug("" +
+                "current connId=" + connId + ", " +
+                "only send FIN to the selected backend");
             BackendConnectionHandler be = conns[connId];
             be.conn.closeWrite();
             if (be.conn.getOutBuffer().used() == 0) {
                 if (be.conn.isRemoteClosed()) {
-                    // close the session
+                    assert Logger.lowLevelDebug("selected backend is closed and data flushed, close session");
+                    // all data flushed to the selected backend
+                    // and the backend is remote closed
+                    // so no data will be written to the frontend
+                    // it's safe to close the session
                     ctx.connection.close();
                     closed(ctx);
                 }
