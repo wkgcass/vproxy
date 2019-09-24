@@ -19,6 +19,7 @@ import vproxy.app.Application;
 import org.junit.*;
 import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.khala.KhalaNode;
+import vproxy.connection.BindServer;
 import vproxy.test.cases.TestSSL;
 import vproxy.test.cases.TestSmart;
 import vproxy.util.Logger;
@@ -1345,14 +1346,18 @@ public class CI {
         assertTrue(ls.contains(Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME));
 
         ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
-        assertEquals(1, ls.size());
-        assertTrue(ls.contains(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_NAME));
+        int cnt = Runtime.getRuntime().availableProcessors();
+        if (BindServer.supportReusePort()) {
+            assertEquals(cnt, ls.size());
+        } else {
+            assertEquals(1, ls.size());
+            assertTrue(ls.contains(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_NAME));
+        }
 
         ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME));
         assertEquals(1, ls.size());
         assertTrue(ls.contains(Application.DEFAULT_CONTROL_EVENT_LOOP_NAME));
 
-        int cnt = Runtime.getRuntime().availableProcessors();
         ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
         assertEquals(cnt, ls.size());
         for (int i = 0; i < cnt; ++i) {
@@ -1364,7 +1369,11 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "server-groups", sgs0));
         tlNames.add(lbName);
         Map<String, String> details = getDetail("tcp-lb", lbName);
-        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        if (BindServer.supportReusePort()) {
+            assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        } else {
+            assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        }
         assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
 
         int socks5Port = 7002;
@@ -1372,7 +1381,11 @@ public class CI {
         execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "server-groups", sgs0));
         socks5Names.add(socks5Name);
         details = getDetail("tcp-lb", lbName);
-        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        if (BindServer.supportReusePort()) {
+            assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        } else {
+            assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
+        }
         assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
 
         String serverGroupName = randomName("sg0");

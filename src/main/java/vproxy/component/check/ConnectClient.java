@@ -59,7 +59,7 @@ public class ConnectClient {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             cancelTimers(); // cancel timer if possible
-            ctx.connection.close(); // close the connection
+            ctx.connection.close(true); // close the connection with reset
 
             assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
 
@@ -68,7 +68,7 @@ public class ConnectClient {
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
-            ctx.connection.close();
+            ctx.connection.close(true);
             closed(ctx);
         }
 
@@ -88,7 +88,7 @@ public class ConnectClient {
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
-            ctx.connection.close();
+            ctx.connection.close(true);
         }
 
         private void cancelTimers() {
@@ -100,7 +100,7 @@ public class ConnectClient {
 
         private void closeAndCallSucc(ConnectionHandlerContext ctx) {
             done = true;
-            ctx.connection.close();
+            ctx.connection.close(true);
             if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
         }
     }
@@ -139,7 +139,7 @@ public class ConnectClient {
         // create a timer handling the connecting timeout
         TimerEvent timer = eventLoop.getSelectorEventLoop().delay(timeout, () -> {
             assert Logger.lowLevelDebug("timeout when doing health check " + conn);
-            conn.close();
+            conn.close(true);
             if (!cb.isCalled() /*called by connection*/ && !stopped) cb.failed(new InterruptedByTimeoutException());
         });
         try {

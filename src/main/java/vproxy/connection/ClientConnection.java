@@ -5,7 +5,6 @@ import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.net.StandardSocketOptions;
 import java.nio.channels.SocketChannel;
 
 public class ClientConnection extends Connection {
@@ -21,8 +20,6 @@ public class ClientConnection extends Connection {
         SocketChannel channel = SocketChannel.open();
         try {
             channel.configureBlocking(false);
-            // we want to simply reset the connection when closing
-            channel.setOption(StandardSocketOptions.SO_LINGER, 0);
             channel.connect(remote);
             return new ClientConnection(channel, remote, opts, inBuffer, outBuffer);
         } catch (IOException e) {

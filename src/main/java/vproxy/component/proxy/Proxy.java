@@ -183,7 +183,7 @@ public class Proxy {
             if (loop == null) {
                 // the loop not exist
                 Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for handler");
-                connection.close();
+                connection.close(true);
                 return;
             }
 
@@ -197,7 +197,7 @@ public class Proxy {
                 // user code fail to provide the data
                 Logger.error(LogType.IMPROPER_USE, "user code should set a tuple(T, null) to the data field");
                 // close the connection because we cannot handle it anymore
-                connection.close();
+                connection.close(true);
                 return;
             }
             tup = new Tuple<>(tup.left, new HandlerCallback(acceptLoop, loop, connection));
@@ -213,7 +213,7 @@ public class Proxy {
                 // and do some log
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add new connection into loop failed", e);
                 // the connection should be closed by the lib
-                connection.close();
+                connection.close(true);
             }
         }
 
@@ -246,7 +246,7 @@ public class Proxy {
                 // and do some log
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add new connection into loop failed", e);
                 // the connection should be closed by the lib
-                frontendConnection.close();
+                frontendConnection.close(true);
             }
         }
 

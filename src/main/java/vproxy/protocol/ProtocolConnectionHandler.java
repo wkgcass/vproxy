@@ -32,7 +32,7 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
         } else {
             handler.exception(pctx, err);
         }
-        ctx.connection.close(); // close the connection when got exception
+        ctx.connection.close(true); // close the connection when got exception
     }
 
     @Override

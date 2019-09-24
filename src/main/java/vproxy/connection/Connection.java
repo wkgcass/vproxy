@@ -172,7 +172,7 @@ public class Connection implements NetFlowRecorder {
         try {
             channel.setOption(StandardSocketOptions.TCP_NODELAY, true);
         } catch (Throwable t) {
-            Logger.error(LogType.SYS_ERROR, "set TCP_NODELAY failed", t);
+            assert Logger.lowLevelDebug("set TCP_NODELAY failed: " + channel + ": " + t);
         }
 
         this.channel = channel;
@@ -290,6 +290,11 @@ public class Connection implements NetFlowRecorder {
 
     // make it synchronized to prevent inside fields inconsistent
     public synchronized void close() {
+        close(false);
+    }
+
+    // make it synchronized to prevent inside fields inconsistent
+    public synchronized void close(boolean reset) {
         if (closed)
             return; // do not close again if already closed
 
@@ -318,6 +323,9 @@ public class Connection implements NetFlowRecorder {
         }
         releaseEventLoopRelatedFields();
         try {
+            if (reset) {
+                channel.setOption(StandardSocketOptions.SO_LINGER, 0);
+            }
             channel.close();
         } catch (IOException e) {
             // we can do nothing about it

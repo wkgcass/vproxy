@@ -205,7 +205,7 @@ public class Discovery {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             assert Logger.lowLevelDebug("got exception for udp conn " + ctx.connection + " " + err);
-            ctx.connection.close();
+            ctx.connection.close(true);
         }
 
         @Override

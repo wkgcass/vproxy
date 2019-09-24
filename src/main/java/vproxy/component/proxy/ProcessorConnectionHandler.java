@@ -297,7 +297,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                             processor.feed(topCtx, subCtx, ByteArray.from(new byte[0]));
                         } catch (Exception e) {
                             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
-                            frontendConnection.close();
+                            frontendConnection.close(true);
                             return;
                         }
                         // check data to write back
@@ -362,7 +362,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
-            frontendConnection.close();
+            frontendConnection.close(true);
             closeAll();
         }
 
@@ -568,7 +568,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
-                frontendConnection.close();
+                frontendConnection.close(true);
             } else {
                 if (bytesToProxy == 0) { // 0 bytes to proxy, so it's already done
                     processor.proxyDone(topCtx, frontendSubCtx);
@@ -588,7 +588,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                         processor.feed(topCtx, frontendSubCtx, ByteArray.from(new byte[0]));
                     } catch (Exception e) {
                         Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
-                        frontendConnection.close();
+                        frontendConnection.close(true);
                         return;
                     }
                     {
@@ -617,7 +617,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 bytesToSend = processor.feed(topCtx, frontendSubCtx, data);
             } catch (Exception e) {
                 Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
-                frontendConnection.close();
+                frontendConnection.close(true);
                 return;
             }
             {
@@ -633,7 +633,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
-                frontendConnection.close();
+                frontendConnection.close(true);
             } else {
                 if (bytesToSend == null || bytesToSend.length() == 0) {
                     readFrontend(); // recursively call to handle more data
@@ -699,7 +699,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
             // remove from collection because it fails
             removeBackend(bh);
-            clientConnection.close();
+            clientConnection.close(true);
 
             return null;
         }

@@ -211,6 +211,14 @@ class NetEventLoopUtils {
     private NetEventLoopUtils() {
     }
 
+    static void callExceptionEvent(ConnectionHandlerContext cctx, IOException err) {
+        cctx.handler.exception(cctx, err);
+        if (!cctx.connection.isClosed()) {
+            cctx.connection.close(true);
+            cctx.handler.closed(cctx);
+        }
+    }
+
     static void resetCloseTimeout(ConnectionHandlerContext ctx) {
         Connection conn = ctx.connection;
         assert Logger.lowLevelDebug("reset close timeout for connection " + conn);
@@ -251,12 +259,7 @@ class NetEventLoopUtils {
             int delta = (int) (Config.currentTimestamp - conn.lastTimestamp);
             if (delta > timeout) {
                 assert Logger.lowLevelDebug("timeout triggered: " + conn);
-                ctx.handler.exception(ctx, new SocketTimeoutException("timeout by timer: " + ctx.connection));
-                // if the user code didn't close the connection, we do it for user
-                if (!conn.isClosed()) {
-                    ctx.handler.closed(ctx);
-                    conn.close();
-                }
+                callExceptionEvent(ctx, new SocketTimeoutException("timeout by timer: " + ctx.connection));
             } else {
                 resetDelay(loop, ctx);
             }
@@ -293,7 +296,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         try {
             read = cctx.connection.getInBuffer().storeBytesFrom((ReadableByteChannel) /* it's definitely readable */ ctx.getChannel());
         } catch (IOException e) {
-            cctx.handler.exception(cctx, e);
+            NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
         }
         assert Logger.lowLevelNetDebug("read " + read + " bytes from " + cctx.connection);
@@ -342,7 +345,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         try {
             write = cctx.connection.getOutBuffer().writeTo((WritableByteChannel) /* it's definitely writable */ ctx.getChannel());
         } catch (IOException e) {
-            cctx.handler.exception(cctx, e);
+            NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
         }
         assert Logger.lowLevelDebug("wrote " + write + " bytes to " + cctx.connection);
@@ -391,7 +394,7 @@ class HandlerForClientConnection extends HandlerForConnection {
             connected = channel.finishConnect();
         } catch (IOException e) {
             // exception when connecting
-            cctx.handler.exception(cctx, e);
+            NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
         }
         cctx.connection.regenId();

@@ -151,7 +151,7 @@ public class Http1ClientImpl implements HttpClient {
                             @Override
                             public void exception(ConnectionHandlerContext ctx, IOException err) {
                                 cb.failed(err);
-                                ctx.connection.close();
+                                ctx.connection.close(true);
                             }
 
                             @Override

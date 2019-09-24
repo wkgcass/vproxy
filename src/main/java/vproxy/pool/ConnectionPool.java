@@ -32,7 +32,7 @@ public class ConnectionPool {
             handler.keepaliveReadable((ClientConnection) ctx.connection);
             if (ctx.connection.getInBuffer().used() != 0) {
                 Logger.error(LogType.IMPROPER_USE, "the user code did not consume all data in the inBuffer");
-                ctx.connection.close();
+                ctx.connection.close(true);
             }
         }
 
@@ -98,7 +98,7 @@ public class ConnectionPool {
             assert Logger.lowLevelDebug("the user code refuse to provide a connection to the pool");
         } else if (conn.getEventLoop() == null) {
             Logger.error(LogType.IMPROPER_USE, "user code did not register the conn to event loop");
-            conn.close();
+            conn.close(true);
         } else {
             assert Logger.lowLevelDebug("new connection provided, add to pool");
             ConnWrap w = new ConnWrap(conn);
