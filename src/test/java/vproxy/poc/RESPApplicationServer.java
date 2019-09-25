@@ -1,7 +1,7 @@
 package vproxy.poc;
 
-import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.redis.RESPConfig;

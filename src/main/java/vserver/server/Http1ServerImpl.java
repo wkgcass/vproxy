@@ -2,8 +2,8 @@ package vserver.server;
 
 import vjson.JSON;
 import vproxy.app.Application;
-import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http1.entity.Chunk;
