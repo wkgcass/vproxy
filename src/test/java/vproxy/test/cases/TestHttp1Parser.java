@@ -2,8 +2,11 @@ package vproxy.test.cases;
 
 import org.junit.Test;
 import vproxy.processor.Processor;
-import vproxy.processor.http1.*;
-import vproxy.processor.http1.entity.*;
+import vproxy.processor.http1.HttpContext;
+import vproxy.processor.http1.HttpProcessor;
+import vproxy.processor.http1.HttpSubContext;
+import vproxy.processor.http1.entity.Request;
+import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
 import vproxy.util.Utils;
 

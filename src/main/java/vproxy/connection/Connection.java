@@ -1,7 +1,10 @@
 package vproxy.connection;
 
 import vproxy.selector.TimerEvent;
-import vproxy.util.*;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
+import vproxy.util.RingBufferETHandler;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

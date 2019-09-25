@@ -1,11 +1,11 @@
 package vproxyx.websocks;
 
-import vproxy.legacy.JsContext;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.dns.Resolver;
+import vproxy.legacy.JsContext;
 import vproxy.util.BlockCallback;
 import vproxy.util.Utils;
 

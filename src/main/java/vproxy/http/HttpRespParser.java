@@ -4,7 +4,9 @@ import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.processor.http1.HttpSubContext;
 import vproxy.processor.http1.entity.Response;
-import vproxy.util.*;
+import vproxy.util.AbstractParser;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 
 import java.util.Arrays;
 import java.util.Collections;

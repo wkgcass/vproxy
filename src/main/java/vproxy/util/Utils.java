@@ -1,9 +1,9 @@
 package vproxy.util;
 
+import sun.misc.Unsafe;
 import vproxy.connection.Connector;
 import vproxy.dns.Resolver;
 import vproxy.socks.AddressType;
-import sun.misc.Unsafe;
 
 import java.io.IOException;
 import java.io.InputStream;

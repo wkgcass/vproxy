@@ -1,14 +1,14 @@
 package vproxy.test.cases;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.exception.NoException;
 import vproxy.discovery.*;
 import vproxy.test.tool.DiscoveryHolder;
 import vproxy.util.BlockCallback;
 import vproxy.util.IPType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import vserver.HttpServer;
 
 import java.lang.reflect.Field;

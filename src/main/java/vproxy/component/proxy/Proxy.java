@@ -6,7 +6,9 @@ import vproxy.protocol.ProtocolConnectionHandler;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
-import vproxy.util.ringbuffer.*;
+import vproxy.util.ringbuffer.ByteBufferRingBuffer;
+import vproxy.util.ringbuffer.ProxyOutputRingBuffer;
+import vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;

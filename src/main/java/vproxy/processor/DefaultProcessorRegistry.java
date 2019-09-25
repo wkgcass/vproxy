@@ -1,10 +1,10 @@
 package vproxy.processor;
 
+import vproxy.processor.common.CommonInt32FramedProcessor;
 import vproxy.processor.dubbo.DubboProcessor;
 import vproxy.processor.http.GeneralHttpProcessor;
 import vproxy.processor.http1.HttpProcessor;
 import vproxy.processor.http2.Http2Processor;
-import vproxy.processor.common.CommonInt32FramedProcessor;
 
 import java.util.HashMap;
 import java.util.Map;

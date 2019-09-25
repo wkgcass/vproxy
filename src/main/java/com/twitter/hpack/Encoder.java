@@ -15,11 +15,11 @@
  */
 package com.twitter.hpack;
 
+import com.twitter.hpack.HpackUtil.IndexType;
+
 import java.io.IOException;
 import java.io.OutputStream;
 import java.util.Arrays;
-
-import com.twitter.hpack.HpackUtil.IndexType;
 
 public final class Encoder {
 

@@ -7,7 +7,10 @@ import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
-import vproxy.util.*;
+import vproxy.util.Callback;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
+import vproxy.util.Tuple;
 
 import java.io.IOException;
 

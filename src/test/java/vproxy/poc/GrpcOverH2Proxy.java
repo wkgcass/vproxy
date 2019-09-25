@@ -7,7 +7,6 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import vproxy.component.proxy.ConnectorGen;
-import vproxy.processor.Processor;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.connection.BindServer;
@@ -17,6 +16,7 @@ import vproxy.connection.NetEventLoop;
 import vproxy.poc.grpc.GreeterGrpc;
 import vproxy.poc.grpc.HelloRequest;
 import vproxy.poc.grpc.HelloResponse;
+import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.selector.SelectorEventLoop;
 

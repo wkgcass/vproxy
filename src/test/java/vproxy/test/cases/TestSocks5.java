@@ -1,5 +1,6 @@
 package vproxy.test.cases;
 
+import org.junit.*;
 import vproxy.app.Config;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.check.HealthCheckConfig;
@@ -13,7 +14,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
-import org.junit.*;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
