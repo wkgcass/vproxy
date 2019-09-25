@@ -5,7 +5,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.http.connect.HttpConnectProtocolHandler;
@@ -122,7 +122,7 @@ public class WebSocksProxyAgent {
             };
 
             // let's create a server, if bind failed, error would be thrown
-            BindServer server = BindServer.create(
+            ServerSock server = ServerSock.create(
                 new InetSocketAddress(InetAddress.getByName(
                     configProcessor.isGateway()
                         ? "0.0.0.0"
@@ -151,7 +151,7 @@ public class WebSocksProxyAgent {
         // maybe we can start the pac server
         if (configProcessor.getPacServerPort() != 0) {
             assert Logger.lowLevelDebug("start pac server");
-            BindServer lsn = BindServer.create(new InetSocketAddress(
+            ServerSock lsn = ServerSock.create(new InetSocketAddress(
                 InetAddress.getByName("0.0.0.0"),
                 configProcessor.getPacServerPort()
             ));

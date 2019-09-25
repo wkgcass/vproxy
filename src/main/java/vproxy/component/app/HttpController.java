@@ -9,7 +9,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.dns.Resolver;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
@@ -238,10 +238,10 @@ public class HttpController {
                 .build(),
             "name", "certs", "key"));
         server.del(moduleBase + "/cert-key/:ck", wrapAsync(this::deleteCertKey));
-        // bind-server
-        server.get(channelBase + "/event-loop-groups/:elgs/event-loop/:el/bind", wrapAsync(this::listBindServersInEl));
-        server.get(channelBase + "/tcp-lb/:tl/bind", wrapAsync(this::listBindServersInTl));
-        server.get(channelBase + "/socks5-server/:socks5/bind", wrapAsync(this::listBindServersInSocks5));
+        // server-sock
+        server.get(channelBase + "/event-loop-groups/:elgs/event-loop/:el/server-sock", wrapAsync(this::listServerSocksInEl));
+        server.get(channelBase + "/tcp-lb/:tl/server-sock", wrapAsync(this::listServerSocksInTl));
+        server.get(channelBase + "/socks5-server/:socks5/server-sock", wrapAsync(this::listServerSocksInSocks5));
         // connection
         server.get(channelBase + "/event-loop-groups/:elgs/event-loop/:el/conn", wrapAsync(this::listConnInEl));
         server.get(channelBase + "/tcp-lb/:tl/conn", wrapAsync(this::listConnInTl));
@@ -265,24 +265,24 @@ public class HttpController {
         // dns-cache
         server.get(stateBase + "/dns-cache", wrapAsync(this::listDnsCache));
         // bytes-in
-        server.get(statistics + "/tcp-lb/:tl/bind/:l4addr/bytes-in", wrapAsync(this::getBytesInFromL4AddrTl));
-        server.get(statistics + "/socks5-server/:socks5/bind/:l4addr/bytes-in", wrapAsync(this::getBytesInFromL4AddrSocks5));
+        server.get(statistics + "/tcp-lb/:tl/server-sock/:l4addr/bytes-in", wrapAsync(this::getBytesInFromL4AddrTl));
+        server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/bytes-in", wrapAsync(this::getBytesInFromL4AddrSocks5));
         server.get(statistics + "/event-loop-group/:elg/event-loop/:el/conn/:l4addr-act/:l4addr-pas/bytes-in", wrapAsync(this::getBytesInFromConnectionOfEl));
         server.get(statistics + "/tcp-lb/:tl/conn/:l4addr-act/:l4addr-pas/bytes-in", wrapAsync(this::getBytesInFromConnectionOfTl));
         server.get(statistics + "/socks5-server/:socks5/conn/:l4addr-act/:l4addr-pas/bytes-in", wrapAsync(this::getBytesInFromConnectionOfSocks5));
         server.get(statistics + "/server-group/:sg/server/:svr/conn/:l4addr-act/:l4addr-pas/bytes-in", wrapAsync(this::getBytesInFromConnectionOfServer));
         server.get(statistics + "/server-group/:sg/server/:svr/bytes-in", wrapAsync(this::getBytesInFromServer));
         // bytes-out
-        server.get(statistics + "/tcp-lb/:tl/bind/:l4addr/bytes-out", wrapAsync(this::getBytesOutFromL4AddrTl));
-        server.get(statistics + "/socks5-server/:socks5/bind/:l4addr/bytes-out", wrapAsync(this::getBytesOutFromL4AddrSocks5));
+        server.get(statistics + "/tcp-lb/:tl/server-sock/:l4addr/bytes-out", wrapAsync(this::getBytesOutFromL4AddrTl));
+        server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/bytes-out", wrapAsync(this::getBytesOutFromL4AddrSocks5));
         server.get(statistics + "/event-loop-group/:elg/event-loop/:el/conn/:l4addr-act/:l4addr-pas/bytes-out", wrapAsync(this::getBytesOutFromConnectionOfEl));
         server.get(statistics + "/tcp-lb/:tl/conn/:l4addr-act/:l4addr-pas/bytes-out", wrapAsync(this::getBytesOutFromConnectionOfTl));
         server.get(statistics + "/socks5-server/:socks5/conn/:l4addr-act/:l4addr-pas/bytes-out", wrapAsync(this::getBytesOutFromConnectionOfSocks5));
         server.get(statistics + "/server-group/:sg/server/:svr/conn/:l4addr-act/:l4addr-pas/bytes-out", wrapAsync(this::getBytesOutFromConnectionOfServer));
         server.get(statistics + "/server-group/:sg/server/:svr/bytes-out", wrapAsync(this::getBytesOutFromServer));
         // accepted-conn-count
-        server.get(statistics + "/tcp-lb/:tl/bind/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrTl));
-        server.get(statistics + "/socks5-server/:socks5/bind/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrSocks5));
+        server.get(statistics + "/tcp-lb/:tl/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrTl));
+        server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrSocks5));
 
         // start
         server.listen(address);
@@ -977,21 +977,21 @@ public class HttpController {
             "remove", "cert-key", rctx.param("ck"));
     }
 
-    private void listBindServersInEl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+    private void listServerSocksInEl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var el = utils.getEventLoop(rctx);
-        List<BindServer> servers = new LinkedList<>();
+        List<ServerSock> servers = new LinkedList<>();
         el.copyServers(servers);
-        utils.respondBindServerList(servers, cb);
+        utils.respondServerSockList(servers, cb);
     }
 
-    private void listBindServersInTl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+    private void listServerSocksInTl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var tl = Application.get().tcpLBHolder.get(rctx.param("tl"));
-        utils.respondBindServerListInTl(tl, cb);
+        utils.respondServerSockListInTl(tl, cb);
     }
 
-    private void listBindServersInSocks5(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+    private void listServerSocksInSocks5(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var socks5 = Application.get().socks5ServerHolder.get(rctx.param("socks5"));
-        utils.respondBindServerListInTl(socks5, cb);
+        utils.respondServerSockListInTl(socks5, cb);
     }
 
     private void listConnInEl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

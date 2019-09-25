@@ -947,21 +947,21 @@ public class HelpCommand {
                         )
                     ))
             )),
-        bindserver("bind-server", "bs", "represents a `ServerSocketChannel`, which binds an ip:port",
+        serversock("server-sock", "ss", "represents a `ServerSocketChannel`, which binds an ip:port",
             Arrays.asList(
-                new ResActMan(ActMan.list, "count bind servers",
+                new ResActMan(ActMan.list, "count server-socks",
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
-                            "list bind-server in el el0 in elg elg0",
+                            "list server-sock in el el0 in elg elg0",
                             "(integer) 1"
                         ),
                         new Tuple<>(
-                            "list bind-server in tcp-lb lb0",
+                            "list server-sock in tcp-lb lb0",
                             "(integer) 1"
                         ),
                         new Tuple<>(
-                            "list bind-server in socks5-server s5",
+                            "list server-sock in socks5-server s5",
                             "(integer) 1"
                         )
                     )),
@@ -969,15 +969,15 @@ public class HelpCommand {
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
-                            "list-detail bind-server in el el0 in elg elg0",
+                            "list-detail server-sock in el el0 in elg elg0",
                             "1) \"127.0.0.1:6380\""
                         ),
                         new Tuple<>(
-                            "list-detail bind-server in tcp-lb lb0",
+                            "list-detail server-sock in tcp-lb lb0",
                             "1) \"127.0.0.1:6380\""
                         ),
                         new Tuple<>(
-                            "list-detail bind-server in socks5-server s5",
+                            "list-detail server-sock in socks5-server s5",
                             "1) \"127.0.0.1:18081\""
                         )
                     ))
@@ -1094,7 +1094,7 @@ public class HelpCommand {
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
-                            "list bytes-in in bind-server 127.0.0.1:6380 in tl lb0",
+                            "list bytes-in in server-sock 127.0.0.1:6380 in tl lb0",
                             "(integer) 45"
                         ),
                         new Tuple<>(
@@ -1113,7 +1113,7 @@ public class HelpCommand {
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
-                            "list bytes-out in bind-server 127.0.0.1:6380 in tl lb0",
+                            "list bytes-out in server-sock 127.0.0.1:6380 in tl lb0",
                             "(integer) 9767"
                         ),
                         new Tuple<>(
@@ -1132,7 +1132,7 @@ public class HelpCommand {
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list accepted-conn-count in bind-server 127.0.0.1:6380 in tl lb0",
+                            "list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0",
                             "(integer) 2"
                         )
                     ))

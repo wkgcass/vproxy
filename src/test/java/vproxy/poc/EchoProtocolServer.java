@@ -1,6 +1,6 @@
 package vproxy.poc;
 
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
@@ -24,7 +24,7 @@ public class EchoProtocolServer {
         config.setOutBufferSize(4);
 
         ProtocolServerHandler.apply(
-            netEventLoop, BindServer.create(new InetSocketAddress("127.0.0.1", 18080)), config,
+            netEventLoop, ServerSock.create(new InetSocketAddress("127.0.0.1", 18080)), config,
             new ProtocolHandler() {
                 @Override
                 public void init(ProtocolHandlerContext ctx) {

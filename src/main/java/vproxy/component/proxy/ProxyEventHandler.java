@@ -1,7 +1,7 @@
 package vproxy.component.proxy;
 
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 
 public interface ProxyEventHandler {
-    void serverRemoved(BindServer server);
+    void serverRemoved(ServerSock server);
 }

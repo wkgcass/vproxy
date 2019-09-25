@@ -1,14 +1,14 @@
 package vproxy.component.proxy;
 
 import vproxy.app.Config;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 
 import javax.net.ssl.SSLContext;
 
 public class ProxyNetConfig {
     NetEventLoop acceptLoop;
-    BindServer server;
+    ServerSock server;
     NetEventLoopProvider handleLoopProvider;
     ConnectorGen connGen;
     int timeout = Config.tcpTimeout;
@@ -23,7 +23,7 @@ public class ProxyNetConfig {
         return this;
     }
 
-    public ProxyNetConfig setServer(BindServer server) {
+    public ProxyNetConfig setServer(ServerSock server) {
         this.server = server;
         return this;
     }
@@ -62,7 +62,7 @@ public class ProxyNetConfig {
         return acceptLoop;
     }
 
-    public BindServer getServer() {
+    public ServerSock getServer() {
         return server;
     }
 

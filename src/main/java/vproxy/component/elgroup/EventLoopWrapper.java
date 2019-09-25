@@ -102,7 +102,7 @@ public class EventLoopWrapper extends NetEventLoop {
 
     public final String alias;
     private final SelectorEventLoop selectorEventLoop;
-    private final ConcurrentHashSet<BindServer> servers = new ConcurrentHashSet<>();
+    private final ConcurrentHashSet<ServerSock> servers = new ConcurrentHashSet<>();
     private final ConcurrentHashSet<Connection> connections = new ConcurrentHashSet<>();
     private final ConcurrentHashSet<EventLoopAttach> attaches = new ConcurrentHashSet<>();
 
@@ -113,7 +113,7 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     @Override
-    public void addServer(BindServer server, Object attachment, ServerHandler handler) throws IOException {
+    public void addServer(ServerSock server, Object attachment, ServerHandler handler) throws IOException {
         servers.add(server); // make sure the server recorded
         try {
             super.addServer(server, attachment, new ServerHandlerWrapper(handler));
@@ -183,7 +183,7 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     // this is a very expansive operation
-    public void copyServers(Collection<? super BindServer> servers) {
+    public void copyServers(Collection<? super ServerSock> servers) {
         servers.addAll(this.servers);
     }
 

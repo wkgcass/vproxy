@@ -12,7 +12,7 @@ import java.nio.channels.SelectableChannel;
 import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.LongAdder;
 
-public class BindServer implements NetFlowRecorder {
+public class ServerSock implements NetFlowRecorder {
     private static int supportReusePort = -1; // 1:true 0:false -1:not decided yet
 
     public final InetSocketAddress bind;
@@ -68,7 +68,7 @@ public class BindServer implements NetFlowRecorder {
         }
     }
 
-    public static BindServer create(InetSocketAddress bindAddress) throws IOException {
+    public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
         ServerSocketChannel channel = ServerSocketChannel.open();
         channel.configureBlocking(false);
         if (supportReusePort()) {
@@ -76,14 +76,14 @@ public class BindServer implements NetFlowRecorder {
         }
         channel.bind(bindAddress);
         try {
-            return new BindServer(channel);
+            return new ServerSock(channel);
         } catch (IOException e) {
-            channel.close(); // close the channel if create BindServer failed
+            channel.close(); // close the channel if create ServerSock failed
             throw e;
         }
     }
 
-    private BindServer(ServerSocketChannel channel) throws IOException {
+    private ServerSock(ServerSocketChannel channel) throws IOException {
         this.channel = channel;
         bind = (InetSocketAddress) channel.getLocalAddress();
         _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
@@ -147,6 +147,6 @@ public class BindServer implements NetFlowRecorder {
 
     @Override
     public String toString() {
-        return "BindServer(" + id() + ")[" + (closed ? "closed" : "open") + "]";
+        return "ServerSock(" + id() + ")[" + (closed ? "closed" : "open") + "]";
     }
 }

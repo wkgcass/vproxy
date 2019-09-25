@@ -11,7 +11,7 @@ import vproxy.component.exception.XException;
 import vproxy.component.proxy.Session;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.dns.Resolver;
 import vproxy.util.Callback;
@@ -391,7 +391,7 @@ public class Command {
         if (targetResource == null)
             targetResource = cmd.prepositionResource;
         switch (cmd.resource.type) {
-            case bs: // bindServer
+            case ss: // serverSock
             case conn: // connection
             case sess: // session
                 // these resources are related to a channel
@@ -405,13 +405,13 @@ public class Command {
                         // not supported for these resources
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case R:
-                        if (cmd.resource.type == ResourceType.bs)
+                        if (cmd.resource.type == ResourceType.ss)
                             throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case L:
                     case l:
                         switch (cmd.resource.type) {
-                            case bs:
-                                BindServerHandle.checkBindServer(cmd.resource);
+                            case ss:
+                                ServerSockHandle.checkServerSock(cmd.resource);
                                 break chnlsw;
                             case conn:
                                 ConnectionHandle.checkConnection(targetResource);
@@ -439,8 +439,8 @@ public class Command {
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
                         switch (targetResource.type) {
-                            case bs:
-                                BindServerHandle.checkBindServer(targetResource);
+                            case ss:
+                                ServerSockHandle.checkServerSock(targetResource);
                                 break bsw;
                             case conn:
                                 ConnectionHandle.checkConnection(targetResource);
@@ -464,10 +464,10 @@ public class Command {
                         throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
                     case L:
                     case l:
-                        // can be found in bind-server
+                        // can be found in server-sock
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-                        BindServerHandle.checkBindServer(targetResource);
+                        ServerSockHandle.checkServerSock(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -746,14 +746,14 @@ public class Command {
                         SessionHandle.close(this);
                         return new CmdResult();
                 }
-            case bs: // can only be retrieved from el
+            case ss: // can only be retrieved from el
                 switch (action) {
                     case l:
-                        int bsCount = BindServerHandle.count(targetResource);
+                        int bsCount = ServerSockHandle.count(targetResource);
                         return new CmdResult(bsCount, bsCount, "" + bsCount);
                     case L:
-                        List<BindServer> bsList = BindServerHandle.list(targetResource);
-                        List<String> bsStrList = bsList.stream().map(BindServer::id).collect(Collectors.toList());
+                        List<ServerSock> bsList = ServerSockHandle.list(targetResource);
+                        List<String> bsStrList = bsList.stream().map(ServerSock::id).collect(Collectors.toList());
                         return new CmdResult(bsList, bsStrList, utilJoinList(bsList));
                 }
             case bin:

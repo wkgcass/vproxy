@@ -19,7 +19,7 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
@@ -95,7 +95,7 @@ class utils {
     static void respondBytesInFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         InetSocketAddress l4addr = tl.bindAddress;
         if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
-            long sum = tl.servers.keySet().stream().mapToLong(BindServer::getFromRemoteBytes).sum();
+            long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getFromRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
             throw new NotFoundException("l4addr in " + nameOfTl(tl), l4addrStr);
@@ -105,7 +105,7 @@ class utils {
     static void respondBytesOutFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         InetSocketAddress l4addr = tl.bindAddress;
         if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
-            long sum = tl.servers.keySet().stream().mapToLong(BindServer::getToRemoteBytes).sum();
+            long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getToRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
             throw new NotFoundException("l4addr in " + nameOfTl(tl), l4addrStr);
@@ -175,7 +175,7 @@ class utils {
     static void respondAcceptedConnFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         InetSocketAddress l4addr = tl.bindAddress;
         if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
-            long sum = tl.servers.keySet().stream().mapToLong(BindServer::getHistoryAcceptedConnectionCount).sum();
+            long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getHistoryAcceptedConnectionCount).sum();
             respondWithTotal(sum, cb);
         } else {
             throw new NotFoundException("l4addr " + nameOfTl(tl), l4addrStr);
@@ -195,7 +195,7 @@ class utils {
         ));
     }
 
-    public static void respondBindServerListInTl(TcpLB tl, Callback<JSON.Instance, Throwable> cb) {
+    public static void respondServerSockListInTl(TcpLB tl, Callback<JSON.Instance, Throwable> cb) {
         cb.succeeded(new SimpleArray(
             tl.servers.keySet().stream().map(s -> new ObjectBuilder()
                 .put("bind", Utils.l4addrStr(s.bind))
@@ -203,7 +203,7 @@ class utils {
         ));
     }
 
-    static void respondBindServerList(Collection<BindServer> list, Callback<JSON.Instance, Throwable> cb) {
+    static void respondServerSockList(Collection<ServerSock> list, Callback<JSON.Instance, Throwable> cb) {
         cb.succeeded(new SimpleArray(
             list.stream().map(s -> new ObjectBuilder()
                 .put("bind", Utils.l4addrStr(s.bind))

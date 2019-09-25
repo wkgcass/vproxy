@@ -3,7 +3,7 @@ package vproxy.poc;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyEventHandler;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
@@ -21,7 +21,7 @@ public class ProxyEchoServer {
         // create event loop (just use the returned event loop)
         NetEventLoop netEventLoop = new NetEventLoop(selectorEventLoop);
         // create server
-        BindServer server = BindServer.create(new InetSocketAddress(18080));
+        ServerSock server = ServerSock.create(new InetSocketAddress(18080));
         // init config
         ProxyNetConfig config = new ProxyNetConfig()
             .setAcceptLoop(netEventLoop)
@@ -46,7 +46,7 @@ public class ProxyEchoServer {
 
 class MyProxyEventHandler implements ProxyEventHandler {
     @Override
-    public void serverRemoved(BindServer server) {
+    public void serverRemoved(ServerSock server) {
         server.close();
     }
 }
