@@ -14,7 +14,9 @@ import vproxy.util.Utils;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
 
 public class Simple {
     private static final List<String> supportedProtocols = Arrays.asList(

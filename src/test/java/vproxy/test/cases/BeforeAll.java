@@ -1,8 +1,8 @@
 package vproxy.test.cases;
 
-import vproxy.dns.Resolver;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import vproxy.dns.Resolver;
 
 import java.security.Security;
 

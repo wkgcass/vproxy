@@ -1,5 +1,6 @@
 package vproxy.test.cases;
 
+import org.junit.*;
 import vproxy.app.Config;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.HealthCheckConfig;
@@ -20,7 +21,6 @@ import vproxy.test.tool.Client;
 import vproxy.test.tool.EchoServer;
 import vproxy.test.tool.IdServer;
 import vproxy.util.Utils;
-import org.junit.*;
 
 import java.io.IOException;
 import java.net.InetAddress;

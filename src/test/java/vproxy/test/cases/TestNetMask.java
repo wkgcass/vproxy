@@ -1,8 +1,8 @@
 package vproxy.test.cases;
 
+import org.junit.Test;
 import vproxy.util.Tuple;
 import vproxy.util.Utils;
-import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;

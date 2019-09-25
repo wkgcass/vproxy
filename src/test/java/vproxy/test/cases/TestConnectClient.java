@@ -1,5 +1,6 @@
 package vproxy.test.cases;
 
+import org.junit.*;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.ConnectClient;
 import vproxy.connection.NetEventLoop;
@@ -8,7 +9,6 @@ import vproxy.test.tool.DirectCloseServer;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.SendOnConnectIdServer;
 import vproxy.util.BlockCallback;
-import org.junit.*;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

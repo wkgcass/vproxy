@@ -1,6 +1,9 @@
 package vproxy.test.cases;
 
 import io.vertx.core.Vertx;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import vproxy.component.auto.AutoConfig;
 import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.auto.SmartNodeDelegate;
@@ -15,14 +18,11 @@ import vproxy.discovery.DiscoveryConfig;
 import vproxy.discovery.TimeConfig;
 import vproxy.test.tool.DiscoveryHolder;
 import vproxy.util.IPType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.net.NetworkInterface;
 import java.util.Enumeration;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 public class TestSmart {
     private DiscoveryHolder holder;

@@ -1,7 +1,7 @@
 package vserver.route;
 
-import vserver.RoutingContext;
 import vserver.Route;
+import vserver.RoutingContext;
 
 public class VariableRoute implements Route {
     private final Route next;

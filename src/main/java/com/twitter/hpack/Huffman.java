@@ -15,8 +15,8 @@
  */
 package com.twitter.hpack;
 
-import static com.twitter.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
 import static com.twitter.hpack.HpackUtil.HUFFMAN_CODES;
+import static com.twitter.hpack.HpackUtil.HUFFMAN_CODE_LENGTHS;
 
 public final class Huffman {
 

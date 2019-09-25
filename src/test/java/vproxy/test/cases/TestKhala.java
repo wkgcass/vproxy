@@ -1,5 +1,8 @@
 package vproxy.test.cases;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import vclient.HttpClient;
 import vclient.HttpResponse;
 import vjson.JSON;
@@ -17,9 +20,6 @@ import vproxy.discovery.TimeConfig;
 import vproxy.test.tool.DiscoveryHolder;
 import vproxy.util.BlockCallback;
 import vproxy.util.IPType;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import vserver.HttpServer;
 
 import java.io.IOException;

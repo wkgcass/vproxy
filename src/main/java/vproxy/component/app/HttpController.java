@@ -23,7 +23,10 @@ import vserver.server.Http1ServerImpl;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.util.*;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.UUID;
 import java.util.stream.Collectors;
 
 public class HttpController {

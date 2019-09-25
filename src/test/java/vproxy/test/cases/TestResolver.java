@@ -1,12 +1,12 @@
 package vproxy.test.cases;
 
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 import vproxy.dns.Resolver;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.Utils;
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 
 import java.io.IOException;
 import java.net.Inet6Address;
