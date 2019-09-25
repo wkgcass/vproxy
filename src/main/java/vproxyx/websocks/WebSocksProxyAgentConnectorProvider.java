@@ -23,7 +23,7 @@ import java.util.function.Consumer;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
     class WebSocksPoolHandler implements ConnectionPoolHandler {
-        class WebSocksClientHandshakeHandler implements ClientConnectionHandler {
+        class WebSocksClientHandshakeHandler implements ConnectableConnectionHandler {
             private final String domainOfProxy;
             private final HttpRespParser httpRespParser = new HttpRespParser(false);
 
@@ -32,7 +32,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
 
             @Override
-            public void connected(ClientConnectionHandlerContext ctx) {
+            public void connected(ConnectableConnectionHandlerContext ctx) {
                 CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
             }
 
@@ -41,11 +41,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 CommonProcess.parseUpgradeResp(ctx, httpRespParser,
                     /* fail */() -> {
                         assert Logger.lowLevelDebug("handshake for the pool failed");
-                        cb.connectionError((ClientConnection) ctx.connection);
+                        cb.connectionError((ConnectableConnection) ctx.connection);
                     },
                     /* succ */() -> {
                         assert Logger.lowLevelDebug("handshake for the pool succeeded");
-                        cb.handshakeDone((ClientConnection) ctx.connection);
+                        cb.handshakeDone((ConnectableConnection) ctx.connection);
                     });
             }
 
@@ -58,7 +58,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             public void exception(ConnectionHandlerContext ctx, IOException err) {
                 Logger.error(LogType.CONN_ERROR, "conn " + ctx.connection +
                     " got exception when handshaking for the pool", err);
-                cb.connectionError((ClientConnection) ctx.connection);
+                cb.connectionError((ConnectableConnection) ctx.connection);
             }
 
             @Override
@@ -71,7 +71,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             public void closed(ConnectionHandlerContext ctx) {
                 Logger.error(LogType.CONN_ERROR, "conn " + ctx.connection +
                     " closed when handshaking for the pool");
-                cb.connectionError((ClientConnection) ctx.connection);
+                cb.connectionError((ConnectableConnection) ctx.connection);
             }
 
             @Override
@@ -89,14 +89,14 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         @Override
-        public ClientConnection provide(NetEventLoop loop) {
+        public ConnectableConnection provide(NetEventLoop loop) {
             SvrHandleConnector connector = servers.get(alias).next(null/*we ignore the source because it's wrr*/);
             if (connector == null) {
                 assert Logger.lowLevelDebug("no available remote server connector for now");
                 return null;
             }
             boolean useSSL = (boolean) connector.getData(); /*useSSL, see ConfigProcessor*/
-            ClientConnection conn;
+            ConnectableConnection conn;
             try {
                 if (useSSL) {
                     conn = CommonProcess.makeSSLConnection(connector);
@@ -111,7 +111,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
 
             try {
-                loop.addClientConnection(conn, null, new WebSocksClientHandshakeHandler(connector.getHostName()));
+                loop.addConnectableConnection(conn, null, new WebSocksClientHandshakeHandler(connector.getHostName()));
             } catch (IOException e) {
                 conn.close();
                 return null;
@@ -120,12 +120,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         @Override
-        public void keepaliveReadable(ClientConnection conn) {
+        public void keepaliveReadable(ConnectableConnection conn) {
             // do nothing, we do not expect any data
         }
 
         @Override
-        public void keepalive(ClientConnection conn) {
+        public void keepalive(ConnectableConnection conn) {
             // PONG frame
             byte[] bytes = {
                 (byte) 0b10001010, // FIN and %xA
@@ -137,7 +137,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
     }
 
-    class AgentClientConnectionHandler implements ClientConnectionHandler {
+    class AgentConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final String domainOfProxy;
         private final AddressType addressType;
         private final String domain;
@@ -159,12 +159,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         private ByteArrayChannel socks5AuthMethodExchange;
         private ByteArrayChannel socks5ConnectResult;
 
-        AgentClientConnectionHandler(String domainOfProxy,
-                                     AddressType addressType,
-                                     String domain,
-                                     int port,
-                                     Consumer<Connector> providedCallback,
-                                     boolean usePooledConnection) {
+        AgentConnectableConnectionHandler(String domainOfProxy,
+                                          AddressType addressType,
+                                          String domain,
+                                          int port,
+                                          Consumer<Connector> providedCallback,
+                                          boolean usePooledConnection) {
             this.domainOfProxy = domainOfProxy;
             this.addressType = addressType;
             this.domain = domain;
@@ -180,7 +180,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             if (!usePooledConnection) {
                 // start handshaking if the connection is not pooled
                 CommonProcess.sendUpgrade(ctx, domainOfProxy, user, pass);
@@ -454,7 +454,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             // add respond to the proxy lib
 
             providedCallback.accept(new AlreadyConnectedConnector(
-                ctx.connection.remote, (ClientConnection) ctx.connection, ctx.eventLoop
+                ctx.connection.remote, (ConnectableConnection) ctx.connection, ctx.eventLoop
             ));
 
             // every thing is done now
@@ -490,11 +490,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     static class CommonProcess {
-        static ClientConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
+        static ConnectableConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
             return makeSSLConnection(null, connector);
         }
 
-        static ClientConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
+        static ConnectableConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
             SSLEngine engine;
             String hostname = connector.getHostName();
             if (hostname == null) {
@@ -530,7 +530,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
         }
 
-        static void sendUpgrade(ClientConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
+        static void sendUpgrade(ConnectableConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
             // send http upgrade on connection
             byte[] bytes = ("" +
                 "GET / HTTP/1.1\r\n" +
@@ -673,7 +673,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 hostname = null;
             }
             try {
-                loop.addClientConnection(conn, null, new AgentClientConnectionHandler(
+                loop.addConnectableConnection(conn, null, new AgentConnectableConnectionHandler(
                     hostname, type, address, port,
                     providedCallback, isPooledConn));
             } catch (IOException e) {

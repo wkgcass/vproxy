@@ -161,16 +161,16 @@ public class TcpLB {
     }
 
     // provide a connector
-    private Connector connectorProvider(Connection clientConn) {
+    private Connector connectorProvider(Connection connectableConn) {
         // check whitelist
-        InetAddress remoteAddress = clientConn.remote.getAddress();
+        InetAddress remoteAddress = connectableConn.remote.getAddress();
         if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
             return null; // terminated by securityGroup
 
         // we get a new connector
 
         // get a server from backends
-        Connector connector = backends.next(clientConn.remote);
+        Connector connector = backends.next(connectableConn.remote);
         if (connector == null)
             return null; // return null if cannot get any
         assert Logger.lowLevelDebug("got a backend: " + connector);

@@ -659,7 +659,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         // set the length in frame head
         utilModifyFrameLength(theSettingsFrameHead, frame.length + extraLength);
 
-        // record the handshake if it's client connection
+        // record the handshake if it's connection from client
         if (connId == 0) {
             ByteArray head = ctx.settingsFrameHeader;
             ByteArray handshake = SEQ_PREFACE_MAGIC.concat(head).concat(payload).arrange();

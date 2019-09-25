@@ -12,24 +12,24 @@ import java.util.function.Consumer;
 
 public class ConnectionPool {
     static class ConnWrap {
-        final ClientConnection conn;
+        final ConnectableConnection conn;
         boolean isHandshaking = true;
 
-        ConnWrap(ClientConnection conn) {
+        ConnWrap(ConnectableConnection conn) {
             this.conn = conn;
         }
     }
 
-    class PoolConnHandler implements ClientConnectionHandler {
+    class PoolConnHandler implements ConnectableConnectionHandler {
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             // ignore the event
         }
 
         @Override
         public void readable(ConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("the pooled connection " + ctx.connection + " is receiving data");
-            handler.keepaliveReadable((ClientConnection) ctx.connection);
+            handler.keepaliveReadable((ConnectableConnection) ctx.connection);
             if (ctx.connection.getInBuffer().used() != 0) {
                 Logger.error(LogType.IMPROPER_USE, "the user code did not consume all data in the inBuffer");
                 ctx.connection.close(true);
@@ -93,7 +93,7 @@ public class ConnectionPool {
             return;
         }
 
-        ClientConnection conn = handler.provide(loop);
+        ConnectableConnection conn = handler.provide(loop);
         if (conn == null) {
             assert Logger.lowLevelDebug("the user code refuse to provide a connection to the pool");
         } else if (conn.getEventLoop() == null) {
@@ -115,7 +115,7 @@ public class ConnectionPool {
         isPendingProviding = true;
     }
 
-    void handshakeDone(ClientConnection conn) {
+    void handshakeDone(ConnectableConnection conn) {
         Logger.alert("handshake done for pooled connection: " + conn);
         connections.stream().filter(w -> w.conn.equals(conn)).forEach(this::handshakeDone);
     }
@@ -125,7 +125,7 @@ public class ConnectionPool {
         loop.removeConnection(w.conn);
 
         try {
-            loop.addClientConnection(w.conn, null, poolConnHandler);
+            loop.addConnectableConnection(w.conn, null, poolConnHandler);
         } catch (IOException e) {
             Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "register connection with poolConnHandler failed", e);
             removeConnection(w.conn);
@@ -151,7 +151,7 @@ public class ConnectionPool {
     }
 
     @ThreadSafe
-    public void get(SelectorEventLoop callerLoop, Consumer<ClientConnection> cb) {
+    public void get(SelectorEventLoop callerLoop, Consumer<ConnectableConnection> cb) {
         loop.getSelectorEventLoop().runOnLoop(() -> {
 
             // here is in the connection pool event loop

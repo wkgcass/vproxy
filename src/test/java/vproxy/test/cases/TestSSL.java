@@ -148,22 +148,22 @@ public class TestSSL {
             RingBuffer.allocate(16384),
             selectorEventLoop
         );
-        ClientConnection conn = ClientConnection.create(
+        ConnectableConnection conn = ConnectableConnection.create(
             new InetSocketAddress(inet, port),
             ConnectionOpts.getDefault(),
             pair.left, pair.right
         );
-        loop.addClientConnection(conn, null, new MySSLClientConnectionHandler());
+        loop.addConnectableConnection(conn, null, new MySSLConnectableConnectionHandler());
 
         // start
         selectorEventLoop.loop();
     }
 
-    class MySSLClientConnectionHandler implements ClientConnectionHandler {
+    class MySSLConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final ByteArrayChannel chnl;
         private final HttpRespParser parser;
 
-        MySSLClientConnectionHandler() {
+        MySSLConnectableConnectionHandler() {
             chnl = ByteArrayChannel.fromFull(("" +
                 "GET / HTTP/1.1\r\n" +
                 "Host: ip.cn\r\n" +
@@ -173,7 +173,7 @@ public class TestSSL {
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             // send http request
             ctx.connection.getOutBuffer().storeBytesFrom(chnl);
         }

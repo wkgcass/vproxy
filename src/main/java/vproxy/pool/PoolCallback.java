@@ -1,6 +1,6 @@
 package vproxy.pool;
 
-import vproxy.connection.ClientConnection;
+import vproxy.connection.ConnectableConnection;
 import vproxy.util.Logger;
 
 public class PoolCallback {
@@ -10,12 +10,12 @@ public class PoolCallback {
         this.pool = pool;
     }
 
-    public void connectionError(ClientConnection conn) {
+    public void connectionError(ConnectableConnection conn) {
         assert Logger.lowLevelDebug("connection error " + conn);
         pool.removeConnection(conn);
     }
 
-    public void handshakeDone(ClientConnection conn) {
+    public void handshakeDone(ConnectableConnection conn) {
         pool.handshakeDone(conn);
     }
 }
