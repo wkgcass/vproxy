@@ -12,8 +12,8 @@ public class Connector {
         this.remote = remote;
     }
 
-    public ClientConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
-        ClientConnection conn = ClientConnection.create(remote, opts, in, out);
+    public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+        ConnectableConnection conn = ConnectableConnection.create(remote, opts, in, out);
         conn.connector = this;
         return conn;
     }

@@ -1,6 +1,6 @@
 package vproxy.component.svrgroup;
 
-import vproxy.connection.ClientConnection;
+import vproxy.connection.ConnectableConnection;
 import vproxy.connection.ConnectionOpts;
 import vproxy.connection.Connector;
 import vproxy.util.RingBuffer;
@@ -16,8 +16,8 @@ public class SvrHandleConnector extends Connector {
     }
 
     @Override
-    public ClientConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
-        ClientConnection conn = super.connect(opts, in, out);
+    public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+        ConnectableConnection conn = super.connect(opts, in, out);
         conn.addNetFlowRecorder(serverHandle);
         serverHandle.attachConnection(conn);
         conn.addConnCloseHandler(serverHandle);

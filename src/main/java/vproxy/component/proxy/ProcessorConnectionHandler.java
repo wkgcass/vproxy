@@ -129,7 +129,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     // -----------------------------
     // --- START backend handler ---
-    class BackendConnectionHandler implements ClientConnectionHandler {
+    class BackendConnectionHandler implements ConnectableConnectionHandler {
         class ByteFlow {
             class Segment {
                 // this field records the current running mode
@@ -186,14 +186,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         private final Processor.SubContext subCtx;
-        private final ClientConnection conn;
+        private final ConnectableConnection conn;
         private boolean isConnected = false;
 
         private ByteArrayChannel chnl = null;
         private final BackendConnectionHandler.ByteFlow backendByteFlow = new BackendConnectionHandler.ByteFlow();
         private final BackendConnectionHandler.ByteFlow frontendByteFlow = new BackendConnectionHandler.ByteFlow();
 
-        BackendConnectionHandler(Processor.SubContext subCtx, ClientConnection conn) {
+        BackendConnectionHandler(Processor.SubContext subCtx, ConnectableConnection conn) {
             this.subCtx = subCtx;
             this.conn = conn;
         }
@@ -263,7 +263,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             isConnected = true;
             // no need to call processor.connected(...) here, it's already called when retrieving the connection
             doBackendWrite();
@@ -690,9 +690,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         // get a new connection
-        ClientConnection clientConnection;
+        ConnectableConnection connectableConnection;
         try {
-            clientConnection = connector.connect(
+            connectableConnection = connector.connect(
                 new ConnectionOpts().setTimeout(config.timeout),
                 RingBuffer.allocateDirect(config.inBufferSize), ProxyOutputRingBuffer.allocateDirect(config.outBufferSize));
         } catch (IOException e) {
@@ -703,17 +703,17 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         // record in collections
         int newConnId = ++cursor;
         BackendConnectionHandler bh =
-            new BackendConnectionHandler(processor.initSub(topCtx, newConnId, connector.remote), clientConnection);
+            new BackendConnectionHandler(processor.initSub(topCtx, newConnId, connector.remote), connectableConnection);
         recordBackend(bh, newConnId);
         // register
         try {
-            loop.addClientConnection(clientConnection, null, bh);
+            loop.addConnectableConnection(connectableConnection, null, bh);
         } catch (IOException e) {
-            Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "add client connection " + clientConnection + " to loop failed");
+            Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "add connectable connection " + connectableConnection + " to loop failed");
 
             // remove from collection because it fails
             removeBackend(bh);
-            clientConnection.close(true);
+            connectableConnection.close(true);
 
             return null;
         }

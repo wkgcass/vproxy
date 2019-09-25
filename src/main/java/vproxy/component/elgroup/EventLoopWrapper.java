@@ -86,16 +86,16 @@ public class EventLoopWrapper extends NetEventLoop {
         }
     }
 
-    class ClientConnectionHandlerWrapper extends ConnectionHandlerWrapper implements ClientConnectionHandler {
-        private final ClientConnectionHandler handler;
+    class ConnectableConnectionHandlerWrapper extends ConnectionHandlerWrapper implements ConnectableConnectionHandler {
+        private final ConnectableConnectionHandler handler;
 
-        ClientConnectionHandlerWrapper(ClientConnectionHandler handler) {
+        ConnectableConnectionHandlerWrapper(ConnectableConnectionHandler handler) {
             super(handler);
             this.handler = handler;
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             handler.connected(ctx);
         }
     }
@@ -135,10 +135,10 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     @Override
-    public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
+    public void addConnectableConnection(ConnectableConnection connection, Object attachment, ConnectableConnectionHandler handler) throws IOException {
         connections.add(connection); // make sure the connection recorded
         try {
-            super.addClientConnection(connection, attachment, new ClientConnectionHandlerWrapper(handler));
+            super.addConnectableConnection(connection, attachment, new ConnectableConnectionHandlerWrapper(handler));
         } catch (IOException e) {
             connections.remove(connection); // remove the recorded connection if got error
             throw e;

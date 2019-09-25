@@ -94,11 +94,11 @@ public class Http1ClientImpl implements HttpClient {
                 initLoop();
 
                 try {
-                    loop.addClientConnection(
-                        ClientConnection.create(remote, new ConnectionOpts().setTimeout(timeout),
+                    loop.addConnectableConnection(
+                        ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(timeout),
                             RingBuffer.allocate(1024), RingBuffer.allocate(1024)),
                         null,
-                        new ClientConnectionHandler() {
+                        new ConnectableConnectionHandler() {
                             private final HttpRespParser parser = new HttpRespParser(true);
                             private final Callback<HttpResponse, IOException> cb = new Callback<>() {
                                 @Override
@@ -119,7 +119,7 @@ public class Http1ClientImpl implements HttpClient {
                             }
 
                             @Override
-                            public void connected(ClientConnectionHandlerContext ctx) {
+                            public void connected(ConnectableConnectionHandlerContext ctx) {
                                 // write data when connected
                                 write(ctx);
                             }

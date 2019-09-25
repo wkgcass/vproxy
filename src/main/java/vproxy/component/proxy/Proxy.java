@@ -76,9 +76,9 @@ public class Proxy {
                 return;
             }
 
-            ClientConnection clientConnection;
+            ConnectableConnection connectableConnection;
             try {
-                clientConnection = connector.connect(
+                connectableConnection = connector.connect(
                     new ConnectionOpts().setTimeout(config.timeout),
                     /*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {
@@ -90,8 +90,8 @@ public class Proxy {
                 return;
             }
 
-            Session session = new Session(connection, clientConnection);
-            ClientConnectionHandler handler = new SessionClientConnectionHandler(session);
+            Session session = new Session(connection, connectableConnection);
+            ConnectableConnectionHandler handler = new SessionConnectableConnectionHandler(session);
 
             // we get a new event loop for handling
             // the event loop is provided by user
@@ -114,18 +114,18 @@ public class Proxy {
             if (loop == null) {
                 // the loop not exist
                 utilCloseSessionAndReleaseBuffers(session);
-                Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for client connection " + clientConnection);
+                Logger.warn(LogType.NO_EVENT_LOOP, "cannot get event loop for connectable connection " + connectableConnection);
                 return;
             }
             try {
-                loop.addClientConnection(clientConnection, null, handler);
+                loop.addConnectableConnection(connectableConnection, null, handler);
 
                 // here the handler added successfully, we can record the session
                 sessions.add(session);
                 // the session record will be removed in `removed()` callback
 
             } catch (IOException e) {
-                Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "register passive connection into event loop failed, passive conn = " + clientConnection + ", err = " + e);
+                Logger.fatal(LogType.EVENT_LOOP_ADD_FAIL, "register passive connection into event loop failed, passive conn = " + connectableConnection + ", err = " + e);
                 // should not happen
                 // but if it happens, we close both sides
                 utilCloseSessionAndReleaseBuffers(session);
@@ -386,16 +386,16 @@ public class Proxy {
         }
     }
 
-    class SessionClientConnectionHandler implements ClientConnectionHandler {
+    class SessionConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final Session session;
         private boolean isConnected = false;
 
-        SessionClientConnectionHandler(Session session) {
+        SessionConnectableConnectionHandler(Session session) {
             this.session = session;
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("passive connection established: " + ctx.connection);
             isConnected = true; // it's connected
 
@@ -435,7 +435,7 @@ public class Proxy {
             if (!isConnected) {
                 // the connection failed before established
                 // we should alert the connector that the connection failed
-                Connector connector = ((ClientConnection) ctx.connection).getConnector();
+                Connector connector = ((ConnectableConnection) ctx.connection).getConnector();
                 if (connector != null) {
                     connector.connectionFailed();
                 }

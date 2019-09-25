@@ -14,7 +14,7 @@ import java.nio.channels.*;
 public class NetEventLoop {
     private static final HandlerForTCPServer handlerForTPCServer = new HandlerForTCPServer();
     private static final HandlerForConnection handlerForConnection = new HandlerForConnection();
-    private static final HandlerForClientConnection handlerForClientConnection = new HandlerForClientConnection();
+    private static final HandlerForConnectableConnection handlerForConnectableConnection = new HandlerForConnectableConnection();
 
     private final SelectorEventLoop selectorEventLoop;
 
@@ -89,7 +89,7 @@ public class NetEventLoop {
             handlerForConnection);
     }
 
-    // this method is for both server connection and client connection
+    // this method is for both server connection and connectable connection
     @ThreadSafe
     public void removeConnection(Connection connection) {
         assert Logger.lowLevelDebug("removing connection from loop: " + connection);
@@ -104,7 +104,7 @@ public class NetEventLoop {
     }
 
     @ThreadSafe
-    public void addClientConnection(ClientConnection connection, Object attachment, ClientConnectionHandler handler) throws IOException {
+    public void addConnectableConnection(ConnectableConnection connection, Object attachment, ConnectableConnectionHandler handler) throws IOException {
         boolean fireConnected = false; // whether to fire `connected` event after registering
         // the connection might already be connected
         // so fire the event to let handler know
@@ -122,9 +122,9 @@ public class NetEventLoop {
             ops = SelectionKey.OP_CONNECT;
         }
 
-        ClientConnectionHandlerContext ctx = new ClientConnectionHandlerContext(this, connection, attachment, handler);
+        ConnectableConnectionHandlerContext ctx = new ConnectableConnectionHandlerContext(this, connection, attachment, handler);
 
-        doAddConnection(connection, ops, ctx, handlerForClientConnection);
+        doAddConnection(connection, ops, ctx, handlerForConnectableConnection);
 
         if (fireConnected) {
             try {
@@ -382,12 +382,12 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     }
 }
 
-class HandlerForClientConnection extends HandlerForConnection {
+class HandlerForConnectableConnection extends HandlerForConnection {
     @Override
     public void connected(HandlerContext<SelectableChannel> ctx) {
         // only tcp SocketChannel will fire connected event
 
-        ClientConnectionHandlerContext cctx = (ClientConnectionHandlerContext) ctx.getAttachment();
+        ConnectableConnectionHandlerContext cctx = (ConnectableConnectionHandlerContext) ctx.getAttachment();
         SocketChannel channel = (SocketChannel) ctx.getChannel();
         boolean connected;
         try {

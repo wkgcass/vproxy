@@ -13,19 +13,19 @@ import java.nio.channels.InterruptedByTimeoutException;
 // connect to target address then close the connection
 // it's useful when running health check
 public class ConnectClient {
-    class ConnectClientConnectionHandler implements ClientConnectionHandler {
+    class ConnectConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final Callback<Void, IOException> callback;
         private final TimerEvent connectionTimeoutEvent;
         private boolean done = false;
         private TimerEvent delayTimeoutEvent;
 
-        ConnectClientConnectionHandler(Callback<Void, IOException> callback, TimerEvent connectionTimeoutEvent) {
+        ConnectConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent connectionTimeoutEvent) {
             this.callback = callback;
             this.connectionTimeoutEvent = connectionTimeoutEvent;
         }
 
         @Override
-        public void connected(ClientConnectionHandlerContext ctx) {
+        public void connected(ConnectableConnectionHandlerContext ctx) {
             cancelTimers(); // cancel timer if possible
             if (checkProtocol == CheckProtocol.tcp) {
                 // for non-delay tcp, directly close the connection and return success
@@ -123,9 +123,9 @@ public class ConnectClient {
 
     public void handle(Callback<Void, IOException> cb) {
         // connect to remote
-        ClientConnection conn;
+        ConnectableConnection conn;
         try {
-            conn = ClientConnection.create(remote,
+            conn = ConnectableConnection.create(remote,
                 // we do not use the timeout in connection opts
                 // because we need to divide the timeouts into several steps
                 ConnectionOpts.getDefault(),
@@ -143,7 +143,7 @@ public class ConnectClient {
             if (!cb.isCalled() /*called by connection*/ && !stopped) cb.failed(new InterruptedByTimeoutException());
         });
         try {
-            eventLoop.addClientConnection(conn, null, new ConnectClientConnectionHandler(cb, timer));
+            eventLoop.addConnectableConnection(conn, null, new ConnectConnectableConnectionHandler(cb, timer));
         } catch (IOException e) {
             if (!stopped) cb.failed(e);
             // exception occurred, so ignore timeout

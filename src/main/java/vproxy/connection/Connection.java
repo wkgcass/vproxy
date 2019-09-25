@@ -151,7 +151,7 @@ public class Connection implements NetFlowRecorder {
 
     private /*only modified in UNSAFE methods*/ RingBuffer inBuffer;
     private /*only modified in UNSAFE methods*/ RingBuffer outBuffer;
-    /*private let ClientConnection have access*/ final InBufferETHandler inBufferETHandler;
+    /*private let ConnectableConnection have access*/ final InBufferETHandler inBufferETHandler;
     private final OutBufferETHandler outBufferETHandler;
 
     private NetEventLoop _eventLoop = null;
