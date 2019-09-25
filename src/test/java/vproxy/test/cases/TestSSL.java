@@ -167,7 +167,7 @@ public class TestSSL {
             chnl = ByteArrayChannel.fromFull(("" +
                 "GET / HTTP/1.1\r\n" +
                 "Host: ip.cn\r\n" +
-                "User-Agent: vproxy\r\n" + // add an agent, otherwise it will return 403
+                "User-Agent: curl/vproxy\r\n" + // add curl agent to get json response
                 "\r\n").getBytes());
             parser = new HttpRespParser(true);
         }

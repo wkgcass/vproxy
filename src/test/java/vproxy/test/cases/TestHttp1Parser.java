@@ -47,7 +47,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             ByteArray r = front.feed(a);
             if (r.length() == 1) {
@@ -88,7 +88,7 @@ public class TestHttp1Parser {
 
         for (byte b : respHeadBytes) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -118,7 +118,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, front.feed(a));
         }
@@ -146,7 +146,7 @@ public class TestHttp1Parser {
 
         for (byte b : respHeadBytes) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -177,7 +177,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             ByteArray r = front.feed(a);
             if (r.length() == 1) {
@@ -218,7 +218,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, front.feed(a));
         }
@@ -250,7 +250,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             ByteArray r = front.feed(a);
             if (r.length() == 1) {
@@ -300,7 +300,7 @@ public class TestHttp1Parser {
 
         for (byte b : respHeadBytes) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -341,7 +341,7 @@ public class TestHttp1Parser {
 
         for (byte b : reqHeadBytes) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             ByteArray r = front.feed(a);
             if (r.length() == 1) {
@@ -376,7 +376,7 @@ public class TestHttp1Parser {
             ByteArray content = chunks.get(chunk);
             for (byte b : chunk) {
                 int len = front.len();
-                assertEquals(1, len);
+                assertEquals(-1, len);
                 ByteArray a = ByteArray.from(b);
                 assertEquals(a, front.feed(a));
             }
@@ -385,7 +385,7 @@ public class TestHttp1Parser {
             front.feed(content.sub(0, content.length() - 3));
             front.feed(content.sub(content.length() - 3, 3));
             len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             assertEquals(ByteArray.from('\r'), front.feed(ByteArray.from('\r')));
             assertEquals(ByteArray.from('\n'), front.feed(ByteArray.from('\n')));
         }
@@ -393,7 +393,7 @@ public class TestHttp1Parser {
         byte[] lastChunk = "0\r\n".getBytes();
         for (byte b : lastChunk) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, front.feed(a));
         }
@@ -431,7 +431,7 @@ public class TestHttp1Parser {
 
         for (byte b : respHeadBytes) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -455,7 +455,7 @@ public class TestHttp1Parser {
             ByteArray content = chunks.get(chunk);
             for (byte b : chunk) {
                 int len = backend.len();
-                assertEquals(1, len);
+                assertEquals(-1, len);
                 ByteArray a = ByteArray.from(b);
                 assertEquals(a, backend.feed(a));
             }
@@ -464,14 +464,14 @@ public class TestHttp1Parser {
             backend.feed(content.sub(0, content.length() - 3));
             backend.feed(content.sub(content.length() - 3, 3));
             len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             assertEquals(ByteArray.from('\r'), backend.feed(ByteArray.from('\r')));
             assertEquals(ByteArray.from('\n'), backend.feed(ByteArray.from('\n')));
         }
         byte[] lastChunkAndEnd = "0\r\n".getBytes();
         for (byte b : lastChunkAndEnd) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -501,7 +501,7 @@ public class TestHttp1Parser {
         byte[] end = "\r\n".getBytes();
         for (byte b : end) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, front.feed(a));
         }
@@ -518,7 +518,7 @@ public class TestHttp1Parser {
             "").getBytes();
         for (byte b : trailersAndEnd) {
             int len = front.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, front.feed(a));
         }
@@ -537,7 +537,7 @@ public class TestHttp1Parser {
         byte[] lastChunkAndEnd = "\r\n".getBytes();
         for (byte b : lastChunkAndEnd) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }
@@ -554,7 +554,7 @@ public class TestHttp1Parser {
             "").getBytes();
         for (byte b : trailersAndEnd) {
             int len = backend.len();
-            assertEquals(1, len);
+            assertEquals(-1, len);
             ByteArray a = ByteArray.from(b);
             assertEquals(a, backend.feed(a));
         }

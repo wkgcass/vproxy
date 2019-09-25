@@ -19,6 +19,10 @@ public class HttpContext extends OOContext<HttpSubContext> {
     @Override
     public int connection(HttpSubContext front) {
         if (front.isIdle()) {
+            // the state may turn to idle after calling feed()
+            // the connection() will be called after calling feed()
+            // so here we should return the last recorded backend id
+            // then set the id to -1
             int foo = currentBackend;
             currentBackend = -1;
             return foo;

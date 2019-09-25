@@ -311,7 +311,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                         readBackend(); // recursively handle more data
                         return;
                     }
-                    chnl = ByteArrayChannel.fromEmpty(len);
+                    if (len < 0) {
+                        chnl = ByteArrayChannel.fromEmpty(conn.getInBuffer().used()); // consume all data
+                    } else {
+                        chnl = ByteArrayChannel.fromEmpty(len);
+                    }
                 }
                 conn.getInBuffer().writeTo(chnl);
                 if (chnl.free() != 0) {
@@ -606,7 +610,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     readFrontend(); // recursively try to handle more data
                     return;
                 }
-                chnl = ByteArrayChannel.fromEmpty(len);
+                if (len < 0) {
+                    chnl = ByteArrayChannel.fromEmpty(frontendConnection.getInBuffer().used()); // consume all data
+                } else {
+                    chnl = ByteArrayChannel.fromEmpty(len);
+                }
             }
             frontendConnection.getInBuffer().writeTo(chnl);
             if (chnl.free() != 0) {

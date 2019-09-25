@@ -29,7 +29,7 @@ public class HttpRespParser extends AbstractParser<Response> {
     @Override
     protected int doSwitch(byte b) {
         try {
-            ctx.feed(ByteArray.from(b));
+            ctx.feed(b);
         } catch (Exception e) {
             // got error when parsing
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "parse http failed: " + e);

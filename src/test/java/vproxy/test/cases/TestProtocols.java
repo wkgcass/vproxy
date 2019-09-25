@@ -471,15 +471,17 @@ public class TestProtocols {
 
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
 
-            while (step != 2 && err[0] == null) {
+            while (step != 4 && err[0] == null) {
                 Thread.sleep(1);
             }
             if (err[0] != null)
                 throw err[0];
-            assertEquals(2, step);
-            assertEquals(1, svr1[0]);
-            assertEquals(1, svr2[0]);
+            assertEquals(4, step);
+            assertEquals(2, svr1[0]);
+            assertEquals(2, svr2[0]);
             assertEquals(1, conn[0]);
         } finally {
             boolean[] closeDone = {false};

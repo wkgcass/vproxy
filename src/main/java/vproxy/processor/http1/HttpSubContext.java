@@ -78,7 +78,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     }};
 
     interface Handler {
-        void handle(ByteArray data) throws Exception;
+        void handle(ByteArray b) throws Exception;
     }
 
     private RequestBuilder req;
@@ -153,57 +153,83 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     @Override
     public int len() {
-        return proxyLen == -1 ? 1 : proxyLen;
+        // when proxyLen == -1, do feed, and -1 means feed any data into the processor
+        return proxyLen;
     }
 
     private boolean passParam_TryFillAdditionalHeaders = false;
 
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
+        int consumedBytes = 0;
+        while (consumedBytes < data.length()) {
+            feed(data.get(consumedBytes++));
+
+            if (passParam_TryFillAdditionalHeaders) {
+                boolean noForwardedFor = true;
+                boolean noClientPort = true;
+
+                for (HeaderBuilder h : headers) {
+                    String hv = h.key.toString().trim();
+                    if (hv.equalsIgnoreCase("x-forwarded-for")) {
+                        noForwardedFor = false;
+                    } else if (hv.equalsIgnoreCase("x-client-port")) {
+                        noClientPort = false;
+                    }
+                    if (!noForwardedFor && !noClientPort) {
+                        break;
+                    }
+                }
+                ByteArray appendData = null;
+                if (noForwardedFor) {
+                    ByteArray b = ByteArray.from(("" +
+                        "x-forwarded-for: " + ctx.clientAddress + "\r\n" +
+                        "").getBytes());
+                    assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
+                    appendData = b;
+                }
+                if (noClientPort) {
+                    ByteArray b = ByteArray.from(("" +
+                        "x-client-port: " + ctx.clientPort + "\r\n" +
+                        "").getBytes());
+                    assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
+                    if (appendData == null) {
+                        appendData = b;
+                    } else {
+                        appendData = appendData.concat(b);
+                    }
+                }
+                if (appendData != null) {
+                    // insert the appendData into data
+                    data = data.sub(0, consumedBytes - 1)
+                        .concat(appendData)
+                        .concat(data.sub(consumedBytes - 1, data.length() - (consumedBytes - 1)));
+                    consumedBytes += appendData.length();
+                }
+                passParam_TryFillAdditionalHeaders = false;
+            }
+            if (proxyLen > 0) {
+                // need to do proxy
+                int originalCursor = consumedBytes;
+                consumedBytes += proxyLen;
+                if (consumedBytes > data.length()) {
+                    // input data has fewer bytes than required
+                    // so still need to do proxy later
+                    consumedBytes = data.length();
+                }
+                for (int i = originalCursor; i < consumedBytes; ++i) {
+                    feed(data.get(i));
+                }
+            }
+        }
+        return data;
+    }
+
+    public void feed(byte b) throws Exception {
         Handler handler = handers.get(state);
         if (handler == null)
             throw new IllegalStateException("BUG: unexpected state " + state);
-        handler.handle(data);
-        if (passParam_TryFillAdditionalHeaders) {
-            boolean noForwardedFor = true;
-            boolean noClientPort = true;
-
-            for (HeaderBuilder h : headers) {
-                String hv = h.key.toString().trim();
-                if (hv.equalsIgnoreCase("x-forwarded-for")) {
-                    noForwardedFor = false;
-                } else if (hv.equalsIgnoreCase("x-client-port")) {
-                    noClientPort = false;
-                }
-                if (!noForwardedFor && !noClientPort) {
-                    break;
-                }
-            }
-            ByteArray appendData = null;
-            if (noForwardedFor) {
-                ByteArray b = ByteArray.from(("" +
-                    "x-forwarded-for: " + ctx.clientAddress + "\r\n" +
-                    "").getBytes());
-                assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
-                appendData = b;
-            }
-            if (noClientPort) {
-                ByteArray b = ByteArray.from(("" +
-                    "x-client-port: " + ctx.clientPort + "\r\n" +
-                    "").getBytes());
-                assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
-                if (appendData == null) {
-                    appendData = b;
-                } else {
-                    appendData = appendData.concat(b);
-                }
-            }
-            if (appendData != null) {
-                data = appendData.concat(data);
-            }
-            passParam_TryFillAdditionalHeaders = false;
-        }
-        return data;
+        handler.handle(ByteArray.from(b));
     }
 
     @Override
