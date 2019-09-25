@@ -11,7 +11,7 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerGroups;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.Protocol;
@@ -501,11 +501,11 @@ public class TestTcpLB {
     }
 
     @Test
-    public void listBindServers() throws Exception {
-        assertEquals("should have 1 bindServer inside the event loop", 1, elg0.get("el0").serverCount());
-        List<BindServer> servers = new LinkedList<>();
+    public void listServerSocks() throws Exception {
+        assertEquals("should have 1 serverSock inside the event loop", 1, elg0.get("el0").serverCount());
+        List<ServerSock> servers = new LinkedList<>();
         elg0.get("el0").copyServers(servers);
-        assertEquals("the bindServer should bind " + lbPort, lbPort, servers.get(0).bind.getPort());
+        assertEquals("the serverSock should bind " + lbPort, lbPort, servers.get(0).bind.getPort());
     }
 
     @Test
@@ -514,7 +514,7 @@ public class TestTcpLB {
         // let's get some resources that will not change
         ServerGroup.ServerHandle svr0 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr0")).findFirst().get();
         ServerGroup.ServerHandle svr1 = sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get();
-        BindServer server = lb0.servers.keySet().stream().findFirst().get();
+        ServerSock server = lb0.servers.keySet().stream().findFirst().get();
 
         assertEquals("the server not connected", 0, server.getHistoryAcceptedConnectionCount());
         assertEquals("the server not connected", 0, server.getFromRemoteBytes());

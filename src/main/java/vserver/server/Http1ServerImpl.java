@@ -2,7 +2,7 @@ package vserver.server;
 
 import vjson.JSON;
 import vproxy.app.Application;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
@@ -44,7 +44,7 @@ public class Http1ServerImpl implements HttpServer {
     private final List<RouteEntry> routes = new LinkedList<>();
     private NetEventLoop loop;
     private final boolean noInputLoop;
-    private BindServer server;
+    private ServerSock server;
 
     public Http1ServerImpl() {
         this(null);
@@ -74,7 +74,7 @@ public class Http1ServerImpl implements HttpServer {
 
         initLoop();
 
-        server = BindServer.create(addr);
+        server = ServerSock.create(addr);
         ProtocolServerHandler.apply(loop, server,
             new ProtocolServerConfig().setInBufferSize(4096).setOutBufferSize(4096),
             new HttpProtocolHandler(true) {

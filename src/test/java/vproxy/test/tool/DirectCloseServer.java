@@ -14,8 +14,8 @@ public class DirectCloseServer {
     }
 
     public DirectCloseServer(NetEventLoop loop, int port, String addr) throws IOException {
-        BindServer bindServer = BindServer.create(new InetSocketAddress(addr, port));
-        loop.addServer(bindServer, null, new CloseHandler());
+        ServerSock serverSock = ServerSock.create(new InetSocketAddress(addr, port));
+        loop.addServer(serverSock, null, new CloseHandler());
     }
 
     class CloseHandler implements ServerHandler {

@@ -27,14 +27,14 @@ public class NetEventLoop {
     }
 
     @ThreadSafe
-    public void addServer(BindServer server, Object attachment, ServerHandler handler) throws IOException {
+    public void addServer(ServerSock server, Object attachment, ServerHandler handler) throws IOException {
         // synchronize in case the fields being inconsistent
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (server) {
             if (server.isClosed())
                 throw new ClosedChannelException();
             if (server._eventLoop != null)
-                throw new IOException("bindServer already registered to a event loop");
+                throw new IOException("serverSock already registered to a event loop");
             server._eventLoop = this;
             //noinspection unchecked
             selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
@@ -44,7 +44,7 @@ public class NetEventLoop {
     }
 
     @ThreadSafe
-    public void removeServer(BindServer server) {
+    public void removeServer(ServerSock server) {
         // event loop in server object will be set to null in remove event
         selectorEventLoop.remove(server.channel);
     }

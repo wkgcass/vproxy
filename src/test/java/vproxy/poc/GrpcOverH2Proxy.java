@@ -9,7 +9,7 @@ import io.grpc.stub.StreamObserver;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
@@ -46,7 +46,7 @@ public class GrpcOverH2Proxy {
         InetSocketAddress backend1 = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 17890);
         InetSocketAddress backend2 = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 17891);
         InetSocketAddress frontend = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 7890);
-        BindServer svr = BindServer.create(frontend);
+        ServerSock svr = ServerSock.create(frontend);
         Proxy proxy = new Proxy(new ProxyNetConfig()
             .setInBufferSize(8)
             .setOutBufferSize(4) // make them small to see whether the lib will work when payload is large

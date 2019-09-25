@@ -54,7 +54,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ smart-group-delegate   /* only available when discovery config is specified */
 +---+ smart-node-delegate /* only available when discovery config is specified */
 
-   bind-server (bs) --+
+   server-sock (ss) --+
   connection (conn)   +-- /* channel */
      session (sess) --+
 
@@ -662,37 +662,37 @@ force-remove dns-cache localhost from resolver (default)
 "OK"
 ```
 
-## Resource: bind-server (bs)
+## Resource: server-sock (ss)
 
 Represents a `ServerSocketChannel`, which binds an ip:port.
 
 #### list
 
-Count bind servers. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+Count server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
 
 ```
-list bind-server in el el0 in elg elg0
+list server-sock in el el0 in elg elg0
 (integer) 1
 
-list bind-server in tcp-lb lb0
+list server-sock in tcp-lb lb0
 (integer) 1
 
-list bind-server in socks5-server s5
+list server-sock in socks5-server s5
 (integer) 1
 ```
 
 #### list-detail
 
-Get info about bind servers. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+Get info about server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
 
 ```
-list-detail bind-server in el el0 in elg elg0
+list-detail server-sock in el el0 in elg elg0
 1) "127.0.0.1:6380"
 
-list-detail bind-server in tcp-lb lb0
+list-detail server-sock in tcp-lb lb0
 1) "127.0.0.1:6380"
 
-list-detail bind-server in socks5-server s5
+list-detail server-sock in socks5-server s5
 1) "127.0.0.1:18081"
 ```
 
@@ -806,10 +806,10 @@ Statistics: bytes flow from remote to local.
 
 #### list/list-detail
 
-Get history total input bytes from a resource. Can be retrieved from `bind-server`, `connection`, `server`.
+Get history total input bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
 
 ```
-list bytes-in in bind-server 127.0.0.1:6380 in tl lb0
+list bytes-in in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 45
 
 list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
@@ -825,10 +825,10 @@ Statistics: bytes flow from local to remote.
 
 #### list/list-detail
 
-Get history total output bytes from a resource. Can be retrieved from `bind-server`, `connection`, `server`.
+Get history total output bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
 
 ```
-list bytes-out in bind-server 127.0.0.1:6380 in tl lb0
+list bytes-out in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 9767
 
 list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
@@ -844,10 +844,10 @@ Statistics: successfully accpeted connections. Connections accepted by os but di
 
 #### list/list-detail
 
-Get history total accepted connection count. Can be retrieved from `bind-server`.
+Get history total accepted connection count. Can be retrieved from `server-sock`.
 
 ```
-list accepted-conn-count in bind-server 127.0.0.1:6380 in tl lb0
+list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 2
 ```
 

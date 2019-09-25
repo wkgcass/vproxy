@@ -19,7 +19,7 @@ import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.khala.KhalaNode;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.test.cases.TestSSL;
 import vproxy.test.cases.TestSmart;
 import vproxy.util.Logger;
@@ -1189,17 +1189,17 @@ public class CI {
 
         Thread.sleep(500);
 
-        // bind-server
-        assertEquals(1, count(createReq(list, "bind-server", "in", "el", "el00", "in", "elg", elg0)));
-        assertEquals(1, count(createReq(list, "bind-server", "in", "el", "el01", "in", "elg", elg0)));
-        assertEquals(Collections.singletonList("127.0.0.1:" + port), queryList(createReq(list_detail, "bind-server", "in", "el", "el00", "in", "elg", elg0)));
-        assertEquals(Collections.singletonList("127.0.0.1:" + port), queryList(createReq(list_detail, "bind-server", "in", "el", "el01", "in", "elg", elg0)));
+        // server-sock
+        assertEquals(1, count(createReq(list, "server-sock", "in", "el", "el00", "in", "elg", elg0)));
+        assertEquals(1, count(createReq(list, "server-sock", "in", "el", "el01", "in", "elg", elg0)));
+        assertEquals(Collections.singletonList("127.0.0.1:" + port), queryList(createReq(list_detail, "server-sock", "in", "el", "el00", "in", "elg", elg0)));
+        assertEquals(Collections.singletonList("127.0.0.1:" + port), queryList(createReq(list_detail, "server-sock", "in", "el", "el01", "in", "elg", elg0)));
 
-        assertEquals(2, count(createReq(list, "bind-server", "in", "tcp-lb", lbName)));
+        assertEquals(2, count(createReq(list, "server-sock", "in", "tcp-lb", lbName)));
         assertEquals(Arrays.asList(
             "127.0.0.1:" + port,
             "127.0.0.1:" + port
-        ), queryList(createReq(list_detail, "bind-server", "in", "tcp-lb", lbName)));
+        ), queryList(createReq(list_detail, "server-sock", "in", "tcp-lb", lbName)));
 
         // test socks5 here
         {
@@ -1212,11 +1212,11 @@ public class CI {
             socks5Names.add(socks5Name);
             checkCreate("socks5-server", socks5Name);
 
-            assertEquals(2, count(createReq(list, "bind-server", "in", "socks5-server", socks5Name)));
+            assertEquals(2, count(createReq(list, "server-sock", "in", "socks5-server", socks5Name)));
             assertEquals(Arrays.asList(
                 "127.0.0.1:" + socks5Port,
                 "127.0.0.1:" + socks5Port
-            ), queryList(createReq(list_detail, "bind-server", "in", "socks5-server", socks5Name)));
+            ), queryList(createReq(list_detail, "server-sock", "in", "socks5-server", socks5Name)));
 
             execute(createReq(remove, "socks5-server", socks5Name));
             checkRemove("socks5-server", socks5Name);
@@ -1227,9 +1227,9 @@ public class CI {
         {
             assertEquals(0,
                 count(createReq(list, "accepted-conn-count",
-                    "in", "bind-server", "127.0.0.1:" + port, "in", "el", "el00", "in", "elg", elg0)) +
+                    "in", "server-sock", "127.0.0.1:" + port, "in", "el", "el00", "in", "elg", elg0)) +
                     count(createReq(list, "accepted-conn-count",
-                        "in", "bind-server", "127.0.0.1:" + port, "in", "el", "el01", "in", "elg", elg0))
+                        "in", "server-sock", "127.0.0.1:" + port, "in", "el", "el01", "in", "elg", elg0))
             );
         }
 
@@ -1277,9 +1277,9 @@ public class CI {
         {
             assertEquals(3,
                 count(createReq(list, "accepted-conn-count",
-                    "in", "bind-server", "127.0.0.1:" + port, "in", "el", "el00", "in", "elg", elg0)) +
+                    "in", "server-sock", "127.0.0.1:" + port, "in", "el", "el00", "in", "elg", elg0)) +
                     count(createReq(list, "accepted-conn-count",
-                        "in", "bind-server", "127.0.0.1:" + port, "in", "el", "el01", "in", "elg", elg0))
+                        "in", "server-sock", "127.0.0.1:" + port, "in", "el", "el01", "in", "elg", elg0))
             );
         }
 
@@ -1347,7 +1347,7 @@ public class CI {
 
         ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
         int cnt = Runtime.getRuntime().availableProcessors();
-        if (BindServer.supportReusePort()) {
+        if (ServerSock.supportReusePort()) {
             assertEquals(cnt, ls.size());
         } else {
             assertEquals(1, ls.size());
@@ -1369,7 +1369,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "server-groups", sgs0));
         tlNames.add(lbName);
         Map<String, String> details = getDetail("tcp-lb", lbName);
-        if (BindServer.supportReusePort()) {
+        if (ServerSock.supportReusePort()) {
             assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         } else {
             assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
@@ -1381,7 +1381,7 @@ public class CI {
         execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "server-groups", sgs0));
         socks5Names.add(socks5Name);
         details = getDetail("tcp-lb", lbName);
-        if (BindServer.supportReusePort()) {
+        if (ServerSock.supportReusePort()) {
             assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         } else {
             assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));

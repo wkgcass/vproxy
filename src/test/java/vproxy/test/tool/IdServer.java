@@ -1,6 +1,6 @@
 package vproxy.test.tool;
 
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
@@ -26,8 +26,8 @@ public class IdServer {
 
     public IdServer(String id, NetEventLoop loop, int port, String addr) throws IOException {
         this.id = id;
-        BindServer bindServer = BindServer.create(new InetSocketAddress(addr, port));
-        ProtocolServerHandler.apply(loop, bindServer,
+        ServerSock serverSocks = ServerSock.create(new InetSocketAddress(addr, port));
+        ProtocolServerHandler.apply(loop, serverSocks,
             new ProtocolServerConfig(), new IdProtocolHandler());
     }
 

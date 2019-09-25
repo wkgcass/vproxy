@@ -21,7 +21,7 @@ public class ProtocolServerHandler implements ServerHandler {
     }
 
     public static void apply(NetEventLoop eventLoop,
-                             BindServer server, ProtocolServerConfig config,
+                             ServerSock server, ProtocolServerConfig config,
                              ProtocolHandler handler) throws IOException {
         eventLoop.addServer(server, handler, new ProtocolServerHandler(eventLoop, config.inBufferSize, config.outBufferSize));
     }

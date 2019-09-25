@@ -1,6 +1,6 @@
 package vproxy.poc;
 
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
@@ -25,7 +25,7 @@ public class RESPPingPongServer {
         RESPConfig rconfig = new RESPConfig();
 
         ProtocolServerHandler.apply(loop,
-            BindServer.create(new InetSocketAddress("127.0.0.1", 16379)),
+            ServerSock.create(new InetSocketAddress("127.0.0.1", 16379)),
             pconfig,
             new RESPProtocolHandler(rconfig, new MyRESPHandler()));
 

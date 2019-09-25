@@ -15,7 +15,7 @@ public class NetEventLoopEchoServer {
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server wrapper object
-        BindServer server = BindServer.create(new InetSocketAddress(18080));
+        ServerSock server = ServerSock.create(new InetSocketAddress(18080));
         // register the server into event loop
         eventLoop.addServer(server, null, new MyServerHandler());
         // start loop in another thread

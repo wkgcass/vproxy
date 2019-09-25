@@ -2,15 +2,15 @@ package vproxy.app.cmd.handle.resource;
 
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 
 public class StatisticHandle {
     private StatisticHandle() {
     }
 
     public static long bytesIn(Resource parent) throws Exception {
-        if (parent.type == ResourceType.bs) {
-            return BindServerHandle.get(parent).getFromRemoteBytes();
+        if (parent.type == ResourceType.ss) {
+            return ServerSockHandle.get(parent).getFromRemoteBytes();
         } else if (parent.type == ResourceType.conn) {
             return ConnectionHandle.get(parent).getFromRemoteBytes();
         } else if (parent.type == ResourceType.svr) {
@@ -20,8 +20,8 @@ public class StatisticHandle {
     }
 
     public static long bytesOut(Resource parent) throws Exception {
-        if (parent.type == ResourceType.bs) {
-            return BindServerHandle.get(parent).getToRemoteBytes();
+        if (parent.type == ResourceType.ss) {
+            return ServerSockHandle.get(parent).getToRemoteBytes();
         } else if (parent.type == ResourceType.conn) {
             return ConnectionHandle.get(parent).getToRemoteBytes();
         } else if (parent.type == ResourceType.svr) {
@@ -31,7 +31,7 @@ public class StatisticHandle {
     }
 
     public static long acceptedConnCount(Resource parent) throws Exception {
-        BindServer bs = BindServerHandle.get(parent);
+        ServerSock bs = ServerSockHandle.get(parent);
         return bs.getHistoryAcceptedConnectionCount();
     }
 }

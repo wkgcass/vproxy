@@ -8,7 +8,7 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.selector.SelectorEventLoop;
@@ -92,11 +92,11 @@ public class ServerGroupExample {
                     // won't happen
                     continue;
                 }
-                List<BindServer> bindServers = new ArrayList<>();
-                w.copyServers(bindServers);
+                List<ServerSock> serverSocks = new ArrayList<>();
+                w.copyServers(serverSocks);
                 List<Connection> connections = new ArrayList<>();
                 w.copyConnections(connections);
-                System.out.println("event loop \033[0;36m" + w.alias + "\033[0m: bind-servers: \033[0;36m" + bindServers + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
+                System.out.println("event loop \033[0;36m" + w.alias + "\033[0m: server-socks: \033[0;36m" + serverSocks + "\033[0m, connections: \033[0;36m" + connections + "\033[0m");
             }
             runTimer(eventLoop, eventLoopGroup, grp);
         });

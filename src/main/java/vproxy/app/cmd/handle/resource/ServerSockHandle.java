@@ -3,16 +3,16 @@ package vproxy.app.cmd.handle.resource;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.exception.NotFoundException;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 
 import java.util.LinkedList;
 import java.util.List;
 
-public class BindServerHandle {
-    private BindServerHandle() {
+public class ServerSockHandle {
+    private ServerSockHandle() {
     }
 
-    public static void checkBindServer(Resource server) throws Exception {
+    public static void checkServerSock(Resource server) throws Exception {
         Resource parent = server.parentResource;
         if (parent == null)
             throw new Exception("cannot find " + server.type.fullname + " on top level");
@@ -27,13 +27,13 @@ public class BindServerHandle {
         }
     }
 
-    public static BindServer get(Resource svr) throws Exception {
+    public static ServerSock get(Resource svr) throws Exception {
         return list(svr.parentResource)
             .stream()
             .filter(bs -> bs.id().equals(svr.alias))
             .findFirst()
             .orElseThrow(() -> new NotFoundException(
-                "bind-server in " + svr.parentResource.type.fullname + " " + svr.parentResource.alias,
+                "server-sock in " + svr.parentResource.type.fullname + " " + svr.parentResource.alias,
                 svr.alias));
     }
 
@@ -48,8 +48,8 @@ public class BindServerHandle {
         }
     }
 
-    public static List<BindServer> list(Resource parent) throws Exception {
-        List<BindServer> servers = new LinkedList<>();
+    public static List<ServerSock> list(Resource parent) throws Exception {
+        List<ServerSock> servers = new LinkedList<>();
         if (parent.type == ResourceType.el) {
             EventLoopHandle.get(parent).copyServers(servers);
         } else if (parent.type == ResourceType.socks5) {

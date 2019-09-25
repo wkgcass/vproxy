@@ -3,7 +3,7 @@ package vproxy.component.app;
 import vproxy.app.Application;
 import vproxy.app.cmd.*;
 import vproxy.component.exception.XException;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
@@ -21,11 +21,11 @@ import java.util.List;
 
 public class RESPController {
     public final String alias;
-    public final BindServer server;
+    public final ServerSock server;
 
     public RESPController(String alias, InetSocketAddress address, byte[] password) throws IOException {
         this.alias = alias;
-        server = BindServer.create(address);
+        server = ServerSock.create(address);
         NetEventLoop loop = Application.get().controlEventLoop;
         ProtocolServerHandler.apply(loop, server,
             new ProtocolServerConfig().setInBufferSize(16384).setOutBufferSize(16384),

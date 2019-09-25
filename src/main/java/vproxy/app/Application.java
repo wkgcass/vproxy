@@ -6,7 +6,7 @@ import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Logger;
 
@@ -98,7 +98,7 @@ public class Application {
                 throw new IOException("create default worker event loop failed", e);
             }
         }
-        if (BindServer.supportReusePort()) {
+        if (ServerSock.supportReusePort()) {
             assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
             application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, application.eventLoopGroupHolder.map.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
         } else {

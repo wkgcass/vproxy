@@ -8,7 +8,7 @@ public enum ResourceType {
     sg("server-group"),
     el("event-loop"),
     svr("server"),
-    bs("bind-server"),
+    ss("server-sock"),
     conn("connection"),
     sess("session"),
     bin("bytes-in"),

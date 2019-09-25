@@ -30,7 +30,7 @@ import java.util.concurrent.ConcurrentMap;
 public class TcpLB {
     class LBProxyEventHandler implements ProxyEventHandler {
         @Override
-        public void serverRemoved(BindServer server) {
+        public void serverRemoved(ServerSock server) {
             // it's removed, so close the listening fd
             server.close();
             servers.remove(server);
@@ -88,7 +88,7 @@ public class TcpLB {
 
     private final LBAttach attach;
 
-    public final ConcurrentMap<BindServer, Proxy> servers = new ConcurrentHashMap<>();
+    public final ConcurrentMap<ServerSock, Proxy> servers = new ConcurrentHashMap<>();
     private final LBProxyEventHandler proxyEventHandler = new LBProxyEventHandler();
 
     public TcpLB(String alias,
@@ -177,7 +177,7 @@ public class TcpLB {
         return connector;
     }
 
-    private ProxyNetConfig getProxyNetConfig(BindServer server, NetEventLoop eventLoop) {
+    private ProxyNetConfig getProxyNetConfig(ServerSock server, NetEventLoop eventLoop) {
         return new ProxyNetConfig()
             .setConnGen(provideConnectorGen())
             .setHandleLoopProvider(acceptLoop -> {
@@ -219,13 +219,13 @@ public class TcpLB {
             }
 
             // check for binding
-            BindServer.checkBind(this.bindAddress);
+            ServerSock.checkBind(this.bindAddress);
             for (EventLoopWrapper w : eventLoops) {
                 if (alreadyBondLoops.contains(w))
                     continue; // ignore already bond loops
 
                 // start one server for each new event loop
-                BindServer server = BindServer.create(this.bindAddress);
+                ServerSock server = ServerSock.create(this.bindAddress);
                 ProxyNetConfig proxyNetConfig = getProxyNetConfig(server, w);
                 Proxy proxy = new Proxy(proxyNetConfig, proxyEventHandler);
 

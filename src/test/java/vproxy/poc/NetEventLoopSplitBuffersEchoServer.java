@@ -19,7 +19,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server wrapper object
-        BindServer server = BindServer.create(new InetSocketAddress(18080));
+        ServerSock server = ServerSock.create(new InetSocketAddress(18080));
         // register the server into event loop
         eventLoop.addServer(server, null, new My2ServerHandler());
         // start loop in another thread

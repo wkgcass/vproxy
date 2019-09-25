@@ -6,7 +6,7 @@ import vproxy.component.check.HealthCheckHandler;
 import vproxy.component.check.TCPHealthCheckClient;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.khala.KhalaNode;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.util.IPType;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -61,7 +61,7 @@ public class SmartNodeDelegate {
             int port = (int) ((Math.random() * 20000) + 10000); // 10000 ~ 30000
             InetSocketAddress l4addr = new InetSocketAddress(l3addr, port);
             try {
-                BindServer.checkBind(l4addr);
+                ServerSock.checkBind(l4addr);
             } catch (IOException e) {
                 // bind failed, try another port
                 continue;

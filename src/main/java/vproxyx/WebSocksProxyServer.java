@@ -4,7 +4,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.BindServer;
+import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.protocol.ProtocolHandler;
@@ -177,10 +177,10 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
 
         // init the listening server
-        BindServer server = BindServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port));
-        BindServer redirectServer = null;
+        ServerSock server = ServerSock.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port));
+        ServerSock redirectServer = null;
         if (redirectPort != -1) {
-            redirectServer = BindServer.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort));
+            redirectServer = ServerSock.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort));
         }
 
         // init event loops
