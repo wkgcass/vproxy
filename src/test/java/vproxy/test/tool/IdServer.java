@@ -1,7 +1,7 @@
 package vproxy.test.tool;
 
-import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.protocol.ProtocolServerConfig;

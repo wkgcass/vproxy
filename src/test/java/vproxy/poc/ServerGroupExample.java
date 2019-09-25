@@ -8,9 +8,9 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.connection.ServerSock;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
+import vproxy.connection.ServerSock;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;

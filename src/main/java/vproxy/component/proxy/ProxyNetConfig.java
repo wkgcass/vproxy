@@ -1,8 +1,8 @@
 package vproxy.component.proxy;
 
 import vproxy.app.Config;
-import vproxy.connection.ServerSock;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 
 import javax.net.ssl.SSLContext;
 

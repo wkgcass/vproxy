@@ -3,9 +3,9 @@ package vproxy.poc;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyEventHandler;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.ServerSock;
 import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
