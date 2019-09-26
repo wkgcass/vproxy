@@ -1,9 +1,5 @@
 package vproxyx.websocks;
 
-import vproxy.legacy.JsContext;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-
 import java.util.regex.Pattern;
 
 public interface DomainChecker {
@@ -36,32 +32,16 @@ class PatternDomainChecker implements DomainChecker {
     }
 }
 
-class PacDomainChecker implements DomainChecker {
-    private final JsContext engine;
+class ABPDomainChecker implements DomainChecker {
+    private final ABP abp;
 
-    PacDomainChecker(JsContext engine) {
-        this.engine = engine;
+    ABPDomainChecker(ABP abp) {
+        this.abp = abp;
     }
 
     @Override
     public boolean needProxy(String domain, int port) {
-        String result;
-        try {
-            result = engine.eval("FindProxyForURL('', '" + domain + "')", String.class);
-        } catch (Exception e) {
-            Logger.error(LogType.IMPROPER_USE, "the pac execution got exception with " + domain, e);
-            return false;
-        }
-        if (result == null) {
-            Logger.error(LogType.IMPROPER_USE, "the pac execution with " + domain + ", result is null");
-            return false;
-        }
-        if (result.equals("DIRECT")) {
-            assert Logger.lowLevelDebug("pac returns DIRECT for " + domain + ", no need to proxy");
-            return false;
-        }
-        assert Logger.lowLevelDebug("pac returns " + result + " for " + domain + ", do proxy");
-        return true;
+        return abp.block(domain);
     }
 }
 

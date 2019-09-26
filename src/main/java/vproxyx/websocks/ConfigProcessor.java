@@ -5,7 +5,6 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.dns.Resolver;
-import vproxy.legacy.JsContext;
 import vproxy.util.BlockCallback;
 import vproxy.util.Utils;
 
@@ -374,24 +373,24 @@ public class ConfigProcessor {
                     String regexp = line.substring(1, line.length() - 1);
                     getDomainList(currentAlias).add(new PatternDomainChecker(Pattern.compile(regexp)));
                 } else if (line.startsWith("[") && line.endsWith("]")) {
-                    String pacfile = line.substring(1, line.length() - 1);
-                    if (pacfile.startsWith("~")) {
-                        pacfile = System.getProperty("user.home") + File.separator + pacfile.substring(1);
+                    String abpfile = line.substring(1, line.length() - 1);
+                    if (abpfile.startsWith("~")) {
+                        abpfile = System.getProperty("user.home") + File.separator + abpfile.substring(1);
                     }
 
-                    JsContext jsContext = JsContext.newContext();
-                    String pacScript;
-                    try (FileReader filePac = new FileReader(pacfile)) {
+                    ABP abp;
+                    try (FileReader fileABP = new FileReader(abpfile)) {
                         StringBuilder sb = new StringBuilder();
-                        BufferedReader br2 = new BufferedReader(filePac);
+                        BufferedReader br2 = new BufferedReader(fileABP);
                         String line2;
                         while ((line2 = br2.readLine()) != null) {
-                            sb.append(line2).append("\n");
+                            sb.append(line2.trim());
                         }
-                        pacScript = sb.toString();
+                        var content = sb.toString();
+                        abp = new ABP(true);
+                        abp.addBase64(content);
                     }
-                    jsContext.eval(pacScript, Object.class);
-                    getDomainList(currentAlias).add(new PacDomainChecker(jsContext));
+                    getDomainList(currentAlias).add(new ABPDomainChecker(abp));
                 } else {
                     getDomainList(currentAlias).add(new SuffixDomainChecker(line));
                 }
