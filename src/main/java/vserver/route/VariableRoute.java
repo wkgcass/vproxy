@@ -23,6 +23,11 @@ public class VariableRoute implements Route {
     }
 
     @Override
+    public boolean currentSame(Route r) {
+        return r instanceof VariableRoute && ((VariableRoute) r).variable.equals(variable);
+    }
+
+    @Override
     public void fill(RoutingContext ctx, String route) {
         ctx.putParam(variable, route);
     }

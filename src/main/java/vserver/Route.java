@@ -29,5 +29,7 @@ public interface Route {
 
     boolean match(String route);
 
+    boolean currentSame(Route r);
+
     void fill(RoutingContext ctx, String route);
 }

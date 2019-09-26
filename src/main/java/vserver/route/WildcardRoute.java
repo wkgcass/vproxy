@@ -21,6 +21,11 @@ public class WildcardRoute implements Route {
     }
 
     @Override
+    public boolean currentSame(Route r) {
+        return r instanceof WildcardRoute;
+    }
+
+    @Override
     public void fill(RoutingContext ctx, String route) {
 
     }
