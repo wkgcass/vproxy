@@ -19,8 +19,14 @@ import java.util.function.Consumer;
 
 public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
+    private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
     private Utils() {
+    }
+
+    public static void syncCpuCacheAndMemory() {
+        //noinspection NonAtomicOperationOnVolatileField
+        ++sync;
     }
 
     public static int positive(byte b) {

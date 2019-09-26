@@ -5,6 +5,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.ThreadSafe;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -188,6 +189,12 @@ public class ConnectionPool {
                 ConnWrap foo = w; // use a new variable just to let the lambda capture
                 loop.removeConnection(w.conn);
                 Logger.alert("pooled connection retrieved: " + w.conn);
+                // sync event loop info into memory to avoid some corner error
+                // the connection is removed from loop of pool on loop thread
+                // and will be added to another loop on another thread
+                // the internal fields may not have been synced to memory
+                // so we sync cache manually
+                Utils.syncCpuCacheAndMemory();
                 callerLoop.runOnLoop(() -> cb.accept(foo.conn));
                 break;
             }
