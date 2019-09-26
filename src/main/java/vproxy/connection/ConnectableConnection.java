@@ -61,6 +61,6 @@ public class ConnectableConnection extends Connection {
 
     @Override
     public String toString() {
-        return "Client" + super.toString();
+        return "Connectable" + super.toString();
     }
 }
