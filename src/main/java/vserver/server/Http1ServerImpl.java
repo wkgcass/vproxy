@@ -14,8 +14,7 @@ import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArray;
-import vproxy.util.Logger;
+import vproxy.util.*;
 import vserver.*;
 import vserver.route.WildcardRoute;
 
@@ -27,21 +26,13 @@ import java.util.stream.Collectors;
 import static vserver.HttpMethod.ALL_METHODS;
 
 public class Http1ServerImpl implements HttpServer {
-    private static class RouteEntry {
-        final List<HttpMethod> methods;
-        final Route route;
-        final RoutingHandler handler;
-
-        private RouteEntry(HttpMethod[] methods, Route route, RoutingHandler handler) {
-            this.methods = Arrays.asList(methods);
-            this.route = route;
-            this.handler = handler;
-        }
-    }
-
     private boolean started = false;
     private boolean closed = false;
-    private final List<RouteEntry> routes = new LinkedList<>();
+    private final Map<HttpMethod, Tree<Route, RoutingHandler>> routes = new HashMap<>(HttpMethod.values().length) {{
+        for (HttpMethod m : HttpMethod.values()) {
+            put(m, new Tree<>());
+        }
+    }};
     private NetEventLoop loop;
     private final boolean noInputLoop;
     private ServerSock server;
@@ -55,12 +46,34 @@ public class Http1ServerImpl implements HttpServer {
         noInputLoop = loop == null;
     }
 
+    private void record(Tree<Route, RoutingHandler> tree, Route route, RoutingHandler handler) {
+        if (route == null) {
+            tree.leaf(handler);
+            return;
+        }
+        var last = tree.lastBranch();
+        if (last != null && last.data.currentSame(route)) {
+            // can use the last node
+            record(last, route.next(), handler);
+            return;
+        }
+        // must be new route
+        var br = tree.branch(route);
+        record(br, route.next(), handler);
+    }
+
+    private void record(HttpMethod[] methods, Route route, RoutingHandler handler) {
+        for (HttpMethod m : methods) {
+            record(routes.get(m), route, handler);
+        }
+    }
+
     @Override
     public HttpServer handle(HttpMethod[] methods, Route route, RoutingHandler handler) {
         if (started) {
             throw new IllegalStateException("This http server is already started");
         }
-        routes.add(new RouteEntry(methods, route, handler));
+        record(methods, route, handler);
         return this;
     }
 
@@ -70,7 +83,7 @@ public class Http1ServerImpl implements HttpServer {
             throw new IllegalStateException("This http server is already started");
         }
         started = true;
-        routes.add(new RouteEntry(ALL_METHODS, Route.create("/*"), this::handle404));
+        record(ALL_METHODS, Route.create("/*"), this::handle404);
 
         initLoop();
 
@@ -294,16 +307,11 @@ public class Http1ServerImpl implements HttpServer {
                 };
             }
             { // chain
-                chain = new HandlerChain() {
-                    int idx = 0;
-
-                    @Override
-                    public void next() {
-                        int[] idx = {this.idx};
-                        RoutingHandler handler = nextHandler(ctx[0], paths, idx);
-                        this.idx = idx[0] + 1;
-                        handler.accept(ctx[0]);
-                    }
+                var list = buildHandlerChain(routes.get(method), paths).iterator();
+                chain = () -> {
+                    var tup = list.next();
+                    tup.left.forEach(pre -> pre.accept(ctx[0])); // pre process
+                    tup.right.accept(ctx[0]);
                 };
             }
 
@@ -352,35 +360,43 @@ public class Http1ServerImpl implements HttpServer {
         }
     }
 
-    private RoutingHandler nextHandler(RoutingContext ctx, List<String> paths, int[] index) {
-        routeEntryLoop:
-        for (int i = index[0]; i < routes.size(); i++) {
-            RouteEntry entry = routes.get(i);
-            if (!entry.methods.contains(ctx.method())) {
-                continue;
-            }
-            Route r = entry.route;
-            int idx = 0;
-            boolean lastIsWildcard = false;
-            while (r != null) {
-                if (idx >= paths.size()) {
-                    continue routeEntryLoop;
-                }
-                String p = paths.get(idx);
-                if (!r.match(p)) {
-                    continue routeEntryLoop;
-                }
-                r.fill(ctx, p);
-                lastIsWildcard = (r instanceof WildcardRoute);
-                r = r.next();
-                ++idx;
-            }
-            if (!lastIsWildcard && idx < paths.size()) {
-                continue; // the route too short
-            }
-            index[0] = i;
-            return entry.handler;
+    private List<Tuple<List<RoutingHandler>, RoutingHandler>> buildHandlerChain(Tree<Route, RoutingHandler> tree, List<String> paths) {
+        var ls = new LinkedList<Tuple<List<RoutingHandler>, RoutingHandler>>();
+        var pre = Collections.<RoutingHandler>emptyList();
+        if (paths.isEmpty()) {
+            ls.add(new Tuple<>(Collections.singletonList(rctx -> {
+            }), this::handle404));
+        } else {
+            buildHandlerChain(ls, pre, tree, paths, 0);
         }
-        throw new IllegalStateException("should not reach here");
+        assert !ls.isEmpty(); // 404 handler would had already been added
+        return ls;
+    }
+
+    private void buildHandlerChain(List<Tuple<List<RoutingHandler>, RoutingHandler>> ret,
+                                   List<RoutingHandler> preHandlers,
+                                   Tree<Route, RoutingHandler> tree,
+                                   List<String> paths,
+                                   int pathIdx) {
+        if (pathIdx >= paths.size()) {
+            return;
+        }
+        String path = paths.get(pathIdx);
+        boolean isLast = pathIdx + 1 == paths.size();
+        for (var br : tree.branches()) {
+            RoutingHandler preHandler = rctx -> br.data.fill(rctx, path);
+            if (br.data.match(path)) {
+                var newPathIdx = pathIdx + 1;
+                var newPreHandlers = new AppendingList<>(preHandlers, preHandler);
+
+                if (isLast || br.data instanceof WildcardRoute) {
+                    for (var h : br.leafData()) {
+                        ret.add(new Tuple<>(newPreHandlers, h));
+                    }
+                }
+
+                buildHandlerChain(ret, newPreHandlers, br, paths, newPathIdx);
+            }
+        }
     }
 }

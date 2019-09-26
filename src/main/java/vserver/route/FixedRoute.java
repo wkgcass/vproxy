@@ -23,6 +23,11 @@ public class FixedRoute implements Route {
     }
 
     @Override
+    public boolean currentSame(Route r) {
+        return r instanceof FixedRoute && ((FixedRoute) r).route.equals(route);
+    }
+
+    @Override
     public void fill(RoutingContext ctx, String route) {
     }
 }
