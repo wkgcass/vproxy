@@ -1,10 +1,12 @@
 plugins {
     id 'java'
+    id "org.beryx.jlink" version "2.15.1"
 }
 
 group 'vproxy'
 version loadVersion()
 
+mainClassName = 'vproxy.app.Main'
 sourceCompatibility = 11.0
 
 repositories {
@@ -26,7 +28,13 @@ dependencies {
 jar {
     archiveName = "vproxy.jar"
     manifest {
-        attributes 'Main-Class': 'vproxy.app.Main'
+        attributes 'Main-Class': mainClassName
+    }
+}
+
+jlink {
+    launcher {
+        name = 'vproxy'
     }
 }
 

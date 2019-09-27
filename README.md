@@ -6,9 +6,30 @@
 
 VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only requires Java 11 to run.
 
-Clone it, javac it, then everything is ready for running.
+Clone it, compile it, then everything is ready for running.
 
-(Gradlew and Dockerfile is also provided)
+## Make
+
+### pack
+
+```
+./gradlew clean jar
+java -jar build/libs/vproxy.jar version
+```
+
+### jlink
+
+```
+./gradlew clean jlink
+./build/image/bin/vproxy version
+```
+
+### docker
+
+```
+docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/vproxy/Dockerfile
+docker run --rm vproxy version
+```
 
 ## Aim
 

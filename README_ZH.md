@@ -4,9 +4,30 @@
 
 VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 11即可运行。
 
-1) clone，2) javac，3) 运行！
+1) clone，2) 编译，3) 运行！
 
-(可以直接使用Gradlew或者Dockerfile)
+## 构建
+
+### 打包
+
+```
+./gradlew clean jar
+java -jar build/libs/vproxy.jar version
+```
+
+### jlink
+
+```
+./gradlew clean jlink
+./build/image/bin/vproxy version
+```
+
+### docker
+
+```
+docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/vproxy/Dockerfile
+docker run --rm vproxy version
+```
 
 ## 模板
 
