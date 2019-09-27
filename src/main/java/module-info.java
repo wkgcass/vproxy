@@ -1,7 +1,7 @@
 module vproxy {
     requires jdk.unsupported;
-    requires java.scripting;
-    requires java.management;
+    requires jdk.crypto.ec;
+    requires jdk.crypto.cryptoki;
 
     // export the processor and related types
     // then the user can write and use their own processors

@@ -68,7 +68,41 @@ public class Main {
         }
     }
 
+    private static String[] checkFlagDeployInArguments(String[] args) {
+        if (System.getProperty("eploy") != null) {
+            // do not modify if -Deploy is already set
+            return args;
+        }
+        boolean found = false;
+        for (var arg : args) {
+            if (arg.startsWith("-Deploy=")) {
+                if (found) {
+                    // should only appear once
+                    throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
+                }
+                found = true;
+            }
+        }
+        if (!found) {
+            // no -Deploy in arguments
+            return args;
+        }
+        // make new arguments and set deploy property
+        var newArgs = new String[args.length - 1];
+        int idx = -1;
+        for (var arg : args) {
+            if (arg.startsWith("-Deploy=")) {
+                var deploy = arg.substring("-Deploy=".length());
+                System.setProperty("eploy", deploy); // this happens before loading Config.class
+            } else {
+                newArgs[++idx] = arg;
+            }
+        }
+        return newArgs;
+    }
+
     public static void main(String[] args) {
+        args = checkFlagDeployInArguments(args);
         beforeStart();
 
         // check for system properties and may run an app
