@@ -27,7 +27,7 @@ java -jar build/libs/vproxy.jar version
 ### docker
 
 ```
-docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/vproxy/Dockerfile
+docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 docker run --rm vproxy version
 ```
 

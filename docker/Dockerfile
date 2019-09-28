@@ -9,7 +9,7 @@ WORKDIR /
 ## download the vproxy runtime
 ## extract (the extract result would be a directory "./vproxy-runtime-musl")
 ## remove the tar.gz file
-RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-ALPHA-5/vproxy-runtime-musl.tar.gz && \
+RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz && \
     tar zxf vproxy-runtime-musl.tar.gz && \
     rm -f vproxy-runtime-musl.tar.gz
 
