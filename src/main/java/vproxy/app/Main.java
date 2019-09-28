@@ -6,6 +6,7 @@ import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.component.exception.XException;
+import vproxy.connection.ServerSock;
 import vproxy.dns.Resolver;
 import vproxy.util.*;
 import vproxyx.Simple;
@@ -38,6 +39,11 @@ public class Main {
         "\n\t\tpidFile                                      Set the pid file path" +
         "\n" +
         "\n\t\tnoLoadLast                                   Do not load last config on start up" +
+        "\n" +
+        "\n\t\tnoSave                                       Disable the ability to save config" +
+        "\n" +
+        "\n\t\tnoStartupBindCheck                           Disable bind check when loading config" +
+        "\n\t\t                                             when launching" +
         "";
 
     private static void beforeStart() {
@@ -130,6 +136,8 @@ public class Main {
 
         // load config if specified in args
         boolean loaded = false;
+        boolean noLoad = false;
+        boolean noBindCheck = false;
         boolean noStdIOController = false;
         String pidFilePath = null;
         for (int i = 0; i < args.length; ++i) {
@@ -191,7 +199,7 @@ public class Main {
                     break;
                 case "discoveryConfig":
                     if (next == null) {
-                        System.err.println("config file path required");
+                        System.err.println("discoveryConfig: config file path required");
                         System.exit(1);
                         return;
                     }
@@ -228,9 +236,20 @@ public class Main {
                     break;
                 case "noLoadLast":
                     loaded = true; // set this flag to true, then last config won't be loaded
+                    noLoad = true;
                     break;
                 case "noSave":
                     Config.configSavingDisabled = true;
+                    break;
+                case "noStartupBindCheck":
+                    // check reuseport
+                    if (!ServerSock.supportReusePort()) {
+                        System.err.println("`noBindCheck` cannot be set because REUSEPORT is not supported");
+                        System.exit(1);
+                        return;
+                    }
+                    noBindCheck = true;
+                    Config.checkBind = false;
                     break;
                 default:
                     System.err.println("unknown argument `" + arg + "`");
@@ -238,6 +257,14 @@ public class Main {
                     return;
             }
         }
+
+        // additional argument check
+        if (noLoad && noBindCheck) {
+            System.err.println("noLoadLast and noStartupBindCheck cannot be set together");
+            System.exit(1);
+            return;
+        }
+
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
@@ -307,7 +334,7 @@ public class Main {
     private static class CallbackInMain extends Callback<String, Throwable> {
         @Override
         protected void onSucceeded(String value) {
-            // do nothing if succeeded
+            Config.checkBind = true;
         }
 
         @Override

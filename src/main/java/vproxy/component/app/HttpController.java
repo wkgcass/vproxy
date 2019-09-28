@@ -5,6 +5,7 @@ import vjson.simple.SimpleArray;
 import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
+import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
@@ -285,7 +286,9 @@ public class HttpController {
         server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrSocks5));
 
         // start
-        ServerSock.checkBind(address);
+        if (Config.checkBind) {
+            ServerSock.checkBind(address);
+        }
         server.listen(address);
     }
 

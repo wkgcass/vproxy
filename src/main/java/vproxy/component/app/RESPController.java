@@ -1,6 +1,7 @@
 package vproxy.component.app;
 
 import vproxy.app.Application;
+import vproxy.app.Config;
 import vproxy.app.cmd.*;
 import vproxy.component.exception.XException;
 import vproxy.connection.NetEventLoop;
@@ -25,7 +26,9 @@ public class RESPController {
 
     public RESPController(String alias, InetSocketAddress address, byte[] password) throws IOException {
         this.alias = alias;
-        ServerSock.checkBind(address);
+        if (Config.checkBind) {
+            ServerSock.checkBind(address);
+        }
         server = ServerSock.create(address);
         NetEventLoop loop = Application.get().controlEventLoop;
         ProtocolServerHandler.apply(loop, server,

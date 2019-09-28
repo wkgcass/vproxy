@@ -37,6 +37,10 @@ public class Config {
     // true = will stop, false = normal state
     public static boolean willStop = false;
 
+    // whether to check before actual binding a port
+    // true = will check, false = will not check
+    public static boolean checkBind = true;
+
     // -Deploy=xxx
     public static final String appClass;
 

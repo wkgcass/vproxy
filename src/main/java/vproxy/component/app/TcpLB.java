@@ -1,5 +1,6 @@
 package vproxy.component.app;
 
+import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.elgroup.EventLoopWrapper;
@@ -219,7 +220,9 @@ public class TcpLB {
             }
 
             // check for binding
-            ServerSock.checkBind(this.bindAddress);
+            if (Config.checkBind) {
+                ServerSock.checkBind(this.bindAddress);
+            }
             for (EventLoopWrapper w : eventLoops) {
                 if (alreadyBondLoops.contains(w))
                     continue; // ignore already bond loops
