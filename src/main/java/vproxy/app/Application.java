@@ -21,7 +21,7 @@ public class Application {
     public static final String DEFAULT_WORKER_EVENT_LOOP_NAME_SUFFIX = ")";
     public static final String DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME = "(control-elg)";
     public static final String DEFAULT_CONTROL_EVENT_LOOP_NAME = "(control-el)";
-    public static final String VERSION = "1.0.0-BETA-5"; // _THE_VERSION_
+    public static final String VERSION = "1.0.0-BETA-6-DEV"; // _THE_VERSION_
 
     private static Application application;
 
