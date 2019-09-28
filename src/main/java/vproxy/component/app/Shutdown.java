@@ -61,6 +61,17 @@ public class Shutdown {
             System.err.println("SIGTERM not handled");
         }
         try {
+            SignalHook.getInstance().sigUsr1(() -> {
+                try {
+                    save(null);
+                } catch (Exception e) {
+                    Logger.shouldNotHappen("save failed", e);
+                }
+            });
+        } catch (Exception e) {
+            System.err.println("SIGUSR1 not handled");
+        }
+        try {
             SignalHook.getInstance().sigUsr2(() -> endSaveAndSoftQuit(128 + 12));
         } catch (Exception e) {
             System.err.println("SIGUSR2 not handled");

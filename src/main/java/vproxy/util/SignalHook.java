@@ -25,6 +25,10 @@ public class SignalHook {
         registerSignal("TERM", r);
     }
 
+    public void sigUsr1(Runnable r) {
+        registerSignal("USR1", r);
+    }
+
     public void sigUsr2(Runnable r) {
         registerSignal("USR2", r);
     }
