@@ -33,6 +33,10 @@ public class Config {
     // true = disabled, false = enabled
     public static boolean configModifyDisabled = false;
 
+    // whether the program is going to stop
+    // true = will stop, false = normal state
+    public static boolean willStop = false;
+
     // -Deploy=xxx
     public static final String appClass;
 

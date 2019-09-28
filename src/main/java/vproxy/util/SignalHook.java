@@ -24,4 +24,8 @@ public class SignalHook {
     public void sigTerm(Runnable r) {
         registerSignal("TERM", r);
     }
+
+    public void sigUsr2(Runnable r) {
+        registerSignal("USR2", r);
+    }
 }

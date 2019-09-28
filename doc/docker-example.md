@@ -29,10 +29,10 @@ docker logs $CONTAINER_ID -f
 
 ## Quit
 
-Use SIGHUP to save current config and quit.
+Use SIGTERM to save current config and quit.
 
 ```
-docker kill --signal=HUP $CONTAINER_ID
+docker stop $CONTAINER_ID
 ```
 
 ## Customized launch parameters

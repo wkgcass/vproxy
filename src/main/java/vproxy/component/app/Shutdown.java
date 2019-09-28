@@ -60,6 +60,11 @@ public class Shutdown {
         } catch (Exception e) {
             System.err.println("SIGTERM not handled");
         }
+        try {
+            SignalHook.getInstance().sigUsr2(() -> endSaveAndSoftQuit(128 + 12));
+        } catch (Exception e) {
+            System.err.println("SIGUSR2 not handled");
+        }
         new Thread(() -> {
             while (true) {
                 sigIntTimes = 0;
@@ -84,6 +89,82 @@ public class Shutdown {
             Logger.shouldNotHappen("save failed", e);
         }
         System.exit(exitCode);
+    }
+
+    private static void endSaveAndSoftQuit(@SuppressWarnings("SameParameterValue") int exitCode) {
+        end();
+        try {
+            save(null);
+        } catch (Exception e) {
+            Logger.shouldNotHappen("save failed", e);
+        }
+        Config.willStop = true;
+        var app = Application.get();
+        Logger.alert("Stopping controllers: resp-controller, http-controller");
+        try {
+            var resp = app.respControllerHolder;
+            for (var name : resp.names()) {
+                resp.removeAndStop(name);
+            }
+            var http = app.httpControllerHolder;
+            for (var name : http.names()) {
+                http.removeAndStop(name);
+            }
+        } catch (Exception e) {
+            Logger.shouldNotHappen("removing controllers failed", e);
+        }
+        Logger.alert("Stopping servers: tcp-lb, socks5-server");
+        try {
+            var tlHolder = app.tcpLBHolder;
+            for (var name : tlHolder.names()) {
+                tlHolder.removeAndStop(name);
+            }
+            var socks5Holder = app.socks5ServerHolder;
+            for (var name : socks5Holder.names()) {
+                socks5Holder.removeAndStop(name);
+            }
+        } catch (Exception e) {
+            Logger.shouldNotHappen("removing servers failed", e);
+        }
+        Logger.alert("Waiting for connections to close");
+        new Thread(() -> {
+            var elgHolder = app.eventLoopGroupHolder;
+            var elgList = new ArrayList<EventLoopGroup>(elgHolder.names().size());
+            for (var name : elgHolder.names()) {
+                try {
+                    elgList.add(elgHolder.get(name));
+                } catch (NotFoundException ignore) {
+                    // ignore if not found
+                }
+            }
+            while (true) {
+                boolean noConnection = true;
+                try {
+                    loopElg:
+                    for (var elg : elgList) {
+                        for (var el : elg.list()) {
+                            if (el.connectionCount() != 0) {
+                                noConnection = false;
+                                break loopElg;
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    Logger.warn(LogType.ALERT, "got exception when checking event loop groups", e);
+                }
+                if (noConnection) {
+                    break;
+                }
+                try {
+                    Thread.sleep(1_000);
+                } catch (InterruptedException e) {
+                    // ignore exception
+                }
+            }
+            // use error to make log more obvious
+            Logger.error(LogType.ALERT, "No connections, shutdown now");
+            System.exit(exitCode);
+        }).start();
     }
 
     private static void end() {
@@ -138,6 +219,10 @@ public class Shutdown {
     public static void save(String filepath) throws Exception {
         if (Config.configSavingDisabled) {
             throw new UnsupportedOperationException("saving is disabled");
+        }
+        if (Config.willStop) {
+            Logger.warn(LogType.ALERT, "the current program is going to stop, saving is disabled");
+            return;
         }
         if (filepath == null) {
             filepath = defaultFilePath();
