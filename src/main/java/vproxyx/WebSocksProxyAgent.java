@@ -122,12 +122,13 @@ public class WebSocksProxyAgent {
             };
 
             // let's create a server, if bind failed, error would be thrown
-            ServerSock server = ServerSock.create(
-                new InetSocketAddress(InetAddress.getByName(
-                    configProcessor.isGateway()
-                        ? "0.0.0.0"
-                        : "127.0.0.1"
-                ), port));
+            var l4addr = new InetSocketAddress(InetAddress.getByName(
+                configProcessor.isGateway()
+                    ? "0.0.0.0"
+                    : "127.0.0.1"
+            ), port);
+            ServerSock.checkBind(l4addr);
+            ServerSock server = ServerSock.create(l4addr);
 
             Proxy proxy = new Proxy(
                 new ProxyNetConfig()
@@ -151,10 +152,12 @@ public class WebSocksProxyAgent {
         // maybe we can start the pac server
         if (configProcessor.getPacServerPort() != 0) {
             assert Logger.lowLevelDebug("start pac server");
-            ServerSock lsn = ServerSock.create(new InetSocketAddress(
+            var l4addr = new InetSocketAddress(
                 InetAddress.getByName("0.0.0.0"),
                 configProcessor.getPacServerPort()
-            ));
+            );
+            ServerSock.checkBind(l4addr);
+            ServerSock lsn = ServerSock.create(l4addr);
             ProtocolServerHandler.apply(acceptor.next(), lsn,
                 new ProtocolServerConfig().setInBufferSize(256).setOutBufferSize(256),
                 new PACHandler(

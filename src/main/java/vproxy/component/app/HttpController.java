@@ -285,6 +285,7 @@ public class HttpController {
         server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrSocks5));
 
         // start
+        ServerSock.checkBind(address);
         server.listen(address);
     }
 

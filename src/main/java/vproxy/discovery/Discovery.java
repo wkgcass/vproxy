@@ -14,6 +14,7 @@ import vproxy.component.svrgroup.ServerListener;
 import vproxy.connection.ConnectionHandler;
 import vproxy.connection.ConnectionHandlerContext;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.ServerSock;
 import vproxy.discovery.protocol.NodeDataMsg;
 import vproxy.discovery.protocol.NodeExistenceMsg;
 import vproxy.redis.RESPParser;
@@ -620,7 +621,9 @@ public class Discovery {
                 }
             });
         });
-        server.listen(new InetSocketAddress(config.bindInetAddress, config.tcpPort));
+        var l4addr = new InetSocketAddress(config.bindInetAddress, config.tcpPort);
+        ServerSock.checkBind(l4addr);
+        server.listen(l4addr);
         return server;
     }
 

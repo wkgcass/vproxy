@@ -177,10 +177,12 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
 
         // init the listening server
-        ServerSock server = ServerSock.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port));
+        var listeningServerL4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
+        ServerSock server = ServerSock.create(listeningServerL4addr);
         ServerSock redirectServer = null;
         if (redirectPort != -1) {
-            redirectServer = ServerSock.create(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort));
+            var l4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort);
+            redirectServer = ServerSock.create(l4addr);
         }
 
         // init event loops
