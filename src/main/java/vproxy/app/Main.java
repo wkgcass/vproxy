@@ -1,28 +1,31 @@
 package vproxy.app;
 
-import vproxy.app.cmd.CmdResult;
-import vproxy.app.cmd.SystemCommand;
-import vproxy.app.mesh.DiscoveryConfigLoader;
+import vproxy.app.args.*;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
-import vproxy.component.exception.XException;
-import vproxy.connection.ServerSock;
 import vproxy.dns.Resolver;
 import vproxy.util.*;
 import vproxyx.Simple;
+import vproxyx.Daemon;
 import vproxyx.WebSocksProxyAgent;
 import vproxyx.WebSocksProxyServer;
 
 import java.io.File;
 import java.io.IOException;
 import java.security.Security;
+import java.util.ArrayList;
+import java.util.List;
 
 public class Main {
     private static final String _HELP_STR_ = "" +
         "vproxy: usage java " + Main.class.getName() + " \\" +
         "\n\t\thelp                                         Show this message" +
         "\n" +
+        "\n\t\tversion                                      Show version" +
+        "\n" +
         "\n\t\tload ${filename}                             Load configuration from file" +
+        "\n" +
+        "\n\t\tcheck                                        check and exit" +
         "\n" +
         "\n\t\tresp-controller ${address} ${password}       Start the resp-controller, will" +
         "\n\t\t                                             be named as `resp-controller`" +
@@ -43,8 +46,11 @@ public class Main {
         "\n\t\tnoSave                                       Disable the ability to save config" +
         "\n" +
         "\n\t\tnoStartupBindCheck                           Disable bind check when loading config" +
-        "\n\t\t                                             when launching" +
+        "\n\t\t                                             when launching. Will be automatically" +
+        "\n\t\t                                             added when reloading using Systemd module" +
+        "\n\t\tautoSaveFile                                 File path for auto saving" +
         "";
+    private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
         Security.setProperty("networkaddress.cache.ttl", "0");
@@ -64,6 +70,9 @@ public class Main {
                     Application.create();
                     Simple.main0(args);
                     break;
+                case "Daemon":
+                    Daemon.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     System.exit(1);
@@ -79,32 +88,33 @@ public class Main {
             // do not modify if -Deploy is already set
             return args;
         }
+        List<String> returnArgs = new ArrayList<>(args.length);
         boolean found = false;
-        for (var arg : args) {
+        for (final var arg : args) {
             if (arg.startsWith("-Deploy=")) {
                 if (found) {
                     // should only appear once
                     throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
                 }
                 found = true;
-            }
-        }
-        if (!found) {
-            // no -Deploy in arguments
-            return args;
-        }
-        // make new arguments and set deploy property
-        var newArgs = new String[args.length - 1];
-        int idx = -1;
-        for (var arg : args) {
-            if (arg.startsWith("-Deploy=")) {
-                var deploy = arg.substring("-Deploy=".length());
-                System.setProperty("eploy", deploy); // this happens before loading Config.class
+            } else if (arg.startsWith("-D")) {
+                // other properties can be set freely
+                var kv = arg.substring("-D".length());
+                if (kv.contains("=")) {
+                    var k = kv.substring(0, kv.indexOf("=")).trim();
+                    var v = kv.substring(kv.indexOf("=") + "=".length()).trim();
+                    if (!k.isEmpty() && !v.isEmpty()) {
+                        System.setProperty(k, v);
+                        continue;
+                    }
+                }
+                returnArgs.add(arg);
             } else {
-                newArgs[++idx] = arg;
+                returnArgs.add(arg);
             }
         }
-        return newArgs;
+        //noinspection ToArrayCallWithZeroLengthArrayArgument
+        return returnArgs.toArray(new String[returnArgs.size()]);
     }
 
     public static void main(String[] args) {
@@ -134,12 +144,23 @@ public class Main {
 
         // every other thing should start after the loop
 
+        // init ctx
+        MainCtx ctx = new MainCtx();
+        ctx.addOp(new AllowSystemCallInNonStdIOControllerOp());
+        ctx.addOp(new CheckOp());
+        ctx.addOp(new DiscoveryConfigOp());
+        ctx.addOp(new HttpControllerOp());
+        ctx.addOp(new LoadOp());
+        ctx.addOp(new NoLoadLastOp());
+        ctx.addOp(new NoSaveOp());
+        ctx.addOp(new NoStartupBindCheckOp());
+        ctx.addOp(new NoStdIOControllerOp());
+        ctx.addOp(new PidFileOp());
+        ctx.addOp(new RespControllerOp());
+        ctx.addOp(new SigIntDirectlyShutdownOp());
+        ctx.addOp(new AutoSaveFileOp());
+
         // load config if specified in args
-        boolean loaded = false;
-        boolean noLoad = false;
-        boolean noBindCheck = false;
-        boolean noStdIOController = false;
-        String pidFilePath = null;
         for (int i = 0; i < args.length; ++i) {
             String arg = args[i];
             String next = i + 1 < args.length ? args[i + 1] : null;
@@ -153,164 +174,84 @@ public class Main {
                     System.out.println(_HELP_STR_);
                     System.exit(0);
                     return;
-                case "load":
-                    // try load after all other configs are processed
-                    if (next == null) {
-                        System.err.println("invalid system call for `load`: should specify a file name to load");
-                        System.exit(1);
-                        return;
-                    }
-                    ++i;
-                    break;
-                case "resp-controller":
-                case "http-controller":
-                    if (next == null || (arg.equals("resp-controller") && next2 == null)) {
-                        System.err.println("invalid system call for `" + arg + "`: should specify an address"
-                            + (arg.equals("resp-controller") ? " and a password" : ""));
-                        System.exit(1);
-                        return;
-                    }
-                    // handle controller, so increase the cursor
-                    i += (arg.equals("resp-controller") ? 2 : 1);
-
-                    StringBuilder call = new StringBuilder();
-                    call.append("System call: add ").append(arg).append(" (").append(arg).append(") address ").append(next);
-                    if (arg.equals("resp-controller")) {
-                        call.append(" password ").append(next2);
-                    }
-                    BlockCallback<CmdResult, XException> cb = new BlockCallback<>();
-                    SystemCommand.handleSystemCall(call.toString(), cb);
-                    try {
-                        cb.block();
-                    } catch (XException e) {
-                        System.err.println("start " + arg + " failed");
-                        e.printStackTrace();
-                        return;
-                    }
-                    break;
-                case "allowSystemCallInNonStdIOController":
-                    SystemCommand.allowNonStdIOController = true;
-                    break;
-                case "noStdIOController":
-                    noStdIOController = true;
-                    break;
-                case "sigIntDirectlyShutdown":
-                    Shutdown.sigIntBeforeTerminate = 1;
-                    break;
-                case "discoveryConfig":
-                    if (next == null) {
-                        System.err.println("discoveryConfig: config file path required");
-                        System.exit(1);
-                        return;
-                    }
-                    System.out.println("loading discovery config from: " + next);
-                    // handle config, so increase the cursor
-                    ++i;
-                    DiscoveryConfigLoader discoveryMain = DiscoveryConfigLoader.getInstance();
-                    int exitCode = discoveryMain.load(next);
-                    if (exitCode != 0) {
-                        System.exit(exitCode);
-                        return;
-                    }
-                    exitCode = discoveryMain.check();
-                    if (exitCode != 0) {
-                        System.exit(exitCode);
-                        return;
-                    }
-                    exitCode = discoveryMain.gen();
-                    if (exitCode != 0) {
-                        System.exit(exitCode);
-                        return;
-                    }
-                    Config.discoveryConfigProvided = true;
-                    break;
-                case "pidFile":
-                    if (next == null) {
-                        System.err.println("pid file path should be specified");
-                        System.exit(1);
-                        return;
-                    }
-                    // handle pid file path, so increase the cursor
-                    ++i;
-                    pidFilePath = next;
-                    break;
-                case "noLoadLast":
-                    loaded = true; // set this flag to true, then last config won't be loaded
-                    noLoad = true;
-                    break;
-                case "noSave":
-                    Config.configSavingDisabled = true;
-                    break;
-                case "noStartupBindCheck":
-                    // check reuseport
-                    if (!ServerSock.supportReusePort()) {
-                        System.err.println("`noBindCheck` cannot be set because REUSEPORT is not supported");
-                        System.exit(1);
-                        return;
-                    }
-                    noBindCheck = true;
-                    Config.checkBind = false;
-                    break;
                 default:
-                    System.err.println("unknown argument `" + arg + "`");
-                    System.exit(1);
-                    return;
+                    var op = ctx.seekOp(arg);
+                    if (op == null) {
+                        System.err.println("unknown argument `" + arg + "`");
+                        System.exit(1);
+                        return;
+                    }
+                    var cnt = op.argCount();
+                    assert cnt <= 2; // make it simple for now...
+                    if (cnt == 0) {
+                        ctx.addTodo(op, new String[0]);
+                    } else {
+                        // check next
+                        if (next == null) {
+                            System.err.println("`" + arg + "` expects more arguments");
+                            System.exit(1);
+                            return;
+                        }
+                        if (cnt == 1) {
+                            ctx.addTodo(op, new String[]{next});
+                            ++i;
+                        } else {
+                            assert cnt == 2;
+                            if (next2 == null) {
+                                System.err.println("`" + arg + "` expects more arguments");
+                                System.exit(1);
+                                return;
+                            }
+                            ctx.addTodo(op, new String[]{next, next2});
+                            i += 2;
+                        }
+                    }
             }
         }
+        ctx.executeAll();
 
-        // additional argument check
-        if (noLoad && noBindCheck) {
-            System.err.println("noLoadLast and noStartupBindCheck cannot be set together");
-            System.exit(1);
-            return;
-        }
-
-        for (int i = 0; i < args.length; ++i) {
-            String arg = args[i];
-            String next = i + 1 < args.length ? args[i + 1] : null;
-            if ("load".equals(arg)) {
-                loaded = true;
-                // if error occurred, the program will exit
-                // so set loaded flag here is ok
-
-                // no need to check whether `next` exists, already check
-                // handle load, so increase the cursor
-                ++i;
-                try {
-                    Shutdown.load(next, new CallbackInMain());
-                } catch (Exception e) {
-                    System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
-                    System.exit(1);
-                    return;
-                }
-            }
-        }
-        if (!loaded && !Config.configLoadingDisabled) {
+        if (!ctx.get("loaded", false) && !Config.configLoadingDisabled) {
             File f = new File(Shutdown.defaultFilePath());
             if (f.exists()) {
                 // load last config
-                System.out.println("trying to load from last saved config " + f.getAbsolutePath());
-                System.out.println("if the process fails to start, remove " + f.getAbsolutePath() + " and start from scratch");
+                Logger.alert("trying to load from last saved config " + f.getAbsolutePath());
+                Logger.alert("if the process fails to start, please manually remove " + f.getAbsolutePath() + " and start from scratch");
+                if (ctx.get("isCheck", false)) {
+                    exitAfterLoading = true;
+                }
                 try {
                     Shutdown.load(null, new CallbackInMain());
                 } catch (Exception e) {
-                    System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
+                    Logger.error(LogType.ALERT, "got exception when do pre-loading: " + Utils.formatErr(e));
+                    System.exit(1);
+                    return;
                 }
             }
         }
 
         // write pid file
-        try {
-            Shutdown.writePid(pidFilePath);
-        } catch (Exception e) {
-            Logger.fatal(LogType.UNEXPECTED, "writing pid failed: " + Utils.formatErr(e));
-            // failed on writing pid file is not a critical error
-            // so we don't quit
+        if (!ctx.get("isCheck", false)) {
+            try {
+                Shutdown.writePid(ctx.get("pidFilePath", null));
+            } catch (Exception e) {
+                Logger.fatal(LogType.UNEXPECTED, "writing pid failed: " + Utils.formatErr(e));
+                // failed on writing pid file is not a critical error
+                // so we don't quit
+            }
+        }
+
+        // exit if it's checking
+        if (ctx.get("isCheck", false)) {
+            if (!exitAfterLoading) {
+                System.out.println("ok");
+                System.exit(0);
+                return;
+            }
         }
 
         // start controllers
 
-        if (!noStdIOController) {
+        if (!ctx.get("noStdIOController", false)) {
             // start stdioController
             StdIOController controller = new StdIOController();
             new Thread(controller::start, "StdIOControllerThread").start();
@@ -325,16 +266,20 @@ public class Main {
 
     private static void saveConfig() {
         try {
-            Shutdown.save(null);
+            Shutdown.autoSave();
         } catch (Exception e) {
             Logger.shouldNotHappen("failed to save config", e);
         }
     }
 
-    private static class CallbackInMain extends Callback<String, Throwable> {
+    public static class CallbackInMain extends Callback<String, Throwable> {
         @Override
         protected void onSucceeded(String value) {
             Config.checkBind = true;
+            if (exitAfterLoading) {
+                System.out.println("ok");
+                System.exit(0);
+            }
         }
 
         @Override

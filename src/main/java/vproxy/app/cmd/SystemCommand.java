@@ -262,8 +262,10 @@ public class SystemCommand {
             }
         } catch (AlreadyExistException e) {
             cb.failed(new XException("the RESPController is already started"));
+            return;
         } catch (IOException e) {
             cb.failed(new XException("got exception when starting RESPController: " + Utils.formatErr(e)));
+            return;
         }
         cb.succeeded(new CmdResult());
     }

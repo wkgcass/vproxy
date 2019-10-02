@@ -1,0 +1,18 @@
+[Unit]
+Description=vproxy instance
+After=network.target
+
+[Service]
+Environment="PIDFILE=/run/vproxy.pid" "JAVA_HOME=" "JVM_OPTS=" "VPROXY_JAR=" "ARGS=resp-controller 0.0.0.0:16379 123456 http-controller 0.0.0.0:18080 allowSystemCallInNonStdIOController"
+# ExecStartPre=
+# no need to set ExecStartPre, the Daemon will execute check before launching the program
+ExecStart=/usr/bin/env ${JAVA_HOME}/bin/java -Xmx8m -Deploy=Daemon -jar $VPROXY_JAR ${JAVA_HOME}/bin/java $JVM_OPTS -jar $VPROXY_JAR $ARGS
+ExecReload=/usr/bin/env ${JAVA_HOME}/bin/java -jar $VPROXY_JAR $ARGS noStartupBindCheck check
+ExecReload=/bin/kill -USR2 $MAINPID
+KillMode=mixed
+Restart=always
+SuccessExitStatus=143
+Type=simple
+
+[Install]
+WantedBy=multi-user.target

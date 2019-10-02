@@ -63,7 +63,7 @@ public class Shutdown {
         try {
             SignalHook.getInstance().sigUsr1(() -> {
                 try {
-                    save(null);
+                    autoSave();
                 } catch (Exception e) {
                     Logger.shouldNotHappen("save failed", e);
                 }
@@ -95,7 +95,7 @@ public class Shutdown {
     private static void endSaveAndQuit(int exitCode) {
         end();
         try {
-            save(null);
+            autoSave();
         } catch (Exception e) {
             Logger.shouldNotHappen("save failed", e);
         }
@@ -105,7 +105,7 @@ public class Shutdown {
     private static void endSaveAndSoftQuit(@SuppressWarnings("SameParameterValue") int exitCode) {
         end();
         try {
-            save(null);
+            autoSave();
         } catch (Exception e) {
             Logger.shouldNotHappen("save failed", e);
         }
@@ -226,6 +226,11 @@ public class Shutdown {
         fos.close();
     }
 
+    @Blocking
+    public static void autoSave() throws Exception {
+        save(Config.autoSaveFilePath);
+    }
+
     @Blocking // writing file is blocking
     public static void save(String filepath) throws Exception {
         if (Config.configSavingDisabled) {
@@ -241,6 +246,7 @@ public class Shutdown {
         if (filepath.startsWith("~")) {
             filepath = System.getProperty("user.home") + filepath.substring("~".length());
         }
+        Logger.alert("Trying to save config into file: " + filepath);
         backupAndRemove(filepath);
         File f = new File(filepath);
         if (!f.createNewFile()) {
@@ -254,6 +260,7 @@ public class Shutdown {
         bw.flush();
 
         fos.close();
+        Logger.alert("Saving config into file done: " + filepath);
     }
 
     public static String currentConfig() {

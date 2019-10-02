@@ -41,6 +41,10 @@ public class Config {
     // true = will check, false = will not check
     public static boolean checkBind = true;
 
+    // the location of auto saved file path
+    // null for the default path
+    public static String autoSaveFilePath = null;
+
     // -Deploy=xxx
     public static final String appClass;
 

@@ -9,9 +9,6 @@ module vproxy {
     exports vproxy.util;
     uses vproxy.processor.ProcessorRegistry;
 
-    // export the main class for user to start
-    exports vproxy.app;
-
     // export json components
     exports vjson;
     // export vserver|vclient components
