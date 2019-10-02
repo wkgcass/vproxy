@@ -1,0 +1,21 @@
+# It's useful when running with kcptun
+# So I recorded this service file here
+
+[Unit]
+Description=udp2raw
+After=network.target
+
+[Service]
+# file path to udp2raw executable file
+Environment="UDP2RAW="
+# exposed tcp port
+Environment="TCP=9443"
+# local udp port
+Environment="UDP=8443"
+ExecStart=/usr/bin/env $UDP2RAW -s -l 0.0.0.0:${TCP} -r 127.0.0.1:${UDP} --raw-mode faketcp -a
+Restart=always
+Type=simple
+SuccessExitStatus=143
+
+[Install]
+WantedBy=kcptun.service

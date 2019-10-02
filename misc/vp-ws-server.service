@@ -1,0 +1,28 @@
+[Unit]
+Description=vproxy WebSocks Proxy Server
+After=network.target
+
+[Service]
+# fill in JAVA_HOME and VPROXY_JAR with the path to java home directory and the path to vproxy.jar file
+Environment="JAVA_HOME=" "VPROXY_JAR="
+# pid file of the daemon process
+Environment="PIDFILE=/run/vp.ws.pid"
+# jvm options
+Environment="JVM_OPTS="
+# cert and key file path
+Environment="CERT=" "KEY="
+# auth
+Environment="AUTH="
+# start up for ssl
+ExecStart=/usr/bin/env ${JAVA_HOME}/bin/java $JVM_OPTS -Deploy=WebSocksProxyServer -jar $VPROXY_JAR \
+          listen 443 redirectport 80 \
+          ssl certpem $CERT keypem $KEY \
+          auth $AUTH
+# start up for plain tcp
+# ExecStart=/usr/bin/env ${JAVA_HOME}/bin/java $JVM_OPTS -Deploy=WebSocksProxyServer -jar $VPROXY_JAR listen 80 auth $AUTH
+Restart=always
+Type=simple
+SuccessExitStatus=143
+
+[Install]
+WantedBy=multi-user.target
