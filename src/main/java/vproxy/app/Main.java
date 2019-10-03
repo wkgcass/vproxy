@@ -48,7 +48,7 @@ public class Main {
         "\n\t\tnoStartupBindCheck                           Disable bind check when loading config" +
         "\n\t\t                                             when launching. Will be automatically" +
         "\n\t\t                                             added when reloading using Systemd module" +
-        "\n\t\tautoSaveFile                                 File path for auto saving" +
+        "\n\t\tautoSaveFile ${filename}                     File path for auto saving" +
         "";
     private static boolean exitAfterLoading = false;
 
