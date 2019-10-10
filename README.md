@@ -76,3 +76,7 @@ Questions about implementation detail are also welcome (in issues).
 ## Contribute
 
 Currently only `I` myself is working on this project. I would be very happy if you want to join :)
+
+Thanks to [Jetbrains](https://www.jetbrains.com/?from=vproxy) for their great IDEs and the free open source license.
+
+![](https://raw.githubusercontent.com/wkgcass/vproxy/master/doc/jetbrains.png)
