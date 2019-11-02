@@ -43,6 +43,10 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         plainBufferForApp.addHandler(readableHandler);
     }
 
+    protected ByteBufferRingBuffer getPlainBufferForApp() {
+        return plainBufferForApp;
+    }
+
     protected void recordIntermediateBuffer(ByteBuffer b) {
         intermediateBuffers.add(SimpleRingBuffer.wrap(b));
     }

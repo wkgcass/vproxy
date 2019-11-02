@@ -6,7 +6,7 @@ import vproxy.util.crypto.StreamingCFBCipher;
 
 import java.nio.ByteBuffer;
 
-public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements RingBuffer {
+public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
     private final BlockCipherKey key;
 
     private int requiredIvLen;

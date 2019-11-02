@@ -7,7 +7,7 @@ import vproxy.util.crypto.Utils;
 
 import java.nio.ByteBuffer;
 
-public class EncryptIVInDataWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuffer {
+public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implements RingBuffer {
     private boolean ivSent = false;
     private StreamingCFBCipher cipher;
     private final byte[] iv0;
