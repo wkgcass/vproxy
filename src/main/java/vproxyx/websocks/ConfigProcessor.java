@@ -19,6 +19,8 @@ public class ConfigProcessor {
     public final EventLoopGroup hcLoopGroup;
     private int listenPort = 1080;
     private int httpConnectListenPort = 0;
+    private int ssListenPort = 0;
+    private String ssPassword = "";
     private boolean gateway = false;
     private Map<String, ServerGroup> servers = new HashMap<>();
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
@@ -44,6 +46,14 @@ public class ConfigProcessor {
 
     public int getHttpConnectListenPort() {
         return httpConnectListenPort;
+    }
+
+    public int getSsListenPort() {
+        return ssListenPort;
+    }
+
+    public String getSsPassword() {
+        return ssPassword;
     }
 
     public boolean isGateway() {
@@ -163,6 +173,18 @@ public class ConfigProcessor {
                     if (httpConnectListenPort < 1 || httpConnectListenPort > 65535) {
                         throw new Exception("invalid agent.httpconnect.listen, port number out of range");
                     }
+                } else if (line.startsWith("agent.ss.listen ")) {
+                    String port = line.substring("agent.ss.listen ".length()).trim();
+                    try {
+                        ssListenPort = Integer.parseInt(port);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.ss.listen, expecting an integer");
+                    }
+                    if (ssListenPort < 1 || ssListenPort > 65535) {
+                        throw new Exception("invalid agent.ss.listen, port number out of range");
+                    }
+                } else if (line.startsWith("agent.ss.password ")) {
+                    ssPassword = line.substring("agent.ss.password ".length()).trim();
                 } else if (line.startsWith("agent.gateway ")) {
                     String val = line.substring("agent.gateway ".length());
                     switch (val) {
@@ -412,6 +434,13 @@ public class ConfigProcessor {
         // check for listening ports
         if (listenPort == httpConnectListenPort) {
             throw new Exception("agent.listen and agent.httpconnect.listen are the same");
+        }
+        if (listenPort == ssListenPort) {
+            throw new Exception("agent.listen and agent.ss.listen are the same");
+        }
+        // check for ss
+        if (ssListenPort != 0 && ssPassword.isEmpty()) {
+            throw new Exception("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
         }
     }
 }

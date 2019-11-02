@@ -2,6 +2,7 @@ package vproxy.poc;
 
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.Aes256Key;
+import vproxy.util.crypto.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
 import vproxy.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
@@ -48,7 +49,7 @@ public class EncryptDecrypt {
                     byte[] arr = new byte[len];
                     plain.writeTo(ByteArrayChannel.fromEmpty(arr));
 
-                    print(arr);
+                    Utils.printBytes(arr);
                 }
                 System.out.println("- - - - - - - -");
             }
@@ -65,56 +66,12 @@ public class EncryptDecrypt {
             byte[] encryptedArray = new byte[encryptBuf.used()];
             encryptBuf.writeTo(ByteArrayChannel.fromEmpty(encryptedArray));
 
-            print(encryptedArray);
+            Utils.printBytes(encryptedArray);
             if (!Arrays.equals(encryptedArray, hexStringToByteArray(toDecrypt[0] + toDecrypt[1]))) {
                 throw new Exception("encrypting failed");
             }
 
             System.out.println("==============");
-        }
-    }
-
-    private static void print(byte[] array) {
-        final int bytesPerLine = 36;
-        int lastLine = array.length % bytesPerLine;
-        if (lastLine == 0) {
-            lastLine = bytesPerLine;
-        }
-        int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
-        byte[][] linesArray = new byte[lines][];
-        for (int i = 0; i < linesArray.length - 1; ++i) {
-            linesArray[i] = new byte[bytesPerLine];
-        }
-        linesArray[linesArray.length - 1] = new byte[lastLine];
-
-        for (int i = 0; i < array.length; ++i) {
-            int idx0 = i / bytesPerLine;
-            int idx1 = i % bytesPerLine;
-            linesArray[idx0][idx1] = array[i];
-        }
-
-        for (int idx = 0; idx < linesArray.length; idx++) {
-            byte[] line = linesArray[idx];
-            System.out.print(bytesToHex(line));
-            System.out.print("    ");
-            if (idx == linesArray.length - 1) {
-                for (int i = 0; i < 2 * (bytesPerLine - lastLine); ++i) {
-                    System.out.print(" ");
-                }
-            }
-            char[] cs = new char[line.length];
-            for (int i = 0; i < line.length; ++i) {
-                int b = line[i];
-                if (b < 0) {
-                    b += 256;
-                }
-                if (b < 32 || b > 126) {
-                    cs[i] = '.';
-                } else {
-                    cs[i] = (char) b;
-                }
-            }
-            System.out.println(new String(cs));
         }
     }
 
@@ -126,17 +83,5 @@ public class EncryptDecrypt {
                 + Character.digit(s.charAt(i + 1), 16));
         }
         return data;
-    }
-
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
-
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
     }
 }

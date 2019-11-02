@@ -1,8 +1,10 @@
 package vproxy.util.ringbuffer;
 
+import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.BlockCipherKey;
 import vproxy.util.crypto.StreamingCFBCipher;
+import vproxy.util.crypto.Utils;
 
 import java.nio.ByteBuffer;
 
@@ -56,6 +58,8 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
         input.get(array);
 
         byte[] ret = cipher.update(array, 0, array.length);
+        assert Logger.lowLevelDebug("decrypt " + ret.length + " bytes");
+        assert Utils.printBytes(ret);
         recordIntermediateBuffer(ByteBuffer.wrap(ret));
     }
 }

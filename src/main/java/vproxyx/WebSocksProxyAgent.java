@@ -14,8 +14,9 @@ import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxy.util.Logger;
-import vproxy.util.Tuple;
+import vproxy.util.Tuple3;
 import vproxyx.websocks.*;
+import vproxyx.websocks.ss.SSProtocolHandler;
 
 import java.io.File;
 import java.net.InetAddress;
@@ -89,21 +90,31 @@ public class WebSocksProxyAgent {
         // initiate pool (it's inside the connector provider)
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor);
         // initiate the agent
-        List<Tuple<Integer, ProtocolHandler>> handlers = new LinkedList<>();
-        handlers.add(new Tuple<>(
+        // --------- port,   handler,         isGateway
+        List<Tuple3<Integer, ProtocolHandler, Boolean>> handlers = new LinkedList<>();
+        handlers.add(new Tuple3<>(
             configProcessor.getListenPort(),
-            new Socks5ProxyProtocolHandler(connectorProvider)
+            new Socks5ProxyProtocolHandler(connectorProvider),
+            configProcessor.isGateway()
         ));
         if (configProcessor.getHttpConnectListenPort() != 0) {
-            handlers.add(new Tuple<>(
+            handlers.add(new Tuple3<>(
                 configProcessor.getHttpConnectListenPort(),
-                new HttpConnectProtocolHandler(connectorProvider)
+                new HttpConnectProtocolHandler(connectorProvider),
+                configProcessor.isGateway()
+            ));
+        }
+        if (configProcessor.getSsListenPort() != 0) {
+            handlers.add(new Tuple3<>(
+                configProcessor.getSsListenPort(),
+                new SSProtocolHandler(configProcessor.getSsPassword(), connectorProvider),
+                true
             ));
         }
 
-        for (Tuple<Integer, ProtocolHandler> entry : handlers) {
-            int port = entry.left;
-            ProtocolHandler handler = entry.right;
+        for (Tuple3<Integer, ProtocolHandler, Boolean> tuple : handlers) {
+            int port = tuple._1;
+            ProtocolHandler handler = tuple._2;
             ConnectorGen connGen = new ConnectorGen() {
                 @Override
                 public Type type() {
@@ -122,11 +133,10 @@ public class WebSocksProxyAgent {
             };
 
             // let's create a server, if bind failed, error would be thrown
-            var l4addr = new InetSocketAddress(InetAddress.getByName(
-                configProcessor.isGateway()
-                    ? "0.0.0.0"
-                    : "127.0.0.1"
-            ), port);
+            var l3addr = tuple._3
+                ? "0.0.0.0"
+                : "127.0.0.1";
+            var l4addr = new InetSocketAddress(InetAddress.getByName(l3addr), port);
             ServerSock.checkBind(l4addr);
             ServerSock server = ServerSock.create(l4addr);
 
@@ -146,7 +156,7 @@ public class WebSocksProxyAgent {
             // start the agent
             proxy.handle();
 
-            Logger.alert("agent started on " + port);
+            Logger.alert("agent started on " + l3addr + ":" + port + " " + tuple._2.getClass().getSimpleName());
         }
 
         // maybe we can start the pac server

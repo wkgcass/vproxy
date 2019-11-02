@@ -1,8 +1,8 @@
 package vproxy.socks;
 
 import vproxy.connection.Connector;
-import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.RingBuffer;
 
 public class Socks5ProxyContext {
     public static final byte GENERAL_SOCKS_SERVER_FAILURE = 0x01;
