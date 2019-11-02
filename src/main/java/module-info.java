@@ -7,6 +7,8 @@ module vproxy {
     // then the user can write and use their own processors
     exports vproxy.processor;
     exports vproxy.util;
+    exports vproxy.util.crypto;
+    exports vproxy.util.io;
     uses vproxy.processor.ProcessorRegistry;
 
     // export json components

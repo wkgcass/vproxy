@@ -43,8 +43,8 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         plainBufferForApp.addHandler(readableHandler);
     }
 
-    protected void recordIntermediateBuffers(ByteBufferRingBuffer b) {
-        intermediateBuffers.add(b);
+    protected void recordIntermediateBuffer(ByteBuffer b) {
+        intermediateBuffers.add(SimpleRingBuffer.wrap(b));
     }
 
     private int intermediateBufferCap() {
@@ -136,7 +136,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         }
     }
 
-    abstract void handlePlainBuffer(ByteBuffer buf, boolean[] errored);
+    abstract protected void handlePlainBuffer(ByteBuffer buf, boolean[] errored);
 
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {

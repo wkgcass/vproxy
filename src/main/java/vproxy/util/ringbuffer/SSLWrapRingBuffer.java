@@ -39,7 +39,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
     }
 
     @Override
-    void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored) {
+    protected void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored) {
         final int positionBeforeHandling = bufferPlain.position();
 
         ByteBuffer bufferEncrypted = getTemporaryBuffer(engine.getSession().getPacketBufferSize());
@@ -81,7 +81,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
             return;
         }
         if (bufferEncrypted.position() != 0) {
-            recordIntermediateBuffers(SimpleRingBuffer.wrap(bufferEncrypted.flip()));
+            recordIntermediateBuffer(bufferEncrypted.flip());
             discardTemporaryBuffer();
         }
         if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {

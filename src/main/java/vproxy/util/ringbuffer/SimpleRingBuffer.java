@@ -60,6 +60,12 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         this.cap = buffer.capacity();
         this.sPos = sPos;
         this.ePos = ePos;
+
+        // fix ePos
+        if (this.ePos == this.cap) {
+            this.ePos = 0;
+            this.ePosIsAfterSPos = false;
+        }
     }
 
     private int storeLimit() {

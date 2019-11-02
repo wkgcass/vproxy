@@ -110,7 +110,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
             return;
         }
         if (plainBuffer.position() != 0) {
-            recordIntermediateBuffers(SimpleRingBuffer.wrap(plainBuffer.flip()));
+            recordIntermediateBuffer(plainBuffer.flip());
             discardTemporaryBuffer();
         }
         if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
