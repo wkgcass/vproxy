@@ -2,7 +2,7 @@ package vproxy.protocol;
 
 import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 
 import java.util.concurrent.ConcurrentLinkedQueue;

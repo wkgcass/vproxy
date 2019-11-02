@@ -6,7 +6,7 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

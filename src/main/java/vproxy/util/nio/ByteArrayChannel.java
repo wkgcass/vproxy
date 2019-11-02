@@ -1,4 +1,6 @@
-package vproxy.util;
+package vproxy.util.nio;
+
+import vproxy.util.ByteArray;
 
 import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;

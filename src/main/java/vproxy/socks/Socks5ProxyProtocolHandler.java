@@ -4,6 +4,7 @@ import vproxy.connection.Connector;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.net.InetAddress;

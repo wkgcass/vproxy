@@ -1,7 +1,7 @@
 package vproxy.redis;
 
 import vproxy.redis.entity.*;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;

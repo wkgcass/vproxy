@@ -22,6 +22,7 @@ import vproxy.redis.Serializer;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 import vserver.HttpServer;
 import vserver.Tool;
 import vserver.server.Http1ServerImpl;

@@ -7,7 +7,7 @@ import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 
 import java.io.IOException;

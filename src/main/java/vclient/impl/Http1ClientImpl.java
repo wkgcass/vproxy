@@ -12,6 +12,7 @@ import vproxy.processor.http1.entity.Request;
 import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 import vserver.HttpMethod;
 
 import java.io.IOException;

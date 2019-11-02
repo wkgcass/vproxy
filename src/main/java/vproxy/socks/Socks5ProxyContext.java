@@ -1,7 +1,7 @@
 package vproxy.socks;
 
 import vproxy.connection.Connector;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 
 public class Socks5ProxyContext {

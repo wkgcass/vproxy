@@ -12,6 +12,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SNIHostName;

@@ -3,6 +3,7 @@ package vproxy.component.proxy;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.ProxyOutputRingBuffer;
 
 import java.io.IOException;

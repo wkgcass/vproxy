@@ -2,7 +2,7 @@ package vproxy.http;
 
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.Logger;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {

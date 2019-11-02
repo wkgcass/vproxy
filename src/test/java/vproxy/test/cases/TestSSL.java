@@ -21,7 +21,7 @@ import vproxy.http.HttpRespParser;
 import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 import vproxy.util.RingBufferETHandler;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;

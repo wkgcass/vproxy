@@ -1,6 +1,6 @@
 package vproxy.poc;
 
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.Aes256Key;
 import vproxy.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;

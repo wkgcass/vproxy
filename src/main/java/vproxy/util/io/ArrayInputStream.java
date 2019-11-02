@@ -1,4 +1,6 @@
-package vproxy.util;
+package vproxy.util.io;
+
+import vproxy.util.ByteArray;
 
 import java.io.InputStream;
 

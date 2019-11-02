@@ -1,5 +1,7 @@
 package vproxy.util;
 
+import vproxy.util.nio.ByteArrayChannel;
+
 import java.util.Set;
 
 public abstract class AbstractParser<T> {

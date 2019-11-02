@@ -2,7 +2,7 @@ package vproxy.poc;
 
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArrayChannel;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 

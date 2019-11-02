@@ -4,6 +4,7 @@ import vproxy.util.bytearray.CompositeByteArray;
 import vproxy.util.bytearray.OneByteArray;
 import vproxy.util.bytearray.SimpleByteArray;
 import vproxy.util.bytearray.SubByteArray;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.nio.ByteBuffer;
 

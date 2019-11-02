@@ -1,5 +1,6 @@
 package vproxy.util;
 
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SimpleRingBuffer;
 
 import java.io.IOException;

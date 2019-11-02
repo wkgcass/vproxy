@@ -10,6 +10,7 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
 
