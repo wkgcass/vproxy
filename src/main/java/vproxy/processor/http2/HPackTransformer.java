@@ -2,9 +2,9 @@ package vproxy.processor.http2;
 
 import com.twitter.hpack.Decoder;
 import com.twitter.hpack.Encoder;
+import vproxy.util.ByteArray;
 import vproxy.util.io.ArrayInputStream;
 import vproxy.util.io.ArrayOutputStream;
-import vproxy.util.ByteArray;
 
 import java.io.IOException;
 

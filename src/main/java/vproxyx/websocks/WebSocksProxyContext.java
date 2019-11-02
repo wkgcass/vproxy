@@ -4,9 +4,9 @@ import vproxy.connection.Connector;
 import vproxy.http.HttpContext;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.Socks5ProxyContext;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.Callback;
 import vproxy.util.Tuple;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 

@@ -11,7 +11,10 @@ import vproxy.processor.http1.entity.Header;
 import vproxy.processor.http1.entity.Request;
 import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.*;
+import vproxy.util.ByteArray;
+import vproxy.util.Callback;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 import vserver.HttpMethod;
 

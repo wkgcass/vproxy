@@ -1,6 +1,9 @@
 package vproxy.util.ringbuffer;
 
-import vproxy.util.*;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
+import vproxy.util.RingBufferETHandler;
+import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;

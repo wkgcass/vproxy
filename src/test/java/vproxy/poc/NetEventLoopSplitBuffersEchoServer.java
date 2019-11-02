@@ -2,9 +2,9 @@ package vproxy.poc;
 
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

@@ -2,8 +2,8 @@ package vproxy.http;
 
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.Logger;
+import vproxy.util.nio.ByteArrayChannel;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
     private final boolean parseBody;

@@ -1,10 +1,10 @@
 package vproxy.redis;
 
 import vproxy.redis.entity.*;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
+import vproxy.util.nio.ByteArrayChannel;
 
 @SuppressWarnings("Duplicates")
 public class RESPParser {

@@ -4,10 +4,10 @@ import vproxy.app.CertKeyHolder;
 import vproxy.component.ssl.CertKey;
 import vproxy.connection.ConnectionOpts;
 import vproxy.processor.http1.entity.Header;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
+import vproxy.util.nio.ByteArrayChannel;
 
 import javax.net.ssl.*;
 import java.io.FileInputStream;

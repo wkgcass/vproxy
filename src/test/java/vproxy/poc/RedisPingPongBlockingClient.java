@@ -1,8 +1,8 @@
 package vproxy.poc;
 
 import vproxy.redis.RESPParser;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.RingBuffer;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.io.InputStream;

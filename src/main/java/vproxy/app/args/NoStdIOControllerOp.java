@@ -1,7 +1,7 @@
 package vproxy.app.args;
 
-import vproxy.app.MainOp;
 import vproxy.app.MainCtx;
+import vproxy.app.MainOp;
 
 public class NoStdIOControllerOp implements MainOp {
     @Override
