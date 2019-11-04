@@ -3,7 +3,7 @@ package vproxy.util.ringbuffer;
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.BlockCipherKey;
 import vproxy.util.crypto.StreamingCFBCipher;
-import vproxy.util.crypto.Utils;
+import vproxy.util.crypto.CryptoUtils;
 
 import java.nio.ByteBuffer;
 
@@ -20,7 +20,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
         super(plainBytesBuffer);
         //noinspection ReplaceNullCheck
         if (iv == null) {
-            this.iv0 = Utils.randomBytes(key.ivLen());
+            this.iv0 = CryptoUtils.randomBytes(key.ivLen());
         } else {
             this.iv0 = iv;
         }

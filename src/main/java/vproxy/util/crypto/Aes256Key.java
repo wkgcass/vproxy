@@ -6,7 +6,7 @@ public class Aes256Key implements BlockCipherKey {
     private final byte[] byteKey;
 
     public Aes256Key(String stringKey) {
-        this.byteKey = Utils.getKey(stringKey, keyLen(), ivLen());
+        this.byteKey = CryptoUtils.getKey(stringKey, keyLen(), ivLen());
     }
 
     @Override

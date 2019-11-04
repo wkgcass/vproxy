@@ -20,7 +20,7 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
-public class Utils {
+public class CryptoUtils {
 
     /**
      * Thanks go to Ola Bini for releasing this source on his blog.
@@ -116,61 +116,4 @@ public class Utils {
         return bytes;
     }
 
-    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
-
-    public static String bytesToHex(byte[] bytes) {
-        char[] hexChars = new char[bytes.length * 2];
-        for (int j = 0; j < bytes.length; j++) {
-            int v = bytes[j] & 0xFF;
-            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
-            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
-        }
-        return new String(hexChars);
-    }
-
-    public static boolean printBytes(byte[] array) {
-        final int bytesPerLine = 36;
-        int lastLine = array.length % bytesPerLine;
-        if (lastLine == 0) {
-            lastLine = bytesPerLine;
-        }
-        int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
-        byte[][] linesArray = new byte[lines][];
-        for (int i = 0; i < linesArray.length - 1; ++i) {
-            linesArray[i] = new byte[bytesPerLine];
-        }
-        linesArray[linesArray.length - 1] = new byte[lastLine];
-
-        for (int i = 0; i < array.length; ++i) {
-            int idx0 = i / bytesPerLine;
-            int idx1 = i % bytesPerLine;
-            linesArray[idx0][idx1] = array[i];
-        }
-
-        for (int idx = 0; idx < linesArray.length; idx++) {
-            byte[] line = linesArray[idx];
-            System.out.print(bytesToHex(line));
-            System.out.print("    ");
-            if (idx == linesArray.length - 1) {
-                for (int i = 0; i < 2 * (bytesPerLine - lastLine); ++i) {
-                    System.out.print(" ");
-                }
-            }
-            char[] cs = new char[line.length];
-            for (int i = 0; i < line.length; ++i) {
-                int b = line[i];
-                if (b < 0) {
-                    b += 256;
-                }
-                if (b < 32 || b > 126) {
-                    cs[i] = '.';
-                } else {
-                    cs[i] = (char) b;
-                }
-            }
-            System.out.println(new String(cs));
-        }
-
-        return true;
-    }
 }

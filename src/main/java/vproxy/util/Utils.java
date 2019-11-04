@@ -5,9 +5,7 @@ import vproxy.connection.Connector;
 import vproxy.dns.Resolver;
 import vproxy.socks.AddressType;
 
-import java.io.IOException;
-import java.io.InputStream;
-import java.io.PrintStream;
+import java.io.*;
 import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.ByteBuffer;
@@ -19,6 +17,7 @@ import java.util.function.Consumer;
 
 public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
+    @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
     private Utils() {
@@ -297,6 +296,7 @@ public class Utils {
         // so we only need to set 1 into the bit sequence
         // start from the first bit
         for (int i = 0; i < masks.length; ++i) {
+            //noinspection ManualMinMaxCalculation
             masks[i] = getByte(mask > 8
                 ? 8 // a byte can contain maximum 8 bits
                 : mask // it's ok if mask < 0, see comment in getByte()
@@ -686,5 +686,69 @@ public class Utils {
     public static void proxyProcessOutput(Process process) {
         proxyProcessOutput(process.getInputStream(), System.out);
         proxyProcessOutput(process.getErrorStream(), System.err);
+    }
+
+    public static String stackTrace() {
+        StringWriter s = new StringWriter();
+        new Throwable().printStackTrace(new PrintWriter(s));
+        return s.toString();
+    }
+
+    private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
+
+    public static String bytesToHex(byte[] bytes) {
+        char[] hexChars = new char[bytes.length * 2];
+        for (int j = 0; j < bytes.length; j++) {
+            int v = bytes[j] & 0xFF;
+            hexChars[j * 2] = HEX_ARRAY[v >>> 4];
+            hexChars[j * 2 + 1] = HEX_ARRAY[v & 0x0F];
+        }
+        return new String(hexChars);
+    }
+
+    public static boolean printBytes(byte[] array) {
+        final int bytesPerLine = 36;
+        int lastLine = array.length % bytesPerLine;
+        if (lastLine == 0) {
+            lastLine = bytesPerLine;
+        }
+        int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
+        byte[][] linesArray = new byte[lines][];
+        for (int i = 0; i < linesArray.length - 1; ++i) {
+            linesArray[i] = new byte[bytesPerLine];
+        }
+        linesArray[linesArray.length - 1] = new byte[lastLine];
+
+        for (int i = 0; i < array.length; ++i) {
+            int idx0 = i / bytesPerLine;
+            int idx1 = i % bytesPerLine;
+            linesArray[idx0][idx1] = array[i];
+        }
+
+        for (int idx = 0; idx < linesArray.length; idx++) {
+            byte[] line = linesArray[idx];
+            System.out.print(bytesToHex(line));
+            System.out.print("    ");
+            if (idx == linesArray.length - 1) {
+                for (int i = 0; i < 2 * (bytesPerLine - lastLine); ++i) {
+                    System.out.print(" ");
+                }
+            }
+            char[] cs = new char[line.length];
+            for (int i = 0; i < line.length; ++i) {
+                int b = line[i];
+                if (b < 0) {
+                    b += 256;
+                }
+                if (b < 32 || b > 126) {
+                    cs[i] = '.';
+                } else {
+                    cs[i] = (char) b;
+                }
+            }
+            System.out.println(new String(cs));
+        }
+
+        return true;
     }
 }

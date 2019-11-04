@@ -30,7 +30,7 @@ public class StreamingCFBCipher {
         this.key = key;
         this.encrypting = encrypting;
         if (iv == null) {
-            this.iv = Utils.randomBytes(key.ivLen());
+            this.iv = CryptoUtils.randomBytes(key.ivLen());
         } else {
             if (iv.length != key.ivLen())
                 throw new IllegalArgumentException("wrong iv length");
