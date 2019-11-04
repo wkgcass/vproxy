@@ -9,6 +9,8 @@ module vproxy {
     exports vproxy.util;
     exports vproxy.util.crypto;
     exports vproxy.util.io;
+    exports vproxy.util.nio;
+    exports vproxy.util.ringbuffer;
     uses vproxy.processor.ProcessorRegistry;
 
     // export json components
