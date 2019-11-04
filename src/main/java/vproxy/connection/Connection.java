@@ -9,6 +9,7 @@ import vproxy.util.Utils;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
+import java.nio.channels.CancelledKeyException;
 import java.nio.channels.SelectionKey;
 import java.nio.channels.SocketChannel;
 import java.util.List;
@@ -71,7 +72,6 @@ public class Connection implements NetFlowRecorder {
                 // the buffer is readable means the channel can write data
                 NetEventLoopUtils.resetCloseTimeout(_cctx);
 
-                boolean addWriteOnLoop = true;
                 if (noQuickWrite) {
                     assert Logger.lowLevelDebug("quick write is disabled");
                 } else {
@@ -105,12 +105,6 @@ public class Connection implements NetFlowRecorder {
                             // user buffer
                             _cctx.handler.writable(_cctx);
 
-                            if (getOutBuffer().used() == 0) {
-                                // outBuffer still empty
-                                // do not add OP_WRITE
-                                assert Logger.lowLevelDebug("the out buffer is still empty, do NOT add op_write. " + channel);
-                                addWriteOnLoop = false;
-                            }
                             // we do not write again if got any bytes
                             // let the NetEventLoop handle
                         }
@@ -120,9 +114,17 @@ public class Connection implements NetFlowRecorder {
                         assert Logger.lowLevelDebug("got exception in quick write: " + e);
                     }
                 }
-                if (addWriteOnLoop) {
+                if (getOutBuffer().used() != 0) {
                     assert Logger.lowLevelDebug("add OP_WRITE for channel " + channel);
                     eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_WRITE);
+                } else {
+                    // remove the write op in case another method added the OP_WRITE event
+                    assert Logger.lowLevelDebug("remove OP_WRITE for channel " + channel);
+                    try {
+                        eventLoop.getSelectorEventLoop().rmOps(channel, SelectionKey.OP_WRITE);
+                    } catch (CancelledKeyException ignore) {
+                        // if the key is invalid, there's no need to remove OP_WRITE
+                    }
                 }
             }
         }

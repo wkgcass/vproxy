@@ -290,6 +290,9 @@ public class SelectorEventLoop {
     }
 
     private void doModify(SelectionKey key, int ops) {
+        if (key.interestOps() == ops) {
+            return;
+        }
         key.interestOps(ops);
         if (needWake()) {
             selector.wakeup();
