@@ -1,17 +1,17 @@
 package vproxy.test.tool;
 
+import vfd.EventSet;
+import vfd.ServerSocketFD;
+import vfd.SocketFD;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 
 import java.io.IOException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
-import java.nio.channels.SocketChannel;
 
-public class EchoServerHandler implements Handler<ServerSocketChannel> {
+public class EchoServerHandler implements Handler<ServerSocketFD> {
     @Override
-    public void accept(HandlerContext<ServerSocketChannel> ctx) {
-        final SocketChannel client;
+    public void accept(HandlerContext<ServerSocketFD> ctx) {
+        final SocketFD client;
         try {
             client = ctx.getChannel().accept();
         } catch (IOException e) {
@@ -20,7 +20,7 @@ public class EchoServerHandler implements Handler<ServerSocketChannel> {
             return;
         }
         try {
-            ctx.getEventLoop().add(client, SelectionKey.OP_READ, null, new EchoClientHandler());
+            ctx.getEventLoop().add(client, EventSet.read(), null, new EchoClientHandler());
         } catch (IOException e) {
             // error for adding this client
             // close the client
@@ -33,24 +33,24 @@ public class EchoServerHandler implements Handler<ServerSocketChannel> {
     }
 
     @Override
-    public void connected(HandlerContext<ServerSocketChannel> ctx) {
+    public void connected(HandlerContext<ServerSocketFD> ctx) {
         // should not fire
     }
 
     @Override
-    public void readable(HandlerContext<ServerSocketChannel> ctx) {
+    public void readable(HandlerContext<ServerSocketFD> ctx) {
         // should not fire
     }
 
     @Override
-    public void writable(HandlerContext<ServerSocketChannel> ctx) {
+    public void writable(HandlerContext<ServerSocketFD> ctx) {
         // should not fire
     }
 
     @Override
-    public void removed(HandlerContext<ServerSocketChannel> ctx) {
+    public void removed(HandlerContext<ServerSocketFD> ctx) {
         // removed from loop, let's close it
-        ServerSocketChannel svr = ctx.getChannel();
+        ServerSocketFD svr = ctx.getChannel();
         try {
             svr.close();
         } catch (IOException e) {

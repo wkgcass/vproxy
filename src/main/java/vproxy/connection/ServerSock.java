@@ -1,5 +1,7 @@
 package vproxy.connection;
 
+import vfd.FDProvider;
+import vfd.ServerSocketFD;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
@@ -8,8 +10,6 @@ import java.io.IOException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
-import java.nio.channels.SelectableChannel;
-import java.nio.channels.ServerSocketChannel;
 import java.util.concurrent.atomic.LongAdder;
 
 public class ServerSock implements NetFlowRecorder {
@@ -17,7 +17,7 @@ public class ServerSock implements NetFlowRecorder {
 
     public final InetSocketAddress bind;
     private final String _id;
-    public final SelectableChannel channel;
+    public final ServerSocketFD channel;
 
     // statistics
     private final LongAdder fromRemoteBytes = new LongAdder();
@@ -31,9 +31,9 @@ public class ServerSock implements NetFlowRecorder {
     public static boolean supportReusePort() {
         if (supportReusePort == 1) return true;
         if (supportReusePort == 0) return false;
-        ServerSocketChannel chnl;
+        ServerSocketFD chnl;
         try {
-            chnl = ServerSocketChannel.open();
+            chnl = FDProvider.get().openServerSocketFD();
         } catch (IOException e) {
             // should not happen
             Logger.shouldNotHappen("creating channel failed", e);
@@ -61,7 +61,7 @@ public class ServerSock implements NetFlowRecorder {
     }
 
     public static void checkBind(InetSocketAddress bindAddress) throws IOException {
-        try (ServerSocketChannel foo = ServerSocketChannel.open()) {
+        try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
             foo.bind(bindAddress);
         } catch (BindException ex) {
             throw new IOException("bind failed for " + bindAddress, ex);
@@ -69,7 +69,7 @@ public class ServerSock implements NetFlowRecorder {
     }
 
     public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
-        ServerSocketChannel channel = ServerSocketChannel.open();
+        ServerSocketFD channel = FDProvider.get().openServerSocketFD();
         channel.configureBlocking(false);
         if (supportReusePort()) {
             channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
@@ -83,7 +83,7 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    private ServerSock(ServerSocketChannel channel) throws IOException {
+    private ServerSock(ServerSocketFD channel) throws IOException {
         this.channel = channel;
         bind = (InetSocketAddress) channel.getLocalAddress();
         _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();

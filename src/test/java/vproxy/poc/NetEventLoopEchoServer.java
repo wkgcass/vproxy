@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.RingBuffer;
@@ -7,7 +8,6 @@ import vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.NetworkChannel;
 
 public class NetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -45,7 +45,7 @@ class MyServerHandler implements ServerHandler {
     }
 
     @Override
-    public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel) {
         // make the buffer small to demonstrate what will be done when buffer is full
         RingBuffer buffer = RingBuffer.allocateDirect(8);
         return new Tuple<>(buffer, buffer); // use the same buffer for input and output

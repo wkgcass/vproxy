@@ -1,5 +1,6 @@
 package vproxy.component.proxy;
 
+import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
 import vproxy.protocol.ProtocolConnectionHandler;
@@ -13,7 +14,6 @@ import vproxy.util.ringbuffer.SSLUtils;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.nio.channels.NetworkChannel;
 import java.util.Collection;
 
 /**
@@ -253,7 +253,7 @@ public class Proxy {
         }
 
         @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel) {
             int inBufferSize, outBufferSize;
             if (config.sslContext == null) {
                 inBufferSize = config.inBufferSize;

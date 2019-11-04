@@ -1,3 +1,5 @@
+import vfd.FDs;
+
 module vproxy {
     requires jdk.unsupported;
     requires jdk.crypto.ec;
@@ -12,6 +14,7 @@ module vproxy {
     exports vproxy.util.nio;
     exports vproxy.util.ringbuffer;
     uses vproxy.processor.ProcessorRegistry;
+    uses FDs;
 
     // export json components
     exports vjson;

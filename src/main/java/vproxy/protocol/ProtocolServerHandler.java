@@ -1,5 +1,6 @@
 package vproxy.protocol;
 
+import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -7,7 +8,6 @@ import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.nio.channels.NetworkChannel;
 
 public class ProtocolServerHandler implements ServerHandler {
     private NetEventLoop eventLoop;
@@ -54,7 +54,7 @@ public class ProtocolServerHandler implements ServerHandler {
     }
 
     @Override
-    public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
+    public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel) {
         return new Tuple<>(
             RingBuffer.allocate(inBufferSize),
             RingBuffer.allocate(outBufferSize)

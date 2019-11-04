@@ -1,12 +1,12 @@
 package vproxy.test.tool;
 
+import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.NetworkChannel;
 
 public class DirectCloseServer {
     public DirectCloseServer(NetEventLoop loop, int port) throws IOException {
@@ -18,7 +18,7 @@ public class DirectCloseServer {
         loop.addServer(serverSock, null, new CloseHandler());
     }
 
-    class CloseHandler implements ServerHandler {
+    static class CloseHandler implements ServerHandler {
         @Override
         public void acceptFail(ServerHandlerContext ctx, IOException err) {
             // ignore
@@ -30,7 +30,7 @@ public class DirectCloseServer {
         }
 
         @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel) {
             // return null, then the lib will close the connection
             return null;
         }

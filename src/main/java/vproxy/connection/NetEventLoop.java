@@ -1,6 +1,9 @@
 package vproxy.connection;
 
+import vfd.EventSet;
+import vfd.ServerSocketFD;
 import vproxy.app.Config;
+import vfd.SocketFD;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
@@ -36,10 +39,9 @@ public class NetEventLoop {
             if (server._eventLoop != null)
                 throw new IOException("serverSock already registered to a event loop");
             server._eventLoop = this;
-            //noinspection unchecked
-            selectorEventLoop.add(server.channel, SelectionKey.OP_ACCEPT,
+            selectorEventLoop.add(server.channel, EventSet.read(),
                 new ServerHandlerContext(this, server, attachment, handler),
-                (Handler) handlerForTPCServer);
+                handlerForTPCServer);
         }
     }
 
@@ -49,7 +51,7 @@ public class NetEventLoop {
         selectorEventLoop.remove(server.channel);
     }
 
-    private void doAddConnection(Connection connection, int ops, ConnectionHandlerContext att, Handler<SelectableChannel> handler) throws IOException {
+    private void doAddConnection(Connection connection, EventSet ops, ConnectionHandlerContext att, Handler<SocketFD> handler) throws IOException {
         // synchronize connection
         // to prevent inner fields being inconsistent
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
@@ -76,12 +78,12 @@ public class NetEventLoop {
 
     @ThreadSafe
     public void addConnection(Connection connection, Object attachment, ConnectionHandler handler) throws IOException {
-        int ops = 0;
+        EventSet ops = EventSet.none();
         if (connection.getInBuffer().free() > 0) {
-            ops |= SelectionKey.OP_READ;
+            ops = ops.combine(EventSet.read());
         }
         if (connection.getOutBuffer().used() > 0) {
-            ops |= SelectionKey.OP_WRITE;
+            ops = ops.combine(EventSet.write());
         }
 
         doAddConnection(connection, ops,
@@ -109,17 +111,17 @@ public class NetEventLoop {
         // the connection might already be connected
         // so fire the event to let handler know
 
-        int ops;
+        EventSet ops;
         if ((connection.channel).isConnected()) {
             fireConnected = true;
 
-            ops = 0;
+            ops = EventSet.none();
             if (connection.getInBuffer().free() > 0)
-                ops |= SelectionKey.OP_READ;
+                ops = ops.combine(EventSet.read());
             if (connection.getOutBuffer().used() > 0)
-                ops |= SelectionKey.OP_WRITE;
+                ops = ops.combine(EventSet.write());
         } else {
-            ops = SelectionKey.OP_CONNECT;
+            ops = EventSet.write();
         }
 
         ConnectableConnectionHandlerContext ctx = new ConnectableConnectionHandlerContext(this, connection, attachment, handler);
@@ -136,13 +138,13 @@ public class NetEventLoop {
     }
 }
 
-class HandlerForTCPServer implements Handler<ServerSocketChannel> {
+class HandlerForTCPServer implements Handler<ServerSocketFD> {
     @Override
-    public void accept(HandlerContext<ServerSocketChannel> ctx) {
+    public void accept(HandlerContext<ServerSocketFD> ctx) {
         ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
 
-        ServerSocketChannel server = ctx.getChannel();
-        SocketChannel sock;
+        ServerSocketFD server = ctx.getChannel();
+        SocketFD sock;
         try {
             sock = server.accept();
         } catch (IOException e) {
@@ -182,25 +184,25 @@ class HandlerForTCPServer implements Handler<ServerSocketChannel> {
     }
 
     @Override
-    public void connected(HandlerContext<ServerSocketChannel> ctx) {
+    public void connected(HandlerContext<ServerSocketFD> ctx) {
         // will not fire
         Logger.shouldNotHappen("server should not fire `connected`");
     }
 
     @Override
-    public void readable(HandlerContext<ServerSocketChannel> ctx) {
+    public void readable(HandlerContext<ServerSocketFD> ctx) {
         // will not fire
         Logger.shouldNotHappen("server should not fire readable");
     }
 
     @Override
-    public void writable(HandlerContext<ServerSocketChannel> ctx) {
+    public void writable(HandlerContext<ServerSocketFD> ctx) {
         // will not fire
         Logger.shouldNotHappen("server should not fire writable");
     }
 
     @Override
-    public void removed(HandlerContext<ServerSocketChannel> ctx) {
+    public void removed(HandlerContext<ServerSocketFD> ctx) {
         ServerHandlerContext sctx = (ServerHandlerContext) ctx.getAttachment();
         sctx.server._eventLoop = null;
         sctx.handler.removed(sctx);
@@ -267,21 +269,21 @@ class NetEventLoopUtils {
     }
 }
 
-class HandlerForConnection implements Handler<SelectableChannel> {
+class HandlerForConnection implements Handler<SocketFD> {
     @Override
-    public void accept(HandlerContext<SelectableChannel> ctx) {
+    public void accept(HandlerContext<SocketFD> ctx) {
         // will not fire
         Logger.shouldNotHappen("connection should not fire accept");
     }
 
     @Override
-    public void connected(HandlerContext<SelectableChannel> ctx) {
+    public void connected(HandlerContext<SocketFD> ctx) {
         // will not fire
         Logger.shouldNotHappen("connection should not fire connected");
     }
 
     @Override
-    public void readable(HandlerContext<SelectableChannel> ctx) {
+    public void readable(HandlerContext<SocketFD> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
 
         assert Logger.lowLevelDebug("readable fired " + cctx.connection);
@@ -294,7 +296,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         }
         int read;
         try {
-            read = cctx.connection.getInBuffer().storeBytesFrom((ReadableByteChannel) /* it's definitely readable */ ctx.getChannel());
+            read = cctx.connection.getInBuffer().storeBytesFrom(ctx.getChannel());
         } catch (IOException e) {
             NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
@@ -310,7 +312,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
                 cctx.handler.remoteClosed(cctx);
             }
             if (!cctx.connection.isClosed()) {
-                ctx.rmOps(SelectionKey.OP_READ); // do not read anymore, it will always fire OP_READ with EOF
+                ctx.rmOps(EventSet.read()); // do not read anymore, it will always fire OP_READ with EOF
             }
             return;
         }
@@ -325,13 +327,13 @@ class HandlerForConnection implements Handler<SelectableChannel> {
             // the in-buffer is full, and client code cannot read, remove read event
             assert Logger.lowLevelDebug("the inBuffer is full now, remove READ event " + cctx.connection);
             if (ctx.getChannel().isOpen()) { // the connection might be closed in readable(), so let's check
-                ctx.rmOps(SelectionKey.OP_READ);
+                ctx.rmOps(EventSet.read());
             }
         }
     }
 
     @Override
-    public void writable(HandlerContext<SelectableChannel> ctx) {
+    public void writable(HandlerContext<SocketFD> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
         if (cctx.connection.getOutBuffer().used() == 0) {
             Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
@@ -343,7 +345,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
 
         int write;
         try {
-            write = cctx.connection.getOutBuffer().writeTo((WritableByteChannel) /* it's definitely writable */ ctx.getChannel());
+            write = cctx.connection.getOutBuffer().writeTo(ctx.getChannel());
         } catch (IOException e) {
             NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
@@ -360,7 +362,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
         if (cctx.connection.getOutBuffer().used() == 0) {
             // all bytes flushed, and no client bytes for now, remove write event
             assert Logger.lowLevelDebug("the outBuffer is empty now, remove WRITE event " + cctx.connection);
-            ctx.rmOps(SelectionKey.OP_WRITE);
+            ctx.rmOps(EventSet.write());
             if (cctx.connection.isWriteClosed()) {
                 if (cctx.connection.remoteClosed) {
                     // both directions closed
@@ -375,7 +377,7 @@ class HandlerForConnection implements Handler<SelectableChannel> {
     }
 
     @Override
-    public void removed(HandlerContext<SelectableChannel> ctx) {
+    public void removed(HandlerContext<SocketFD> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
         cctx.connection.releaseEventLoopRelatedFields();
         cctx.handler.removed(cctx);
@@ -384,11 +386,11 @@ class HandlerForConnection implements Handler<SelectableChannel> {
 
 class HandlerForConnectableConnection extends HandlerForConnection {
     @Override
-    public void connected(HandlerContext<SelectableChannel> ctx) {
+    public void connected(HandlerContext<SocketFD> ctx) {
         // only tcp SocketChannel will fire connected event
 
         ConnectableConnectionHandlerContext cctx = (ConnectableConnectionHandlerContext) ctx.getAttachment();
-        SocketChannel channel = (SocketChannel) ctx.getChannel();
+        SocketFD channel = ctx.getChannel();
         boolean connected;
         try {
             connected = channel.finishConnect();
@@ -402,9 +404,9 @@ class HandlerForConnectableConnection extends HandlerForConnection {
             Logger.shouldNotHappen("the connection is not connected, should not fire the event");
         }
 
-        int ops = SelectionKey.OP_READ;
+        EventSet ops = EventSet.read();
         if (cctx.connection.getOutBuffer().used() > 0) {
-            ops |= SelectionKey.OP_WRITE;
+            ops = ops.combine(EventSet.write());
         }
         ctx.modify(ops);
         cctx.handler.connected(cctx);

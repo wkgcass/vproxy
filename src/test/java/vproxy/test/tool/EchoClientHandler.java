@@ -1,28 +1,29 @@
 package vproxy.test.tool;
 
+import vfd.Event;
+import vfd.EventSet;
+import vfd.SocketFD;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
 
-public class EchoClientHandler implements Handler<SocketChannel> {
+public class EchoClientHandler implements Handler<SocketFD> {
     private final RingBuffer buffer = RingBuffer.allocateDirect(8); // let's set this very small, to test all the code flow
 
     @Override
-    public void accept(HandlerContext<SocketChannel> ctx) {
+    public void accept(HandlerContext<SocketFD> ctx) {
         // should not fire
     }
 
     @Override
-    public void connected(HandlerContext<SocketChannel> ctx) {
+    public void connected(HandlerContext<SocketFD> ctx) {
         // should not fire
     }
 
     @Override
-    public void readable(HandlerContext<SocketChannel> ctx) {
+    public void readable(HandlerContext<SocketFD> ctx) {
         int readBytes;
         try {
             readBytes = buffer.storeBytesFrom(ctx.getChannel());
@@ -42,7 +43,7 @@ public class EchoClientHandler implements Handler<SocketChannel> {
             if (buffer.free() == 0) {
                 // reached limit
                 // remove read event and add write event
-                ctx.modify((ctx.getOps() & ~SelectionKey.OP_READ) | SelectionKey.OP_WRITE);
+                ctx.modify(ctx.getOps().reduce(EventSet.read()).combine(EventSet.write()));
                 // let's print this in std out, otherwise we cannot see the output being separated
                 System.out.println("\033[0;36mbuffer is full, let's stop reading and start writing\033[0m");
             }
@@ -60,12 +61,12 @@ public class EchoClientHandler implements Handler<SocketChannel> {
             // print to console
             System.out.println("buffer now looks like: " + buffer);
             // add write event
-            ctx.modify(ctx.getOps() | SelectionKey.OP_WRITE);
+            ctx.modify(ctx.getOps().combine(EventSet.write()));
         }
     }
 
     @Override
-    public void writable(HandlerContext<SocketChannel> ctx) {
+    public void writable(HandlerContext<SocketFD> ctx) {
         final int writeBytes;
         try {
             // maxBytesToWrite is set to a very strange number 3
@@ -83,27 +84,27 @@ public class EchoClientHandler implements Handler<SocketChannel> {
             }
             return;
         }
-        int oldOps = ctx.getOps();
-        int ops = oldOps;
+        EventSet oldOps = ctx.getOps();
+        EventSet ops = oldOps;
         if (writeBytes > 0) {
             // buffer definitely has some space left now
-            if ((ops & SelectionKey.OP_READ) == 0) {
+            if (!ops.have(Event.READABLE)) {
                 System.out.println("\033[0;32mbuffer now has some free space, let's start reading\033[0m");
             }
-            ops |= SelectionKey.OP_READ;
+            ops = ops.combine(EventSet.read());
         }
         if (buffer.used() == 0) {
             // nothing to write anymore
-            ops &= ~SelectionKey.OP_WRITE;
+            ops = ops.reduce(EventSet.write());
             System.out.println("\033[0;32mnothing to write for now, let's stop writing\033[0m");
         }
-        if (oldOps != ops) {
+        if (!oldOps.equals(ops)) {
             ctx.modify(ops);
         }
     }
 
     @Override
-    public void removed(HandlerContext<SocketChannel> ctx) {
+    public void removed(HandlerContext<SocketFD> ctx) {
         // close the connection here
         try {
             ctx.getChannel().close();

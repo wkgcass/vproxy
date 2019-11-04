@@ -1,5 +1,6 @@
 package vproxy.selector;
 
+import vfd.*;
 import vproxy.app.Config;
 import vproxy.util.*;
 
@@ -11,8 +12,14 @@ import java.util.function.Function;
 
 public class SelectorEventLoop {
     static class RegisterData {
-        Handler handler;
-        Object att;
+        boolean connected = false;
+        final Handler handler;
+        final Object att;
+
+        RegisterData(Handler handler, Object att) {
+            this.handler = handler;
+            this.att = att;
+        }
     }
 
     private static final ThreadLocal<SelectorEventLoop> loopThreadLocal = new ThreadLocal<>();
@@ -21,7 +28,7 @@ public class SelectorEventLoop {
         return loopThreadLocal.get();
     }
 
-    private final Selector selector;
+    private final FDSelector selector;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
@@ -30,10 +37,10 @@ public class SelectorEventLoop {
     // these locks are a little tricky
     // see comments in loop() and close()
     private final Object CLOSE_LOCK = new Object();
-    private List<Tuple<SelectableChannel, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
+    private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
     private SelectorEventLoop() throws IOException {
-        this.selector = Selector.open();
+        this.selector = FDProvider.get().openSelector();
     }
 
     public static SelectorEventLoop open() throws IOException {
@@ -75,52 +82,54 @@ public class SelectorEventLoop {
     }
 
     @SuppressWarnings("unchecked")
-    private void doHandling(Iterator<SelectionKey> keys) {
+    private void doHandling(Iterator<SelectedEntry> keys) {
         while (keys.hasNext()) {
-            SelectionKey key = keys.next();
-            keys.remove();
+            SelectedEntry key = keys.next();
 
-            RegisterData registerData = (RegisterData) key.attachment();
+            RegisterData registerData = (RegisterData) key.attachment;
 
-            SelectableChannel channel = key.channel();
+            FD channel = key.fd;
             Handler handler = registerData.handler;
 
             ctx.channel = channel;
             ctx.attachment = registerData.att;
 
-            if (!key.isValid()) {
-                //noinspection UnnecessaryContinue
-                continue;
-            } else if (!channel.isOpen()) {
+            if (!channel.isOpen()) {
                 Logger.error(LogType.CONN_ERROR, "channel is closed but still firing");
             } else {
-                int readyOps = key.readyOps();
+                EventSet readyOps = key.ready;
                 // handle read first because it's most likely to happen
-                if ((readyOps & SelectionKey.OP_READ) != 0) {
-                    try {
-                        handler.readable(ctx);
-                    } catch (Throwable t) {
-                        Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
-                    }
-                } else if ((readyOps & SelectionKey.OP_CONNECT) != 0) {
-                    try {
-                        handler.connected(ctx);
-                    } catch (Throwable t) {
-                        Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
-                    }
-                } else if ((readyOps & SelectionKey.OP_ACCEPT) != 0) {
-                    try {
-                        handler.accept(ctx);
-                    } catch (Throwable t) {
-                        Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
+                if (readyOps.have(Event.READABLE)) {
+                    if (channel instanceof ServerSocketFD) {
+                        // OP_ACCEPT
+                        try {
+                            handler.accept(ctx);
+                        } catch (Throwable t) {
+                            Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
+                        }
+                    } else {
+                        try {
+                            handler.readable(ctx);
+                        } catch (Throwable t) {
+                            Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
+                        }
                     }
                 }
                 // read and write may happen in the same loop round
-                if ((readyOps & SelectionKey.OP_WRITE) != 0) {
-                    try {
-                        handler.writable(ctx);
-                    } catch (Throwable t) {
-                        Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                if (readyOps.have(Event.WRITABLE)) {
+                    if (registerData.connected) {
+                        try {
+                            handler.writable(ctx);
+                        } catch (Throwable t) {
+                            Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                        }
+                    } else {
+                        registerData.connected = true;
+                        try {
+                            handler.connected(ctx);
+                        } catch (Throwable t) {
+                            Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
+                        }
                     }
                 }
             }
@@ -128,8 +137,8 @@ public class SelectorEventLoop {
     }
 
     private void release() {
-        for (Tuple<SelectableChannel, RegisterData> tuple : THE_KEY_SET_BEFORE_SELECTOR_CLOSE) {
-            SelectableChannel channel = tuple.left;
+        for (Tuple<FD, RegisterData> tuple : THE_KEY_SET_BEFORE_SELECTOR_CLOSE) {
+            FD channel = tuple.left;
             RegisterData att = tuple.right;
             triggerRemovedCallback(channel, att);
         }
@@ -170,18 +179,18 @@ public class SelectorEventLoop {
             // here we do not lock select()
             // let close() have chance to run
 
-            final int selectedSize;
+            final Collection<SelectedEntry> selected;
             try {
                 if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
-                    selectedSize = selector.select(); // let it sleep
+                    selected = selector.select(); // let it sleep
                 } else if (!runOnLoopEvents.isEmpty()) {
-                    selectedSize = selector.selectNow(); // immediately return
+                    selected = selector.selectNow(); // immediately return
                 } else {
                     int time = timeQueue.nextTime();
                     if (time == 0) {
-                        selectedSize = selector.selectNow(); // immediately return
+                        selected = selector.selectNow(); // immediately return
                     } else {
-                        selectedSize = selector.select(time); // wait until the nearest timer
+                        selected = selector.select(time); // wait until the nearest timer
                     }
                 }
             } catch (IOException | ClosedSelectorException e) {
@@ -198,8 +207,8 @@ public class SelectorEventLoop {
                 if (!selector.isOpen())
                     break; // break if it's closed
 
-                if (selectedSize > 0) {
-                    Iterator<SelectionKey> keys = selector.selectedKeys().iterator();
+                if (!selected.isEmpty()) {
+                    Iterator<SelectedEntry> keys = selected.iterator();
                     doHandling(keys);
                 }
             }
@@ -250,11 +259,12 @@ public class SelectorEventLoop {
 
     @ThreadSafe
     @SuppressWarnings("DuplicateThrows")
-    public <CHANNEL extends SelectableChannel> void add(CHANNEL channel, int ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
+    public <CHANNEL extends FD> void add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
         channel.configureBlocking(false);
-        RegisterData registerData = new RegisterData();
-        registerData.att = attachment;
-        registerData.handler = handler;
+        RegisterData registerData = new RegisterData(handler, attachment);
+        if (channel instanceof SocketFD) {
+            registerData.connected = ((SocketFD) channel).isConnected();
+        }
         if (add0(channel, ops, registerData)) {
             if (needWake()) {
                 selector.wakeup();
@@ -263,9 +273,9 @@ public class SelectorEventLoop {
     }
 
     // a helper function for adding a channel into the selector
-    private boolean add0(SelectableChannel channel, int ops, Object registerData) throws IOException {
+    private boolean add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
         try {
-            channel.register(selector, ops, registerData);
+            selector.register(channel, ops, registerData);
         } catch (CancelledKeyException e) {
             // the key might still being processed
             // but is canceled
@@ -278,7 +288,7 @@ public class SelectorEventLoop {
 
             nextTick(() -> nextTick(() -> {
                 try {
-                    channel.register(selector, ops, registerData);
+                    selector.register(channel, ops, registerData);
                 } catch (ClosedChannelException e1) {
                     // will not happen, if the channel is closed, this statement will not run
                     throw new RuntimeException(e1);
@@ -289,47 +299,47 @@ public class SelectorEventLoop {
         return true;
     }
 
-    private void doModify(SelectionKey key, int ops) {
-        if (key.interestOps() == ops) {
-            return;
+    private void doModify(FD fd, EventSet ops) {
+        if (selector.events(fd).equals(ops)) {
+            return; // no need to update if they are the same
         }
-        key.interestOps(ops);
+        selector.modify(fd, ops);
         if (needWake()) {
             selector.wakeup();
         }
     }
 
     @ThreadSafe
-    public void modify(SelectableChannel channel, int ops) {
-        SelectionKey key = getKeyCheckNull(channel);
-        doModify(key, ops);
+    public void modify(FD channel, EventSet ops) {
+        doModify(channel, ops);
     }
 
     @ThreadSafe
-    public void addOps(SelectableChannel channel, int ops) {
-        SelectionKey key = getKeyCheckNull(channel);
-        doModify(key, key.interestOps() | ops);
+    public void addOps(FD channel, EventSet ops) {
+        var old = selector.events(channel);
+        doModify(channel, old.combine(ops));
     }
 
     @ThreadSafe
-    public void rmOps(SelectableChannel channel, int ops) {
-        SelectionKey key = getKeyCheckNull(channel);
-        doModify(key, key.interestOps() & ~ops);
+    public void rmOps(FD channel, EventSet ops) {
+        var old = selector.events(channel);
+        doModify(channel, old.reduce(ops));
     }
 
     @ThreadSafe
-    public void remove(SelectableChannel channel) {
-        SelectionKey key;
+    public void remove(FD channel) {
+        RegisterData att;
+
         // synchronize the channel
         // to prevent it being canceled from multiple threads
         //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (channel) {
-            key = channel.keyFor(selector);
-            if (key == null)
+            if (!selector.isRegistered(channel))
                 return;
+            att = (RegisterData) selector.attachment(channel);
         }
-        RegisterData att = (RegisterData) key.attachment();
-        key.cancel();
+
+        selector.remove(channel);
         if (needWake()) {
             selector.wakeup();
         }
@@ -337,26 +347,17 @@ public class SelectorEventLoop {
     }
 
     @ThreadSafe
-    public int getOps(SelectableChannel channel) {
-        SelectionKey key = getKeyCheckNull(channel);
-        return key.interestOps();
+    public EventSet getOps(FD channel) {
+        return selector.events(channel);
     }
 
     @ThreadSafe
-    public Object getAtt(SelectableChannel channel) {
-        SelectionKey key = getKeyCheckNull(channel);
-        return key.attachment();
-    }
-
-    private SelectionKey getKeyCheckNull(SelectableChannel channel) {
-        SelectionKey key = channel.keyFor(selector);
-        if (key == null)
-            throw new IllegalArgumentException("channel is not registered with this selector");
-        return key;
+    public Object getAtt(FD channel) {
+        return ((RegisterData) selector.attachment(channel)).att;
     }
 
     @SuppressWarnings("unchecked")
-    private void triggerRemovedCallback(SelectableChannel channel, RegisterData registerData) {
+    private void triggerRemovedCallback(FD channel, RegisterData registerData) {
         assert registerData != null;
         ctx.channel = channel;
         ctx.attachment = registerData.att;
@@ -382,12 +383,12 @@ public class SelectorEventLoop {
         // the nio lib will raise error if it's already closed
 
         synchronized (CLOSE_LOCK) {
-            Set<SelectionKey> keys = selector.keys();
+            Collection<RegisterEntry> keys = selector.entries();
             while (true) {
                 THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
                 try {
-                    for (SelectionKey key : keys) {
-                        THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.channel(), (RegisterData) key.attachment()));
+                    for (RegisterEntry key : keys) {
+                        THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.fd, (RegisterData) key.attachment));
                     }
                 } catch (ConcurrentModificationException ignore) {
                     // there might be adding and removing occur when closing the selector

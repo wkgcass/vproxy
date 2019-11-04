@@ -1,5 +1,7 @@
 package vproxy.connection;
 
+import vfd.EventSet;
+import vfd.SocketFD;
 import vproxy.selector.TimerEvent;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
@@ -10,8 +12,6 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.CancelledKeyException;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.SocketChannel;
 import java.util.List;
 import java.util.concurrent.CopyOnWriteArrayList;
 
@@ -45,7 +45,7 @@ public class Connection implements NetFlowRecorder {
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
                 assert Logger.lowLevelDebug("in buffer is writable, add READ for channel " + channel);
-                eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_READ);
+                eventLoop.getSelectorEventLoop().addOps(channel, EventSet.read());
                 // we do not directly read here
                 // the reading process requires a corresponding handler
                 // the handler may not be a part of this connection lib
@@ -116,12 +116,12 @@ public class Connection implements NetFlowRecorder {
                 }
                 if (getOutBuffer().used() != 0) {
                     assert Logger.lowLevelDebug("add OP_WRITE for channel " + channel);
-                    eventLoop.getSelectorEventLoop().addOps(channel, SelectionKey.OP_WRITE);
+                    eventLoop.getSelectorEventLoop().addOps(channel, EventSet.write());
                 } else {
                     // remove the write op in case another method added the OP_WRITE event
                     assert Logger.lowLevelDebug("remove OP_WRITE for channel " + channel);
                     try {
-                        eventLoop.getSelectorEventLoop().rmOps(channel, SelectionKey.OP_WRITE);
+                        eventLoop.getSelectorEventLoop().rmOps(channel, EventSet.write());
                     } catch (CancelledKeyException ignore) {
                         // if the key is invalid, there's no need to remove OP_WRITE
                     }
@@ -139,7 +139,7 @@ public class Connection implements NetFlowRecorder {
     public final InetSocketAddress remote;
     protected InetSocketAddress local; // may be modified if not connected (in this case, local will be null)
     protected String _id; // may be modified if local was null
-    public final SocketChannel channel;
+    public final SocketFD channel;
 
     // fields for closing the connection
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
@@ -169,7 +169,7 @@ public class Connection implements NetFlowRecorder {
 
     private boolean noQuickWrite = false;
 
-    Connection(SocketChannel channel,
+    Connection(SocketFD channel,
                InetSocketAddress remote, InetSocketAddress local,
                ConnectionOpts opts,
                RingBuffer inBuffer, RingBuffer outBuffer) {
@@ -327,10 +327,14 @@ public class Connection implements NetFlowRecorder {
             eventLoop.removeConnection(this);
         }
         releaseEventLoopRelatedFields();
-        try {
-            if (reset) {
+        if (reset) {
+            try {
                 channel.setOption(StandardSocketOptions.SO_LINGER, 0);
+            } catch (IOException ignore) {
+                // ignore if setting SO_LINGER failed
             }
+        }
+        try {
             channel.close();
         } catch (IOException e) {
             // we can do nothing about it

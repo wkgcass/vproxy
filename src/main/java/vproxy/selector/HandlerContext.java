@@ -1,8 +1,9 @@
 package vproxy.selector;
 
-import java.nio.channels.SelectableChannel;
+import vfd.EventSet;
+import vfd.FD;
 
-public class HandlerContext<CHANNEL extends SelectableChannel> {
+public class HandlerContext<CHANNEL extends FD> {
     private final SelectorEventLoop eventLoop;
     CHANNEL channel;
     Object attachment;
@@ -15,15 +16,15 @@ public class HandlerContext<CHANNEL extends SelectableChannel> {
         eventLoop.remove(channel);
     }
 
-    public void modify(int ops) {
+    public void modify(EventSet ops) {
         eventLoop.modify(channel, ops);
     }
 
-    public void addOps(int ops) {
+    public void addOps(EventSet ops) {
         eventLoop.addOps(channel, ops);
     }
 
-    public void rmOps(int ops) {
+    public void rmOps(EventSet ops) {
         eventLoop.rmOps(channel, ops);
     }
 
@@ -39,7 +40,7 @@ public class HandlerContext<CHANNEL extends SelectableChannel> {
         return attachment;
     }
 
-    public int getOps() {
+    public EventSet getOps() {
         return eventLoop.getOps(channel);
     }
 }

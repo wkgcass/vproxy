@@ -1,5 +1,6 @@
 package vproxy.connection;
 
+import vfd.SocketFD;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
@@ -12,7 +13,7 @@ public interface ServerHandler {
     void connection(ServerHandlerContext ctx, Connection connection);
 
     // <in buffer, out buffer>
-    Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel);
+    Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel);
 
     void removed(ServerHandlerContext ctx);
 

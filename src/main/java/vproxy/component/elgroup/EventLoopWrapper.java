@@ -1,5 +1,6 @@
 package vproxy.component.elgroup;
 
+import vfd.SocketFD;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
@@ -8,7 +9,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
 import java.io.IOException;
-import java.nio.channels.NetworkChannel;
 import java.util.Collection;
 import java.util.Iterator;
 
@@ -31,7 +31,7 @@ public class EventLoopWrapper extends NetEventLoop {
         }
 
         @Override
-        public Tuple<RingBuffer, RingBuffer> getIOBuffers(NetworkChannel channel) {
+        public Tuple<RingBuffer, RingBuffer> getIOBuffers(SocketFD channel) {
             return handler.getIOBuffers(channel);
         }
 

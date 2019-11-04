@@ -1,16 +1,17 @@
 package vproxy.test.tool;
 
+import vfd.EventSet;
+import vfd.FDProvider;
+import vfd.ServerSocketFD;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SelectionKey;
-import java.nio.channels.ServerSocketChannel;
 
 public class EchoServer {
     public EchoServer(SelectorEventLoop loop, int port) throws IOException {
-        ServerSocketChannel server = ServerSocketChannel.open();
+        ServerSocketFD server = FDProvider.get().openServerSocketFD();
         server.bind(new InetSocketAddress(port));
-        loop.add(server, SelectionKey.OP_ACCEPT, null, new EchoServerHandler());
+        loop.add(server, EventSet.read(), null, new EchoServerHandler());
     }
 }

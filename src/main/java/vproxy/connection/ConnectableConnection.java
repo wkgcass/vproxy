@@ -1,11 +1,12 @@
 package vproxy.connection;
 
+import vfd.FDProvider;
+import vfd.SocketFD;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.nio.channels.SocketChannel;
 
 public class ConnectableConnection extends Connection {
     Connector connector; // maybe null, only for recording purpose, will not be used by the connection lib
@@ -17,7 +18,7 @@ public class ConnectableConnection extends Connection {
     public static ConnectableConnection create(InetSocketAddress remote,
                                                ConnectionOpts opts,
                                                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        SocketChannel channel = SocketChannel.open();
+        SocketFD channel = FDProvider.get().openSocketFD();
         try {
             channel.configureBlocking(false);
             channel.connect(remote);
@@ -28,7 +29,7 @@ public class ConnectableConnection extends Connection {
         }
     }
 
-    private ConnectableConnection(SocketChannel channel, InetSocketAddress remote,
+    private ConnectableConnection(SocketFD channel, InetSocketAddress remote,
                                   ConnectionOpts opts,
                                   RingBuffer inBuffer, RingBuffer outBuffer) {
         super(channel, remote, null, opts, inBuffer, outBuffer);

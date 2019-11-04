@@ -1,8 +1,8 @@
 package vproxy.selector;
 
-import java.nio.channels.SelectableChannel;
+import vfd.FD;
 
-public interface Handler<CHANNEL extends SelectableChannel> {
+public interface Handler<CHANNEL extends FD> {
     void accept(HandlerContext<CHANNEL> ctx);
 
     void connected(HandlerContext<CHANNEL> ctx);
