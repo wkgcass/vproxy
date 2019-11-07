@@ -8,10 +8,10 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
-public class JDKSocketFD extends ChannelFDBase implements SocketFD {
+public class SocketChannelFD extends ChannelFD implements SocketFD {
     private final SocketChannel channel;
 
-    public JDKSocketFD(SocketChannel channel) {
+    public SocketChannelFD(SocketChannel channel) {
         super(channel);
         this.channel = channel;
     }

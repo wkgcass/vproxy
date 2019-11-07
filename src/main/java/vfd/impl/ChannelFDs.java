@@ -13,16 +13,16 @@ import java.nio.channels.SocketChannel;
 public class ChannelFDs implements FDs {
     @Override
     public SocketFD openSocketFD() throws IOException {
-        return new JDKSocketFD(SocketChannel.open());
+        return new SocketChannelFD(SocketChannel.open());
     }
 
     @Override
     public ServerSocketFD openServerSocketFD() throws IOException {
-        return new JDKServerSocketFD(ServerSocketChannel.open());
+        return new ServerSocketChannelFD(ServerSocketChannel.open());
     }
 
     @Override
     public FDSelector openSelector() throws IOException {
-        return new JDKSelector(Selector.open());
+        return new ChannelSelector(Selector.open());
     }
 }

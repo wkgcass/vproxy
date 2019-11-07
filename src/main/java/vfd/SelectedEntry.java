@@ -10,4 +10,13 @@ public class SelectedEntry {
         this.ready = ready;
         this.attachment = attachment;
     }
+
+    @Override
+    public String toString() {
+        return "SelectedEntry{" +
+            "fd=" + fd +
+            ", ready=" + ready +
+            ", attachment=" + attachment +
+            '}';
+    }
 }

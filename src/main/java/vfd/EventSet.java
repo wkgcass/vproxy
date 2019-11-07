@@ -131,4 +131,15 @@ public final class EventSet {
     public int hashCode() {
         return Objects.hash(e1, e2);
     }
+
+    @Override
+    public String toString() {
+        if (e1 == null) {
+            return "EventSet()";
+        } else if (e2 != null) {
+            return "EventSet(" + e1 + ", " + e2 + ")";
+        } else {
+            return "EventSet(" + e1 + ")";
+        }
+    }
 }

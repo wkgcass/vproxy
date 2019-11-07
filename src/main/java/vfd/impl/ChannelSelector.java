@@ -7,7 +7,7 @@ import java.io.IOException;
 import java.nio.channels.*;
 import java.util.*;
 
-public class JDKSelector implements FDSelector {
+public class ChannelSelector implements FDSelector {
     private static class Att {
         final FD fd;
         final Object att;
@@ -20,7 +20,7 @@ public class JDKSelector implements FDSelector {
 
     private final Selector selector;
 
-    public JDKSelector(Selector selector) {
+    public ChannelSelector(Selector selector) {
         this.selector = selector;
     }
 
@@ -75,7 +75,7 @@ public class JDKSelector implements FDSelector {
 
     @Override
     public boolean isRegistered(FD fd) {
-        return ((ChannelFDBase) fd).getChannel().keyFor(selector) != null;
+        return ((ChannelFD) fd).getChannel().keyFor(selector) != null;
     }
 
     private int buildInterestOps(FD fd, EventSet ops) {
@@ -99,12 +99,12 @@ public class JDKSelector implements FDSelector {
     public void register(FD fd, EventSet ops, Object registerData) throws ClosedChannelException {
         int iOps = buildInterestOps(fd, ops);
         //noinspection MagicConstant
-        ((ChannelFDBase) fd).getChannel().register(selector, iOps, new Att(fd, registerData));
+        ((ChannelFD) fd).getChannel().register(selector, iOps, new Att(fd, registerData));
     }
 
     @Override
     public void remove(FD fd) {
-        SelectableChannel channel = ((ChannelFDBase) fd).getChannel();
+        SelectableChannel channel = ((ChannelFD) fd).getChannel();
 
         SelectionKey key;
         // synchronize the channel
@@ -119,7 +119,7 @@ public class JDKSelector implements FDSelector {
     }
 
     private SelectionKey getKeyCheckNull(FD fd) {
-        SelectableChannel channel = ((ChannelFDBase) fd).getChannel();
+        SelectableChannel channel = ((ChannelFD) fd).getChannel();
 
         SelectionKey key = channel.keyFor(selector);
         if (key == null)

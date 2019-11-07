@@ -9,10 +9,10 @@ import java.net.SocketAddress;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
-public class JDKServerSocketFD extends ChannelFDBase implements ServerSocketFD {
+public class ServerSocketChannelFD extends ChannelFD implements ServerSocketFD {
     private final ServerSocketChannel channel;
 
-    public JDKServerSocketFD(ServerSocketChannel channel) {
+    public ServerSocketChannelFD(ServerSocketChannel channel) {
         super(channel);
         this.channel = channel;
     }
@@ -28,7 +28,7 @@ public class JDKServerSocketFD extends ChannelFDBase implements ServerSocketFD {
         if (socket == null) {
             return null;
         }
-        return new JDKSocketFD(socket);
+        return new SocketChannelFD(socket);
     }
 
     @Override

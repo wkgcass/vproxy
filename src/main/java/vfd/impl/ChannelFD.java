@@ -7,10 +7,10 @@ import java.net.SocketOption;
 import java.nio.channels.NetworkChannel;
 import java.nio.channels.SelectableChannel;
 
-public class ChannelFDBase implements FD {
+public class ChannelFD implements FD {
     private final SelectableChannel channel;
 
-    public ChannelFDBase(SelectableChannel channel) {
+    public ChannelFD(SelectableChannel channel) {
         this.channel = channel;
     }
 
