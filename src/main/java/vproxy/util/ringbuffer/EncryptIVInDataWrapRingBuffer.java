@@ -2,8 +2,8 @@ package vproxy.util.ringbuffer;
 
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.BlockCipherKey;
-import vproxy.util.crypto.StreamingCFBCipher;
 import vproxy.util.crypto.CryptoUtils;
+import vproxy.util.crypto.StreamingCFBCipher;
 
 import java.nio.ByteBuffer;
 

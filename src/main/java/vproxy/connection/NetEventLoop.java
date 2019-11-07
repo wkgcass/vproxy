@@ -2,8 +2,8 @@ package vproxy.connection;
 
 import vfd.EventSet;
 import vfd.ServerSocketFD;
-import vproxy.app.Config;
 import vfd.SocketFD;
+import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
@@ -12,7 +12,7 @@ import vproxy.util.*;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
-import java.nio.channels.*;
+import java.nio.channels.ClosedChannelException;
 
 public class NetEventLoop {
     private static final HandlerForTCPServer handlerForTPCServer = new HandlerForTCPServer();

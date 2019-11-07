@@ -5,7 +5,6 @@ import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.nio.channels.NetworkChannel;
 
 public interface ServerHandler {
     void acceptFail(ServerHandlerContext ctx, IOException err);

@@ -1,7 +1,7 @@
 package vfd.impl;
 
-import vfd.FDs;
 import vfd.FDSelector;
+import vfd.FDs;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
 
