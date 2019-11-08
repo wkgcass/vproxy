@@ -1,6 +1,6 @@
 package vfd;
 
-import vfd.impl.ChannelFDs;
+import vfd.jdk.ChannelFDs;
 
 import java.io.IOException;
 import java.util.Optional;
