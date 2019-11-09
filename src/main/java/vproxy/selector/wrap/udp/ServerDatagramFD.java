@@ -1,13 +1,12 @@
 package vproxy.selector.wrap.udp;
 
-import vfd.DatagramFD;
-import vfd.FD;
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
+import vfd.*;
 import vproxy.app.Config;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
+import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
+import vproxy.selector.wrap.WritableAware;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -17,13 +16,12 @@ import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.util.*;
 
-public final class ServerDatagramFD implements FD, ServerSocketFD {
-    private static final int EXPIRE_TIME = 15 * 60 * 1000;
-
+public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware {
     private final DatagramFD server;
     private final SelectorEventLoop loop;
+    private final WrappedSelector selector;
 
-    private final ByteBuffer buf = ByteBuffer.allocateDirect(65536); // enough for any udp packet
+    private final ByteBuffer buf = ByteBuffer.allocate(Config.udpMtu); // enough for any udp packet
     private final Deque<VirtualDatagramFD> acceptQ = new LinkedList<>();
     private final Map<SocketAddress, VirtualDatagramFD> acceptMap = new HashMap<>();
     private final Map<SocketAddress, VirtualDatagramFD> conns = new HashMap<>();
@@ -31,6 +29,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
     public ServerDatagramFD(DatagramFD server, SelectorEventLoop loop) {
         this.server = server;
         this.loop = loop;
+        selector = (WrappedSelector) loop.selector;
     }
 
     @Override
@@ -56,9 +55,11 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
 
                 buf.flip();
 
+                boolean fireReadable = false;
                 VirtualDatagramFD fd;
                 if (conns.containsKey(addr)) {
                     fd = conns.get(addr);
+                    fireReadable = true;
                 } else if (acceptMap.containsKey(addr)) {
                     fd = acceptMap.get(addr);
                 } else {
@@ -71,10 +72,14 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
                     acceptQ.add(fd);
                 }
                 // append to fd
-                ByteBuffer b = ByteBuffer.allocateDirect(buf.limit() - buf.position());
+                ByteBuffer b = ByteBuffer.allocate(buf.limit() - buf.position());
                 b.put(buf);
                 b.flip();
                 fd.bufs.add(b);
+
+                if (fireReadable) {
+                    fd.setReadable();
+                }
             } finally {
                 // reset buf
                 buf.limit(buf.capacity());
@@ -88,7 +93,9 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
             return null;
         }
         fd.setReadable();
+        fd.setWritable();
         acceptMap.values().remove(fd);
+        conns.put(fd.remoteAddress, fd);
         return fd;
     }
 
@@ -115,7 +122,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
     @Override
     public void close() throws IOException {
         server.close();
-        Utils.clean(buf);
         for (VirtualDatagramFD fd : conns.values()) {
             fd.release();
         }
@@ -127,7 +133,17 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
         conns.clear();
     }
 
-    public class VirtualDatagramFD implements SocketFD {
+    @Override
+    public void writable() {
+        // cancel writable
+        selector.modify0(this,
+            selector.events(this).reduce(EventSet.write()));
+        for (var fd : conns.values()) {
+            fd.setWritable();
+        }
+    }
+
+    public class VirtualDatagramFD implements VirtualFD, SocketFD {
         private final ServerDatagramFD serverSelf = ServerDatagramFD.this;
         private final Deque<ByteBuffer> bufs = new LinkedList<>();
 
@@ -135,24 +151,23 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
         private TimerEvent expireTimer;
         private long lastTimestamp;
 
-        private boolean connected = false;
         private boolean closed = false;
 
         VirtualDatagramFD(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
             lastTimestamp = Config.currentTimestamp;
-            expireTimer = loop.delay(EXPIRE_TIME, this::checkAndHandleExpire);
+            expireTimer = loop.delay(Config.udpTimeout, this::checkAndHandleExpire);
         }
 
         private void checkAndHandleExpire() {
             long now = Config.currentTimestamp;
-            if (now - lastTimestamp > EXPIRE_TIME) {
+            if (now - lastTimestamp > Config.udpTimeout) {
                 // expired
                 expireTimer = null;
                 close();
             } else {
                 // not expired, reset the timer
-                int wait = (int) (lastTimestamp + EXPIRE_TIME - now);
+                int wait = (int) (lastTimestamp + Config.udpTimeout - now);
                 expireTimer = loop.delay(wait, this::checkAndHandleExpire);
             }
         }
@@ -165,7 +180,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
 
         @Override
         public boolean isConnected() {
-            return connected;
+            return !closed;
         }
 
         @Override
@@ -185,7 +200,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
 
         @Override
         public boolean finishConnect() {
-            connected = true;
             return true;
         }
 
@@ -193,34 +207,8 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
         public int read(ByteBuffer dst) {
             lastTimestamp = Config.currentTimestamp;
 
-            int ret = 0;
-            while (true) {
-                if (bufs.isEmpty()) {
-                    // src is empty
-                    break;
-                }
-                ByteBuffer b = bufs.peek();
-                int oldLim = b.limit();
-                int oldPos = b.position();
-                if (oldLim - oldPos == 0) {
-                    Utils.clean(bufs.poll());
-                    continue;
-                }
-                int dstLim = dst.limit();
-                int dstPos = dst.position();
+            int ret = Utils.writeFromFIFOQueueToBuffer(bufs, dst);
 
-                if (dstLim - dstPos == 0) {
-                    // dst is full
-                    break;
-                }
-
-                if (dstLim - dstPos < oldLim - oldPos) {
-                    b.limit(oldPos + (dstLim - dstPos));
-                }
-                ret += (b.limit() - b.position());
-                dst.put(b);
-                b.limit(oldLim);
-            }
             if (bufs.isEmpty()) {
                 cancelReadable();
             } else {
@@ -235,9 +223,9 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
             int contained = src.limit() - src.position();
             int wrote = server.send(src, remoteAddress);
             if (wrote < contained) {
-                setWritable();
+                cancelWritable(true);
             } else {
-                cancelWritable();
+                setWritable();
             }
             return wrote;
         }
@@ -254,8 +242,12 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
             ((WrappedSelector) loop.selector).removeVirtualReadable(this);
         }
 
-        private void cancelWritable() {
+        private void cancelWritable(boolean addWritableEvent) {
             ((WrappedSelector) loop.selector).removeVirtualWritable(this);
+            if (addWritableEvent) {
+                selector.modify(ServerDatagramFD.this,
+                    selector.events(ServerDatagramFD.this).combine(EventSet.write()));
+            }
         }
 
         @Override
@@ -288,12 +280,9 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
                 expireTimer = null;
             }
             cancelReadable();
-            cancelWritable();
+            cancelWritable(false);
 
-            ByteBuffer b;
-            while ((b = bufs.poll()) != null) {
-                Utils.clean(b);
-            }
+            bufs.clear();
         }
 
         @Override
@@ -306,5 +295,25 @@ public final class ServerDatagramFD implements FD, ServerSocketFD {
                 acceptQ.remove(this);
             }
         }
+
+        @Override
+        public void onRegister() {
+            // do nothing
+        }
+
+        @Override
+        public void onRemove() {
+            // do nothing
+        }
+
+        @Override
+        public String toString() {
+            return "VirtualDatagramFD(" + serverSelf.server + ", remote=" + remoteAddress + ")";
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "ServerDatagramFD(" + server + ")";
     }
 }

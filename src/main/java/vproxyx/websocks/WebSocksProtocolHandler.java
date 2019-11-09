@@ -282,7 +282,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         ctx.inBuffer.writeTo(chnl);
         if (chnl.used() > 2) {
             // check first 2 bytes, whether it's indicating that it's a PONG message
-            byte[] b = chnl.get();
+            byte[] b = chnl.getBytes();
             if ((b[0] & 0xf) == 0xA) {
                 // opcode is PONG
                 assert Logger.lowLevelDebug("received PONG message");

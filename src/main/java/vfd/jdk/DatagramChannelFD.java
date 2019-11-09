@@ -81,4 +81,13 @@ public class DatagramChannelFD extends ChannelFD implements DatagramFD {
     public DatagramChannel getChannel() {
         return channel;
     }
+
+    @Override
+    public String toString() {
+        try {
+            return "DatagramChannelFD(local=" + channel.getLocalAddress() + ", remote=" + channel.getRemoteAddress() + ")";
+        } catch (IOException e) {
+            return "DatagramChannelFD(" + channel + ")";
+        }
+    }
 }

@@ -22,20 +22,15 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-package io.jpower.kcp.netty;
+package vproxy.selector.wrap.kcp;
 
 import java.util.Iterator;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.ListIterator;
 
-import io.jpower.kcp.netty.internal.ReItrLinkedList;
-import io.jpower.kcp.netty.internal.ReusableListIterator;
-import io.netty.buffer.ByteBuf;
-import io.netty.buffer.ByteBufAllocator;
-import io.netty.util.Recycler;
-import io.netty.util.internal.logging.InternalLogger;
-import io.netty.util.internal.logging.InternalLoggerFactory;
+import vproxy.selector.wrap.kcp.mock.*;
+import vproxy.util.ex.*;
 
 /**
  * Java implementation of <a href="https://github.com/skywind3000/kcp">KCP</a>

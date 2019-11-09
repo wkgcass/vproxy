@@ -3,7 +3,10 @@ package vproxy.connection;
 import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.SocketFD;
+import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.udp.DatagramSocketFDWrapper;
+import vproxy.selector.wrap.udp.UDPBasedFDs;
+import vproxy.selector.wrap.udp.UDPFDs;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
 
@@ -17,10 +20,8 @@ public class ConnectableConnection extends Connection {
         return connector;
     }
 
-    public static ConnectableConnection create(InetSocketAddress remote,
-                                               ConnectionOpts opts,
-                                               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        SocketFD channel = FDProvider.get().openSocketFD();
+    private static ConnectableConnection create(SocketFD channel, InetSocketAddress remote, ConnectionOpts opts,
+                                                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         try {
             channel.configureBlocking(false);
             channel.connect(remote);
@@ -31,19 +32,26 @@ public class ConnectableConnection extends Connection {
         }
     }
 
+    public static ConnectableConnection create(InetSocketAddress remote,
+                                               ConnectionOpts opts,
+                                               RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        SocketFD channel = FDProvider.get().openSocketFD();
+        return create(channel, remote, opts, inBuffer, outBuffer);
+    }
+
     public static ConnectableConnection createUDP(InetSocketAddress remote,
                                                   ConnectionOpts opts,
                                                   RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        DatagramFD channel = FDProvider.get().openDatagramFD();
-        try {
-            channel.configureBlocking(false);
-            channel.bind(null);
-            channel.connect(remote);
-            return new ConnectableConnection(new DatagramSocketFDWrapper(channel), remote, opts, inBuffer, outBuffer);
-        } catch (IOException e) {
-            channel.close();
-            throw e;
-        }
+        return createUDP(remote, opts, inBuffer, outBuffer, null, UDPFDs.get());
+    }
+
+    public static ConnectableConnection createUDP(InetSocketAddress remote,
+                                                  ConnectionOpts opts,
+                                                  RingBuffer inBuffer, RingBuffer outBuffer,
+                                                  SelectorEventLoop loop,
+                                                  UDPBasedFDs fds) throws IOException {
+        SocketFD channel = fds.openSocketFD(loop);
+        return create(channel, remote, opts, inBuffer, outBuffer);
     }
 
     private ConnectableConnection(SocketFD channel, InetSocketAddress remote,

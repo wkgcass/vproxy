@@ -374,7 +374,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         private void checkAndProcessAuthExchangeAndSendConnect(ConnectionHandlerContext ctx) {
-            byte[] ex = socks5AuthMethodExchange.get();
+            byte[] ex = socks5AuthMethodExchange.getBytes();
             if (ex[0] != 5 || ex[1] != 0) {
                 // version != 5 or meth != no_auth
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,
@@ -399,7 +399,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         private void checkAndProcessFirst5BytesOfConnectResult(ConnectionHandlerContext ctx) {
-            byte[] connect5Bytes = socks5ConnectResult.get();
+            byte[] connect5Bytes = socks5ConnectResult.getBytes();
             if (connect5Bytes[0] != 5 || connect5Bytes[1] != 0) {
                 // version != 5 or resp != success
                 Logger.error(LogType.INVALID_EXTERNAL_DATA,

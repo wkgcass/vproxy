@@ -83,4 +83,9 @@ public final class DatagramSocketFDWrapper implements SocketFD {
     public void close() throws IOException {
         fd.close();
     }
+
+    @Override
+    public String toString() {
+        return "DatagramSocketFDWrapper(" + fd + ")";
+    }
 }

@@ -5,6 +5,7 @@ import vfd.FDProvider;
 import vfd.ServerSocketFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.udp.ServerDatagramFD;
+import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
@@ -83,8 +84,7 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
-        ServerSocketFD channel = FDProvider.get().openServerSocketFD();
+    private static ServerSock create(ServerSocketFD channel, InetSocketAddress bindAddress) throws IOException {
         channel.configureBlocking(false);
         if (supportReusePort()) {
             channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
@@ -98,20 +98,20 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
+    public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
+        ServerSocketFD channel = FDProvider.get().openServerSocketFD();
+        return create(channel, bindAddress);
+    }
+
     // note: the input loop should be the same that would be added
     public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop) throws IOException {
         DatagramFD channel = FDProvider.get().openDatagramFD();
-        channel.configureBlocking(false);
-        if (supportReusePort()) {
-            channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-        }
-        channel.bind(bindAddress);
-        try {
-            return new ServerSock(new ServerDatagramFD(channel, loop));
-        } catch (IOException e) {
-            channel.close(); // close the channel if create ServerSock failed
-            throw e;
-        }
+        ServerDatagramFD fd = new ServerDatagramFD(channel, loop);
+        return create(fd, bindAddress);
+    }
+
+    public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop, UDPBasedFDs fds) throws IOException {
+        return create(fds.openServerSocketFD(loop), bindAddress);
     }
 
     private ServerSock(ServerSocketFD channel) throws IOException {

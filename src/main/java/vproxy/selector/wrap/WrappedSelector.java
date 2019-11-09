@@ -1,7 +1,6 @@
 package vproxy.selector.wrap;
 
 import vfd.*;
-import vproxy.selector.wrap.udp.ServerDatagramFD;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -22,7 +21,7 @@ public class WrappedSelector implements FDSelector {
         }
     }
 
-    private final Map<FD, REntry> virtualSocketFDs = new HashMap<>();
+    private final Map<VirtualFD, REntry> virtualSocketFDs = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
 
@@ -37,7 +36,7 @@ public class WrappedSelector implements FDSelector {
 
     private Set<SelectedEntry> calcVirtual() {
         Set<SelectedEntry> ret = new HashSet<>();
-        for (Map.Entry<FD, REntry> e : virtualSocketFDs.entrySet()) {
+        for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
             FD fd = e.getKey();
             REntry entry = e.getValue();
 
@@ -61,20 +60,33 @@ public class WrappedSelector implements FDSelector {
             } else if (writable) {
                 eventSet = EventSet.write();
             } else {
-                eventSet = EventSet.none();
+                eventSet = null;
             }
-            ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+            if (eventSet != null) {
+                ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+            }
         }
         return ret;
+    }
+
+    private Collection<SelectedEntry> handleRealSelect(Collection<SelectedEntry> entries) {
+        for (SelectedEntry entry : entries) {
+            if (entry.fd instanceof WritableAware) {
+                if (entry.ready.have(Event.WRITABLE)) {
+                    ((WritableAware) entry.fd).writable();
+                }
+            }
+        }
+        return entries;
     }
 
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         var set = calcVirtual();
         if (set.isEmpty()) {
-            return selector.select();
+            return handleRealSelect(selector.select());
         } else {
-            set.addAll(selector.selectNow());
+            set.addAll(handleRealSelect(selector.selectNow()));
             return set;
         }
     }
@@ -82,7 +94,7 @@ public class WrappedSelector implements FDSelector {
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         var set = calcVirtual();
-        set.addAll(selector.selectNow());
+        set.addAll(handleRealSelect(selector.selectNow()));
         return set;
     }
 
@@ -90,9 +102,9 @@ public class WrappedSelector implements FDSelector {
     public Collection<SelectedEntry> select(long millis) throws IOException {
         var set = calcVirtual();
         if (set.isEmpty()) {
-            return selector.select(millis);
+            return handleRealSelect(selector.select(millis));
         } else {
-            set.addAll(selector.selectNow());
+            set.addAll(handleRealSelect(selector.selectNow()));
             return set;
         }
     }
@@ -104,7 +116,7 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public boolean isRegistered(FD fd) {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
+        if (fd instanceof VirtualFD) {
             return virtualSocketFDs.containsKey(fd);
         } else {
             return selector.isRegistered(fd);
@@ -113,23 +125,29 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public void register(FD fd, EventSet ops, Object registerData) throws ClosedChannelException {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
-            virtualSocketFDs.put(fd, new REntry(ops, registerData));
+        if (fd instanceof VirtualFD) {
+            virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
             // check fire
             if (readableFired.contains(fd) || writableFired.contains(fd)) {
                 wakeup();
             }
+            ((VirtualFD) fd).onRegister();
         } else {
+            if (fd instanceof WritableAware) {
+                ops = ops.combine(EventSet.write());
+            }
+
             selector.register(fd, ops, registerData);
         }
     }
 
     @Override
     public void remove(FD fd) {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
+        if (fd instanceof VirtualFD) {
             virtualSocketFDs.remove(fd);
             readableFired.remove(fd);
             writableFired.remove(fd);
+            ((VirtualFD) fd).onRemove();
         } else {
             selector.remove(fd);
         }
@@ -137,20 +155,28 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public void modify(FD fd, EventSet ops) {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
+        if (fd instanceof VirtualFD) {
             if (virtualSocketFDs.containsKey(fd)) {
                 virtualSocketFDs.get(fd).watchedEvents = ops;
             } else {
                 throw new CancelledKeyException();
             }
         } else {
-            selector.modify(fd, ops);
+            if (fd instanceof WritableAware) {
+                ops = ops.combine(EventSet.write());
+            }
+
+            modify0(fd, ops);
         }
+    }
+
+    public void modify0(FD fd, EventSet ops) {
+        selector.modify(fd, ops);
     }
 
     @Override
     public EventSet events(FD fd) {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
+        if (fd instanceof VirtualFD) {
             if (virtualSocketFDs.containsKey(fd)) {
                 return virtualSocketFDs.get(fd).watchedEvents;
             } else {
@@ -163,7 +189,7 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public Object attachment(FD fd) {
-        if (fd instanceof ServerDatagramFD.VirtualDatagramFD) {
+        if (fd instanceof VirtualFD) {
             if (virtualSocketFDs.containsKey(fd)) {
                 return virtualSocketFDs.get(fd).attachment;
             } else {
@@ -182,7 +208,7 @@ public class WrappedSelector implements FDSelector {
         }
 
         Set<RegisterEntry> ret = new HashSet<>(selectorRet);
-        for (Map.Entry<FD, REntry> e : virtualSocketFDs.entrySet()) {
+        for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
             var fd = e.getKey();
             var entry = e.getValue();
             ret.add(new RegisterEntry(fd, entry.watchedEvents, entry.attachment));
@@ -198,14 +224,14 @@ public class WrappedSelector implements FDSelector {
         selector.close();
     }
 
-    public void registerVirtualReadable(FD fd) {
+    public void registerVirtualReadable(VirtualFD vfd) {
         if (!selector.isOpen()) {
             throw new ClosedSelectorException();
         }
-        readableFired.add(fd);
+        readableFired.add(vfd);
 
         // check fired
-        var rentry = virtualSocketFDs.get(fd);
+        var rentry = virtualSocketFDs.get(vfd);
         if (rentry == null) {
             return;
         }
@@ -214,18 +240,18 @@ public class WrappedSelector implements FDSelector {
         }
     }
 
-    public void removeVirtualReadable(FD fd) {
-        readableFired.remove(fd);
+    public void removeVirtualReadable(VirtualFD vfd) {
+        readableFired.remove(vfd);
     }
 
-    public void registerVirtualWritable(FD fd) {
+    public void registerVirtualWritable(VirtualFD vfd) {
         if (!selector.isOpen()) {
             throw new ClosedSelectorException();
         }
-        writableFired.add(fd);
+        writableFired.add(vfd);
 
         // check fired
-        var rentry = virtualSocketFDs.get(fd);
+        var rentry = virtualSocketFDs.get(vfd);
         if (rentry == null) {
             return;
         }
@@ -234,7 +260,7 @@ public class WrappedSelector implements FDSelector {
         }
     }
 
-    public void removeVirtualWritable(FD fd) {
-        writableFired.remove(fd);
+    public void removeVirtualWritable(VirtualFD vfd) {
+        writableFired.remove(vfd);
     }
 }

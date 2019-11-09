@@ -12,8 +12,8 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     private int writeLen; // free space left for writing into arr
     private int readOff; // the current read offset
 
-    private final int initialOff;
-    private final int initialLen;
+    private final int initialWriteOff;
+    private final int initialWriteLen;
     private final int initialReadOff;
 
     private ByteArrayChannel(ByteArray arr, int readOff, int writeOff, int writeLen) {
@@ -26,11 +26,18 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
             writeLen < 0 ||
             writeOff + writeLen > arr.length())
             throw new IllegalArgumentException();
-        this.initialOff = writeOff;
-        this.initialLen = writeLen;
+        this.initialWriteOff = writeOff;
+        this.initialWriteLen = writeLen;
         this.initialReadOff = readOff;
 
         reset();
+    }
+
+    private ByteArrayChannel() {
+        this.arr = ByteArray.from(new byte[0]);
+        this.initialWriteOff = 0;
+        this.initialWriteLen = 0;
+        this.initialReadOff = 0;
     }
 
     public static ByteArrayChannel fromEmpty(int len) {
@@ -53,6 +60,10 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
         return new ByteArrayChannel(arr, 0, arr.length(), 0);
     }
 
+    public static ByteArrayChannel zero() {
+        return new ByteArrayChannel();
+    }
+
     @Override
     public int read(ByteBuffer dst) {
         int readLen = writeOff - readOff;
@@ -60,6 +71,17 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
         arr.byteBufferPut(dst, readOff, readBytes);
         readOff += readBytes;
         return readBytes;
+    }
+
+    public byte read() {
+        if (writeOff - readOff == 0) {
+            throw new IndexOutOfBoundsException("readOff=" + readOff + ", writeOff=" + writeOff);
+        }
+        return arr.get(readOff++);
+    }
+
+    public void skip(int n) {
+        readOff += n;
     }
 
     @Override
@@ -90,12 +112,38 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public void reset() {
-        this.writeOff = initialOff;
-        this.writeLen = initialLen;
+        this.writeOff = initialWriteOff;
+        this.writeLen = initialWriteLen;
         this.readOff = initialReadOff;
     }
 
-    public byte[] get() {
-        return arr.toJavaArray();
+    public byte[] getBytes() {
+        if (initialReadOff == 0) {
+            return arr.toJavaArray();
+        } else {
+            byte[] ret = new byte[arr.length() - initialReadOff];
+            arr.byteBufferPut(ByteBuffer.wrap(ret), initialReadOff, ret.length);
+            return ret;
+        }
+    }
+
+    public ByteArray getArray() {
+        if (initialReadOff == 0) {
+            return arr;
+        } else {
+            return arr.sub(initialReadOff, arr.length() - initialReadOff);
+        }
+    }
+
+    public int getWriteOff() {
+        return writeOff - initialReadOff;
+    }
+
+    public int getWriteLen() {
+        return writeLen - initialReadOff;
+    }
+
+    public int getReadOff() {
+        return readOff - initialReadOff;
     }
 }

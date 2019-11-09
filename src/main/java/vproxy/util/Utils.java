@@ -9,10 +9,7 @@ import java.io.*;
 import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.Arrays;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.Consumer;
 
 public class Utils {
@@ -31,6 +28,11 @@ public class Utils {
     public static int positive(byte b) {
         if (b < 0) return 256 + b;
         return b;
+    }
+
+    public static int positive(short s) {
+        if (s < 0) return 32768 + s;
+        return s;
     }
 
     private static String addTo(@SuppressWarnings("SameParameterValue") int len, String s) {
@@ -707,6 +709,16 @@ public class Utils {
     }
 
     public static boolean printBytes(byte[] array) {
+        return printBytes(array, 0, array.length);
+    }
+
+    public static boolean printBytes(byte[] array, int off, int end) {
+        {
+            byte[] tmp = new byte[end - off];
+            System.arraycopy(array, off, tmp, 0, end - off);
+            array = tmp;
+        }
+
         final int bytesPerLine = 36;
         int lastLine = array.length % bytesPerLine;
         if (lastLine == 0) {
@@ -750,5 +762,37 @@ public class Utils {
         }
 
         return true;
+    }
+
+    public static int writeFromFIFOQueueToBuffer(Deque<ByteBuffer> bufs, ByteBuffer dst) {
+        int ret = 0;
+        while (true) {
+            if (bufs.isEmpty()) {
+                // src is empty
+                break;
+            }
+            ByteBuffer b = bufs.peek();
+            int oldLim = b.limit();
+            int oldPos = b.position();
+            if (oldLim - oldPos == 0) {
+                bufs.poll();
+                continue;
+            }
+            int dstLim = dst.limit();
+            int dstPos = dst.position();
+
+            if (dstLim - dstPos == 0) {
+                // dst is full
+                break;
+            }
+
+            if (dstLim - dstPos < oldLim - oldPos) {
+                b.limit(oldPos + (dstLim - dstPos));
+            }
+            ret += (b.limit() - b.position());
+            dst.put(b);
+            b.limit(oldLim);
+        }
+        return ret;
     }
 }

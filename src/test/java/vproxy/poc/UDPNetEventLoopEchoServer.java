@@ -35,7 +35,7 @@ class EchoClientConnectableConnectionHandler implements ConnectableConnectionHan
     @Override
     public void readable(ConnectionHandlerContext ctx) {
         ctx.connection.getInBuffer().writeTo(readChnl);
-        String s = new String(readChnl.get(), 0, readChnl.used(), StandardCharsets.UTF_8);
+        String s = new String(readChnl.getBytes(), 0, readChnl.used(), StandardCharsets.UTF_8);
         System.out.println("client read \033[0;32m" + s + "\033[0m");
         if (s.equals(SEND)) {
             readChnl.reset();

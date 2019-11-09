@@ -12,6 +12,9 @@ public class Config {
     // set it smaller if your environment have a smaller tcp session ttl
     public static final int tcpTimeout = 15 * 60_000;
 
+    // the maximum expected size of a udp packet
+    public static final int udpMtu = 65536;
+
     // the recommended min payload length
     // also, see Processor.PROXY_ZERO_COPY_THRESHOLD
     public static final int recommendedMinPayloadLength = 1400;
