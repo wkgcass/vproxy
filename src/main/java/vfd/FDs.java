@@ -7,5 +7,7 @@ public interface FDs {
 
     ServerSocketFD openServerSocketFD() throws IOException;
 
+    DatagramFD openDatagramFD() throws IOException;
+
     FDSelector openSelector() throws IOException;
 }

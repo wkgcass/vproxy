@@ -34,6 +34,11 @@ public class ChannelFD implements FD {
         ((NetworkChannel) channel).setOption(name, value);
     }
 
+    @Override
+    public FD real() {
+        return this;
+    }
+
     public SelectableChannel getChannel() {
         return channel;
     }

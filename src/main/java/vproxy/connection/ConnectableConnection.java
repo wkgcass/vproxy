@@ -1,7 +1,9 @@
 package vproxy.connection;
 
+import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.SocketFD;
+import vproxy.selector.wrap.udp.DatagramSocketFDWrapper;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
 
@@ -23,6 +25,21 @@ public class ConnectableConnection extends Connection {
             channel.configureBlocking(false);
             channel.connect(remote);
             return new ConnectableConnection(channel, remote, opts, inBuffer, outBuffer);
+        } catch (IOException e) {
+            channel.close();
+            throw e;
+        }
+    }
+
+    public static ConnectableConnection createUDP(InetSocketAddress remote,
+                                                  ConnectionOpts opts,
+                                                  RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        DatagramFD channel = FDProvider.get().openDatagramFD();
+        try {
+            channel.configureBlocking(false);
+            channel.bind(null);
+            channel.connect(remote);
+            return new ConnectableConnection(new DatagramSocketFDWrapper(channel), remote, opts, inBuffer, outBuffer);
         } catch (IOException e) {
             channel.close();
             throw e;

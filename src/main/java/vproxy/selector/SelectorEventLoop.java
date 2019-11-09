@@ -2,6 +2,7 @@ package vproxy.selector;
 
 import vfd.*;
 import vproxy.app.Config;
+import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.*;
 
 import java.io.IOException;
@@ -30,7 +31,7 @@ public class SelectorEventLoop {
         return loopThreadLocal.get();
     }
 
-    private final FDSelector selector;
+    public final FDSelector selector;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
@@ -42,7 +43,7 @@ public class SelectorEventLoop {
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
     private SelectorEventLoop() throws IOException {
-        this.selector = FDProvider.get().openSelector();
+        this.selector = new WrappedSelector(FDProvider.get().openSelector());
     }
 
     public static SelectorEventLoop open() throws IOException {

@@ -79,6 +79,11 @@ public class RunAll {
         System.out.println("==============================================");
         GrpcOverH2Proxy.main(new String[0]);
 
+        System.out.println("==============================================");
+        System.out.println("            udp server and client");
+        System.out.println("==============================================");
+        UDPNetEventLoopEchoServer.main(new String[0]);
+
         Resolver.stopDefault();
     }
 }

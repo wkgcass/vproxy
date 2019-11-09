@@ -1,7 +1,10 @@
 package vproxy.connection;
 
+import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.ServerSocketFD;
+import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.udp.ServerDatagramFD;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
@@ -68,6 +71,18 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
+    public static void checkBind(Protocol protocol, InetSocketAddress bindAddress) throws IOException {
+        if (protocol == Protocol.TCP) {
+            checkBind(bindAddress);
+        } else {
+            try (DatagramFD foo = FDProvider.get().openDatagramFD()) {
+                foo.bind(bindAddress);
+            } catch (BindException ex) {
+                throw new IOException("bind failed for " + bindAddress, ex);
+            }
+        }
+    }
+
     public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
         ServerSocketFD channel = FDProvider.get().openServerSocketFD();
         channel.configureBlocking(false);
@@ -77,6 +92,22 @@ public class ServerSock implements NetFlowRecorder {
         channel.bind(bindAddress);
         try {
             return new ServerSock(channel);
+        } catch (IOException e) {
+            channel.close(); // close the channel if create ServerSock failed
+            throw e;
+        }
+    }
+
+    // note: the input loop should be the same that would be added
+    public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop) throws IOException {
+        DatagramFD channel = FDProvider.get().openDatagramFD();
+        channel.configureBlocking(false);
+        if (supportReusePort()) {
+            channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+        }
+        channel.bind(bindAddress);
+        try {
+            return new ServerSock(new ServerDatagramFD(channel, loop));
         } catch (IOException e) {
             channel.close(); // close the channel if create ServerSock failed
             throw e;

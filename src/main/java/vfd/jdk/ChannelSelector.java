@@ -75,10 +75,11 @@ public class ChannelSelector implements FDSelector {
 
     @Override
     public boolean isRegistered(FD fd) {
-        return ((ChannelFD) fd).getChannel().keyFor(selector) != null;
+        return ((ChannelFD) fd.real()).getChannel().keyFor(selector) != null;
     }
 
     private int buildInterestOps(FD fd, EventSet ops) {
+        fd = fd.real();
         int op = 0;
         if (fd instanceof ServerSocketFD) {
             if (ops.have(Event.READABLE)) {
@@ -91,6 +92,15 @@ public class ChannelSelector implements FDSelector {
             if (ops.have(Event.WRITABLE)) {
                 op |= (SelectionKey.OP_WRITE | SelectionKey.OP_CONNECT);
             }
+        } else if (fd instanceof DatagramFD) {
+            if (ops.have(Event.READABLE)) {
+                op |= SelectionKey.OP_READ;
+            }
+            if (ops.have(Event.WRITABLE)) {
+                op |= SelectionKey.OP_WRITE;
+            }
+        } else {
+            throw new IllegalArgumentException("unknown fd type: " + fd);
         }
         return op;
     }
@@ -99,12 +109,12 @@ public class ChannelSelector implements FDSelector {
     public void register(FD fd, EventSet ops, Object registerData) throws ClosedChannelException {
         int iOps = buildInterestOps(fd, ops);
         //noinspection MagicConstant
-        ((ChannelFD) fd).getChannel().register(selector, iOps, new Att(fd, registerData));
+        ((ChannelFD) fd.real()).getChannel().register(selector, iOps, new Att(fd, registerData));
     }
 
     @Override
     public void remove(FD fd) {
-        SelectableChannel channel = ((ChannelFD) fd).getChannel();
+        SelectableChannel channel = ((ChannelFD) fd.real()).getChannel();
 
         SelectionKey key;
         // synchronize the channel
@@ -119,7 +129,7 @@ public class ChannelSelector implements FDSelector {
     }
 
     private SelectionKey getKeyCheckNull(FD fd) {
-        SelectableChannel channel = ((ChannelFD) fd).getChannel();
+        SelectableChannel channel = ((ChannelFD) fd.real()).getChannel();
 
         SelectionKey key = channel.keyFor(selector);
         if (key == null)

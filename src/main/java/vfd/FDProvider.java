@@ -29,6 +29,10 @@ public class FDProvider {
         return provided.openServerSocketFD();
     }
 
+    public DatagramFD openDatagramFD() throws IOException {
+        return provided.openDatagramFD();
+    }
+
     public FDSelector openSelector() throws IOException {
         return provided.openSelector();
     }

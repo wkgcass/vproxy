@@ -1,11 +1,9 @@
 package vfd.jdk;
 
-import vfd.FDSelector;
-import vfd.FDs;
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
+import vfd.*;
 
 import java.io.IOException;
+import java.nio.channels.DatagramChannel;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
@@ -19,6 +17,11 @@ public class ChannelFDs implements FDs {
     @Override
     public ServerSocketFD openServerSocketFD() throws IOException {
         return new ServerSocketChannelFD(ServerSocketChannel.open());
+    }
+
+    @Override
+    public DatagramFD openDatagramFD() throws IOException {
+        return new DatagramChannelFD(DatagramChannel.open());
     }
 
     @Override
