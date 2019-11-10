@@ -3,6 +3,7 @@ package vproxy.poc;
 import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
@@ -11,20 +12,20 @@ import java.net.InetSocketAddress;
 
 public class NetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
-        NetEventLoop loop = create(18080, Protocol.TCP);
+        NetEventLoop loop = create(18080, null);
         Thread.sleep(500);
         AlphabetBlockingClient.runBlock(18080, 10, false);
         loop.getSelectorEventLoop().close();
     }
 
-    static NetEventLoop create(int port, Protocol protocol) throws IOException {
+    static NetEventLoop create(int port, UDPBasedFDs fds) throws IOException {
         // create the event loop for network operations
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server wrapper object
         ServerSock server;
-        if (protocol == Protocol.UDP) {
-            server = ServerSock.createUDP(new InetSocketAddress(port), selectorEventLoop);
+        if (fds != null) {
+            server = ServerSock.createUDP(new InetSocketAddress(port), selectorEventLoop, fds);
         } else {
             server = ServerSock.create(new InetSocketAddress(port));
         }

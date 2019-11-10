@@ -80,9 +80,14 @@ public class RunAll {
         GrpcOverH2Proxy.main(new String[0]);
 
         System.out.println("==============================================");
-        System.out.println("            udp server and client");
+        System.out.println("         udp echo server and client");
         System.out.println("==============================================");
         UDPNetEventLoopEchoServer.main(new String[0]);
+
+        System.out.println("==============================================");
+        System.out.println("         kcp echo server and client");
+        System.out.println("==============================================");
+        KCPNetEventLoopEchoServer.main(new String[0]);
 
         Resolver.stopDefault();
     }

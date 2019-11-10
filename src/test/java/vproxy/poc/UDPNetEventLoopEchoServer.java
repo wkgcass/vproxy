@@ -1,6 +1,7 @@
 package vproxy.poc;
 
 import vproxy.connection.*;
+import vproxy.selector.wrap.udp.UDPFDs;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
@@ -10,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class UDPNetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
-        NetEventLoop loop = NetEventLoopEchoServer.create(18080, Protocol.UDP);
+        NetEventLoop loop = NetEventLoopEchoServer.create(18080, UDPFDs.get());
 
         ConnectableConnection conn = ConnectableConnection.createUDP(new InetSocketAddress(18080),
             new ConnectionOpts(), RingBuffer.allocateDirect(1024), RingBuffer.allocateDirect(3));
@@ -22,13 +23,15 @@ public class UDPNetEventLoopEchoServer {
 }
 
 class EchoClientConnectableConnectionHandler implements ConnectableConnectionHandler {
-    private static final String SEND = "hello-world";
+    private static final String SEND = "hello-world-";
     private final ByteArrayChannel readChnl = ByteArrayChannel.fromEmpty(1024);
     private ByteArrayChannel writeChnl = null;
+    private int currentPostfix = 0;
+    private String currentSend = SEND + (currentPostfix++);
 
     @Override
     public void connected(ConnectableConnectionHandlerContext ctx) {
-        writeChnl = ByteArrayChannel.fromFull(SEND.getBytes());
+        writeChnl = ByteArrayChannel.fromFull(currentSend.getBytes());
         ctx.connection.getOutBuffer().storeBytesFrom(writeChnl);
     }
 
@@ -37,9 +40,10 @@ class EchoClientConnectableConnectionHandler implements ConnectableConnectionHan
         ctx.connection.getInBuffer().writeTo(readChnl);
         String s = new String(readChnl.getBytes(), 0, readChnl.used(), StandardCharsets.UTF_8);
         System.out.println("client read \033[0;32m" + s + "\033[0m");
-        if (s.equals(SEND)) {
+        if (s.equals(currentSend)) {
+            currentSend = SEND + (currentPostfix++);
             readChnl.reset();
-            writeChnl = ByteArrayChannel.fromFull(SEND.getBytes());
+            writeChnl = ByteArrayChannel.fromFull(currentSend.getBytes());
             ctx.connection.getOutBuffer().storeBytesFrom(writeChnl);
         }
     }
