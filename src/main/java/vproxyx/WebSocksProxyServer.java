@@ -2,14 +2,19 @@ package vproxyx;
 
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
+import vproxy.component.proxy.NetEventLoopProvider;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
+import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
+import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.kcp.KCPFDs;
+import vproxy.selector.wrap.kcp.KCPServerSocketFD;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
@@ -24,9 +29,7 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Supplier;
 
 @SuppressWarnings("unused")
@@ -41,6 +44,7 @@ public class WebSocksProxyServer {
         String keypem = null;
         String domain = null;
         int redirectPort = -1;
+        boolean useKcp = false;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -115,9 +119,13 @@ public class WebSocksProxyServer {
                     throw new IllegalArgumentException("redirectport is not valid");
                 }
                 ++i;
+            } else if (arg.equals("kcp")) {
+                useKcp = true;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
-                    "argument: listen {} auth {} [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] [redirectport {}]\n" +
+                    "argument: listen {} auth {} \\\n" +
+                    "          [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\\n" +
+                    "          [redirectport {}] [kcp] \n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     "          listen 443 auth alice:pasSw0rD ssl \\\n" +
                     "                  certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\\n" +
@@ -176,15 +184,6 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("domain: " + domain);
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
 
-        // init the listening server
-        var listeningServerL4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
-        ServerSock server = ServerSock.create(listeningServerL4addr);
-        ServerSock redirectServer = null;
-        if (redirectPort != -1) {
-            var l4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort);
-            redirectServer = ServerSock.create(l4addr);
-        }
-
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
         int workers = threads;
@@ -194,10 +193,29 @@ public class WebSocksProxyServer {
         // initiate the acceptor event loop(s)
         EventLoopGroup acceptor = new EventLoopGroup("acceptor-group");
         acceptor.add("acceptor-loop");
+        NetEventLoop netLoopForKcp = acceptor.next();
+        SelectorEventLoop loopForKcp = netLoopForKcp.getSelectorEventLoop();
         // initiate the worker event loop(s)
         EventLoopGroup worker = new EventLoopGroup("worker-group");
         for (int i = 0; i < workers; ++i) {
             worker.add("worker-loop-" + i);
+        }
+
+        // init the listening server
+        var listeningServerL4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
+        List<ServerSock> servers = new LinkedList<>();
+        {
+            ServerSock server = ServerSock.create(listeningServerL4addr);
+            servers.add(server);
+        }
+        if (useKcp) {
+            ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, KCPFDs.get());
+            servers.add(server);
+        }
+        ServerSock redirectServer = null;
+        if (redirectPort != -1) {
+            var l4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort);
+            redirectServer = ServerSock.create(l4addr);
         }
 
         // build ssl engine supplier (or maybe null)
@@ -266,21 +284,29 @@ public class WebSocksProxyServer {
                 return null; // will not be called because type is `handler`
             }
         };
-        Proxy proxy = new Proxy(
-            new ProxyNetConfig()
-                .setAcceptLoop(acceptor.next())
-                .setInBufferSize(24576)
-                .setOutBufferSize(24576)
-                .setHandleLoopProvider(worker::next)
-                .setServer(server)
-                .setConnGen(connGen),
-            s -> {
-                // do nothing, won't happen
-                // when terminating, user should simply kill this process and won't close server
-            });
+        for (ServerSock server : servers) {
+            NetEventLoopProvider loopProvider;
+            if (server.channel instanceof KCPServerSocketFD) {
+                loopProvider = v -> netLoopForKcp;
+            } else {
+                loopProvider = worker::next;
+            }
+            Proxy proxy = new Proxy(
+                new ProxyNetConfig()
+                    .setAcceptLoop(netLoopForKcp)
+                    .setInBufferSize(24576)
+                    .setOutBufferSize(24576)
+                    .setHandleLoopProvider(loopProvider)
+                    .setServer(server)
+                    .setConnGen(connGen),
+                s -> {
+                    // do nothing, won't happen
+                    // when terminating, user should simply kill this process and won't close server
+                });
 
-        // start the proxy server
-        proxy.handle();
+            // start the proxy server
+            proxy.handle();
+        }
 
         if (redirectServer != null) {
             ProtocolServerHandler.apply(acceptor.get("acceptor-loop"), redirectServer,
@@ -291,6 +317,9 @@ public class WebSocksProxyServer {
         Logger.alert("server started on " + port);
         if (redirectPort != -1) {
             Logger.alert("redirect server started on " + redirectPort);
+        }
+        if (useKcp) {
+            Logger.alert("kcp server started on " + port);
         }
     }
 }

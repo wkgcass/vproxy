@@ -120,18 +120,20 @@ public class SelectorEventLoop {
                 }
                 // read and write may happen in the same loop round
                 if (readyOps.have(Event.WRITABLE)) {
-                    if (registerData.connected) {
-                        try {
-                            handler.writable(ctx);
-                        } catch (Throwable t) {
-                            Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
-                        }
-                    } else {
-                        registerData.connected = true;
-                        try {
-                            handler.connected(ctx);
-                        } catch (Throwable t) {
-                            Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
+                    if (channel instanceof SocketFD) {
+                        if (registerData.connected) {
+                            try {
+                                handler.writable(ctx);
+                            } catch (Throwable t) {
+                                Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
+                            }
+                        } else {
+                            registerData.connected = true;
+                            try {
+                                handler.connected(ctx);
+                            } catch (Throwable t) {
+                                Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
+                            }
                         }
                     }
                 }

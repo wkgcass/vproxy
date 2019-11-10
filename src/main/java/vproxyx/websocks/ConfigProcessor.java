@@ -31,6 +31,7 @@ public class ConfigProcessor {
     private boolean verifyCert = true;
     private boolean strictMode = false;
     private int poolSize = 10;
+    private boolean noHealthCheck = false;
 
     private String pacServerIp;
     private int pacServerPort;
@@ -208,6 +209,15 @@ public class ConfigProcessor {
                     pass = userpass[1].trim();
                     if (pass.isEmpty())
                         throw new Exception("invalid proxy.server.auth: pass is empty");
+                } else if (line.startsWith("proxy.server.hc ")) {
+                    String hc = line.substring("proxy.server.hc ".length());
+                    if (hc.equals("on")) {
+                        noHealthCheck = false;
+                    } else if (hc.equals("off")) {
+                        noHealthCheck = true;
+                    } else {
+                        throw new Exception("invalid value for proxy.server.hc: " + hc);
+                    }
                 } else if (line.startsWith("agent.cacerts.path ")) {
                     String path = line.substring("agent.cacerts.path ".length()).trim();
                     if (path.isEmpty())
@@ -296,12 +306,27 @@ public class ConfigProcessor {
                     currentAlias = null;
                     continue;
                 }
-                if (!line.startsWith("websocks://") && !line.startsWith("websockss://")) {
+                if (!line.startsWith("websocks://") && !line.startsWith("websockss://")
+                    && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")) {
                     throw new Exception("unknown protocol: " + line);
                 }
 
                 boolean useSSL = line.startsWith("websockss");
-                line = line.substring(useSSL ? "websockss://".length() : "websocks://".length());
+                boolean useKCP = line.contains(":kcp://");
+                // format line
+                if (useSSL) {
+                    if (useKCP) {
+                        line = line.substring("websockss:kcp://".length());
+                    } else {
+                        line = line.substring("websockss://".length());
+                    }
+                } else {
+                    if (useKCP) {
+                        line = line.substring("websocks:kcp://".length());
+                    } else {
+                        line = line.substring("websocks://".length());
+                    }
+                }
 
                 String program = null;
                 int programPort = 0;
@@ -373,7 +398,7 @@ public class ConfigProcessor {
 
                 // this will be used when connection establishes to remote
                 // in WebSocksProxyAgentConnectorProvider.java
-                handle.data = useSSL;
+                handle.data = new SharedData(useSSL, useKCP);
             } else {
                 //noinspection ConstantConditions
                 assert step == 2;
@@ -441,6 +466,17 @@ public class ConfigProcessor {
         // check for ss
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             throw new Exception("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
+        }
+        // modify server group if noHealthCheck
+        if (noHealthCheck) {
+            for (ServerGroup g : servers.values()) {
+                g.setHealthCheckConfig(new HealthCheckConfig(
+                    Integer.MAX_VALUE, Integer.MAX_VALUE, 1, Integer.MAX_VALUE
+                ));
+                for (ServerGroup.ServerHandle svr : g.getServerHandles()) {
+                    svr.healthy = true;
+                }
+            }
         }
     }
 }

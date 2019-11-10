@@ -9,6 +9,7 @@ import vproxy.pool.ConnectionPoolHandler;
 import vproxy.pool.PoolCallback;
 import vproxy.processor.http1.entity.Response;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.*;
@@ -96,15 +97,17 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 assert Logger.lowLevelDebug("no available remote server connector for now");
                 return null;
             }
-            boolean useSSL = (boolean) connector.getData(); /*useSSL, see ConfigProcessor*/
+            SharedData shared = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
+            if (shared.useKCP) {
+                assert Logger.lowLevelDebug("kcp does not support pooled connections");
+                return null;
+            }
             ConnectableConnection conn;
             try {
-                if (useSSL) {
+                if (shared.useSSL) {
                     conn = CommonProcess.makeSSLConnection(connector);
                 } else {
-                    conn = connector.connect(
-                        WebSocksUtils.getConnectionOpts(),
-                        RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                    conn = CommonProcess.makeRawConnection(connector);
                 }
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "make websocks connection for the pool failed", e);
@@ -491,11 +494,33 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     static class CommonProcess {
-        static ConnectableConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
-            return makeSSLConnection(null, connector);
+        static ConnectableConnection makeRawConnection(SvrHandleConnector connector) throws IOException {
+            return makeRawConnection(null, connector, false);
         }
 
-        static ConnectableConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector) throws IOException {
+        static ConnectableConnection makeRawConnection(SelectorEventLoop loop, SvrHandleConnector connector, boolean kcp) throws IOException {
+            if (loop == null && kcp) {
+                throw new IllegalArgumentException("loop must be specified when using kcp");
+            }
+            if (kcp) {
+                return ConnectableConnection.createUDP(connector.remote, new ConnectionOpts(),
+                    RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384),
+                    loop, KCPFDs.get());
+            } else {
+                return connector.connect(
+                    WebSocksUtils.getConnectionOpts(),
+                    RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+            }
+        }
+
+        static ConnectableConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
+            return makeSSLConnection(null, connector, false);
+        }
+
+        static ConnectableConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector, boolean kcp) throws IOException {
+            if (loop == null && kcp) {
+                throw new IllegalArgumentException("loop must be specified when using kcp");
+            }
             SSLEngine engine;
             String hostname = connector.getHostName();
             if (hostname == null) {
@@ -528,7 +553,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     RingBuffer.allocate(24576),
                     loop);
             }
-            return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
+            if (kcp) {
+                return ConnectableConnection.createUDP(connector.remote,
+                    new ConnectionOpts(), pair.left, pair.right,
+                    loop, KCPFDs.get());
+            } else {
+                return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
+            }
         }
 
         static void sendUpgrade(ConnectableConnectionHandlerContext ctx, String domainOfProxy, String user, String pass) {
@@ -655,12 +686,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     return;
                 }
                 try {
-                    if ((Boolean) connector.getData() /*useSSL, see ConfigProcessor*/) {
-                        conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector);
+                    SharedData sharedData = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
+                    if (sharedData.useSSL) {
+                        conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector, sharedData.useKCP);
                     } else {
-                        conn = connector.connect(
-                            WebSocksUtils.getConnectionOpts(),
-                            RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+                        conn = CommonProcess.makeRawConnection(loop.getSelectorEventLoop(), connector, sharedData.useKCP);
                     }
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "connect to " + connector + " failed", e);
