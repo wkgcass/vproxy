@@ -121,6 +121,6 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
 
     @Override
     public String toString() {
-        return this.getClass().getName() + "(" + fd + ")";
+        return this.getClass().getSimpleName() + "(" + fd + ")";
     }
 }

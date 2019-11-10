@@ -7,6 +7,7 @@ import vproxy.selector.TimerEvent;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.selector.wrap.WritableAware;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -223,8 +224,10 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
             int contained = src.limit() - src.position();
             int wrote = server.send(src, remoteAddress);
             if (wrote < contained) {
+                assert Logger.lowLevelDebug("wrote(" + wrote + ") < contained(" + contained + "), cancelWritable");
                 cancelWritable(true);
             } else {
+                assert Logger.lowLevelDebug("wrote(" + wrote + ") >= contained(" + contained + "), is still writable");
                 setWritable();
             }
             return wrote;
@@ -235,6 +238,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         }
 
         private void setWritable() {
+            assert Logger.lowLevelDebug("setWritable in " + VirtualDatagramFD.this);
             ((WrappedSelector) loop.selector).registerVirtualWritable(this);
         }
 
@@ -243,6 +247,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         }
 
         private void cancelWritable(boolean addWritableEvent) {
+            assert Logger.lowLevelDebug("cancelWritable in " + VirtualDatagramFD.this + ", addWritableEvent=" + addWritableEvent);
             ((WrappedSelector) loop.selector).removeVirtualWritable(this);
             if (addWritableEvent) {
                 selector.modify(ServerDatagramFD.this,

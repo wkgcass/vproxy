@@ -65,4 +65,9 @@ public class SocketChannelFD extends ChannelFD implements SocketFD {
     public SocketChannel getChannel() {
         return channel;
     }
+
+    @Override
+    public String toString() {
+        return "SocketChannelFD(" + channel + ")";
+    }
 }

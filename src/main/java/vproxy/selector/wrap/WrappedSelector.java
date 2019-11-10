@@ -1,6 +1,7 @@
 package vproxy.selector.wrap;
 
 import vfd.*;
+import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -18,6 +19,14 @@ public class WrappedSelector implements FDSelector {
         public REntry(EventSet watchedEvents, Object attachment) {
             this.watchedEvents = watchedEvents;
             this.attachment = attachment;
+        }
+
+        @Override
+        public String toString() {
+            return "REntry{" +
+                "watchedEvents=" + watchedEvents +
+                ", attachment=" + attachment +
+                '}';
         }
     }
 
@@ -44,11 +53,13 @@ public class WrappedSelector implements FDSelector {
             boolean writable = false;
             if (entry.watchedEvents.have(Event.READABLE)) {
                 if (readableFired.contains(fd)) {
+                    assert Logger.lowLevelDebug("fire readable for " + fd);
                     readable = true;
                 }
             }
             if (entry.watchedEvents.have(Event.WRITABLE)) {
                 if (writableFired.contains(fd)) {
+                    assert Logger.lowLevelDebug("fire writable for " + fd);
                     writable = true;
                 }
             }
@@ -143,6 +154,7 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public void remove(FD fd) {
+        assert Logger.lowLevelDebug("remove fd from selector " + fd);
         if (fd instanceof VirtualFD) {
             virtualSocketFDs.remove(fd);
             readableFired.remove(fd);
@@ -261,6 +273,7 @@ public class WrappedSelector implements FDSelector {
     }
 
     public void removeVirtualWritable(VirtualFD vfd) {
+        assert Logger.lowLevelDebug("remove virtual writable: " + vfd);
         writableFired.remove(vfd);
     }
 }

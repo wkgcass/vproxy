@@ -52,6 +52,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         this.fdHandler = new ArqUDPInsideFDHandler();
         this.handler = handlerConstructor.apply(b -> {
             writeBufs.add(b);
+            assert Logger.lowLevelDebug("writeBufs currently have " + writeBufs.size() + " elements");
             fdHandler.watchInsideFDWritable();
         });
         this.fdHandler.setSelfFDWritable();
@@ -249,7 +250,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 return;
             }
             if (readBytes == 0) {
-                // read nothing, so nothing to handle
+                assert Logger.lowLevelDebug("read nothing, nothing to handle " + ctx.getChannel());
                 return;
             }
             // copy into the tmp byteArrayChannel
@@ -286,18 +287,6 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 // record the result buffer
                 readBufs.add(ByteBuffer.wrap(b.toJavaArray()));
                 setSelfFDReadable();
-                // check what's left in the buffer
-                if (tmp.used() == 0) {
-                    // nothing left
-                    tmp.reset();
-                } else {
-                    // move bytes to the most front
-                    ByteBuffer foo = ByteBuffer.allocate(tmp.used());
-                    tmp.read(foo);
-                    tmp.reset();
-                    foo.flip();
-                    tmp.write(foo);
-                }
                 // check the tmp buffer threshold
                 if (tmp.used() < Config.udpMtu) {
                     watchInsideFDReadable();
@@ -307,6 +296,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
         @Override
         public void writable(HandlerContext<SocketFD> ctx) {
+            assert Logger.lowLevelDebug("writable for " + ctx.getChannel() + " in " + ArqUDPSocketFD.this);
             while (true) {
                 ByteArrayChannel buf = writeBufs.peek();
 
@@ -361,6 +351,6 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     @Override
     public String toString() {
-        return this.getClass().getName() + "(" + fd + ")";
+        return this.getClass().getSimpleName() + "(" + fd + ")";
     }
 }
