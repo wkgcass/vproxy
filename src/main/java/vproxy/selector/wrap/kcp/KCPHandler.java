@@ -66,7 +66,12 @@ public class KCPHandler extends ArqUDPHandler {
     }
 
     @Override
-    public void clock(long ts) {
+    public void clock(long ts) throws IOException {
         kcp.update(ts);
+        int state = kcp.getState();
+        if (state < 0) {
+            assert Logger.lowLevelDebug("kcp connection is invalid, state = " + state);
+            throw new IOException("the kcp connection is invalid");
+        }
     }
 }

@@ -24,5 +24,5 @@ public abstract class ArqUDPHandler {
      */
     abstract public void write(ByteArray input) throws IOException;
 
-    abstract public void clock(long ts);
+    abstract public void clock(long ts) throws IOException;
 }
