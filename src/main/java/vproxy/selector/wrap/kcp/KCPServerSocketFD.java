@@ -7,7 +7,7 @@ import vproxy.selector.wrap.arqudp.ArqUDPServerSocketFD;
 import vproxy.selector.wrap.udp.ServerDatagramFD;
 
 public class KCPServerSocketFD extends ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
-    public KCPServerSocketFD(ServerDatagramFD fd, SelectorEventLoop loop) {
-        super(fd, loop, sockFD -> f -> new KCPHandler(f, sockFD));
+    public KCPServerSocketFD(ServerDatagramFD fd, SelectorEventLoop loop, KCPHandler.KCPOptions opts) {
+        super(fd, loop, sockFD -> f -> new KCPHandler(f, sockFD, opts));
     }
 }

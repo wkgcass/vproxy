@@ -209,7 +209,7 @@ public class WebSocksProxyServer {
             servers.add(server);
         }
         if (useKcp) {
-            ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, KCPFDs.get());
+            ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, KCPFDs.getFast3());
             servers.add(server);
         }
         ServerSock redirectServer = null;

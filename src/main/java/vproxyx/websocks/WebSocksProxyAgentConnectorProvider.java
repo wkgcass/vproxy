@@ -505,7 +505,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             if (kcp) {
                 return ConnectableConnection.createUDP(connector.remote, new ConnectionOpts(),
                     RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384),
-                    loop, KCPFDs.get());
+                    loop, KCPFDs.getFast3());
             } else {
                 return connector.connect(
                     WebSocksUtils.getConnectionOpts(),
@@ -556,7 +556,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             if (kcp) {
                 return ConnectableConnection.createUDP(connector.remote,
                     new ConnectionOpts(), pair.left, pair.right,
-                    loop, KCPFDs.get());
+                    loop, KCPFDs.getFast3());
             } else {
                 return connector.connect(WebSocksUtils.getConnectionOpts(), pair.left, pair.right);
             }

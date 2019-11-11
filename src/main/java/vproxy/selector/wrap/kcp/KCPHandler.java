@@ -14,7 +14,26 @@ import java.util.function.Consumer;
 public class KCPHandler extends ArqUDPHandler {
     private final Kcp kcp;
 
-    protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier) {
+    public static class KCPOptions {
+        // config is copied from kcptun fast3
+        // https://github.com/xtaci/kcptun/blob/master/server/main.go#L371
+
+        public boolean nodelay = true;
+        public int interval = 10;
+        public int resend = 2;
+        public boolean nc = true;
+
+        public int sndWnd = 1024;
+        public int rcvWnd = 1024;
+
+        public int mtu = 1350;
+
+        // the following are my configurations
+        // decrease rto
+        public int rxMinRto = 30;
+    }
+
+    protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier, KCPOptions options) {
         super(emitter);
         this.kcp = new Kcp(0, (data, kcp) -> {
             assert Logger.lowLevelNetDebug("kcp wants to write " + data.chnl.used() + " bytes to " + kcp.getUser());
@@ -23,9 +42,10 @@ public class KCPHandler extends ArqUDPHandler {
         });
         this.kcp.setUser(identifier);
         // configure kcp
-        // config is copied from kcptun fast3
-        // https://github.com/xtaci/kcptun/blob/master/server/main.go#L371
-        kcp.nodelay(true, 10, 2, true);
+        kcp.nodelay(options.nodelay, options.interval, options.resend, options.nc);
+        kcp.wndsize(options.sndWnd, options.rcvWnd);
+        kcp.setMtu(options.mtu);
+        kcp.setRxMinrto(options.rxMinRto);
     }
 
     @Override

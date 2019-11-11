@@ -188,7 +188,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             Logger.shouldNotHappen("onRegister callback failed when adding fd " + fd + " to loop", e);
             throw new RuntimeException(e);
         }
-        periodicEvent = loop.period(10, () -> {
+        periodicEvent = loop.period(5, () -> {
             try {
                 handler.clock(Config.currentTimestamp);
             } catch (IOException e) {
