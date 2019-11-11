@@ -8,6 +8,7 @@ import vproxy.util.nio.ByteArrayChannel;
 
 import java.nio.ByteBuffer;
 
+@SuppressWarnings("UnusedReturnValue")
 public interface ByteArray {
     static ByteArray allocate(int len) {
         if (len == 0) {
@@ -66,7 +67,7 @@ public interface ByteArray {
         return ByteArray.from(toJavaArray());
     }
 
-    default ByteArrayChannel toChannel() {
+    default ByteArrayChannel toFullChannel() {
         return ByteArrayChannel.fromFull(this);
     }
 
@@ -107,7 +108,19 @@ public interface ByteArray {
         return this;
     }
 
+    /**
+     * <pre>
+     *      for (int i = off; i < off + len; i++)
+     *          dst.put(this[i]);
+     * </pre>
+     */
     void byteBufferPut(ByteBuffer dst, int off, int len);
 
+    /**
+     * <pre>
+     *      for (int i = off; i < off + len; i++)
+     *          this[i] = src.get();
+     * </pre>
+     */
     void byteBufferGet(ByteBuffer src, int off, int len);
 }

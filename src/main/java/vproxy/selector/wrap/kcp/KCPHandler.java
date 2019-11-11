@@ -4,10 +4,11 @@ import vproxy.selector.wrap.arqudp.ArqUDPHandler;
 import vproxy.selector.wrap.kcp.mock.ByteBuf;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.function.Consumer;
 
 public class KCPHandler extends ArqUDPHandler {
@@ -16,8 +17,8 @@ public class KCPHandler extends ArqUDPHandler {
     protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier) {
         super(emitter);
         this.kcp = new Kcp(0, (data, kcp) -> {
-            assert Logger.lowLevelDebug("kcp wants to write " + data.chnl.used() + " bytes to " + kcp.getUser());
-            assert Utils.printBytes(data.chnl.getBytes(), data.chnl.getReadOff(), data.chnl.getWriteOff());
+            assert Logger.lowLevelNetDebug("kcp wants to write " + data.chnl.used() + " bytes to " + kcp.getUser());
+            assert Logger.lowLevelNetDebugPrintBytes(data.chnl.getBytes(), data.chnl.getReadOff(), data.chnl.getWriteOff());
             emitter.accept(data.chnl);
         });
         this.kcp.setUser(identifier);
@@ -25,28 +26,28 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public ByteArray parse(ByteArrayChannel buf) throws IOException {
-        assert Logger.lowLevelDebug("kcp is inputting " + buf.used() + " bytes from " + kcp.getUser());
-        assert Utils.printBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
-
         int ret = kcp.input(new ByteBuf(buf));
         if (ret < 0) {
             throw new IOException("writing from network to kcp failed: " + ret);
         }
 
         ByteArray array = null;
-        while (true) {
-            final int cap = 512;
-            ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(cap);
-            ret = kcp.recv(new ByteBuf(chnl));
-            assert ret >= -1 || Logger.lowLevelDebug("reading from kcp to app failed: " + ret);
+        while (kcp.canRecv()) {
+            List<ByteBuf> arrays = new LinkedList<>();
+            ret = kcp.recv(arrays);
             if (ret <= 0) {
                 break;
             }
-            ByteArray foo = chnl.getArray().sub(0, ret);
-            if (array == null) {
-                array = foo;
-            } else {
-                array = array.concat(foo);
+            if (arrays.isEmpty()) {
+                break;
+            }
+            for (ByteBuf b : arrays) {
+                ByteArray a = b.chnl.readAll();
+                if (array == null) {
+                    array = a;
+                } else {
+                    array = array.concat(a);
+                }
             }
         }
         return array;

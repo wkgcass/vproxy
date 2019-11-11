@@ -21,6 +21,7 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
+import java.nio.channels.CancelledKeyException;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.function.Consumer;
@@ -103,7 +104,29 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             checkException();
             return 0;
         }
+
+        assert Utils.debug(() -> {
+            assert Logger.lowLevelNetDebug("BEGIN: readBufs inside ArqUDPSocketFD:=================");
+            for (ByteBuffer b : readBufs) {
+                assert Logger.lowLevelNetDebugPrintBytes(b.array(), b.position(), b.limit());
+                assert Logger.lowLevelNetDebug("---");
+            }
+            assert Logger.lowLevelNetDebug("END: readBufs inside ArqUDPSocketFD:=================");
+        });
+
+        int oldPos = dst.position();
         int ret = Utils.writeFromFIFOQueueToBuffer(readBufs, dst);
+
+        assert Utils.debug(() -> {
+            int newPos = dst.position();
+            dst.position(oldPos);
+            int n = newPos - oldPos;
+            byte[] content = new byte[n];
+            dst.get(content);
+            assert Logger.lowLevelNetDebug("read " + n + " bytes from ArqUDPSocketFD");
+            assert Logger.lowLevelNetDebugPrintBytes(content);
+        });
+
         checkException();
         if (readBufs.isEmpty()) {
             selector.removeVirtualReadable(this);
@@ -120,6 +143,8 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         checkException();
         byte[] copy = new byte[n];
         src.get(copy);
+        assert Logger.lowLevelNetDebug("write " + n + " bytes to ArqUDPSocketFD");
+        assert Logger.lowLevelNetDebugPrintBytes(copy);
 
         handler.write(ByteArray.from(copy));
         return n;
@@ -156,6 +181,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         if (!writeBufs.isEmpty()) {
             events = events.combine(EventSet.write());
         }
+        assert Logger.lowLevelDebug(this + ".onRegister() with events " + events);
         try {
             loop.add(fd, events, null, fdHandler);
         } catch (IOException e) {
@@ -167,6 +193,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     @Override
     public void onRemove() {
+        assert Logger.lowLevelDebug(this + ".onRemove()");
         if (periodicEvent != null) {
             periodicEvent.cancel();
         }
@@ -200,7 +227,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         }
 
         private void unwatchInsideFDWritable() {
-            loop.rmOps(fd, EventSet.write());
+            try {
+                loop.rmOps(fd, EventSet.write());
+            } catch (CancelledKeyException ignore) {
+                // if it's cancelled, it's removed, so ignore the exception
+            }
         }
 
         private void setSelfFDReadable() {
@@ -269,9 +300,10 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     return;
                 }
                 // read something, try to handle
+                // make a copy for data in tmp to make sure it will not be overwritten
                 ByteArray b;
                 try {
-                    b = handler.parse(tmp);
+                    b = handler.parse(tmp.readAll().copy().toFullChannel());
                 } catch (IOException e) {
                     error = e;
                     Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
@@ -313,8 +345,8 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     continue;
                 }
 
-                assert Logger.lowLevelDebug("kcp is writing " + buf.used() + " bytes to " + ctx.getChannel());
-                assert Utils.printBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
+                assert Logger.lowLevelNetDebug("kcp is writing " + buf.used() + " bytes to " + ctx.getChannel());
+                assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
 
                 // try to write data
                 ByteBuffer foo = ByteBuffer.allocate(buf.used());

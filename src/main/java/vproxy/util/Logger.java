@@ -128,4 +128,72 @@ public class Logger {
         t.printStackTrace(System.out);
         return true;
     }
+
+    public static boolean lowLevelNetDebugPrintBytes(byte[] array) {
+        if (lowLevelNetDebugOn) {
+            printBytes(array);
+        }
+        return true;
+    }
+
+    public static boolean lowLevelNetDebugPrintBytes(byte[] array, int off, int end) {
+        if (lowLevelNetDebugOn) {
+            printBytes(array, off, end);
+        }
+        return true;
+    }
+
+    public static void printBytes(byte[] array) {
+        printBytes(array, 0, array.length);
+    }
+
+    public static void printBytes(byte[] array, int off, int end) {
+        {
+            byte[] tmp = new byte[end - off];
+            System.arraycopy(array, off, tmp, 0, end - off);
+            array = tmp;
+        }
+
+        final int bytesPerLine = 36;
+        int lastLine = array.length % bytesPerLine;
+        if (lastLine == 0) {
+            lastLine = bytesPerLine;
+        }
+        int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
+        byte[][] linesArray = new byte[lines][];
+        for (int i = 0; i < linesArray.length - 1; ++i) {
+            linesArray[i] = new byte[bytesPerLine];
+        }
+        linesArray[linesArray.length - 1] = new byte[lastLine];
+
+        for (int i = 0; i < array.length; ++i) {
+            int idx0 = i / bytesPerLine;
+            int idx1 = i % bytesPerLine;
+            linesArray[idx0][idx1] = array[i];
+        }
+
+        for (int idx = 0; idx < linesArray.length; idx++) {
+            byte[] line = linesArray[idx];
+            System.out.print(Utils.bytesToHex(line));
+            System.out.print("    ");
+            if (idx == linesArray.length - 1) {
+                for (int i = 0; i < 2 * (bytesPerLine - lastLine); ++i) {
+                    System.out.print(" ");
+                }
+            }
+            char[] cs = new char[line.length];
+            for (int i = 0; i < line.length; ++i) {
+                int b = line[i];
+                if (b < 0) {
+                    b += 256;
+                }
+                if (b < 32 || b > 126) {
+                    cs[i] = '.';
+                } else {
+                    cs[i] = (char) b;
+                }
+            }
+            System.out.println(new String(cs));
+        }
+    }
 }

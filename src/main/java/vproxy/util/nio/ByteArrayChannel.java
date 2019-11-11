@@ -81,6 +81,13 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public void skip(int n) {
+        if (n < 0) {
+            throw new IllegalArgumentException("n = " + n + " < 0");
+        }
+
+        if (readOff + n > writeOff) {
+            throw new IndexOutOfBoundsException("readOff + n = " + readOff + " + " + n + " = " + (readOff + n) + " > writeOff(" + writeOff + ")");
+        }
         readOff += n;
     }
 
@@ -88,6 +95,28 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     public int write(ByteBuffer src) {
         int writeBytes = Math.min(writeLen, src.limit() - src.position());
         arr.byteBufferGet(src, writeOff, writeBytes);
+        writeOff += writeBytes;
+        writeLen -= writeBytes;
+        return writeBytes;
+    }
+
+    public int write(ByteArrayChannel src) {
+        return write(src, src.used());
+    }
+
+    public int write(ByteArrayChannel src, int len) {
+        if (len < 0) {
+            throw new IllegalArgumentException("len = " + len + " < 0");
+        }
+        if (src.used() < len) {
+            throw new IndexOutOfBoundsException("src.used = " + src.used() + ", len = " + len + " < 0");
+        }
+
+        int writeBytes = Math.min(writeLen, len);
+        ByteBuffer tmp = ByteBuffer.allocate(len);
+        src.read(tmp);
+        tmp.flip();
+        arr.byteBufferGet(tmp, writeOff, writeBytes);
         writeOff += writeBytes;
         writeLen -= writeBytes;
         return writeBytes;
@@ -118,20 +147,32 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public byte[] getBytes() {
-        if (initialReadOff == 0) {
-            return arr.toJavaArray();
+        return getArray().toJavaArray();
+    }
+
+    public ByteArray readableArray() {
+        int off = readOff;
+        int len = writeOff - readOff;
+        if (off == 0 && len == arr.length()) {
+            return arr;
         } else {
-            byte[] ret = new byte[arr.length() - initialReadOff];
-            arr.byteBufferPut(ByteBuffer.wrap(ret), initialReadOff, ret.length);
-            return ret;
+            return arr.sub(off, len);
         }
     }
 
+    public ByteArray readAll() {
+        ByteArray arr = readableArray();
+        readOff = writeOff; // everything read
+        return arr;
+    }
+
     public ByteArray getArray() {
-        if (initialReadOff == 0) {
+        int off = initialReadOff;
+        int len = initialWriteOff + initialWriteLen - initialReadOff;
+        if (off == 0 && len == arr.length()) {
             return arr;
         } else {
-            return arr.sub(initialReadOff, arr.length() - initialReadOff);
+            return arr.sub(off, len);
         }
     }
 
@@ -145,5 +186,10 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
 
     public int getReadOff() {
         return readOff - initialReadOff;
+    }
+
+    @Override
+    public String toString() {
+        return "ByteArrayChannel:" + arr.getClass().getSimpleName() + "(" + arr.sub(readOff, writeOff - readOff).toString().replaceAll("\\r|\\n", ".") + ")";
     }
 }

@@ -18,6 +18,8 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public byte get(int idx) {
+        checkBoundForOffset(idx);
+
         if (idx >= len || idx < 0)
             throw new ArrayIndexOutOfBoundsException("index=" + idx + ", length=" + len);
         if (idx < first.length()) {
@@ -29,6 +31,8 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public ByteArray set(int idx, byte value) {
+        checkBoundForOffset(idx);
+
         if (idx >= len || idx < 0)
             throw new ArrayIndexOutOfBoundsException("index=" + idx + ", length=" + len);
         if (idx < first.length()) {
@@ -46,6 +50,8 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public void byteBufferPut(ByteBuffer dst, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(dst, off, len);
+
         int firstLen = first.length();
         if (off > firstLen) {
             second.byteBufferPut(dst, off - firstLen, len);
@@ -61,6 +67,8 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public void byteBufferGet(ByteBuffer src, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(src, off, len);
+
         int firstLen = first.length();
         if (off > firstLen) {
             second.byteBufferGet(src, off - firstLen, len);

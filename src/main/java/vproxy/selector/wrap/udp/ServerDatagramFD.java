@@ -303,7 +303,10 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public void onRegister() {
-            // do nothing
+            if (!bufs.isEmpty()) {
+                setReadable();
+            }
+            setWritable();
         }
 
         @Override

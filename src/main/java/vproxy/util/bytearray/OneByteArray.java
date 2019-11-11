@@ -18,7 +18,7 @@ public class OneByteArray extends AbstractByteArray {
     public byte get(int idx) {
         if (idx == 0)
             return b;
-        throw new ArrayIndexOutOfBoundsException("" + idx);
+        throw new ArrayIndexOutOfBoundsException("off=" + idx);
     }
 
     @Override
@@ -27,7 +27,7 @@ public class OneByteArray extends AbstractByteArray {
             b = value;
             return this;
         }
-        throw new ArrayIndexOutOfBoundsException("" + idx);
+        throw new ArrayIndexOutOfBoundsException("off=" + idx);
     }
 
     @Override
@@ -37,12 +37,7 @@ public class OneByteArray extends AbstractByteArray {
 
     @Override
     public void byteBufferPut(ByteBuffer dst, int off, int len) {
-        if (len > 1) {
-            throw new ArrayIndexOutOfBoundsException("" + len);
-        }
-        if (off != 0) {
-            throw new ArrayIndexOutOfBoundsException("" + off);
-        }
+        checkBoundForByteBufferAndOffsetAndLength(dst, off, len);
         if (len == 0)
             return;
         dst.put(b);
@@ -50,12 +45,7 @@ public class OneByteArray extends AbstractByteArray {
 
     @Override
     public void byteBufferGet(ByteBuffer src, int off, int len) {
-        if (len > 1) {
-            throw new ArrayIndexOutOfBoundsException("" + len);
-        }
-        if (off != 0) {
-            throw new ArrayIndexOutOfBoundsException("" + off);
-        }
+        checkBoundForByteBufferAndOffsetAndLength(src, off, len);
         if (len == 0)
             return;
         b = src.get();

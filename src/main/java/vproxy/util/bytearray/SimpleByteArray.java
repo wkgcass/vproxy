@@ -13,11 +13,13 @@ public class SimpleByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public byte get(int idx) {
+        checkBoundForOffset(idx);
         return array[idx];
     }
 
     @Override
     public ByteArray set(int idx, byte value) {
+        checkBoundForOffset(idx);
         array[idx] = value;
         return this;
     }
@@ -39,11 +41,13 @@ public class SimpleByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public void byteBufferPut(ByteBuffer dst, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(dst, off, len);
         dst.put(array, off, len);
     }
 
     @Override
     public void byteBufferGet(ByteBuffer src, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(src, off, len);
         src.get(array, off, len);
     }
 }

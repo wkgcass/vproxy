@@ -143,7 +143,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
                 Segment(ByteArray byteArray) {
                     this.isProxy = false;
-                    this.chnl = byteArray.toChannel();
+                    this.chnl = byteArray.toFullChannel();
                     this.bytesToProxy = 0;
                 }
 
@@ -419,7 +419,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             public final ByteArrayChannel chnl;
 
             Segment(ByteArray byteArray) {
-                this.chnl = byteArray.toChannel();
+                this.chnl = byteArray.toFullChannel();
             }
         }
 

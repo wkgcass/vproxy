@@ -20,15 +20,13 @@ public class SubByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public byte get(int idx) {
-        if (idx >= len || idx < 0)
-            throw new ArrayIndexOutOfBoundsException("index=" + idx + ", length=" + len);
+        checkBoundForOffset(idx);
         return source.get(idx + from);
     }
 
     @Override
     public ByteArray set(int idx, byte value) {
-        if (idx >= len || idx < 0)
-            throw new ArrayIndexOutOfBoundsException("index=" + idx + ", length=" + len);
+        checkBoundForOffset(idx);
         source.set(from + idx, value);
         return this;
     }
@@ -40,11 +38,13 @@ public class SubByteArray extends AbstractByteArray implements ByteArray {
 
     @Override
     public void byteBufferPut(ByteBuffer dst, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(dst, off, len);
         source.byteBufferPut(dst, off + from, len);
     }
 
     @Override
     public void byteBufferGet(ByteBuffer src, int off, int len) {
+        checkBoundForByteBufferAndOffsetAndLength(src, off, len);
         source.byteBufferGet(src, off + from, len);
     }
 }

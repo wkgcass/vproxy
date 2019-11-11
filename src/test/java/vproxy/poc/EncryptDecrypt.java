@@ -1,7 +1,7 @@
 package vproxy.poc;
 
+import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
 import vproxy.util.crypto.Aes256Key;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
@@ -49,7 +49,7 @@ public class EncryptDecrypt {
                     byte[] arr = new byte[len];
                     plain.writeTo(ByteArrayChannel.fromEmpty(arr));
 
-                    Utils.printBytes(arr);
+                    Logger.printBytes(arr);
                 }
                 System.out.println("- - - - - - - -");
             }
@@ -66,7 +66,7 @@ public class EncryptDecrypt {
             byte[] encryptedArray = new byte[encryptBuf.used()];
             encryptBuf.writeTo(ByteArrayChannel.fromEmpty(encryptedArray));
 
-            Utils.printBytes(encryptedArray);
+            Logger.printBytes(encryptedArray);
             if (!Arrays.equals(encryptedArray, hexStringToByteArray(toDecrypt[0] + toDecrypt[1]))) {
                 throw new Exception("encrypting failed");
             }
