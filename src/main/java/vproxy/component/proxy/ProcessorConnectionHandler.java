@@ -324,7 +324,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     return;
                 }
                 assert Logger.lowLevelDebug("the message is totally read, feeding to processor");
-                ByteArray data = ByteArray.from(chnl.getBytes());
+                ByteArray data = chnl.getArray();
                 chnl = null;
                 ByteArray dataToSend;
                 try {
@@ -623,7 +623,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 return;
             }
             assert Logger.lowLevelDebug("data reading is done now");
-            ByteArray data = ByteArray.from(chnl.getBytes());
+            ByteArray data = chnl.getArray();
             chnl = null;
             // handle the data
             ByteArray bytesToSend;
