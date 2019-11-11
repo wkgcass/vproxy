@@ -3,7 +3,6 @@ package vproxy.selector.wrap.udp;
 import vfd.*;
 import vproxy.app.Config;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.selector.TimerEvent;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.selector.wrap.WritableAware;
@@ -149,30 +148,12 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         private final Deque<ByteBuffer> bufs = new LinkedList<>();
 
         private final SocketAddress remoteAddress;
-        private TimerEvent expireTimer;
-        private long lastTimestamp;
 
         private boolean closed = false;
 
         VirtualDatagramFD(SocketAddress remoteAddress) {
             this.remoteAddress = remoteAddress;
-            lastTimestamp = Config.currentTimestamp;
-            expireTimer = loop.delay(Config.udpTimeout, this::checkAndHandleExpire);
         }
-
-        private void checkAndHandleExpire() {
-            long now = Config.currentTimestamp;
-            if (now - lastTimestamp > Config.udpTimeout) {
-                // expired
-                expireTimer = null;
-                close();
-            } else {
-                // not expired, reset the timer
-                int wait = (int) (lastTimestamp + Config.udpTimeout - now);
-                expireTimer = loop.delay(wait, this::checkAndHandleExpire);
-            }
-        }
-
 
         @Override
         public void connect(InetSocketAddress l4addr) {
@@ -206,8 +187,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public int read(ByteBuffer dst) {
-            lastTimestamp = Config.currentTimestamp;
-
             int ret = Utils.writeFromFIFOQueueToBuffer(bufs, dst);
 
             if (bufs.isEmpty()) {
@@ -220,7 +199,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public int write(ByteBuffer src) throws IOException {
-            lastTimestamp = Config.currentTimestamp;
             int contained = src.limit() - src.position();
             int wrote = server.send(src, remoteAddress);
             if (wrote < contained) {
@@ -280,10 +258,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
                 return;
             }
             closed = true;
-            if (expireTimer != null) {
-                expireTimer.cancel();
-                expireTimer = null;
-            }
             cancelReadable();
             cancelWritable(false);
 
