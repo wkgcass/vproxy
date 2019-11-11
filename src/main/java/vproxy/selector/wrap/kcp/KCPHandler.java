@@ -22,6 +22,10 @@ public class KCPHandler extends ArqUDPHandler {
             emitter.accept(data.chnl);
         });
         this.kcp.setUser(identifier);
+        // configure kcp
+        // config is copied from kcptun fast3
+        // https://github.com/xtaci/kcptun/blob/master/server/main.go#L371
+        kcp.nodelay(true, 10, 2, true);
     }
 
     @Override
