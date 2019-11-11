@@ -12,8 +12,6 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class KCPHandler extends ArqUDPHandler {
-    private final Kcp kcp;
-
     public static class KCPOptions {
         // config is copied from kcptun fast3
         // https://github.com/xtaci/kcptun/blob/master/server/main.go#L371
@@ -31,7 +29,13 @@ public class KCPHandler extends ArqUDPHandler {
         // the following are my configurations
         // decrease rto
         public int rxMinRto = 30;
+
+        // alert the kcp every few ms
+        public int clockInterval = 5;
     }
+
+    private final Kcp kcp;
+    private final KCPOptions opts;
 
     protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier, KCPOptions options) {
         super(emitter);
@@ -46,6 +50,7 @@ public class KCPHandler extends ArqUDPHandler {
         kcp.wndsize(options.sndWnd, options.rcvWnd);
         kcp.setMtu(options.mtu);
         kcp.setRxMinrto(options.rxMinRto);
+        this.opts = options;
     }
 
     @Override
@@ -93,5 +98,10 @@ public class KCPHandler extends ArqUDPHandler {
             assert Logger.lowLevelDebug("kcp connection is invalid, state = " + state);
             throw new IOException("the kcp connection is invalid");
         }
+    }
+
+    @Override
+    public int clockInterval() {
+        return opts.clockInterval;
     }
 }

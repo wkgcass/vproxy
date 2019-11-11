@@ -25,6 +25,7 @@ public class KCPFDs implements UDPBasedFDs {
             opts.nodelay = false;
             opts.interval = 30;
             opts.rxMinRto = 60;
+            opts.clockInterval = 10;
             instanceFast1 = new KCPFDs(opts);
         }
         {
@@ -33,6 +34,7 @@ public class KCPFDs implements UDPBasedFDs {
             opts.nodelay = false;
             opts.interval = 40;
             opts.rxMinRto = 100;
+            opts.clockInterval = 10;
             instanceNormal = new KCPFDs(opts);
         }
     }
