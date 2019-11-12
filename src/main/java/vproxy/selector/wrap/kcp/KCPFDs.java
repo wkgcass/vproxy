@@ -1,12 +1,12 @@
 package vproxy.selector.wrap.kcp;
 
 import vproxy.selector.SelectorEventLoop;
-import vproxy.selector.wrap.udp.UDPBasedFDs;
+import vproxy.selector.wrap.arqudp.ArqUDPBasedFDs;
 import vproxy.selector.wrap.udp.UDPFDs;
 
 import java.io.IOException;
 
-public class KCPFDs implements UDPBasedFDs {
+public class KCPFDs implements ArqUDPBasedFDs {
     private static final KCPFDs instanceFast3 = new KCPFDs(new KCPHandler.KCPOptions());
     private static final KCPFDs instanceFast2;
     private static final KCPFDs instanceFast1;

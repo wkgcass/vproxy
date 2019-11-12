@@ -21,6 +21,10 @@ public class NetEventLoopEchoServer {
     static NetEventLoop create(int port, UDPBasedFDs fds) throws IOException {
         // create the event loop for network operations
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
+        return create(selectorEventLoop, port, fds);
+    }
+
+    static NetEventLoop create(SelectorEventLoop selectorEventLoop, int port, UDPBasedFDs fds) throws IOException {
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server wrapper object
         ServerSock server;

@@ -53,7 +53,11 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
     }
 
     public static ByteArrayChannel from(byte[] arr, int readOff, int writeOff, int writeLen) {
-        return new ByteArrayChannel(ByteArray.from(arr), readOff, writeOff, writeLen);
+        return from(ByteArray.from(arr), readOff, writeOff, writeLen);
+    }
+
+    public static ByteArrayChannel from(ByteArray arr, int readOff, int writeOff, int writeLen) {
+        return new ByteArrayChannel(arr, readOff, writeOff, writeLen);
     }
 
     public static ByteArrayChannel fromFull(ByteArray arr) {

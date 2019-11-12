@@ -51,6 +51,10 @@ public interface ByteArray {
     }
 
     default byte[] toJavaArray() {
+        return toNewJavaArray();
+    }
+
+    default byte[] toNewJavaArray() {
         int len = length();
         byte[] array = new byte[len];
         for (int i = 0; i < len; ++i) {
@@ -60,11 +64,11 @@ public interface ByteArray {
     }
 
     default ByteArray arrange() {
-        return new SimpleByteArray(toJavaArray());
+        return new SimpleByteArray(toNewJavaArray());
     }
 
     default ByteArray copy() {
-        return ByteArray.from(toJavaArray());
+        return ByteArray.from(toNewJavaArray());
     }
 
     default ByteArrayChannel toFullChannel() {
