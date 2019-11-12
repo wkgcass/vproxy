@@ -69,7 +69,7 @@ public class WebSocksProxyAgent {
         }
 
         // parse config
-        ConfigProcessor configProcessor = new ConfigProcessor(configFile, worker);
+        ConfigProcessor configProcessor = new ConfigProcessor(configFile, worker, worker);
         configProcessor.parse();
 
         assert Logger.lowLevelDebug("listen on " + configProcessor.getListenPort());

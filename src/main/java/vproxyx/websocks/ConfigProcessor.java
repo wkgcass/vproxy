@@ -4,7 +4,11 @@ import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
+import vproxy.connection.NetEventLoop;
 import vproxy.dns.Resolver;
+import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.h2streamed.H2StreamedClientFDs;
+import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.BlockCallback;
 import vproxy.util.Utils;
 
@@ -17,6 +21,7 @@ import java.util.regex.Pattern;
 public class ConfigProcessor {
     public final String fileName;
     public final EventLoopGroup hcLoopGroup;
+    public final EventLoopGroup workerLoopGroup;
     private int listenPort = 1080;
     private int httpConnectListenPort = 0;
     private int ssListenPort = 0;
@@ -36,9 +41,10 @@ public class ConfigProcessor {
     private String pacServerIp;
     private int pacServerPort;
 
-    public ConfigProcessor(String fileName, EventLoopGroup hcLoopGroup) {
+    public ConfigProcessor(String fileName, EventLoopGroup hcLoopGroup, EventLoopGroup workerLoopGroup) {
         this.fileName = fileName;
         this.hcLoopGroup = hcLoopGroup;
+        this.workerLoopGroup = workerLoopGroup;
     }
 
     public int getListenPort() {
@@ -398,7 +404,24 @@ public class ConfigProcessor {
 
                 // this will be used when connection establishes to remote
                 // in WebSocksProxyAgentConnectorProvider.java
-                handle.data = new SharedData(useSSL, useKCP);
+                Map<SelectorEventLoop, H2StreamedClientFDs> fds = new HashMap<>();
+                {
+                    // build fds map
+                    Set<NetEventLoop> set = new HashSet<>();
+                    while (true) {
+                        NetEventLoop l = workerLoopGroup.next();
+                        if (!set.add(l)) {
+                            // all loops visited
+                            break;
+                        }
+                        // build for this remote server
+                        KCPFDs kcpFDs = KCPFDs.getFast3();
+                        H2StreamedClientFDs h2sFDs = new H2StreamedClientFDs(kcpFDs, l.getSelectorEventLoop(),
+                            handle.server);
+                        fds.put(l.getSelectorEventLoop(), h2sFDs);
+                    }
+                }
+                handle.data = new SharedData(useSSL, useKCP, fds);
             } else {
                 //noinspection ConstantConditions
                 assert step == 2;

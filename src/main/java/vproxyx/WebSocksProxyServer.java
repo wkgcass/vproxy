@@ -13,8 +13,9 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.VirtualFD;
+import vproxy.selector.wrap.h2streamed.H2StreamedServerFDs;
 import vproxy.selector.wrap.kcp.KCPFDs;
-import vproxy.selector.wrap.kcp.KCPServerSocketFD;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
@@ -209,7 +210,9 @@ public class WebSocksProxyServer {
             servers.add(server);
         }
         if (useKcp) {
-            ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, KCPFDs.getFast3());
+            KCPFDs kcpFDs = KCPFDs.getFast3();
+            H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, listeningServerL4addr);
+            ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, serverFds);
             servers.add(server);
         }
         ServerSock redirectServer = null;
@@ -286,7 +289,7 @@ public class WebSocksProxyServer {
         };
         for (ServerSock server : servers) {
             NetEventLoopProvider loopProvider;
-            if (server.channel instanceof KCPServerSocketFD) {
+            if (server.channel instanceof VirtualFD) {
                 loopProvider = v -> netLoopForKcp;
             } else {
                 loopProvider = worker::next;
