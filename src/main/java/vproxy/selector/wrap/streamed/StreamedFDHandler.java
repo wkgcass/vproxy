@@ -562,6 +562,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         if (arr == null || arr.length() == 0) {
             return;
         }
+        assert Logger.lowLevelNetDebug("addMessageToWrite");
+        assert Logger.lowLevelNetDebugPrintBytes(arr.toJavaArray());
         messagesToWrite.add(arr);
         watchWritable();
     }

@@ -6,6 +6,8 @@ import vfd.SocketFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -47,6 +49,7 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
 
     @Override
     public SocketFD accept() throws IOException {
+        assert Logger.lowLevelDebug("accept() called on " + this);
         if (!isOpen) {
             throw new IOException("the fd is closed: " + this);
         }
@@ -67,11 +70,12 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     @Override
     public void onRegister() {
         // ignore
+        assert Logger.lowLevelDebug("calling onRegister() on " + this);
     }
 
     @Override
     public void onRemove() {
-        // ignore
+        Logger.error(LogType.IMPROPER_USE, "removing the streamed server socket fd from loop: " + this);
     }
 
     @Override
@@ -103,7 +107,13 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     void accepted(StreamedFD fd) {
+        assert Logger.lowLevelDebug("accepted(" + fd + ") called on " + this);
         acceptQueue.add(fd);
         selector.registerVirtualReadable(this);
+    }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "(local=" + local + ")";
     }
 }

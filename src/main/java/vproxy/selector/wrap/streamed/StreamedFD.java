@@ -5,6 +5,7 @@ import vfd.SocketFD;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.ByteArray;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -67,16 +68,19 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     private void setReadable() {
+        assert Logger.lowLevelDebug("set readable for " + this);
         selector.registerVirtualReadable(this);
         readable = true;
     }
 
     private void setWritable() {
+        assert Logger.lowLevelDebug("set writable for " + this);
         selector.registerVirtualWritable(this);
         writable = true;
     }
 
     private void cancelReadable() {
+        assert Logger.lowLevelDebug("cancel readable for " + this);
         selector.removeVirtualReadable(this);
         readable = false;
     }
@@ -91,6 +95,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     public void setState(State newState) {
+        assert Logger.lowLevelDebug("state for " + this + " changes: old=" + state + ", new=" + newState);
         if (this.state != State.established && newState == State.established) {
             setWritable();
         } else if (newState == State.fin_recv || newState == State.dead) {
@@ -160,6 +165,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     @Override
     public int read(ByteBuffer dst) throws IOException {
+        assert Logger.lowLevelDebug("read() called on " + this);
         checkState();
         if (readableBuffers.isEmpty()) {
             if (state == State.fin_recv || state == State.dead) {
@@ -172,6 +178,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
             // nothing can be read anymore
             cancelReadable();
         }
+        assert Logger.lowLevelDebug("read() returns " + n + " bytes");
         return n;
     }
 
@@ -244,6 +251,8 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     void inputData(ByteArray data) {
+        assert Logger.lowLevelNetDebug("calling input with " + data.length());
+        assert Logger.lowLevelNetDebugPrintBytes(data.toJavaArray());
         readableBuffers.add(ByteBuffer.wrap(data.toJavaArray()));
         setReadable();
     }
