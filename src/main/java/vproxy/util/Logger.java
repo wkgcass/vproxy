@@ -6,11 +6,11 @@ public class Logger {
     private static final boolean lowLevelDebugOn;
     private static final boolean lowLevelNetDebugOn;
 
-    private static final String DEBUG_COLOR = "\033[0;36m";
-    private static final String INFO_COLOR = "\033[0;32m";
-    private static final String WARN_COLOR = "\033[0;33m";
-    private static final String ERROR_COLOR = "\033[0;31m";
-    private static final String RESET_COLOR = "\033[0m";
+    public static final String DEBUG_COLOR = "\033[0;36m";
+    public static final String INFO_COLOR = "\033[0;32m";
+    public static final String WARN_COLOR = "\033[0;33m";
+    public static final String ERROR_COLOR = "\033[0;31m";
+    public static final String RESET_COLOR = "\033[0m";
 
     static {
         {
@@ -118,6 +118,10 @@ public class Logger {
 
     public static void alert(String msg) {
         info(LogType.ALERT, msg);
+    }
+
+    public static void probe(String msg) {
+        System.out.println(DEBUG_COLOR + current() + LogType.PROBE + " - " + RESET_COLOR + msg);
     }
 
     public static void shouldNotHappen(String msg, Throwable err) {

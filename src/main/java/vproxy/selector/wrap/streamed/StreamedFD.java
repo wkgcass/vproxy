@@ -34,13 +34,19 @@ public class StreamedFD implements SocketFD, VirtualFD {
     private boolean writable = false;
 
     public enum State {
-        none,
-        syn_sent,
-        established,
-        fin_sent,
-        fin_recv,
-        dead,
-        real_closed,
+        none(Logger.DEBUG_COLOR),
+        syn_sent(Logger.WARN_COLOR),
+        established(Logger.INFO_COLOR),
+        fin_sent(Logger.WARN_COLOR),
+        fin_recv(Logger.WARN_COLOR),
+        dead(Logger.ERROR_COLOR),
+        real_closed(Logger.ERROR_COLOR),
+        ;
+        public final String probeColor;
+
+        State(String probeColor) {
+            this.probeColor = probeColor;
+        }
     }
 
     public StreamedFD(int streamId,
@@ -214,11 +220,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     @Override
     public <T> void setOption(SocketOption<T> name, T value) {
         if (name == StandardSocketOptions.SO_LINGER) {
-            if (Integer.valueOf(0).equals(value)) {
-                soLinger0 = true;
-            } else {
-                soLinger0 = false;
-            }
+            soLinger0 = Integer.valueOf(0).equals(value);
         }
     }
 

@@ -2,11 +2,11 @@ package vproxy.selector.wrap.h2streamed;
 
 import vproxy.selector.wrap.streamed.StreamedFDHandler;
 import vproxy.util.ByteArray;
+import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.List;
 
 public class H2StreamedFDHandler extends StreamedFDHandler {
@@ -17,14 +17,15 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
     );
     private static final byte TYPE_DATA = 0x0;
     private static final byte TYPE_HEADER = 0x1;
-    private static final byte TYPE_RST = 0x3;
     private static final byte TYPE_SETTINGS = 0x4;
     private static final byte TYPE_PING = 0x6;
     private static final byte TYPE_GOAWAY = 0x7;
     private static final List<Byte> validTypes = Arrays.asList(
-        TYPE_DATA, TYPE_HEADER, TYPE_RST, TYPE_PING, TYPE_GOAWAY
+        TYPE_DATA, TYPE_HEADER, TYPE_PING, TYPE_GOAWAY // TYPE_SETTINGS is not valid after handshaking
     );
-    private static final List<Byte> validTypesWithPayload = Collections.singletonList(TYPE_DATA);
+    private static final List<Byte> validTypesWithPayload = Arrays.asList(TYPE_DATA, TYPE_GOAWAY);
+
+    private static final byte FLAG_CLOSE_STREAM = 0x1;
 
     private static ByteArray getEmptySettings() {
         return HEAD.copy().set(3, TYPE_SETTINGS);
@@ -38,12 +39,23 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         return HEAD.copy().set(3, TYPE_PING);
     }
 
-    private static ByteArray getEmptyGoAway(int streamId) {
-        return HEAD.copy().set(3, TYPE_GOAWAY).int32(5, streamId);
+    @SuppressWarnings("SameParameterValue")
+    private static ByteArray getGoAway(int lastStreamId, int errorCode, String msg) {
+        byte[] bytes = msg.getBytes();
+        return HEAD.copy()
+            .int24(0, 4 /*R+Last-Stream-ID*/ + 4 /*Error Code*/ + bytes.length)
+            .set(3, TYPE_GOAWAY)
+            .concat(ByteArray.allocate(4).int32(0, lastStreamId))
+            .concat(ByteArray.allocate(4).int32(0, errorCode))
+            .concat(ByteArray.from(bytes));
     }
 
-    private static ByteArray getEmptyRst(int streamId) {
-        return HEAD.copy().set(3, TYPE_RST).int32(5, streamId);
+    private static ByteArray getEmptyCloseStreamHeader(int streamId) {
+        return HEAD.copy().set(3, TYPE_HEADER).set(4, FLAG_CLOSE_STREAM).int32(5, streamId);
+    }
+
+    private static ByteArray getEmptyCloseStreamData(int streamId) {
+        return HEAD.copy().set(3, TYPE_DATA).set(4, FLAG_CLOSE_STREAM).int32(5, streamId);
     }
 
     private static ByteArray getData(int streamId, ByteArray array) {
@@ -52,6 +64,16 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
 
     protected H2StreamedFDHandler(boolean client) {
         super(client);
+    }
+
+    @Override
+    protected ByteArray errorMessage(IOException err) {
+        String msg = err.getMessage();
+        if (msg == null || msg.isBlank()) {
+            msg = err.getClass().getName();
+        }
+        msg = msg.trim();
+        return getGoAway(-1, -1, msg);
     }
 
     @Override
@@ -65,6 +87,16 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
             return 0;
         }
         if (!array.sub(0, HEAD.length()).equals(getEmptySettings())) {
+            // check whether is GOAWAY
+            byte type = type(array);
+            if (type == TYPE_GOAWAY) {
+                int len = len(array);
+                if (array.length() < HEAD.length() + len) {
+                    return 0; // the frame is not complete, wait for next call
+                }
+                handleGoAway(array);
+            }
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "got invalid handshake message, type=" + type);
             throw new IOException("handshake message is invalid");
         }
         return HEAD.length();
@@ -85,6 +117,10 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
 
     private byte type(ByteArray array) {
         return array.get(3);
+    }
+
+    private byte flag(ByteArray array) {
+        return array.get(4);
     }
 
     private int streamId(ByteArray array) {
@@ -108,26 +144,48 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         }
     }
 
-    private int handleGeneralFeedData(int len, byte type, int streamId, ByteArray array) throws IOException {
+    private void handleGoAway(ByteArray array) throws IOException {
+        int len = len(array);
+        IOException error;
+        if (len < 8) {
+            // no error message present
+            error = new IOException("GOAWAY");
+        } else {
+            error = new IOException(new String(array.sub(HEAD.length() + 8, len - 8).toJavaArray()));
+        }
+        errorReceived(error);
+    }
+
+    private int handleGeneralFeedData(int len, byte type, byte flag, int streamId, ByteArray array) throws IOException {
         switch (type) {
             case TYPE_DATA:
                 if (len == 0) {
+                    if ((flag & FLAG_CLOSE_STREAM) == FLAG_CLOSE_STREAM) {
+                        // similar to FIN
+                        finReceived(streamId);
+                    }
                     return HEAD.length();
                 }
                 dataForStream(streamId, array.sub(HEAD.length(), len));
+                // maybe fin with data (similar to PSH,FIN)
+                if ((flag & FLAG_CLOSE_STREAM) == FLAG_CLOSE_STREAM) {
+                    finReceived(streamId);
+                }
                 return HEAD.length() + len;
             case TYPE_HEADER:
-                synReceived(streamId);
+                if ((flag & FLAG_CLOSE_STREAM) == FLAG_CLOSE_STREAM) {
+                    // reset
+                    rstReceived(streamId);
+                } else {
+                    synReceived(streamId);
+                }
                 return HEAD.length();
-            case TYPE_RST:
-                rstReceived(streamId);
-                return HEAD.length();
+            case TYPE_GOAWAY:
+                handleGoAway(array);
+                return HEAD.length() + len;
             case TYPE_PING:
                 // keep-alive packet
                 // ignore
-                return HEAD.length();
-            case TYPE_GOAWAY:
-                finReceived(streamId);
                 return HEAD.length();
             default:
                 throw new IOException("invalid frame type: " + type);
@@ -147,10 +205,11 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         }
         byte type = type(array);
         checkType(type, len);
+        byte flag = flag(array);
         int streamId = streamId(array);
         checkStreamId(streamId);
 
-        return handleGeneralFeedData(len, type, streamId, array);
+        return handleGeneralFeedData(len, type, flag, streamId, array);
     }
 
     @Override
@@ -175,7 +234,7 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
 
     @Override
     protected ByteArray formatFIN(int streamId) {
-        return getEmptyGoAway(streamId);
+        return getEmptyCloseStreamData(streamId);
     }
 
     @Override
@@ -199,6 +258,6 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
 
     @Override
     protected ByteArray formatRST(int streamId) {
-        return getEmptyRst(streamId);
+        return getEmptyCloseStreamHeader(streamId);
     }
 }

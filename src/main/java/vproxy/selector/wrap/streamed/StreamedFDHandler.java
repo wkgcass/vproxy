@@ -5,11 +5,13 @@ import vfd.SocketFD;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.TimerEvent;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -34,6 +36,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     private Consumer<ArqUDPSocketFD> readyCallback;
     private Consumer<ArqUDPSocketFD> invalidCallback;
     private Predicate<StreamedFD> acceptCallback;
+
+    private TimerEvent handshakeTimeout = null;
 
     protected StreamedFDHandler(boolean client) {
         this.client = client;
@@ -72,11 +76,37 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         Logger.shouldNotHappen("`accept` should not fire here");
     }
 
+    abstract protected ByteArray errorMessage(IOException err);
+
     abstract protected ByteArray clientHandshakeMessage();
 
     private void fail(IOException t) {
+        fail(t, true);
+    }
+
+    private boolean isFailed = false;
+
+    private void fail(IOException t, boolean sendRst) {
+        if (isFailed) {
+            return;
+        }
+        isFailed = true;
         Logger.error(LogType.CONN_ERROR, "the stream thrown exception", t);
-        invalidCallback.accept(fd);
+        if (sendRst) {
+            ByteArray err = errorMessage(t);
+            // add to the most front of the sending queue
+            state = -1; // update state to invalid state
+            pushMessageToWrite(err);
+            // wait for 1 second before alerting the upper level code
+            loop.delay(1_000, () -> invalidCallback.accept(fd));
+        } else {
+            invalidCallback.accept(fd);
+        }
+    }
+
+    @MethodForImplementation
+    protected final void errorReceived(IOException err) {
+        fail(err, false);
     }
 
     private int state = 0;
@@ -123,6 +153,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             Logger.shouldNotHappen("server should not fire `connected` event");
             return;
         }
+        // set a timer for handshaking (client)
+        handshakeTimeout = loop.delay(5_000, () -> fail(new IOException("handshake timed out")));
 
         // need to send handshake message
         ByteArray msg = clientHandshakeMessage();
@@ -140,8 +172,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         // everything wrote
         state = 1;
         // want to receive handshake, so unwatch writable and watch readable
-        loop.rmOps(fd, EventSet.write());
-        loop.addOps(fd, EventSet.read());
+        cancelWritable();
+        watchReadable();
     }
 
     private final ByteBuffer readBuf = ByteBuffer.allocate(1024);
@@ -216,6 +248,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     abstract protected ByteArray serverHandshakeMessage();
 
+    private void handshakeDone() {
+        handshakeTimeout.cancel();
+        state = 2;
+        readyCallback.accept(fd);
+    }
+
     private void clientReadable(@SuppressWarnings("unused") HandlerContext<SocketFD> ctx) {
         if (state == 0) {
             Logger.shouldNotHappen("client readable should not see state == 0");
@@ -233,8 +271,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             reduceReceivedMessage(n);
             // connection done
-            state = 2;
-            readyCallback.accept(fd);
+            handshakeDone();
         }
         // else will not be called
     }
@@ -256,6 +293,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // handshake read
             state = 1;
 
+            // set a timer for handshaking (server)
+            handshakeTimeout = loop.delay(5_000, () -> fail(new IOException("handshake timed out")));
+
             // need to send handshake message
             ByteArray msg = serverHandshakeMessage();
             cachedMessageToWrite = ByteArrayChannel.fromFull(msg);
@@ -265,12 +305,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             if (n == 0) {
                 // need to write more data
-                loop.addOps(fd, EventSet.write());
+                watchWritable();
                 return;
             }
             // handshake message sent
-            state = 2;
-            readyCallback.accept(fd);
+            handshakeDone();
         } else if (state == 1) {
             Logger.error(LogType.INVALID_EXTERNAL_DATA, "server should not fire readable in state = " + state);
         }
@@ -292,7 +331,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             return;
         }
-        assert state == 2;
+        assert state == 2 || state == -1;
 
         while (true) {
             int n;
@@ -323,8 +362,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // change state
             state = 1;
             // want to receive handshake, so unwatch writable and watch readable
-            loop.rmOps(fd, EventSet.write());
-            loop.addOps(fd, EventSet.read());
+            cancelWritable();
+            watchReadable();
         } else if (state == 1) {
             Logger.shouldNotHappen("client should not fire writable in state = " + state);
         }
@@ -337,9 +376,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         } else if (state == 1) {
             // everything wrote
             // update state
-            state = 2;
+            handshakeDone();
             // add readable and remove writable
-            loop.rmOps(fd, EventSet.write());
+            cancelWritable();
             // no need to add op_read because it's unnecessary to be removed for servers
         }
         // else will not be called
@@ -367,12 +406,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 }
                 return;
             }
-            assert state == 2;
+            assert state == 2 || state == -1;
 
             ByteArray arr = messagesToWrite.poll();
             if (arr == null) {
                 // nothing to write, no need to watch writable events
-                loop.rmOps(fd, EventSet.write());
+                cancelWritable();
                 return;
             }
             cachedMessageToWrite = ByteArrayChannel.fromFull(arr);
@@ -382,11 +421,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     @Override
     public final void removed(HandlerContext<SocketFD> ctx) {
         Logger.warn(LogType.IMPROPER_USE, "fd " + fd + " removed from loop, we have to invalid the fd");
-        try {
-            fd.close();
-        } catch (IOException e) {
-            Logger.error(LogType.CONN_ERROR, "closing fd " + fd + " failed", e);
-        }
+        fail(new IOException("arq udp socket removed from loop: " + fd));
     }
 
     private final Map<Integer, StreamedFD> fdMap = new HashMap<>();
@@ -493,7 +528,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 assert Logger.lowLevelDebug("server: calling synReceived on existing stream: " + streamId);
                 return false;
             }
-            accept(streamId);
+            if (!accept(streamId)) {
+                String err = "accepting " + streamId + " failed in arq udp socket " + fd;
+                Logger.error(LogType.IMPROPER_USE, err);
+                fail(new IOException(err));
+                return false;
+            }
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
@@ -554,8 +594,16 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         return true;
     }
 
+    private void watchReadable() {
+        loop.addOps(fd, EventSet.read());
+    }
+
     private void watchWritable() {
         loop.addOps(fd, EventSet.write());
+    }
+
+    private void cancelWritable() {
+        loop.rmOps(fd, EventSet.write());
     }
 
     private void addMessageToWrite(ByteArray arr) {
@@ -627,9 +675,34 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     abstract protected ByteArray keepaliveMessage();
 
     @MethodForFDs
-    final void keepalive() {
+    final void probe() {
+        // send keepalive message
         // add to the first of the queue
         pushMessageToWrite(keepaliveMessage());
+        // do probe
+        Logger.probe("keepalive message sent on arq udp socket " + fd);
+        // check recorded connections
+        try {
+            Logger.probe("isClient=" + client + ", state=" + state);
+            InetSocketAddress arqSockRemote = (InetSocketAddress) fd.getRemoteAddress();
+            String arqSockRemoteStr = Utils.l4addrStr(arqSockRemote);
+            for (Map.Entry<Integer, StreamedFD> entry : fdMap.entrySet()) {
+                int streamId = entry.getKey();
+                StreamedFD sfd = entry.getValue();
+                String local = Utils.l4addrStr((InetSocketAddress) sfd.getLocalAddress());
+                String remote = Utils.l4addrStr((InetSocketAddress) sfd.getRemoteAddress());
+
+                Logger.probe(
+                    "record: " + arqSockRemoteStr
+                        + " -> " + streamId
+                        + " -> " + local
+                        + "/" + remote
+                        + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + Logger.RESET_COLOR + "]"
+                );
+            }
+        } catch (Throwable t) {
+            Logger.shouldNotHappen("got exception when probing", t);
+        }
     }
 
     abstract protected int nextStreamId();

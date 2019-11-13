@@ -112,7 +112,7 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                 private void ready(ArqUDPSocketFD fd) {
                     StreamedFDHandler h = currentHandlers.get(fd);
                     assert h != null;
-                    loop.period(30_000, h::keepalive);
+                    loop.period(30_000, h::probe);
                     Logger.alert("streamed arq udp is ready: " + h.getClass().getSimpleName() + "(" + fd + ")");
                 }
 

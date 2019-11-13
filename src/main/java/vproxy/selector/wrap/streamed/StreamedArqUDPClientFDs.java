@@ -8,6 +8,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.arqudp.ArqUDPBasedFDs;
 import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
+import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
@@ -40,6 +41,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     }
 
     private void stop() {
+        Logger.error(LogType.PROBE, "streamed arq udp client is stopping: remote=" + remote);
         if (keepaliveEvent != null) {
             keepaliveEvent.cancel();
             keepaliveEvent = null;
@@ -53,8 +55,10 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
                 Logger.shouldNotHappen("closing fd " + fd + " failed", e);
             }
         }
-        currentHandler.clear();
-        currentHandler = null;
+        if (currentHandler != null) {
+            currentHandler.clear();
+            currentHandler = null;
+        }
     }
 
     private void restart(ArqUDPSocketFD fd) {
@@ -67,6 +71,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     }
 
     private void start() throws IOException {
+        Logger.probe("streamed arq udp client is starting: remote=" + remote);
         boolean failed = true;
         try {
             fd = fds.openSocketFD(loop);
@@ -88,7 +93,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private void ready(ArqUDPSocketFD fd) {
         ready = true;
         Logger.alert("streamed arq udp is ready: " + currentHandler.getClass().getSimpleName() + "(" + fd + ")");
-        keepaliveEvent = loop.period(30_000, currentHandler::keepalive);
+        keepaliveEvent = loop.period(30_000, currentHandler::probe);
     }
 
     @Override
