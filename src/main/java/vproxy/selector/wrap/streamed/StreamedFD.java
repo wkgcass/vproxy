@@ -158,14 +158,12 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
-        checkState();
+    public SocketAddress getLocalAddress() {
         return localAddress;
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
-        checkState();
+    public SocketAddress getRemoteAddress() {
         return remoteAddress;
     }
 

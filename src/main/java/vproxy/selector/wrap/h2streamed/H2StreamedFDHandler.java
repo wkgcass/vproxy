@@ -156,7 +156,7 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
             // no error message present
             error = new IOException("GOAWAY");
         } else {
-            error = new IOException(new String(array.sub(HEAD.length() + 8, len - 8).toJavaArray()));
+            error = new IOException("GOAWAY: " + new String(array.sub(HEAD.length() + 8, len - 8).toJavaArray()));
         }
         errorReceived(error);
     }

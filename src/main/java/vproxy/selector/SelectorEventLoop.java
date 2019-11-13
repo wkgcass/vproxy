@@ -98,7 +98,7 @@ public class SelectorEventLoop {
             ctx.attachment = registerData.att;
 
             if (!channel.isOpen()) {
-                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing");
+                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: " + channel);
             } else {
                 EventSet readyOps = key.ready;
                 // handle read first because it's most likely to happen

@@ -13,6 +13,7 @@ import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,7 +43,25 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     }
 
     private void init() throws IOException {
+        initProbe();
         start();
+    }
+
+    private void initProbe() {
+        loop.period(30_000, () -> {
+            String localStr = Utils.l4addrStr(local);
+            for (Map.Entry<ArqUDPSocketFD, StreamedFDHandler> entry : currentHandlers.entrySet()) {
+                ArqUDPSocketFD k = entry.getKey();
+                // StreamedFDHandler v = entry.getValue();
+
+                try {
+                    String remoteStr = Utils.l4addrStr((InetSocketAddress) k.getRemoteAddress());
+                    Logger.probe("accepted: " + localStr + " <- " + remoteStr);
+                } catch (Throwable t) {
+                    Logger.shouldNotHappen("got exception when probing", t);
+                }
+            }
+        });
     }
 
     private void stop() {

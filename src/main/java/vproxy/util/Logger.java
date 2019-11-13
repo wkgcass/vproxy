@@ -121,7 +121,8 @@ public class Logger {
     }
 
     public static void probe(String msg) {
-        System.out.println(DEBUG_COLOR + current() + LogType.PROBE + " - " + RESET_COLOR + msg);
+        String threadName = Thread.currentThread().getName();
+        System.out.println(DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg);
     }
 
     public static void shouldNotHappen(String msg, Throwable err) {

@@ -128,7 +128,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         });
 
         checkException();
-        if (readBufs.isEmpty()) {
+        if (readBufs.isEmpty() && !fdHandler.isInvalid()) {
             selector.removeVirtualReadable(this);
         }
         return ret;
@@ -141,6 +141,10 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             return 0;
         }
         checkException();
+        if (!handler.canWrite()) {
+            fdHandler.cancelSelfFDWritable();
+            return 0;
+        }
         byte[] copy = new byte[n];
         src.get(copy);
         assert Logger.lowLevelNetDebug("write " + n + " bytes to ArqUDPSocketFD");
@@ -320,6 +324,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
                     return;
                 }
+                // maybe ack is feed into the handler.parse method
+                // so we check whether we can write data now
+                if (handler.canWrite()) {
+                    setSelfFDWritable();
+                }
                 if (b == null) {
                     // still cannot handle
                     // want more data, so:
@@ -347,8 +356,6 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     // nothing to write
                     // so we do not care about inside writable event any more
                     unwatchInsideFDWritable();
-                    // also the application level can write data now
-                    setSelfFDWritable();
                     return;
                 }
                 if (buf.used() == 0) {
@@ -375,9 +382,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     // still have data to write,
 
                     // so the inside fd is not writable for now
-                    // so we make the self fd not writable
-                    cancelSelfFDWritable();
-                    // and watch writable event for inside fd
+                    // watch writable event for inside fd
                     watchInsideFDWritable();
                     return;
                 } else {

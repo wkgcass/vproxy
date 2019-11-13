@@ -26,9 +26,6 @@ import java.util.function.Predicate;
 
 @SuppressWarnings("UnusedReturnValue")
 public abstract class StreamedFDHandler implements Handler<SocketFD> {
-    @SuppressWarnings("FieldCanBeLocal")
-    private final int MAX_CACHED_MESSAGE_BYTES = 1024 * 1024;
-
     private ArqUDPSocketFD fd;
     private SelectorEventLoop loop;
     private final boolean client;
@@ -91,6 +88,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             return;
         }
         isFailed = true;
+        fdMap.values().forEach(fd -> fd.setState(StreamedFD.State.dead));
         Logger.error(LogType.CONN_ERROR, "the stream thrown exception", t);
         if (sendRst) {
             ByteArray err = errorMessage(t);
@@ -120,11 +118,15 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     // 2: handshake sent and connected (R)
 
     private ByteArrayChannel cachedMessageToWrite;
+    private byte[] cachedMessageArrayToWrite;
 
     private int write() {
+        if (cachedMessageArrayToWrite == null) {
+            cachedMessageArrayToWrite = cachedMessageToWrite.getArray().toJavaArray();
+        }
         int n;
         try {
-            n = fd.write(ByteBuffer.wrap(cachedMessageToWrite.getArray().toJavaArray()));
+            n = fd.write(ByteBuffer.wrap(cachedMessageArrayToWrite, cachedMessageToWrite.getReadOff(), cachedMessageToWrite.used()));
         } catch (IOException e) {
             fail(e);
             return -1;
@@ -140,6 +142,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         if (n == cachedMessageToWrite.used()) {
             // everything wrote
             cachedMessageToWrite = null;
+            cachedMessageArrayToWrite = null;
             return 1;
         }
         // wrote some
@@ -349,6 +352,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 // nothing fed
                 return;
             }
+            if (cachedReceivedMessage == null) {
+                // it may be set to null if called `fail(...)`
+                return;
+            }
             reduceReceivedMessage(n);
             if (cachedReceivedMessage == null) {
                 return;
@@ -391,9 +398,14 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         while (true) {
             if (cachedMessageToWrite != null) {
                 int n = write();
-                if (n <= 0) {
-                    // failed or still got data to send
-                    // if still got data to send, wait for the next writable event
+                if (n < 0) {
+                    // failed
+                    return;
+                } else if (n == 0) {
+                    // still got data to send
+                    // so the inside fd is not writable, we cancel writable event for the streamedFD
+                    // wait for the next writable event
+                    fdMap.values().forEach(StreamedFD::cancelWritable);
                     return;
                 }
                 // fall through
@@ -633,50 +645,25 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     abstract protected ByteArray formatPSH(int streamId, ByteArray data);
 
-    private int calcMessagesToWriteBytes() {
-        int ret = 0;
-        for (ByteArray a : messagesToWrite) {
-            ret += a.length();
-        }
-        return ret;
-    }
-
-    private int canSend() {
-        int n = MAX_CACHED_MESSAGE_BYTES - calcMessagesToWriteBytes();
-        if (n < 0) {
-            n = 0;
-        }
-        return n;
-    }
-
     @MethodForStreamedFD
     public final int send(StreamedFD fd, ByteBuffer src) throws IOException {
         if (!fdMap.containsValue(fd)) {
             throw new IOException("fdMap does not contain fd " + fd);
         }
-        if (fd.getState() != StreamedFD.State.established) {
-            throw new IOException(fd + " is not connected yet");
+        if (fd.getState() != StreamedFD.State.syn_sent
+            && fd.getState() != StreamedFD.State.established
+            && fd.getState() != StreamedFD.State.fin_recv) {
+            throw new IOException(fd + " is not connected: " + fd.getState());
         }
         if (src.limit() == src.position()) {
             // nothing to be sent
             return 0;
         }
-        int maxLen = canSend();
-        if (maxLen <= 0) {
-            // too many bytes
-            return 0;
-        }
-        int inputLen = src.limit() - src.position();
-        int len = Math.min(maxLen, inputLen);
+        int len = src.limit() - src.position();
         byte[] data = new byte[len];
         src.get(data);
         // append to the last of the queue
         addMessageToWrite(formatPSH(fd.streamId, ByteArray.from(data)));
-        // check whether can write any more
-        if (maxLen <= inputLen) {
-            // is full after writing
-            fd.cancelWritable();
-        }
         return len;
     }
 
@@ -720,33 +707,49 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // cancel the timer
             TimerEvent te = keepaliveTimeouts.get(kId);
             if (te == null) {
-                Logger.shouldNotHappen("the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
+                Logger.warn(LogType.PROBE, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
                 return;
             }
             Logger.probe("receiving keepalive ack message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
+            ++keepaliveSuccessCount;
+            if (keepaliveSuccessCount > KEEPALIVE_MAX_SUCCESS_COUNT) {
+                keepaliveSuccessCount = KEEPALIVE_MAX_SUCCESS_COUNT;
+            }
             te.cancel();
         } else {
             // it's keepalive request, do respond
             // add at the most front of the queue
+            Logger.probe("receiving remote keepalive message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
             pushMessageToWrite(keepaliveMessage(kId, true));
         }
     }
 
+    private int keepaliveSuccessCount = 0;
+    private static final int KEEPALIVE_MAX_SUCCESS_COUNT = 2;
+
     @MethodForFDs
     final void probe() {
-        // send keepalive message
-        long kId = ++nextKeepaliveId;
-        // record with a timeout
-        keepaliveTimeouts.put(kId, loop.delay(5_000, () -> fail(new IOException("keepalive response timeout"))));
-        // add to the first of the queue
-        pushMessageToWrite(keepaliveMessage(kId, false));
+        // only send keepalive message if it's in idle
+        if (cachedMessageToWrite == null && messagesToWrite.isEmpty()) {
+            // send keepalive message
+            long kId = ++nextKeepaliveId;
+            // record with a timeout
+            keepaliveTimeouts.put(kId, loop.delay(5_000, () -> {
+                if (keepaliveSuccessCount <= 0) {
+                    fail(new IOException("keepalive response timeout"));
+                }
+                --keepaliveSuccessCount;
+            }));
+            // add to the first of the queue
+            pushMessageToWrite(keepaliveMessage(kId, false));
+            Logger.probe("keepalive message 0x" + Long.toHexString(kId) + " sent on arq udp socket " + fd);
+        }
         // do probe
-        Logger.probe("keepalive message 0x" + Long.toHexString(kId) + " sent on arq udp socket " + fd);
         // check recorded connections
         try {
             Logger.probe("isClient=" + client + ", state=" + state);
-            InetSocketAddress arqSockRemote = (InetSocketAddress) fd.getRemoteAddress();
-            String arqSockRemoteStr = Utils.l4addrStr(arqSockRemote);
+            InetSocketAddress arqSockLocal = (InetSocketAddress) fd.getLocalAddress();
+            String arqSockLocalStr = Utils.l4addrStr(arqSockLocal);
             for (Map.Entry<Integer, StreamedFD> entry : fdMap.entrySet()) {
                 int streamId = entry.getKey();
                 StreamedFD sfd = entry.getValue();
@@ -754,10 +757,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 String remote = Utils.l4addrStr((InetSocketAddress) sfd.getRemoteAddress());
 
                 Logger.probe(
-                    "record: " + arqSockRemoteStr
+                    "record: " + arqSockLocalStr
                         + " -> " + streamId
                         + " -> " + local
-                        + "/" + remote
+                        + " -> " + remote
                         + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + Logger.RESET_COLOR + "]"
                 );
             }
@@ -835,11 +838,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     @MethodForFDs
     final void clear() {
         for (StreamedFD streamedFD : fdMap.values()) {
-            try {
-                streamedFD.close();
-            } catch (IOException e) {
-                Logger.error(LogType.CONN_ERROR, "closing streamed fd failed: " + streamedFD, e);
-            }
+            streamedFD.setState(StreamedFD.State.dead);
         }
         for (TimerEvent e : keepaliveTimeouts.values()) {
             e.cancel();

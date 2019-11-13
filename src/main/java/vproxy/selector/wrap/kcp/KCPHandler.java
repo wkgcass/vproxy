@@ -46,6 +46,7 @@ public class KCPHandler extends ArqUDPHandler {
             emitter.accept(data.chnl);
         });
         this.kcp.setUser(identifier);
+        kcp.setStream(true); // we always use stream mode
         // configure kcp
         kcp.nodelay(options.nodelay, options.interval, options.resend, options.nc);
         kcp.wndsize(options.sndWnd, options.rcvWnd);
@@ -89,6 +90,11 @@ public class KCPHandler extends ArqUDPHandler {
         if (ret < 0) {
             throw new IOException("writing from app to kcp failed: " + ret);
         }
+    }
+
+    @Override
+    public boolean canWrite() {
+        return kcp.waitSnd() < opts.sndWnd;
     }
 
     @Override
