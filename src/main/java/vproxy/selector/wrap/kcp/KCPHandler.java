@@ -36,6 +36,7 @@ public class KCPHandler extends ArqUDPHandler {
 
     private final Kcp kcp;
     private final KCPOptions opts;
+    private boolean isInvalid = false;
 
     protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier, KCPOptions options) {
         super(emitter);
@@ -92,9 +93,13 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public void clock(long ts) throws IOException {
+        if (isInvalid) {
+            return;
+        }
         kcp.update(ts);
         int state = kcp.getState();
         if (state < 0) {
+            isInvalid = true;
             assert Logger.lowLevelDebug("kcp connection is invalid, state = " + state);
             throw new IOException("the kcp connection is invalid");
         }

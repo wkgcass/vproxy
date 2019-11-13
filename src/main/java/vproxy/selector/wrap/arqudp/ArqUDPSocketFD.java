@@ -192,7 +192,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             try {
                 handler.clock(Config.currentTimestamp);
             } catch (IOException e) {
-                fdHandler.error = e;
+                fdHandler.setError(e);
             }
         });
     }
@@ -211,6 +211,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         private final ByteBuffer tmpBuffer = ByteBuffer.allocate(Config.udpMtu);
         private IOException error = null;
         private boolean invalid = false;
+
+        private void setError(IOException error) {
+            this.error = error;
+            setSelfFDReadable(); // set readable so user code can retrieve the error
+        }
 
         public IOException getError() {
             return error;
@@ -277,7 +282,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 readBytes = ctx.getChannel().read(tmpBuffer);
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "reading data from " + ctx.getChannel() + " failed", e);
-                error = e;
+                setError(e);
                 return;
             }
             if (readBytes < 0) {
@@ -311,7 +316,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 try {
                     b = handler.parse(tmp.readAll().copy().toFullChannel());
                 } catch (IOException e) {
-                    error = e;
+                    setError(e);
                     Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
                     return;
                 }
@@ -362,7 +367,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     ctx.getChannel().write(foo);
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "writing data to " + ctx.getChannel() + " failed", e);
-                    error = e;
+                    setError(e);
                     return;
                 }
                 if (buf.used() > 0) {
