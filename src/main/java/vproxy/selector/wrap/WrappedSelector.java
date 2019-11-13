@@ -4,9 +4,7 @@ import vfd.*;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.nio.channels.CancelledKeyException;
 import java.nio.channels.ClosedChannelException;
-import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class WrappedSelector implements FDSelector {
@@ -171,7 +169,7 @@ public class WrappedSelector implements FDSelector {
             if (virtualSocketFDs.containsKey(fd)) {
                 virtualSocketFDs.get(fd).watchedEvents = ops;
             } else {
-                throw new CancelledKeyException();
+                throw new CancelledKeyExceptionWithInfo(fd.toString());
             }
         } else {
             if (fd instanceof WritableAware) {
@@ -192,7 +190,7 @@ public class WrappedSelector implements FDSelector {
             if (virtualSocketFDs.containsKey(fd)) {
                 return virtualSocketFDs.get(fd).watchedEvents;
             } else {
-                throw new CancelledKeyException();
+                throw new CancelledKeyExceptionWithInfo(fd.toString());
             }
         } else {
             return selector.events(fd);
@@ -205,7 +203,7 @@ public class WrappedSelector implements FDSelector {
             if (virtualSocketFDs.containsKey(fd)) {
                 return virtualSocketFDs.get(fd).attachment;
             } else {
-                throw new CancelledKeyException();
+                throw new CancelledKeyExceptionWithInfo(fd.toString());
             }
         } else {
             return selector.attachment(fd);
@@ -238,7 +236,7 @@ public class WrappedSelector implements FDSelector {
 
     public void registerVirtualReadable(VirtualFD vfd) {
         if (!selector.isOpen()) {
-            throw new ClosedSelectorException();
+            throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
         readableFired.add(vfd);
 
@@ -258,7 +256,7 @@ public class WrappedSelector implements FDSelector {
 
     public void registerVirtualWritable(VirtualFD vfd) {
         if (!selector.isOpen()) {
-            throw new ClosedSelectorException();
+            throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
         writableFired.add(vfd);
 
