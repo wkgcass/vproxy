@@ -79,6 +79,17 @@ public interface ByteArray {
         return uint8(offset) << 16 | uint8(offset + 1) << 8 | uint8(offset + 2);
     }
 
+    default long int64(int offset) {
+        return uint8long(offset) << 56
+            | uint8long(offset + 1) << 48
+            | uint8long(offset + 2) << 40
+            | uint8long(offset + 3) << 32
+            | uint8long(offset + 4) << 24
+            | uint8long(offset + 5) << 16
+            | uint8long(offset + 6) << 8
+            | uint8long(offset + 7);
+    }
+
     default int int32(int offset) {
         return uint8(offset) << 24 | uint8(offset + 1) << 16 | uint8(offset + 2) << 8 | uint8(offset + 3);
     }
@@ -89,6 +100,10 @@ public interface ByteArray {
 
     default int uint8(int offset) {
         return get(offset) & 0xff;
+    }
+
+    default long uint8long(int offset) {
+        return get(offset) & 0xFFFFFFFFL;
     }
 
     default ByteArray int24(int offset, int val) {
@@ -109,6 +124,18 @@ public interface ByteArray {
         set(offset + 1, (byte) ((val >> 16) & 0xff));
         set(offset + 2, (byte) ((val >> 8) & 0xff));
         set(offset + 3, (byte) ((val) & 0xff));
+        return this;
+    }
+
+    default ByteArray int64(int offset, long val) {
+        set(offset, (byte) ((val >> 56) & 0xff));
+        set(offset + 1, (byte) ((val >> 48) & 0xff));
+        set(offset + 2, (byte) ((val >> 40) & 0xff));
+        set(offset + 3, (byte) ((val >> 32) & 0xff));
+        set(offset + 4, (byte) ((val >> 24) & 0xff));
+        set(offset + 5, (byte) ((val >> 16) & 0xff));
+        set(offset + 6, (byte) ((val >> 8) & 0xff));
+        set(offset + 7, (byte) ((val) & 0xff));
         return this;
     }
 

@@ -23,9 +23,10 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
     private static final List<Byte> validTypes = Arrays.asList(
         TYPE_DATA, TYPE_HEADER, TYPE_PING, TYPE_GOAWAY // TYPE_SETTINGS is not valid after handshaking
     );
-    private static final List<Byte> validTypesWithPayload = Arrays.asList(TYPE_DATA, TYPE_GOAWAY);
+    private static final List<Byte> validTypesWithPayload = Arrays.asList(TYPE_DATA, TYPE_GOAWAY, TYPE_PING);
 
     private static final byte FLAG_CLOSE_STREAM = 0x1;
+    private static final byte FLAG_ACK = 0x1;
 
     private static ByteArray getEmptySettings() {
         return HEAD.copy().set(3, TYPE_SETTINGS);
@@ -35,8 +36,12 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         return HEAD.copy().set(3, TYPE_HEADER).int32(5, streamId);
     }
 
-    private static ByteArray getEmptyPing() {
-        return HEAD.copy().set(3, TYPE_PING);
+    private static ByteArray getPing(long data, boolean isAck) {
+        return HEAD.copy()
+            .int24(0, 8)
+            .set(3, TYPE_PING)
+            .set(4, isAck ? FLAG_ACK : 0)
+            .concat(ByteArray.allocate(8).int64(0, data));
     }
 
     @SuppressWarnings("SameParameterValue")
@@ -185,8 +190,14 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
                 return HEAD.length() + len;
             case TYPE_PING:
                 // keep-alive packet
-                // ignore
-                return HEAD.length();
+                if (len < 8) {
+                    // invalid ping frame, ignore it
+                    return HEAD.length() + len;
+                }
+                boolean isAck = ((flag & FLAG_ACK) == FLAG_ACK);
+                long kId = array.int64(HEAD.length());
+                keepaliveReceived(kId, isAck);
+                return HEAD.length() + len;
             default:
                 throw new IOException("invalid frame type: " + type);
         }
@@ -238,8 +249,8 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
     }
 
     @Override
-    protected ByteArray keepaliveMessage() {
-        return getEmptyPing();
+    protected ByteArray keepaliveMessage(long kId, boolean isAck) {
+        return getPing(kId, isAck);
     }
 
     private int streamId = 1;

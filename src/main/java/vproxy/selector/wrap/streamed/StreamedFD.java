@@ -79,7 +79,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         readable = true;
     }
 
-    private void setWritable() {
+    void setWritable() {
         assert Logger.lowLevelDebug("set writable for " + this);
         selector.registerVirtualWritable(this);
         writable = true;
@@ -89,6 +89,12 @@ public class StreamedFD implements SocketFD, VirtualFD {
         assert Logger.lowLevelDebug("cancel readable for " + this);
         selector.removeVirtualReadable(this);
         readable = false;
+    }
+
+    void cancelWritable() {
+        assert Logger.lowLevelDebug("cancel writable for " + this);
+        selector.removeVirtualWritable(this);
+        writable = false;
     }
 
     private void checkState() throws IOException {
@@ -182,7 +188,10 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int n = Utils.writeFromFIFOQueueToBuffer(readableBuffers, dst);
         if (readableBuffers.isEmpty()) {
             // nothing can be read anymore
-            cancelReadable();
+            if (state != State.fin_recv && state != State.dead) {
+                // keep firing readable when fin received or stream closed
+                cancelReadable();
+            }
         }
         assert Logger.lowLevelDebug("read() returns " + n + " bytes");
         return n;
@@ -191,10 +200,10 @@ public class StreamedFD implements SocketFD, VirtualFD {
     @Override
     public int write(ByteBuffer src) throws IOException {
         checkState();
-        byte[] bytes = new byte[src.limit() - src.position()];
-        src.get(bytes);
-        handler.send(this, ByteArray.from(bytes));
-        return bytes.length;
+        if (state == State.fin_sent) {
+            throw new IOException("cannot write when in state " + state);
+        }
+        return handler.send(this, src);
     }
 
     @Override

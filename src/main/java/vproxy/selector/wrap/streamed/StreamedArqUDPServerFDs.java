@@ -117,6 +117,7 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                 }
 
                 private void invalid(ArqUDPSocketFD fd) {
+                    loop.remove(fd);
                     try {
                         fd.close();
                     } catch (IOException e) {
