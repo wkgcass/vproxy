@@ -34,18 +34,20 @@ public class StreamedFD implements SocketFD, VirtualFD {
     private boolean writable = false;
 
     public enum State {
-        none(Logger.DEBUG_COLOR),
-        syn_sent(Logger.WARN_COLOR),
-        established(Logger.INFO_COLOR),
-        fin_sent(Logger.WARN_COLOR),
-        fin_recv(Logger.WARN_COLOR),
-        dead(Logger.ERROR_COLOR),
-        real_closed(Logger.ERROR_COLOR),
+        none(Logger.DEBUG_COLOR, false),
+        syn_sent(Logger.WARN_COLOR, false),
+        established(Logger.INFO_COLOR, false),
+        fin_sent(Logger.WARN_COLOR, false),
+        fin_recv(Logger.WARN_COLOR, true),
+        dead(Logger.ERROR_COLOR, true),
+        real_closed(Logger.ERROR_COLOR, true),
         ;
         public final String probeColor;
+        public final boolean readReturnNegative1;
 
-        State(String probeColor) {
+        State(String probeColor, boolean readReturnNegative1) {
             this.probeColor = probeColor;
+            this.readReturnNegative1 = readReturnNegative1;
         }
     }
 
@@ -100,6 +102,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
     private void checkState() throws IOException {
         if (rst) {
             throw new IOException(Utils.RESET_MSG);
+        }
+        if (state == State.dead) {
+            throw new IOException(Utils.BROKEN_PIPE_MSG);
         }
         if (state == State.real_closed) {
             throw new IOException(this + " is closed");
@@ -178,7 +183,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         assert Logger.lowLevelDebug("read() called on " + this);
         checkState();
         if (readableBuffers.isEmpty()) {
-            if (state == State.fin_recv || state == State.dead) {
+            if (state.readReturnNegative1) {
                 return -1;
             }
         }
@@ -186,8 +191,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int n = Utils.writeFromFIFOQueueToBuffer(readableBuffers, dst);
         if (readableBuffers.isEmpty()) {
             // nothing can be read anymore
-            if (state != State.fin_recv && state != State.dead) {
-                // keep firing readable when fin received or stream closed
+            if (!state.readReturnNegative1) { // keep firing readable when fin received or stream closed
                 cancelReadable();
             }
         }

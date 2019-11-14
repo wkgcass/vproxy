@@ -123,11 +123,16 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     public void close() throws IOException {
         server.close();
         for (VirtualDatagramFD fd : conns.values()) {
+            // the fd is accepted by user code
+            // it's user's responsibility to close it
+            // so only release the fd but do not close it
             fd.release();
         }
         VirtualDatagramFD fd;
         while ((fd = acceptQ.poll()) != null) {
-            fd.release();
+            // it's not accepted yet
+            // so we can close the fd
+            fd.close();
         }
         acceptMap.clear();
         conns.clear();
@@ -187,9 +192,13 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public int read(ByteBuffer dst) {
+            if (bufs.isEmpty() && closed) {
+                return -1;
+            }
+
             int ret = Utils.writeFromFIFOQueueToBuffer(bufs, dst);
 
-            if (bufs.isEmpty()) {
+            if (bufs.isEmpty() && !closed) {
                 cancelReadable();
             } else {
                 setReadable();
@@ -258,15 +267,14 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
                 return;
             }
             closed = true;
-            cancelReadable();
+            setReadable(); // user code should be able to get -1 when calling read()
             cancelWritable(false);
-
-            bufs.clear();
         }
 
         @Override
         public void close() {
             release();
+            bufs.clear();
             conns.values().remove(this);
             var x = acceptMap.remove(remoteAddress);
             assert x == null || x == this;

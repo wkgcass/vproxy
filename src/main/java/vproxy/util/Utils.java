@@ -15,6 +15,7 @@ import java.util.function.Consumer;
 
 public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
+    public static final String BROKEN_PIPE_MSG = "Broken pipe";
     @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
@@ -660,6 +661,10 @@ public class Utils {
 
     public static boolean isReset(IOException t) {
         return RESET_MSG.equals(t.getMessage());
+    }
+
+    public static boolean isBrokenPipe(IOException t) {
+        return BROKEN_PIPE_MSG.equals(t.getMessage());
     }
 
     public static Process runSubProcess(String program) throws IOException {
