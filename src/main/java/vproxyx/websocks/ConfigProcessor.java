@@ -402,25 +402,28 @@ public class ConfigProcessor {
                     handle = getGroup(currentAlias).add(hostPart, hostPart, new InetSocketAddress(inet, port), 10);
                 }
 
-                // this will be used when connection establishes to remote
-                // in WebSocksProxyAgentConnectorProvider.java
+                // init streamed fds
                 Map<SelectorEventLoop, H2StreamedClientFDs> fds = new HashMap<>();
-                {
-                    // build fds map
-                    Set<NetEventLoop> set = new HashSet<>();
-                    while (true) {
-                        NetEventLoop l = workerLoopGroup.next();
-                        if (!set.add(l)) {
-                            // all loops visited
-                            break;
+                if (useKCP) {
+                    {
+                        // build fds map
+                        Set<NetEventLoop> set = new HashSet<>();
+                        while (true) {
+                            NetEventLoop l = workerLoopGroup.next();
+                            if (!set.add(l)) {
+                                // all loops visited
+                                break;
+                            }
+                            // build for this remote server
+                            KCPFDs kcpFDs = KCPFDs.getFast3();
+                            H2StreamedClientFDs h2sFDs = new H2StreamedClientFDs(kcpFDs, l.getSelectorEventLoop(),
+                                handle.server);
+                            fds.put(l.getSelectorEventLoop(), h2sFDs);
                         }
-                        // build for this remote server
-                        KCPFDs kcpFDs = KCPFDs.getFast3();
-                        H2StreamedClientFDs h2sFDs = new H2StreamedClientFDs(kcpFDs, l.getSelectorEventLoop(),
-                            handle.server);
-                        fds.put(l.getSelectorEventLoop(), h2sFDs);
                     }
                 }
+                // this will be used when connection establishes to remote
+                // in WebSocksProxyAgentConnectorProvider.java
                 handle.data = new SharedData(useSSL, useKCP, fds);
             } else {
                 //noinspection ConstantConditions
