@@ -1,8 +1,11 @@
 package vproxy.app;
 
+import vfd.FDProvider;
+
 public class Config {
     // a volatile long field is atomic, and we only read/assign this value, not increase
     public static volatile long currentTimestamp = System.currentTimeMillis();
+    // initially we use the java impl because the FDProvider is not initiated yet
 
     // the default udpTimeout is the same as LVS
     // set it smaller if your environment have a smaller udp ttl
@@ -48,10 +51,15 @@ public class Config {
     // null for the default path
     public static String autoSaveFilePath = null;
 
+    // -Dvfd=...
+    // see FDProvider
+    public static final String vfdImpl;
+
     // -Deploy=xxx
     public static final String appClass;
 
     static {
         appClass = System.getProperty("eploy"); // -Deploy
+        vfdImpl = System.getProperty("vfd", "provided");
     }
 }

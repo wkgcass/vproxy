@@ -1,5 +1,6 @@
 package vproxy.app;
 
+import vfd.FDProvider;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.dns.ResolveListener;
@@ -43,7 +44,7 @@ public class ServerAddressUpdater implements ResolveListener {
     }
 
     private static void handle(Resolver.Cache newCache, Resolver.Cache oldCache) {
-        long cur = System.currentTimeMillis();
+        long cur = FDProvider.get().currentTimeMillis();
         if (cur - oldCache.timestamp > 3600_000) { // scan the whole list every one hour
             checkAll(newCache.host, newCache);
         } else {

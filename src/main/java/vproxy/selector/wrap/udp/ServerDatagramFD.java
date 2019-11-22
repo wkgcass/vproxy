@@ -209,7 +209,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         @Override
         public int write(ByteBuffer src) throws IOException {
             int contained = src.limit() - src.position();
-            int wrote = server.send(src, remoteAddress);
+            int wrote = server.send(src, (InetSocketAddress) remoteAddress);
             if (wrote < contained) {
                 assert Logger.lowLevelDebug("wrote(" + wrote + ") < contained(" + contained + "), cancelWritable");
                 cancelWritable(true);

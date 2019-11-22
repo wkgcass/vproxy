@@ -12,7 +12,7 @@ public interface DatagramFD extends FD, ReadableByteChannel, WritableByteChannel
 
     void bind(InetSocketAddress l4addr) throws IOException;
 
-    int send(ByteBuffer buf, SocketAddress remote) throws IOException;
+    int send(ByteBuffer buf, InetSocketAddress remote) throws IOException;
 
     SocketAddress receive(ByteBuffer buf) throws IOException;
 

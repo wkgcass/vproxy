@@ -28,4 +28,9 @@ public class ChannelFDs implements FDs {
     public FDSelector openSelector() throws IOException {
         return new ChannelSelector(Selector.open());
     }
+
+    @Override
+    public long currentTimeMillis() {
+        return System.currentTimeMillis();
+    }
 }

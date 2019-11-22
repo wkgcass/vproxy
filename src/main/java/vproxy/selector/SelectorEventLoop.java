@@ -178,7 +178,7 @@ public class SelectorEventLoop {
                     break; // break if it's closed
 
                 // handle some non select events
-                Config.currentTimestamp = System.currentTimeMillis();
+                Config.currentTimestamp = FDProvider.get().currentTimeMillis();
                 handleNonSelectEvents();
             }
             // here we do not lock select()

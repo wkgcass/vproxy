@@ -1,5 +1,6 @@
 package vproxy.dns;
 
+import vfd.FDProvider;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
@@ -65,7 +66,7 @@ public class Resolver implements IResolver {
                 te = null;
             }
 
-            timestamp = System.currentTimeMillis();
+            timestamp = FDProvider.get().currentTimeMillis();
         }
 
         public void remove() {

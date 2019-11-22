@@ -39,3 +39,8 @@ build/
 !gradlew.bat
 !gradle/wrapper/gradle-wrapper.jar
 !gradle/wrapper/gradle-wrapper.properties
+
+#dylib/so/dll
+*.dylib
+*.so
+*.dll

@@ -1,6 +1,7 @@
 package vproxy.util;
 
 import sun.misc.Unsafe;
+import vfd.FDProvider;
 import vproxy.connection.Connector;
 import vproxy.dns.Resolver;
 import vproxy.socks.AddressType;
@@ -54,14 +55,14 @@ public class Utils {
     }
 
     private static String ipv6Str(byte[] ip) {
-        return "[" + addTo(4, Integer.toHexString(((ip[0] << 8) & 0xFFFF) | (ip[1] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[2] << 8) & 0xFFFF) | (ip[3] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[4] << 8) & 0xFFFF) | (ip[5] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[6] << 8) & 0xFFFF) | (ip[7] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[8] << 8) & 0xFFFF) | (ip[9] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[10] << 8) & 0xFFFF) | (ip[11] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[12] << 8) & 0xFFFF) | (ip[13] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString(((ip[14] << 8) & 0xFFFF) | (ip[15] & 0xFF)))
+        return "[" + addTo(4, Integer.toHexString((((ip[0] & 0xFF) << 8) & 0xFFFF) | (ip[1] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[2] & 0xFF) << 8) & 0xFFFF) | (ip[3] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[4] & 0xFF) << 8) & 0xFFFF) | (ip[5] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[6] & 0xFF) << 8) & 0xFFFF) | (ip[7] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[8] & 0xFF) << 8) & 0xFFFF) | (ip[9] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[10] & 0xFF) << 8) & 0xFFFF) | (ip[11] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[12] & 0xFF) << 8) & 0xFFFF) | (ip[13] & 0xFF)))
+            + ":" + addTo(4, Integer.toHexString((((ip[14] & 0xFF) << 8) & 0xFFFF) | (ip[15] & 0xFF)))
             + "]";
     }
 
@@ -646,7 +647,7 @@ public class Utils {
 
     public static long currentMinute() {
         return
-            (System.currentTimeMillis() / 60_000 // remove millis and seconds
+            (FDProvider.get().currentTimeMillis() / 60_000 // remove millis and seconds
             ) * 60_000 // get minutes
             ;
     }
@@ -753,5 +754,18 @@ public class Utils {
             return true;
         }).getAsBoolean();
         return true;
+    }
+
+    public static int ipv4Bytes2Int(byte[] host) {
+        return ((host[0] & 0xff) << 24) | ((host[1] & 0xff) << 16) | ((host[2] & 0xff) << 8) | (host[3] & 0xff);
+    }
+
+    public static byte[] ipv4Int2Bytes(int ip) {
+        byte[] ret = new byte[4];
+        ret[0] = (byte) ((ip >> 24) & 0xff);
+        ret[1] = (byte) ((ip >> 16) & 0xff);
+        ret[2] = (byte) ((ip >> 8) & 0xff);
+        ret[3] = (byte) ((ip) & 0xff);
+        return ret;
     }
 }

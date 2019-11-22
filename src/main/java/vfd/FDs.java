@@ -10,4 +10,6 @@ public interface FDs {
     DatagramFD openDatagramFD() throws IOException;
 
     FDSelector openSelector() throws IOException;
+
+    long currentTimeMillis();
 }

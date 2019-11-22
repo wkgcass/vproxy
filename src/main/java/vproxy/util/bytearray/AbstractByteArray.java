@@ -16,7 +16,9 @@ public abstract class AbstractByteArray implements ByteArray {
     }
 
     protected void checkBoundForOffsetAndLength(int off, int len) {
-        checkBoundForOffset(off);
+        if (len > 0) {
+            checkBoundForOffset(off);
+        }
         if (len < 0) {
             throw new IllegalArgumentException("len=" + len + " < 0");
         }

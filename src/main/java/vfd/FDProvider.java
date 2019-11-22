@@ -1,8 +1,12 @@
 package vfd;
 
 import vfd.jdk.ChannelFDs;
+import vfd.posix.PosixFDs;
+import vproxy.app.Config;
+import vproxy.util.Logger;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
 import java.util.ServiceLoader;
 
@@ -12,9 +16,21 @@ public class FDProvider {
     private final FDs provided;
 
     private FDProvider() {
-        ServiceLoader<FDs> loader = ServiceLoader.load(FDs.class);
-        Optional<FDs> vChannels = loader.findFirst();
-        provided = vChannels.orElse(new ChannelFDs());
+        var supported = Arrays.asList("provided", "jdk", "posix");
+        var selected = Config.vfdImpl;
+        if (!supported.contains(selected)) {
+            selected = "provided";
+        }
+        if ("jdk".equals(selected)) {
+            provided = new ChannelFDs();
+        } else if ("posix".equals(selected)) {
+            provided = new PosixFDs();
+            System.out.println("USING POSIX NATIVE FDs Impl");
+        } else {
+            ServiceLoader<FDs> loader = ServiceLoader.load(FDs.class);
+            Optional<FDs> vChannels = loader.findFirst();
+            provided = vChannels.orElse(new ChannelFDs());
+        }
     }
 
     public static FDProvider get() {
@@ -35,5 +51,9 @@ public class FDProvider {
 
     public FDSelector openSelector() throws IOException {
         return provided.openSelector();
+    }
+
+    public long currentTimeMillis() {
+        return provided.currentTimeMillis();
     }
 }

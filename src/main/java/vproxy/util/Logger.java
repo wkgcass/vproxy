@@ -132,7 +132,7 @@ public class Logger {
 
     public static void probe(String msg) {
         String threadName = Thread.currentThread().getName();
-        String log = DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg;
+        String log = DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg + "\r\n";
         DatagramFD chnl = getLogChannel();
         try {
             chnl.send(ByteBuffer.wrap(log.getBytes()), getLogAddress());

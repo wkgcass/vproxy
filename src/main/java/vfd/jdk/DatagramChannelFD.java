@@ -28,7 +28,7 @@ public class DatagramChannelFD extends ChannelFD implements DatagramFD {
     }
 
     @Override
-    public int send(ByteBuffer buf, SocketAddress remote) throws IOException {
+    public int send(ByteBuffer buf, InetSocketAddress remote) throws IOException {
         return channel.send(buf, remote);
     }
 
