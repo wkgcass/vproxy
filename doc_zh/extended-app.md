@@ -53,6 +53,7 @@ vproxy简易负载均衡。你可以用一行shell命令启动一个完整的负
 * `keypem`: 私钥文件路径。
 * `domain`: 当前主机的域名（可选）。
 * `redirectport`: 绑定一个端口并返回http 3xx，用于将客户端（浏览器）重定向到`listen`设定的端口。
+* `kcp`: 启动kcp传输协议，监听端口和`listen`指定的端口一致。
 
 例如：
 
@@ -64,7 +65,8 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
         certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \
         keypem /etc/letsencrypt/live/example.com/privkey.pem \
         domain example.com \
-        redirectport 80
+        redirectport 80 \
+        kcp
 ```
 
 ### Deploy=WebSocksAgent

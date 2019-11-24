@@ -55,6 +55,7 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 * `keypem`: the private key file path.
 * `domain`: the domain name of current host (optional).
 * `redirectport`: bind a port and return http 3xx to redirect the client(browser) to the `listen` port.
+* `kcp`: enable kcp transporting, the listening port will be the same as what `listen` specifies.
 
 e.g.
 
@@ -66,7 +67,8 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
         certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \
         keypem /etc/letsencrypt/live/example.com/privkey.pem \
         domain example.com \
-        redirectport 80
+        redirectport 80 \
+        kcp
 ```
 
 ### Deploy=WebSocksProxyAgent
