@@ -1,5 +1,13 @@
 package vproxy.util;
 
+import vfd.DatagramFD;
+import vfd.FDProvider;
+
+import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
+import java.nio.ByteBuffer;
 import java.util.Date;
 
 public class Logger {
@@ -11,6 +19,8 @@ public class Logger {
     public static final String WARN_COLOR = "\033[0;33m";
     public static final String ERROR_COLOR = "\033[0;31m";
     public static final String RESET_COLOR = "\033[0m";
+
+    private static DatagramFD logChannel;
 
     static {
         {
@@ -37,7 +47,7 @@ public class Logger {
 
     @SuppressWarnings("deprecation")
     private static String current() {
-        long cur = System.currentTimeMillis();
+        long cur = FDProvider.get().currentTimeMillis();
         Date d = new Date(cur);
         return "[" +
             (d.getYear() + 1900) + "-" +
@@ -122,7 +132,50 @@ public class Logger {
 
     public static void probe(String msg) {
         String threadName = Thread.currentThread().getName();
-        System.out.println(DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg);
+        String log = DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg;
+        DatagramFD chnl = getLogChannel();
+        try {
+            chnl.send(ByteBuffer.wrap(log.getBytes()), getLogAddress());
+        } catch (IOException e) {
+            Logger.shouldNotHappen("sending log message failed", e);
+        }
+    }
+
+    private static DatagramFD getLogChannel() {
+        if (logChannel == null) {
+            try {
+                logChannel = FDProvider.get().openDatagramFD();
+                logChannel.configureBlocking(false);
+            } catch (IOException e) {
+                shouldNotHappen("open datagram channel as log channel failed", e);
+                if (logChannel != null) {
+                    try {
+                        logChannel.close();
+                    } catch (IOException ignore) {
+                    }
+                }
+                logChannel = null;
+                throw new RuntimeException(e);
+            }
+        }
+        if (!logChannel.isOpen()) {
+            try {
+                logChannel.close();
+            } catch (IOException ignore) {
+            }
+            logChannel = null;
+            return getLogChannel();
+        }
+        return logChannel;
+    }
+
+    private static InetSocketAddress getLogAddress() {
+        try {
+            return new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 23456);
+        } catch (UnknownHostException e) {
+            shouldNotHappen("get log address failed", e);
+            throw new RuntimeException(e);
+        }
     }
 
     public static void shouldNotHappen(String msg, Throwable err) {
