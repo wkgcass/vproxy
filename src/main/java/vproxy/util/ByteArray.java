@@ -57,11 +57,11 @@ public interface ByteArray {
     default byte[] toNewJavaArray() {
         int len = length();
         byte[] array = new byte[len];
-        for (int i = 0; i < len; ++i) {
-            array[i] = get(i);
-        }
+        toNewJavaArray(array, 0);
         return array;
     }
+
+    void toNewJavaArray(byte[] holder, int off);
 
     default ByteArray arrange() {
         return new SimpleByteArray(toNewJavaArray());

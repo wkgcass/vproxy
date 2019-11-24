@@ -50,4 +50,9 @@ public class OneByteArray extends AbstractByteArray {
             return;
         b = src.get();
     }
+
+    @Override
+    protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen) {
+        dst[dstOff] = b;
+    }
 }

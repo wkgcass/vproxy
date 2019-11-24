@@ -50,4 +50,9 @@ public class SimpleByteArray extends AbstractByteArray implements ByteArray {
         checkBoundForByteBufferAndOffsetAndLength(src, off, len);
         src.get(array, off, len);
     }
+
+    @Override
+    protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen) {
+        System.arraycopy(array, srcOff, dst, dstOff, srcLen);
+    }
 }

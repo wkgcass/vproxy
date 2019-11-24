@@ -81,4 +81,20 @@ public class CompositeByteArray extends AbstractByteArray implements ByteArray {
         first.byteBufferGet(src, off, firstLen - off);
         second.byteBufferGet(src, 0, len - (firstLen - off));
     }
+
+    @Override
+    protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen) {
+        int firstLen = first.length();
+        if (firstLen > srcOff) {
+            //noinspection UnnecessaryLocalVariable
+            int off = srcOff;
+            int len = Math.min(srcLen, firstLen - off);
+            ((AbstractByteArray) first).doToNewJavaArray(dst, dstOff, off, len);
+            if (srcLen > len) {
+                ((AbstractByteArray) second).doToNewJavaArray(dst, dstOff + len, 0, srcLen - len);
+            }
+        } else {
+            ((AbstractByteArray) second).doToNewJavaArray(dst, dstOff, srcOff - firstLen, srcLen);
+        }
+    }
 }

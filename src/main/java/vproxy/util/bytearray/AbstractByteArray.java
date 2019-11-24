@@ -35,6 +35,17 @@ public abstract class AbstractByteArray implements ByteArray {
     }
 
     @Override
+    public void toNewJavaArray(byte[] holder, int off) {
+        int len = length();
+        if (len > holder.length - off) {
+            throw new IllegalArgumentException("input byte[] and offset cannot hold bytes in this ByteArray: input=" + holder.length + ", off=" + off + ", this=" + len);
+        }
+        doToNewJavaArray(holder, off, 0, len);
+    }
+
+    abstract protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen);
+
+    @Override
     public boolean equals(Object obj) {
         if (!(obj instanceof ByteArray))
             return false;

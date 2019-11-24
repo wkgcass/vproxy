@@ -47,4 +47,9 @@ public class SubByteArray extends AbstractByteArray implements ByteArray {
         checkBoundForByteBufferAndOffsetAndLength(src, off, len);
         source.byteBufferGet(src, off + from, len);
     }
+
+    @Override
+    protected void doToNewJavaArray(byte[] dst, int dstOff, int srcOff, int srcLen) {
+        ((AbstractByteArray) source).doToNewJavaArray(dst, dstOff, from + srcOff, srcLen);
+    }
 }
