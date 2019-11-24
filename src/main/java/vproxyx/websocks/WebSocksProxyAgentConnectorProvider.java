@@ -448,7 +448,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         private void done(ConnectionHandlerContext ctx) {
-            assert Logger.lowLevelDebug("handshake operation done " + ctx.connection);
+            assert Logger.lowLevelDebug("handshake operation done " + ctx.connection + ", providedCallback = " + providedCallback);
 
             socks5ConnectResult = null;
             // remove the connection from loop

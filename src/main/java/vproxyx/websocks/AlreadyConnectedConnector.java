@@ -42,4 +42,14 @@ public class AlreadyConnectedConnector extends Connector {
     public NetEventLoop loop() {
         return loop;
     }
+
+    @Override
+    public void close() {
+        conn.close();
+    }
+
+    @Override
+    public String toString() {
+        return "AlreadyConnectedConnector(" + conn + ", " + loop + ")";
+    }
 }

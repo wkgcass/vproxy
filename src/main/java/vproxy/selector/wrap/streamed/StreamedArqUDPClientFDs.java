@@ -67,6 +67,8 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
             start();
         } catch (IOException e) {
             Logger.shouldNotHappen("starting streamed arq udp client failed", e);
+            // restart in 2 seconds
+            loop.delay(2_000, () -> restart(fd));
         }
     }
 
@@ -85,6 +87,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
             if (failed) {
                 if (fd != null) {
                     fd.close();
+                    fd = null;
                 }
             }
         }

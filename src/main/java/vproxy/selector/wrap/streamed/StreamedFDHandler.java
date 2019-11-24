@@ -426,8 +426,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 unwatchWritable();
                 return;
             }
-            // set writable for all fds
-            fdMap.values().forEach(StreamedFD::setWritable);
+            // set writable for all fds that's established
+            fdMap.values().forEach(fd -> {
+                if (fd.getState() == StreamedFD.State.established) {
+                    fd.setWritable();
+                }
+            });
             cachedMessageToWrite = ByteArrayChannel.fromFull(arr);
         }
     }

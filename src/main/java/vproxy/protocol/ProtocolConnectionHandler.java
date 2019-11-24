@@ -2,6 +2,8 @@ package vproxy.protocol;
 
 import vproxy.connection.ConnectionHandler;
 import vproxy.connection.ConnectionHandlerContext;
+import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 
@@ -26,8 +28,9 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
 
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
+        assert Logger.lowLevelDebug("ProtocolConnectionHandler.exception: " + pctx);
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        if ("Connection reset by peer".equals(err.getMessage())) {
+        if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
             handler.end(pctx);
         } else {
             handler.exception(pctx, err);
@@ -37,6 +40,7 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
 
     @Override
     public void remoteClosed(ConnectionHandlerContext ctx) {
+        assert Logger.lowLevelDebug("ProtocolConnectionHandler.remoteClosed: " + pctx);
         // the connection is closed
         // we directly close the connection here regardless of data loss
         ctx.connection.close();
@@ -45,11 +49,13 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
 
     @Override
     public void closed(ConnectionHandlerContext ctx) {
+        assert Logger.lowLevelDebug("ProtocolConnectionHandler.closed: " + pctx);
         // do nothing since the `removed` callback will be called just follow the closed event
     }
 
     @Override
     public void removed(ConnectionHandlerContext ctx) {
+        assert Logger.lowLevelDebug("ProtocolConnectionHandler.removed: " + pctx);
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
         if (handler.closeOnRemoval(pctx)) {
             // close the connection when loop ends

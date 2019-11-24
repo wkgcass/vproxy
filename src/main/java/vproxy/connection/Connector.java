@@ -32,6 +32,11 @@ public class Connector {
         return null; // default: do not provide
     }
 
+    // close the connection inside the connector
+    public void close() {
+        // do nothing if it's a manually created connector
+    }
+
     @Override
     public String toString() {
         return "Connector(" + remote + ")";

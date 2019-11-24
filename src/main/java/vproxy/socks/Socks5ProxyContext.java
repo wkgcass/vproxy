@@ -4,6 +4,8 @@ import vproxy.connection.Connector;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
+import java.util.Arrays;
+
 public class Socks5ProxyContext {
     public static final byte GENERAL_SOCKS_SERVER_FAILURE = 0x01;
     public static final byte CONNECTION_NOT_ALLOWED_BY_RULESET = 0x02;
@@ -61,6 +63,27 @@ public class Socks5ProxyContext {
         chnl.reset();
         inBuffer.writeTo(chnl);
         return b[0];
+    }
+
+    @Override
+    public String toString() {
+        return "Socks5ProxyContext{" +
+            "state=" + state +
+            ", errType=" + errType +
+            ", isDoingAuth=" + isDoingAuth +
+            ", done=" + done +
+            ", clientMethodLeft=" + clientMethodLeft +
+            ", clientSupportedMethods=" + Arrays.toString(clientSupportedMethods) +
+            ", clientCommand=" + clientCommand +
+            ", reqType=" + reqType +
+            ", addressLeft=" + addressLeft +
+            ", address=" + Arrays.toString(address) +
+            ", portLeft=" + portLeft +
+            ", portBytes=" + Arrays.toString(portBytes) +
+            ", port=" + port +
+            ", connector=" + connector +
+            ", b=" + Arrays.toString(b) +
+            '}';
     }
 }
 

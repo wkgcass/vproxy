@@ -128,7 +128,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         }
         checkState();
         handler.sendSYN(this);
-        state = State.syn_sent;
+        setState(State.syn_sent);
     }
 
     @Override
@@ -141,7 +141,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         checkState();
         switch (state) {
             case none:
-                state = State.dead;
+                setState(State.dead);
                 break;
             case syn_sent:
                 close();
@@ -255,7 +255,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         } else if (state != State.fin_sent && state != State.dead) {
             handler.sendFIN(this);
         }
-        state = State.real_closed;
+        setState(State.real_closed);
         release();
     }
 

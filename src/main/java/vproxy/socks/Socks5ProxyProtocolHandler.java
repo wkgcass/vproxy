@@ -277,7 +277,12 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
                     }
                 } else {
                     assert Logger.lowLevelDebug("connector found for " + address + ":" + pctx.port + ", " + connector);
-                    pctx.done = true; // mark it's done
+                    if (pctx.state == -1) {
+                        assert Logger.lowLevelDebug("but the handler context is invalid now: " + pctx);
+                        // close it
+                        connector.close();
+                        return;
+                    }
                     pctx.connector = connector;
                     pctx.errType = 0;
                     byte[] writeBack = getCommonResp(pctx);
@@ -287,7 +292,6 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
                 }
             }
         });
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (lock) {
             returned[0] = true;
             if (sameThread[0]) {
@@ -301,6 +305,8 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
     private static int callback(ProtocolHandlerContext
                                     <Tuple<Socks5ProxyContext, Callback<Connector, IOException>>> ctx,
                                 Socks5ProxyContext pctx) {
+        assert Logger.lowLevelDebug("callback called on " + pctx);
+        pctx.done = true; // mark it's done
         ctx.data.right.succeeded(pctx.connector);
         return 12; // done
     }
@@ -334,6 +340,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         // connection should be closed by the protocol lib
         // we ignore the exception here
         assert Logger.lowLevelDebug("socks5 exception " + ctx.connectionId + ", " + err);
+        checkAndCloseConnector(ctx);
     }
 
     @Override
@@ -341,10 +348,31 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         // connection is closed by the protocol lib
         // we ignore the event here
         assert Logger.lowLevelDebug("socks5 end " + ctx.connectionId);
+        checkAndCloseConnector(ctx);
+    }
+
+    private void checkAndCloseConnector(ProtocolHandlerContext<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+        assert Logger.lowLevelDebug("checkAndCloseConnector: " + ctx.data);
+
+        if (closeOnRemoval(ctx)
+            && ctx.data != null
+            && ctx.data.left != null) {
+
+            Socks5ProxyContext pctx = ctx.data.left;
+            assert Logger.lowLevelDebug("socks5 proxy protocol handler ended or got exception, so we close connector " + pctx.connector);
+            pctx.state = -1;
+            pctx.errType = Socks5ProxyContext.GENERAL_SOCKS_SERVER_FAILURE;
+
+            if (ctx.data.left.connector != null) {
+                // should close the retrieved connector if it's not returned to outside
+                pctx.connector.close();
+            }
+        }
     }
 
     @Override
     public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>> ctx) {
+        assert Logger.lowLevelDebug("closeOnRemoval called on pctx " + ctx.data);
         if (ctx.data == null || ctx.data.left == null) {
             // return true when it's not fully initialized
             return true;

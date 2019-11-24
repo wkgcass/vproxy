@@ -89,6 +89,7 @@ public class Proxy {
                 // but if it happens, we close both sides
 
                 utilCloseConnectionAndReleaseBuffers(connection);
+                connector.close();
                 return;
             }
 
@@ -147,6 +148,7 @@ public class Proxy {
 
             @Override
             protected void onSucceeded(Connector connector) {
+                assert Logger.lowLevelDebug("HandlerCallback.onSucceeded called with connector: " + connector);
                 // remove the connection from loop first
                 // because we want to remove the old ConnectionHandler
                 // then handle it as direct
@@ -430,7 +432,11 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+            if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
+                assert Logger.lowLevelDebug("session " + session + " got exception: " + err);
+            } else {
+                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+            }
             // close both sides
             utilCloseSessionAndReleaseBuffers(session);
 

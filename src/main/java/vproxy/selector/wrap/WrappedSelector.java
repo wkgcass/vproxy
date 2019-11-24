@@ -134,6 +134,7 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public void register(FD fd, EventSet ops, Object registerData) throws ClosedChannelException {
+        assert Logger.lowLevelDebug("register fd to selector " + fd);
         if (fd instanceof VirtualFD) {
             virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
             // check fire

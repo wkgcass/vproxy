@@ -88,4 +88,15 @@ public class ProtocolHandlerContext<T> {
             handler.readable(this);
         });
     }
+
+    @Override
+    public String toString() {
+        return "ProtocolHandlerContext{" +
+            "connectionId='" + connectionId + '\'' +
+            ", connection=" + connection +
+            ", loop=" + loop +
+            ", handler=" + handler +
+            ", data=" + data +
+            '}';
+    }
 }
