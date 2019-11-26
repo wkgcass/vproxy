@@ -31,6 +31,24 @@ docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgca
 docker run --rm vproxy version
 ```
 
+### use native fds impl
+
+Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable.
+
+```
+cd ./src/main/c
+./make-general.sh
+
+# copy .so or .dylib to upper level directory
+
+cp libvfdposix.* ../../../
+
+# then run the program
+
+cd ../../../
+java -Dvfd=posix -jar build/libs/vproxy.jar version
+```
+
 ## Aim
 
 * Zero dependency: no dependency other than java standard library, and no jni extensions.
