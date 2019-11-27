@@ -14,21 +14,21 @@ Clone it, compile it, then everything is ready for running.
 
 ```
 ./gradlew clean jar
-java -jar build/libs/vproxy.jar version
+java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 ### jlink
 
 ```
 ./gradlew clean jlink
-./build/image/bin/vproxy version
+./build/image/bin/vproxy -Deploy=HelloWorld
 ```
 
 ### docker
 
 ```
 docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
-docker run --rm vproxy version
+docker run --rm vproxy -Deploy=HelloWorld
 ```
 
 ### use native fds impl
@@ -39,14 +39,8 @@ Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env v
 cd ./src/main/c
 ./make-general.sh
 
-# copy .so or .dylib to upper level directory
-
-cp libvfdposix.* ../../../
-
-# then run the program
-
 cd ../../../
-java -Dvfd=posix -jar build/libs/vproxy.jar version
+java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 ## Aim
