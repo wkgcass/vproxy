@@ -4,6 +4,7 @@ import vproxy.app.args.*;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.dns.Resolver;
+import vproxy.fstack.FStackUtil;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -58,6 +59,15 @@ public class Main {
     private static void beforeStart() {
         Security.setProperty("networkaddress.cache.ttl", "0");
         Resolver.getDefault();
+
+        if (Config.useFStack) {
+            try {
+                FStackUtil.init();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("initiate f-stack failed", e);
+                System.exit(1);
+            }
+        }
     }
 
     private static void runApp(String appClass, String[] args) {
@@ -129,6 +139,9 @@ public class Main {
         String appClass = Config.appClass;
         if (appClass != null) {
             runApp(appClass, args);
+            if (Config.useFStack) {
+                FStackUtil.run();
+            }
             return;
         }
 
@@ -265,6 +278,10 @@ public class Main {
         Shutdown.initSignal();
         // start scheduled saving task
         Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
+
+        if (Config.useFStack) {
+            FStackUtil.run();
+        }
     }
 
     private static void saveConfig() {

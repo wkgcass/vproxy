@@ -2,11 +2,14 @@ package vserver;
 
 import vproxy.util.ByteArray;
 
+import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RoutingContext {
+    private final InetSocketAddress remote;
+    private final InetSocketAddress local;
     private final HttpMethod method;
     private final String uri;
     private final Map<String, String> query;
@@ -21,13 +24,17 @@ public class RoutingContext {
     public interface StorageKey<T> {
     }
 
-    public RoutingContext(HttpMethod method,
+    public RoutingContext(InetSocketAddress remote,
+                          InetSocketAddress local,
+                          HttpMethod method,
                           String uri,
                           Map<String, String> query,
                           Map<String, String> headers,
                           ByteArray body,
                           HttpResponse response,
                           HandlerChain chain) {
+        this.remote = remote;
+        this.local = local;
         this.method = method;
         this.uri = uri;
         this.query = Collections.unmodifiableMap(query);
@@ -35,6 +42,14 @@ public class RoutingContext {
         this.body = body;
         this.response = response;
         this.chain = chain;
+    }
+
+    public InetSocketAddress getRemote() {
+        return remote;
+    }
+
+    public InetSocketAddress getLocal() {
+        return local;
     }
 
     public RoutingContext putParam(String key, String value) {

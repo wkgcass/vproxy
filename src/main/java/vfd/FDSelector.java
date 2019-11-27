@@ -14,6 +14,8 @@ public interface FDSelector extends Closeable {
 
     Collection<SelectedEntry> select(long millis) throws IOException;
 
+    boolean supportsWakeup();
+
     void wakeup();
 
     boolean isRegistered(FD fd);

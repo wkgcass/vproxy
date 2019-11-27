@@ -9,9 +9,10 @@ public class PosixSocketFD extends PosixNetworkFD implements SocketFD {
         super(posix);
     }
 
-    public PosixSocketFD(Posix posix, int fd) {
+    public PosixSocketFD(Posix posix, int fd, boolean ipv4) {
         this(posix);
         this.fd = fd;
+        this.ipv4 = ipv4;
         connected = true;
     }
 

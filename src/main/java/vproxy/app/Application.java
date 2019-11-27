@@ -89,6 +89,9 @@ public class Application {
         }
         // use the current core count
         int cores = Runtime.getRuntime().availableProcessors();
+        if (Config.useFStack) {
+            cores = 1; // f-stack applications have only one thread
+        }
         for (int i = 0; i < cores; ++i) {
             try {
                 application.eventLoopGroupHolder.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME).add(

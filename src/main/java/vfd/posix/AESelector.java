@@ -131,6 +131,11 @@ public class AESelector implements FDSelector {
     }
 
     @Override
+    public boolean supportsWakeup() {
+        return pipefd != null;
+    }
+
+    @Override
     public void wakeup() {
         if (pipefd == null) {
             throw new UnsupportedOperationException("does not support wakeup");

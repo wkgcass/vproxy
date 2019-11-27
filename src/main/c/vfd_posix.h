@@ -9,8 +9,9 @@
     #endif
     #include "ae.h"
     #ifdef __linux__
-        #include <eventfd.h>
+        #include <sys/eventfd.h>
     #endif
+
 
 
     #include <sys/socket.h>
@@ -90,16 +91,15 @@
 
 
 
-    #include <fcntl.h>
-
-    #define V_F_GETFL F_GETFL
-    #define V_F_SETFL F_SETFL
-    #define V_O_NONBLOCK O_NONBLOCK
-
+    // we cannot use ff_fcntl to set non-blocking
+    // f-stack bug, use ioctl instead
+    // https://github.com/F-Stack/f-stack/issues/146#issuecomment-356867119
+    #include <sys/ioctl.h>
+    #define V_FIONBIO FIONBIO
     #ifdef FSTACK
-        #define v_fcntl ff_fcntl
+        #define v_ioctl ff_ioctl
     #else
-        #define v_fcntl fcntl
+        #define v_ioctl ioctl
     #endif
 
 

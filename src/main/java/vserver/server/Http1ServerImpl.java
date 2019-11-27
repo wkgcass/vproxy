@@ -316,7 +316,7 @@ public class Http1ServerImpl implements HttpServer {
             }
 
             // build ctx
-            ctx[0] = new RoutingContext(method, uri, query, headers, body, response, chain);
+            ctx[0] = new RoutingContext(_pctx.connection.remote, _pctx.connection.getLocal(), method, uri, query, headers, body, response, chain);
         }
         ctx[0].next();
     }

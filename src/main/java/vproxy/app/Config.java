@@ -1,7 +1,5 @@
 package vproxy.app;
 
-import vfd.FDProvider;
-
 public class Config {
     // a volatile long field is atomic, and we only read/assign this value, not increase
     public static volatile long currentTimestamp = System.currentTimeMillis();
@@ -55,11 +53,31 @@ public class Config {
     // see FDProvider
     public static final String vfdImpl;
 
+    public static final String fstack;
+    public static final boolean useFStack;
+    public static final String vfdlibname;
+
     // -Deploy=xxx
     public static final String appClass;
 
     static {
         appClass = System.getProperty("eploy"); // -Deploy
-        vfdImpl = System.getProperty("vfd", "provided");
+        fstack = System.getProperty("fstack", "");
+        useFStack = !fstack.isBlank();
+        vfdImpl = useFStack ? "posix" : System.getProperty("vfd", "provided");
+        String vfdlibnameConf = System.getProperty("vfdlibname", "");
+        if (vfdlibnameConf.isBlank()) {
+            if (vfdImpl.equals("posix")) {
+                if (useFStack) {
+                    vfdlibname = "vfdfstack";
+                } else {
+                    vfdlibname = "vfdposix";
+                }
+            } else {
+                vfdlibname = null;
+            }
+        } else {
+            vfdlibname = vfdlibnameConf;
+        }
     }
 }

@@ -1,6 +1,7 @@
 package vfd.posix;
 
 import vfd.*;
+import vproxy.app.Config;
 
 import java.io.IOException;
 
@@ -8,10 +9,13 @@ public class PosixFDs implements FDs {
     private final Posix posix;
 
     public PosixFDs() {
+        assert Config.vfdlibname != null;
+        String lib = Config.vfdlibname;
         try {
-            System.loadLibrary("vfdposix");
+            System.loadLibrary(lib);
         } catch (UnsatisfiedLinkError e) {
-            System.out.println("vfdposix not found, requires libvfdposix.dylib or libvfdposix.so or vfdposix.dll on java.library.path");
+            System.out.println(lib + " not found, requires lib" + lib + ".dylib or lib" + lib + ".so or " + lib + ".dll on java.library.path");
+            e.printStackTrace(System.out);
             System.exit(1);
         }
         posix = new GeneralPosix();
@@ -40,7 +44,7 @@ public class PosixFDs implements FDs {
         }
         long ae;
         try {
-            ae = posix.aeCreateEventLoop(1024);
+            ae = posix.aeCreateEventLoop(1024 * 1024);
         } catch (IOException e) {
             if (pipeFd != null) {
                 try {

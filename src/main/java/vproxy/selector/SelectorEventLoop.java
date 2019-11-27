@@ -32,6 +32,7 @@ public class SelectorEventLoop {
     }
 
     public final FDSelector selector;
+    public final FDs fds;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
     private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
@@ -42,12 +43,41 @@ public class SelectorEventLoop {
     private final Object CLOSE_LOCK = new Object();
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
-    private SelectorEventLoop() throws IOException {
-        this.selector = new WrappedSelector(FDProvider.get().openSelector());
+    private SelectorEventLoop(FDs fds) throws IOException {
+        this.selector = new WrappedSelector(fds.openSelector());
+        this.fds = fds;
     }
 
+    private static volatile SelectorEventLoop theLoop = null; // this field is used when using fstack
+
     public static SelectorEventLoop open() throws IOException {
-        return new SelectorEventLoop();
+        if (Config.useFStack) {
+            // we use only one event loop if it's using f-stack
+            // considering the program code base, it will take too much time
+            // modifying code everywhere,
+            // so we let all the components share the same event loop
+            // and loop is handled at the entrance of the program
+            if (theLoop == null) {
+                synchronized (SelectorEventLoop.class) {
+                    if (theLoop == null) {
+                        theLoop = new SelectorEventLoop(FDProvider.get().getProvided());
+                    }
+                }
+            }
+            return theLoop;
+            // no need to consider whether the loop would be closed
+            // when the loop closes, the program will exit
+        }
+        return new SelectorEventLoop(FDProvider.get().getProvided());
+    }
+
+    public static SelectorEventLoop open(FDs fds) throws IOException {
+        if (Config.useFStack) {
+            if (FDProvider.get().getProvided() == fds) {
+                throw new IllegalArgumentException("should not call SelectorEventLoop.open(fds) with the default fds impl");
+            }
+        }
+        return new SelectorEventLoop(fds);
     }
 
     private void tryRunnable(Runnable r) {
@@ -151,6 +181,10 @@ public class SelectorEventLoop {
 
     @Blocking // will block until the loop actually starts
     public void loop(Function<Runnable, Thread> constructThread) {
+        if (Config.useFStack && fds == FDProvider.get().getProvided()) {
+            // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
+            return;
+        }
         constructThread.apply(this::loop).start();
         while (runningThread == null) {
             try {
@@ -161,63 +195,99 @@ public class SelectorEventLoop {
         }
     }
 
+    // this method is for f-stack
+    // do not use it anywhere else
+    public void _bindThread0() {
+        runningThread = Thread.currentThread();
+        loopThreadLocal.set(this);
+    }
+
+    // return -1 for break
+    // return  0 for continue
+    @Blocking
+    public int onePoll() {
+        synchronized (CLOSE_LOCK) {
+            // yes, we lock the whole while body (except the select part)
+            // it's ok because we won't close the loop from inside the loop
+            // and it's also ok to let the operator wait for some time
+            // since closing the loop is considered as expansive and dangerous
+
+            if (!selector.isOpen())
+                return -1; // break if it's closed
+
+            // handle some non select events
+            Config.currentTimestamp = fds.currentTimeMillis();
+            handleNonSelectEvents();
+        }
+        // here we do not lock select()
+        // let close() have chance to run
+
+        final Collection<SelectedEntry> selected;
+        try {
+            if (Config.useFStack && fds == FDProvider.get().getProvided()) { // f-stack main loop does not wait
+                selected = selector.selectNow();
+            } else if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
+                selected = selector.select(); // let it sleep
+            } else if (!runOnLoopEvents.isEmpty()) {
+                selected = selector.selectNow(); // immediately return
+            } else {
+                int time = timeQueue.nextTime();
+                if (time == 0) {
+                    selected = selector.selectNow(); // immediately return
+                } else {
+                    selected = selector.select(time); // wait until the nearest timer
+                }
+            }
+        } catch (IOException | ClosedSelectorException e) {
+            // let's ignore this exception and continue
+            // if it's closed, the next loop will not run
+            return 0;
+        }
+
+        // here we lock again
+        // because we need to handle something
+        // and at this time the selector might be closed
+        synchronized (CLOSE_LOCK) {
+
+            if (!selector.isOpen())
+                return -1; // break if it's closed
+
+            if (!selected.isEmpty()) {
+                Iterator<SelectedEntry> keys = selected.iterator();
+                doHandling(keys);
+            }
+        }
+        return 0;
+    }
+
     @Blocking
     public void loop() {
+        if (Config.useFStack && fds == FDProvider.get().getProvided()) {
+            // when using f-stack, the MAIN loop is started by ff_loop (non-main loops can still run)
+            // we should not start any loop inside ff_loop
+            // but considering the base code, this method is used everywhere
+            // so we simply block the thread and never exit
+
+            // there is no need to consider to break the loop when selector closes
+            // echo f-stack program only have one main thread, and that means one loop only
+
+            //noinspection InfiniteLoopStatement
+            while (true) {
+                try {
+                    Thread.sleep(365L * 24 * 60 * 60 * 1000 /*very long time, 1 year*/);
+                } catch (Throwable ignore) {
+                }
+            }
+        }
+
         // set thread
         runningThread = Thread.currentThread();
         loopThreadLocal.set(this);
         // run
         while (selector.isOpen()) {
-            synchronized (CLOSE_LOCK) {
-                // yes, we lock the whole while body (except the select part)
-                // it's ok because we won't close the loop from inside the loop
-                // and it's also ok to let the operator wait for some time
-                // since closing the loop is considered as expansive and dangerous
-
-                if (!selector.isOpen())
-                    break; // break if it's closed
-
-                // handle some non select events
-                Config.currentTimestamp = FDProvider.get().currentTimeMillis();
-                handleNonSelectEvents();
+            if (-1 == onePoll()) {
+                break;
             }
-            // here we do not lock select()
-            // let close() have chance to run
-
-            final Collection<SelectedEntry> selected;
-            try {
-                if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
-                    selected = selector.select(); // let it sleep
-                } else if (!runOnLoopEvents.isEmpty()) {
-                    selected = selector.selectNow(); // immediately return
-                } else {
-                    int time = timeQueue.nextTime();
-                    if (time == 0) {
-                        selected = selector.selectNow(); // immediately return
-                    } else {
-                        selected = selector.select(time); // wait until the nearest timer
-                    }
-                }
-            } catch (IOException | ClosedSelectorException e) {
-                // let's ignore this exception and continue
-                // if it's closed, the next loop will not run
-                continue;
-            }
-
-            // here we lock again
-            // because we need to handle something
-            // and at this time the selector might be closed
-            synchronized (CLOSE_LOCK) {
-
-                if (!selector.isOpen())
-                    break; // break if it's closed
-
-                if (!selected.isEmpty()) {
-                    Iterator<SelectedEntry> keys = selected.iterator();
-                    doHandling(keys);
-                }
-            }
-            // while-loop ends here
         }
         runningThread = null; // it's not running now, set to null
         loopThreadLocal.remove(); // remove from thread local
@@ -234,7 +304,9 @@ public class SelectorEventLoop {
         runOnLoopEvents.add(r);
         if (runningThread == null || Thread.currentThread() == runningThread)
             return; // we do not need to wakeup because it's not started or is already waken up
-        selector.wakeup(); // wake the selector because new event is added
+        if (selector.supportsWakeup()) {
+            selector.wakeup(); // wake the selector because new event is added
+        }
     }
 
     @ThreadSafe

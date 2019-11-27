@@ -3,7 +3,6 @@ package vfd;
 import vfd.jdk.ChannelFDs;
 import vfd.posix.PosixFDs;
 import vproxy.app.Config;
-import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -22,19 +21,23 @@ public class FDProvider {
             selected = "provided";
         }
         if ("jdk".equals(selected)) {
-            provided = new ChannelFDs();
+            provided = ChannelFDs.get();
         } else if ("posix".equals(selected)) {
             provided = new PosixFDs();
             System.out.println("USING POSIX NATIVE FDs Impl");
         } else {
             ServiceLoader<FDs> loader = ServiceLoader.load(FDs.class);
             Optional<FDs> vChannels = loader.findFirst();
-            provided = vChannels.orElse(new ChannelFDs());
+            provided = vChannels.orElse(ChannelFDs.get());
         }
     }
 
     public static FDProvider get() {
         return instance;
+    }
+
+    public FDs getProvided() {
+        return provided;
     }
 
     public SocketFD openSocketFD() throws IOException {

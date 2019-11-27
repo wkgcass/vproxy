@@ -97,13 +97,19 @@ public class ApplicationLevelHttpServer {
 
     private void runServer() throws Exception {
         HttpServer.create()
+            .all("/*", this::log)
             .all("/api/v1/*", Tool.bodyJsonHandler())
             .get("/api/v1/services/:serviceId", this::getService)
             .get("/api/v1/services", this::listServices)
             .pst("/api/v1/services", this::createService)
             .put("/api/v1/services/:serviceId", this::updateService)
             .del("/api/v1/services/:serviceId", this::deleteService)
-            .listen(8080);
+            .listenIPv6(8080);
+    }
+
+    private void log(RoutingContext rctx) {
+        Logger.alert("received request remote=" + Utils.l4addrStr(rctx.getRemote()) + " -> local=" + Utils.l4addrStr(rctx.getLocal()) + " " + rctx.method() + " " + rctx.uri());
+        rctx.next();
     }
 
     private void listServices(RoutingContext rctx) {

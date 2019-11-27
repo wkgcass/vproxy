@@ -94,16 +94,16 @@ public class GeneralPosix implements Posix {
     native public void shutdownOutput(int fd) throws IOException;
 
     @Override
-    native public SocketAddressIPv4 getIPv4Local(int fd) throws IOException;
+    native public VSocketAddress getIPv4Local(int fd) throws IOException;
 
     @Override
-    native public SocketAddressIPv6 getIPv6Local(int fd) throws IOException;
+    native public VSocketAddress getIPv6Local(int fd) throws IOException;
 
     @Override
-    native public SocketAddressIPv4 getIPv4Remote(int fd) throws IOException;
+    native public VSocketAddress getIPv4Remote(int fd) throws IOException;
 
     @Override
-    native public SocketAddressIPv6 getIPv6Remote(int fd) throws IOException;
+    native public VSocketAddress getIPv6Remote(int fd) throws IOException;
 
     @Override
     native public int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
@@ -118,10 +118,10 @@ public class GeneralPosix implements Posix {
     native public int sendtoIPv6(int fd, ByteBuffer directBuffer, int off, int len, String fullAddr, int port) throws IOException;
 
     @Override
-    native public Tuple<SocketAddressIPv4, Integer> recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    native public Tuple<VSocketAddress, Integer> recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     @Override
-    native public Tuple<SocketAddressIPv6, Integer> recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    native public Tuple<VSocketAddress, Integer> recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     @Override
     native public long currentTimeMillis();

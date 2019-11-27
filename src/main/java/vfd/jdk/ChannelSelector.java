@@ -69,6 +69,11 @@ public class ChannelSelector implements FDSelector {
     }
 
     @Override
+    public boolean supportsWakeup() {
+        return true;
+    }
+
+    @Override
     public void wakeup() {
         selector.wakeup();
     }

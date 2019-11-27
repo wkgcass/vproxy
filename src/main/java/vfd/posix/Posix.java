@@ -64,13 +64,13 @@ public interface Posix {
 
     void shutdownOutput(int fd) throws IOException;
 
-    SocketAddressIPv4 getIPv4Local(int fd) throws IOException;
+    VSocketAddress getIPv4Local(int fd) throws IOException;
 
-    SocketAddressIPv6 getIPv6Local(int fd) throws IOException;
+    VSocketAddress getIPv6Local(int fd) throws IOException;
 
-    SocketAddressIPv4 getIPv4Remote(int fd) throws IOException;
+    VSocketAddress getIPv4Remote(int fd) throws IOException;
 
-    SocketAddressIPv6 getIPv6Remote(int fd) throws IOException;
+    VSocketAddress getIPv6Remote(int fd) throws IOException;
 
     int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
@@ -80,9 +80,9 @@ public interface Posix {
 
     int sendtoIPv6(int fd, ByteBuffer directBuffer, int off, int len, String fullAddr, int port) throws IOException;
 
-    Tuple<SocketAddressIPv4, Integer> recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    Tuple<VSocketAddress, Integer> recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
-    Tuple<SocketAddressIPv6, Integer> recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    Tuple<VSocketAddress, Integer> recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     long currentTimeMillis();
 }

@@ -1,5 +1,6 @@
 package vproxyx;
 
+import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.ServerHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
@@ -54,6 +55,9 @@ public class WebSocksProxyAgent {
 
         // get worker thread count
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
+        if (Config.useFStack) {
+            threads = 1;
+        }
         int workers = threads;
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors

@@ -9,6 +9,15 @@ import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
 
 public class ChannelFDs implements FDs {
+    private static final ChannelFDs instance = new ChannelFDs();
+
+    public static ChannelFDs get() {
+        return instance;
+    }
+
+    private ChannelFDs() {
+    }
+
     @Override
     public SocketFD openSocketFD() throws IOException {
         return new SocketChannelFD(SocketChannel.open());

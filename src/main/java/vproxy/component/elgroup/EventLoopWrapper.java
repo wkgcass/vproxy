@@ -1,6 +1,7 @@
 package vproxy.component.elgroup;
 
 import vfd.SocketFD;
+import vproxy.app.Config;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
@@ -201,6 +202,10 @@ public class EventLoopWrapper extends NetEventLoop {
     }
 
     public void loop() {
+        if (Config.useFStack) {
+            // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
+            return;
+        }
         if (getSelectorEventLoop().runningThread != null) {
             throw new IllegalStateException();
         }

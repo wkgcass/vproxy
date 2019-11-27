@@ -2,10 +2,13 @@ package vproxy.discovery;
 
 import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
+import vfd.FDProvider;
+import vfd.jdk.ChannelFDs;
 import vjson.JSON;
 import vjson.ex.JsonParseException;
 import vjson.simple.SimpleArray;
 import vjson.util.ObjectBuilder;
+import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.*;
 import vproxy.component.svrgroup.Method;
@@ -377,7 +380,11 @@ public class Discovery {
         HttpServer tcpServer = null;
 
         try {
-            blockingUDPSendThread = SelectorEventLoop.open();
+            blockingUDPSendThread = SelectorEventLoop.open(
+                Config.useFStack
+                    ? ChannelFDs.get()
+                    : FDProvider.get().getProvided()
+                /*FIXME: we might switch to nonblocking impl, this can be modified at that time*/);
             blockingUDPSendThread.loop(r -> new Thread(r, "BlockingUDPSendThread:" + nodeName));
             blockingUDPRecvThread = SelectorEventLoop.open();
             blockingUDPRecvThread.loop(r -> new Thread(r, "BlockingUDPRecvThread:" + nodeName));

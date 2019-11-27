@@ -43,7 +43,7 @@ JNIEXPORT jintArray JNICALL Java_vfd_posix_GeneralPosix_openPipe
                 throwIOExceptionBasedOnErrno(env);
                 return NULL;
             }
-            jintArray ret = (*env)->NetIntArray(env, 2);
+            jintArray ret = (*env)->NewIntArray(env, 2);
             jint elems[] = { fd, fd };
             (*env)->SetIntArrayRegion(env, ret, 0, 2, elems);
             return ret;
@@ -56,15 +56,8 @@ JNIEXPORT jintArray JNICALL Java_vfd_posix_GeneralPosix_openPipe
             }
             for (int i = 0; i < 2; ++i) {
                 int fd = pipes[i];
-                res = v_fcntl(fd, V_F_GETFL, 0);
-                if (res == -1) {
-                    v_close(pipes[0]);
-                    v_close(pipes[1]);
-                    throwIOExceptionBasedOnErrno(env);
-                    return NULL;
-                }
-                int flags = res | O_NONBLOCK;
-                res = v_fcntl(fd, V_F_SETFL, flags);
+                int on = 1;
+                res = v_ioctl(fd, V_FIONBIO, &on);
                 if (res == -1) {
                     v_close(pipes[0]);
                     v_close(pipes[1]);
@@ -163,62 +156,52 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeUpdateFileEvent
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeDeleteFileEvent
   (JNIEnv* env, jobject self, jlong aex, jint fd) {
-	aeEventLoop* ae = (aeEventLoop*) aex;
-	jobject ref = (jobject) aeGetClientData(ae, fd);
-	if (ref != NULL) {
-	    (*env)->DeleteGlobalRef(env, ref);
-	}
-	aeDeleteFileEvent(ae, fd, 0xffffffff);
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    jobject ref = (jobject) aeGetClientData(ae, fd);
+    if (ref != NULL) {
+        (*env)->DeleteGlobalRef(env, ref);
+    }
+    aeDeleteFileEvent(ae, fd, 0xffffffff);
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_aeGetFileEvents
   (JNIEnv* env, jobject self, jlong aex, jint fd) {
-	aeEventLoop* ae = (aeEventLoop*) aex;
-	return aeGetFileEvents(ae, fd);
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    return aeGetFileEvents(ae, fd);
 }
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_aeGetClientData
   (JNIEnv* env, jobject self, jlong aex, jint fd) {
-	aeEventLoop* ae = (aeEventLoop*) aex;
-	return aeGetClientData(ae, fd);
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    return aeGetClientData(ae, fd);
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeDeleteEventLoop
   (JNIEnv* env, jobject self, jlong aex) {
     aeEventLoop* ae = (aeEventLoop*) aex;
     // we need to release all the GlobalRefs
-	for (int fd = 0; fd <= ae->maxfd; ++fd) {
-	    jobject ref = (jobject)aeGetClientData(ae, fd);
-	    if (ref != NULL) {
-	        (*env)->DeleteGlobalRef(env, ref);
-	    }
-	}
-	aeDeleteEventLoop(ae);
+    for (int fd = 0; fd <= ae->maxfd; ++fd) {
+        jobject ref = (jobject)aeGetClientData(ae, fd);
+        if (ref != NULL) {
+            (*env)->DeleteGlobalRef(env, ref);
+        }
+    }
+    aeDeleteEventLoop(ae);
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setBlocking
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
-	int res = v_fcntl(fd, V_F_GETFL, 0);
-	if (res == -1) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return;
-	}
-	int flags = res;
-	if (v) {
-	    flags &= (~V_O_NONBLOCK);
-	} else {
-	    flags |= V_O_NONBLOCK;
-	}
-	res = v_fcntl(fd, V_F_SETFL, flags);
-	if (res == -1) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return;
-	}
+    int on = 1;
+    int res = v_ioctl(fd, V_FIONBIO, &on);
+    if (res == -1) {
+        throwIOExceptionBasedOnErrno(env);
+        return;
+    }
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setSoLinger
   (JNIEnv* env, jobject self, jint fd, jint v) {
-	v_linger sl;
+    v_linger sl;
     sl.l_onoff = 1;
     sl.l_linger = v;
     int res = v_setsockopt(fd, V_SOL_SOCKET, V_SO_LINGER, &sl, sizeof(v_linger));
@@ -229,16 +212,19 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setSoLinger
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setReusePort
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
-	int optval = v ? 1 : 0;
-    int res = v_setsockopt(fd, V_SOL_SOCKET, V_SO_REUSEPORT, &optval, sizeof(int));
-	if (res < 0) {
-        throwIOExceptionBasedOnErrno(env);
-    }
+    #ifndef FSTACK
+        int optval = v ? 1 : 0;
+        int res = v_setsockopt(fd, V_SOL_SOCKET, V_SO_REUSEPORT, &optval, sizeof(int));
+        if (res < 0) {
+            throwIOExceptionBasedOnErrno(env);
+        }
+    #endif
+    // do nothing for FSTACK
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setTcpNoDelay
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
-	int i = v ? 1 : 0;
+    int i = v ? 1 : 0;
     int res = v_setsockopt(fd, V_IPPROTO_TCP, V_TCP_NODELAY, &i, sizeof(int));
     if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
@@ -247,30 +233,30 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setTcpNoDelay
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_close
   (JNIEnv* env, jobject self, jint fd) {
-	int res = v_close(fd);
-	if (res < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	}
+    int res = v_close(fd);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+    }
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createIPv4TcpFD
   (JNIEnv* env, jobject self) {
     int sockfd = v_socket(V_AF_INET, V_SOCK_STREAM, 0);
-	if (sockfd < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return -1;
-	}
-	return sockfd;
+    if (sockfd < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return -1;
+    }
+    return sockfd;
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createIPv6TcpFD
   (JNIEnv* env, jobject self) {
     int sockfd6 = v_socket(V_AF_INET6, V_SOCK_STREAM, 0);
-	if (sockfd6 < 0) {
-	    throwIOExceptionBasedOnErrno(env);
+    if (sockfd6 < 0) {
+        throwIOExceptionBasedOnErrno(env);
         return -1;
-	}
-	return sockfd6;
+    }
+    return sockfd6;
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createIPv4UdpFD
@@ -324,7 +310,7 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv4
 
 int j2cSockAddrIPv6(JNIEnv* env, v_sockaddr_in6* name, jstring fullAddr, jint port) {
     v_bzero(name, sizeof(v_sockaddr_in6));
-	name->sin6_family = AF_INET6;
+    name->sin6_family = AF_INET6;
     name->sin6_port = htons(port);
     const char* fullAddrCharArray = (*env)->GetStringUTFChars(env, fullAddr, NULL);
     int res = v_inet_pton(V_AF_INET6, fullAddrCharArray, &(name->sin6_addr.s6_addr));
@@ -334,7 +320,7 @@ int j2cSockAddrIPv6(JNIEnv* env, v_sockaddr_in6* name, jstring fullAddr, jint po
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv6
   (JNIEnv* env, jobject self, jint fd, jstring fullAddr, jint port) {
-	v_sockaddr_in6 name;
+    v_sockaddr_in6 name;
     int res = j2cSockAddrIPv6(env, &name, fullAddr, port);
     if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
@@ -373,7 +359,7 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_accept
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv4
   (JNIEnv* env, jobject self, jint fd, jint addrHostOrder, jint port) {
-	v_sockaddr_in name;
+    v_sockaddr_in name;
     j2cSockAddrIPv4(&name, addrHostOrder, port);
     int res = v_connect(fd, (v_sockaddr*) &name, sizeof(v_sockaddr_in));
     if (res < 0) {
@@ -387,7 +373,7 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv4
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv6
   (JNIEnv* env, jobject self, jint fd, jstring fullAddr, jint port) {
-	v_sockaddr_in6 name;
+    v_sockaddr_in6 name;
     int res = j2cSockAddrIPv6(env, &name, fullAddr, port);
     if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
@@ -405,11 +391,11 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv6
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_shutdownOutput
   (JNIEnv* env, jobject self, jint fd) {
-	int res = v_shutdown(fd, V_SHUT_WR);
-	if (res < 0) {
+    int res = v_shutdown(fd, V_SHUT_WR);
+    if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
         return;
-	}
+    }
 }
 
 jobject formatSocketAddressIPv4(JNIEnv* env, v_sockaddr_in* addr) {
@@ -422,10 +408,9 @@ jobject formatSocketAddressIPv4(JNIEnv* env, v_sockaddr_in* addr) {
 }
 
 jobject formatSocketAddressIPv6(JNIEnv* env, v_sockaddr_in6* addr) {
-    byte* ip = (byte*) addr->sin6_addr.s6_addr;
     // build ip string
     char chars[40]; // 16bytes=32hex, 4hex in one group=7split, so 39 + 1(\0) is enough
-    const char* res = v_inet_ntop(V_AF_INET6, addr, chars, sizeof(chars));
+    const char* res = v_inet_ntop(V_AF_INET6, &(addr->sin6_addr), chars, sizeof(chars));
     if (res == NULL) {
         throwIOExceptionBasedOnErrno(env);
         return NULL;
@@ -445,49 +430,49 @@ jobject formatSocketAddressIPv6(JNIEnv* env, v_sockaddr_in6* addr) {
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Local
   (JNIEnv* env, jobject self, jint fd) {
     v_sockaddr_in name;
-    unsigned int foo;
-	int res = v_getsockname(fd, (v_sockaddr*) &name, &foo);
-	if (res < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return NULL;
-	}
-	return formatSocketAddressIPv4(env, &name);
+    unsigned int foo = sizeof(v_sockaddr_in);
+    int res = v_getsockname(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressIPv4(env, &name);
 }
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Local
   (JNIEnv* env, jobject self, jint fd) {
-	v_sockaddr_in6 name;
-	unsigned int foo;
-	int res = v_getsockname(fd, (v_sockaddr*) &name, &foo);
-	if (res < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return NULL;
-	}
-	return formatSocketAddressIPv6(env, &name);
+    v_sockaddr_in6 name;
+    unsigned int foo = sizeof(v_sockaddr_in6);
+    int res = v_getsockname(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressIPv6(env, &name);
 }
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Remote
   (JNIEnv* env, jobject self, jint fd) {
     v_sockaddr_in name;
-    unsigned int foo;
-	int res = v_getpeername(fd, (v_sockaddr*) &name, &foo);
-	if (res < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return NULL;
-	}
-	return formatSocketAddressIPv4(env, &name);
+    unsigned int foo = sizeof(v_sockaddr_in);
+    int res = v_getpeername(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressIPv4(env, &name);
 }
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Remote
   (JNIEnv* env, jobject self, jint fd) {
-	v_sockaddr_in6 name;
-	unsigned int foo;
-	int res = v_getpeername(fd, (v_sockaddr*) &name, &foo);
-	if (res < 0) {
-	    throwIOExceptionBasedOnErrno(env);
-	    return NULL;
-	}
-	return formatSocketAddressIPv6(env, &name);
+    v_sockaddr_in6 name;
+    unsigned int foo = sizeof(v_sockaddr_in6);
+    int res = v_getpeername(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressIPv6(env, &name);
 }
 
 jint handleReadIOOperationResult(JNIEnv* env, int res) {
@@ -497,10 +482,10 @@ jint handleReadIOOperationResult(JNIEnv* env, int res) {
         }
         throwIOExceptionBasedOnErrno(env);
         return 0;
-	} else if (res == 0) { // EOF
-	    return -1;
-	}
-	return res;
+    } else if (res == 0) { // EOF
+        return -1;
+    }
+    return res;
 }
 
 jint handleWriteIOOperationResult(JNIEnv* env, int res) {
@@ -510,8 +495,8 @@ jint handleWriteIOOperationResult(JNIEnv* env, int res) {
         }
         throwIOExceptionBasedOnErrno(env);
         return 0;
-	}
-	return res;
+    }
+    return res;
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_read
@@ -520,27 +505,27 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_read
         return 0;
     }
     byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	int res = v_read(fd, buf + off, len);
-	return handleReadIOOperationResult(env, res);
+    int res = v_read(fd, buf + off, len);
+    return handleReadIOOperationResult(env, res);
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_write
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len) {
-	if (len == 0) {
-	    return 0;
-	}
-	byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	int res = v_write(fd, buf + off, len);
-	return handleWriteIOOperationResult(env, res);
+    if (len == 0) {
+        return 0;
+    }
+    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    int res = v_write(fd, buf + off, len);
+    return handleWriteIOOperationResult(env, res);
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv4
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len, jint addrHostOrder, jint port) {
-	if (len == 0) {
-	    return 0;
-	}
-	byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	v_sockaddr_in name;
+    if (len == 0) {
+        return 0;
+    }
+    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    v_sockaddr_in name;
     j2cSockAddrIPv4(&name, addrHostOrder, port);
     int res = v_sendto(fd, buf + off, len, 0, (v_sockaddr*) &name, sizeof(v_sockaddr_in));
     return handleWriteIOOperationResult(env, res);
@@ -548,11 +533,11 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv4
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv6
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len, jstring fullAddr, jint port) {
-	if (len == 0) {
-	    return 0;
-	}
-	byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	v_sockaddr_in6 name;
+    if (len == 0) {
+        return 0;
+    }
+    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    v_sockaddr_in6 name;
     int res = j2cSockAddrIPv6(env, &name, fullAddr, port);
     if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
@@ -564,16 +549,16 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv6
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len) {
-	if (len == 0) {
-	    return NULL;
-	}
-	byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	v_sockaddr_in name;
-	unsigned int foo;
-	int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
-	jint retLen = handleReadIOOperationResult(env, res) < 0;
-	if (res < 0) {
-	    return NULL;
+    if (len == 0) {
+        return NULL;
+    }
+    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    v_sockaddr_in name;
+    unsigned int foo = sizeof(v_sockaddr_in);
+    int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
+    jint retLen = handleReadIOOperationResult(env, res) < 0;
+    if (res < 0) {
+        return NULL;
     }
     jobject retAddr = formatSocketAddressIPv4(env, &name);
 
@@ -586,15 +571,15 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len) {
     if (len == 0) {
-	    return NULL;
-	}
-	byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
-	v_sockaddr_in6 name;
-	unsigned int foo;
-	int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
-	jint retLen = handleReadIOOperationResult(env, res) < 0;
-	if (res < 0) {
-	    return NULL;
+        return NULL;
+    }
+    byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
+    v_sockaddr_in6 name;
+    unsigned int foo = sizeof(v_sockaddr_in6);
+    int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
+    jint retLen = handleReadIOOperationResult(env, res) < 0;
+    if (res < 0) {
+        return NULL;
     }
     jobject retAddr = formatSocketAddressIPv6(env, &name);
     if (retAddr == NULL) {

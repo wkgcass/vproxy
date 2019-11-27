@@ -1,6 +1,8 @@
 package vproxy.dns;
 
 import vfd.FDProvider;
+import vfd.jdk.ChannelFDs;
+import vproxy.app.Config;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
@@ -175,7 +177,11 @@ public class Resolver implements IResolver {
         // currently we only use java standard lib to resolve the address
         // so this loop is only used for handling events for now
         this.alias = alias;
-        this.loop = new NetEventLoop(SelectorEventLoop.open());
+        this.loop = new NetEventLoop(SelectorEventLoop.open(
+            Config.useFStack
+                ? ChannelFDs.get()
+                : FDProvider.get().getProvided()
+            /*FIXME: we might implement nonblocking dns client, this can be modified at that time*/));
         // java resolve process will block the thread
         // so we start a new thread only for resolving
         // it will make a callback when resolve completed

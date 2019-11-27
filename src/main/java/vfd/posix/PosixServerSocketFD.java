@@ -30,7 +30,7 @@ public class PosixServerSocketFD extends PosixFD implements ServerSocketFD {
         if (subFd == 0) {
             return null;
         }
-        return new PosixSocketFD(posix, subFd);
+        return new PosixSocketFD(posix, subFd, local.getAddress() instanceof Inet4Address);
     }
 
     @Override

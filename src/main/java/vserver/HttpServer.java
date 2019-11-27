@@ -46,6 +46,10 @@ public interface HttpServer {
         listen(port, "0.0.0.0");
     }
 
+    default void listenIPv6(int port) throws IOException {
+        listen(port, "::");
+    }
+
     default void listen(int port, String address) throws IOException {
         InetAddress l3addr;
         try {
