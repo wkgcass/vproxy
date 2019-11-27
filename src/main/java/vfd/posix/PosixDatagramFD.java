@@ -1,7 +1,6 @@
 package vfd.posix;
 
 import vfd.DatagramFD;
-import vproxy.util.Tuple;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -146,19 +145,22 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
         VSocketAddress l4addr;
         int n = 0;
         try {
-            Tuple<? extends VSocketAddress, Integer> tup;
+            UDPRecvResult tup;
             if (ipv4) {
                 tup = posix.recvfromIPv4(fd, directBuffer, off, len);
             } else {
                 tup = posix.recvfromIPv6(fd, directBuffer, off, len);
             }
-            l4addr = tup.left;
-            n = tup.right;
+            if (tup == null) { // nothing received
+                return null;
+            }
+            l4addr = tup.address;
+            n = tup.len;
         } finally {
             if (n > 0) {
                 if (release) {
                     directBuffer.limit(n).position(0);
-                    directBuffer.put(buf);
+                    buf.put(directBuffer);
                 } else {
                     buf.position(buf.position() + n);
                 }

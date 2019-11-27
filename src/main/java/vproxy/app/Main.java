@@ -54,9 +54,6 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
-        Security.setProperty("networkaddress.cache.ttl", "0");
-        Resolver.getDefault();
-
         if (Config.useFStack) {
             try {
                 FStackUtil.init();
@@ -65,6 +62,9 @@ public class Main {
                 System.exit(1);
             }
         }
+
+        Security.setProperty("networkaddress.cache.ttl", "0");
+        Resolver.getDefault();
     }
 
     private static void runApp(String appClass, String[] args) {

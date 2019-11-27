@@ -22,6 +22,7 @@ public class FStackUtil {
             fstack = new FStack();
             Logger.alert("RUNNING F-STACK");
         } catch (UnsatisfiedLinkError e) {
+            Config.vfdlibname = "vfdposix";
             Logger.error(LogType.ALERT, "loading vfdfstack failed, fallback to MockFStack impl");
             assert Logger.printStackTrace(e);
             fstack = new MockFStack();

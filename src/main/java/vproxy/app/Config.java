@@ -55,7 +55,7 @@ public class Config {
 
     public static final String fstack;
     public static final boolean useFStack;
-    public static final String vfdlibname;
+    public static String vfdlibname;
 
     // -Deploy=xxx
     public static final String appClass;
@@ -65,19 +65,12 @@ public class Config {
         fstack = System.getProperty("fstack", "");
         useFStack = !fstack.isBlank();
         vfdImpl = useFStack ? "posix" : System.getProperty("vfd", "provided");
-        String vfdlibnameConf = System.getProperty("vfdlibname", "");
-        if (vfdlibnameConf.isBlank()) {
-            if (vfdImpl.equals("posix")) {
-                if (useFStack) {
-                    vfdlibname = "vfdfstack";
-                } else {
-                    vfdlibname = "vfdposix";
-                }
+        if (!vfdImpl.equals("provided")) {
+            if (useFStack) {
+                vfdlibname = "vfdfstack";
             } else {
-                vfdlibname = null;
+                vfdlibname = "vfdposix";
             }
-        } else {
-            vfdlibname = vfdlibnameConf;
         }
     }
 }

@@ -303,8 +303,10 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv4
     }
     res = v_listen(fd, MAX_EVENTS);
 	if (res < 0) {
-        throwIOExceptionBasedOnErrno(env);
-        return;
+	    if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
+            throwIOExceptionBasedOnErrno(env);
+            return;
+        }
     }
 }
 
@@ -556,14 +558,14 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
     v_sockaddr_in name;
     unsigned int foo = sizeof(v_sockaddr_in);
     int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
-    jint retLen = handleReadIOOperationResult(env, res) < 0;
+    jint retLen = handleReadIOOperationResult(env, res);
     if (res < 0) {
         return NULL;
     }
     jobject retAddr = formatSocketAddressIPv4(env, &name);
 
-    jclass sCls = (*env)->FindClass(env, "vproxy/util/Tuple");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V");
+    jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
+    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
     jobject ret = (*env)->NewObject(env, sCls, constructor, retAddr, retLen);
     return ret;
 }
@@ -577,7 +579,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
     v_sockaddr_in6 name;
     unsigned int foo = sizeof(v_sockaddr_in6);
     int res = v_recvfrom(fd, buf + off, len, 0, (v_sockaddr*) &name, &foo);
-    jint retLen = handleReadIOOperationResult(env, res) < 0;
+    jint retLen = handleReadIOOperationResult(env, res);
     if (res < 0) {
         return NULL;
     }
@@ -586,8 +588,8 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
         return NULL;
     }
 
-    jclass sCls = (*env)->FindClass(env, "vproxy/util/Tuple");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/Object;Ljava/lang/Object;)V");
+    jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
+    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
     jobject ret = (*env)->NewObject(env, sCls, constructor, retAddr, retLen);
     return ret;
 }

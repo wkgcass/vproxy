@@ -1,7 +1,5 @@
 package vfd.posix;
 
-import vproxy.util.Tuple;
-
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -118,10 +116,10 @@ public class GeneralPosix implements Posix {
     native public int sendtoIPv6(int fd, ByteBuffer directBuffer, int off, int len, String fullAddr, int port) throws IOException;
 
     @Override
-    native public Tuple<VSocketAddress, Integer> recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    native public UDPRecvResult recvfromIPv4(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     @Override
-    native public Tuple<VSocketAddress, Integer> recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
+    native public UDPRecvResult recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     @Override
     native public long currentTimeMillis();

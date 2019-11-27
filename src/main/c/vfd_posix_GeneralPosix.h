@@ -242,7 +242,7 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_shutdownOutput
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    getIPv4Local
- * Signature: (I)Lvfd/posix/SocketAddressIPv4;
+ * Signature: (I)Lvfd/posix/VSocketAddress;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Local
   (JNIEnv *, jobject, jint);
@@ -250,7 +250,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Local
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    getIPv6Local
- * Signature: (I)Lvfd/posix/SocketAddressIPv6;
+ * Signature: (I)Lvfd/posix/VSocketAddress;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Local
   (JNIEnv *, jobject, jint);
@@ -258,7 +258,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Local
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    getIPv4Remote
- * Signature: (I)Lvfd/posix/SocketAddressIPv4;
+ * Signature: (I)Lvfd/posix/VSocketAddress;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Remote
   (JNIEnv *, jobject, jint);
@@ -266,7 +266,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Remote
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    getIPv6Remote
- * Signature: (I)Lvfd/posix/SocketAddressIPv6;
+ * Signature: (I)Lvfd/posix/VSocketAddress;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Remote
   (JNIEnv *, jobject, jint);
@@ -306,7 +306,7 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv6
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    recvfromIPv4
- * Signature: (ILjava/nio/ByteBuffer;II)Lvproxy/util/Tuple;
+ * Signature: (ILjava/nio/ByteBuffer;II)Lvfd/posix/UDPRecvResult;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
   (JNIEnv *, jobject, jint, jobject, jint, jint);
@@ -314,7 +314,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    recvfromIPv6
- * Signature: (ILjava/nio/ByteBuffer;II)Lvproxy/util/Tuple;
+ * Signature: (ILjava/nio/ByteBuffer;II)Lvfd/posix/UDPRecvResult;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
   (JNIEnv *, jobject, jint, jobject, jint, jint);
