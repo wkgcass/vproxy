@@ -2,6 +2,7 @@ package vproxyx;
 
 import vclient.HttpClient;
 import vfd.SocketFD;
+import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
@@ -15,11 +16,13 @@ import java.net.InetSocketAddress;
 
 public class HelloWorld {
     public static void main0(@SuppressWarnings("unused") String[] args) throws Exception {
+        Logger.alert("You are using vproxy " + Application.VERSION);
+
         SelectorEventLoop sLoop = SelectorEventLoop.open();
         NetEventLoop nLoop = new NetEventLoop(sLoop);
 
         HttpServer.create().get("/hello", rctx -> rctx.response().end(
-            "Welcome to vproxy.\r\n" +
+            "Welcome to vproxy " + Application.VERSION + ".\r\n" +
                 "Your request address is " + Utils.l4addrStr(rctx.getRemote()) + ".\r\n" +
                 "Server address is " + Utils.l4addrStr(rctx.getLocal()) + ".\r\n"
         )).listen(80);
