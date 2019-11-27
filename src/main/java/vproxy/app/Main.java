@@ -9,10 +9,7 @@ import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
-import vproxyx.Daemon;
-import vproxyx.Simple;
-import vproxyx.WebSocksProxyAgent;
-import vproxyx.WebSocksProxyServer;
+import vproxyx.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -86,6 +83,9 @@ public class Main {
                 case "Daemon":
                     Daemon.main0(args);
                     break;
+                case "HelloWorld":
+                    HelloWorld.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     System.exit(1);
@@ -110,6 +110,7 @@ public class Main {
                     throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
                 }
                 found = true;
+                System.setProperty("eploy", arg.substring("-Deploy=".length()));
             } else if (arg.startsWith("-D")) {
                 // other properties can be set freely
                 var kv = arg.substring("-D".length());
