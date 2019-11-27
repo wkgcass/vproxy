@@ -125,7 +125,9 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public void wakeup() {
-        selector.wakeup();
+        if (selector.supportsWakeup()) {
+            selector.wakeup();
+        }
     }
 
     @Override
