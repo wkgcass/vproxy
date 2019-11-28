@@ -1,16 +1,12 @@
 package vproxyx;
 
 import vfd.VFDConfig;
-import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.NetEventLoopProvider;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.connection.Connection;
-import vproxy.connection.Connector;
-import vproxy.connection.NetEventLoop;
-import vproxy.connection.ServerSock;
+import vproxy.connection.*;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
@@ -211,10 +207,12 @@ public class WebSocksProxyServer {
         var listeningServerL4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
         List<ServerSock> servers = new LinkedList<>();
         {
+            ServerSock.checkBind(listeningServerL4addr);
             ServerSock server = ServerSock.create(listeningServerL4addr);
             servers.add(server);
         }
         if (useKcp) {
+            ServerSock.checkBind(Protocol.UDP, listeningServerL4addr);
             KCPFDs kcpFDs = KCPFDs.getFast3();
             H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, listeningServerL4addr);
             ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, serverFds);

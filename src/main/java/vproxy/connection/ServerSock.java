@@ -12,6 +12,7 @@ import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.BindException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.util.concurrent.atomic.LongAdder;
@@ -45,6 +46,7 @@ public class ServerSock implements NetFlowRecorder {
         }
         try {
             chnl.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+            chnl.bind(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), 50505));
         } catch (UnsupportedOperationException ignore) {
             Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT");
             supportReusePort = 0;
