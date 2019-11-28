@@ -9,6 +9,11 @@ then
 	FF_PATH="/data/f-stack"
 fi
 
+if [[ -z "$FF_DPDK" ]]
+then
+	FF_DPDK="$FF_PATH/dpdk/x86_64-native-linuxapp-gcc"
+fi
+
 rm -f libvfdfstack.so
 
 gcc -std=gnu99 \
@@ -17,7 +22,7 @@ gcc -std=gnu99 \
     -I "$JAVA_HOME/include/linux" \
     -I "$FF_PATH/lib" \
     -DFSTACK=1 -DHAVE_FF_KQUEUE=1 \
-    -L${FF_PATH}/lib -Wl,--no-as-needed,--whole-archive,-lfstack,-ldpdk,--no-whole-archive \
+    -L${FF_PATH}/lib -L${FF_DPDK}/lib -Wl,--no-as-needed,--whole-archive,-lfstack,-ldpdk,--no-whole-archive \
     -Wl,--as-needed,--no-whole-archive -lrt -lm -ldl -lcrypto -pthread -lnuma \
     -shared -Werror -lc -fPIC \
     vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c vproxy_fstack_FStack.c \
