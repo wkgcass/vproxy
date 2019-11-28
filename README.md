@@ -33,7 +33,7 @@ docker run --rm vproxy -Deploy=HelloWorld
 
 ### use native fds impl
 
-Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable.
+Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.
 
 ```
 cd ./src/main/c
@@ -42,6 +42,8 @@ cd ./src/main/c
 cd ../../../
 java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
+
+For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md).
 
 ## Aim
 
@@ -83,7 +85,8 @@ Questions about implementation detail are also welcome (in issues).
 * [discovery-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/discovery-protocol.md): The protocol which is used by vproxy auto discovery impl.
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
-* [using-application-layer-protocols](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
+* [using-application-layer-protocols.md](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
+* [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
 
 ## Contribute
 

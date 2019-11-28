@@ -1,12 +1,18 @@
 ## Architecture
 
-![architecture](https://github.com/wkgcass/vproxy/blob/master/vproxy.jpg?raw=true)
+![architecture](https://github.com/wkgcass/vproxy/blob/master/doc_assets/001-vproxy.jpg?raw=true)
 
 ### Data Plane
 
 Let's start from the bottom.
 
-Everything is based on java nio `Selector`.
+Everything is based on `FD` and `Selector`.
+
+#### FD
+
+FD is an abstraction for jdk channel or os fds. With the help of FDs, we can easily change the whole network stack without touching the upper level code. For example you can use (almost) all functionalities when you switch to the `F-Stack` fd implementation.
+
+Also it makes it easy to write ARQ protocols based on UDP, and wrap them into `TCP-like` API, and plug into the vproxy system. For example you can use the KCP FDs impl just like using a normal TCP channel.
 
 #### SelectorEventLoop
 
@@ -49,9 +55,11 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 `ServerGroups` is a list of groups, each group is assigned with a weight. It's nothing but a container and does not do IO it self. It provides a `next()` method, which will go throught all serverGroups and retrieve a healthy server. The method of selecting serverGroup is always WRR, and it doesn't affect how `ServerGroup` selects server.
 
-#### TcpLB
+#### TcpLB and Socks5Server
 
-`TcpLB` listens on a port and does loadbalancing. You can create multiple `TcpLB`s if you want to listen on multiple ports.
+These are the main functionalities that vproxy main program provides.
+
+`TcpLB` listens on a port and does loadbalancing for TCP based protocols (e.g. HTTP). You can create multiple `TcpLB`s if you want to listen on multiple ports. `Socks5Server` is almost the same as `TcpLB` but it runs socks5 protocol and proxies netflow to client specified backend.
 
 ### Control Plane
 
@@ -66,3 +74,20 @@ VProxy provides you with multiple ways of configuring the vproxy instance.
 #### RESPController
 
 `RESPController` listens on a port and uses the REdis Serialization Protocol for transporting commands and results. You can use `redis-cli` to manage the vproxy instance.
+
+#### HTTPController
+
+`HTTPController` creates an HTTP server that exposes RESTful json api to manage the vproxy instance.
+
+### Service Mesh
+
+VProxy provides the ability of service discovery and can act as a sidecar.  
+You may use the combination of `TcpLB`, `Socks5Server`, `SmartGroupDelegate` and `SmartNodeDelegate` to build any role inside a mesh.
+
+### Library
+
+With all above functionalities, vproxy wraps some of them and provides libraries with light weight API.
+
+### Application
+
+Besides acting as a loadbalancer, vproxy provides some other network related tools, for example you may use the WebSocksProxyAgent/Server to build a tunnel through fireware.

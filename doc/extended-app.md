@@ -32,11 +32,23 @@ java -Deploy=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0r
 
 ## Available apps
 
+### Deploy=HelloWorld
+
+Start an http server and an udp echo server. Also clients are started to request the servers, in order to see the environment is ok and basic functionalities are ok.
+
 ### Deploy=Simple
 
 The vproxy simple loadbalancer. You can start a fully functional loadbalancer in one shell command.
 
 See [how-to-use](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) for more info.
+
+### Deploy=Daemon
+
+It's a daemon process specially designed for `Systemd`, used to launch, reload or auto-recover vproxy processes.
+
+#### Start arguments
+
+All accepted startup args are used to launch the vproxy subprocess.
 
 ### Deploy=WebSocksProxyServer
 

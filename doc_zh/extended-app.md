@@ -30,11 +30,23 @@ java -Deploy=WebSocksProxyServer -jar vproxy.jar listen 18686 auth alice:pasSw0r
 
 ## 可用的应用
 
+### Deploy=HelloWorld
+
+启动一个http server和一个udp echo server。并且启动client来访问它们，以检查环境和基础功能是否正常。
+
 ### Deploy=Simple
 
 vproxy简易负载均衡。你可以用一行shell命令启动一个完整的负载均衡。
 
 查看 [how-to-use](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md) 获取更多信息。
+
+### Deploy=Daemon
+
+专为`Systemd`设计的一个daemon进程，用于启动、reload、自动拉起vproxy进程。
+
+#### 启动参数
+
+所有接受的启动参数均被用于启动子进程（vproxy进程）。
 
 ### Deploy=WebSocksProxyServer
 
