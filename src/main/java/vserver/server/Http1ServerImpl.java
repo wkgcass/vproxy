@@ -360,12 +360,20 @@ public class Http1ServerImpl implements HttpServer {
         }
     }
 
+    // return: list<tuple<list<preHandlers>, actualHandler>>
+    // the preHandlers are constructed in this method, and actualHandlers are user defined
     private List<Tuple<List<RoutingHandler>, RoutingHandler>> buildHandlerChain(Tree<Route, RoutingHandler> tree, List<String> paths) {
         var ls = new LinkedList<Tuple<List<RoutingHandler>, RoutingHandler>>();
         var pre = Collections.<RoutingHandler>emptyList();
         if (paths.isEmpty()) {
-            ls.add(new Tuple<>(Collections.singletonList(rctx -> {
-            }), this::handle404));
+            // special handling for paths.isEmpty condition
+            // which means the request path is `/`
+            for (var h : tree.leafData()) {
+                // definitely no data to fill, so preHandlers can be empty
+                ls.add(new Tuple<>(Collections.emptyList(), h));
+            }
+            // also 404 should be added
+            ls.add(new Tuple<>(Collections.emptyList(), this::handle404));
         } else {
             buildHandlerChain(ls, pre, tree, paths, 0);
         }

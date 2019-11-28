@@ -21,19 +21,26 @@ public class HelloWorld {
         SelectorEventLoop sLoop = SelectorEventLoop.open();
         NetEventLoop nLoop = new NetEventLoop(sLoop);
 
-        HttpServer.create().get("/hello", rctx -> rctx.response().end(
-            "Welcome to vproxy " + Application.VERSION + ".\r\n" +
-                "Your request address is " + Utils.l4addrStr(rctx.getRemote()) + ".\r\n" +
-                "Server address is " + Utils.l4addrStr(rctx.getLocal()) + ".\r\n"
-        )).listen(80);
-        Logger.alert("HTTP server is listening on 80");
+        final int listenPort = 8080;
+
+        HttpServer.create()
+            .get("/", rctx -> rctx.response().end(
+                "vproxy " + Application.VERSION + "\r\n"
+            ))
+            .get("/hello", rctx -> rctx.response().end(
+                "Welcome to vproxy " + Application.VERSION + ".\r\n" +
+                    "Your request address is " + Utils.l4addrStr(rctx.getRemote()) + ".\r\n" +
+                    "Server address is " + Utils.l4addrStr(rctx.getLocal()) + ".\r\n"
+            ))
+            .listen(listenPort);
+        Logger.alert("HTTP server is listening on " + listenPort);
 
         if (Config.useFStack) {
             Logger.warn(LogType.ALERT, "F-Stack does not support 127.0.0.1 nor to request self ip address.");
-            Logger.warn(LogType.ALERT, "You may run `curl $ip:80/hello` to see if the TCP server is working.");
+            Logger.warn(LogType.ALERT, "You may run `curl $ip:" + listenPort + "/hello` to see if the TCP server is working.");
             Logger.warn(LogType.ALERT, "Or you may run -Deploy=Simple to start a simple loadbalancer to verify the TCP client functions.");
         } else {
-            HttpClient client = HttpClient.to("127.0.0.1", 80);
+            HttpClient client = HttpClient.to("127.0.0.1", listenPort);
             sLoop.delay(1_000, () -> {
                 Logger.alert("HTTP client now starts ...");
                 Logger.alert("Making request: GET /hello");
@@ -48,8 +55,8 @@ public class HelloWorld {
             });
         }
 
-        InetSocketAddress listenAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), 80);
-        InetSocketAddress connectAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 80);
+        InetSocketAddress listenAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), listenPort);
+        InetSocketAddress connectAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), listenPort);
         final int bufferSize = 1024;
         ServerSock sock = ServerSock.createUDP(listenAddress, sLoop);
         nLoop.addServer(sock, null, new ServerHandler() {
@@ -109,10 +116,10 @@ public class HelloWorld {
                 Logger.alert("server sock " + sock + " removed from loop");
             }
         });
-        Logger.alert("UDP server is listening on 80");
+        Logger.alert("UDP server is listening on " + listenPort);
 
         if (Config.useFStack) {
-            Logger.warn(LogType.ALERT, "You may run `nc -u $ip 80` to see if the UDP server is working. It's an echo server, it will respond with anything you input.");
+            Logger.warn(LogType.ALERT, "You may run `nc -u $ip " + listenPort + "` to see if the UDP server is working. It's an echo server, it will respond with anything you input.");
         } else {
             sLoop.delay(2_000, () -> {
                 Logger.alert("UDP client now starts ...");
