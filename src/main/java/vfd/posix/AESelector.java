@@ -229,10 +229,12 @@ public class AESelector implements FDSelector {
             } catch (IOException e) {
                 Logger.shouldNotHappen("closing read end of the pipefd failed", e);
             }
-            try {
-                posix.close(pipefd[1]);
-            } catch (IOException e) {
-                Logger.shouldNotHappen("closing write end of the pipefd failed", e);
+            if (pipefd[1] != pipefd[0]) {
+                try {
+                    posix.close(pipefd[1]);
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("closing write end of the pipefd failed", e);
+                }
             }
         }
     }

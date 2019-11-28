@@ -1,6 +1,7 @@
 package vproxy.selector;
 
 import vfd.*;
+import vfd.jdk.ChannelFDs;
 import vproxy.app.Config;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.*;
@@ -40,12 +41,25 @@ public class SelectorEventLoop {
 
     // these locks are a little tricky
     // see comments in loop() and close()
-    private final Object CLOSE_LOCK = new Object();
+    private final Lock CLOSE_LOCK;
+    private final Lock SELECTOR_OPERATION_LOCK;
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
     private SelectorEventLoop(FDs fds) throws IOException {
         this.selector = new WrappedSelector(fds.openSelector());
         this.fds = fds;
+        if (VFDConfig.useFStack) {
+            CLOSE_LOCK = Lock.createMock();
+        } else {
+            CLOSE_LOCK = Lock.create();
+        }
+        if (FDProvider.get().getProvided() == ChannelFDs.get() || VFDConfig.useFStack) {
+            // no extra lock needed for jdk impl
+            // no extra lock needed when running f-stack
+            SELECTOR_OPERATION_LOCK = Lock.createMock();
+        } else {
+            SELECTOR_OPERATION_LOCK = Lock.create();
+        }
     }
 
     private static volatile SelectorEventLoop theLoop = null; // this field is used when using fstack
@@ -206,7 +220,8 @@ public class SelectorEventLoop {
     // return  0 for continue
     @Blocking
     public int onePoll() {
-        synchronized (CLOSE_LOCK) {
+        //noinspection unused
+        try (var unused = CLOSE_LOCK.lock()) {
             // yes, we lock the whole while body (except the select part)
             // it's ok because we won't close the loop from inside the loop
             // and it's also ok to let the operator wait for some time
@@ -247,7 +262,8 @@ public class SelectorEventLoop {
         // here we lock again
         // because we need to handle something
         // and at this time the selector might be closed
-        synchronized (CLOSE_LOCK) {
+        //noinspection unused
+        try (var unused = CLOSE_LOCK.lock()) {
 
             if (!selector.isOpen())
                 return -1; // break if it's closed
@@ -299,13 +315,20 @@ public class SelectorEventLoop {
         return runningThread != null && Thread.currentThread() != runningThread;
     }
 
+    private void wakeup() {
+        //noinspection unused
+        try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
+            selector.wakeup();
+        }
+    }
+
     @ThreadSafe
     public void nextTick(Runnable r) {
         runOnLoopEvents.add(r);
         if (runningThread == null || Thread.currentThread() == runningThread)
             return; // we do not need to wakeup because it's not started or is already waken up
         if (selector.supportsWakeup()) {
-            selector.wakeup(); // wake the selector because new event is added
+            wakeup(); // wake the selector because new event is added
         }
     }
 
@@ -344,7 +367,7 @@ public class SelectorEventLoop {
         }
         if (add0(channel, ops, registerData)) {
             if (needWake()) {
-                selector.wakeup();
+                wakeup();
             }
         }
     }
@@ -382,7 +405,7 @@ public class SelectorEventLoop {
         }
         selector.modify(fd, ops);
         if (needWake()) {
-            selector.wakeup();
+            wakeup();
         }
     }
 
@@ -418,7 +441,7 @@ public class SelectorEventLoop {
 
         selector.remove(channel);
         if (needWake()) {
-            selector.wakeup();
+            wakeup();
         }
         triggerRemovedCallback(channel, att);
     }
@@ -459,7 +482,8 @@ public class SelectorEventLoop {
         // just shut down all keys and close the selector
         // the nio lib will raise error if it's already closed
 
-        synchronized (CLOSE_LOCK) {
+        //noinspection unused
+        try (var unused = CLOSE_LOCK.lock()) {
             Collection<RegisterEntry> keys = selector.entries();
             while (true) {
                 THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
@@ -481,7 +505,7 @@ public class SelectorEventLoop {
             }
             selector.close();
         }
-        // selector.wakeup();
+        // wakeup();
         // we don not need to wakeup manually, the selector.close does this for us
 
         if (runningThread != null && runningThread != Thread.currentThread()) {
