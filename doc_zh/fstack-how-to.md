@@ -62,7 +62,7 @@ vboxnet0
 
 创建后进入“设置”页面。“存储”配置的光驱中指定ubuntu安装镜像。
 
-![storage](https://github.com/wkgcass/vproxy/blob/master/doc_assets/002-fstack-how-to-storage.png?raw=true)
+![storage](https://github.com/wkgcass/vproxy/blob/master/doc_assets/003-fstack-how-to-storage.png?raw=true)
 
 ### 4. 网络配置
 
@@ -75,7 +75,7 @@ vboxnet0
 
 其中，Host-Only的网卡，“界面名称”的选择刚才配置的虚拟网卡vboxnet0。并且，第三张网卡需要点开高级设置，控制芯片里选择“Intel PRO/1000 MT 服务器 (82545EM)”。
 
-![nic](https://github.com/wkgcass/vproxy/blob/master/doc_assets/002-fstack-how-to-nic.png?raw=true)
+![nic](https://github.com/wkgcass/vproxy/blob/master/doc_assets/004-fstack-how-to-nic.png?raw=true)
 
 看到这里你可能有几个疑惑：
 
@@ -102,7 +102,7 @@ vboxnet0
 
 ### 5. 配置清单
 
-![list](https://github.com/wkgcass/vproxy/blob/master/doc_assets/002-fstack-how-to-list.png?raw=true)
+![list](https://github.com/wkgcass/vproxy/blob/master/doc_assets/005-fstack-how-to-list.png?raw=true)
 
 ### 6. 安装操作系统
 
@@ -133,7 +133,7 @@ iface eth1 inet dhcp
 
 比方说，我这里看到的是`192.168.56.102`。后续操作建议都使用ssh进行，可以从宿主机连到eth1上。
 
-还需要检查是否支持sse4，`cat /proc/cpuinfo | grep sse`，应该能看到sse4_1 sse4_2的字样。
+还需要检查是否支持sse4，`cat /proc/cpuinfo | grep sse`，应该能看到sse4\_1 sse4\_2的字样。
 
 ### 9. 安装软件
 
@@ -284,7 +284,7 @@ java -Deploy=HelloWorld -Dfstack="--conf /etc/f-stack.conf" -Djava.library.path=
 
 正常的话应当能够看到如下打印：（后续版本更新后可能打印有所变化，不过大概应当如此）
 
-![print](https://github.com/wkgcass/vproxy/blob/master/doc_assets/002-fstack-how-to-print.png?raw=true)
+![print](https://github.com/wkgcass/vproxy/blob/master/doc_assets/006-fstack-how-to-print.png?raw=true)
 
 注：程序可能会在下面这个位置卡一段时间，这是正常现象，稍微等待即可，可能半分钟到两分钟不等（另外请确认/etc/f-stack.conf的lcore_mask配置是否符合本文）。
 
@@ -298,7 +298,8 @@ EAL:   probe driver: 8086:100f net_e1000_em
 
 因为f-stack无法从进程内部访问自己，所以HelloWorld进程没办法自测试，可以从宿主机或者虚拟机里使用curl和nc进行测试。
 
-访问HTTP Server：  
+访问HTTP Server：
+
 ```
 curl 192.168.56.40:8080/hello
 # 输出：
