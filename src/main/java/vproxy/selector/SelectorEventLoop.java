@@ -51,7 +51,7 @@ public class SelectorEventLoop {
     private static volatile SelectorEventLoop theLoop = null; // this field is used when using fstack
 
     public static SelectorEventLoop open() throws IOException {
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             // we use only one event loop if it's using f-stack
             // considering the program code base, it will take too much time
             // modifying code everywhere,
@@ -72,7 +72,7 @@ public class SelectorEventLoop {
     }
 
     public static SelectorEventLoop open(FDs fds) throws IOException {
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             if (FDProvider.get().getProvided() == fds) {
                 throw new IllegalArgumentException("should not call SelectorEventLoop.open(fds) with the default fds impl");
             }
@@ -181,7 +181,7 @@ public class SelectorEventLoop {
 
     @Blocking // will block until the loop actually starts
     public void loop(Function<Runnable, Thread> constructThread) {
-        if (Config.useFStack && fds == FDProvider.get().getProvided()) {
+        if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
             // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
             return;
         }
@@ -224,7 +224,7 @@ public class SelectorEventLoop {
 
         final Collection<SelectedEntry> selected;
         try {
-            if (Config.useFStack && fds == FDProvider.get().getProvided()) { // f-stack main loop does not wait
+            if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) { // f-stack main loop does not wait
                 selected = selector.selectNow();
             } else if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
                 selected = selector.select(); // let it sleep
@@ -262,7 +262,7 @@ public class SelectorEventLoop {
 
     @Blocking
     public void loop() {
-        if (Config.useFStack && fds == FDProvider.get().getProvided()) {
+        if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
             // when using f-stack, the MAIN loop is started by ff_loop (non-main loops can still run)
             // we should not start any loop inside ff_loop
             // but considering the base code, this method is used everywhere

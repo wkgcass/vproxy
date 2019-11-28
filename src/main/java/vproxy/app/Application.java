@@ -1,5 +1,6 @@
 package vproxy.app;
 
+import vfd.VFDConfig;
 import vproxy.app.mesh.SmartGroupDelegateHolder;
 import vproxy.app.mesh.SmartNodeDelegateHolder;
 import vproxy.component.elgroup.EventLoopWrapper;
@@ -12,7 +13,6 @@ import vproxy.util.Logger;
 
 import java.io.IOException;
 
-@SuppressWarnings("ClassEscapesDefinedScope")
 public class Application {
     public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME = "(acceptor-elg)";
     public static final String DEFAULT_ACCEPTOR_EVENT_LOOP_NAME = "(acceptor-el)";
@@ -89,7 +89,7 @@ public class Application {
         }
         // use the current core count
         int cores = Runtime.getRuntime().availableProcessors();
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             cores = 1; // f-stack applications have only one thread
         }
         for (int i = 0; i < cores; ++i) {

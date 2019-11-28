@@ -2,7 +2,6 @@ package vfd;
 
 import vfd.jdk.ChannelFDs;
 import vfd.posix.PosixFDs;
-import vproxy.app.Config;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -16,7 +15,7 @@ public class FDProvider {
 
     private FDProvider() {
         var supported = Arrays.asList("provided", "jdk", "posix");
-        var selected = Config.vfdImpl;
+        var selected = VFDConfig.vfdImpl;
         if (!supported.contains(selected)) {
             selected = "provided";
         }

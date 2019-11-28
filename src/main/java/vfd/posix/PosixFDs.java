@@ -1,7 +1,6 @@
 package vfd.posix;
 
 import vfd.*;
-import vproxy.app.Config;
 
 import java.io.IOException;
 
@@ -9,8 +8,8 @@ public class PosixFDs implements FDs {
     private final Posix posix;
 
     public PosixFDs() {
-        assert Config.vfdlibname != null;
-        String lib = Config.vfdlibname;
+        assert VFDConfig.vfdlibname != null;
+        String lib = VFDConfig.vfdlibname;
         try {
             System.loadLibrary(lib);
         } catch (UnsatisfiedLinkError e) {

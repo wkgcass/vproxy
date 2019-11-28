@@ -1,6 +1,6 @@
 package vproxy.fstack;
 
-import vproxy.app.Config;
+import vfd.VFDConfig;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -22,7 +22,7 @@ public class FStackUtil {
             fstack = new FStack();
             Logger.alert("RUNNING F-STACK");
         } catch (UnsatisfiedLinkError e) {
-            Config.vfdlibname = "vfdposix";
+            VFDConfig.vfdlibname = "vfdposix";
             Logger.error(LogType.ALERT, "loading vfdfstack failed, fallback to MockFStack impl");
             assert Logger.printStackTrace(e);
             fstack = new MockFStack();
@@ -30,7 +30,7 @@ public class FStackUtil {
         }
 
         // init
-        List<String> args = new LinkedList<>(Arrays.stream(Config.fstack.split(" ")).filter(s -> !s.isBlank()).map(String::trim).collect(Collectors.toList()));
+        List<String> args = Arrays.stream(VFDConfig.fstack.split(" ")).filter(s -> !s.isBlank()).map(String::trim).collect(Collectors.toCollection(LinkedList::new));
         args.add(0, "vproxy" /*this is a placeholder for program name in c argv list*/);
         fstack.ff_init(args);
         loop = SelectorEventLoop.open();

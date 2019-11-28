@@ -1,5 +1,6 @@
 package vproxyx;
 
+import vfd.VFDConfig;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.ServerHandle;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -55,7 +56,7 @@ public class WebSocksProxyAgent {
 
         // get worker thread count
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             threads = 1;
         }
         int workers = threads;

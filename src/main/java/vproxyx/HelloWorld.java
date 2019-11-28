@@ -2,8 +2,8 @@ package vproxyx;
 
 import vclient.HttpClient;
 import vfd.SocketFD;
+import vfd.VFDConfig;
 import vproxy.app.Application;
-import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
@@ -35,7 +35,7 @@ public class HelloWorld {
             .listen(listenPort);
         Logger.alert("HTTP server is listening on " + listenPort);
 
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "F-Stack does not support 127.0.0.1 nor to request self ip address.");
             Logger.warn(LogType.ALERT, "You may run `curl $ip:" + listenPort + "/hello` to see if the TCP server is working.");
             Logger.warn(LogType.ALERT, "Or you may run -Deploy=Simple to start a simple loadbalancer to verify the TCP client functions.");
@@ -118,7 +118,7 @@ public class HelloWorld {
         });
         Logger.alert("UDP server is listening on " + listenPort);
 
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "You may run `nc -u $ip " + listenPort + "` to see if the UDP server is working. It's an echo server, it will respond with anything you input.");
         } else {
             sLoop.delay(2_000, () -> {

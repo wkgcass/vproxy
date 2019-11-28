@@ -49,28 +49,10 @@ public class Config {
     // null for the default path
     public static String autoSaveFilePath = null;
 
-    // -Dvfd=...
-    // see FDProvider
-    public static final String vfdImpl;
-
-    public static final String fstack;
-    public static final boolean useFStack;
-    public static String vfdlibname;
-
     // -Deploy=xxx
     public static final String appClass;
 
     static {
         appClass = System.getProperty("eploy"); // -Deploy
-        fstack = System.getProperty("fstack", "");
-        useFStack = !fstack.isBlank();
-        vfdImpl = useFStack ? "posix" : System.getProperty("vfd", "provided");
-        if (!vfdImpl.equals("provided")) {
-            if (useFStack) {
-                vfdlibname = "vfdfstack";
-            } else {
-                vfdlibname = "vfdposix";
-            }
-        }
     }
 }

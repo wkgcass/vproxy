@@ -1,6 +1,7 @@
 package vproxy.dns;
 
 import vfd.FDProvider;
+import vfd.VFDConfig;
 import vfd.jdk.ChannelFDs;
 import vproxy.app.Config;
 import vproxy.connection.NetEventLoop;
@@ -178,7 +179,7 @@ public class Resolver implements IResolver {
         // so this loop is only used for handling events for now
         this.alias = alias;
         this.loop = new NetEventLoop(SelectorEventLoop.open(
-            Config.useFStack
+            VFDConfig.useFStack
                 ? ChannelFDs.get()
                 : FDProvider.get().getProvided()
             /*FIXME: we might implement nonblocking dns client, this can be modified at that time*/));

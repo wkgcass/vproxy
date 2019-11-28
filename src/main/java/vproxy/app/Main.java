@@ -1,5 +1,6 @@
 package vproxy.app;
 
+import vfd.VFDConfig;
 import vproxy.app.args.*;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
@@ -54,7 +55,7 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             try {
                 FStackUtil.init();
             } catch (IOException e) {
@@ -140,7 +141,7 @@ public class Main {
         String appClass = Config.appClass;
         if (appClass != null) {
             runApp(appClass, args);
-            if (Config.useFStack) {
+            if (VFDConfig.useFStack) {
                 FStackUtil.run();
             }
             return;
@@ -280,7 +281,7 @@ public class Main {
         // start scheduled saving task
         Application.get().controlEventLoop.getSelectorEventLoop().period(60 * 60 * 1000, Main::saveConfig);
 
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             FStackUtil.run();
         }
     }

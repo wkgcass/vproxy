@@ -1,5 +1,6 @@
 package vproxyx;
 
+import vfd.VFDConfig;
 import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
@@ -188,7 +189,7 @@ public class WebSocksProxyServer {
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
-        if (Config.useFStack) {
+        if (VFDConfig.useFStack) {
             threads = 1;
         }
         int workers = threads;

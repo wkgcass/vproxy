@@ -3,12 +3,12 @@ package vproxy.discovery;
 import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
 import vfd.FDProvider;
+import vfd.VFDConfig;
 import vfd.jdk.ChannelFDs;
 import vjson.JSON;
 import vjson.ex.JsonParseException;
 import vjson.simple.SimpleArray;
 import vjson.util.ObjectBuilder;
-import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.*;
 import vproxy.component.svrgroup.Method;
@@ -381,7 +381,7 @@ public class Discovery {
 
         try {
             blockingUDPSendThread = SelectorEventLoop.open(
-                Config.useFStack
+                VFDConfig.useFStack
                     ? ChannelFDs.get()
                     : FDProvider.get().getProvided()
                 /*FIXME: we might switch to nonblocking impl, this can be modified at that time*/);
