@@ -142,7 +142,7 @@ public class SelectorEventLoop {
             ctx.attachment = registerData.att;
 
             if (!channel.isOpen()) {
-                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: " + channel);
+                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctx.attachment);
             } else {
                 EventSet readyOps = key.ready;
                 // handle read first because it's most likely to happen
@@ -316,9 +316,11 @@ public class SelectorEventLoop {
     }
 
     private void wakeup() {
-        //noinspection unused
-        try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
-            selector.wakeup();
+        if (selector.supportsWakeup()) {
+            //noinspection unused
+            try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
+                selector.wakeup();
+            }
         }
     }
 
@@ -327,9 +329,7 @@ public class SelectorEventLoop {
         runOnLoopEvents.add(r);
         if (runningThread == null || Thread.currentThread() == runningThread)
             return; // we do not need to wakeup because it's not started or is already waken up
-        if (selector.supportsWakeup()) {
-            wakeup(); // wake the selector because new event is added
-        }
+        wakeup(); // wake the selector because new event is added
     }
 
     @ThreadSafe
