@@ -711,7 +711,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // cancel the timer
             TimerEvent te = keepaliveTimeouts.get(kId);
             if (te == null) {
-                Logger.warn(LogType.PROBE, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
+                Logger.warn(LogType.ALERT, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
                 return;
             }
             Logger.probe("receiving keepalive ack message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);

@@ -89,6 +89,9 @@ public class GeneralPosix implements Posix {
     native public void connectIPv6(int fd, String fullAddr, int port) throws IOException;
 
     @Override
+    native public void finishConnect(int fd) throws IOException;
+
+    @Override
     native public void shutdownOutput(int fd) throws IOException;
 
     @Override

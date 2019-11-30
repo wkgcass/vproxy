@@ -41,7 +41,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     }
 
     private void stop() {
-        Logger.error(LogType.PROBE, "streamed arq udp client is stopping: remote=" + remote);
+        Logger.error(LogType.ALERT, "streamed arq udp client is stopping: remote=" + remote);
         if (keepaliveEvent != null) {
             keepaliveEvent.cancel();
             keepaliveEvent = null;

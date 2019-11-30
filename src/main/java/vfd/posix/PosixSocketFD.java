@@ -28,6 +28,7 @@ public class PosixSocketFD extends PosixNetworkFD implements SocketFD {
     public boolean finishConnect() throws IOException {
         checkFD();
         checkNotClosed();
+        posix.finishConnect(fd);
         connected = true;
         return true;
     }

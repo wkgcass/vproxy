@@ -296,14 +296,14 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv4
         throwIOExceptionBasedOnErrno(env);
         return;
     }
-	res = v_bind(fd, (v_sockaddr*) &name, sizeof(v_sockaddr_in));
-	if (res < 0) {
+    res = v_bind(fd, (v_sockaddr*) &name, sizeof(v_sockaddr_in));
+    if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
         return;
     }
     res = v_listen(fd, MAX_EVENTS);
-	if (res < 0) {
-	    if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
+    if (res < 0) {
+        if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
             throwIOExceptionBasedOnErrno(env);
             return;
         }
@@ -340,7 +340,7 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv6
         return;
     }
     res = v_listen(fd, MAX_EVENTS);
-	if (res < 0) {
+    if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
         return;
     }
@@ -389,6 +389,24 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv6
         throwIOExceptionBasedOnErrno(env);
         return;
     }
+}
+
+jint handleWriteIOOperationResult(JNIEnv* env, int res) {
+    if (res < 0) {
+        if (errno == V_EAGAIN || errno == V_EWOULDBLOCK) {
+            return 0;
+        }
+        throwIOExceptionBasedOnErrno(env);
+        return 0;
+    }
+    return res;
+}
+
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_finishConnect
+  (JNIEnv* env, jobject self, jint fd) {
+    byte buf[0];
+    int res = v_write(fd, 0, 0);
+    handleWriteIOOperationResult(env, res);
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_shutdownOutput
@@ -486,17 +504,6 @@ jint handleReadIOOperationResult(JNIEnv* env, int res) {
         return 0;
     } else if (res == 0) { // EOF
         return -1;
-    }
-    return res;
-}
-
-jint handleWriteIOOperationResult(JNIEnv* env, int res) {
-    if (res < 0) {
-        if (errno == V_EAGAIN || errno == V_EWOULDBLOCK) {
-            return 0;
-        }
-        throwIOExceptionBasedOnErrno(env);
-        return 0;
     }
     return res;
 }

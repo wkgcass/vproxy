@@ -142,7 +142,9 @@ public class SelectorEventLoop {
             ctx.attachment = registerData.att;
 
             if (!channel.isOpen()) {
-                Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctx.attachment);
+                if (selector.isRegistered(channel)) {
+                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctx.attachment);
+                } // else the channel is closed in another fd handler and removed from loop, this is ok and no need to report
             } else {
                 EventSet readyOps = key.ready;
                 // handle read first because it's most likely to happen

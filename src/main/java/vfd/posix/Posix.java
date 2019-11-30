@@ -60,6 +60,8 @@ public interface Posix {
 
     void connectIPv6(int fd, String fullAddr, int port) throws IOException;
 
+    void finishConnect(int fd) throws IOException;
+
     void shutdownOutput(int fd) throws IOException;
 
     VSocketAddress getIPv4Local(int fd) throws IOException;

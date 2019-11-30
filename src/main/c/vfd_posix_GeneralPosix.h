@@ -233,6 +233,14 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_connectIPv6
 
 /*
  * Class:     vfd_posix_GeneralPosix
+ * Method:    finishConnect
+ * Signature: (I)V
+ */
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_finishConnect
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
  * Method:    shutdownOutput
  * Signature: (I)V
  */

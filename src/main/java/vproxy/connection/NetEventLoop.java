@@ -171,7 +171,21 @@ class HandlerForTCPServer implements Handler<ServerSocketFD> {
                     sctx.handler.connectionOpts(),
                     ioBuffers.left, ioBuffers.right);
             } catch (IOException e) {
-                Logger.shouldNotHappen("Connection object create failed: " + e);
+                if ("Invalid argument".equals(e.getMessage())) {
+                    // the connection might already closed when reaches here
+                    // the native impl will throw `Invalid argument`
+                    // in this case, no need to log an error message
+                    assert Logger.lowLevelDebug("creating Connection object for " + sock + " failed");
+                } else {
+                    Logger.error(LogType.CONN_ERROR, "creating Connection object for " + sock + " failed: " + e);
+                }
+                assert Logger.printStackTrace(e);
+                // should rollback
+                try {
+                    sock.close();
+                } catch (IOException e1) {
+                    Logger.shouldNotHappen("failed to close the sock " + sock + " after failed creating Connection object", e1);
+                }
                 return;
             }
             conn.addNetFlowRecorder(sctx.server);
