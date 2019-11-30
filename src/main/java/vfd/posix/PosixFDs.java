@@ -3,6 +3,7 @@ package vfd.posix;
 import vfd.*;
 
 import java.io.IOException;
+import java.lang.reflect.Proxy;
 
 public class PosixFDs implements FDs {
     private final Posix posix;
@@ -17,7 +18,11 @@ public class PosixFDs implements FDs {
             e.printStackTrace(System.out);
             System.exit(1);
         }
-        posix = new GeneralPosix();
+        if (VFDConfig.vfdtrace) {
+            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{Posix.class}, new TracePosixInvocationHandler(new GeneralPosix()));
+        } else {
+            posix = new GeneralPosix();
+        }
     }
 
     @Override

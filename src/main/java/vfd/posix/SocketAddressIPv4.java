@@ -31,7 +31,7 @@ public class SocketAddressIPv4 implements VSocketAddress {
     @Override
     public String toString() {
         return "SocketAddressIPv4{" +
-            "ip=" + ip +
+            "ip=" + Utils.ipStr(Utils.ipv4Int2Bytes(ip)) +
             ", port=" + port +
             '}';
     }

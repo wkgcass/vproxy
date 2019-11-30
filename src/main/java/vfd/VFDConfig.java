@@ -15,6 +15,9 @@ public class VFDConfig {
     // -Dvfdlibname="vfdposix"
     public static String vfdlibname;
 
+    // -Dvfdtrace=1
+    public static final boolean vfdtrace;
+
     static {
         fstack = System.getProperty("fstack", "");
         useFStack = !fstack.isBlank();
@@ -26,5 +29,8 @@ public class VFDConfig {
                 vfdlibname = "vfdposix";
             }
         }
+
+        String vfdtraceConf = System.getProperty("vfdtrace", "0");
+        vfdtrace = !vfdtraceConf.equals("0");
     }
 }

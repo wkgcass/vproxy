@@ -10,4 +10,13 @@ public class FDInfo {
         this.events = events;
         this.attachment = attachment;
     }
+
+    @Override
+    public String toString() {
+        return "FDInfo{" +
+            "fd=" + fd +
+            ", events=" + events +
+            ", attachment=" + attachment +
+            '}';
+    }
 }

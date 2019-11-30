@@ -254,4 +254,16 @@ public class Logger {
             System.out.println(new String(cs));
         }
     }
+
+    public static char toPrintableChar(byte bb) {
+        int b = bb;
+        if (b < 0) {
+            b += 256;
+        }
+        if (b < 32 || b > 126) {
+            return '.';
+        } else {
+            return (char) b;
+        }
+    }
 }

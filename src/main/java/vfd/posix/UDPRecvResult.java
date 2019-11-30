@@ -8,4 +8,9 @@ public class UDPRecvResult {
         this.address = address;
         this.len = len;
     }
+
+    @Override
+    public String toString() {
+        return "(addr=" + address + ", len=" + len + ")";
+    }
 }

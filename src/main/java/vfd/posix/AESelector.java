@@ -45,6 +45,14 @@ public class AESelector implements FDSelector {
             this.fd = fd;
             this.att = att;
         }
+
+        @Override
+        public String toString() {
+            return "Att{" +
+                "fd=" + fd +
+                ", att=" + att +
+                '}';
+        }
     }
 
     @Override
