@@ -3,6 +3,7 @@ package vproxy.selector.wrap.streamed;
 import vfd.EventSet;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
+import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.PeriodicEvent;
@@ -48,20 +49,22 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     }
 
     private void initProbe() {
-        loop.period(30_000, () -> {
-            String localStr = Utils.l4addrStr(local);
-            for (Map.Entry<ArqUDPSocketFD, StreamedFDHandler> entry : currentHandlers.entrySet()) {
-                ArqUDPSocketFD k = entry.getKey();
-                // StreamedFDHandler v = entry.getValue();
+        if (Config.probe.contains("streamed-arq-udp-record")) {
+            loop.period(30_000, () -> {
+                String localStr = Utils.l4addrStr(local);
+                for (Map.Entry<ArqUDPSocketFD, StreamedFDHandler> entry : currentHandlers.entrySet()) {
+                    ArqUDPSocketFD k = entry.getKey();
+                    // StreamedFDHandler v = entry.getValue();
 
-                try {
-                    String remoteStr = Utils.l4addrStr((InetSocketAddress) k.getRemoteAddress());
-                    Logger.probe("accepted: " + localStr + " <- " + remoteStr);
-                } catch (Throwable t) {
-                    Logger.shouldNotHappen("got exception when probing", t);
+                    try {
+                        String remoteStr = Utils.l4addrStr((InetSocketAddress) k.getRemoteAddress());
+                        Logger.probe("accepted: " + localStr + " <- " + remoteStr);
+                    } catch (Throwable t) {
+                        Logger.shouldNotHappen("got exception when probing", t);
+                    }
                 }
-            }
-        });
+            });
+        }
     }
 
     private void stop() {
@@ -131,7 +134,7 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                 private void ready(ArqUDPSocketFD fd) {
                     StreamedFDHandler h = currentHandlers.get(fd);
                     assert h != null;
-                    loop.period(30_000, h::probe);
+                    loop.period(30_000, h::keepalive);
                     Logger.alert("streamed arq udp is ready: " + h.getClass().getSimpleName() + "(" + fd + ")");
                 }
 

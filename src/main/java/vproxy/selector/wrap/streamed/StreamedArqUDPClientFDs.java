@@ -3,6 +3,7 @@ package vproxy.selector.wrap.streamed;
 import vfd.EventSet;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
+import vproxy.app.Config;
 import vproxy.selector.PeriodicEvent;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.arqudp.ArqUDPBasedFDs;
@@ -73,7 +74,9 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     }
 
     private void start() throws IOException {
-        Logger.probe("streamed arq udp client is starting: remote=" + remote);
+        if (Config.probe.contains("streamed-arq-udp-event")) {
+            Logger.probe("streamed arq udp client is starting: remote=" + remote);
+        }
         boolean failed = true;
         try {
             fd = fds.openSocketFD(loop);
@@ -96,7 +99,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private void ready(ArqUDPSocketFD fd) {
         ready = true;
         Logger.alert("streamed arq udp is ready: " + currentHandler.getClass().getSimpleName() + "(" + fd + ")");
-        keepaliveEvent = loop.period(30_000, currentHandler::probe);
+        keepaliveEvent = loop.period(30_000, currentHandler::keepalive);
     }
 
     @Override

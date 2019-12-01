@@ -145,13 +145,19 @@ int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,
         return AE_ERR;
     }
     aeFileEvent *fe = &eventLoop->events[fd];
-
-    if (aeApiAddEvent(eventLoop, fd, mask) == -1)
-        return AE_ERR;
     fe->mask |= mask;
     if (mask & AE_READABLE) fe->rfileProc = proc;
     if (mask & AE_WRITABLE) fe->wfileProc = proc;
     fe->clientData = clientData;
+    // set data first, the fd might not be added from the poll thread, so we should make sure it's recorded
+
+    if (aeApiAddEvent(eventLoop, fd, mask) == -1) {
+        fe->mask = 0;
+        fe->rfileProc = NULL;
+        fe->wfileProc = NULL;
+        fe->clientData = NULL; // clear the clientData
+        return AE_ERR;
+    }
     if (fd > eventLoop->maxfd)
         eventLoop->maxfd = fd;
     return AE_OK;

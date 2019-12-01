@@ -2,11 +2,11 @@ package vproxy.selector.wrap.streamed;
 
 import vfd.EventSet;
 import vfd.SocketFD;
+import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
-import vproxy.selector.wrap.WrappedSelector;
 import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;
@@ -502,10 +502,14 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             remote = virtual;
         }
-        StreamedFD sfd = new StreamedFD(streamId, fd, (WrappedSelector) loop.selector, local, remote, this, client);
+        StreamedFD sfd = new StreamedFD(streamId, fd, loop.selector, local, remote, this, client);
         fdMap.put(streamId, sfd);
         assert Logger.lowLevelDebug("adding new fd to fdMap: " + fd);
         return true;
+    }
+
+    final void removeStreamedFD(StreamedFD fd) {
+        fdMap.values().remove(fd);
     }
 
     @MethodForImplementation
@@ -577,8 +581,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
-        if (sfd.getState() == StreamedFD.State.none) {
-            assert Logger.lowLevelDebug("fd: " + sfd + " state = " + sfd.getState() + " == " + StreamedFD.State.none);
+        if (sfd.getState() == StreamedFD.State.none || sfd.getState() == StreamedFD.State.real_closed) {
+            assert Logger.lowLevelDebug("fd: " + sfd + " state = " + sfd.getState());
             return false;
         }
         if (sfd.getState() == StreamedFD.State.dead) {
@@ -602,7 +606,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
-        if (sfd.getState() == StreamedFD.State.dead) {
+        if (sfd.getState() == StreamedFD.State.dead || sfd.getState() == StreamedFD.State.real_closed) {
             return false; // already closed
         }
         sfd.setState(StreamedFD.State.dead);
@@ -695,6 +699,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 fd.setState(StreamedFD.State.fin_sent);
                 break;
             case fin_sent:
+            case real_closed:
                 // nothing to do
                 break;
         }
@@ -714,7 +719,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 Logger.warn(LogType.ALERT, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
                 return;
             }
-            Logger.probe("receiving keepalive ack message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
+            if (Config.probe.contains("streamed-arq-udp-event")) {
+                Logger.probe("receiving keepalive ack message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
+            }
             ++keepaliveSuccessCount;
             if (keepaliveSuccessCount > KEEPALIVE_MAX_SUCCESS_COUNT) {
                 keepaliveSuccessCount = KEEPALIVE_MAX_SUCCESS_COUNT;
@@ -723,7 +730,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         } else {
             // it's keepalive request, do respond
             // add at the most front of the queue
-            Logger.probe("receiving remote keepalive message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
+            if (Config.probe.contains("streamed-arq-udp-event")) {
+                Logger.probe("receiving remote keepalive message 0x" + Long.toHexString(kId) + " on arq udp socket " + fd);
+            }
             pushMessageToWrite(keepaliveMessage(kId, true));
         }
     }
@@ -732,7 +741,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     private static final int KEEPALIVE_MAX_SUCCESS_COUNT = 2;
 
     @MethodForFDs
-    final void probe() {
+    final void keepalive() {
         // only send keepalive message if it's in idle
         if (cachedMessageToWrite == null && messagesToWrite.isEmpty()) {
             // send keepalive message
@@ -746,30 +755,34 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }));
             // add to the first of the queue
             pushMessageToWrite(keepaliveMessage(kId, false));
-            Logger.probe("keepalive message 0x" + Long.toHexString(kId) + " sent on arq udp socket " + fd);
+            if (Config.probe.contains("streamed-arq-udp-event")) {
+                Logger.probe("keepalive message 0x" + Long.toHexString(kId) + " sent on arq udp socket " + fd);
+            }
         }
         // do probe
         // check recorded connections
-        try {
-            Logger.probe("isClient=" + client + ", state=" + state);
-            InetSocketAddress arqSockLocal = (InetSocketAddress) fd.getLocalAddress();
-            String arqSockLocalStr = Utils.l4addrStr(arqSockLocal);
-            for (Map.Entry<Integer, StreamedFD> entry : fdMap.entrySet()) {
-                int streamId = entry.getKey();
-                StreamedFD sfd = entry.getValue();
-                String local = Utils.l4addrStr((InetSocketAddress) sfd.getLocalAddress());
-                String remote = Utils.l4addrStr((InetSocketAddress) sfd.getRemoteAddress());
+        if (Config.probe.contains("streamed-arq-udp-record")) {
+            try {
+                Logger.probe("isClient=" + client + ", state=" + state);
+                InetSocketAddress arqSockLocal = (InetSocketAddress) fd.getLocalAddress();
+                String arqSockLocalStr = Utils.l4addrStr(arqSockLocal);
+                for (Map.Entry<Integer, StreamedFD> entry : fdMap.entrySet()) {
+                    int streamId = entry.getKey();
+                    StreamedFD sfd = entry.getValue();
+                    String local = Utils.l4addrStr((InetSocketAddress) sfd.getLocalAddress());
+                    String remote = Utils.l4addrStr((InetSocketAddress) sfd.getRemoteAddress());
 
-                Logger.probe(
-                    "record: " + arqSockLocalStr
-                        + " -> " + streamId
-                        + " -> " + local
-                        + " -> " + remote
-                        + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + Logger.RESET_COLOR + "]"
-                );
+                    Logger.probe(
+                        "record: " + arqSockLocalStr
+                            + " -> " + streamId
+                            + " -> " + local
+                            + " -> " + remote
+                            + " [" + sfd.getState().probeColor + sfd.getState().toString().toUpperCase() + Logger.RESET_COLOR + "]"
+                    );
+                }
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("got exception when probing", t);
             }
-        } catch (Throwable t) {
-            Logger.shouldNotHappen("got exception when probing", t);
         }
     }
 
@@ -818,7 +831,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         // append rst to the last of the queue
         addMessageToWrite(formatRST(fd.streamId));
-        fd.setState(StreamedFD.State.dead);
+        if (fd.getState() != StreamedFD.State.real_closed) {
+            fd.setState(StreamedFD.State.dead);
+        }
+        fdMap.values().remove(fd);
     }
 
     private boolean accept(int streamId) {

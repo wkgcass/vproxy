@@ -1,6 +1,7 @@
 package vproxy.selector.wrap;
 
 import vfd.*;
+import vproxy.util.Lock;
 import vproxy.util.Logger;
 
 import java.io.IOException;
@@ -31,6 +32,7 @@ public class WrappedSelector implements FDSelector {
     private final Map<VirtualFD, REntry> virtualSocketFDs = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
+    private final Lock SELECTOR_OPERATION_LOCK = Lock.create();
 
     public WrappedSelector(FDSelector selector) {
         this.selector = selector;
@@ -126,7 +128,10 @@ public class WrappedSelector implements FDSelector {
     @Override
     public void wakeup() {
         if (selector.supportsWakeup()) {
-            selector.wakeup();
+            //noinspection unused
+            try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
+                selector.wakeup();
+            }
         }
     }
 
@@ -246,6 +251,10 @@ public class WrappedSelector implements FDSelector {
         if (!selector.isOpen()) {
             throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
+        if (!vfd.isOpen()) {
+            Logger.shouldNotHappen("fd " + vfd + " is not open, but still trying to register readable", new Throwable());
+            return;
+        }
         readableFired.add(vfd);
 
         // check fired
@@ -266,6 +275,10 @@ public class WrappedSelector implements FDSelector {
         if (!selector.isOpen()) {
             throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
+        if (!vfd.isOpen()) {
+            Logger.shouldNotHappen("fd " + vfd + " is not open, but still trying to register writable", new Throwable());
+            return;
+        }
         writableFired.add(vfd);
 
         // check fired
@@ -281,5 +294,32 @@ public class WrappedSelector implements FDSelector {
     public void removeVirtualWritable(VirtualFD vfd) {
         assert Logger.lowLevelDebug("remove virtual writable: " + vfd);
         writableFired.remove(vfd);
+    }
+
+    public void probe() {
+        for (Map.Entry<VirtualFD, REntry> entry : virtualSocketFDs.entrySet()) {
+            var fd = entry.getKey();
+            var watch = entry.getValue().watchedEvents;
+            var fire = EventSet.none();
+            if (readableFired.contains(fd)) {
+                fire = fire.combine(EventSet.read());
+            }
+            if (writableFired.contains(fd)) {
+                fire = fire.combine(EventSet.write());
+            }
+            Logger.probe("virtual: " + fd + ", watch: " + watch + ", fire: " + fire);
+        }
+        for (FD fd : readableFired) {
+            //noinspection SuspiciousMethodCalls
+            if (!virtualSocketFDs.containsKey(fd)) {
+                Logger.probe("extra readable: " + fd);
+            }
+        }
+        for (FD fd : writableFired) {
+            //noinspection SuspiciousMethodCalls
+            if (!virtualSocketFDs.containsKey(fd)) {
+                Logger.probe("extra writable: " + fd);
+            }
+        }
     }
 }

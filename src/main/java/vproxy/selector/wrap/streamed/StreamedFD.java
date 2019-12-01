@@ -113,6 +113,11 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     public void setState(State newState) {
         assert Logger.lowLevelDebug("state for " + this + " changes: old=" + state + ", new=" + newState);
+        if (state == State.real_closed) {
+            // no need to set to other states it it's already closed
+            Logger.shouldNotHappen("should not set to another state when it's real-closed: " + this + ", new=" + newState, new Throwable());
+            return;
+        }
         if (this.state != State.established && newState == State.established) {
             setWritable();
         } else if (newState == State.fin_recv || newState == State.dead) {
@@ -250,12 +255,13 @@ public class StreamedFD implements SocketFD, VirtualFD {
         if (state == State.real_closed) {
             return;
         }
+        setState(State.real_closed);
         if (state != State.dead && soLinger0) {
             handler.sendRST(this);
         } else if (state != State.fin_sent && state != State.dead) {
             handler.sendFIN(this);
         }
-        setState(State.real_closed);
+        handler.removeStreamedFD(this);
         release();
     }
 
@@ -266,12 +272,16 @@ public class StreamedFD implements SocketFD, VirtualFD {
     void inputData(ByteArray data) {
         assert Logger.lowLevelNetDebug("calling input with " + data.length());
         assert Logger.lowLevelNetDebugPrintBytes(data.toJavaArray());
+        if (state == State.real_closed || state == State.dead) {
+            // connection is already closed, so ignore any data from another endpoint
+            return;
+        }
         readableBuffers.add(ByteBuffer.wrap(data.toJavaArray()));
         setReadable();
     }
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "(local=" + localAddress + ", remote=" + remoteAddress + ", client=" + client + ")";
+        return this.getClass().getSimpleName() + "(local=" + localAddress + ", remote=" + remoteAddress + ", client=" + client + ", state=" + state + ")";
     }
 }

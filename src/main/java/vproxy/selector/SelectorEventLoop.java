@@ -1,7 +1,6 @@
 package vproxy.selector;
 
 import vfd.*;
-import vfd.jdk.ChannelFDs;
 import vproxy.app.Config;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.*;
@@ -32,7 +31,7 @@ public class SelectorEventLoop {
         return loopThreadLocal.get();
     }
 
-    public final FDSelector selector;
+    public final WrappedSelector selector;
     public final FDs fds;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
@@ -42,7 +41,6 @@ public class SelectorEventLoop {
     // these locks are a little tricky
     // see comments in loop() and close()
     private final Lock CLOSE_LOCK;
-    private final Lock SELECTOR_OPERATION_LOCK;
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
     private SelectorEventLoop(FDs fds) throws IOException {
@@ -53,12 +51,10 @@ public class SelectorEventLoop {
         } else {
             CLOSE_LOCK = Lock.create();
         }
-        if (FDProvider.get().getProvided() == ChannelFDs.get() || VFDConfig.useFStack) {
-            // no extra lock needed for jdk impl
-            // no extra lock needed when running f-stack
-            SELECTOR_OPERATION_LOCK = Lock.createMock();
-        } else {
-            SELECTOR_OPERATION_LOCK = Lock.create();
+
+        // probe
+        if (Config.probe.contains("virtual-fd-event")) {
+            period(30_000, selector::probe);
         }
     }
 
@@ -318,12 +314,7 @@ public class SelectorEventLoop {
     }
 
     private void wakeup() {
-        if (selector.supportsWakeup()) {
-            //noinspection unused
-            try (var unused = SELECTOR_OPERATION_LOCK.lock()) {
-                selector.wakeup();
-            }
-        }
+        selector.wakeup();
     }
 
     @ThreadSafe

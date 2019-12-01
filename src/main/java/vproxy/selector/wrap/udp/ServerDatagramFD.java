@@ -266,9 +266,9 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
             if (closed) {
                 return;
             }
-            closed = true;
             setReadable(); // user code should be able to get -1 when calling read()
             cancelWritable(false);
+            closed = true;
         }
 
         @Override

@@ -1,5 +1,9 @@
 package vproxy.app;
 
+import java.util.Arrays;
+import java.util.Set;
+import java.util.stream.Collectors;
+
 public class Config {
     // a volatile long field is atomic, and we only read/assign this value, not increase
     public static volatile long currentTimestamp = System.currentTimeMillis();
@@ -52,7 +56,16 @@ public class Config {
     // -Deploy=xxx
     public static final String appClass;
 
+    // -Dprobe=...
+    public static final Set<String> probe;
+
     static {
         appClass = System.getProperty("eploy"); // -Deploy
+        String probeConf = System.getProperty("probe", "");
+        if (probeConf.equals("all")) {
+            probe = Set.of("virtual-fd-event", "streamed-arq-udp-event", "streamed-arq-udp-record");
+        } else {
+            probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
+        }
     }
 }
