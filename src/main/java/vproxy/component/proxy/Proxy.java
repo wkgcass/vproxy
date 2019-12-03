@@ -340,10 +340,11 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
-                assert Logger.lowLevelDebug("session " + session + " got exception: " + err);
+                assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
             } else {
-                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception on " + side + " side: " + err);
             }
             // close both sides
             utilCloseSessionAndReleaseBuffers(session);
@@ -432,10 +433,11 @@ public class Proxy {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            String side = (session.active == ctx.connection) ? "active" : "passive";
             if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
-                assert Logger.lowLevelDebug("session " + session + " got exception: " + err);
+                assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
             } else {
-                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception: " + err);
+                Logger.error(LogType.CONN_ERROR, "session " + session + " got exception on " + side + " side: " + err);
             }
             // close both sides
             utilCloseSessionAndReleaseBuffers(session);

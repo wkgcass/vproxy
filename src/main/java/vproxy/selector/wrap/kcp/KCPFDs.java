@@ -12,12 +12,21 @@ public class KCPFDs implements ArqUDPBasedFDs {
     private static final KCPFDs instanceFast1;
     private static final KCPFDs instanceNormal;
 
+    private static final KCPFDs instanceClientFast3;
+
     static {
         {
             // https://github.com/xtaci/kcptun/blob/1b72bf39d8ef6d83b28facdbe4fb8a21fddbd5ee/server/main.go#L369
             var opts = new KCPHandler.KCPOptions();
             opts.interval = 20;
             instanceFast2 = new KCPFDs(opts);
+        }
+        {
+            var opts = new KCPHandler.KCPOptions();
+            opts.sndWnd = 32;
+            // client usually won't sent too much data
+            // and client network quality is usually better than the server side
+            instanceClientFast3 = new KCPFDs(opts);
         }
         {
             // https://github.com/xtaci/kcptun/blob/1b72bf39d8ef6d83b28facdbe4fb8a21fddbd5ee/server/main.go#L367
@@ -47,6 +56,10 @@ public class KCPFDs implements ArqUDPBasedFDs {
 
     public static KCPFDs getFast3() {
         return instanceFast3;
+    }
+
+    public static KCPFDs getClientFast3() {
+        return instanceClientFast3;
     }
 
     public static KCPFDs getFast2() {

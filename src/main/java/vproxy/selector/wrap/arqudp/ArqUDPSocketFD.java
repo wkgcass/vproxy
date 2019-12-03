@@ -49,13 +49,14 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         this.fd = fd;
         this.loop = loop;
 
-        this.selector = (WrappedSelector) loop.selector;
+        this.selector = loop.selector;
         this.fdHandler = new ArqUDPInsideFDHandler();
         this.handler = handlerConstructor.apply(b -> {
             writeBufs.add(b);
             assert Logger.lowLevelDebug("writeBufs currently have " + writeBufs.size() + " elements");
             fdHandler.watchInsideFDWritable();
         });
+        // the fd is always writable when just constructed because writing queue is empty
         this.fdHandler.setSelfFDWritable();
     }
 
@@ -134,6 +135,10 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         return ret;
     }
 
+    public int writableLen() {
+        return handler.writableLen();
+    }
+
     @Override
     public int write(ByteBuffer src) throws IOException {
         int n = src.limit() - src.position();
@@ -141,10 +146,14 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             return 0;
         }
         checkException();
-        if (!handler.canWrite()) {
+        int writableLen = handler.writableLen();
+        if (writableLen <= 0 || writableLen < n) {
             fdHandler.cancelSelfFDWritable();
-            return 0;
+            if (writableLen <= 0) {
+                return 0;
+            }
         }
+        n = Math.min(writableLen, n);
         byte[] copy = new byte[n];
         src.get(copy);
         assert Logger.lowLevelNetDebug("write " + n + " bytes to ArqUDPSocketFD");
@@ -211,7 +220,6 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     }
 
     private class ArqUDPInsideFDHandler implements Handler<SocketFD> {
-        private final ByteArrayChannel tmp = ByteArrayChannel.fromEmpty(Config.udpMtu * 2);
         private final ByteBuffer tmpBuffer = ByteBuffer.allocate(Config.udpMtu);
         private IOException error = null;
         private boolean invalid = false;
@@ -287,6 +295,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "reading data from " + ctx.getChannel() + " failed", e);
                 setError(e);
+                unwatchInsideFDReadable();
                 return;
             }
             if (readBytes < 0) {
@@ -301,49 +310,44 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             }
             // copy into the tmp byteArrayChannel
             tmpBuffer.flip();
+            int len = tmpBuffer.limit() - tmpBuffer.position();
+            if (len == 0) {
+                // nothing to be done
+                tmpBuffer.limit(tmpBuffer.capacity()).position(0);
+                watchInsideFDReadable();
+                return;
+            }
+            ByteArrayChannel tmp = ByteArrayChannel.fromEmpty(len);
             tmp.write(tmpBuffer);
             // reset the tmpBuffer
             tmpBuffer.limit(tmpBuffer.capacity()).position(0);
-            // check whether can read
-            if (tmp.used() > Config.udpMtu) {
+
+            // read something, try to handle
+            // make a copy for data in tmp to make sure it will not be overwritten
+            ByteArray b;
+            try {
+                b = handler.parse(tmp);
+            } catch (IOException e) {
+                setError(e);
+                Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
                 unwatchInsideFDReadable();
+                return;
             }
-            while (true) {
-                if (tmp.used() == 0) {
-                    // nothing to be done
-                    tmp.reset();
-                    return;
-                }
-                // read something, try to handle
-                // make a copy for data in tmp to make sure it will not be overwritten
-                ByteArray b;
-                try {
-                    b = handler.parse(tmp.readAll().copy().toFullChannel());
-                } catch (IOException e) {
-                    setError(e);
-                    Logger.error(LogType.CONN_ERROR, "parse kcp packet failed", e);
-                    return;
-                }
-                // maybe ack is feed into the handler.parse method
-                // so we check whether we can write data now
-                if (handler.canWrite()) {
-                    setSelfFDWritable();
-                }
-                if (b == null) {
-                    // still cannot handle
-                    // want more data, so:
-                    watchInsideFDReadable();
-                    tmp.reset();
-                    return;
-                }
-                // record the result buffer
-                readBufs.add(ByteBuffer.wrap(b.toJavaArray()));
-                setSelfFDReadable();
-                // check the tmp buffer threshold
-                if (tmp.used() < Config.udpMtu) {
-                    watchInsideFDReadable();
-                }
+            // maybe ack is feed into the handler.parse method
+            // so we check whether we can write data now
+            if (handler.writableLen() > 0) {
+                setSelfFDWritable();
             }
+            if (b == null) {
+                // still cannot handle
+                // want more data, so:
+                watchInsideFDReadable();
+                return;
+            }
+            // record the result buffer
+            readBufs.add(ByteBuffer.wrap(b.toJavaArray()));
+            setSelfFDReadable();
+            watchInsideFDReadable();
         }
 
         @Override
@@ -363,7 +367,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     continue;
                 }
 
-                assert Logger.lowLevelNetDebug("kcp is writing " + buf.used() + " bytes to " + ctx.getChannel());
+                assert Logger.lowLevelNetDebug("arq udp socket is writing " + buf.used() + " bytes to " + ctx.getChannel());
                 assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
 
                 // try to write data

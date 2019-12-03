@@ -703,6 +703,40 @@ public class Utils {
         return s.toString();
     }
 
+    public static int writeFromFIFOQueueToBufferPacketBound(Deque<ByteBuffer> bufs, ByteBuffer dst) {
+        int ret = 0;
+        while (true) {
+            if (bufs.isEmpty()) {
+                // src is empty
+                break;
+            }
+            ByteBuffer b = bufs.peek();
+            int bufLim = b.limit();
+            int bufPos = b.position();
+            if (bufLim - bufPos == 0) {
+                bufs.poll();
+                continue;
+            }
+            int dstLim = dst.limit();
+            int dstPos = dst.position();
+
+            if (dstLim - dstPos == 0) {
+                // dst is full
+                break;
+            }
+
+            if (dstLim - dstPos < bufLim - bufPos) {
+                // we consider packet bound
+                // so should not write partial data into the dst
+                break;
+            }
+
+            ret += (b.limit() - b.position());
+            dst.put(b);
+        }
+        return ret;
+    }
+
     public static int writeFromFIFOQueueToBuffer(Deque<ByteBuffer> bufs, ByteBuffer dst) {
         int ret = 0;
         while (true) {

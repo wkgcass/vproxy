@@ -24,7 +24,7 @@ public class KCPHandler extends ArqUDPHandler {
         public int sndWnd = 1024;
         public int rcvWnd = 1024;
 
-        public int mtu = 1350;
+        public int mtu = 1250;
 
         // the following are my configurations
         // decrease rto
@@ -57,6 +57,9 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public ByteArray parse(ByteArrayChannel buf) throws IOException {
+        assert Logger.lowLevelNetDebug("inputting into kcp: " + buf.used());
+        assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.used());
+
         int ret = kcp.input(new ByteBuf(buf));
         if (ret < 0) {
             throw new IOException("writing from network to kcp failed: " + ret);
@@ -93,8 +96,9 @@ public class KCPHandler extends ArqUDPHandler {
     }
 
     @Override
-    public boolean canWrite() {
-        return kcp.waitSnd() < opts.sndWnd;
+    public int writableLen() {
+        int len = opts.sndWnd - kcp.waitSnd();
+        return Math.max(len, 0) * (opts.mtu - Kcp.IKCP_OVERHEAD);
     }
 
     @Override

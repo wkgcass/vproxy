@@ -1,5 +1,6 @@
 package vproxy.connection;
 
+import vfd.Event;
 import vfd.EventSet;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
@@ -366,8 +367,13 @@ class HandlerForConnection implements Handler<SocketFD> {
         }
         assert Logger.lowLevelDebug("wrote " + write + " bytes to " + cctx.connection);
         if (write <= 0) {
-            Logger.shouldNotHappen("wrote nothing, the event should not be fired");
-            // we ignore it for now
+            // check whether writable event has already been removed
+            // if so, no need to print error
+            // otherwise should log
+            if (ctx.getEventLoop().selector.events(ctx.getChannel()).have(Event.WRITABLE)) {
+                Logger.shouldNotHappen("wrote nothing, the event should not be fired: " + cctx.connection);
+                // we ignore it for now
+            }
             return;
         }
         cctx.connection.incToRemoteBytes(write); // record net flow, it's writing, so is "to remote"

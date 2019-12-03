@@ -29,7 +29,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     public ServerDatagramFD(DatagramFD server, SelectorEventLoop loop) {
         this.server = server;
         this.loop = loop;
-        selector = (WrappedSelector) loop.selector;
+        selector = loop.selector;
     }
 
     @Override
@@ -196,7 +196,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
                 return -1;
             }
 
-            int ret = Utils.writeFromFIFOQueueToBuffer(bufs, dst);
+            int ret = Utils.writeFromFIFOQueueToBufferPacketBound(bufs, dst);
 
             if (bufs.isEmpty() && !closed) {
                 cancelReadable();
@@ -221,21 +221,21 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         }
 
         private void setReadable() {
-            ((WrappedSelector) loop.selector).registerVirtualReadable(this);
+            loop.selector.registerVirtualReadable(this);
         }
 
         private void setWritable() {
             assert Logger.lowLevelDebug("setWritable in " + VirtualDatagramFD.this);
-            ((WrappedSelector) loop.selector).registerVirtualWritable(this);
+            loop.selector.registerVirtualWritable(this);
         }
 
         private void cancelReadable() {
-            ((WrappedSelector) loop.selector).removeVirtualReadable(this);
+            loop.selector.removeVirtualReadable(this);
         }
 
         private void cancelWritable(boolean addWritableEvent) {
             assert Logger.lowLevelDebug("cancelWritable in " + VirtualDatagramFD.this + ", addWritableEvent=" + addWritableEvent);
-            ((WrappedSelector) loop.selector).removeVirtualWritable(this);
+            loop.selector.removeVirtualWritable(this);
             if (addWritableEvent) {
                 selector.modify(ServerDatagramFD.this,
                     selector.events(ServerDatagramFD.this).combine(EventSet.write()));

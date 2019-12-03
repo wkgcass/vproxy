@@ -24,12 +24,12 @@ SOFTWARE.
 
 package vproxy.selector.wrap.kcp;
 
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.ListIterator;
+import java.util.*;
 
 import vproxy.selector.wrap.kcp.mock.*;
+import vproxy.util.ByteArray;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vproxy.util.ex.*;
 
 /**
@@ -975,7 +975,60 @@ public class Kcp {
 
             conv = data.readIntLE();
             if (conv != this.conv && !(this.conv == 0 && autoSetConv)) {
-                return -4;
+                // ==================START
+                // NOTE: this code slice is not part of the standard kcp impl
+                // NOTE: there's a udp-to-tcp wrapper impl called rsock
+                // NOTE: and it might add extra data into the udp packet
+                // NOTE: we should remove those packets
+                // NOTE: the packet looks like: (BE)
+                // f268b10bd0083eed1700d8095cfb738a4008070000004fec855e0000000000
+                // f268b10bd0083eed170089aac51cc4d6d8a510000000a5e9895e0000000000
+                // f268b10bd0083eed1700b6bc82180c30f1290101000019e719370000000000
+                // f268b10bd0083eed1700b6bc82180c30f129f200000083e517370000000000
+                // f268b10bd0083eed1700b6bc82180c30f129e400000045e318370000000000
+                // f268b10bd0083eed1700b6bc82180c30f129d9000000b6db1a370000000000
+                // so the first 10 bytes are the same, and last 5 bytes are 0, total 31 bytes
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid kcp conv, try to recover");
+                // first 4 bytes: (conv is LE, so make this also LE)
+                if (conv != ((0xf2) | (0x68 << 8) | (0xb1 << 16) | (0x0b << 24))) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "conv = " + conv + " != 0xf268b10b");
+                    return -4;
+                }
+                // length
+                if (data.readableBytes() < (31 - 4/*4 bytes already read*/)) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "readable bytes = " + data.readableBytes() + " < " + (31 - 4));
+                    return -4;
+                }
+                // 6 bytes after first 4:
+                {
+                    byte a = data.readByte();
+                    byte b = data.readByte();
+                    byte c = data.readByte();
+                    byte d = data.readByte();
+                    byte e = data.readByte();
+                    byte f = data.readByte();
+                    if (a != ((byte) 0xd0) || b != ((byte) 0x08) || c != ((byte) 0x3e) || d != ((byte) 0xed) || e != ((byte) 0x17) || f != ((byte) 0x00)) {
+                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "6 bytes are " + a + "," + b + "," + c + "," + d + "," + e + "," + f + ", not 0xd0083eed1700");
+                        return -4;
+                    }
+                }
+                // last 5 bytes
+                {
+                    data.skipBytes(31 - 4 - 6 - 5);
+                    byte a = data.readByte();
+                    byte b = data.readByte();
+                    byte c = data.readByte();
+                    byte d = data.readByte();
+                    byte e = data.readByte();
+                    if (a != 0 || b != 0 || c != 0 || d != 0 || e != 0) {
+                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "last 5 bytes are " + a + "," + b + "," + c + "," + d + "," + e + " not all 0");
+                        return -4;
+                    }
+                }
+                // return -4;
+                Logger.info(LogType.INVALID_EXTERNAL_DATA, "recognized rsock magic packet");
+                continue;
+                // ==================END
             }
 
             cmd = data.readByte();
