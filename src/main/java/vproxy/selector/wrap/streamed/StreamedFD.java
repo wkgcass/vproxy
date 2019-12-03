@@ -119,7 +119,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
             return;
         }
         if (this.state != State.established && newState == State.established) {
-            setWritable();
+            if (handler.writableLen() > 0) {
+                setWritable();
+            }
         } else if (newState == State.fin_recv || newState == State.dead) {
             setReadable();
         }
@@ -282,6 +284,6 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     @Override
     public String toString() {
-        return this.getClass().getSimpleName() + "(local=" + localAddress + ", remote=" + remoteAddress + ", client=" + client + ", state=" + state + ")";
+        return this.getClass().getSimpleName() + "(local=" + localAddress + ", remote=" + remoteAddress + ", client=" + client + ", state=" + state + ", insideFD=" + realFD + ")";
     }
 }

@@ -175,7 +175,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         // everything wrote
         state = 1;
         // want to receive handshake, so unwatch writable and watch readable
-        unwatchWritable();
+        unwatchWritable("connected");
         watchReadable();
     }
 
@@ -308,7 +308,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             if (n == 0) {
                 // need to write more data
-                watchWritable();
+                watchWritable("serverReadable");
                 return;
             }
             // handshake message sent
@@ -369,7 +369,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // change state
             state = 1;
             // want to receive handshake, so unwatch writable and watch readable
-            unwatchWritable();
+            unwatchWritable("clientWritable");
             watchReadable();
         } else if (state == 1) {
             Logger.shouldNotHappen("client should not fire writable in state = " + state);
@@ -385,13 +385,50 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // update state
             handshakeDone();
             // add readable and remove writable
-            unwatchWritable();
+            unwatchWritable("serverWritable");
             // no need to add op_read because it's unnecessary to be removed for servers
         }
         // else will not be called
     }
 
     private final Deque<ByteArray> messagesToWrite = new LinkedList<>();
+
+    int writableLen() {
+        int hold = 0;
+        if (cachedMessageToWrite != null) {
+            hold += cachedMessageToWrite.used();
+        }
+        for (ByteArray b : messagesToWrite) {
+            hold += b.length();
+        }
+
+        int canWrite = fd.writableLen();
+        if (canWrite > hold) {
+            return canWrite - hold;
+        } else {
+            return 0;
+        }
+    }
+
+    private void checkAndCancelWritable() {
+        if (writableLen() <= 0) {
+            fdMap.values().forEach(StreamedFD::cancelWritable);
+            // also we should watch when we can write
+            watchWritable("checkAndCancelWritable");
+        }
+    }
+
+    private void checkAndSetWritableForEstablished() {
+        if (writableLen() > 0) {
+            fdMap.values().forEach(fd -> {
+                if (fd.getState() == StreamedFD.State.established) {
+                    fd.setWritable();
+                }
+            });
+            // no need to watch inside writable because this writable is set
+            unwatchWritable("writable");
+        }
+    }
 
     @Override
     public void writable(HandlerContext<SocketFD> ctx) {
@@ -405,7 +442,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                     // still got data to send
                     // so the inside fd is not writable, we cancel writable event for the streamedFD
                     // wait for the next writable event
-                    fdMap.values().forEach(StreamedFD::cancelWritable);
+                    checkAndCancelWritable();
                     return;
                 }
                 // fall through
@@ -420,18 +457,14 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             }
             assert state == 2 || state == -1;
 
+            // something wrote, so check whether writable and
+            // set writable for all fds that's established
+            checkAndSetWritableForEstablished();
+
             ByteArray arr = messagesToWrite.poll();
             if (arr == null) {
-                // nothing to write, no need to watch writable events
-                unwatchWritable();
                 return;
             }
-            // set writable for all fds that's established
-            fdMap.values().forEach(fd -> {
-                if (fd.getState() == StreamedFD.State.established) {
-                    fd.setWritable();
-                }
-            });
             cachedMessageToWrite = ByteArrayChannel.fromFull(arr);
         }
     }
@@ -617,25 +650,41 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     }
 
     private void watchReadable() {
+        assert Logger.lowLevelDebug("watch readable on fd " + fd + " for streamed fds");
         loop.addOps(fd, EventSet.read());
     }
 
-    private void watchWritable() {
+    private void watchWritable(String reason) {
+        assert Logger.lowLevelDebug("watch writable on fd " + fd + " for streamed fds, " + reason);
         loop.addOps(fd, EventSet.write());
     }
 
-    private void unwatchWritable() {
+    private void unwatchWritable(String reason) {
+        assert Logger.lowLevelDebug("unwatch writable on fd " + fd + " for streamed fds, " + reason);
         loop.rmOps(fd, EventSet.write());
     }
 
-    private void addMessageToWrite(ByteArray arr) {
+    private void _addMessageToWrite0(ByteArray arr) {
         if (arr == null || arr.length() == 0) {
             return;
         }
         assert Logger.lowLevelNetDebug("addMessageToWrite");
         assert Logger.lowLevelNetDebugPrintBytes(arr.toJavaArray());
         messagesToWrite.add(arr);
-        watchWritable();
+    }
+
+    private void addMessageToWrite(ByteArray arr) {
+        _addMessageToWrite0(arr);
+        watchWritable("addMessageToWrite");
+        checkAndCancelWritable();
+    }
+
+    private void addMessagesToWrite(List<ByteArray> arrays) {
+        for (ByteArray arr : arrays) {
+            _addMessageToWrite0(arr);
+        }
+        watchWritable("addMessageToWrite");
+        checkAndCancelWritable();
     }
 
     private void pushMessageToWrite(ByteArray arr) {
@@ -643,15 +692,33 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             return;
         }
         messagesToWrite.push(arr);
-        watchWritable();
-    }
-
-    @MethodForImplementation
-    protected final void send(ByteArray data) {
-        addMessageToWrite(data);
+        watchWritable("pushMessageToWrite");
+        checkAndCancelWritable();
     }
 
     abstract protected ByteArray formatPSH(int streamId, ByteArray data);
+
+    // private static final int MAX_FRAME = 1024;
+
+    private List<ByteArray> formatPSHs(int streamId, ByteArray data) {
+        /*
+        int len = data.length();
+        if (len < MAX_FRAME) {
+            return Collections.singletonList(formatPSH(streamId, data));
+        }
+        List<ByteArray> ret = new ArrayList<>(len / MAX_FRAME + 1);
+        int off = 0;
+        while (off < data.length()) {
+            int subLen = Math.min(len, MAX_FRAME);
+            ByteArray sub = data.sub(off, subLen);
+            ret.add(formatPSH(streamId, sub));
+            off += subLen;
+            len -= subLen;
+        }
+        return ret;
+         */
+        return Collections.singletonList(formatPSH(streamId, data));
+    }
 
     @MethodForStreamedFD
     public final int send(StreamedFD fd, ByteBuffer src) throws IOException {
@@ -667,11 +734,17 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // nothing to be sent
             return 0;
         }
-        int len = src.limit() - src.position();
+        int len = Math.min(writableLen(), src.limit() - src.position());
+        if (len <= 0) {
+            // cannot write
+            checkAndCancelWritable();
+            return 0;
+        }
         byte[] data = new byte[len];
         src.get(data);
         // append to the last of the queue
-        addMessageToWrite(formatPSH(fd.streamId, ByteArray.from(data)));
+        addMessagesToWrite(formatPSHs(fd.streamId, ByteArray.from(data)));
+        checkAndCancelWritable();
         return len;
     }
 
