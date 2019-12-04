@@ -1,7 +1,6 @@
 #!/bin/bash
 
 runtime="vproxy-runtime-linux"
-kcptunPort="8443"
 listenPort="443"
 
 echo "check and install missing softwares"
@@ -85,32 +84,6 @@ else
 	echo "PKCS12 file exists"
 fi
 
-check=`ls kcptun 2>/dev/null`
-
-if [ -z "$check" ]
-then
-	echo "Creating kcptun directory"
-	mkdir kcptun
-else
-	echo "kcptun directory exists"
-fi
-
-cd kcptun
-
-check=`ls server_linux_amd64 2>/dev/null`
-
-if [ -z "$check" ]
-then
-	echo "Getting kcptun"
-	rm -f client_linux_amd64
-	rm -f server_linux_amd64
-	rm -f kcptun-linux-amd64-20190611.tar.gz
-	wget -q https://github.com/xtaci/kcptun/releases/download/v20190611/kcptun-linux-amd64-20190611.tar.gz
-	tar zxf kcptun-linux-amd64-20190611.tar.gz
-else
-	echo "kcptun exists"
-fi
-
 cd ../
 
 # p12 password
@@ -120,27 +93,6 @@ read -p "your username: " user
 # pass
 read -p "your password: " pass
 
-check=`ps aux | grep server_linux_amd64 | grep -v grep`
-kcptunpid=""
-
-if [ -z "$check" ]
-then
-	echo "checking udp port :$kcptunPort"
-	udpPortRes=`lsof -P -n -i ":$kcptunPort" | grep ' UDP '`
-	if [ -z "$kcptunPortRes" ]
-	then
-		echo "launching kcptun"
-		kcptun/server_linux_amd64 -t "127.0.0.1:$listenPort" -l ":$kcptunPort" -mode fast3 -nocomp -dscp 46 &
-		kcptunpid=`echo $!`
-		echo "kcptun started on pid $kcptunpid"
-	else
-		echo "udp port :$kcptunPort already bond"
-		exit 1
-	fi
-else
-	echo "kcptun already running"
-fi
-
 version=`"$runtime/bin/java" -jar vproxy.jar version`
 
 echo "current vproxy version: $version"
@@ -148,11 +100,4 @@ echo "current vproxy version: $version"
 echo "launching..."
 echo "README: It's recommended to run this application inside tmux."
 
-"$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy.jar listen "$listenPort" ssl pkcs12 certkey.p12 pkcs12pswd "$pswd" auth "$user:$pass"
-
-# kill kcptun after java exits
-if [[ ! -z "$kcptunpid" ]]
-then
-	echo "kill kcptun $kcptunpid"
-	kill $kcptunpid
-fi
+"$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy.jar listen "$listenPort" ssl pkcs12 certkey.p12 pkcs12pswd "$pswd" auth "$user:$pass" kcp

@@ -40,51 +40,10 @@ public class ConfigGenerator {
         }
     }
 
-    private static String getKcpClientProgram(String os, int arch, String baseDir) throws Exception {
-        String name;
-        //noinspection IfCanBeSwitch
-        if (os.equals("win")) {
-            if (arch == 32) {
-                name = "client_windows_386.exe";
-            } else if (arch == 64) {
-                name = "client_windows_amd64.exe";
-            } else {
-                throw new Exception("should not reach here");
-            }
-        } else if (os.equals("mac")) {
-            if (arch == 32) {
-                throw new Exception("There should be no arch=32bit mac any more.");
-            } else if (arch == 64) {
-                name = "client_darwin_amd64";
-            } else {
-                throw new Exception("should not reach here");
-            }
-        } else if (os.equals("linux")) {
-            if (arch == 32) {
-                name = "client_linux_386";
-            } else if (arch == 64) {
-                name = "client_linux_amd64";
-            } else {
-                throw new Exception("should not reach here");
-            }
-        } else {
-            throw new Exception("should not reach here");
-        }
-
-        File save = new File(baseDir + File.separator + name);
-
-        URI uri = URI.create("https://github.com/wkgcass/kcptun-extract/releases/download/v20190611/" + name);
+    private static void downloadGfwListFile(String basedir) throws Exception {
+        URI uri = URI.create("https://raw.githubusercontent.com/gfwlist/gfwlist/master/gfwlist.txt");
         HttpsURLConnection conn = (HttpsURLConnection) uri.toURL().openConnection();
-        download(conn, save);
-        //noinspection ResultOfMethodCallIgnored
-        save.setExecutable(true);
-        return save.getAbsolutePath();
-    }
-
-    private static void downloadPacFile(String basedir) throws Exception {
-        URI uri = URI.create("https://raw.githubusercontent.com/petronny/gfwlist2pac/master/gfwlist.pac");
-        HttpsURLConnection conn = (HttpsURLConnection) uri.toURL().openConnection();
-        File save = new File(basedir + File.separator + "gfwlist.pac");
+        File save = new File(basedir + File.separator + "gfwlist.base64");
         download(conn, save);
     }
 
@@ -150,13 +109,12 @@ public class ConfigGenerator {
 
         int remotePort;
         boolean usingTls;
-        int kcpPort;
-        String kcpClientName = null;
+        boolean usingKcp;
 
         if (startScript) {
             remotePort = 443;
             usingTls = true;
-            kcpPort = 8443;
+            usingKcp = true;
         } else {
             System.out.println("What's the port of your WebSocksProxyServer ?");
             System.out.print("[443]> ");
@@ -166,62 +124,21 @@ public class ConfigGenerator {
             System.out.print("[Y]/n> ");
             usingTls = getBool(scanner, true);
 
-            System.out.println("What's the KCP port of your server ? Type in 0 if you are not using KCP.");
-            System.out.print("[0]> ");
-            kcpPort = getPort(scanner, 0, true);
-        }
-
-        if (kcpPort != 0) {
-            String kcptunDirStr = basedir + File.separator + "kcptun";
-            File kcptunDir = new File(kcptunDirStr);
-            if (kcptunDir.exists() && !kcptunDir.isDirectory()) {
-                throw new Exception(kcptunDirStr + " is not a directory");
-            }
-            if (!kcptunDir.exists()) {
-                if (!kcptunDir.mkdir()) {
-                    throw new Exception("make directory failed: " + kcptunDirStr);
-                }
-            }
-            File[] files = kcptunDir.listFiles((dir, name) -> name.startsWith("client_"));
-            if (files == null) {
-                throw new Exception("unexpected null for filtering files in " + kcptunDirStr);
-            }
-            if (files.length > 0) {
-                kcpClientName = files[0].getAbsolutePath();
-            } else {
-                System.out.println("Trying to get kcptun...");
-                String os = System.getProperty("os.name").toLowerCase();
-                if (os.contains("win")) {
-                    os = "win";
-                } else if (os.contains("mac")) {
-                    os = "mac";
-                } else if (os.contains("nix") || os.contains("nux") || os.contains("aix")) {
-                    os = "linux";
-                } else {
-                    System.err.println("We cannot identify your OS: " + os + ", disabling KCP support.");
-                    os = null;
-                    kcpPort = 0;
-                }
-                String archStr = System.getProperty("os.arch");
-                int arch;
-                if (archStr.contains("64")) {
-                    arch = 64;
-                } else {
-                    arch = 32;
-                }
-                if (kcpPort != 0) {
-                    kcpClientName = getKcpClientProgram(os, arch, kcptunDirStr);
-                }
-            }
+            System.out.println("Is KCP enabled on the server side, and you want to access the server via KCP ?");
+            System.out.print("[Y]/n> ");
+            usingKcp = getBool(scanner, true);
         }
 
         System.out.println("Do you want to customize other configurations here ?");
-        System.out.println("You may refer to manual on github and modify the generated config file later.");
+        System.out.println("You may refer to manual on github and modify the generated config file later: " +
+            "https://raw.githubusercontent.com/wkgcass/vproxy/master/src/test/resources/websocks-agent-example.conf");
         System.out.print("y/[N]> ");
         boolean customize = getBool(scanner, false);
 
         int socks5Port = 1080;
         int httpConnectPort = 0;
+        int ssPort = 0;
+        String ssPass = null;
         boolean gateway = false;
         int pacServerPort = 0;
 
@@ -234,6 +151,20 @@ public class ConfigGenerator {
             System.out.println("This might be useful when your Android device connect to the agent.");
             System.out.print("[0]> ");
             httpConnectPort = getPort(scanner, 0, true);
+
+            System.out.println("Which port do you want to use to listen for ss traffic ? Type in 0 if you do not want to enable.");
+            System.out.println("[0]> ");
+            ssPort = getPort(scanner, 0, true);
+
+            if (ssPort != 0) {
+                System.out.println("Set the password of your ss server.");
+                System.out.println("[agent.ss.password]> ");
+                ssPass = scanner.nextLine().trim();
+                if (ssPass.isEmpty()) {
+                    throw new Exception("The password of ss server should not be empty.");
+                }
+                System.out.println("The ss server is enabled. You should aware that only aes-256-cfb is supported for now.");
+            }
 
             System.out.println("Do you want to expose the agent to devices in your LAN ?");
             System.out.print("y/[N]> ");
@@ -249,7 +180,7 @@ public class ConfigGenerator {
             }
         }
 
-        downloadPacFile(basedir);
+        downloadGfwListFile(basedir);
 
         StringBuilder config = new StringBuilder();
         config.append("#################################################\n");
@@ -268,24 +199,25 @@ public class ConfigGenerator {
         if (pacServerPort != 0) {
             config.append("agent.gateway.pac.address *:").append(pacServerPort).append("\n");
         }
+        if (ssPort != 0) {
+            config.append("agent.ss.listen ").append(ssPort).append("\n");
+            config.append("agent.ss.password ").append(ssPass).append("\n");
+        }
         config.append("\n");
         config.append("proxy.server.list.start\n");
         {
+            String kcp = usingKcp ? "kcp:" : "";
             if (usingTls) {
-                config.append("websockss://");
+                config.append("websockss:").append(kcp).append("//");
             } else {
-                config.append("websocks://");
+                config.append("websocks:").append(kcp).append("//");
             }
-            config.append(host).append(":").append(remotePort);
-            if (kcpPort != 0) {
-                config.append(" ").append(kcpClientName).append(" -r $SERVER_IP:8$SERVER_PORT -l 127.0.0.1:$LOCAL_PORT -mode fast3 -nocomp -autoexpire 900 -sockbuf 16777216 -dscp 46");
-            }
-            config.append("\n");
+            config.append(host).append(":").append(remotePort).append("\n");
         }
         config.append("proxy.server.list.end\n");
         config.append("\n");
         config.append("proxy.domain.list.start\n");
-        config.append("[~").append(File.separator).append("gfwlist.pac]\n");
+        config.append("[~").append(File.separator).append("gfwlist.base64]\n");
         config.append("proxy.domain.list.end\n");
 
         String configStr = config.toString();

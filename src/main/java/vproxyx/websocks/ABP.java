@@ -5,6 +5,7 @@ import vproxy.util.Logger;
 
 import java.util.*;
 import java.util.function.Function;
+import java.util.regex.Pattern;
 
 /**
  * https://github.com/gfwlist/gfwlist/wiki/Syntax
@@ -60,16 +61,16 @@ public class ABP {
             addMatchingSpecificURI(line.substring("||".length()));
         } else if (line.startsWith("|")) {
             addMatchingFromBeginning(line.substring("|".length()));
+        } else if (line.startsWith("/") && line.endsWith("/")) {
+            addMatchingRegexp(line.substring("/".length(), line.length() - "/".length()));
         } else if (line.startsWith("@@||")) {
             addWhitelistRuleMatchingSpecificURI(line.substring("@@||".length()));
         } else if (line.startsWith("@@|")) {
             addWhitelistRuleMatchingFromBeginning(line.substring("@@|".length()));
         } else if (line.startsWith("@@")) {
             addWhitelistSimpleRule(line.substring("@@".length()));
-        } else if (line.startsWith("/")) {
-            Logger.warn(LogType.ALERT,
-                "We do not support regexp in the ABP for now, " +
-                    "you may add the regexp into the vproxy config file: " + line);
+        } else if (line.startsWith("@@/") && line.endsWith("/")) {
+            addWhitelistRuleRegexp(line.substring("@@/".length(), line.length() - "/".length()));
         } else if (validSimpleRuleStart.contains(line.charAt(0))) {
             addSimpleRule(line);
         } else {
@@ -101,6 +102,23 @@ public class ABP {
             if (input.equals(host)) {
                 Logger.alert(input + " matches ABP matching from beginning rule: " + rule);
                 return true;
+            }
+            return null;
+        });
+    }
+
+    private interface MatchingRegexp extends Function<String, Boolean> {
+    }
+
+    private void addMatchingRegexp(String rule) {
+        Pattern pattern = Pattern.compile(rule);
+        checkers.add((MatchingRegexp) input -> {
+            String[] protocols = new String[]{"", "http://", "https://"};
+            for (String protocol : protocols) {
+                if (pattern.matcher(protocol + input).matches()) {
+                    Logger.alert(input + " matches ABP matching regexp rule: " + rule);
+                    return true;
+                }
             }
             return null;
         });
@@ -144,6 +162,23 @@ public class ABP {
             if (input.contains(host)) {
                 assert Logger.lowLevelDebug(input + " matches ABP WHITELIST simple rule: " + rule);
                 return false;
+            }
+            return null;
+        });
+    }
+
+    private interface WhitelistRegexpRule extends Function<String, Boolean> {
+    }
+
+    private void addWhitelistRuleRegexp(String rule) {
+        Pattern pattern = Pattern.compile(rule);
+        checkers.add((WhitelistRegexpRule) input -> {
+            String[] protocols = new String[]{"", "http://", "https://"};
+            for (String protocol : protocols) {
+                if (pattern.matcher(protocol + input).matches()) {
+                    Logger.alert(input + " matches ABP WHITELIST regexp rule: " + rule);
+                    return false;
+                }
             }
             return null;
         });
