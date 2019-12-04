@@ -1,13 +1,11 @@
 package vproxy.connection;
 
-import vfd.Event;
-import vfd.EventSet;
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
+import vfd.*;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.VirtualFD;
 import vproxy.util.*;
 
 import java.io.IOException;
@@ -309,6 +307,7 @@ class HandlerForConnection implements Handler<SocketFD> {
             Logger.shouldNotHappen("the connection has no space to store data");
             return;
         }
+        assert Logger.lowLevelDebug("before calling storeBytesFrom: inBuffer.used() = " + cctx.connection.getInBuffer().used());
         int read;
         try {
             read = cctx.connection.getInBuffer().storeBytesFrom(ctx.getChannel());
@@ -358,6 +357,18 @@ class HandlerForConnection implements Handler<SocketFD> {
         // reset close timer because now it's active (will send some data)
         NetEventLoopUtils.resetCloseTimeout(cctx);
 
+        boolean writableFires;
+        {
+            FD fd = ctx.getChannel();
+            if (fd instanceof VirtualFD) {
+                // virtual fd writable might be removed when handling other fds
+                writableFires = ctx.getEventLoop().selector.firingEvents((VirtualFD) fd).have(Event.WRITABLE);
+            } else {
+                // non-virtual fd should not be affected by other fds
+                // and retrieving events of a non-virtual fd might cost too much
+                writableFires = true;
+            }
+        }
         int write;
         try {
             write = cctx.connection.getOutBuffer().writeTo(ctx.getChannel());
@@ -370,7 +381,7 @@ class HandlerForConnection implements Handler<SocketFD> {
             // check whether writable event has already been removed
             // if so, no need to print error
             // otherwise should log
-            if (ctx.getEventLoop().selector.events(ctx.getChannel()).have(Event.WRITABLE)) {
+            if (writableFires) {
                 Logger.shouldNotHappen("wrote nothing, the event should not be fired: " + cctx.connection);
                 // we ignore it for now
             }

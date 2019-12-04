@@ -988,25 +988,38 @@ public class Kcp {
                 // f268b10bd0083eed1700b6bc82180c30f129e400000045e318370000000000
                 // f268b10bd0083eed1700b6bc82180c30f129d9000000b6db1a370000000000
                 // so the first 10 bytes are the same, and last 5 bytes are 0, total 31 bytes
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid kcp conv, try to recover");
-                // first 4 bytes: (conv is LE, so make this also LE)
-                if (conv != ((0xf2) | (0x68 << 8) | (0xb1 << 16) | (0x0b << 24))) {
-                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "conv = " + conv + " != 0xf268b10b");
-                    return -4;
-                }
+                Logger.info(LogType.INVALID_EXTERNAL_DATA, "invalid kcp conv, try to recover");
+
                 // length
                 if (data.readableBytes() < (31 - 4/*4 bytes already read*/)) {
                     Logger.error(LogType.INVALID_EXTERNAL_DATA, "readable bytes = " + data.readableBytes() + " < " + (31 - 4));
                     return -4;
                 }
+
+                byte[] arr = new byte[31];
+                arr[0] = (byte) (conv & 0xff);
+                arr[1] = (byte) ((conv >> 8) & 0xff);
+                arr[2] = (byte) ((conv >> 16) & 0xff);
+                arr[3] = (byte) ((conv >> 24) & 0xff);
+                for (int i = 4; i < 31; ++i) {
+                    arr[i] = data.readByte();
+                }
+                Logger.info(LogType.INVALID_EXTERNAL_DATA, "the received packet is:");
+                Logger.printBytes(arr);
+
+                // first 4 bytes: (conv is LE, so make this also LE)
+                if (conv != ((0xf2) | (0x68 << 8) | (0xb1 << 16) | (0x0b << 24))) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "conv = " + conv + " != 0xf268b10b");
+                    return -4;
+                }
                 // 6 bytes after first 4:
                 {
-                    byte a = data.readByte();
-                    byte b = data.readByte();
-                    byte c = data.readByte();
-                    byte d = data.readByte();
-                    byte e = data.readByte();
-                    byte f = data.readByte();
+                    byte a = arr[4];
+                    byte b = arr[5];
+                    byte c = arr[6];
+                    byte d = arr[7];
+                    byte e = arr[8];
+                    byte f = arr[9];
                     if (a != ((byte) 0xd0) || b != ((byte) 0x08) || c != ((byte) 0x3e) || d != ((byte) 0xed) || e != ((byte) 0x17) || f != ((byte) 0x00)) {
                         Logger.error(LogType.INVALID_EXTERNAL_DATA, "6 bytes are " + a + "," + b + "," + c + "," + d + "," + e + "," + f + ", not 0xd0083eed1700");
                         return -4;
@@ -1014,12 +1027,11 @@ public class Kcp {
                 }
                 // last 5 bytes
                 {
-                    data.skipBytes(31 - 4 - 6 - 5);
-                    byte a = data.readByte();
-                    byte b = data.readByte();
-                    byte c = data.readByte();
-                    byte d = data.readByte();
-                    byte e = data.readByte();
+                    byte a = arr[26];
+                    byte b = arr[27];
+                    byte c = arr[28];
+                    byte d = arr[29];
+                    byte e = arr[30];
                     if (a != 0 || b != 0 || c != 0 || d != 0 || e != 0) {
                         Logger.error(LogType.INVALID_EXTERNAL_DATA, "last 5 bytes are " + a + "," + b + "," + c + "," + d + "," + e + " not all 0");
                         return -4;

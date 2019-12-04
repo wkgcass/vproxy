@@ -197,6 +197,17 @@ public class WrappedSelector implements FDSelector {
         selector.modify(fd, ops);
     }
 
+    public EventSet firingEvents(VirtualFD fd) {
+        EventSet ret = EventSet.none();
+        if (writableFired.contains(fd)) {
+            ret = ret.combine(EventSet.write());
+        }
+        if (readableFired.contains(fd)) {
+            ret = ret.combine(EventSet.read());
+        }
+        return ret;
+    }
+
     @Override
     public EventSet events(FD fd) {
         if (fd instanceof VirtualFD) {
@@ -279,6 +290,7 @@ public class WrappedSelector implements FDSelector {
             Logger.shouldNotHappen("fd " + vfd + " is not open, but still trying to register writable", new Throwable());
             return;
         }
+        assert Logger.lowLevelDebug("add virtual writable: " + vfd);
         writableFired.add(vfd);
 
         // check fired

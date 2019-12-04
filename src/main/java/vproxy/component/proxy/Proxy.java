@@ -401,7 +401,7 @@ public class Proxy {
 
         @Override
         public void connected(ConnectableConnectionHandlerContext ctx) {
-            assert Logger.lowLevelDebug("passive connection established: " + ctx.connection);
+            assert Logger.lowLevelDebug("passive connection established: " + session);
             isConnected = true; // it's connected
 
             // now we can add active connection into event loop

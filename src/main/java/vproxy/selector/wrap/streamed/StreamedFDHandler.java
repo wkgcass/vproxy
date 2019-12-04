@@ -319,6 +319,8 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         // else will not be called
     }
 
+    private long lastReadableTimestamp = 0L;
+
     @Override
     public void readable(HandlerContext<SocketFD> ctx) {
         read();
@@ -326,6 +328,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // nothing read
             return;
         }
+        lastReadableTimestamp = Config.currentTimestamp;
         if (state == 0 || state == 1) {
             if (client) {
                 clientReadable(ctx);
@@ -460,6 +463,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             // something wrote, so check whether writable and
             // set writable for all fds that's established
             checkAndSetWritableForEstablished();
+            checkAndCancelWritable();
+            // note: after writing a packet into arq-udp, the writableLen might become smaller
+            // the free space we use to calculate is based on mtu and packet overhead
+            // but the fed packet is usually smaller than mtu, so free space is consumed,
+            // writableLen will be smaller
 
             ByteArray arr = messagesToWrite.poll();
             if (arr == null) {
@@ -664,25 +672,13 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         loop.rmOps(fd, EventSet.write());
     }
 
-    private void _addMessageToWrite0(ByteArray arr) {
+    private void addMessageToWrite(ByteArray arr) {
         if (arr == null || arr.length() == 0) {
             return;
         }
         assert Logger.lowLevelNetDebug("addMessageToWrite");
         assert Logger.lowLevelNetDebugPrintBytes(arr.toJavaArray());
         messagesToWrite.add(arr);
-    }
-
-    private void addMessageToWrite(ByteArray arr) {
-        _addMessageToWrite0(arr);
-        watchWritable("addMessageToWrite");
-        checkAndCancelWritable();
-    }
-
-    private void addMessagesToWrite(List<ByteArray> arrays) {
-        for (ByteArray arr : arrays) {
-            _addMessageToWrite0(arr);
-        }
         watchWritable("addMessageToWrite");
         checkAndCancelWritable();
     }
@@ -698,28 +694,6 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     abstract protected ByteArray formatPSH(int streamId, ByteArray data);
 
-    // private static final int MAX_FRAME = 1024;
-
-    private List<ByteArray> formatPSHs(int streamId, ByteArray data) {
-        /*
-        int len = data.length();
-        if (len < MAX_FRAME) {
-            return Collections.singletonList(formatPSH(streamId, data));
-        }
-        List<ByteArray> ret = new ArrayList<>(len / MAX_FRAME + 1);
-        int off = 0;
-        while (off < data.length()) {
-            int subLen = Math.min(len, MAX_FRAME);
-            ByteArray sub = data.sub(off, subLen);
-            ret.add(formatPSH(streamId, sub));
-            off += subLen;
-            len -= subLen;
-        }
-        return ret;
-         */
-        return Collections.singletonList(formatPSH(streamId, data));
-    }
-
     @MethodForStreamedFD
     public final int send(StreamedFD fd, ByteBuffer src) throws IOException {
         if (!fdMap.containsValue(fd)) {
@@ -732,18 +706,20 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         if (src.limit() == src.position()) {
             // nothing to be sent
+            assert Logger.lowLevelDebug("nothing to be sent, return 0");
             return 0;
         }
         int len = Math.min(writableLen(), src.limit() - src.position());
         if (len <= 0) {
             // cannot write
+            assert Logger.lowLevelDebug("cannot write, return 0");
             checkAndCancelWritable();
             return 0;
         }
         byte[] data = new byte[len];
         src.get(data);
         // append to the last of the queue
-        addMessagesToWrite(formatPSHs(fd.streamId, ByteArray.from(data)));
+        addMessageToWrite(formatPSH(fd.streamId, ByteArray.from(data)));
         checkAndCancelWritable();
         return len;
     }
@@ -816,7 +792,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     @MethodForFDs
     final void keepalive() {
         // only send keepalive message if it's in idle
-        if (cachedMessageToWrite == null && messagesToWrite.isEmpty()) {
+        if (cachedMessageToWrite == null && messagesToWrite.isEmpty() && (Config.currentTimestamp - lastReadableTimestamp) > 5_000) {
             // send keepalive message
             long kId = ++nextKeepaliveId;
             // record with a timeout

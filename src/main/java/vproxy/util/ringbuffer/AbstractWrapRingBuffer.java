@@ -89,6 +89,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     }
 
     private void _generalWrap() {
+        assert Logger.lowLevelDebug("calling _generalWrap");
         // first try to flush intermediate buffers into the output buffer
         while (!intermediateBuffers.isEmpty()) {
             ByteBufferRingBuffer buffer = intermediateBuffers.peekFirst();
@@ -114,10 +115,13 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         //noinspection ConstantConditions
         do {
             // check the intermediate capacity
-            if (intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
+            int intermediateBufferCap = intermediateBufferCap();
+            if (intermediateBufferCap > MAX_INTERMEDIATE_BUFFER_CAPACITY) {
+                assert Logger.lowLevelDebug("intermediateBufferCap = " + intermediateBufferCap + " > " + MAX_INTERMEDIATE_BUFFER_CAPACITY);
                 break; // should not run the operation when capacity reaches the limit
             }
             try {
+                assert Logger.lowLevelDebug("before handling data in plain buffer");
                 // here, we should not check whether the plain buffer is empty or now
                 // because when handshaking, the plain buffer can be empty but the connection
                 // should still send handshaking data
@@ -125,6 +129,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
                 plainBufferForApp.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
                     bufferPlain -> handlePlainBuffer(bufferPlain, errored));
                 if (errored[0]) {
+                    assert Logger.lowLevelDebug("handling data in plain buffer failed");
                     return; // end the process if errored
                 }
             } catch (IOException e) {
