@@ -95,6 +95,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     protected void generalUnwrap() {
         if (isOperating()) {
+            assert Logger.lowLevelDebug("generalUnwrap is operating");
             return; // should not call the method when it's operating
         }
         setOperating(true);
@@ -105,6 +106,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
                 triggerWritable = false;
                 triggerWritable();
             }
+            assert Logger.lowLevelDebug("generalUnwrap is not operating now");
             setOperating(false);
         }
     }

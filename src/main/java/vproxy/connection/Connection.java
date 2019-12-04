@@ -66,7 +66,7 @@ public class Connection implements NetFlowRecorder {
     class OutBufferETHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
-            assert Logger.lowLevelNetDebug("readableET triggered " + Connection.this);
+            assert Logger.lowLevelDebug("readableET triggered " + Connection.this);
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is readable means the channel can write data

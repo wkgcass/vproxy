@@ -156,7 +156,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         n = Math.min(writableLen, n);
         byte[] copy = new byte[n];
         src.get(copy);
-        assert Logger.lowLevelNetDebug("write " + n + " bytes to ArqUDPSocketFD");
+        assert Logger.lowLevelDebug("write " + n + " bytes to ArqUDPSocketFD");
         assert Logger.lowLevelNetDebugPrintBytes(copy);
 
         handler.write(ByteArray.from(copy));
@@ -335,7 +335,9 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             }
             // maybe ack is feed into the handler.parse method
             // so we check whether we can write data now
-            if (handler.writableLen() > 0) {
+            assert Logger.lowLevelDebug("checking writable for " + ArqUDPSocketFD.this +
+                "writableThreshold = " + handler.writableThreshold() + ", writableLen = " + handler.writableLen());
+            if (handler.writableLen() > handler.writableThreshold()) {
                 setSelfFDWritable();
             }
             if (b == null) {

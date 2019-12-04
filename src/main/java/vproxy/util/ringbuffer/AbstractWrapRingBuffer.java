@@ -74,6 +74,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
 
     void generalWrap() {
         if (isOperating()) {
+            assert Logger.lowLevelDebug("generalWrap is operating");
             return; // should not call the method when it's operating
         }
         setOperating(true);
@@ -84,6 +85,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
                 triggerReadable = false;
                 triggerReadable();
             }
+            assert Logger.lowLevelDebug("generalWrap is not operating now");
             setOperating(false);
         }
     }
