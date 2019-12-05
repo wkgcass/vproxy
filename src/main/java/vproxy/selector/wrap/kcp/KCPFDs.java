@@ -7,11 +7,13 @@ import vproxy.selector.wrap.udp.UDPFDs;
 import java.io.IOException;
 
 public class KCPFDs implements ArqUDPBasedFDs {
+    private static final KCPFDs instanceFast4;
     private static final KCPFDs instanceFast3 = new KCPFDs(new KCPHandler.KCPOptions());
     private static final KCPFDs instanceFast2;
     private static final KCPFDs instanceFast1;
     private static final KCPFDs instanceNormal;
 
+    private static final KCPFDs instanceClientFast4;
     private static final KCPFDs instanceClientFast3;
 
     static {
@@ -23,7 +25,7 @@ public class KCPFDs implements ArqUDPBasedFDs {
         }
         {
             var opts = new KCPHandler.KCPOptions();
-            opts.sndWnd = 32;
+            opts.sndWnd = 128;
             // client usually won't sent too much data
             // and client network quality is usually better than the server side
             instanceClientFast3 = new KCPFDs(opts);
@@ -34,7 +36,6 @@ public class KCPFDs implements ArqUDPBasedFDs {
             opts.nodelay = false;
             opts.interval = 30;
             opts.rxMinRto = 60;
-            opts.clockInterval = 10;
             instanceFast1 = new KCPFDs(opts);
         }
         {
@@ -43,8 +44,25 @@ public class KCPFDs implements ArqUDPBasedFDs {
             opts.nodelay = false;
             opts.interval = 40;
             opts.rxMinRto = 100;
-            opts.clockInterval = 10;
             instanceNormal = new KCPFDs(opts);
+        }
+
+        {
+            // very aggressive strategy
+            var opts = new KCPHandler.KCPOptions();
+            opts.mtu = 768;
+            opts.sndWnd = 2048;
+            opts.rcvWnd = 2048;
+            instanceFast4 = new KCPFDs(opts);
+        }
+
+        {
+            // very aggressive strategy
+            var opts = new KCPHandler.KCPOptions();
+            opts.mtu = 768;
+            opts.sndWnd = 256;
+            opts.rcvWnd = 2048;
+            instanceClientFast4 = new KCPFDs(opts);
         }
     }
 
@@ -52,6 +70,14 @@ public class KCPFDs implements ArqUDPBasedFDs {
 
     public KCPFDs(KCPHandler.KCPOptions opts) {
         this.opts = opts;
+    }
+
+    public static KCPFDs getFast4() {
+        return instanceFast4;
+    }
+
+    public static KCPFDs getClientFast4() {
+        return instanceClientFast4;
     }
 
     public static KCPFDs getFast3() {

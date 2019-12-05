@@ -213,7 +213,7 @@ public class WebSocksProxyServer {
         }
         if (useKcp) {
             ServerSock.checkBind(Protocol.UDP, listeningServerL4addr);
-            KCPFDs kcpFDs = KCPFDs.getFast3();
+            KCPFDs kcpFDs = KCPFDs.getFast4();
             H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, listeningServerL4addr);
             ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, serverFds);
             servers.add(server);

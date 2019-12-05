@@ -31,7 +31,7 @@ public class KCPHandler extends ArqUDPHandler {
         public int rxMinRto = 30;
 
         // alert the kcp every few ms
-        public int clockInterval = 5;
+        public int clockInterval = 10;
     }
 
     private final Kcp kcp;
