@@ -124,7 +124,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             int n = newPos - oldPos;
             byte[] content = new byte[n];
             dst.get(content);
-            assert Logger.lowLevelNetDebug("read " + n + " bytes from ArqUDPSocketFD");
+            assert Logger.lowLevelDebug("read " + n + " bytes from " + this);
             assert Logger.lowLevelNetDebugPrintBytes(content);
         });
 
@@ -369,7 +369,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                     continue;
                 }
 
-                assert Logger.lowLevelNetDebug("arq udp socket is writing " + buf.used() + " bytes to " + ctx.getChannel());
+                assert Logger.lowLevelDebug("arq udp socket is writing " + buf.used() + " bytes to " + ctx.getChannel());
                 assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
 
                 // try to write data

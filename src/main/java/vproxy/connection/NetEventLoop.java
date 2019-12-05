@@ -315,7 +315,7 @@ class HandlerForConnection implements Handler<SocketFD> {
             NetEventLoopUtils.callExceptionEvent(cctx, e);
             return;
         }
-        assert Logger.lowLevelNetDebug("read " + read + " bytes from " + cctx.connection);
+        assert Logger.lowLevelDebug("read " + read + " bytes from " + cctx.connection);
         if (read < 0) {
             // EOF, the remote write is closed
             // the event may fire multiple times (when buffer writable fires, OP_READ will be added)

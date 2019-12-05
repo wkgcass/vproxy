@@ -212,7 +212,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
         if (state == State.fin_sent) {
             throw new IOException("cannot write when in state " + state);
         }
-        return handler.send(this, src);
+        int wrote = handler.send(this, src);
+        assert Logger.lowLevelDebug("streamed fd wrote " + wrote + " bytes: " + this);
+        return wrote;
     }
 
     @Override
@@ -272,7 +274,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     void inputData(ByteArray data) {
-        assert Logger.lowLevelNetDebug("calling input with " + data.length());
+        assert Logger.lowLevelDebug("calling input with " + data.length() + " on " + this + ", readableBuffers.size() before adding is " + readableBuffers.size());
         assert Logger.lowLevelNetDebugPrintBytes(data.toJavaArray());
         if (state == State.real_closed || state == State.dead) {
             // connection is already closed, so ignore any data from another endpoint

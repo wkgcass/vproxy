@@ -40,7 +40,7 @@ public class Connection implements NetFlowRecorder {
 
         @Override
         public void writableET() {
-            assert Logger.lowLevelNetDebug("writableET triggered " + Connection.this);
+            assert Logger.lowLevelDebug("writableET triggered " + Connection.this);
             NetEventLoop eventLoop = _eventLoop;
             if (!closed && eventLoop != null) {
                 // the buffer is writable means the channel can read data
