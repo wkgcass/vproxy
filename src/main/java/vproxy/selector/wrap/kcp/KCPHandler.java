@@ -41,7 +41,7 @@ public class KCPHandler extends ArqUDPHandler {
     protected KCPHandler(Consumer<ByteArrayChannel> emitter, Object identifier, KCPOptions options) {
         super(emitter);
         this.kcp = new Kcp(0, (data, kcp) -> {
-            assert Logger.lowLevelNetDebug("kcp wants to write " + data.chnl.used() + " bytes to " + kcp.getUser());
+            assert Logger.lowLevelDebug("kcp wants to write " + data.chnl.used() + " bytes to " + kcp.getUser());
             assert Logger.lowLevelNetDebugPrintBytes(data.chnl.getBytes(), data.chnl.getReadOff(), data.chnl.getWriteOff());
             emitter.accept(data.chnl);
         });
@@ -57,7 +57,7 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public ByteArray parse(ByteArrayChannel buf) throws IOException {
-        assert Logger.lowLevelNetDebug("inputting into kcp: " + buf.used());
+        assert Logger.lowLevelDebug("inputting into kcp: " + buf.used());
         assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.used());
 
         int ret = kcp.input(new ByteBuf(buf));
@@ -103,7 +103,7 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public int writableThreshold() {
-        return (opts.sndWnd * 3 / 2) * (opts.mtu - Kcp.IKCP_OVERHEAD);
+        return (opts.sndWnd) * (opts.mtu - Kcp.IKCP_OVERHEAD);
     }
 
     @Override
@@ -116,7 +116,7 @@ public class KCPHandler extends ArqUDPHandler {
         if (state < 0) {
             isInvalid = true;
             assert Logger.lowLevelDebug("kcp connection is invalid, state = " + state);
-            throw new IOException("the kcp connection is invalid");
+            throw new IOException("the kcp connection is invalid: " + kcp.getUser());
         }
     }
 
