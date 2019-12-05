@@ -73,7 +73,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 byte[] foo = new byte[expectingLen];
                 wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
-            ctx.write(response(101, accept)); // respond to the client about the upgrading
+            ctx.write(response(101, accept, ctx)); // respond to the client about the upgrading
         }
 
         // it's ordered with `-priority`, smaller the index is, higher priority it has
@@ -99,7 +99,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         private void fail(ProtocolHandlerContext<HttpContext> ctx, int code, String msg) {
             assert Logger.lowLevelDebug("WebSocket handshake failed: " + msg);
             ctx.inBuffer.clear();
-            ctx.write(response(code, msg));
+            ctx.write(response(code, msg, ctx));
             // no need to tell the Proxy it fails
             // the client may make another http request
         }
@@ -176,7 +176,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             put(500, "Internal Server Error");
         }};
 
-        private byte[] response(int statusCode, String msg) {
+        private byte[] response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
             String statusMsg = STATUS_MSG.get(statusCode);
             Response resp = new Response();
             resp.version = "HTTP/1.1";
@@ -195,7 +195,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Server", "nginx/1.14.2"));
                 resp.headers.add(new Header("Date", new Date().toString()));
                 resp.headers.add(new Header("Content-Type", "text/html"));
-                msg = ErrorPages.build(statusCode, statusMsg, msg);
+                msg = ErrorPages.build(statusCode, statusMsg, msg, Utils.ipStr(ctx.connection.remote.getAddress().getAddress()));
                 ByteArray body = ByteArray.from(msg.getBytes());
                 resp.headers.add(new Header("Content-Length", "" + body.length()));
                 resp.body = body;

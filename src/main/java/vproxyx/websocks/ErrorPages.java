@@ -6,7 +6,7 @@ public class ErrorPages {
     private ErrorPages() {
     }
 
-    public static String build(int code, String statusMsg, String msg) {
+    public static String build(int code, String statusMsg, String msg, String ip) {
         return "<html><head> <meta charset=\"utf-8\"> <meta content=\"width=device-width,initial-scale=1.0,minimum-scale=1.0,maximum-scale=1.0,user-scalable=no\" name=\"viewport\"> <title> " + code + " " + statusMsg + " </title> <link rel=\"shortcut icon\" type=\"image/x-icon\" href=\"https://github.com/fluidicon.png\"> <style>html, body {\n" +
             "  font-family: sans-serif;\n" +
             "  -ms-text-size-adjust: 100%;\n" +
@@ -91,6 +91,6 @@ public class ErrorPages {
             "  position: fixed;\n" +
             "  left: 12px;\n" +
             "  bottom: 12px; }\n" +
-            "</style> <base target=\"_parent\"> </head> <body class=\"friendly\"> <div class=\"spacer\"></div> <div class=\"message\"> <div class=\"message__title\"> " + code + " " + statusMsg + " <br/> " + msg + " <br/> <p> current server time " + new Date() + "</p> </div> <a href=\"https://github.com\" class=\"btn\">Build something amazing</a> </div>   </body></html>\n";
+            "</style> <base target=\"_parent\"> </head> <body class=\"friendly\"> <div class=\"spacer\"></div> <div class=\"message\"> <div class=\"message__title\"> " + code + " " + statusMsg + " <br/> " + msg + " <br/> <p> current server time " + new Date() + "</p> <p> your request ip " + ip + " </p> </div> <a href=\"https://github.com\" class=\"btn\">Build something amazing</a> </div>   </body></html>\n";
     }
 }
