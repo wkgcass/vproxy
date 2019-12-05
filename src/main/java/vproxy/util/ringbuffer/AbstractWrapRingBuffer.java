@@ -33,6 +33,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     private final Deque<ByteBufferRingBuffer> intermediateBuffers = new LinkedList<>();
     private ByteBuffer temporaryBuffer = null;
     private boolean triggerReadable = false;
+    protected boolean transferring = false;
 
     public AbstractWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer) {
         this.plainBufferForApp = plainBytesBuffer;
@@ -77,17 +78,34 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             assert Logger.lowLevelDebug("generalWrap is operating");
             return; // should not call the method when it's operating
         }
-        setOperating(true);
-        try {
-            _generalWrap();
-        } finally {
-            if (triggerReadable) {
-                triggerReadable = false;
-                triggerReadable();
+        do {
+            assert Logger.lowLevelDebug("begin to handle generalWrap");
+            setOperating(true);
+            try {
+                _generalWrap();
+            } finally {
+                if (triggerReadable) {
+                    triggerReadable = false;
+                    triggerReadable();
+                }
+                assert Logger.lowLevelDebug("generalWrap is not operating now");
+                setOperating(false);
             }
-            assert Logger.lowLevelDebug("generalWrap is not operating now");
-            setOperating(false);
-        }
+        } while (
+            plainBufferForApp.used() != 0 && encryptedBufferForOutput.used() == 0 && transferring
+            // in the triggerReadable() process, the encrypted buffer might be flushed to channel
+            // but will not notify the plain buffer to write data to encrypted buffer
+            //
+            // when encrypted buffer still have data (used() != 0), the OP_WRITE will be added and write again
+            // in this case, no need for us to re-handle here
+            // but when encrypted buffer is empty (used() == 0), the OP_WRITE will be canceled
+            // and if plain buffer is not empty, the plainBuffer.readableET will not be triggered when reading from channel
+            // then there's no chance for the network flow to be handled
+            //
+            // so we should handle again here if plain buffer is not empty and encrypted buffer is empty
+            //
+            // the transferring check is because of the consideration that sometimes data cannot be transferred
+        );
     }
 
     private void _generalWrap() {
@@ -158,8 +176,15 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
         // we write encrypted data to the channel
-        int bytes = encryptedBufferForOutput.writeTo(channel, maxBytesToWrite);
-        generalWrap();
+        int bytes = 0;
+        while (true) {
+            int wrote = encryptedBufferForOutput.writeTo(channel, maxBytesToWrite);
+            generalWrap();
+            if (wrote == 0) {
+                break;
+            }
+            bytes += wrote;
+        }
         return bytes;
     }
 

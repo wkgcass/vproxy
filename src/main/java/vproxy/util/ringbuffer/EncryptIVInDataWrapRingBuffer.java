@@ -14,6 +14,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
 
     public EncryptIVInDataWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer, BlockCipherKey key) {
         this(plainBytesBuffer, key, null);
+        transferring = true; // we can transfer data at any time
     }
 
     public EncryptIVInDataWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer, BlockCipherKey key, byte[] iv) {

@@ -98,9 +98,9 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
             }
             assert Logger.lowLevelDebug("unwrap2: " + result);
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
-            assert Logger.lowLevelDebug("got BUFFER_UNDERFLOW when unwrapping, expecting: " + engine.getSession().getPacketBufferSize());
             // manipulate the position back to the original one
             encryptedBuffer.position(positionBeforeHandling);
+            assert Logger.lowLevelDebug("got BUFFER_UNDERFLOW when unwrapping, expecting: " + engine.getSession().getPacketBufferSize() + ", the buffer has " + (encryptedBuffer.limit() - encryptedBuffer.position()));
             underflow[0] = true;
             return;
         }

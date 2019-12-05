@@ -85,6 +85,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
             discardTemporaryBuffer();
         }
         if (result.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING) {
+            transferring = true; // not handshaking, so we can transfer data
             assert result.getStatus() == SSLEngineResult.Status.OK;
         } else {
             wrapHandshake(result);

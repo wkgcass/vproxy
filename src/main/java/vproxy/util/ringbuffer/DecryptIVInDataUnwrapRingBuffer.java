@@ -57,7 +57,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
         input.get(array);
 
         byte[] ret = cipher.update(array, 0, array.length);
-        assert Logger.lowLevelNetDebug("decrypt " + ret.length + " bytes");
+        assert Logger.lowLevelDebug("decrypt " + ret.length + " bytes");
         assert Logger.lowLevelNetDebugPrintBytes(ret);
         recordIntermediateBuffer(ByteBuffer.wrap(ret));
     }

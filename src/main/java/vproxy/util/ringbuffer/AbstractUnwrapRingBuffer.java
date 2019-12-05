@@ -179,7 +179,16 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
         // proxy the operation from plain buffer
-        return plainBufferForApp.writeTo(channel, maxBytesToWrite);
+        int bytes = 0;
+        while (true) {
+            int wrote = plainBufferForApp.writeTo(channel, maxBytesToWrite);
+            generalUnwrap();
+            if (wrote == 0) {
+                break;
+            }
+            bytes += wrote;
+        }
+        return bytes;
     }
 
     @Override
