@@ -113,7 +113,9 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     private void _generalUnwrap() {
         if ((intermediateBuffers.isEmpty() || plainBufferForApp.free() == 0)
-            &&
+            // cannot write
+            && // and
+            // cannot read
             (encryptedBufferForInput.used() == 0 || intermediateBufferCap() > MAX_INTERMEDIATE_BUFFER_CAPACITY)) {
             return;
         }
