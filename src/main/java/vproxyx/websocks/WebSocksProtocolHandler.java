@@ -195,7 +195,23 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Server", "nginx/1.14.2"));
                 resp.headers.add(new Header("Date", new Date().toString()));
                 resp.headers.add(new Header("Content-Type", "text/html"));
-                msg = ErrorPages.build(statusCode, statusMsg, msg, Utils.ipStr(ctx.connection.remote.getAddress().getAddress()));
+                {
+                    String rawIp = Utils.ipStr(ctx.connection.remote.getAddress().getAddress());
+                    String xff = null;
+                    if (ctx.data != null && ctx.data.result != null && ctx.data.result.headers != null) {
+                        var headers = ctx.data.result.headers;
+                        for (var header : headers) {
+                            if (header.key.trim().toLowerCase().equals("x-forwarded-for")) {
+                                xff = header.value.trim();
+                                break;
+                            }
+                        }
+                    }
+                    if (xff == null) {
+                        xff = "(none)";
+                    }
+                    msg = ErrorPages.build(statusCode, statusMsg, msg, rawIp, xff);
+                }
                 ByteArray body = ByteArray.from(msg.getBytes());
                 resp.headers.add(new Header("Content-Length", "" + body.length()));
                 resp.body = body;

@@ -7,10 +7,7 @@ import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Tuple;
+import vproxy.util.*;
 
 import java.io.IOException;
 
@@ -35,13 +32,13 @@ public class HttpConnectProtocolHandler
                 // fetch data from method and url
                 // it should be CONNECT host:port
                 Request req = ctx.data.result;
+                String url = req.uri;
 
                 boolean isConnect;
                 // check method
                 {
                     String method = req.method;
                     isConnect = method.equalsIgnoreCase("connect");
-                    String url = req.uri;
                     if (!isConnect && !url.startsWith("http://")) {
                         Logger.warn(LogType.INVALID_EXTERNAL_DATA, "method is wrong! expecting CONNECT or proxying for http, " +
                             "but got " + method + " " + url + ", " +
@@ -55,7 +52,7 @@ public class HttpConnectProtocolHandler
                     int port;
                     // check url for connect
                     {
-                        String url = ctx.data.result.uri;
+                        url = ctx.data.result.uri;
                         if (!url.contains(":")) {
                             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "url is wrong! no `:` in " + url + ", " +
                                 "connection: " + ctx.connectionId);
@@ -94,7 +91,17 @@ public class HttpConnectProtocolHandler
                     outCtx.write("HTTP/1.0 200 Connection established\r\n\r\n".getBytes());
                 } else {
                     assert Logger.lowLevelDebug("client is sending raw http request");
-                    outCtx.data.right.failed(new IOException("do not support raw http request"));
+                    String msg = "only \"connect\" proxy requests are supported";
+                    String rebuiltUrl = "https://" + url.substring("http://".length());
+                    String respBody = ErrorPages.build("VPROXY ERROR PAGE", msg, "you may try to request via https", rebuiltUrl, rebuiltUrl);
+                    String resp = "" +
+                        "HTTP/1.0 400 Bad Request\r\n" +
+                        "Connection: Close\r\n" +
+                        "Content-Length: " + respBody.getBytes().length + "\r\n" +
+                        "\r\n" +
+                        respBody;
+                    outCtx.write(resp.getBytes());
+                    outCtx.data.right.failed(new IOException(msg));
                 }
             }
         };
