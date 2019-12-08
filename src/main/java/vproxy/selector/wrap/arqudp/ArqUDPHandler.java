@@ -26,8 +26,6 @@ public abstract class ArqUDPHandler {
 
     abstract public int writableLen();
 
-    abstract public int writableThreshold();
-
     abstract public void clock(long ts) throws IOException;
 
     abstract public int clockInterval();

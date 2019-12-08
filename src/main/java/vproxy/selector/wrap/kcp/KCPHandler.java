@@ -97,13 +97,8 @@ public class KCPHandler extends ArqUDPHandler {
 
     @Override
     public int writableLen() {
-        int len = opts.sndWnd * 2 /*let user code write more data*/ - kcp.waitSnd();
+        int len = opts.sndWnd - kcp.waitSnd();
         return Math.max(len, 0) * (opts.mtu - Kcp.IKCP_OVERHEAD);
-    }
-
-    @Override
-    public int writableThreshold() {
-        return (opts.sndWnd) * (opts.mtu - Kcp.IKCP_OVERHEAD);
     }
 
     @Override
