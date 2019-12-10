@@ -415,7 +415,7 @@ public class ConfigProcessor {
                                 break;
                             }
                             // build for this remote server
-                            KCPFDs kcpFDs = KCPFDs.getClientFast4();
+                            KCPFDs kcpFDs = KCPFDs.getClientDefault();
                             H2StreamedClientFDs h2sFDs = new H2StreamedClientFDs(kcpFDs, l.getSelectorEventLoop(),
                                 handle.server);
                             fds.put(l.getSelectorEventLoop(), h2sFDs);

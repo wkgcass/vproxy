@@ -50,18 +50,19 @@ public class KCPFDs implements ArqUDPBasedFDs {
         {
             // very aggressive strategy
             var opts = new KCPHandler.KCPOptions();
-            opts.mtu = 768;
-            opts.sndWnd = 2048;
-            opts.rcvWnd = 2048;
+            opts.resend = 1;
+            opts.interval = 5;
+            opts.clockInterval = 5;
             instanceFast4 = new KCPFDs(opts);
         }
 
         {
             // very aggressive strategy
             var opts = new KCPHandler.KCPOptions();
-            opts.mtu = 768;
+            opts.resend = 1;
             opts.sndWnd = 256;
-            opts.rcvWnd = 2048;
+            opts.interval = 5;
+            opts.clockInterval = 5;
             instanceClientFast4 = new KCPFDs(opts);
         }
     }
@@ -72,11 +73,11 @@ public class KCPFDs implements ArqUDPBasedFDs {
         this.opts = opts;
     }
 
-    public static KCPFDs getFast4() {
+    public static KCPFDs getDefault() {
         return instanceFast4;
     }
 
-    public static KCPFDs getClientFast4() {
+    public static KCPFDs getClientDefault() {
         return instanceClientFast4;
     }
 

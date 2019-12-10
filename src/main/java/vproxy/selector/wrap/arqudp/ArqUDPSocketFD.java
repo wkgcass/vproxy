@@ -37,6 +37,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     private final Deque<ByteBuffer> readBufs = new LinkedList<>(); // data for application level
     private final Deque<ByteArrayChannel> writeBufs = new LinkedList<>(); // data to network level
+    private boolean notFullySent = false; // the flag indicating that it cannot send data
 
     private PeriodicEvent periodicEvent;
 
@@ -52,6 +53,16 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         this.selector = loop.selector;
         this.fdHandler = new ArqUDPInsideFDHandler();
         this.handler = handlerConstructor.apply(b -> {
+            // check `notFullySent` flag
+            // if it's set to true, which means the sending queue is not fully sent
+            // and the data writing into the handler may be the retransmission packets
+            // causing more and more data queuing in the application level
+            // so we need to clear the whole queue if it happens
+            if (notFullySent) {
+                Logger.info(LogType.ALERT, "`notFullySent` flag is set, clear the writeBufs queue"); // TODO set level to INFO(ALERT) for now for debug purpose, can be set to lowLevelDebug later
+                notFullySent = false; // unset flag
+                writeBufs.clear(); // clear the queue
+            }
             writeBufs.add(b);
             assert Logger.lowLevelDebug("writeBufs currently have " + writeBufs.size() + " elements");
             fdHandler.watchInsideFDWritable();
@@ -373,26 +384,32 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 assert Logger.lowLevelNetDebugPrintBytes(buf.getBytes(), buf.getReadOff(), buf.getWriteOff());
 
                 // try to write data
-                ByteBuffer foo = ByteBuffer.allocate(buf.used());
-                buf.read(foo);
-                foo.flip();
+                int wlen = buf.used();
+                ByteBuffer foo = ByteBuffer.wrap(buf.readableArray().toJavaArray());
+                int wrote;
                 try {
-                    ctx.getChannel().write(foo);
+                    wrote = ctx.getChannel().write(foo);
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "writing data to " + ctx.getChannel() + " failed", e);
                     setError(e);
                     return;
                 }
-                if (buf.used() > 0) {
-                    assert Logger.lowLevelDebug("the buffer still have data to write: " + buf.used());
-                    // still have data to write,
+                if (wrote < wlen) {
+                    assert Logger.lowLevelDebug("not all data wrote: " + (wlen - wrote));
+                    if (wrote != 0) {
+                        Logger.shouldNotHappen("writing half udp packet to the fd " + ctx.getChannel());
+                    }
 
                     // so the inside fd is not writable for now
                     // watch writable event for inside fd
                     watchInsideFDWritable();
+                    // set flag
+                    notFullySent = true;
                     return;
                 } else {
                     assert Logger.lowLevelDebug("the buffer is empty now, everything wrote");
+                    notFullySent = false;
+                    buf.skip(wlen);
                 }
             }
         }
