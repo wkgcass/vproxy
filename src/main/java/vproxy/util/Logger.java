@@ -11,6 +11,7 @@ import java.nio.ByteBuffer;
 import java.util.Date;
 
 public class Logger {
+    private static final boolean stackTraceOn;
     private static final boolean lowLevelDebugOn;
     private static final boolean lowLevelNetDebugOn;
 
@@ -23,6 +24,11 @@ public class Logger {
     private static DatagramFD logChannel;
 
     static {
+        {
+            String stackTrace = System.getProperty("vproxy.stacktrace", "off");
+            stackTraceOn = !"off".equals(stackTrace);
+        }
+
         {
             String debug = System.getProperty("vproxy.debug");
             lowLevelDebugOn = !"off".equals(debug);
@@ -87,6 +93,19 @@ public class Logger {
         System.out.println(ERROR_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + err);
     }
 
+    private static void privatePrintStackTrace(Throwable t) {
+        if (stackTraceOn) {
+            t.printStackTrace(System.out);
+        } else {
+            String msg = t.getMessage();
+            if (msg == null || msg.isBlank()) {
+                System.out.println(t.getClass().getName());
+            } else {
+                System.out.println(t.getClass().getName() + ": " + msg.trim());
+            }
+        }
+    }
+
     // unexpected errors, or situation should happen
     public static void fatal(LogType logType, String err) {
         privateErr(logType + " - " + err);
@@ -94,7 +113,7 @@ public class Logger {
 
     public static void fatal(LogType logType, String err, Throwable ex) {
         privateErr(logType + " - " + err);
-        ex.printStackTrace(System.out);
+        privatePrintStackTrace(ex);
     }
 
     // expected errors, but not normal condition
@@ -104,7 +123,7 @@ public class Logger {
 
     public static void error(LogType logType, String err, Throwable ex) {
         privateErr(logType + " - " + err);
-        ex.printStackTrace(System.out);
+        privatePrintStackTrace(ex);
     }
 
     // expected errors, maybe user misuse, and we can recover
@@ -114,7 +133,7 @@ public class Logger {
 
     public static void warn(LogType logType, String err, Throwable t) {
         System.out.println(WARN_COLOR + current() + logType + " - " + RESET_COLOR + err);
-        t.printStackTrace();
+        privatePrintStackTrace(t);
     }
 
     // expected condition
@@ -183,7 +202,7 @@ public class Logger {
     }
 
     public static boolean printStackTrace(Throwable t) {
-        t.printStackTrace(System.out);
+        t.printStackTrace(System.out); // do not use privatePrintStackTrace, always print here
         return true;
     }
 
