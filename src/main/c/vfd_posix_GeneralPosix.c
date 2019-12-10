@@ -222,6 +222,15 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setReusePort
     // do nothing for FSTACK
 }
 
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setRcvBuf
+  (JNIEnv* env, jobject self, jint fd, jint v) {
+    int val = v;
+    int res = v_setsockopt(fd, V_SOL_SOCKET, V_SO_RCVBUF, &val, sizeof(int));
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+    }
+}
+
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setTcpNoDelay
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
     int i = v ? 1 : 0;

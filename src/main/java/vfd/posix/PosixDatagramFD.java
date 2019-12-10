@@ -87,15 +87,15 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
         }
         int off = 0;
         int len = buf.limit() - buf.position();
-        boolean release = false;
+        boolean needCopy = false;
         ByteBuffer directBuffer;
         if (buf.isDirect()) {
             directBuffer = buf;
             off = buf.position();
         } else {
-            directBuffer = ByteBuffer.allocateDirect(len);
+            directBuffer = getDirectBuffer(len);
             directBuffer.put(buf);
-            release = true;
+            needCopy = true;
         }
         int n = 0;
         try {
@@ -108,7 +108,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
                 n = posix.sendtoIPv6(fd, directBuffer, off, len, ip, port);
             }
         } finally {
-            if (release) { // src was fully read
+            if (needCopy) { // src was fully read
                 if (n < len) {
                     buf.position(buf.limit() - len + n);
                 }
@@ -117,9 +117,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
                     buf.position(buf.position() + n);
                 }
             }
-            if (release) {
-                Utils.clean(directBuffer);
-            }
+            resetDirectBuffer();
         }
         return n;
     }
@@ -133,14 +131,14 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
         }
         int off = 0;
         int len = buf.limit() - buf.position();
-        boolean release = false;
+        boolean needCopy = false;
         ByteBuffer directBuffer;
         if (buf.isDirect()) {
             directBuffer = buf;
             off = buf.position();
         } else {
-            directBuffer = ByteBuffer.allocateDirect(len);
-            release = true;
+            directBuffer = getDirectBuffer(len);
+            needCopy = true;
         }
         VSocketAddress l4addr;
         int n = 0;
@@ -158,16 +156,14 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             n = tup.len;
         } finally {
             if (n > 0) {
-                if (release) {
+                if (needCopy) {
                     directBuffer.limit(n).position(0);
                     buf.put(directBuffer);
                 } else {
                     buf.position(buf.position() + n);
                 }
             }
-            if (release) {
-                Utils.clean(directBuffer);
-            }
+            resetDirectBuffer();
         }
         return l4addr.toInetSocketAddress();
     }

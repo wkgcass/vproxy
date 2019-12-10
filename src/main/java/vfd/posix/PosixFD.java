@@ -1,10 +1,12 @@
 package vfd.posix;
 
 import vfd.FD;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
+import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -14,9 +16,28 @@ public class PosixFD implements FD {
     protected int fd = -1;
     private Boolean blocking = null;
     private Map<SocketOption, Object> opts = new HashMap<>();
+    private ByteBuffer directBuffer = null;
 
     protected PosixFD(Posix posix) {
         this.posix = posix;
+    }
+
+    protected ByteBuffer getDirectBuffer(int len) {
+        if (directBuffer != null && directBuffer.capacity() < len) {
+            Utils.clean(directBuffer);
+            directBuffer = null;
+        }
+        if (directBuffer == null) {
+            directBuffer = ByteBuffer.allocateDirect(2 * len);
+        }
+        return directBuffer;
+    }
+
+    protected void resetDirectBuffer() {
+        if (directBuffer == null) {
+            return;
+        }
+        directBuffer.limit(directBuffer.capacity()).position(0);
     }
 
     protected void checkFD() throws IOException {
@@ -57,7 +78,8 @@ public class PosixFD implements FD {
         if (fd == -1) {
             if (name != StandardSocketOptions.SO_LINGER
                 && name != StandardSocketOptions.SO_REUSEPORT
-                && name != StandardSocketOptions.TCP_NODELAY) {
+                && name != StandardSocketOptions.TCP_NODELAY
+                && name != StandardSocketOptions.SO_RCVBUF) {
                 throw new IOException("not supported " + name);
             }
             opts.put(name, value);
@@ -66,6 +88,8 @@ public class PosixFD implements FD {
                 posix.setSoLinger(fd, (Integer) value);
             } else if (name == StandardSocketOptions.SO_REUSEPORT) {
                 posix.setReusePort(fd, (Boolean) value);
+            } else if (name == StandardSocketOptions.SO_RCVBUF) {
+                posix.setRcvBuf(fd, (Integer) value);
             } else if (name == StandardSocketOptions.TCP_NODELAY) {
                 posix.setTcpNoDelay(fd, (Boolean) value);
             } else {
@@ -92,6 +116,9 @@ public class PosixFD implements FD {
         closed = true;
         if (fd != -1) {
             posix.close(fd);
+        }
+        if (directBuffer != null) {
+            Utils.clean(directBuffer);
         }
     }
 

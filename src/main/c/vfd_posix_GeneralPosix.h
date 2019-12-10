@@ -145,6 +145,14 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setReusePort
 
 /*
  * Class:     vfd_posix_GeneralPosix
+ * Method:    setRcvBuf
+ * Signature: (II)V
+ */
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setRcvBuf
+  (JNIEnv *, jobject, jint, jint);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
  * Method:    setTcpNoDelay
  * Signature: (IZ)V
  */

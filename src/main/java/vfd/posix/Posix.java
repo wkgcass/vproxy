@@ -38,6 +38,8 @@ public interface Posix {
 
     void setReusePort(int fd, boolean v) throws IOException;
 
+    void setRcvBuf(int fd, int buflen) throws IOException;
+
     void setTcpNoDelay(int fd, boolean v) throws IOException;
 
     void close(int fd) throws IOException;

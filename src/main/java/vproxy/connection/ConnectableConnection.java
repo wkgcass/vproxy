@@ -1,17 +1,18 @@
 package vproxy.connection;
 
-import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.SocketFD;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.selector.wrap.udp.DatagramSocketFDWrapper;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.selector.wrap.udp.UDPFDs;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.net.StandardSocketOptions;
 
 public class ConnectableConnection extends Connection {
     Connector connector; // maybe null, only for recording purpose, will not be used by the connection lib
@@ -51,6 +52,12 @@ public class ConnectableConnection extends Connection {
                                                   SelectorEventLoop loop,
                                                   UDPBasedFDs fds) throws IOException {
         SocketFD channel = fds.openSocketFD(loop);
+        int buflen = 1024 * 1024 * 2; // ensures 2mBytes receiving buffer
+        try {
+            channel.setOption(StandardSocketOptions.SO_RCVBUF, buflen);
+        } catch (IOException e) {
+            Logger.warn(LogType.SOCKET_ERROR, "setting SO_RCVBUF to " + buflen + " for " + channel + " failed: " + e);
+        }
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 

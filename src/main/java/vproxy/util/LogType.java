@@ -21,4 +21,5 @@ public enum LogType {
     SSL_ERROR,
     SYS_ERROR,
     PROBE,
+    SOCKET_ERROR,
 }

@@ -56,6 +56,9 @@ public class GeneralPosix implements Posix {
     native public void setReusePort(int fd, boolean v) throws IOException;
 
     @Override
+    native public void setRcvBuf(int fd, int buflen) throws IOException;
+
+    @Override
     native public void setTcpNoDelay(int fd, boolean v) throws IOException;
 
     @Override

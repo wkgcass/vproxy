@@ -96,29 +96,27 @@ public class PosixNetworkFD extends PosixFD {
         int off = 0;
         int len = dst.limit() - dst.position();
         ByteBuffer directBuffer;
-        boolean release = false;
+        boolean needCopy = false;
         if (dst.isDirect()) {
             directBuffer = dst;
             off = dst.position();
         } else {
-            directBuffer = ByteBuffer.allocateDirect(len);
-            release = true;
+            directBuffer = getDirectBuffer(len);
+            needCopy = true;
         }
         int n = 0;
         try {
             n = posix.read(fd, directBuffer, off, len);
         } finally {
             if (n > 0) {
-                if (release) {
+                if (needCopy) {
                     directBuffer.limit(n).position(0);
                     dst.put(directBuffer);
                 } else {
                     dst.position(dst.position() + n);
                 }
             }
-            if (release) {
-                Utils.clean(directBuffer);
-            }
+            resetDirectBuffer();
         }
         return n;
     }
@@ -131,20 +129,20 @@ public class PosixNetworkFD extends PosixFD {
         int off = 0;
         int len = src.limit() - src.position();
         ByteBuffer directBuffer;
-        boolean release = false;
+        boolean needCopy = false;
         if (src.isDirect()) {
             directBuffer = src;
             off = src.position();
         } else {
-            directBuffer = ByteBuffer.allocateDirect(len);
+            directBuffer = getDirectBuffer(len);
             directBuffer.put(src);
-            release = true;
+            needCopy = true;
         }
         int n = 0;
         try {
             n = posix.write(fd, directBuffer, off, len);
         } finally {
-            if (release) { // src was fully read
+            if (needCopy) { // src was fully read
                 if (n < len) {
                     src.position(src.limit() - len + n);
                 }
@@ -153,9 +151,7 @@ public class PosixNetworkFD extends PosixFD {
                     src.position(src.position() + n);
                 }
             }
-            if (release) {
-                Utils.clean(directBuffer);
-            }
+            resetDirectBuffer();
         }
         return n;
     }

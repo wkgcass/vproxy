@@ -24,6 +24,7 @@
     #define V_SO_LINGER    SO_LINGER
     #define V_SO_REUSEPORT SO_REUSEPORT
     #define V_SO_REUSEADDR SO_REUSEADDR
+    #define V_SO_RCVBUF    SO_RCVBUF
     #define V_IPPROTO_TCP  IPPROTO_TCP
     #define V_SHUT_WR      SHUT_WR
     typedef struct linger v_linger;
