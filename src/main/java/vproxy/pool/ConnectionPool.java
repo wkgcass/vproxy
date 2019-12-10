@@ -117,7 +117,7 @@ public class ConnectionPool {
     }
 
     void handshakeDone(ConnectableConnection conn) {
-        Logger.alert("handshake done for pooled connection: " + conn);
+        Logger.warn(LogType.ALERT, "handshake done for pooled connection: " + conn);
         connections.stream().filter(w -> w.conn.equals(conn)).forEach(this::handshakeDone);
     }
 

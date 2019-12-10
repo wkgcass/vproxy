@@ -97,16 +97,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return null;
             }
             SharedData shared = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
-            if (shared.useKCP) {
-                assert Logger.lowLevelDebug("kcp does not support pooled connections");
-                return null;
-            }
             ConnectableConnection conn;
             try {
                 if (shared.useSSL) {
-                    conn = CommonProcess.makeSSLConnection(connector);
+                    conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector, shared);
                 } else {
-                    conn = CommonProcess.makeRawConnection(connector);
+                    conn = CommonProcess.makeRawConnection(loop.getSelectorEventLoop(), connector, shared);
                 }
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "make websocks connection for the pool failed", e);
@@ -493,14 +489,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     static class CommonProcess {
-        private static SharedData mockNonKcpSharedData(boolean useSSL) {
-            return new SharedData(useSSL, false, Collections.emptyMap());
-        }
-
-        static ConnectableConnection makeRawConnection(SvrHandleConnector connector) throws IOException {
-            return makeRawConnection(null, connector, mockNonKcpSharedData(false));
-        }
-
         static ConnectableConnection makeRawConnection(SelectorEventLoop loop, SvrHandleConnector connector, SharedData sharedData) throws IOException {
             if (loop == null && sharedData.useKCP) {
                 throw new IllegalArgumentException("loop must be specified when using kcp");
@@ -520,10 +508,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     WebSocksUtils.getConnectionOpts(),
                     RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
             }
-        }
-
-        static ConnectableConnection makeSSLConnection(SvrHandleConnector connector) throws IOException {
-            return makeSSLConnection(null, connector, mockNonKcpSharedData(true));
         }
 
         static ConnectableConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector, SharedData sharedData) throws IOException {
@@ -634,10 +618,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
-    private final Map<String, ConnectionPool> pool;
+    private final Map<String, Map<SelectorEventLoop, ConnectionPool>> pool;
 
-    public WebSocksProxyAgentConnectorProvider(NetEventLoop eventLoop,
-                                               ConfigProcessor config) {
+    public WebSocksProxyAgentConnectorProvider(ConfigProcessor config) {
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
         this.servers = config.getServers();
@@ -647,9 +630,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         pool = new HashMap<>();
         for (String alias : config.getServers().keySet()) {
             final String finalAlias = alias;
-            pool.put(alias, new ConnectionPool(eventLoop,
-                cb -> new WebSocksPoolHandler(finalAlias, cb),
-                config.getPoolSize()));
+            Map<SelectorEventLoop, ConnectionPool> poolMap = new HashMap<>();
+            pool.put(alias, poolMap);
+            for (NetEventLoop loop : config.workerLoopGroup.list()) {
+                poolMap.put(loop.getSelectorEventLoop(), new ConnectionPool(loop,
+                    cb -> new WebSocksPoolHandler(finalAlias, cb),
+                    config.getPoolSize()));
+            }
         }
     }
 
@@ -686,7 +673,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         // try to fetch an existing connection from pool
-        pool.get(serverAlias).get(loop.getSelectorEventLoop(), conn -> {
+        pool.get(serverAlias).get(loop.getSelectorEventLoop()).get(loop.getSelectorEventLoop(), conn -> {
             boolean isPooledConn = conn != null;
             if (conn == null) {
                 // retrieve a remote connection

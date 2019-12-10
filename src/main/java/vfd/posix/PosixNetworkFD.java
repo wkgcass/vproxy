@@ -155,4 +155,14 @@ public class PosixNetworkFD extends PosixFD {
         }
         return n;
     }
+
+    @Override
+    public String toString() {
+        return this.getClass().getSimpleName() + "{" +
+            "fd=" + fd +
+            ", closed=" + !isOpen() +
+            ", local=" + local +
+            ", remote=" + remote +
+            '}';
+    }
 }

@@ -93,7 +93,7 @@ public class WebSocksProxyAgent {
             , "JKS", false, configProcessor.isVerifyCert());
 
         // initiate pool (it's inside the connector provider)
-        WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(worker.next(), configProcessor);
+        WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(configProcessor);
         // initiate the agent
         // --------- port,   handler,         isGateway
         List<Tuple3<Integer, ProtocolHandler, Boolean>> handlers = new LinkedList<>();
