@@ -19,7 +19,18 @@ public class PosixFDs implements FDs {
             System.exit(1);
         }
         if (VFDConfig.vfdtrace) {
-            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{Posix.class}, new TracePosixInvocationHandler(new GeneralPosix()));
+            // make it difficult for graalvm native image initializer to detect the Posix.class
+            // however we cannot use -Dvfdtrace=1 flag when using native image
+            String clsStr = this.getClass().getPackage().getName() + "." + this.getClass().getSimpleName().substring(0, "Posix".length());
+            // clsStr should be vfd.posix.Posix
+            Class<?> cls;
+            try {
+                cls = Class.forName(clsStr);
+            } catch (ClassNotFoundException e) {
+                // should not happen
+                throw new RuntimeException(e);
+            }
+            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{cls}, new TracePosixInvocationHandler(new GeneralPosix()));
         } else {
             posix = new GeneralPosix();
         }
