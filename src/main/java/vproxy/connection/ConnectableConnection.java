@@ -52,7 +52,7 @@ public class ConnectableConnection extends Connection {
                                                   SelectorEventLoop loop,
                                                   UDPBasedFDs fds) throws IOException {
         SocketFD channel = fds.openSocketFD(loop);
-        int buflen = 1024 * 1024 * 2; // ensures 2mBytes receiving buffer
+        int buflen = 1024 * 1024 * 16; // make 16mBytes receiving buffer
         try {
             channel.setOption(StandardSocketOptions.SO_RCVBUF, buflen);
         } catch (IOException e) {

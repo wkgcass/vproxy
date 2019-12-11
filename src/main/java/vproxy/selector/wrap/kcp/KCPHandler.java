@@ -52,6 +52,7 @@ public class KCPHandler extends ArqUDPHandler {
         kcp.wndsize(options.sndWnd, options.rcvWnd);
         kcp.setMtu(options.mtu);
         kcp.setRxMinrto(options.rxMinRto);
+        kcp.setNocwnd(true);
         this.opts = options;
     }
 

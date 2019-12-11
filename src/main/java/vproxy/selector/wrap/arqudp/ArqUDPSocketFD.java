@@ -300,38 +300,46 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
         @Override
         public void readable(HandlerContext<SocketFD> ctx) {
-            int readBytes;
-            try {
-                readBytes = ctx.getChannel().read(tmpBuffer);
-            } catch (IOException e) {
-                Logger.error(LogType.CONN_ERROR, "reading data from " + ctx.getChannel() + " failed", e);
-                setError(e);
-                unwatchInsideFDReadable();
-                return;
+            while (true) {
+                int readBytes;
+                try {
+                    readBytes = ctx.getChannel().read(tmpBuffer);
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "reading data from " + ctx.getChannel() + " failed", e);
+                    setError(e);
+                    unwatchInsideFDReadable();
+                    return;
+                }
+                if (readBytes < 0) {
+                    assert Logger.lowLevelDebug("reading data from " + ctx.getChannel() + " failed with " + readBytes);
+                    invalid = true;
+                    unwatchInsideFDReadable();
+                    return;
+                }
+                if (readBytes == 0) {
+                    assert Logger.lowLevelDebug("read nothing, nothing to handle " + ctx.getChannel());
+                    return;
+                }
+                try {
+                    readableOne();
+                } finally {
+                    // reset the tmpBuffer
+                    tmpBuffer.limit(tmpBuffer.capacity()).position(0);
+                }
             }
-            if (readBytes < 0) {
-                assert Logger.lowLevelDebug("reading data from " + ctx.getChannel() + " failed with " + readBytes);
-                invalid = true;
-                unwatchInsideFDReadable();
-                return;
-            }
-            if (readBytes == 0) {
-                assert Logger.lowLevelDebug("read nothing, nothing to handle " + ctx.getChannel());
-                return;
-            }
+        }
+
+        public void readableOne() {
             // copy into the tmp byteArrayChannel
             tmpBuffer.flip();
             int len = tmpBuffer.limit() - tmpBuffer.position();
             if (len == 0) {
                 // nothing to be done
-                tmpBuffer.limit(tmpBuffer.capacity()).position(0);
                 watchInsideFDReadable();
                 return;
             }
             ByteArrayChannel tmp = ByteArrayChannel.fromEmpty(len);
             tmp.write(tmpBuffer);
-            // reset the tmpBuffer
-            tmpBuffer.limit(tmpBuffer.capacity()).position(0);
 
             // read something, try to handle
             // make a copy for data in tmp to make sure it will not be overwritten
