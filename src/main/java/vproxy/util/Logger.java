@@ -141,6 +141,10 @@ public class Logger {
         System.out.println(INFO_COLOR + current() + logType + " - " + RESET_COLOR + msg);
     }
 
+    public static void trace(LogType logType, String msg) {
+        System.out.println(DEBUG_COLOR + current() + logType + " - " + RESET_COLOR + msg);
+    }
+
     public static void shouldNotHappen(String msg) {
         fatal(LogType.UNEXPECTED, "should not happen - " + msg);
     }
