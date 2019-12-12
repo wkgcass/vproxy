@@ -13,6 +13,8 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
@@ -801,5 +803,30 @@ public class Utils {
         ret[2] = (byte) ((ip >> 8) & 0xff);
         ret[3] = (byte) ((ip) & 0xff);
         return ret;
+    }
+
+    public static byte[] gzipCompress(ByteArrayOutputStream baos, byte[] plain) {
+        try (GZIPOutputStream gzip = new GZIPOutputStream(baos)) {
+            gzip.write(plain);
+        } catch (IOException e) {
+            Logger.shouldNotHappen("running gzip compression failed", e);
+            throw new RuntimeException(e);
+        }
+        return baos.toByteArray();
+    }
+
+    public static byte[] gzipDecompress(ByteArrayOutputStream baos, byte[] compressed) {
+        ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
+        try (GZIPInputStream gzip = new GZIPInputStream(bais)) {
+            byte[] buf = new byte[1024];
+            int n;
+            while ((n = gzip.read(buf, 0, buf.length)) >= 0) {
+                baos.write(buf, 0, n);
+            }
+        } catch (IOException e) {
+            Logger.shouldNotHappen("running gzip decompression failed", e);
+            return null;
+        }
+        return baos.toByteArray();
     }
 }

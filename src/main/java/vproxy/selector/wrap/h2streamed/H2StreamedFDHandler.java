@@ -4,7 +4,9 @@ import vproxy.selector.wrap.streamed.StreamedFDHandler;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Utils;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.List;
@@ -27,6 +29,9 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
 
     private static final byte FLAG_CLOSE_STREAM = 0x1;
     private static final byte FLAG_ACK = 0x1;
+
+    private static final byte FLAG_COMPRESSED = 0x4; // customized flag for compressed data payload
+    // currently only 0x1(END_STREAM) and 0x8(PADDED) are used by RFC7540, we set this to 0x4
 
     private static ByteArray getEmptySettings() {
         return HEAD.copy().set(3, TYPE_SETTINGS);
@@ -63,8 +68,20 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         return HEAD.copy().set(3, TYPE_DATA).set(4, FLAG_CLOSE_STREAM).int32(5, streamId);
     }
 
-    private static ByteArray getData(int streamId, ByteArray array) {
-        return HEAD.copy().int24(0, array.length()).set(3, TYPE_DATA).int32(5, streamId).concat(array);
+    private static ByteArray getData(int streamId, ByteArray array, ByteArrayOutputStream bufForCompression) {
+        byte flag = 0;
+        int oldLen = array.length();
+        if (oldLen > 1024) {
+            // try to compress
+            bufForCompression.reset();
+            byte[] bytes = Utils.gzipCompress(bufForCompression, array.toJavaArray());
+            if (bytes.length < oldLen) {
+                assert Logger.lowLevelDebug("compress for packet: oldLen=" + oldLen + ", newLen=" + bytes.length);
+                array = ByteArray.from(bytes);
+                flag |= FLAG_COMPRESSED;
+            }
+        }
+        return HEAD.copy().int24(0, array.length()).set(3, TYPE_DATA).set(4, flag).int32(5, streamId).concat(array);
     }
 
     protected H2StreamedFDHandler(boolean client) {
@@ -171,7 +188,17 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
                     }
                     return HEAD.length();
                 }
-                dataForStream(streamId, array.sub(HEAD.length(), len));
+                ByteArray content = array.sub(HEAD.length(), len);
+                if ((flag & FLAG_COMPRESSED) == FLAG_COMPRESSED) {
+                    bufForCompression.reset();
+                    byte[] bytes = Utils.gzipDecompress(bufForCompression, content.toJavaArray());
+                    if (bytes == null) {
+                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "decompress data failed");
+                        throw new IOException("decompress data failed");
+                    }
+                    content = ByteArray.from(bytes);
+                }
+                dataForStream(streamId, content);
                 // maybe fin with data (similar to PSH,FIN)
                 if ((flag & FLAG_CLOSE_STREAM) == FLAG_CLOSE_STREAM) {
                     finReceived(streamId);
@@ -238,9 +265,11 @@ public class H2StreamedFDHandler extends StreamedFDHandler {
         return getEmptyHeader(streamId);
     }
 
+    private final ByteArrayOutputStream bufForCompression = new ByteArrayOutputStream(1024);
+
     @Override
     protected ByteArray formatPSH(int streamId, ByteArray data) {
-        return getData(streamId, data);
+        return getData(streamId, data, bufForCompression);
     }
 
     @Override
