@@ -31,6 +31,14 @@ docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgca
 docker run --rm vproxy -Deploy=HelloWorld
 ```
 
+### graal native-image
+
+```
+./gradlew clean jar
+native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fallback --no-server vproxy
+./vproxy -Deploy=HelloWorld
+```
+
 ### use native fds impl
 
 Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.

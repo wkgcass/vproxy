@@ -29,6 +29,14 @@ docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgca
 docker run --rm vproxy -Deploy=HelloWorld
 ```
 
+### graal native-image
+
+```
+./gradlew clean jar
+native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fallback --no-server vproxy
+./vproxy -Deploy=HelloWorld
+```
+
 ### native fds impl
 
 仅支持macos(bsd)/linux。另外在编译前，你可能需要配置`JAVA_HOME`环境变量。
