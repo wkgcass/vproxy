@@ -7,6 +7,7 @@ import vproxy.util.RingBuffer;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 /**
@@ -39,7 +40,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
     }
 
     @Override
-    protected void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored) {
+    protected void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = bufferPlain.position();
 
         ByteBuffer bufferEncrypted = getTemporaryBuffer(engine.getSession().getPacketBufferSize());
@@ -49,13 +50,15 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
         } catch (SSLException e) {
             Logger.error(LogType.SSL_ERROR, "got error when wrapping", e);
             errored[0] = true;
+            ex[0] = e;
             return;
         }
 
         assert Logger.lowLevelDebug("wrap: " + result);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
-            Logger.shouldNotHappen("the wrapping returned CLOSED");
+            Logger.error(LogType.SSL_ERROR, "the wrapping returned CLOSED");
             errored[0] = true;
+            ex[0] = new IOException("SSLEngine closed");
             return;
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             // reset the position first in case it's changed
@@ -68,6 +71,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
             } catch (SSLException e) {
                 Logger.error(LogType.SSL_ERROR, "got error when wrapping", e);
                 errored[0] = true;
+                ex[0] = e;
                 return;
             }
             assert Logger.lowLevelDebug("wrap2: " + result);

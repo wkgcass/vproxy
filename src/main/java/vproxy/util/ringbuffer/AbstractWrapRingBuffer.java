@@ -34,6 +34,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     private ByteBuffer temporaryBuffer = null;
     private boolean triggerReadable = false;
     protected boolean transferring = false;
+    private IOException exceptionToThrow = null;
 
     public AbstractWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer) {
         this.plainBufferForApp = plainBytesBuffer;
@@ -42,6 +43,12 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
 
         // we add a handler to the plain buffer
         plainBufferForApp.addHandler(readableHandler);
+    }
+
+    private void checkException() throws IOException {
+        if (exceptionToThrow != null) {
+            throw exceptionToThrow;
+        }
     }
 
     protected ByteBufferRingBuffer getPlainBufferForApp() {
@@ -80,6 +87,10 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         }
         do {
             assert Logger.lowLevelDebug("begin to handle generalWrap");
+            if (exceptionToThrow != null) {
+                assert Logger.lowLevelDebug("exit wrap loop because of exception " + exceptionToThrow);
+                return;
+            }
             setOperating(true);
             try {
                 _generalWrap();
@@ -146,8 +157,13 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
                 // because when handshaking, the plain buffer can be empty but the connection
                 // should still send handshaking data
                 boolean[] errored = {false};
+                IOException[] ex = {null};
                 plainBufferForApp.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
-                    bufferPlain -> handlePlainBuffer(bufferPlain, errored));
+                    bufferPlain -> handlePlainBuffer(bufferPlain, errored, ex));
+                if (ex[0] != null) {
+                    assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
+                    exceptionToThrow = ex[0];
+                }
                 if (errored[0]) {
                     assert Logger.lowLevelDebug("handling data in plain buffer failed");
                     return; // end the process if errored
@@ -165,16 +181,18 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         }
     }
 
-    abstract protected void handlePlainBuffer(ByteBuffer buf, boolean[] errored);
+    abstract protected void handlePlainBuffer(ByteBuffer buf, boolean[] errored, IOException[] ex);
 
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+        checkException();
         // do store to the plain buffer
         return plainBufferForApp.storeBytesFrom(channel);
     }
 
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+        checkException();
         // we write encrypted data to the channel
         int bytes = 0;
         while (true) {

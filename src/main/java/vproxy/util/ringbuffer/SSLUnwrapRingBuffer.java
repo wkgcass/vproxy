@@ -8,6 +8,7 @@ import vproxy.util.RingBuffer;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
+import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.function.Consumer;
 
@@ -67,7 +68,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
     // -------------------
 
     @Override
-    protected void handleEncryptedBuffer(ByteBuffer encryptedBuffer, boolean[] underflow, boolean[] errored) {
+    protected void handleEncryptedBuffer(ByteBuffer encryptedBuffer, boolean[] underflow, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = encryptedBuffer.position();
 
         ByteBuffer plainBuffer = getTemporaryBuffer(engine.getSession().getApplicationBufferSize());
@@ -77,12 +78,14 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
         } catch (SSLException e) {
             Logger.error(LogType.SSL_ERROR, "got error when unwrapping", e);
             errored[0] = true;
+            ex[0] = e;
             return;
         }
         assert Logger.lowLevelDebug("unwrap: " + result);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
-            Logger.shouldNotHappen("the unwrapping returned CLOSED");
+            Logger.error(LogType.SSL_ERROR, "the unwrapping returned CLOSED");
             errored[0] = true;
+            ex[0] = new IOException("SSLEngine closed");
             return;
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             // reset the position in case it's modified
@@ -94,6 +97,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
             } catch (SSLException e) {
                 Logger.error(LogType.SSL_ERROR, "got error when unwrapping", e);
                 errored[0] = true;
+                ex[0] = e;
                 return;
             }
             assert Logger.lowLevelDebug("unwrap2: " + result);

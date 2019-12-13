@@ -5,6 +5,7 @@ import vproxy.util.RingBuffer;
 import vproxy.util.crypto.BlockCipherKey;
 import vproxy.util.crypto.StreamingCFBCipher;
 
+import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
@@ -22,7 +23,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
     }
 
     @Override
-    protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored) {
+    protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored, IOException[] ex) {
         if (requiredIvLen != 0) {
             readIv(buf);
             if (requiredIvLen == 0) {

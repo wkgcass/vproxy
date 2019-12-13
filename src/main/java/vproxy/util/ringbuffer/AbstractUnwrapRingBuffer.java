@@ -34,6 +34,8 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     private boolean triggerWritable = false;
 
+    private IOException exceptionToThrow = null;
+
     public AbstractUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp) {
         this.plainBufferForApp = plainBufferForApp;
 
@@ -43,8 +45,15 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         this.encryptedBufferForInput = RingBuffer.allocateDirect(plainBufferForApp.capacity());
     }
 
+    private void checkException() throws IOException {
+        if (exceptionToThrow != null) {
+            throw exceptionToThrow;
+        }
+    }
+
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+        checkException();
         int read = encryptedBufferForInput.storeBytesFrom(channel);
         if (read == 0) {
             return 0; // maybe the buffer is full
@@ -97,6 +106,10 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         if (isOperating()) {
             assert Logger.lowLevelDebug("generalUnwrap is operating");
             return; // should not call the method when it's operating
+        }
+        if (exceptionToThrow != null) {
+            assert Logger.lowLevelDebug("exit unwrap because of exception " + exceptionToThrow);
+            return;
         }
         setOperating(true);
         try {
@@ -153,8 +166,9 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
                 boolean canDefragment = encryptedBufferForInput.canDefragment();
                 boolean[] underflow = {false};
                 boolean[] errored = {false};
+                IOException[] ex = {null};
                 encryptedBufferForInput.operateOnByteBufferWriteOut(Integer.MAX_VALUE,
-                    encryptedBuffer -> handleEncryptedBuffer(encryptedBuffer, underflow, errored));
+                    encryptedBuffer -> handleEncryptedBuffer(encryptedBuffer, underflow, errored, ex));
                 if (underflow[0]) {
                     if (canDefragment) {
                         encryptedBufferForInput.defragment();
@@ -162,6 +176,10 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
                         assert Logger.lowLevelDebug("got underflow, but the encrypted buffer cannot defragment, maybe buffer limit to small, or data not enough yet");
                         errored[0] = true;
                     }
+                }
+                if (ex[0] != null) {
+                    assert Logger.lowLevelDebug("got exception from buffer" + ex[0]);
+                    exceptionToThrow = ex[0];
                 }
                 if (errored[0]) {
                     return; // exit if error occurred
@@ -176,10 +194,11 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         _generalUnwrap();
     }
 
-    abstract protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored);
+    abstract protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored, IOException[] exception);
 
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+        checkException();
         // proxy the operation from plain buffer
         int bytes = 0;
         while (true) {
