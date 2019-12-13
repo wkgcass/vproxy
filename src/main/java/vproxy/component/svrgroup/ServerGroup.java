@@ -742,7 +742,7 @@ public class ServerGroup {
                 if (c.logicDelete) // ignore logic deleted servers
                     continue;
                 if (!replace) // raise error if replace flag is disabled
-                    throw new AlreadyExistException("server in server-group" + ServerGroup.this.alias, alias);
+                    throw new AlreadyExistException("server in server-group " + ServerGroup.this.alias, alias);
                 toLogicDelete = c;
                 // directly set the flag
                 c.logicDelete = true;
