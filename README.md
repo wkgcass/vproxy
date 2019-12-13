@@ -51,7 +51,7 @@ cd ../../../
 java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md).
+For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
 ## Aim
 

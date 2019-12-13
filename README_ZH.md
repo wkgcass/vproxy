@@ -49,7 +49,7 @@ cd ../../../
 java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md)。
+如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
 
 ## 模板
 
