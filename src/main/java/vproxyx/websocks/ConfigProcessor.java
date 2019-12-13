@@ -388,18 +388,18 @@ public class ConfigProcessor {
                     } else {
                         inet = InetAddress.getByAddress(hostPart, new byte[]{127, 0, 0, 1});
                     }
-                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, programPort), 10);
+                    handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, programPort), 10);
                 } else if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), 10);
+                    handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, port), 10);
                 } else if (Utils.isIpv6(hostPart)) {
                     InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = getGroup(currentAlias).add(hostPart, new InetSocketAddress(inet, port), 10);
+                    handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, port), 10);
                 } else {
                     BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();
                     Resolver.getDefault().resolveV4(hostPart, cb);
                     InetAddress inet = cb.block();
-                    handle = getGroup(currentAlias).add(hostPart, hostPart, new InetSocketAddress(inet, port), 10);
+                    handle = getGroup(currentAlias).add(line, hostPart, new InetSocketAddress(inet, port), 10);
                 }
 
                 // init streamed fds
