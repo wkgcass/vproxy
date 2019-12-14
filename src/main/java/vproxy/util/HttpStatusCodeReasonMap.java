@@ -1,4 +1,4 @@
-package vserver;
+package vproxy.util;
 
 import java.util.HashMap;
 import java.util.Map;

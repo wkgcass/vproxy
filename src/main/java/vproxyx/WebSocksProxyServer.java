@@ -17,10 +17,7 @@ import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
-import vproxyx.websocks.RedirectHandler;
-import vproxyx.websocks.WebSocksProtocolHandler;
-import vproxyx.websocks.WebSocksProxyContext;
-import vproxyx.websocks.WebSocksUtils;
+import vproxyx.websocks.*;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -28,6 +25,8 @@ import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.function.Supplier;
 
@@ -44,6 +43,7 @@ public class WebSocksProxyServer {
         String domain = null;
         int redirectPort = -1;
         boolean useKcp = false;
+        String webroot = null;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
             String next = i == args.length - 1 ? null : args[i + 1];
@@ -120,11 +120,21 @@ public class WebSocksProxyServer {
                 ++i;
             } else if (arg.equals("kcp")) {
                 useKcp = true;
+            } else if (arg.equals("webroot")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`webroot` should be followed with a directory path");
+                }
+                if (!Files.isDirectory(Path.of(next))) {
+                    throw new IllegalArgumentException("webroot is not a directory");
+                }
+                webroot = next;
+                ++i;
             } else
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
                     "argument: listen {} auth {} \\\n" +
                     "          [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\\n" +
-                    "          [redirectport {}] [kcp] \n" +
+                    "          [redirectport {}] [kcp] \\\n" +
+                    "          [webroot {}] \n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     "          listen 443 auth alice:pasSw0rD ssl \\\n" +
                     "                  certpem /etc/letsencrypt/live/example.com/cert.pem,/etc/letsencrypt/live/example.com/chain.pem \\\n" +
@@ -182,6 +192,8 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("keypem: " + keypem);
         assert Logger.lowLevelDebug("domain: " + domain);
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
+        assert Logger.lowLevelDebug("useKcp: " + useKcp);
+        assert Logger.lowLevelDebug("webroot: " + webroot);
 
         // init event loops
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
@@ -273,7 +285,7 @@ public class WebSocksProxyServer {
             }
         }
         // init the proxy server
-        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier);
+        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot));
         ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<>() {
             @Override
             public Type type() {

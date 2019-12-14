@@ -13,6 +13,7 @@ import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxy.util.HttpStatusCodeReasonMap;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
@@ -28,8 +29,24 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             Request req = ctx.data.result;
             assert Logger.lowLevelDebug("receive new request " + req);
             if (!req.method.equals("GET")) {
-                fail(ctx, 400, "invalid http method for upgrading to WebSocket");
+                fail(ctx, 400, "unsupported http method " + req.method);
                 return;
+            }
+            if (req.headers.stream().map(h -> h.key).noneMatch(key -> key.equalsIgnoreCase("upgrade"))) {
+                assert Logger.lowLevelDebug("not upgrade request, try to respond with a registered page");
+                if (pageProvider == null) {
+                    assert Logger.lowLevelDebug("pageProvider is not set, cannot respond a page");
+                    // fall through
+                } else {
+                    if (req.uri.contains("..")) {
+                        assert Logger.lowLevelDebug("the request wants to get upper level resources, which might be an attack");
+                        // fall through
+                    } else {
+                        Logger.alert("incoming request " + ctx.connection.remote + "->" + req.uri);
+                        fail(ctx, 200, req.uri);
+                        return;
+                    }
+                }
             }
             if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(req.headers, false)) {
                 fail(ctx, 400, "upgrading related headers are invalid");
@@ -154,7 +171,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 || pass.equals(WebSocksUtils.calcPass(expected, mDec));
         }
 
-        private final String rfc6455UUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+        private static final String rfc6455UUID = "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
 
         private String getWebSocketAccept(String key) {
             String foo = key + rfc6455UUID;
@@ -169,31 +186,38 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             return Base64.getEncoder().encodeToString(sha1.digest());
         }
 
-        private final Map<Integer, String> STATUS_MSG = new HashMap<>() {{
-            put(101, "Switching Protocols");
-            put(400, "Bad Request");
-            put(401, "Unauthorized");
-            put(500, "Internal Server Error");
-        }};
-
         private byte[] response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
-            String statusMsg = STATUS_MSG.get(statusCode);
+            // check whether the page exists when statusCode is 200
+            ByteArray page = null;
+            if (statusCode == 200) {
+                page = pageProvider.getPage(msg);
+                if (page == null) {
+                    statusCode = 404;
+                    msg = msg + " not found";
+                }
+            }
+
+            String statusMsg = HttpStatusCodeReasonMap.get(statusCode);
             Response resp = new Response();
             resp.version = "HTTP/1.1";
             resp.statusCode = statusCode;
             resp.reason = statusMsg;
             resp.headers = new LinkedList<>();
+            resp.headers.add(new Header("Server", "nginx/1.14.2"));
+            resp.headers.add(new Header("Date", new Date().toString()));
             if (statusCode == 101) {
                 resp.headers.add(new Header("Upgrade", "websocket"));
                 resp.headers.add(new Header("Connection", "Upgrade"));
                 resp.headers.add(new Header("Sec-Websocket-Accept", msg));
                 resp.headers.add(new Header("Sec-WebSocket-Protocol", "socks5"));
+            } else if (statusCode == 200) {
+                resp.headers.add(new Header("Content-Type", "text/html"));
+                resp.headers.add(new Header("Content-Length", "" + page.length()));
+                resp.body = page;
             } else {
                 if (statusCode == 401) {
                     resp.headers.add(new Header("WWW-Authenticate", "Basic"));
                 }
-                resp.headers.add(new Header("Server", "nginx/1.14.2"));
-                resp.headers.add(new Header("Date", new Date().toString()));
                 resp.headers.add(new Header("Content-Type", "text/html"));
                 {
                     String rawIp = Utils.ipStr(ctx.connection.remote.getAddress().getAddress());
@@ -226,10 +250,12 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
 
     private final Map<String, String> auth;
     private final Supplier<SSLEngine> engineSupplier;
+    private final PageProvider pageProvider;
 
-    public WebSocksProtocolHandler(Map<String, String> auth, Supplier<SSLEngine> engineSupplier) {
+    public WebSocksProtocolHandler(Map<String, String> auth, Supplier<SSLEngine> engineSupplier, PageProvider pageProvider) {
         this.auth = auth;
         this.engineSupplier = engineSupplier;
+        this.pageProvider = pageProvider;
     }
 
     private void initSSL(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {

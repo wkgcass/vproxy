@@ -2,6 +2,7 @@ package vserver;
 
 import vjson.JSON;
 import vproxy.util.ByteArray;
+import vproxy.util.HttpStatusCodeReasonMap;
 
 public interface HttpResponse {
     default HttpResponse status(int code) {

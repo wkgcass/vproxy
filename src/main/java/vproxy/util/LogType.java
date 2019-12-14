@@ -22,4 +22,5 @@ public enum LogType {
     SYS_ERROR,
     PROBE,
     SOCKET_ERROR,
+    FILE_ERROR,
 }
