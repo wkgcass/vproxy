@@ -63,9 +63,10 @@ vproxy简易负载均衡。你可以用一行shell命令启动一个完整的负
 * `pkcs12pswd`: pkcs12文件的密码。
 * `certpem`: 证书文件路径. 多个证书文件可以用`,`分割。
 * `keypem`: 私钥文件路径。
-* `domain`: 当前主机的域名（可选）。
-* `redirectport`: 绑定一个端口并返回http 3xx，用于将客户端（浏览器）重定向到`listen`设定的端口。
-* `kcp`: 启动kcp传输协议，监听端口和`listen`指定的端口一致。
+* `domain`: `[可选]` 当前主机的域名。
+* `redirectport`: `[可选]` 绑定一个端口并返回http 3xx，用于将客户端（浏览器）重定向到`listen`设定的端口。
+* `kcp`: `[可选]` 启动kcp传输协议，监听端口和`listen`指定的端口一致。
+* `webroot`: `[可选]` 网站根目录，可以用来返回一些静态页面
 
 例如：
 
@@ -78,7 +79,8 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
         keypem /etc/letsencrypt/live/example.com/privkey.pem \
         domain example.com \
         redirectport 80 \
-        kcp
+        kcp \
+        webroot /var/www/html
 ```
 
 ### Deploy=WebSocksAgent

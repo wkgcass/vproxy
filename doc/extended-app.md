@@ -65,9 +65,10 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 * `pkcs12pswd`: the password of the pkcs12 file.
 * `certpem`: the certificate file path. Multiple certificates are separated with `,`.
 * `keypem`: the private key file path.
-* `domain`: the domain name of current host (optional).
-* `redirectport`: bind a port and return http 3xx to redirect the client(browser) to the `listen` port.
-* `kcp`: enable kcp transporting, the listening port will be the same as what `listen` specifies.
+* `domain`: `[optional]` the domain name of current host (optional).
+* `redirectport`: `[optional]` bind a port and return http 3xx to redirect the client(browser) to the `listen` port.
+* `kcp`: `[optional]` enable kcp transporting, the listening port will be the same as what `listen` specifies.
+* `webroot`: `[optional]` the root directory of the website, you may use it to respond some static pages.
 
 e.g.
 
@@ -80,7 +81,8 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
         keypem /etc/letsencrypt/live/example.com/privkey.pem \
         domain example.com \
         redirectport 80 \
-        kcp
+        kcp \
+        webroot /var/www/html
 ```
 
 ### Deploy=WebSocksProxyAgent
