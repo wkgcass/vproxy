@@ -1,4 +1,4 @@
-# It's useful when running with kcptun
+# It's useful when udp not allowed through firewalls
 # So I recorded this service file here
 
 [Unit]
@@ -18,4 +18,4 @@ Type=simple
 SuccessExitStatus=143
 
 [Install]
-WantedBy=kcptun.service
+WantedBy=multi-user.target

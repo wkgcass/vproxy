@@ -63,31 +63,16 @@ check=`ls certkey.p12 2>/dev/null`
 
 if [ -z "$check" ]
 then
-	echo "Generating pkcs12 file"
+	echo "Generating certificate files"
 	rm -f cert.pem
 	rm -f key.pem
-	rm -f certkey.pem
-	rm -f certkey.p12
 	openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 36500 -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=example.com" 2>/dev/null
-	cat cert.pem > certkey.pem
-	cat key.pem >> certkey.pem
-	echo "Input the p12 file password, which will be used later"
-	openssl pkcs12 -export -in certkey.pem -out certkey.p12
-	ret=$?
-	if [ $ret -ne 0 ]
-	then
-		rm -f certkey.p12
-		echo "Failed!"
-		exit $ret
-	fi
 else
 	echo "PKCS12 file exists"
 fi
 
 cd ../
 
-# p12 password
-read -p "PKCS12 file password: " pswd
 # user
 read -p "your username: " user
 # pass
@@ -97,7 +82,22 @@ version=`"$runtime/bin/java" -jar vproxy.jar version`
 
 echo "current vproxy version: $version"
 
-echo "launching..."
-echo "README: It's recommended to run this application inside tmux."
+# detect old process
+check=`ps aux | grep 'WebSocksProxyServer' | grep -v grep | awk '{print $2}'`
 
-"$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy.jar listen "$listenPort" ssl pkcs12 certkey.p12 pkcs12pswd "$pswd" auth "$user:$pass" kcp
+if [ -z "$check" ]
+then
+	echo "Terminating old WebSocksProxyServer process: $check"
+	kill "$check"
+fi
+
+echo "launching..."
+
+nohup "$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy.jar \
+	listen "$listenPort" \
+	ssl certpem cert.pem keypem key.pem \
+	auth "$user:$pass" \
+	kcp \
+	2>&1 >> vproxy.log &
+
+echo ""

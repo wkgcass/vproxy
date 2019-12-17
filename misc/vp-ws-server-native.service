@@ -1,10 +1,10 @@
 [Unit]
-Description=vproxy WebSocks Proxy Server
+Description=vproxy WebSocks Proxy Server with graal native image
 After=network.target
 
 [Service]
-# fill in JAVA_HOME and VPROXY_JAR with the path to java home directory and the path to vproxy.jar file
-Environment="JAVA_HOME=" "VPROXY_JAR="
+# fill in VPROXY_EXECUTABLE with the path to the vproxy file
+Environment="VPROXY_EXECUTABLE="
 # pid file of the daemon process
 Environment="PIDFILE=/run/vp.ws.pid"
 # jvm options
@@ -16,7 +16,7 @@ Environment="AUTH="
 # other args
 Environment="ARGS="
 # start up for ssl
-ExecStart=/usr/bin/env ${JAVA_HOME}/bin/java $JVM_OPTS -Deploy=WebSocksProxyServer -jar $VPROXY_JAR \
+ExecStart=/usr/bin/env ${VPROXY_EXECUTABLE} $JVM_OPTS -Deploy=WebSocksProxyServer \
           listen 443 redirectport 80 \
           ssl certpem $CERT keypem $KEY \
           auth $AUTH \
