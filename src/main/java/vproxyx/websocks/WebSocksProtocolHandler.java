@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vproxy.app.Application;
 import vproxy.connection.Connector;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
@@ -42,8 +43,12 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                         assert Logger.lowLevelDebug("the request wants to get upper level resources, which might be an attack");
                         // fall through
                     } else {
-                        Logger.alert("incoming request " + ctx.connection.remote + "->" + req.uri);
-                        fail(ctx, 200, req.uri);
+                        String uri = req.uri;
+                        if (uri.contains("?")) {
+                            uri = uri.substring(0, uri.indexOf("?"));
+                        }
+                        Logger.alert("incoming request " + ctx.connection.remote + "->" + uri);
+                        fail(ctx, 200, uri);
                         return;
                     }
                 }
@@ -188,12 +193,15 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
 
         private byte[] response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
             // check whether the page exists when statusCode is 200
-            ByteArray page = null;
+            PageProvider.PageResult page = null;
             if (statusCode == 200) {
                 page = pageProvider.getPage(msg);
                 if (page == null) {
                     statusCode = 404;
                     msg = msg + " not found";
+                } else if (page.redirect != null) {
+                    statusCode = 302;
+                    msg = page.redirect;
                 }
             }
 
@@ -203,7 +211,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             resp.statusCode = statusCode;
             resp.reason = statusMsg;
             resp.headers = new LinkedList<>();
-            resp.headers.add(new Header("Server", "nginx/1.14.2"));
+            resp.headers.add(new Header("Server", "vproxy/" + Application.VERSION));
             resp.headers.add(new Header("Date", new Date().toString()));
             if (statusCode == 101) {
                 resp.headers.add(new Header("Upgrade", "websocket"));
@@ -211,9 +219,21 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Sec-Websocket-Accept", msg));
                 resp.headers.add(new Header("Sec-WebSocket-Protocol", "socks5"));
             } else if (statusCode == 200) {
-                resp.headers.add(new Header("Content-Type", "text/html"));
-                resp.headers.add(new Header("Content-Length", "" + page.length()));
-                resp.body = page;
+                resp.headers.add(new Header("Content-Type", page.mime));
+                resp.headers.add(new Header("Content-Length", "" + page.content.length()));
+                resp.body = page.content;
+            } else if (statusCode == 302) {
+                ByteArray body = ByteArray.from(("" +
+                    "<html>\r\n" +
+                    "<head><title>302 Found</title></head>\r\n" +
+                    "<body bgcolor=\"white\">\r\n" +
+                    "<center><h1>302 Found</h1></center>\r\n" +
+                    "<hr><center>vproxy/" + Application.VERSION + "</center>\r\n" +
+                    "</body>\r\n" +
+                    "</html>\r\n").getBytes());
+                resp.headers.add(new Header("Location", msg));
+                resp.headers.add(new Header("Content-Length", "" + body.length()));
+                resp.body = body;
             } else {
                 if (statusCode == 401) {
                     resp.headers.add(new Header("WWW-Authenticate", "Basic"));

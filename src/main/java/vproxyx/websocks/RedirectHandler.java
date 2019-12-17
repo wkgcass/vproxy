@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vproxy.app.Application;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http1.entity.Header;
@@ -18,11 +19,11 @@ public class RedirectHandler extends HttpProtocolHandler {
     private final String domain;
     private final int port;
 
-    public RedirectHandler(String protocol, String domain, int port) {
+    public RedirectHandler(RedirectBaseInfo info) {
         super(false);
-        this.protocol = protocol;
-        this.domain = domain;
-        this.port = port;
+        this.protocol = info.protocol;
+        this.domain = info.domain;
+        this.port = info.port;
     }
 
     private Response buildResponse(Request req) {
@@ -37,11 +38,11 @@ public class RedirectHandler extends HttpProtocolHandler {
             "<head><title>301 Moved Permanently</title></head>\r\n" +
             "<body bgcolor=\"white\">\r\n" +
             "<center><h1>301 Moved Permanently</h1></center>\r\n" +
-            "<hr><center>nginx/1.14.2</center>\r\n" +
+            "<hr><center>vproxy/" + Application.VERSION + "</center>\r\n" +
             "</body>\r\n" +
             "</html>\r\n").getBytes());
 
-        resp.headers.add(new Header("Server", "nginx/1.14.2"));
+        resp.headers.add(new Header("Server", "vproxy/" + Application.VERSION));
         resp.headers.add(new Header("Date", new Date().toString()));
         resp.headers.add(new Header("Content-Type", "text/html"));
         resp.headers.add(new Header("Content-Length", "" + body.length()));
@@ -76,7 +77,7 @@ public class RedirectHandler extends HttpProtocolHandler {
                 location = protocol + "://" + domain + ":" + port;
             }
         }
-        resp.headers.add(new Header("Location", location));
+        resp.headers.add(new Header("Location", location + req.uri));
 
         return resp;
     }

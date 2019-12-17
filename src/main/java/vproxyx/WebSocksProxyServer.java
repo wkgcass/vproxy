@@ -285,7 +285,8 @@ public class WebSocksProxyServer {
             }
         }
         // init the proxy server
-        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot));
+        RedirectBaseInfo redirectBaseInfo = new RedirectBaseInfo(ssl ? "https" : "http", domain, port);
+        WebSocksProtocolHandler webSocksProtocolHandler = new WebSocksProtocolHandler(auth, engineSupplier, webroot == null ? null : new WebRootPageProvider(webroot, redirectBaseInfo));
         ConnectorGen<WebSocksProxyContext> connGen = new ConnectorGen<>() {
             @Override
             public Type type() {
@@ -329,7 +330,7 @@ public class WebSocksProxyServer {
         if (redirectServer != null) {
             ProtocolServerHandler.apply(acceptor.get("acceptor-loop"), redirectServer,
                 new ProtocolServerConfig().setInBufferSize(512).setOutBufferSize(512),
-                new RedirectHandler(ssl ? "https" : "http", domain, port));
+                new RedirectHandler(redirectBaseInfo));
         }
 
         Logger.alert("server started on " + port);

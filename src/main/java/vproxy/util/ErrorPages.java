@@ -11,7 +11,7 @@ public class ErrorPages {
     }
 
     public static String build(String title, String description, String message) {
-        return build(title, description, message, "Build something amazing", "https://github.com");
+        return build(title, description, message, "Build something amazing", "https://github.com/wkgcass/vproxy");
     }
 
     public static String build(String title, String description, String message, String buttonMsg, String buttonDirect) {

@@ -10,6 +10,9 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRootPageProvider implements PageProvider {
     private final String baseDir;
+    private final String protocol;
+    private final String domain;
+    private final int port;
     private final ConcurrentHashMap<String, Page> pages = new ConcurrentHashMap<>();
 
     private static class Page {
@@ -22,8 +25,11 @@ public class WebRootPageProvider implements PageProvider {
         }
     }
 
-    public WebRootPageProvider(String baseDir) {
+    public WebRootPageProvider(String baseDir, RedirectBaseInfo info) {
         this.baseDir = baseDir;
+        this.protocol = info.protocol;
+        this.domain = info.domain;
+        this.port = info.port;
     }
 
     private File findFile(String url) {
@@ -52,12 +58,47 @@ public class WebRootPageProvider implements PageProvider {
         return null;
     }
 
+    private String getMime(File f) {
+        String name = f.getName();
+        if (name.endsWith(".html")) {
+            return "text/html";
+        } else if (name.endsWith(".js")) {
+            return "text/javascript";
+        } else if (name.endsWith(".css")) {
+            return "text/css";
+        } else if (name.endsWith(".json")) {
+            return "application/json";
+        } else {
+            return "application/octet-stream";
+        }
+    }
+
     @Override
-    public ByteArray getPage(String url) {
+    public PageResult getPage(String url) {
+        if (!url.endsWith("/")) {
+            // maybe url not ending with `/` but it's a directory
+            // relative path may be wrong
+            File file = Path.of(baseDir, url).toFile();
+            if (file.isDirectory()) {
+                // need to redirect
+                String portStr = ":" + port;
+                if (protocol.equals("http")) {
+                    if (port == 80) {
+                        portStr = "";
+                    }
+                } else if (protocol.equals("https")) {
+                    if (port == 443) {
+                        portStr = "";
+                    }
+                }
+                return new PageResult(protocol + "://" + domain + portStr + url + "/");
+            }
+        }
         File file = findFile(url);
         if (file == null) {
             return null;
         }
+        String mime = getMime(file);
         String key = file.getAbsolutePath();
         if (!file.exists() || file.isDirectory()) {
             pages.remove(key);
@@ -74,7 +115,7 @@ public class WebRootPageProvider implements PageProvider {
         }
         if (page != null) {
             assert Logger.lowLevelDebug("using cached page: " + url);
-            return page.content;
+            return new PageResult(mime, page.content);
         }
         assert Logger.lowLevelDebug("reading from disk: " + url);
         byte[] buf = new byte[1024];
@@ -87,7 +128,7 @@ public class WebRootPageProvider implements PageProvider {
             ByteArray content = ByteArray.from(baos.toByteArray());
             page = new Page(content, time);
             pages.put(key, page);
-            return content;
+            return new PageResult(mime, page.content);
         } catch (IOException e) {
             Logger.error(LogType.FILE_ERROR, "reading file " + key + " failed", e);
             return null;
