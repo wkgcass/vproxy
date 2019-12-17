@@ -101,7 +101,7 @@ public class Application {
                 throw new IOException("create default worker event loop failed", e);
             }
         }
-        if (ServerSock.supportReusePort()) {
+        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
             assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
             application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, application.eventLoopGroupHolder.map.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
         } else {

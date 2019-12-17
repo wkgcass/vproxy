@@ -1,5 +1,7 @@
 package vproxy.app;
 
+import vproxy.util.Logger;
+
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,6 +61,10 @@ public class Config {
     // -Dprobe=...
     public static final Set<String> probe;
 
+    private static int supportReusePortLB = 0;
+    // do not initialize the field statically
+    // graalvm native image might initialize the field and won't be changed at runtime
+
     static {
         appClass = System.getProperty("eploy"); // -Deploy
         String probeConf = System.getProperty("probe", "");
@@ -67,5 +73,38 @@ public class Config {
         } else {
             probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
         }
+    }
+
+    public static boolean supportReusePortLB() {
+        if (supportReusePortLB == -1) {
+            return false;
+        }
+        if (supportReusePortLB == 1) {
+            return true;
+        }
+        String os = System.getProperty("os.name", "");
+        String version = System.getProperty("os.version", "");
+        if (os.toLowerCase().contains("linux")) {
+            if (version.contains(".")) {
+                String majorStr = version.substring(0, version.indexOf("."));
+                String reset = version.substring(version.indexOf(".") + 1);
+                if (reset.contains(".")) {
+                    String minorStr = reset.substring(0, reset.indexOf("."));
+                    try {
+                        int major = Integer.parseInt(majorStr);
+                        int minor = Integer.parseInt(minorStr);
+                        if (major > 3 || (major == 3 && minor >= 9)) { // version >= 3.9
+                            assert Logger.lowLevelDebug("reuseport load balancing IS supported: " + os + " " + version);
+                            supportReusePortLB = 1;
+                            return true;
+                        }
+                    } catch (NumberFormatException ignore) {
+                    }
+                }
+            }
+        }
+        assert Logger.lowLevelDebug("reuseport load balancing NOT supported: " + os + " " + version);
+        supportReusePortLB = -1;
+        return false;
     }
 }
