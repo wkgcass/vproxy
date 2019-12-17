@@ -72,19 +72,30 @@ public class Main {
         try {
             switch (appClass) {
                 case "WebSocksProxyAgent":
+                case "WebSocksAgent":
+                case "wsagent":
                     WebSocksProxyAgent.main0(args);
                     break;
                 case "WebSocksProxyServer":
+                case "WebSocksServer":
+                case "wsserver":
                     WebSocksProxyServer.main0(args);
                     break;
+                case "KcpTun":
+                case "kcptun":
+                    KcpTun.main0(args);
+                    break;
                 case "Simple":
+                case "simple":
                     Application.create();
                     Simple.main0(args);
                     break;
                 case "Daemon":
+                case "daemon":
                     Daemon.main0(args);
                     break;
                 case "HelloWorld":
+                case "helloworld":
                     HelloWorld.main0(args);
                     break;
                 default:
