@@ -2,6 +2,7 @@ package vproxy.protocol;
 
 import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
@@ -48,6 +49,7 @@ public class ProtocolHandlerContext<T> {
             {
                 int size = outBuffer.storeBytesFrom(chnl);
                 // the chnl might be null because buffer ET writable handler called
+                assert Logger.lowLevelDebug("stored size = " + size);
 
                 if (size == 0) {
                     break; // stored nothing, so just break
@@ -57,8 +59,7 @@ public class ProtocolHandlerContext<T> {
             } // we should not use the `size` variable any more, so use a code block {} to prevent
 
             if (chnl != null && chnl.used() != 0) {
-                break; // still have some bytes left, which means the outBuffer is full
-                // this is ok even after ET writable handler
+                continue; // still have some bytes left, try to write again until write size equals 0
             }
             // otherwise,
             // this bytes array is already written
