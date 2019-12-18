@@ -59,7 +59,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             // causing more and more data queuing in the application level
             // so we need to clear the whole queue if it happens
             if (notFullySent) {
-                Logger.info(LogType.ALERT, "`notFullySent` flag is set, clear the writeBufs queue"); // TODO set level to INFO(ALERT) for now for debug purpose, can be set to lowLevelDebug later
+                assert Logger.lowLevelDebug("`notFullySent` flag is set, clear the writeBufs queue");
                 notFullySent = false; // unset flag
                 writeBufs.clear(); // clear the queue
             }
