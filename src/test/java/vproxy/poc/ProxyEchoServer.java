@@ -25,7 +25,7 @@ public class ProxyEchoServer {
         // init config
         ProxyNetConfig config = new ProxyNetConfig()
             .setAcceptLoop(netEventLoop)
-            .setConnGen(conn -> {
+            .setConnGen((conn, hint) -> {
                 // connect to localhost 19080
                 return new Connector(new InetSocketAddress("127.0.0.1", 19080));
             })

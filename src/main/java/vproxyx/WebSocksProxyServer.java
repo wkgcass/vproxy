@@ -7,6 +7,7 @@ import vproxy.component.proxy.NetEventLoopProvider;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.connection.*;
+import vproxy.processor.Hint;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
@@ -299,7 +300,7 @@ public class WebSocksProxyServer {
             }
 
             @Override
-            public Connector genConnector(Connection accepted) {
+            public Connector genConnector(Connection accepted, Hint hint) {
                 return null; // will not be called because type is `handler`
             }
         };

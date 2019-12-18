@@ -1,5 +1,6 @@
 package vproxy.component.proxy;
 
+import vproxy.processor.Hint;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
 import vproxy.util.ByteArray;
@@ -573,8 +574,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         if (mode == Processor.Mode.proxy) {
             int bytesToProxy = processor.len(topCtx, frontendSubCtx);
             int connId = processor.connection(topCtx, frontendSubCtx);
-            assert Logger.lowLevelDebug("the bytesToProxy is " + bytesToProxy + ", and connId is " + connId);
-            BackendConnectionHandler backend = getConnection(connId);
+            Hint connHint = processor.connectionHint(topCtx, frontendSubCtx);
+            assert Logger.lowLevelDebug("the bytesToProxy is " + bytesToProxy + ", connId is " + connId + ", hint is " + connHint);
+            BackendConnectionHandler backend = getConnection(connId, connHint);
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
@@ -642,8 +644,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             }
 
             int connId = processor.connection(topCtx, frontendSubCtx);
-            assert Logger.lowLevelDebug("the processor return data of length " + (bytesToSend == null ? "null" : bytesToSend.length()) + ", sending to connId=" + connId);
-            BackendConnectionHandler backend = getConnection(connId);
+            Hint hint = processor.connectionHint(topCtx, frontendSubCtx);
+            assert Logger.lowLevelDebug("the processor return data of length " + (bytesToSend == null ? "null" : bytesToSend.length()) + ", sending to connId=" + connId + ", hint=" + hint);
+            BackendConnectionHandler backend = getConnection(connId, hint);
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
@@ -663,14 +666,14 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         readFrontend();
     }
 
-    private BackendConnectionHandler getConnection(int connId) {
+    private BackendConnectionHandler getConnection(int connId, Hint hint) {
         if (connId > 0 && conns[connId] != null)
             return conns[connId]; // get connection if it already exists
 
         assert connId == -1;
 
         // get connector
-        Connector connector = config.connGen.genConnector(frontendConnection);
+        Connector connector = config.connGen.genConnector(frontendConnection, hint);
         if (connector == null) {
             Logger.info(LogType.NO_CLIENT_CONN, "the user code refuse to provide a remote endpoint");
             return null;

@@ -39,6 +39,11 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
+    public Hint connectionHint(CTX ctx, SUB front) {
+        return ctx.connectionHint(front);
+    }
+
+    @Override
     public void chosen(CTX ctx, SUB front, SUB sub) {
         ctx.chosen(front, sub);
     }

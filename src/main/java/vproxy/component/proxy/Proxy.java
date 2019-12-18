@@ -62,7 +62,7 @@ public class Proxy {
 
         private void handleDirect(NetEventLoop acceptLoop, Connection connection) {
             // make connection to another end point
-            Connector connector = config.connGen.genConnector(connection);
+            Connector connector = config.connGen.genConnector(connection, /*directly proxy does not require hint*/ null);
             handleDirect(acceptLoop, connection, connector);
         }
 

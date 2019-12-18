@@ -1,5 +1,6 @@
 package vproxy.component.proxy;
 
+import vproxy.processor.Hint;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.processor.Processor;
@@ -20,7 +21,7 @@ public interface ConnectorGen<T> {
         return Type.direct;
     }
 
-    Connector genConnector(Connection accepted);
+    Connector genConnector(Connection accepted, Hint hint);
 
     // the handler should set Tuple<T, null> to the context when init()
     // and the Callback object will be set by the Proxy lib

@@ -13,6 +13,11 @@ class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
     }
 
     @Override
+    public Hint connectionHint(HeadPayloadSubContext front) {
+        return null; // we do not choose backend by protocol
+    }
+
+    @Override
     public void chosen(HeadPayloadSubContext front, HeadPayloadSubContext subCtx) {
         nextConnId = subCtx.connId;
     }

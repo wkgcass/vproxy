@@ -1,5 +1,6 @@
 package vproxy.processor.http1;
 
+import vproxy.processor.Hint;
 import vproxy.processor.OOContext;
 import vproxy.util.Utils;
 
@@ -28,6 +29,12 @@ public class HttpContext extends OOContext<HttpSubContext> {
             return foo;
         }
         return currentBackend;
+    }
+
+    @Override
+    public Hint connectionHint(HttpSubContext front) {
+        // TODO
+        return null;
     }
 
     @Override

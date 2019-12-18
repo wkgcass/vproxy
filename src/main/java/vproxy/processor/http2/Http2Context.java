@@ -1,5 +1,6 @@
 package vproxy.processor.http2;
 
+import vproxy.processor.Hint;
 import vproxy.processor.OOContext;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
@@ -42,6 +43,12 @@ public class Http2Context extends OOContext<Http2SubContext> {
             return -1;
         else
             return sub.connId;
+    }
+
+    @Override
+    public Hint connectionHint(Http2SubContext front) {
+        // TODO
+        return null;
     }
 
     @Override

@@ -10,6 +10,7 @@ import vproxy.component.exception.NotFoundException;
 import vproxy.component.proxy.*;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
+import vproxy.processor.Hint;
 import vproxy.component.svrgroup.ServerGroups;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
@@ -149,8 +150,8 @@ public class TcpLB {
                 }
 
                 @Override
-                public Connector genConnector(Connection accepted) {
-                    return connectorProvider(accepted);
+                public Connector genConnector(Connection accepted, Hint hint) {
+                    return connectorProvider(accepted, hint);
                 }
 
                 @Override
@@ -162,7 +163,7 @@ public class TcpLB {
     }
 
     // provide a connector
-    private Connector connectorProvider(Connection connectableConn) {
+    private Connector connectorProvider(Connection connectableConn, Hint hint) {
         // check whitelist
         InetAddress remoteAddress = connectableConn.remote.getAddress();
         if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
@@ -171,7 +172,7 @@ public class TcpLB {
         // we get a new connector
 
         // get a server from backends
-        Connector connector = backends.next(connectableConn.remote);
+        Connector connector = backends.next(connectableConn.remote, hint);
         if (connector == null)
             return null; // return null if cannot get any
         assert Logger.lowLevelDebug("got a backend: " + connector);

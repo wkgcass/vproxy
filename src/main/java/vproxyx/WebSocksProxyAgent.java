@@ -11,6 +11,7 @@ import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.connection.ServerSock;
 import vproxy.http.connect.HttpConnectProtocolHandler;
+import vproxy.processor.Hint;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
@@ -132,7 +133,7 @@ public class WebSocksProxyAgent {
                 }
 
                 @Override
-                public Connector genConnector(Connection accepted) {
+                public Connector genConnector(Connection accepted, Hint hint) {
                     return null; // will not be called because type is `handler`
                 }
             };

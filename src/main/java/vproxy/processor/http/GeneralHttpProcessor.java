@@ -1,5 +1,6 @@
 package vproxy.processor.http;
 
+import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.processor.http1.HttpProcessor;
 import vproxy.processor.http2.Http2Processor;
@@ -114,9 +115,23 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
     }
 
     @Override
+    public Hint connectionHint(GeneralHttpContext ctx, GeneralHttpSubContext subCtx) {
+        if (ctx.useHttp) return httpProcessor.connectionHint(ctx.httpContext, subCtx.httpSubContext);
+        if (ctx.useHttp2) return http2Processor.connectionHint(ctx.http2Context, subCtx.http2SubContext);
+        // if (ctx.willUseHttp2)
+        return null;
+    }
+
+    @Override
     public void chosen(GeneralHttpContext ctx, GeneralHttpSubContext front, GeneralHttpSubContext subCtx) {
-        if (ctx.useHttp) httpProcessor.chosen(ctx.httpContext, front.httpSubContext, subCtx.httpSubContext);
-        if (ctx.useHttp2) http2Processor.chosen(ctx.http2Context, front.http2SubContext, subCtx.http2SubContext);
+        if (ctx.useHttp) {
+            httpProcessor.chosen(ctx.httpContext, front.httpSubContext, subCtx.httpSubContext);
+            return;
+        }
+        if (ctx.useHttp2) {
+            http2Processor.chosen(ctx.http2Context, front.http2SubContext, subCtx.http2SubContext);
+            return;
+        }
         // if (ctx.willUseHttp2)
         ctx.chosen = subCtx;
     }

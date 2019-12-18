@@ -10,6 +10,7 @@ import vproxy.component.svrgroup.ServerGroups;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.connection.Protocol;
+import vproxy.processor.Hint;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
@@ -34,7 +35,7 @@ public class Socks5Server extends TcpLB {
         }
 
         @Override
-        public Connector genConnector(Connection accepted) {
+        public Connector genConnector(Connection accepted, Hint hint) {
             // will not be called
             return null;
         }

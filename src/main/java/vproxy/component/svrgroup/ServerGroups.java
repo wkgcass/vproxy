@@ -3,6 +3,7 @@ package vproxy.component.svrgroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.connection.Connector;
+import vproxy.processor.Hint;
 
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -167,6 +168,30 @@ public class ServerGroups {
     }
 
     public Connector next(InetSocketAddress source) {
+        return next(source, null);
+    }
+
+    public Connector next(InetSocketAddress source, Hint hint) {
+        if (hint != null) {
+            int maxLvl = Hint.MAX_MATCH_LEVEL;
+            int level = 0;
+            ServerGroupHandle lastMax = null;
+            for (ServerGroupHandle h : serverGroups) {
+                int l = hint.matchLevel(h.alias);
+                if (l == maxLvl) { // directly return if it's the best match
+                    return h.group.next(source);
+                }
+                if (l > level) {
+                    level = l;
+                    lastMax = h;
+                }
+            }
+            if (lastMax != null) { // return the most matched
+                return lastMax.group.next(source);
+            }
+            // not found, use normal process
+            // fall through
+        }
         WRR wrr = _wrr;
         return next(source, wrr, 0);
     }

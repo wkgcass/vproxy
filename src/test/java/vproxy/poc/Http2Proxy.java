@@ -10,6 +10,7 @@ import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
+import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.selector.SelectorEventLoop;
@@ -69,7 +70,7 @@ public class Http2Proxy {
                 private int count = 0;
 
                 @Override
-                public Connector genConnector(Connection accepted) {
+                public Connector genConnector(Connection accepted, Hint hint) {
                     int n = count++;
                     if (n % 2 == 0) {
                         return new Connector(backend1);

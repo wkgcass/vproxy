@@ -112,10 +112,20 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     /**
      * retrieve the connection id to proxy data to
      *
-     * @param ctx context
+     * @param ctx   context
+     * @param front frontend sub context
      * @return connection id, -1 for creating new connections or connection reuse, 0 is invalid for now
      */
     int connection(CTX ctx, SUB front);
+
+    /**
+     * retrieve the connection hint when the lib tries to create a new connection or reuse one
+     *
+     * @param ctx   context
+     * @param front frontend sub context
+     * @return a string for connection hint, or null when no hint is available
+     */
+    Hint connectionHint(CTX ctx, SUB front);
 
     /**
      * after the `connection` method return -1, the lib will choose a connection and

@@ -159,7 +159,7 @@ public class KcpTun {
             ServerSock.checkBind(Protocol.UDP, local);
             sock = ServerSock.createUDP(local, sLoop, new H2StreamedServerFDs(kcpFDs, sLoop, local));
             // connect to remote server using raw tcp
-            connectorGen = v -> new Connector(target);
+            connectorGen = (v, hint) -> new Connector(target);
         } else {
             // listen on tcp
             InetSocketAddress local = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), port);
@@ -167,7 +167,7 @@ public class KcpTun {
             sock = ServerSock.create(local);
             // connect to remote server using kcptun
             H2StreamedClientFDs fds = new H2StreamedClientFDs(kcpFDs, sLoop, target);
-            connectorGen = v -> {
+            connectorGen = (v, hint) -> {
                 ConnectableConnection conn;
                 try {
                     conn = ConnectableConnection.createUDP(target, new ConnectionOpts(),
