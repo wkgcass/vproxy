@@ -529,12 +529,12 @@ public class Command {
                     case R:
                     case L:
                     case l:
-                        // server group is on top level or in serverGroups
+                        // server group is on top level or in upstream
                         if (targetResource != null) {
-                            if (targetResource.type != ResourceType.sgs)
+                            if (targetResource.type != ResourceType.ups)
                                 throw new Exception(targetResource.type.fullname + " does not contain " + cmd.resource.type.fullname);
-                            // also should check serverGroups
-                            ServerGroupsHandle.checkServerGroups(targetResource);
+                            // also should check upstream
+                            UpstreamHandle.checkUpstream(targetResource);
                             if (cmd.action == Action.a) {
                                 // also should check server group
                                 ServerGroupHandle.checkAttachServerGroup(cmd);
@@ -588,7 +588,7 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
-            case sgs: // server groups
+            case ups: // upstream
             case tl: // tcp lb
             case socks5: // socks5 server
             case elg: // event loog group
@@ -797,19 +797,19 @@ public class Command {
                         ServerHandle.update(this);
                         return new CmdResult();
                 }
-            case sgs: // top level
+            case ups: // top level
                 switch (action) {
                     case l:
                     case L:
-                        List<String> sgsNames = ServerGroupsHandle.names();
-                        return new CmdResult(sgsNames, sgsNames, utilJoinList(sgsNames));
+                        List<String> upsNames = UpstreamHandle.names();
+                        return new CmdResult(upsNames, upsNames, utilJoinList(upsNames));
                     case a:
-                        ServerGroupsHandle.add(this);
+                        UpstreamHandle.add(this);
                         return new CmdResult();
                     case r:
-                        ServerGroupsHandle.preCheck(this);
+                        UpstreamHandle.preCheck(this);
                     case R:
-                        ServerGroupsHandle.forceRemove(this);
+                        UpstreamHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case elg: // top level
@@ -841,7 +841,7 @@ public class Command {
                         EventLoopHandle.forceRemove(this);
                         return new CmdResult();
                 }
-            case sg: // top level or retrieved from serverGroups
+            case sg: // top level or retrieved from upstream
                 switch (action) {
                     case l:
                         List<String> sgNames = ServerGroupHandle.names(targetResource);

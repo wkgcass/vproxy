@@ -383,7 +383,7 @@ public class HelpCommand {
         acceptorelg("acceptor-elg", "aelg", "acceptor event loop group"),
         eventloopgroup("event-loop-group", "elg", "event loop group"),
         address("address", "addr", "ip address -> ip:port"),
-        servergroups("server-groups", "sgs", "server groups"),
+        upstream("upstream", "ups", "upstream"),
         inbuffersize("in-buffer-size", null, "in buffer size"),
         outbuffersize("out-buffer-size", null, "out buffer size"),
         securitygroup("security-group", "secg", "security group"),
@@ -445,7 +445,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
-                    , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
+                    , new ResActParamMan(ParamMan.upstream, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.protocol, "the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See doc for more info", "tcp")
@@ -454,7 +454,7 @@ public class HelpCommand {
                 ),
                 Collections.singletonList(
                     new Tuple<>(
-                        "add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 server-groups sgs0 in-buffer-size 16384 out-buffer-size 16384",
+                        "add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 upstream ups0 in-buffer-size 16384 out-buffer-size 16384",
                         "\"OK\""
                     )
                 ))
@@ -471,7 +471,7 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail tcp-lb",
-                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0\""
+                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of an lb",
@@ -501,7 +501,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
-                    , new ResActParamMan(ParamMan.servergroups, "used as the backend servers")
+                    , new ResActParamMan(ParamMan.upstream, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
@@ -512,7 +512,7 @@ public class HelpCommand {
                 ),
                 Collections.singletonList(
                     new Tuple<>(
-                        "add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0",
+                        "add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 upstream backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0",
                         "\"OK\""
                     )
                 ))
@@ -588,33 +588,33 @@ public class HelpCommand {
                         )
                     ))
             )),
-        servergroups("server-groups", "sgs", "a resource containing multiple `server-group` resources",
+        upstream("upstream", "ups", "a resource containing multiple `server-group` resources",
             Arrays.asList(
-                new ResActMan(ActMan.add, "specify a name and create a server-groups resource",
+                new ResActMan(ActMan.add, "specify a name and create an upstream resource",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add server-groups sgs0",
+                            "add upstream ups0",
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.list, "retrieve names of all server-groups resources",
+                new ResActMan(ActMan.list, "retrieve names of all upstream resources",
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
-                            "list server-groups",
-                            "1) \"sgs0\""
+                            "list upstream",
+                            "1) \"ups0\""
                         ),
                         new Tuple<>(
-                            "list-detail server-groups",
-                            "1) \"sgs0\""
+                            "list-detail upstream",
+                            "1) \"ups0\""
                         )
                     )),
-                new ResActMan(ActMan.remove, "remove a server-groups resource",
+                new ResActMan(ActMan.remove, "remove an upstream resource",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "remove server-groups sgs0",
+                            "remove upstream ups0",
                             "\"OK\""
                         )
                     ))
@@ -636,17 +636,17 @@ public class HelpCommand {
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.addto, "attach an existing server group into a `server-groups` resource",
+                new ResActMan(ActMan.addto, "attach an existing server group into an `upstream` resource",
                     Collections.singletonList(
-                        new ResActParamMan(ParamMan.weight, "the weight of group in this server-groups resource")
+                        new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add server-group sg0 to server-groups sgs0 weight 10",
+                            "add server-group sg0 to upstream ups0 weight 10",
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.list, "retrieve names of all server group (s) on top level or in a server-groups",
+                new ResActMan(ActMan.list, "retrieve names of all server group (s) on top level or in an upstream",
                     Collections.emptyList(),
                     Arrays.asList(
                         new Tuple<>(
@@ -654,7 +654,7 @@ public class HelpCommand {
                             "1) \"sg0\""
                         ),
                         new Tuple<>(
-                            "list server-group in server-groups sgs0",
+                            "list server-group in upstream ups0",
                             "1) \"sg0\""
                         )
                     )),
@@ -666,7 +666,7 @@ public class HelpCommand {
                             "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0\""
                         ),
                         new Tuple<>(
-                            "list-detail server-group in server-groups sgs0",
+                            "list-detail server-group in upstream ups0",
                             "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 weight 10\""
                         )
                     )),
@@ -674,14 +674,14 @@ public class HelpCommand {
                     "\n" +
                     "Param list is the same as add, but not all required.\n" +
                     "\n" +
-                    "Also you can change the weight of a group in a server-groups resource",
+                    "Also you can change the weight of a group in an upstream resource",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.timeout, "health check connect timeout (ms)", "not changed"),
                         new ResActParamMan(ParamMan.period, "do check every `${period}` milliseconds", "not changed"),
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times", "not changed"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times", "not changed"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "not changed"),
-                        new ResActParamMan(ParamMan.weight, "the weight of group in this server-groups resource", "not changed")
+                        new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource", "not changed")
                     ),
                     Arrays.asList(
                         new Tuple<>(
@@ -693,7 +693,7 @@ public class HelpCommand {
                             "\"OK\""
                         ),
                         new Tuple<>(
-                            "update server-group sg0 in server-groups sgs0 weight 5",
+                            "update server-group sg0 in upstream ups0 weight 5",
                             "\"OK\""
                         )
                     ), "all fields in health check config should be all specified if any one of them exists"),
@@ -705,11 +705,11 @@ public class HelpCommand {
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.removefrom, "detach the group grom a `server-groups` resource",
+                new ResActMan(ActMan.removefrom, "detach the group from an `upstream` resource",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "remove server-group sg0 from server-groups sgs0",
+                            "remove server-group sg0 from upstream ups0",
                             "\"OK\""
                         )
                     ))

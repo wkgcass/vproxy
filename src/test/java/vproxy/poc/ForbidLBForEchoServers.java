@@ -11,7 +11,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Protocol;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Utils;
@@ -25,19 +25,19 @@ public class ForbidLBForEchoServers {
 
     public static void main(String[] args) throws AlreadyExistException, IOException, ClosedException, InterruptedException, NotFoundException {
         EventLoopGroup eventLoopGroup = new EventLoopGroup("eventLoopGroup");
-        ServerGroups serverGroups = new ServerGroups("serverGroups");
+        Upstream upstream = new Upstream("upstream");
         ServerGroup grp1 = new ServerGroup("grp1", eventLoopGroup,
             new HealthCheckConfig(200, 800, 1, 5),
             Method.wrr);
         ServerGroup grp2 = new ServerGroup("grp2", eventLoopGroup,
             new HealthCheckConfig(200, 800, 1, 5),
             Method.wrr);
-        serverGroups.add(grp1, 10);
-        serverGroups.add(grp2, 10);
+        upstream.add(grp1, 10);
+        upstream.add(grp2, 10);
         SecurityGroup secg = new SecurityGroup("secg0", false);
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
-            new InetSocketAddress(18080), serverGroups,
+            new InetSocketAddress(18080), upstream,
             Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
             secg
         );

@@ -13,7 +13,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class ServerGroups {
+public class Upstream {
     public class ServerGroupHandle {
         public final String alias;
         public final ServerGroup group;
@@ -40,23 +40,23 @@ public class ServerGroups {
         final ArrayList<ServerGroupHandle> groups;
         int[] seq;
 
-        WRR(ArrayList<ServerGroupHandle> serverGroups) {
-            this.groups = serverGroups;
+        WRR(ArrayList<ServerGroupHandle> serverGroupHandles) {
+            this.groups = serverGroupHandles;
         }
     }
 
     public final String alias;
-    private ArrayList<ServerGroupHandle> serverGroups = new ArrayList<>(0);
+    private ArrayList<ServerGroupHandle> serverGroupHandles = new ArrayList<>(0);
     private WRR _wrr;
 
-    public ServerGroups(String alias) {
+    public Upstream(String alias) {
         this.alias = alias;
         recalculateWRR();
     }
 
     private void recalculateWRR() {
         ArrayList<ServerGroupHandle> groups =
-            serverGroups
+            serverGroupHandles
                 .stream()
                 .filter(g -> g.weight > 0)
                 .collect(Collectors.toCollection(ArrayList::new));
@@ -133,20 +133,20 @@ public class ServerGroups {
     }
 
     public void add(ServerGroup group, int weight) throws AlreadyExistException {
-        List<ServerGroupHandle> groups = serverGroups;
+        List<ServerGroupHandle> groups = serverGroupHandles;
         if (groups.stream().anyMatch(g -> g.group.equals(group)))
-            throw new AlreadyExistException("server-group in server-groups " + this.alias, group.alias);
+            throw new AlreadyExistException("server-group in upstream " + this.alias, group.alias);
         ArrayList<ServerGroupHandle> newLs = new ArrayList<>(groups.size() + 1);
         newLs.addAll(groups);
         newLs.add(new ServerGroupHandle(group, weight));
-        serverGroups = newLs;
+        serverGroupHandles = newLs;
         recalculateWRR();
     }
 
     public synchronized void remove(ServerGroup group) throws NotFoundException {
-        List<ServerGroupHandle> groups = serverGroups;
+        List<ServerGroupHandle> groups = serverGroupHandles;
         if (groups.isEmpty())
-            throw new NotFoundException("server-group in server-groups " + this.alias, group.alias);
+            throw new NotFoundException("server-group in upstream " + this.alias, group.alias);
         boolean found = false;
         ArrayList<ServerGroupHandle> newLs = new ArrayList<>(groups.size() - 1);
         for (ServerGroupHandle g : groups) {
@@ -157,14 +157,14 @@ public class ServerGroups {
             }
         }
         if (!found) {
-            throw new NotFoundException("server-group in server-groups " + this.alias, group.alias);
+            throw new NotFoundException("server-group in upstream " + this.alias, group.alias);
         }
-        serverGroups = newLs;
+        serverGroupHandles = newLs;
         recalculateWRR();
     }
 
-    public List<ServerGroupHandle> getServerGroups() {
-        return new ArrayList<>(serverGroups);
+    public List<ServerGroupHandle> getServerGroupHandles() {
+        return new ArrayList<>(serverGroupHandles);
     }
 
     public Connector next(InetSocketAddress source) {
@@ -176,7 +176,7 @@ public class ServerGroups {
             int maxLvl = Hint.MAX_MATCH_LEVEL;
             int level = 0;
             ServerGroupHandle lastMax = null;
-            for (ServerGroupHandle h : serverGroups) {
+            for (ServerGroupHandle h : serverGroupHandles) {
                 int l = hint.matchLevel(h.alias);
                 if (l == maxLvl) { // directly return if it's the best match
                     return h.group.next(source);

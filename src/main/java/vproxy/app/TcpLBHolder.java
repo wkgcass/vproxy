@@ -7,7 +7,7 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.util.Logger;
 
 import javax.net.ssl.KeyManager;
@@ -32,7 +32,7 @@ public class TcpLBHolder {
                     EventLoopGroup acceptorEventLoopGroup,
                     EventLoopGroup workerEventLoopGroup,
                     InetSocketAddress bindAddress,
-                    ServerGroups backends,
+                    Upstream backends,
                     int timeout,
                     int inBufferSize,
                     int outBufferSize,

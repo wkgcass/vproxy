@@ -103,11 +103,11 @@ add server backend3 to server-group ngx address 10.0.2.3:80 weight 10
 list-detail server in server-group ngx
 ```
 
-创建一个`server-groups`资源，并且将`ngx`组加入这个新资源里。
+创建一个`upstream`资源，并且将`ngx`组加入这个新资源里。
 
 ```
-add server-groups backend-groups
-add server-group ngx to server-groups backend-groups
+add upstream backend-groups
+add server-group ngx to upstream backend-groups
 ```
 
 ### 5. TCP 负载均衡
@@ -115,7 +115,7 @@ add server-group ngx to server-groups backend-groups
 创建一个负载均衡器，绑定地址`10.0.0.10:80`。
 
 ```
-add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:80 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384
+add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:80 upstream backend-groups in-buffer-size 16384 out-buffer-size 16384
 ```
 
 这样，tcp负载均衡就启动完毕了。

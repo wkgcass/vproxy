@@ -16,7 +16,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.util.*;
 
 import java.io.*;
@@ -273,10 +273,10 @@ public class Shutdown {
         List<EventLoopGroup> eventLoopGroups = new LinkedList<>();
         Set<String> eventLoopGroupNames = new HashSet<>();
 
-        List<ServerGroup> serverGroups = new LinkedList<>();
+        List<ServerGroup> serverGroupList = new LinkedList<>();
 
-        List<ServerGroups> serverGroupss = new LinkedList<>();
-        Set<String> serverGroupsNames = new HashSet<>();
+        List<Upstream> upstreams = new LinkedList<>();
+        Set<String> upstreamNames = new HashSet<>();
 
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
@@ -396,39 +396,39 @@ public class Shutdown {
                     " timeout " + c.timeout + " period " + c.period + " up " + c.up + " down " + c.down +
                     " method " + sg.getMethod() + " event-loop-group " + sg.eventLoopGroup.alias;
                 commands.add(cmd);
-                serverGroups.add(sg);
-                serverGroupsNames.add(name);
+                serverGroupList.add(sg);
+                upstreamNames.add(name);
             }
         }
         {
-            // create server-groups
-            ServerGroupsHolder sgh = app.serverGroupsHolder;
+            // create upstream
+            UpstreamHolder sgh = app.upstreamHolder;
             List<String> names = sgh.names();
             for (String name : names) {
-                ServerGroups sgs;
+                Upstream ups;
                 try {
-                    sgs = sgh.get(name);
+                    ups = sgh.get(name);
                 } catch (NotFoundException e) {
-                    assert Logger.lowLevelDebug("sgs not found " + name);
+                    assert Logger.lowLevelDebug("ups not found " + name);
                     assert Logger.printStackTrace(e);
                     continue;
                 }
 
-                String cmd = "add server-groups " + sgs.alias;
+                String cmd = "add upstream " + ups.alias;
                 commands.add(cmd);
-                serverGroupss.add(sgs);
-                serverGroupsNames.add(name);
+                upstreams.add(ups);
+                upstreamNames.add(name);
             }
         }
         {
             // attach group into groups
-            for (ServerGroups sgs : serverGroupss) {
-                for (ServerGroups.ServerGroupHandle sg : sgs.getServerGroups()) {
-                    if (!serverGroupsNames.contains(sg.alias)) {
+            for (Upstream ups : upstreams) {
+                for (Upstream.ServerGroupHandle sg : ups.getServerGroupHandles()) {
+                    if (!upstreamNames.contains(sg.alias)) {
                         Logger.warn(LogType.IMPROPER_USE, "the sg " + sg.alias + " already removed");
                         continue;
                     }
-                    String cmd = "add server-group " + sg.alias + " to server-groups " + sgs.alias + " weight " + sg.getWeight();
+                    String cmd = "add server-group " + sg.alias + " to upstream " + ups.alias + " weight " + sg.getWeight();
                     commands.add(cmd);
                 }
             }
@@ -485,8 +485,8 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the elg " + tl.workerGroup.alias + " already removed");
                     continue;
                 }
-                if (!serverGroupsNames.contains(tl.backends.alias)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the sgs " + tl.backends.alias + " already removed");
+                if (!upstreamNames.contains(tl.backends.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + tl.backends.alias + " already removed");
                     continue;
                 }
                 if (!securityGroupNames.contains(tl.securityGroup.alias) && !tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -503,7 +503,7 @@ public class Shutdown {
                 }
                 StringBuilder cmd = new StringBuilder("add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
-                    " address " + Utils.ipport(tl.bindAddress) + " server-groups " + tl.backends.alias +
+                    " address " + Utils.ipport(tl.bindAddress) + " upstream " + tl.backends.alias +
                     " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " protocol " + tl.protocol);
@@ -540,8 +540,8 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the elg " + socks5.workerGroup.alias + " already removed");
                     continue;
                 }
-                if (!serverGroupsNames.contains(socks5.backends.alias)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the sgs " + socks5.backends.alias + " already removed");
+                if (!upstreamNames.contains(socks5.backends.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + socks5.backends.alias + " already removed");
                     continue;
                 }
                 if (!securityGroupNames.contains(socks5.securityGroup.alias) && !socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -550,7 +550,7 @@ public class Shutdown {
                 }
                 String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
                     " event-loop-group " + socks5.workerGroup.alias +
-                    " address " + Utils.ipport(socks5.bindAddress) + " server-groups " + socks5.backends.alias +
+                    " address " + Utils.ipport(socks5.bindAddress) + " upstream " + socks5.backends.alias +
                     " timeout " + socks5.getTimeout() +
                     " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
                     " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
@@ -573,7 +573,7 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
-                if (!serverGroups.contains(s.handledGroup)) {
+                if (!serverGroupList.contains(s.handledGroup)) {
                     Logger.warn(LogType.IMPROPER_USE, "the sg " + s.handledGroup.alias + " already removed");
                     continue;
                 }
@@ -586,7 +586,7 @@ public class Shutdown {
         }
         {
             // create server
-            for (ServerGroup sg : serverGroups) {
+            for (ServerGroup sg : serverGroupList) {
                 if (smartGroupDelegates.stream().anyMatch(s -> s.handledGroup.equals(sg))) {
                     // do not init servers if it's attached to a smartGroupDelegate
                     continue;

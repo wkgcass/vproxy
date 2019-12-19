@@ -69,11 +69,11 @@ Note that default buffer size of haproxy is 16384 bytes.
 
 ```
 add event-loop-group elg0
-add server-groups sgs0
-add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 0.0.0.0:80 server-groups sgs0 in-buffer-size 512 out-buffer-size 512
+add upstream ups0
+add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 addr 0.0.0.0:80 upstream ups0 in-buffer-size 512 out-buffer-size 512
 add event-loop el0 to event-loop-group elg0
 add server-group sg0 timeout 1000 period 3000 up 1 down 5 method wrr event-loop-group elg0
-add server-group sg0 to server-groups sgs0
+add server-group sg0 to upstream ups0
 add server s0 to server-group sg0 address 10.0.0.165:80 ip 0.0.0.0 weight 10
 ```
 

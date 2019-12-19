@@ -4,7 +4,7 @@ public enum ResourceType {
     tl("tcp-lb"),
     socks5("socks5-server"),
     elg("event-loop-group"),
-    sgs("server-groups"),
+    ups("upstream"),
     sg("server-group"),
     el("event-loop"),
     svr("server"),

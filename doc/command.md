@@ -25,11 +25,11 @@ There are eight `$action`s in vproxy command:
 If the `$action` is `list` or `list-detail`, the first `$resource-alias` should not be specified, otherwise, it's required:
 
 ```
-list server-groups                   --- no alias
-add server-groups name               --- an alias is required when action is not list nor list-detail
+list upstream                   --- no alias
+add upstream name               --- an alias is required when action is not list nor list-detail
 ```
 
-where `server-groups` is a `$resource-type`. The command means to list all resources with type `server-groups` on top level.
+where `upstream` is a `$resource-type`. The command means to list all resources with type `upstream` on top level.
 
 There are many kinds of `$resource-type`s, as shown in this figure:
 
@@ -39,7 +39,7 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ event-loop-group (elg)
 |        |
 |        +---+ event-loop (el)
-+---+ server-groups (sgs)
++---+ upstream (ups)
 |        |
 |        +---+ server-group (sg)
 +---+ server-group (sg)
@@ -131,14 +131,14 @@ Create a loadbalancer.
 * acceptor-elg (aelg): *optional*. choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
 * event-loop-group (elg): *optional*. choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
 * address (addr): the bind address of the loadbalancer
-* server-groups (sgs): used as the backend servers
+* upstream (ups): used as the backend servers
 * in-buffer-size: *optional*. input buffer size. default 16384 (bytes)
 * out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
 * protocol: *optional*. the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
 * security-group (secg): *optional*. specify a security group for the lb. default allow any
 
 ```
-add tcp-lb lb0 address 127.0.0.1:18080 server-groups sgs0
+add tcp-lb lb0 address 127.0.0.1:18080 upstream ups0
 "OK"
 ```
 
@@ -157,7 +157,7 @@ Retrieve detailed info of all tcp-loadbalancers.
 
 ```
 list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends sgs0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
 ```
 
 #### update
@@ -194,7 +194,7 @@ See `add tcp-lb` for more info.
 * acceptor-elg (aelg): *optional*, the acceptor event loop.
 * event-loop-group (elg): *optional*. the worker event loop.
 * address (addr): the bind address
-* server-groups (sgs): used as backends, the socks5 only supports servers added into this group
+* upstream (ups): used as backends, the socks5 only supports servers added into this group
 * in-buffer-size: *optional*. input buffer size.
 * out-buffer-size: *optional*. output buffer size.
 * security-group (secg): security group
@@ -205,7 +205,7 @@ Flags:
 * deny-non-backend: *optional*. only able to access backend endpoints. the default flag.
 
 ```
-add socks5-server s5 address 127.0.0.1:18081 server-groups backend-groups security-group secg0
+add socks5-server s5 address 127.0.0.1:18081 upstream backend-groups security-group secg0
 "OK"
 ```
 
@@ -278,36 +278,36 @@ remove event-loop-group elg0
 "OK"
 ```
 
-## Resource: server-groups (sgs)
+## Resource: upstream (ups)
 
 A resource containing multiple `server-group` resources.
 
 #### add
 
-Specify a name and create a `server-groups`.
+Specify a name and create a `upstream`.
 
 ```
-add server-groups sgs0
+add upstream ups0
 "OK"
 ```
 
 #### list/list-detail
 
-Retrieve names of all `server-groups` resources.
+Retrieve names of all `upstream` resources.
 
 ```
-list server-groups
-1) "sgs0"
-list-detail server-groups
-1) "sgs0"
+list upstream
+1) "ups0"
+list-detail upstream
+1) "ups0"
 ```
 
 #### remove
 
-Remove a `server-groups` resource.
+Remove a `upstream` resource.
 
 ```
-remove server-groups sgs0
+remove upstream ups0
 "OK"
 ```
 
@@ -333,24 +333,24 @@ add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr
 
 #### add to
 
-Attach an existing server group into `server-groups`.
+Attach an existing server group into `upstream`.
 
-* weight (w): the weight of group in this server-groups resource
+* weight (w): the weight of group in this upstream resource
 
 ```
-add server-group sg0 to server-groups sgs0 weight 10
+add server-group sg0 to upstream ups0 weight 10
 "OK"
 ```
 
 #### list
 
-Retrieve names of all server group (s) on top level or in a `server-groups`.
+Retrieve names of all server group (s) on top level or in a `upstream`.
 
 ```
 list server-group
 1) "sg0"
 
-list server-group in server-groups sgs0
+list server-group in upstream ups0
 1) "sg0"
 ```
 
@@ -362,7 +362,7 @@ Retrieve detailed info of all server group (s).
 list-detail server-group
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0"
 
-list-detail server-group in server-groups sgs0
+list-detail server-group in upstream ups0
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 weight 10"
 ```
 
@@ -372,7 +372,7 @@ Change health check config or load balancing algorithm.
 
 Param list is the same as add, but not all required.
 
-Also you can change the weight of a group in a `server-groups` resource.
+Also you can change the weight of a group in a `upstream` resource.
 
 ```
 update server-group sg0 timeout 500 period 600 up 3 down 2
@@ -381,7 +381,7 @@ update server-group sg0 timeout 500 period 600 up 3 down 2
 update server-group sg0 method wlc
 "OK"
 
-update server-group sg0 in server-groups sgs0 weight 5
+update server-group sg0 in upstream ups0 weight 5
 "OK"
 ```
 
@@ -398,10 +398,10 @@ remove server-group sg0
 
 #### remove from
 
-Detach the group grom a `server-groups` resource.
+Detach the group grom a `upstream` resource.
 
 ```
-remove server-group sg0 from server-groups sgs0
+remove server-group sg0 from upstream ups0
 "OK"
 ```
 

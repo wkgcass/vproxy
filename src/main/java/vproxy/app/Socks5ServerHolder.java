@@ -6,7 +6,7 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -26,7 +26,7 @@ public class Socks5ServerHolder {
                             EventLoopGroup acceptorEventLoopGroup,
                             EventLoopGroup workerEventLoopGroup,
                             InetSocketAddress bindAddress,
-                            ServerGroups backends,
+                            Upstream backends,
                             int timeout,
                             int inBufferSize,
                             int outBufferSize,

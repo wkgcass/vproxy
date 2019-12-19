@@ -33,7 +33,7 @@ public class Application {
 
     public final EventLoopGroupHolder eventLoopGroupHolder;
     public final ServerGroupHolder serverGroupHolder;
-    public final ServerGroupsHolder serverGroupsHolder;
+    public final UpstreamHolder upstreamHolder;
     public final TcpLBHolder tcpLBHolder;
     public final Socks5ServerHolder socks5ServerHolder;
     public final SecurityGroupHolder securityGroupHolder;
@@ -51,7 +51,7 @@ public class Application {
 
         this.eventLoopGroupHolder = new EventLoopGroupHolder();
         this.serverGroupHolder = new ServerGroupHolder();
-        this.serverGroupsHolder = new ServerGroupsHolder();
+        this.upstreamHolder = new UpstreamHolder();
         this.tcpLBHolder = new TcpLBHolder();
         this.securityGroupHolder = new SecurityGroupHolder();
         this.certKeyHolder = new CertKeyHolder();

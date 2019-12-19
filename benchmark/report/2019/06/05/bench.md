@@ -28,15 +28,15 @@ vproxy listens on 8800 for h2, 9900 for tcp, 10800 for tcp (short connection);
 add server-group sg-tcp timeout 1000 period 5000 up 1 down 2 method wrr event-loop-group (control-elg)
 add server-group sg-short timeout 1000 period 5000 up 1 down 2 method wrr event-loop-group (control-elg)
 add server-group sg0 timeout 1000 period 5000 up 1 down 2 method wrr event-loop-group (control-elg)
-add server-groups sgs0
-add server-groups sgs-tcp
-add server-groups sgs-short
-add server-group sg0 to server-groups sgs0 weight 10
-add server-group sg-tcp to server-groups sgs-tcp weight 10
-add server-group sg-short to server-groups sgs-short weight 10
-add tcp-lb lb-short acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:10800 server-groups sgs-short timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol tcp
-add tcp-lb tl-tcp acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:9900 server-groups sgs-tcp timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol tcp
-add tcp-lb tl0 acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:8800 server-groups sgs0 timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol h2
+add upstream ups0
+add upstream ups-tcp
+add upstream ups-short
+add server-group sg0 to upstream ups0 weight 10
+add server-group sg-tcp to upstream ups-tcp weight 10
+add server-group sg-short to upstream ups-short weight 10
+add tcp-lb lb-short acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:10800 upstream ups-short timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol tcp
+add tcp-lb tl-tcp acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:9900 upstream ups-tcp timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol tcp
+add tcp-lb tl0 acceptor-elg (acceptor-elg) event-loop-group (worker-elg) address 0.0.0.0:8800 upstream ups timeout 900000 in-buffer-size 16384 out-buffer-size 16384 protocol h2
 add server svr-tcp-0 to server-group sg-tcp address 10.18.198.191:8080 weight 10
 add server svr-tcp-1 to server-group sg-tcp address 10.18.198.191:8081 weight 10
 add server svr-short-1 to server-group sg-short address 10.18.198.191:10080 weight 10

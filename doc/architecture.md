@@ -51,9 +51,9 @@ The accept eventloop, handle eventloop (for handling connections), which backend
 
 `ServerGroup` is a group of endpoints, each endpoint is attached with a boolean flag indicating it's currently healthy or not. The `ServerGroup` provides a `next()` method to retrieve the next healthy server. The method of determining which is the "next" is configurable.
 
-#### ServerGroups
+#### Upstream
 
-`ServerGroups` is a list of groups, each group is assigned with a weight. It's nothing but a container and does not do IO it self. It provides a `next()` method, which will go throught all serverGroups and retrieve a healthy server. The method of selecting serverGroup is always WRR, and it doesn't affect how `ServerGroup` selects server.
+`Upstream` is a list of groups, each group is assigned with a weight. It provides a `next()` method, which accepts a `hint` and it will select the most corresponding serverGroup, or will choose a default one if no `hint` provided or nothing matches. The method of selecting serverGroup is always WRR, and it doesn't affect how `ServerGroup` selects server.
 
 #### TcpLB and Socks5Server
 

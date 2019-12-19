@@ -94,7 +94,7 @@ public class Config {
                         int major = Integer.parseInt(majorStr);
                         int minor = Integer.parseInt(minorStr);
                         if (major > 3 || (major == 3 && minor >= 9)) { // version >= 3.9
-                            assert Logger.lowLevelDebug("reuseport load balancing IS supported: " + os + " " + version);
+                            Logger.alert("reuseport load balancing across sockets supported on " + os + " " + major + "." + minor);
                             supportReusePortLB = 1;
                             return true;
                         }

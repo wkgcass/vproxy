@@ -18,7 +18,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
 import vproxy.util.Callback;
@@ -328,27 +328,27 @@ class utils {
             .build();
     }
 
-    static JSON.Object formatServerGroups(ServerGroups sgs) {
+    static JSON.Object formatUpstream(Upstream ups) {
         return new ObjectBuilder()
-            .put("name", sgs.alias)
+            .put("name", ups.alias)
             .build();
     }
 
-    static JSON.Object formatServerGroupsDetail(ServerGroups sgs) {
+    static JSON.Object formatUpstreamDetail(Upstream ups) {
         return new ObjectBuilder()
-            .put("name", sgs.alias)
-            .putArray("serverGroupList", arr -> sgs.getServerGroups().forEach(sg -> arr.addInst(formatServerGroupInGroupsDetail(sg))))
+            .put("name", ups.alias)
+            .putArray("serverGroupList", arr -> ups.getServerGroupHandles().forEach(sg -> arr.addInst(formatServerGroupInGroupsDetail(sg))))
             .build();
     }
 
-    static JSON.Object formatServerGroupInGroups(ServerGroups.ServerGroupHandle sg) {
+    static JSON.Object formatServerGroupInGroups(Upstream.ServerGroupHandle sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
             .build();
     }
 
-    static JSON.Object formatServerGroupInGroupsDetail(ServerGroups.ServerGroupHandle sg) {
+    static JSON.Object formatServerGroupInGroupsDetail(Upstream.ServerGroupHandle sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
@@ -393,7 +393,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", socks5.alias)
             .put("address", Utils.l4addrStr(socks5.bindAddress))
-            .putInst("backend", formatServerGroupsDetail(socks5.backends))
+            .putInst("backend", formatUpstreamDetail(socks5.backends))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(socks5.acceptorGroup))
             .putInst("workerLoopGroup", formatEventLoopGroupDetail(socks5.workerGroup))
             .put("inBufferSize", socks5.getInBufferSize())
@@ -443,7 +443,7 @@ class utils {
             .put("name", tl.alias)
             .put("address", Utils.l4addrStr(tl.bindAddress))
             .put("protocol", tl.protocol)
-            .putInst("backend", formatServerGroupsDetail(tl.backends))
+            .putInst("backend", formatUpstreamDetail(tl.backends))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(tl.acceptorGroup))
             .putInst("workerLoopGroup", formatEventLoopGroupDetail(tl.workerGroup))
             .put("inBufferSize", tl.getInBufferSize())
@@ -538,11 +538,11 @@ class utils {
         }
         {
             var arr = new ArrayBuilder();
-            var sgsHolder = Application.get().serverGroupsHolder;
-            for (var name : sgsHolder.names()) {
-                arr.addInst(utils.formatServerGroupsDetail(sgsHolder.get(name)));
+            var upstreamHolder = Application.get().upstreamHolder;
+            for (var name : upstreamHolder.names()) {
+                arr.addInst(utils.formatUpstreamDetail(upstreamHolder.get(name)));
             }
-            ret.putInst("serverGroupsList", arr.build());
+            ret.putInst("upstreamList", arr.build());
         }
         {
             var arr = new ArrayBuilder();

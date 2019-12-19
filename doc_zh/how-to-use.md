@@ -195,10 +195,10 @@ GET /api/v1/module/smart-node-delegate
 创建一个文件，并且输入如下文字：
 
 ```
-add server-groups sgs0
-add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0
+add upstream ups0
+add tcp-lb lb0 addr 127.0.0.1:8899 upstream ups0
 add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr
-add server-group sg0 to server-groups sgs0 weight 10
+add server-group sg0 to upstream ups0 weight 10
 add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
 
@@ -238,10 +238,10 @@ redis-cli -p 16379 -h $vproxy主机的ip地址 -a 123456 [$你还可以直接在
 
 1. 通过 `vproxy.app.Main` 启动程序
 2. 输入如下命令，或者通过redis-cli执行如下命令：
-3. `add server-groups sgs0`  
-    创建了一个名叫`sgs0`的ServerGroups资源。ServerGroups资源包含了多个ServerGroup（主机组）
-5. `add tcp-lb lb0 addr 127.0.0.1:8899 server-groups sgs0`  
-    创建了一个叫做`lb0`的tcp负载均衡。该负载均衡监听`127.0.0.1:8899`，使用`sgs0`作为它的后端服务器列表。
+3. `add upstream ups0`  
+    创建了一个名叫`ups0`的Upstream资源。Upstream资源包含了多个ServerGroup（主机组）
+5. `add tcp-lb lb0 addr 127.0.0.1:8899 upstream ups0`  
+    创建了一个叫做`lb0`的tcp负载均衡。该负载均衡监听`127.0.0.1:8899`，使用`ups0`作为它的后端服务器列表。
 
 > 不过，推荐设置一个更大的buffer容量，例如16384。
 
@@ -252,8 +252,8 @@ redis-cli -p 16379 -h $vproxy主机的ip地址 -a 123456 [$你还可以直接在
 
 1. `add server-group sg0 timeout 1000 period 3000 up 4 down 5 method wrr`  
     这条命令创建了一个名叫`sg0`的主机组；健康检查配置为：检查超时时间为1秒，每3秒检查一次，如果有4次成功的检查则将节点视为UP，如果有5次失败则将节点视为DOWN；从组里取节点的算法为`wrr`。
-2. `add server-group sg0 to server-groups sgs0 weight 10`  
-    这条命令将主机组`sg0`加入了ServerGroups `sgs0`。将`sg0`加入`sgs0`是因为tcp负载均衡使用`sgs0`作为它的后端服务器列表。
+2. `add server-group sg0 to upstream ups0 weight 10`  
+    这条命令将主机组`sg0`加入了Upstream `ups0`。将`sg0`加入`ups0`是因为tcp负载均衡使用`ups0`作为它的后端服务器列表。
 3. `add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10`  
     这条命令往主机组`sg0`里添加了一个名为`s0`的新主机。远端地址为`127.0.0.1:12345`，这个主机在组里的权重是`10`。
 

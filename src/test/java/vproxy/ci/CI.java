@@ -17,6 +17,7 @@ import vjson.JSON;
 import vjson.simple.SimpleObject;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
+import vproxy.app.Config;
 import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.khala.KhalaNode;
 import vproxy.connection.ServerSock;
@@ -232,7 +233,7 @@ public class CI {
     private List<String> tlNames = new ArrayList<>();
     private List<String> socks5Names = new ArrayList<>();
     private List<String> elgNames = new ArrayList<>();
-    private List<String> sgsNames = new ArrayList<>();
+    private List<String> upsNames = new ArrayList<>();
     private List<String> sgNames = new ArrayList<>();
     private List<String> securgNames = new ArrayList<>();
     private List<String> sgdNames = new ArrayList<>();
@@ -241,7 +242,7 @@ public class CI {
 
     private String elg0;
     private String elg1;
-    private String sgs0;
+    private String ups0;
 
     private WebClient socks5WebClient = null;
     private WebClient h2WebClient = null;
@@ -271,10 +272,10 @@ public class CI {
             checkCreate("event-loop", name, "event-loop-group", elg1);
         }
 
-        sgs0 = randomName("sgs0");
-        execute(createReq(add, "server-groups", sgs0));
-        sgsNames.add(sgs0);
-        checkCreate("server-groups", sgs0);
+        ups0 = randomName("ups0");
+        execute(createReq(add, "upstream", ups0));
+        upsNames.add(ups0);
+        checkCreate("upstream", ups0);
     }
 
     @After
@@ -300,10 +301,10 @@ public class CI {
             execute(createReq(remove, "socks5-server", socks5));
             checkRemove("socks5-server", socks5);
         }
-        // remove server groups
-        for (String sgs : sgsNames) {
-            execute(createReq(remove, "server-groups", sgs));
-            checkRemove("server-groups", sgs);
+        // remove upstream
+        for (String ups : upsNames) {
+            execute(createReq(remove, "upstream", ups));
+            checkRemove("upstream", ups);
         }
         // remove server group
         for (String sg : sgNames) {
@@ -366,7 +367,7 @@ public class CI {
     }
 
     private void initNetClient() {
-        netClient = vertx.createNetClient(new NetClientOptions().setIdleTimeout(2));
+        netClient = vertx.createNetClient(new NetClientOptions().setIdleTimeout(10));
     }
 
     private static Response _execute(Request req) {
@@ -546,14 +547,14 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
         Map<String, String> detail = getDetail("tcp-lb", lbName);
         assertEquals(elg0, detail.get("acceptor"));
         assertEquals(elg1, detail.get("worker"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
-        assertEquals(sgs0, detail.get("backends"));
+        assertEquals(ups0, detail.get("backends"));
         assertEquals("16384", detail.get("in-buffer-size"));
         assertEquals("16384", detail.get("out-buffer-size"));
         assertEquals("tcp", detail.get("protocol"));
@@ -566,8 +567,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -601,14 +602,14 @@ public class CI {
         execute(createReq(add, "socks5-server", socks5Name,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         socks5Names.add(socks5Name);
         checkCreate("socks5-server", socks5Name);
         Map<String, String> detail = getDetail("socks5-server", socks5Name);
         assertEquals(elg0, detail.get("acceptor"));
         assertEquals(elg1, detail.get("worker"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
-        assertEquals(sgs0, detail.get("backends"));
+        assertEquals(ups0, detail.get("backends"));
         assertEquals("16384", detail.get("in-buffer-size"));
         assertEquals("16384", detail.get("out-buffer-size"));
         assertEquals("(allow-all)", detail.get("security-group"));
@@ -629,10 +630,10 @@ public class CI {
         sgNames.add(sg1);
         checkCreate("server-group", sg1);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
-        execute(createReq(add, "server-group", sg1, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg1, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
+        execute(createReq(add, "server-group", sg1, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg1, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -670,7 +671,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
 
@@ -690,10 +691,10 @@ public class CI {
             assertEquals(elg0, details.get("event-loop-group"));
         }
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "12"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "12"));
+        checkCreate("server-group", sg0, "upstream", ups0);
         {
-            Map<String, String> details = getDetail("server-group", sg0, "server-groups", sgs0);
+            Map<String, String> details = getDetail("server-group", sg0, "upstream", ups0);
             assertEquals("500", details.get("timeout"));
             assertEquals("200", details.get("period"));
             assertEquals("2", details.get("up"));
@@ -728,7 +729,7 @@ public class CI {
         {
             Map<String, String> details = getDetail("server-group", sg0);
             assertEquals("wlc", details.get("method"));
-            details = getDetail("server-group", sg0, "server-groups", sgs0);
+            details = getDetail("server-group", sg0, "upstream", ups0);
             assertEquals("wlc", details.get("method"));
         }
         // remove server temporarily
@@ -759,15 +760,15 @@ public class CI {
         }
 
         for (NetSocket socks : socks7771) {
-            socks.write("" +
-                "GET / HTTP/1.1\r\n" +
-                "Host: 127.0.0.1\r\n" +
-                "\r\n");
             String[] result = {null};
             Throwable[] err = {null};
             socks.handler(b -> result[0] = b.toString());
             socks.exceptionHandler(t -> err[0] = t);
             socks.closeHandler(v -> err[0] = new Exception("connection closed"));
+            socks.write("" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: 127.0.0.1\r\n" +
+                "\r\n");
             while (result[0] == null && err[0] == null) {
                 Thread.sleep(1);
             }
@@ -779,15 +780,15 @@ public class CI {
         }
 
         for (NetSocket socks : socks7772) {
-            socks.write("" +
-                "GET / HTTP/1.1\r\n" +
-                "Host: 127.0.0.1\r\n" +
-                "\r\n");
             String[] result = {null};
             Throwable[] err = {null};
             socks.handler(b -> result[0] = b.toString());
             socks.exceptionHandler(t -> err[0] = t);
             socks.closeHandler(v -> err[0] = new Exception("connection closed"));
+            socks.write("" +
+                "GET / HTTP/1.1\r\n" +
+                "Host: 127.0.0.1\r\n" +
+                "\r\n");
             while (result[0] == null && err[0] == null) {
                 Thread.sleep(1);
             }
@@ -803,7 +804,7 @@ public class CI {
         {
             Map<String, String> details = getDetail("server-group", sg0);
             assertEquals("source", details.get("method"));
-            details = getDetail("server-group", sg0, "server-groups", sgs0);
+            details = getDetail("server-group", sg0, "upstream", ups0);
             assertEquals("source", details.get("method"));
         }
 
@@ -844,7 +845,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
 
@@ -855,8 +856,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         String sg1 = randomName("sg1");
         execute(createReq(add, "server-group", sg1,
@@ -865,8 +866,8 @@ public class CI {
         sgNames.add(sg1);
         checkCreate("server-group", sg1);
 
-        execute(createReq(add, "server-group", sg1, "to", "server-groups", sgs0, "weight", "5"));
-        checkCreate("server-group", sg1, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg1, "to", "upstream", ups0, "weight", "5"));
+        checkCreate("server-group", sg1, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -888,11 +889,11 @@ public class CI {
         execute(createReq(update, "server", "sg7774", "in", "server-group", sg1, "weight", "10"));
         weightCheck(port, new String[]{"7771", "7772", "7773", "7774"}, new int[]{12, 8, 5, 5});
 
-        execute(createReq(update, "server-group", sg1, "in", "server-groups", sgs0, "weight", "15"));
+        execute(createReq(update, "server-group", sg1, "in", "upstream", ups0, "weight", "15"));
         weightCheck(port, new String[]{"7771", "7772", "7773", "7774"}, new int[]{12, 8, 15, 15});
 
-        execute(createReq(remove, "server-group", sg1, "from", "server-groups", sgs0));
-        checkRemove("server-group", sg1, "server-groups", sgs0);
+        execute(createReq(remove, "server-group", sg1, "from", "upstream", ups0));
+        checkRemove("server-group", sg1, "upstream", ups0);
         weightCheck(port, new String[]{"7771", "7772"}, new int[]{3, 2});
     }
 
@@ -969,7 +970,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + lbPort,
-            "server-groups", sgs0));
+            "upstream", ups0));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
 
@@ -977,7 +978,7 @@ public class CI {
         execute(createReq(add, "socks5-server", socks5Name,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + socks5Port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         socks5Names.add(socks5Name);
         checkCreate("socks5-server", socks5Name);
 
@@ -988,8 +989,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -1168,7 +1169,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
-            "server-groups", sgs0));
+            "upstream", ups0));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
 
@@ -1179,8 +1180,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -1208,7 +1209,7 @@ public class CI {
             execute(createReq(add, "socks5-server", socks5Name,
                 "acceptor-elg", elg0, "event-loop-group", elg1,
                 "address", "127.0.0.1:" + socks5Port,
-                "server-groups", sgs0));
+                "upstream", ups0));
             socks5Names.add(socks5Name);
             checkCreate("socks5-server", socks5Name);
 
@@ -1295,7 +1296,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + lbPort,
-            "server-groups", sgs0,
+            "upstream", ups0,
             "protocol", "h2"));
         tlNames.add(lbName);
         checkCreate("tcp-lb", lbName);
@@ -1308,8 +1309,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -1347,7 +1348,7 @@ public class CI {
 
         ls = queryList(createReq(list, "event-loop", "in", "event-loop-group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
         int cnt = Runtime.getRuntime().availableProcessors();
-        if (ServerSock.supportReusePort()) {
+        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
             assertEquals(cnt, ls.size());
         } else {
             assertEquals(1, ls.size());
@@ -1366,10 +1367,10 @@ public class CI {
 
         int lbPort = 7001;
         String lbName = randomName("lb0");
-        execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "server-groups", sgs0));
+        execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "upstream", ups0));
         tlNames.add(lbName);
         Map<String, String> details = getDetail("tcp-lb", lbName);
-        if (ServerSock.supportReusePort()) {
+        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
             assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         } else {
             assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
@@ -1378,10 +1379,10 @@ public class CI {
 
         int socks5Port = 7002;
         String socks5Name = randomName("socks5-0");
-        execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "server-groups", sgs0));
+        execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "upstream", ups0));
         socks5Names.add(socks5Name);
         details = getDetail("tcp-lb", lbName);
-        if (ServerSock.supportReusePort()) {
+        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
             assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         } else {
             assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
@@ -1425,7 +1426,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName,
             "acceptor-elg", elg0, "event-loop-group", elg1,
             "address", "127.0.0.1:" + lbPort,
-            "server-groups", sgs0,
+            "upstream", ups0,
             "protocol", "http",
             "cert-key", certKeyName));
         tlNames.add(lbName);
@@ -1438,8 +1439,8 @@ public class CI {
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs0, "weight", "10"));
-        checkCreate("server-group", sg0, "server-groups", sgs0);
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", sg0, "upstream", ups0);
 
         execute(createReq(add, "server", "sg7771", "to", "server-group", sg0, "address", "127.0.0.1:7771", "weight", "10"));
         checkCreate("server", "sg7771", "server-group", sg0);
@@ -1612,6 +1613,16 @@ public class CI {
         }
     }
 
+    private static int nextPort = 30000;
+
+    private static int getNextListeningPort() {
+        int r = ++nextPort;
+        if (r >= 60000) {
+            nextPort = 30000;
+        }
+        return r;
+    }
+
     private static void putRandom(ObjectBuilder ob, String key, Class<?> valueType) {
         if (valueType == String.class) {
             var sb = new StringBuilder();
@@ -1630,7 +1641,7 @@ public class CI {
             Object v = enums[(int) (Math.random() * enums.length)];
             putValue(ob, key, valueType, v);
         } else if (valueType == InetSocketAddress.class) {
-            int port = (int) (Math.random() * 10000) + 50000;
+            int port = getNextListeningPort();
             putValue(ob, key, valueType, "0.0.0.0:" + port);
         } else if (valueType == boolean.class) {
             putValue(ob, key, valueType, (Math.random() < 0.5) ? true : false);
@@ -1895,9 +1906,9 @@ public class CI {
         }
     }
 
-    private String randomServerGroups() {
-        String n = randomName("sgs");
-        execute(createReq(add, "server-groups", n));
+    private String randomUpstream() {
+        String n = randomName("ups");
+        execute(createReq(add, "upstream", n));
         return n;
     }
 
@@ -1956,7 +1967,7 @@ public class CI {
     @Test
     public void apiV1TcpLB() throws Exception {
         run("/tcp-lb", Entities.TcpLB.class,
-            "backend", randomServerGroups(),
+            "backend", randomUpstream(),
             "acceptorLoopGroup", randomEventLoopGroup(),
             "workerLoopGroup", randomEventLoopGroup(),
             "listOfCertKey", new String[]{randomCertKey()},
@@ -1968,7 +1979,7 @@ public class CI {
     @Test
     public void apiV1Socks5Server() throws Exception {
         run("/socks5-server", Entities.Socks5Server.class,
-            "backend", randomServerGroups(),
+            "backend", randomUpstream(),
             "acceptorLoopGroup", randomEventLoopGroup(),
             "workerLoopGroup", randomEventLoopGroup(),
             "securityGroup", randomSecurityGroup());
@@ -1985,18 +1996,18 @@ public class CI {
     }
 
     @Test
-    public void apiV1ServerGroupInServerGroups() throws Exception {
-        var sgs = randomServerGroups();
+    public void apiV1ServerGroupInUpstream() throws Exception {
+        var ups = randomUpstream();
         var sg = randomServerGroup();
-        run("/server-groups/" + sgs + "/server-group", Entities.ServerGroupInServerGroups.class,
+        run("/upstream/" + ups + "/server-group", Entities.ServerGroupInUpstream.class,
             "name", sg);
         assertEquals(CC(1), postCnt);
         assertEquals(CC(1) * CC(1), putCnt);
     }
 
     @Test
-    public void apiV1ServerGroups() throws Exception {
-        runNoUpdate("/server-groups", Entities.ServerGroups.class);
+    public void apiV1Upstream() throws Exception {
+        runNoUpdate("/upstream", Entities.Upstream.class);
         assertEquals(1, postCnt);
         assertEquals(0, putCnt);
     }
@@ -2094,17 +2105,17 @@ public class CI {
         var el1 = randomName("el1");
         execute(createReq(add, "event-loop", el0, "to", "event-loop-group", elg));
         execute(createReq(add, "event-loop", el1, "to", "event-loop-group", elg));
-        var sgs = randomName("sgs");
-        execute(createReq(add, "server-groups", sgs));
-        sgsNames.add(sgs);
+        var ups = randomName("ups");
+        execute(createReq(add, "upstream", ups));
+        upsNames.add(ups);
         var sg0 = randomName("sg0");
         var sg1 = randomName("sg1");
         execute(createReq(add, "server-group", sg0, "timeout", "1000", "period", "5000", "up", "2", "down", "3", "method", "wlc", "event-loop-group", elg));
         execute(createReq(add, "server-group", sg1, "timeout", "2000", "period", "2500", "up", "3", "down", "4", "method", "wrr", "event-loop-group", elg));
         sgNames.add(sg0);
         sgNames.add(sg1);
-        execute(createReq(add, "server-group", sg0, "to", "server-groups", sgs, "weight", "10"));
-        execute(createReq(add, "server-group", sg1, "to", "server-groups", sgs, "weight", "20"));
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups, "weight", "10"));
+        execute(createReq(add, "server-group", sg1, "to", "upstream", ups, "weight", "20"));
         var svr00 = randomName("svr00");
         var svr01 = randomName("svr01");
         execute(createReq(add, "server", svr00, "to", "server-group", sg0, "address", "127.0.0.1:8080", "weight", "10"));
@@ -2127,7 +2138,7 @@ public class CI {
         execute(createReq(add, "cert-key", ck, "cert", ckTup.left, "key", ckTup.right));
         certKeyNames.add(ck);
         var tl = randomName("tl");
-        execute(createReq(add, "tcp-lb", tl, "address", "0.0.0.0:18080", "server-groups", sgs,
+        execute(createReq(add, "tcp-lb", tl, "address", "0.0.0.0:18080", "upstream", ups,
             "protocol", "http",
             "acceptor-elg", aelg, "event-loop-group", elg,
             "in-buffer-size", "32768", "out-buffer-size", "32768",
@@ -2135,7 +2146,7 @@ public class CI {
             "security-group", secg));
         tlNames.add(tl);
         var socks5 = randomName("socks5");
-        execute(createReq(add, "socks5-server", socks5, "address", "0.0.0.0:18081", "server-groups", sgs,
+        execute(createReq(add, "socks5-server", socks5, "address", "0.0.0.0:18081", "upstream", ups,
             "acceptor-elg", aelg, "event-loop-group", elg,
             "in-buffer-size", "32768", "out-buffer-size", "32768",
             "security-group", secg,
@@ -2147,7 +2158,7 @@ public class CI {
             "    \"address\": \"0.0.0.0:18080\",\n" +
             "    \"protocol\": \"http\",\n" +
             "    \"backend\": {\n" +
-            "        \"name\": \"" + sgs + "\",\n" +
+            "        \"name\": \"" + ups + "\",\n" +
             "        \"serverGroupList\": [\n" +
             "            {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
@@ -2273,7 +2284,7 @@ public class CI {
             "    \"name\": \"" + socks5 + "\",\n" +
             "    \"address\": \"0.0.0.0:18081\",\n" +
             "    \"backend\": {\n" +
-            "        \"name\": \"" + sgs + "\",\n" +
+            "        \"name\": \"" + ups + "\",\n" +
             "        \"serverGroupList\": [\n" +
             "            {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
@@ -2439,12 +2450,12 @@ public class CI {
             "        ]\n" +
             "    }\n" +
             "}";
-        pretty = requestApi(HttpMethod.GET, "/server-groups/" + sgs + "/server-group/" + sg0 + "/detail").pretty();
-        System.out.println("server-group in server-groups: " + pretty);
+        pretty = requestApi(HttpMethod.GET, "/upstream/" + ups + "/server-group/" + sg0 + "/detail").pretty();
+        System.out.println("server-group in upstream: " + pretty);
         assertEquals(JSON.parse(sgInSgsResp).pretty(), pretty);
 
-        var sgsResp = "{\n" +
-            "    \"name\": \"" + sgs + "\",\n" +
+        var upsResp = "{\n" +
+            "    \"name\": \"" + ups + "\",\n" +
             "    \"serverGroupList\": [\n" +
             "        {\n" +
             "            \"name\": \"" + sg0 + "\",\n" +
@@ -2518,9 +2529,9 @@ public class CI {
             "        }\n" +
             "    ]\n" +
             "}";
-        pretty = requestApi(HttpMethod.GET, "/server-groups/" + sgs + "/detail").pretty();
-        System.out.println("server-groups: " + pretty);
-        assertEquals(JSON.parse(sgsResp).pretty(), pretty);
+        pretty = requestApi(HttpMethod.GET, "/upstream/" + ups + "/detail").pretty();
+        System.out.println("upstream: " + pretty);
+        assertEquals(JSON.parse(upsResp).pretty(), pretty);
 
         var serverResp = "{\n" +
             "    \"name\": \"" + svr00 + "\",\n" +

@@ -14,7 +14,7 @@ import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -27,21 +27,21 @@ public class ServerGroupHandle {
     public static ServerGroup get(Resource resource) throws Exception {
         if (resource.parentResource == null)
             return Application.get().serverGroupHolder.get(resource.alias);
-        List<ServerGroups.ServerGroupHandle> ls = ServerGroupsHandle.get(resource.parentResource).getServerGroups();
-        for (ServerGroups.ServerGroupHandle s : ls) {
+        List<Upstream.ServerGroupHandle> ls = UpstreamHandle.get(resource.parentResource).getServerGroupHandles();
+        for (Upstream.ServerGroupHandle s : ls) {
             if (s.alias.equals(resource.alias))
                 return s.group;
         }
-        throw new NotFoundException("server-group in server-groups " + resource.parentResource.alias, resource.alias);
+        throw new NotFoundException("server-group in upstream " + resource.parentResource.alias, resource.alias);
     }
 
-    public static ServerGroups.ServerGroupHandle getHandle(Resource resource) throws Exception {
-        List<ServerGroups.ServerGroupHandle> ls = ServerGroupsHandle.get(resource.parentResource).getServerGroups();
-        for (ServerGroups.ServerGroupHandle s : ls) {
+    public static Upstream.ServerGroupHandle getHandle(Resource resource) throws Exception {
+        List<Upstream.ServerGroupHandle> ls = UpstreamHandle.get(resource.parentResource).getServerGroupHandles();
+        for (Upstream.ServerGroupHandle s : ls) {
             if (s.alias.equals(resource.alias))
                 return s;
         }
-        throw new NotFoundException("server-group in server-groups " + resource.parentResource.alias, resource.alias);
+        throw new NotFoundException("server-group in upstream " + resource.parentResource.alias, resource.alias);
     }
 
     public static void checkAttachServerGroup(Command cmd) throws Exception {
@@ -78,9 +78,9 @@ public class ServerGroupHandle {
     public static void checkUpdateServerGroup(Command cmd) throws Exception {
         if (cmd.resource.parentResource == null) {
             // can only update the server group self info on top level
-            // i'm not saying that you cannot modify the one in serverGroups
-            // but you don't have to go into serverGroups to modify,
-            // the one on top level is the same one in any serverGroup
+            // i'm not saying that you cannot modify the one in upstream
+            // but you don't have to go into upstream to modify,
+            // the one on top level is the same one in any upstream
             if (cmd.args.containsKey(Param.timeout)
                 || cmd.args.containsKey(Param.period)
                 || cmd.args.containsKey(Param.up)
@@ -99,8 +99,8 @@ public class ServerGroupHandle {
                 }
             }
         } else {
-            // can modify the weight in a ServerGroups
-            if (cmd.resource.parentResource.type != ResourceType.sgs)
+            // can modify the weight in a upstream
+            if (cmd.resource.parentResource.type != ResourceType.ups)
                 throw new Exception(cmd.resource.parentResource.type.fullname + " does not contain " + ResourceType.sg.fullname);
             if (cmd.args.containsKey(Param.w)) {
                 WeightHandle.check(cmd);
@@ -117,7 +117,7 @@ public class ServerGroupHandle {
         if (targetResource == null) {
             return Application.get().serverGroupHolder.names();
         } else {
-            return ServerGroupsHandle.get(targetResource).getServerGroups()
+            return UpstreamHandle.get(targetResource).getServerGroupHandles()
                 .stream().map(g -> g.alias).collect(Collectors.toList());
         }
     }
@@ -132,7 +132,7 @@ public class ServerGroupHandle {
             }
             return list;
         } else {
-            return ServerGroupsHandle.get(targetResource).getServerGroups()
+            return UpstreamHandle.get(targetResource).getServerGroupHandles()
                 .stream().map(h -> new ServerGroupRef(h.alias, h)).collect(Collectors.toList());
         }
     }
@@ -150,24 +150,24 @@ public class ServerGroupHandle {
             HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
             Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd));
         } else {
-            // add into serverGroups
+            // add into upstream
             int weight = WeightHandle.get(cmd);
-            Application.get().serverGroupsHolder.get(cmd.prepositionResource.alias)
+            Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
                 .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
         }
     }
 
     public static void preCheck(Command cmd) throws Exception {
         if (cmd.prepositionResource != null)
-            return; // it's ok to detach from serverGroups
+            return; // it's ok to detach from upstream
         // remove top level server group
         ServerGroup serverGroup = Application.get().serverGroupHolder.get(cmd.resource.alias);
 
-        // check serverGroups
-        for (String groupsName : Application.get().serverGroupsHolder.names()) {
-            ServerGroups groups = Application.get().serverGroupsHolder.get(groupsName);
-            if (groups.getServerGroups().stream().anyMatch(h -> h.group.equals(serverGroup))) {
-                throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgs.fullname + " " + groups.alias);
+        // check upstream
+        for (String upstreamName : Application.get().upstreamHolder.names()) {
+            Upstream groups = Application.get().upstreamHolder.get(upstreamName);
+            if (groups.getServerGroupHandles().stream().anyMatch(h -> h.group.equals(serverGroup))) {
+                throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.ups.fullname + " " + groups.alias);
             }
         }
         // check smart-group-delegate
@@ -184,9 +184,9 @@ public class ServerGroupHandle {
             // remove top level server group
             Application.get().serverGroupHolder.removeAndClear(cmd.resource.alias);
         } else {
-            // detach from serverGroups
+            // detach from upstream
             ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
-            ServerGroupsHandle.get(cmd.prepositionResource).remove(g);
+            UpstreamHandle.get(cmd.prepositionResource).remove(g);
         }
     }
 
@@ -200,7 +200,7 @@ public class ServerGroupHandle {
                 g.setMethod(MethHandle.get(cmd));
             }
         } else {
-            ServerGroups.ServerGroupHandle h = getHandle(cmd.resource);
+            Upstream.ServerGroupHandle h = getHandle(cmd.resource);
             if (cmd.args.containsKey(Param.w)) {
                 h.setWeight(WeightHandle.get(cmd));
             }
@@ -210,7 +210,7 @@ public class ServerGroupHandle {
     public static class ServerGroupRef {
         private final String alias;
         private final ServerGroup g;
-        private final ServerGroups.ServerGroupHandle h;
+        private final Upstream.ServerGroupHandle h;
 
         public ServerGroupRef(String alias, ServerGroup g) {
             this.alias = alias;
@@ -218,7 +218,7 @@ public class ServerGroupHandle {
             this.h = null;
         }
 
-        public ServerGroupRef(String alias, ServerGroups.ServerGroupHandle h) {
+        public ServerGroupRef(String alias, Upstream.ServerGroupHandle h) {
             this.alias = alias;
             this.h = h;
             this.g = h.group;

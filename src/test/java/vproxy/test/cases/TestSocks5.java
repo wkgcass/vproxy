@@ -8,7 +8,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
@@ -28,7 +28,7 @@ public class TestSocks5 {
 
     private static SelectorEventLoop serverLoop;
 
-    private ServerGroups sgs0;
+    private Upstream ups0;
     private EventLoopGroup elg0;
     private ServerGroup sg0;
     private ServerGroup domainDotComGroup;
@@ -56,7 +56,7 @@ public class TestSocks5 {
 
     @Before
     public void setUp() throws Exception {
-        sgs0 = new ServerGroups("sgs0");
+        ups0 = new Upstream("ups0");
         elg0 = new EventLoopGroup("elg0");
         elg0.add("el0");
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
@@ -76,13 +76,13 @@ public class TestSocks5 {
 
         // connection will not spread between groups
         // so just add them
-        sgs0.add(sg0, 10);
-        sgs0.add(domainDotComGroup, 10);
+        ups0.add(sg0, 10);
+        ups0.add(domainDotComGroup, 10);
 
         socks5 = new Socks5Server(
             "socks5", elg0, elg0,
             new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 18080),
-            sgs0,
+            ups0,
             Config.tcpTimeout, 16384, 16384, SecurityGroup.allowAll()
         );
         socks5.start();

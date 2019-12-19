@@ -103,11 +103,11 @@ You can use `list-detail` to check current health check status.
 list-detail server in server-group ngx
 ```
 
-Create a `server-groups` resource, and attach group `ngx` to the new resource.
+Create a `upstream` resource, and attach group `ngx` to the new resource.
 
 ```
-add server-groups backend-groups
-add server-group ngx to server-groups backend-groups
+add upstream backend-groups
+add server-group ngx to upstream backend-groups
 ```
 
 #### 5. TCP LB
@@ -115,7 +115,7 @@ add server-group ngx to server-groups backend-groups
 Create a loadbalancer and bind `10.0.0.10:80`.
 
 ```
-add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:80 server-groups backend-groups in-buffer-size 16384 out-buffer-size 16384
+add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:80 upstream backend-groups in-buffer-size 16384 out-buffer-size 16384
 ```
 
 Then the tcp loadbalancer starts.

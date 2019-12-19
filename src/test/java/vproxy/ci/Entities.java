@@ -92,12 +92,12 @@ public class Entities {
         String name;
     }
 
-    static class ServerGroupInServerGroups {
+    static class ServerGroupInUpstream {
         String name;
         @Optional @Modifiable int weight;
     }
 
-    static class ServerGroups {
+    static class Upstream {
         String name;
     }
 

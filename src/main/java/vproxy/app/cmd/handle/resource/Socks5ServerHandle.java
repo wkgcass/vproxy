@@ -14,7 +14,7 @@ import vproxy.component.app.Socks5Server;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.util.Utils;
 
 import java.net.InetSocketAddress;
@@ -34,8 +34,8 @@ public class Socks5ServerHandle {
     public static void checkCreateSocks5Server(Command cmd) throws Exception {
         if (!cmd.args.containsKey(Param.addr))
             throw new Exception("missing argument " + Param.addr.fullname);
-        if (!cmd.args.containsKey(Param.sgs))
-            throw new Exception("missing argument " + Param.sgs.fullname);
+        if (!cmd.args.containsKey(Param.ups))
+            throw new Exception("missing argument " + Param.ups.fullname);
 
         AddrHandle.check(cmd);
 
@@ -92,7 +92,7 @@ public class Socks5ServerHandle {
         EventLoopGroup acceptor = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.aelg));
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         InetSocketAddress addr = AddrHandle.get(cmd);
-        ServerGroups backend = Application.get().serverGroupsHolder.get(cmd.args.get(Param.sgs));
+        Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
         int timeout;

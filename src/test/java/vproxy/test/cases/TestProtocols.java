@@ -28,7 +28,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.poc.dubbo.GreetingsService;
 import vproxy.poc.grpc.GreeterGrpc;
 import vproxy.poc.grpc.HelloRequest;
@@ -53,7 +53,7 @@ public class TestProtocols {
 
     private TcpLB lb;
     private EventLoopGroup elg;
-    private ServerGroups sgs;
+    private Upstream ups;
     private int step = 0;
 
     @Before
@@ -72,9 +72,9 @@ public class TestProtocols {
         sg1.getServerHandles().forEach(h -> h.healthy = true);
         sg2.getServerHandles().forEach(h -> h.healthy = true);
 
-        sgs = new ServerGroups("sgs0");
-        sgs.add(sg1, 10);
-        sgs.add(sg2, 10);
+        ups = new Upstream("ups0");
+        ups.add(sg1, 10);
+        ups.add(sg2, 10);
     }
 
     @After
@@ -89,17 +89,17 @@ public class TestProtocols {
 
     private void initLb(String protocol) throws Exception {
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), ups, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
         );
         lb.start();
     }
 
     private void initDubboLb() throws Exception {
-        ServerGroups sgs = new ServerGroups("dubboSgs");
+        Upstream ups = new Upstream("dubboUps");
         ServerGroup sg = new ServerGroup("dubboSg", elg, new HealthCheckConfig(1000, 10000, 1, 3), Method.wrr);
-        sgs.add(sg, 10);
+        ups.add(sg, 10);
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), sgs, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), ups, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
         );
         lb.start();
         sg.add("svr3", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port3dubbo), 10);
@@ -640,6 +640,7 @@ public class TestProtocols {
             }
             if (err[0] != null)
                 throw err[0];
+            Thread.sleep(100);
             assertEquals(200, step);
             assertEquals(1d, ((double) svr1[0]) / svr2[0], 0.05);
             assertEquals(2, conn[0]);

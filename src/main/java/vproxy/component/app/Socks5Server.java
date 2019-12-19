@@ -6,7 +6,7 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
 import vproxy.connection.Protocol;
@@ -58,11 +58,11 @@ public class Socks5Server extends TcpLB {
             }
 
             // then let's try to find a connector
-            ServerGroups serverGroups = Socks5Server.super.backends;
+            Upstream upstream = Socks5Server.super.backends;
             if (type == AddressType.domain) {
                 String addrport = address + ":" + port;
                 // search for a group with name same as the address:port
-                for (ServerGroups.ServerGroupHandle gh : serverGroups.getServerGroups()) {
+                for (Upstream.ServerGroupHandle gh : upstream.getServerGroupHandles()) {
                     if (gh.alias.equals(addrport)) { // matches
                         providedCallback.accept(gh.group.next(accepted.remote));
                         return;
@@ -74,7 +74,7 @@ public class Socks5Server extends TcpLB {
                 // and maybe more advantages in the future
 
                 // search for the backend in all groups
-                for (ServerGroups.ServerGroupHandle gh : serverGroups.getServerGroups()) {
+                for (Upstream.ServerGroupHandle gh : upstream.getServerGroupHandles()) {
                     for (ServerGroup.ServerHandle sh : gh.group.getServerHandles()) {
                         // match address and port
                         if (Utils.ipStr(sh.server.getAddress().getAddress()).equals(address) && sh.server.getPort() == port) {
@@ -103,7 +103,7 @@ public class Socks5Server extends TcpLB {
     private final Socks5ServerConnectorProvider connectorProvider = new Socks5ServerConnectorProvider();
     public boolean allowNonBackend = false;
 
-    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, ServerGroups backends, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
+    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backends, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
         super(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
     }
 

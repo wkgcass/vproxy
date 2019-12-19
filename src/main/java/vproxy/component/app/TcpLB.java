@@ -11,7 +11,7 @@ import vproxy.component.proxy.*;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.processor.Hint;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.*;
 import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
@@ -69,7 +69,7 @@ public class TcpLB {
     public final EventLoopGroup acceptorGroup;
     public final EventLoopGroup workerGroup;
     public final InetSocketAddress bindAddress;
-    public final ServerGroups backends;
+    public final Upstream backends;
     private int timeout; // modifiable
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
@@ -97,7 +97,7 @@ public class TcpLB {
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
-                 ServerGroups backends,
+                 Upstream backends,
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
@@ -108,7 +108,7 @@ public class TcpLB {
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
-                 ServerGroups backends,
+                 Upstream backends,
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  String protocol,

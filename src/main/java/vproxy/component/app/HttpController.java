@@ -116,28 +116,28 @@ public class HttpController {
                 .build(),
             "name"));
         server.del(moduleBase + "/event-loop-group/:elg", wrapAsync(this::deleteEventLoopGroup));
-        // server-group in server-groups
-        server.get(moduleBase + "/server-groups/:sgs/server-group/:sg/detail", wrapAsync(this::getServerGroupInGroupsDetail));
-        server.get(moduleBase + "/server-groups/:sgs/server-group/:sg", wrapAsync(this::getServerGroupInGroups));
-        server.get(moduleBase + "/server-groups/:sgs/server-group", wrapAsync(this::listServerGroupInGroups));
-        server.pst(moduleBase + "/server-groups/:sgs/server-group", wrapAsync(this::createServerGroupInGroups, new ObjectBuilder()
+        // server-group in upstream
+        server.get(moduleBase + "/upstream/:ups/server-group/:sg/detail", wrapAsync(this::getServerGroupInUpstreamDetail));
+        server.get(moduleBase + "/upstream/:ups/server-group/:sg", wrapAsync(this::getServerGroupInUpstream));
+        server.get(moduleBase + "/upstream/:ups/server-group", wrapAsync(this::listServerGroupInUpstream));
+        server.pst(moduleBase + "/upstream/:ups/server-group", wrapAsync(this::createServerGroupInUpstream, new ObjectBuilder()
                 .put("name", "alias of the server group to be added")
                 .put("weight", 10)
                 .build(),
             "name"));
-        server.put(moduleBase + "/server-groups/:sgs/server-group/:sg", wrapAsync(this::updateServerGroupInGroups, new ObjectBuilder()
+        server.put(moduleBase + "/upstream/:ups/server-group/:sg", wrapAsync(this::updateServerGroupInUpstream, new ObjectBuilder()
             .put("weight", 10)
             .build()));
-        server.del(moduleBase + "/server-groups/:sgs/server-group/:sg", wrapAsync(this::deleteServerGroupInGroups));
-        // server-groups
-        server.get(moduleBase + "/server-groups/:sgs/detail", wrapAsync(this::getServerGroupsDetail));
-        server.get(moduleBase + "/server-groups/:sgs", wrapAsync(this::getServerGroups));
-        server.get(moduleBase + "/server-groups", wrapAsync(this::listServerGroups));
-        server.pst(moduleBase + "/server-groups", wrapAsync(this::createServerGroups, new ObjectBuilder()
-                .put("name", "alias of the server-groups")
+        server.del(moduleBase + "/upstream/:ups/server-group/:sg", wrapAsync(this::deleteServerGroupInUpstream));
+        // upstream
+        server.get(moduleBase + "/upstream/:ups/detail", wrapAsync(this::getUpstreamDetail));
+        server.get(moduleBase + "/upstream/:ups", wrapAsync(this::getUpstream));
+        server.get(moduleBase + "/upstream", wrapAsync(this::listUpstream));
+        server.pst(moduleBase + "/upstream", wrapAsync(this::createUpstream, new ObjectBuilder()
+                .put("name", "alias of the upstream")
                 .build(),
             "name"));
-        server.del(moduleBase + "/server-groups/:sgs", wrapAsync(this::deleteServerGroups));
+        server.del(moduleBase + "/upstream/:ups", wrapAsync(this::deleteUpstream));
         // server
         server.get(moduleBase + "/server-group/:sg/server/:svr/detail", wrapAsync(this::getServer));
         server.get(moduleBase + "/server-group/:sg/server/:svr", wrapAsync(this::getServer));
@@ -327,7 +327,7 @@ public class HttpController {
         var address = body.getString("address");
         var backend = body.getString("backend");
         var options = new LinkedList<>(Arrays.asList(
-            "add", "tcp-lb", name, "address", address, "server-groups", backend
+            "add", "tcp-lb", name, "address", address, "upstream", backend
         ));
         if (body.containsKey("protocol")) {
             options.add("protocol");
@@ -420,7 +420,7 @@ public class HttpController {
         var address = body.getString("address");
         var backend = body.getString("backend");
         var options = new LinkedList<>(Arrays.asList(
-            "add", "socks5-server", name, "address", address, "server-groups", backend
+            "add", "socks5-server", name, "address", address, "upstream", backend
         ));
         if (body.containsKey("acceptorLoopGroup")) {
             options.add("acceptor-elg");
@@ -543,43 +543,43 @@ public class HttpController {
         utils.execute(cb, "remove", "event-loop-group", rctx.param("elg"));
     }
 
-    private void getServerGroupInGroupsDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgsName = rctx.param("sgs");
-        var sgs = Application.get().serverGroupsHolder.get(sgsName);
+    private void getServerGroupInUpstreamDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var upsName = rctx.param("ups");
+        var ups = Application.get().upstreamHolder.get(upsName);
         var sgName = rctx.param("sg");
-        var opt = sgs.getServerGroups().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
+        var opt = ups.getServerGroupHandles().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
         if (opt.isEmpty()) {
-            throw new NotFoundException("server-group in server-groups " + sgsName, sgName);
+            throw new NotFoundException("server-group in upstream " + upsName, sgName);
         } else {
             cb.succeeded(utils.formatServerGroupInGroupsDetail(opt.get()));
         }
     }
 
-    private void getServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgsName = rctx.param("sgs");
-        var sgs = Application.get().serverGroupsHolder.get(sgsName);
+    private void getServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var upsName = rctx.param("ups");
+        var ups = Application.get().upstreamHolder.get(upsName);
         var sgName = rctx.param("sg");
-        var opt = sgs.getServerGroups().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
+        var opt = ups.getServerGroupHandles().stream().filter(sg -> sg.alias.equals(sgName)).findAny();
         if (opt.isEmpty()) {
-            throw new NotFoundException("server-group in server-groups " + sgsName, sgName);
+            throw new NotFoundException("server-group in upstream " + upsName, sgName);
         } else {
             cb.succeeded(utils.formatServerGroupInGroups(opt.get()));
         }
     }
 
-    private void listServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgs = Application.get().serverGroupsHolder.get(rctx.param("sgs"));
+    private void listServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var ups = Application.get().upstreamHolder.get(rctx.param("ups"));
         var arr = new ArrayBuilder();
-        sgs.getServerGroups().forEach(sg -> arr.addInst(utils.formatServerGroupInGroups(sg)));
+        ups.getServerGroupHandles().forEach(sg -> arr.addInst(utils.formatServerGroupInGroups(sg)));
         cb.succeeded(arr.build());
     }
 
-    private void createServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var sgs = rctx.param("sgs");
+    private void createServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var ups = rctx.param("ups");
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         var sg = body.getString("name");
         List<String> options = new LinkedList<>(Arrays.asList(
-            "add", "server-group", sg, "to", "server-groups", sgs
+            "add", "server-group", sg, "to", "upstream", ups
         ));
         if (body.containsKey("weight")) {
             options.add("weight");
@@ -588,12 +588,12 @@ public class HttpController {
         utils.execute(cb, options);
     }
 
-    private void updateServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var sgs = rctx.param("sgs");
+    private void updateServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var ups = rctx.param("ups");
         var sg = rctx.param("sg");
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         List<String> options = new LinkedList<>(Arrays.asList(
-            "update", "server-group", sg, "in", "server-groups", sgs
+            "update", "server-group", sg, "in", "upstream", ups
         ));
         if (body.containsKey("weight")) {
             options.add("weight");
@@ -602,43 +602,43 @@ public class HttpController {
         utils.execute(cb, options);
     }
 
-    private void deleteServerGroupInGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var sgs = rctx.param("sgs");
+    private void deleteServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var ups = rctx.param("ups");
         var sg = rctx.param("sg");
         utils.execute(cb,
-            "remove", "server-group", sg, "from", "server-groups", sgs);
+            "remove", "server-group", sg, "from", "upstream", ups);
     }
 
-    private void getServerGroupsDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgs = Application.get().serverGroupsHolder.get(rctx.param("sgs"));
-        cb.succeeded(utils.formatServerGroupsDetail(sgs));
+    private void getUpstreamDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var ups = Application.get().upstreamHolder.get(rctx.param("ups"));
+        cb.succeeded(utils.formatUpstreamDetail(ups));
     }
 
-    private void getServerGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgs = Application.get().serverGroupsHolder.get(rctx.param("sgs"));
-        cb.succeeded(utils.formatServerGroups(sgs));
+    private void getUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var ups = Application.get().upstreamHolder.get(rctx.param("ups"));
+        cb.succeeded(utils.formatUpstream(ups));
     }
 
-    private void listServerGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var holder = Application.get().serverGroupsHolder;
+    private void listUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var holder = Application.get().upstreamHolder;
         var names = holder.names();
         var arr = new ArrayBuilder();
         for (var name : names) {
-            var sgs = holder.get(name);
-            arr.addInst(utils.formatServerGroups(sgs));
+            var ups = holder.get(name);
+            arr.addInst(utils.formatUpstream(ups));
         }
         cb.succeeded(arr.build());
     }
 
-    private void createServerGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+    private void createUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         utils.execute(cb,
-            "add", "server-groups", body.getString("name"));
+            "add", "upstream", body.getString("name"));
     }
 
-    private void deleteServerGroups(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+    private void deleteUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
-            "remove", "server-groups", rctx.param("sgs"));
+            "remove", "upstream", rctx.param("ups"));
     }
 
     private void getServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

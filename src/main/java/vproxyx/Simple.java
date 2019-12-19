@@ -176,7 +176,7 @@ public class Simple {
             Application.get().certKeyHolder.add("crt", certpath, keypath);
         }
         // create group
-        Application.get().serverGroupsHolder.add("collection");
+        Application.get().upstreamHolder.add("collection");
         ServerGroup group = Application.get().serverGroupHolder.add("backend",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr);
@@ -194,13 +194,13 @@ public class Simple {
                 group.add("backend" + (++svrCnt), svr.host, new InetSocketAddress(addr, svr.port), 10);
             }
         }
-        Application.get().serverGroupsHolder.get("collection").add(group, 10);
+        Application.get().upstreamHolder.get("collection").add(group, 10);
         // create lb
         Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port),
-            Application.get().serverGroupsHolder.get("collection"),
+            Application.get().upstreamHolder.get("collection"),
             60_000,
             4096,
             4096,

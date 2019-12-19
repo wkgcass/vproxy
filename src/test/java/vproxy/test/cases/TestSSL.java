@@ -14,7 +14,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.ServerGroups;
+import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.*;
 import vproxy.dns.Resolver;
 import vproxy.http.HttpRespParser;
@@ -409,9 +409,9 @@ public class TestSSL {
             sslContext.init(km, null, null);
 
             elg.add("el");
-            ServerGroups sgs = new ServerGroups("sgs");
+            Upstream ups = new Upstream("ups");
             ServerGroup sg = new ServerGroup("sg", elg, new HealthCheckConfig(400, 2000, 1, 2, CheckProtocol.tcpDelay), Method.wrr);
-            sgs.add(sg, 10);
+            ups.add(sg, 10);
 
             Thread.sleep(1000);
 
@@ -422,7 +422,7 @@ public class TestSSL {
                 elg,
                 elg,
                 new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 19999),
-                sgs,
+                ups,
                 1000,
                 4096,
                 4096,
