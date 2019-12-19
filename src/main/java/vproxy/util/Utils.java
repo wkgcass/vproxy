@@ -829,4 +829,13 @@ public class Utils {
         }
         return baos.toByteArray();
     }
+
+    public static boolean assertOn() {
+        try {
+            assert false;
+            return false;
+        } catch (AssertionError ignore) {
+            return true;
+        }
+    }
 }

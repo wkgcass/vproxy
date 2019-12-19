@@ -35,7 +35,7 @@ public class Logger {
         }
 
         {
-            if (lowLevelDebugOn) {
+            if (lowLevelDebugOn && Utils.assertOn()) {
                 stackTraceOn = true;
             } else {
                 String stackTrace = System.getProperty("vproxy.stacktrace", "off");
