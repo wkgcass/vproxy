@@ -586,9 +586,13 @@ public class TestProtocols {
                     err[0] = t;
                 }
                 if (req.version() == HttpVersion.HTTP_2) {
-                    ++ver2[0];
+                    synchronized (ver2) {
+                        ++ver2[0];
+                    }
                 } else {
-                    ++ver1[0];
+                    synchronized (ver1) {
+                        ++ver1[0];
+                    }
                 }
                 String resp = "" + req.localAddress().port();
                 req.response().end("resp-" + resp);
@@ -640,7 +644,6 @@ public class TestProtocols {
             }
             if (err[0] != null)
                 throw err[0];
-            Thread.sleep(100);
             assertEquals(200, step);
             assertEquals(1d, ((double) svr1[0]) / svr2[0], 0.05);
             assertEquals(2, conn[0]);

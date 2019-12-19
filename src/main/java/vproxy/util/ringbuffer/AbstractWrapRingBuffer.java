@@ -186,8 +186,23 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
         checkException();
-        // do store to the plain buffer
-        return plainBufferForApp.storeBytesFrom(channel);
+        int len = 0;
+        while (true) {
+            // do store to the plain buffer
+            int read = plainBufferForApp.storeBytesFrom(channel);
+            if (read == 0) {
+                break;
+            }
+            if (read == -1) {
+                if (len == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            }
+            len += read;
+        }
+        return len;
     }
 
     @Override

@@ -12,7 +12,7 @@ import java.util.Deque;
 import java.util.LinkedList;
 
 public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
-    class WritableHandler implements RingBufferETHandler {
+    protected class WritableHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
             triggerReadable(); // proxy the event
@@ -54,17 +54,25 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
         checkException();
-        int read = encryptedBufferForInput.storeBytesFrom(channel);
-        if (read == 0) {
-            return 0; // maybe the buffer is full
+        int len = 0;
+        while (true) {
+            int read = encryptedBufferForInput.storeBytesFrom(channel);
+            if (read == 0) {
+                break; // maybe the buffer is full
+            }
+            if (read == -1) {
+                assert Logger.lowLevelDebug("reading from remote return -1");
+                if (len == 0) {
+                    return -1;
+                } else {
+                    break;
+                }
+            }
+            len += read;
+            // got new data, let's unwrap it
+            generalUnwrap();
         }
-        if (read == -1) {
-            assert Logger.lowLevelDebug("reading from remote return -1");
-            return -1;
-        }
-        // got new data, let's unwrap it
-        generalUnwrap();
-        return read;
+        return len;
     }
 
     // -------------------
