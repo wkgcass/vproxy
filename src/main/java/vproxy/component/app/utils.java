@@ -300,6 +300,7 @@ class utils {
             .put("period", sg.getHealthCheckConfig().period)
             .put("up", sg.getHealthCheckConfig().up)
             .put("down", sg.getHealthCheckConfig().down)
+            .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
             .put("eventLoopGroup", sg.eventLoopGroup.alias)
             .build();
@@ -312,6 +313,7 @@ class utils {
             .put("period", sg.getHealthCheckConfig().period)
             .put("up", sg.getHealthCheckConfig().up)
             .put("down", sg.getHealthCheckConfig().down)
+            .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(sg.eventLoopGroup))
             .putArray("serverList", arr -> sg.getServerHandles().forEach(svr -> arr.addInst(utils.formatServer(svr))))
@@ -337,18 +339,18 @@ class utils {
     static JSON.Object formatUpstreamDetail(Upstream ups) {
         return new ObjectBuilder()
             .put("name", ups.alias)
-            .putArray("serverGroupList", arr -> ups.getServerGroupHandles().forEach(sg -> arr.addInst(formatServerGroupInGroupsDetail(sg))))
+            .putArray("serverGroupList", arr -> ups.getServerGroupHandles().forEach(sg -> arr.addInst(formatServerGroupInUpstreamDetail(sg))))
             .build();
     }
 
-    static JSON.Object formatServerGroupInGroups(Upstream.ServerGroupHandle sg) {
+    static JSON.Object formatServerGroupInUpstream(Upstream.ServerGroupHandle sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
             .build();
     }
 
-    static JSON.Object formatServerGroupInGroupsDetail(Upstream.ServerGroupHandle sg) {
+    static JSON.Object formatServerGroupInUpstreamDetail(Upstream.ServerGroupHandle sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())

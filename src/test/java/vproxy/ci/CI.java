@@ -687,6 +687,7 @@ public class CI {
             assertEquals("200", details.get("period"));
             assertEquals("2", details.get("up"));
             assertEquals("5", details.get("down"));
+            assertEquals("tcp", details.get("protocol"));
             assertEquals("wrr", details.get("method"));
             assertEquals(elg0, details.get("event-loop-group"));
         }
@@ -699,6 +700,7 @@ public class CI {
             assertEquals("200", details.get("period"));
             assertEquals("2", details.get("up"));
             assertEquals("5", details.get("down"));
+            assertEquals("tcp", details.get("protocol"));
             assertEquals("wrr", details.get("method"));
             assertEquals(elg0, details.get("event-loop-group"));
             assertEquals("12", details.get("weight"));
@@ -1285,7 +1287,8 @@ public class CI {
         }
 
         // bytes-in and bytes-out are not easy to be tested
-        // we just leave here a TODO
+        // we just leave here a
+        // TODO
     }
 
     @Test
@@ -2023,6 +2026,15 @@ public class CI {
     @Test
     public void apiV1ServerGroup() throws Exception {
         run("/server-group", Entities.ServerGroup.class,
+            "protocol", "tcp",
+            "eventLoopGroup", randomEventLoopGroup());
+        assertEquals(CC(2), postCnt);
+        assertEquals(CC(2) * CC(2), putCnt);
+    }
+
+    @Test
+    public void apiV1ServerGroupNoProtocol() throws Exception {
+        run("/server-group", Entities.ServerGroupNoProtocol.class,
             "eventLoopGroup", randomEventLoopGroup());
         assertEquals(CC(2), postCnt);
         assertEquals(CC(2) * CC(2), putCnt);
@@ -2169,6 +2181,7 @@ public class CI {
             "                    \"period\": 5000,\n" +
             "                    \"up\": 2,\n" +
             "                    \"down\": 3,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wlc\",\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
@@ -2204,6 +2217,7 @@ public class CI {
             "                    \"period\": 2500,\n" +
             "                    \"up\": 3,\n" +
             "                    \"down\": 4,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wrr\",\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
@@ -2295,6 +2309,7 @@ public class CI {
             "                    \"period\": 5000,\n" +
             "                    \"up\": 2,\n" +
             "                    \"down\": 3,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wlc\",\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
@@ -2330,6 +2345,7 @@ public class CI {
             "                    \"period\": 2500,\n" +
             "                    \"up\": 3,\n" +
             "                    \"down\": 4,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wrr\",\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
@@ -2424,6 +2440,7 @@ public class CI {
             "        \"period\": 5000,\n" +
             "        \"up\": 2,\n" +
             "        \"down\": 3,\n" +
+            "        \"protocol\": \"tcp\",\n" +
             "        \"method\": \"wlc\",\n" +
             "        \"eventLoopGroup\": {\n" +
             "            \"name\": \"" + elg + "\",\n" +
@@ -2466,6 +2483,7 @@ public class CI {
             "                \"period\": 5000,\n" +
             "                \"up\": 2,\n" +
             "                \"down\": 3,\n" +
+            "                \"protocol\": \"tcp\",\n" +
             "                \"method\": \"wlc\",\n" +
             "                \"eventLoopGroup\": {\n" +
             "                    \"name\": \"" + elg + "\",\n" +
@@ -2501,6 +2519,7 @@ public class CI {
             "                \"period\": 2500,\n" +
             "                \"up\": 3,\n" +
             "                \"down\": 4,\n" +
+            "                \"protocol\": \"tcp\",\n" +
             "                \"method\": \"wrr\",\n" +
             "                \"eventLoopGroup\": {\n" +
             "                    \"name\": \"" + elg + "\",\n" +
@@ -2550,6 +2569,7 @@ public class CI {
             "    \"period\": 5000,\n" +
             "    \"up\": 2,\n" +
             "    \"down\": 3,\n" +
+            "    \"protocol\": \"tcp\",\n" +
             "    \"method\": \"wlc\",\n" +
             "    \"eventLoopGroup\": {\n" +
             "        \"name\": \"" + elg + "\",\n" +
@@ -2637,6 +2657,7 @@ public class CI {
             "        \"period\": 5000,\n" +
             "        \"up\": 2,\n" +
             "        \"down\": 3,\n" +
+            "        \"protocol\": \"tcp\",\n" +
             "        \"method\": \"source\",\n" +
             "        \"eventLoopGroup\": {\n" +
             "            \"name\": \"" + elg + "\",\n" +

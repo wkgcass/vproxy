@@ -228,7 +228,8 @@ public class ServerGroupHandle {
         public String toString() {
             HealthCheckConfig c = g.getHealthCheckConfig();
             return alias + " -> timeout " + c.timeout + " period " + c.period +
-                " up " + c.up + " down " + c.down + " method " + g.getMethod() +
+                " up " + c.up + " down " + c.down + " protocol " + c.checkProtocol.name() +
+                " method " + g.getMethod() +
                 " event-loop-group " + g.eventLoopGroup.alias +
                 (h == null ? "" : " weight " + h.getWeight());
         }

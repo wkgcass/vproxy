@@ -323,6 +323,7 @@ Specify name, event loop, load balancing method, health check config and create 
 * period: do check every `${period}` milliseconds
 * up: set server status to UP after succeeded for `${up}` times
 * down: set server status to DOWN after failed for `${down}` times
+* protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `none`. default `tcp`
 * method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
 * event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
 
@@ -370,12 +371,12 @@ list-detail server-group in upstream ups0
 
 Change health check config or load balancing algorithm.
 
-Param list is the same as add, but not all required.
+Param list is the same as add, but not all required. Note that if you change the health check related params and not specifying `procotol`, it will be set to `tcp` as default.
 
 Also you can change the weight of a group in a `upstream` resource.
 
 ```
-update server-group sg0 timeout 500 period 600 up 3 down 2
+update server-group sg0 timeout 500 period 600 up 3 down 2 protocol tcp
 "OK"
 
 update server-group sg0 method wlc

@@ -162,6 +162,7 @@ public class HttpController {
                 .put("period", 5000)
                 .put("up", 2)
                 .put("down", 3)
+                .put("protocol", "the protocol used to do health check")
                 .put("method", "load balancing method")
                 .put("eventLoopGroup", "choose a event-loop-group for the server group. health check operations will be performed on the event loop group")
                 .build(),
@@ -171,6 +172,7 @@ public class HttpController {
             .put("period", 5000)
             .put("up", 2)
             .put("down", 3)
+            .put("protocol", "the protocol used to do health check")
             .put("method", "load balancing method")
             .build()));
         server.del(moduleBase + "/server-group/:sg", wrapAsync(this::deleteServerGroup));
@@ -551,7 +553,7 @@ public class HttpController {
         if (opt.isEmpty()) {
             throw new NotFoundException("server-group in upstream " + upsName, sgName);
         } else {
-            cb.succeeded(utils.formatServerGroupInGroupsDetail(opt.get()));
+            cb.succeeded(utils.formatServerGroupInUpstreamDetail(opt.get()));
         }
     }
 
@@ -563,14 +565,14 @@ public class HttpController {
         if (opt.isEmpty()) {
             throw new NotFoundException("server-group in upstream " + upsName, sgName);
         } else {
-            cb.succeeded(utils.formatServerGroupInGroups(opt.get()));
+            cb.succeeded(utils.formatServerGroupInUpstream(opt.get()));
         }
     }
 
     private void listServerGroupInUpstream(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         var ups = Application.get().upstreamHolder.get(rctx.param("ups"));
         var arr = new ArrayBuilder();
-        ups.getServerGroupHandles().forEach(sg -> arr.addInst(utils.formatServerGroupInGroups(sg)));
+        ups.getServerGroupHandles().forEach(sg -> arr.addInst(utils.formatServerGroupInUpstream(sg)));
         cb.succeeded(arr.build());
     }
 
@@ -728,6 +730,10 @@ public class HttpController {
         options.add("" + body.getInt("up"));
         options.add("down");
         options.add("" + body.getInt("down"));
+        if (body.containsKey("protocol")) {
+            options.add("protocol");
+            options.add(body.getString("protocol"));
+        }
         if (body.containsKey("method")) {
             options.add("method");
             options.add(body.getString("method"));
@@ -746,7 +752,7 @@ public class HttpController {
         options.add("server-group");
         options.add(rctx.param("sg"));
 
-        if (body.containsKey("timeout") || body.containsKey("period") || body.containsKey("up") || body.containsKey("down")) {
+        if (body.containsKey("timeout") || body.containsKey("period") || body.containsKey("up") || body.containsKey("down") || body.containsKey("protocol")) {
             // health check options should be set all together
             if (!body.containsKey("timeout")
                 || !body.containsKey("period")
@@ -767,6 +773,10 @@ public class HttpController {
             options.add("" + up);
             options.add("down");
             options.add("" + down);
+            if (body.containsKey("protocol")) {
+                options.add("protocol");
+                options.add(body.getString("protocol"));
+            }
         }
         if (body.containsKey("method")) {
             options.add("method");

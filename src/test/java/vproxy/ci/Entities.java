@@ -113,6 +113,19 @@ public class Entities {
         @Modifiable @Sticky(1) int period;
         @Modifiable @Sticky(1) int up;
         @Modifiable @Sticky(1) int down;
+        @Modifiable @Sticky(1) String protocol;
+        @Modifiable @Optional LoadBalancingMethod method;
+        @Optional String eventLoopGroup;
+    }
+
+    // the base code does not support sticky fields with optional tag
+    // so create another class without the protocol field
+    static class ServerGroupNoProtocol {
+        String name;
+        @Modifiable @Sticky(1) int timeout;
+        @Modifiable @Sticky(1) int period;
+        @Modifiable @Sticky(1) int up;
+        @Modifiable @Sticky(1) int down;
         @Modifiable @Optional LoadBalancingMethod method;
         @Optional String eventLoopGroup;
     }

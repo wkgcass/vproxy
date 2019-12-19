@@ -393,7 +393,7 @@ public class Shutdown {
                 HealthCheckConfig c = sg.getHealthCheckConfig();
 
                 String cmd = "add server-group " + sg.alias +
-                    " timeout " + c.timeout + " period " + c.period + " up " + c.up + " down " + c.down +
+                    " timeout " + c.timeout + " period " + c.period + " up " + c.up + " down " + c.down + " protocol " + c.checkProtocol.name() +
                     " method " + sg.getMethod() + " event-loop-group " + sg.eventLoopGroup.alias;
                 commands.add(cmd);
                 serverGroupList.add(sg);

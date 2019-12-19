@@ -627,6 +627,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.period, "do check every `${period}` milliseconds"),
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times"),
+                        new ResActParamMan(ParamMan.protocol, "the protocol used for checking the servers, you may choose `tcp`, `none`", "tcp"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "wrr"),
                         new ResActParamMan(ParamMan.eventloopgroup, "choose a event-loop-group for the server group. health check operations will be performed on the event loop group", Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME)
                     ),
@@ -680,6 +681,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.period, "do check every `${period}` milliseconds", "not changed"),
                         new ResActParamMan(ParamMan.up, "set server status to UP after succeeded for `${up}` times", "not changed"),
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times", "not changed"),
+                        new ResActParamMan(ParamMan.protocol, "the protocol used for checking the servers, you may choose `tcp`, `none`. " +
+                            "Note: this field will be set to `tcp` as default when updating other hc options", "not changed"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "not changed"),
                         new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource", "not changed")
                     ),

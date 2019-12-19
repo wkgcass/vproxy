@@ -390,7 +390,7 @@ public class TestSSL {
 
         try {
             // start backend
-            vertx.createHttpServer().requestHandler(req -> req.response().end("hello")).listen(49999);
+            vertx.createHttpServer().requestHandler(req -> req.response().end("hello")).listen(39999);
 
             // build ssl context if needed
             // create ctx
@@ -415,7 +415,7 @@ public class TestSSL {
 
             Thread.sleep(1000);
 
-            sg.add("svr", new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 49999), 10);
+            sg.add("svr", new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 39999), 10);
 
             TcpLB tl = new TcpLB(
                 "testSslProxy",
