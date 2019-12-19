@@ -20,6 +20,7 @@ import vproxy.test.cases.*;
     TestSSL.class,
     TestProtocols.class,
     TestHttp1Parser.class,
+    TestDNS.class,
 
     AfterAll.class
 })
