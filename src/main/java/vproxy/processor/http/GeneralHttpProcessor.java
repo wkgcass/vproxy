@@ -86,8 +86,9 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
         } else {
             ctx.useHttp = true;
             // feed the h1 processor with these two bytes
-            httpProcessor.feed(ctx.httpContext, subCtx.httpSubContext, data);
-            return data;
+            ByteArray ret = httpProcessor.feed(ctx.httpContext, subCtx.httpSubContext, data);
+            assert ret == null; // the data would be cached inside the processor
+            return null;
         }
     }
 

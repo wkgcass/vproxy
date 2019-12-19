@@ -646,6 +646,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             int connId = processor.connection(topCtx, frontendSubCtx);
             Hint hint = processor.connectionHint(topCtx, frontendSubCtx);
             assert Logger.lowLevelDebug("the processor return data of length " + (bytesToSend == null ? "null" : bytesToSend.length()) + ", sending to connId=" + connId + ", hint=" + hint);
+            if (connId == 0) {
+                if (bytesToSend == null || bytesToSend.length() == 0) {
+                    readFrontend();
+                    return;
+                } else {
+                    Logger.error(LogType.IMPROPER_USE, "When you return connection()==0, you must guarantee that the former feed() calling result was null or an array with length 0");
+                    // ignore and fall through
+                }
+            }
             BackendConnectionHandler backend = getConnection(connId, hint);
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing

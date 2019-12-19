@@ -1,32 +1,31 @@
 package vproxy.processor;
 
 public class Hint {
-    public final String prefix;
-    public final String suffix;
+    public final String hint;
 
-    public Hint(String prefix, String suffix) {
-        this.prefix = prefix;
-        this.suffix = suffix;
+    public Hint(String hint) {
+        this.hint = hint;
     }
 
     public static final int MAX_MATCH_LEVEL = 3;
 
     public int matchLevel(String s) {
-        int l = 0;
-        if (s.startsWith(prefix)) {
-            l += 2;
+        if (hint.equals(s)) { // exact match
+            return 3;
         }
-        if (s.endsWith(suffix)) {
-            l += 1;
+        if (hint.endsWith("." + s)) { // hint is a sub domain name of input value
+            return 2;
         }
-        return l;
+        if (s.endsWith("." + hint)) { // input value is a sub domain name of the hint
+            return 1;
+        }
+        return 0; // not matched
     }
 
     @Override
     public String toString() {
         return "Hint{" +
-            "prefix='" + prefix + '\'' +
-            ", suffix='" + suffix + '\'' +
+            "hint=" + hint +
             '}';
     }
 }

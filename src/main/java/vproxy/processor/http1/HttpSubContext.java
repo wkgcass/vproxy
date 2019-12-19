@@ -11,10 +11,8 @@ import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 
-import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 
 @SuppressWarnings("StatementWithEmptyBody")
 public class HttpSubContext extends OOSubContext<HttpContext> {
@@ -49,33 +47,33 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
      * 24 => reason ~> \r\n -> 4
      */
 
-    private Map<Integer, Handler> handers = new HashMap<>() {{
-        put(0, HttpSubContext.this::state0);
-        put(1, HttpSubContext.this::state1);
-        put(2, HttpSubContext.this::state2);
-        put(3, HttpSubContext.this::state3);
-        put(4, HttpSubContext.this::state4);
-        put(5, HttpSubContext.this::state5);
-        put(6, HttpSubContext.this::state6);
-        put(7, HttpSubContext.this::state7);
-        put(8, HttpSubContext.this::state8);
-        put(9, HttpSubContext.this::state9);
-        put(10, HttpSubContext.this::state10);
-        put(11, HttpSubContext.this::state11);
-        put(12, HttpSubContext.this::state12);
-        put(13, HttpSubContext.this::state13);
-        put(14, HttpSubContext.this::state14);
-        put(15, HttpSubContext.this::state15);
-        put(16, HttpSubContext.this::state16);
-        put(17, HttpSubContext.this::state17);
-        put(18, HttpSubContext.this::state18);
-        put(19, HttpSubContext.this::state19);
-        put(20, HttpSubContext.this::state20);
-        put(21, HttpSubContext.this::state21);
-        put(22, HttpSubContext.this::state22);
-        put(23, HttpSubContext.this::state23);
-        put(24, HttpSubContext.this::state24);
-    }};
+    private Handler[] handlers = new Handler[]{
+        HttpSubContext.this::state0,
+        HttpSubContext.this::state1,
+        HttpSubContext.this::state2,
+        HttpSubContext.this::state3,
+        HttpSubContext.this::state4,
+        HttpSubContext.this::state5,
+        HttpSubContext.this::state6,
+        HttpSubContext.this::state7,
+        HttpSubContext.this::state8,
+        HttpSubContext.this::state9,
+        HttpSubContext.this::state10,
+        HttpSubContext.this::state11,
+        HttpSubContext.this::state12,
+        HttpSubContext.this::state13,
+        HttpSubContext.this::state14,
+        HttpSubContext.this::state15,
+        HttpSubContext.this::state16,
+        HttpSubContext.this::state17,
+        HttpSubContext.this::state18,
+        HttpSubContext.this::state19,
+        HttpSubContext.this::state20,
+        HttpSubContext.this::state21,
+        HttpSubContext.this::state22,
+        HttpSubContext.this::state23,
+        HttpSubContext.this::state24,
+    };
 
     interface Handler {
         void handle(ByteArray b) throws Exception;
@@ -91,9 +89,27 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     private HeaderBuilder trailer;
     private int proxyLen = -1;
 
+    // value of the Host: header
+    // would be used as the hint
+    // only accessed when it's a frontend sub context
+    // if it's a backend sub context, the field might be set but never used
+    // when this field is set to a value, it will not be set to null again
+    // because normally a client will not request different hosts in the same connection
+    String theHostHeader = null;
+    // set this field to true to respond data to the processor lib, otherwise data would be cached
+    // only accessed when it's a frontend sub context
+    // if it's a backend sub context, the field will be set but never used
+    // when this field is set to true, it will not be set to false again
+    boolean hostHeaderRetrieved;
+
     public HttpSubContext(HttpContext httpContext, int connId) {
         super(httpContext, connId);
         frontend = connId == 0;
+        hostHeaderRetrieved = !frontend;
+    }
+
+    public void setParserMode() {
+        this.hostHeaderRetrieved = true; // set this field to true to let feed() respond bytes
     }
 
     public Request getReq() {
@@ -158,6 +174,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     }
 
     private boolean passParam_TryFillAdditionalHeaders = false;
+    private ByteArray storedBytes = null;
 
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
@@ -222,14 +239,29 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                 }
             }
         }
-        return data;
+        if (hostHeaderRetrieved) {
+            if (storedBytes == null) {
+                return data;
+            } else {
+                ByteArray arr = storedBytes;
+                storedBytes = null;
+                return arr.concat(data);
+            }
+        } else {
+            if (storedBytes == null) {
+                storedBytes = data;
+            } else {
+                storedBytes = storedBytes.concat(data);
+            }
+            return null;
+        }
     }
 
     public void feed(byte b) throws Exception {
-        Handler handler = handers.get(state);
-        if (handler == null)
+        if (state < 0 || state >= handlers.length) {
             throw new IllegalStateException("BUG: unexpected state " + state);
-        handler.handle(ByteArray.from(b));
+        }
+        handlers[state].handle(ByteArray.from(b));
     }
 
     @Override
@@ -367,6 +399,11 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         if (header != null) {
             headers.add(header);
             assert Logger.lowLevelDebug("received header " + header);
+            String k = header.key.toString();
+            if (k.trim().equalsIgnoreCase("host")) {
+                theHostHeader = header.value.toString().trim();
+                hostHeaderRetrieved = true;
+            }
             header = null;
         }
 
@@ -387,6 +424,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     // it's for state transferring
     private void state9(@SuppressWarnings("unused") ByteArray data) {
         // ignore the data
+        hostHeaderRetrieved = true;
         if (headers == null) {
             end();
             return;

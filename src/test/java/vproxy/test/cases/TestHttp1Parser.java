@@ -39,6 +39,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "GET /hello/url HTTP/1.1\r\n" +
@@ -82,6 +83,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext backend = p.initSub(ctx, 1, null);
+        backend.setParserMode();
 
         String respHead = "" +
             "HTTP/1.1 200 OK\r\n" +
@@ -112,6 +114,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "GET /hello/url HTTP/1.1\r\n" +
@@ -141,6 +144,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext backend = p.initSub(ctx, 1, null);
+        backend.setParserMode();
 
         String respHead = "" +
             "HTTP/1.1 200 OK\r\n" +
@@ -169,6 +173,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "GET /hello/url\r\n" +
@@ -212,6 +217,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "GET /hello/url\r\n" +
@@ -241,6 +247,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "PUT /hello/url HTTP/1.1\r\n" +
@@ -293,6 +300,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext backend = p.initSub(ctx, 1, null);
+        backend.setParserMode();
 
         String respHead = "" +
             "HTTP/1.1 200 OK\r\n" +
@@ -332,6 +340,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(address);
         HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
 
         String reqHead = "" +
             "POST /hello/url HTTP/1.1\r\n" +
@@ -424,6 +433,7 @@ public class TestHttp1Parser {
         Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
         HttpContext ctx = p.init(null);
         HttpSubContext backend = p.initSub(ctx, 1, null);
+        backend.setParserMode();
 
         String respHead = "" +
             "HTTP/1.1 200 OK\r\n" +

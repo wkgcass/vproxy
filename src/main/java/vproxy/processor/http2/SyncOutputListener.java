@@ -6,22 +6,34 @@ import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.io.OutputStream;
+import java.util.function.Consumer;
 
 public class SyncOutputListener implements HeaderListener {
     private final Encoder encoder;
     private final OutputStream out;
     private final Header[] headers;
+    private final Consumer<String> hostHeaderListener;
     private final boolean[] added; // whether it's already added into the header list
 
-    public SyncOutputListener(Encoder encoder, OutputStream out, Header[] headers) {
+    public SyncOutputListener(Encoder encoder,
+                              OutputStream out,
+                              Header[] additionalHeaders,
+                              Consumer<String> hostHeaderListener) {
         this.encoder = encoder;
         this.out = out;
-        this.headers = headers;
-        this.added = new boolean[headers == null ? 0 : headers.length];
+        this.headers = additionalHeaders;
+        this.hostHeaderListener = hostHeaderListener;
+        this.added = new boolean[additionalHeaders == null ? 0 : additionalHeaders.length];
     }
 
     @Override
     public void addHeader(byte[] name, byte[] value, boolean sensitive) throws IOException {
+        // we need to search for the header `host` can call the callback
+        if (new String(name).equalsIgnoreCase("host")) { // h2 headers must be lower-case strings
+            hostHeaderListener.accept(new String(value));
+        }
+
+        // do adding or replacement for additional headers
         byte[] replaced = checkAndGet(name, value);
         if (replaced != null) {
             value = replaced;

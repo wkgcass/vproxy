@@ -26,6 +26,7 @@ public class HttpReqParser extends AbstractParser<Request> {
         //noinspection unchecked
         Processor.SubContext s = p.initSub(c, 0, null);
         ctx = (HttpSubContext) s;
+        ctx.setParserMode();
     }
 
     @Override

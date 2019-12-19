@@ -244,15 +244,23 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     // record the first settings frame head and send all when the whole frame is received
     private ByteArray theSettingsFrameHead;
 
+    // set this field to true to respond data to the processor lib, otherwise data would be cached
+    // only accessed when it's a frontend sub context
+    // if it's a backend sub context, the field will be set but never used
+    // when this field is set to true, it will not be set to false again
+    boolean hostHeaderRetrieved;
+
     public Http2SubContext(Http2Context ctx, int connId) {
         super(ctx, connId);
 
         if (connId == 0) {
             state = 0;
             syntheticAckFlag = false; // this field will not be used if it's frontend connection
+            hostHeaderRetrieved = false;
         } else {
             state = 1;
             syntheticAckFlag = !ctx.backendHandshaking; // this field will only be used when the first backend handshaking is done
+            hostHeaderRetrieved = true; // backend can always respond data to the frontend
         }
     }
 
@@ -340,8 +348,35 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         }
     }
 
+    private ByteArray storedBytes = null;
+
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
+        boolean frontendSettingsSent = ctx.frontendSettingsSent; // this value may be changed in the handling process, so we need to cache it before handling
+        ByteArray arr = _feed(data);
+        if (hostHeaderRetrieved || !frontendSettingsSent) { // first settings frame should pass freely
+            if (storedBytes == null) {
+                return arr;
+            } else if (arr == null) {
+                ByteArray stored = storedBytes;
+                storedBytes = null;
+                return stored;
+            } else {
+                ByteArray stored = storedBytes;
+                storedBytes = null;
+                return stored.concat(arr);
+            }
+        } else {
+            if (storedBytes == null) {
+                storedBytes = arr;
+            } else if (arr != null) {
+                storedBytes = storedBytes.concat(data);
+            }
+            return null;
+        }
+    }
+
+    public ByteArray _feed(ByteArray data) throws Exception {
         switch (state) {
             case 0:
                 assert data.length() == SEQ_PREFACE_MAGIC.length() + LEN_FRAME_HEAD;
@@ -374,6 +409,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
                 }
             case 4:
                 data = handleSettings(data);
+                ctx.frontendSettingsSent = true;
                 lastFrame = frame;
                 frame = null;
                 state = 1;
@@ -713,6 +749,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         // set header end before return the result
         if (frame.endHeaders) {
             ctx.hPackTransformer.endHeaders();
+            hostHeaderRetrieved = true; // headers frame ends, connection related headers must have been retrieved, so send data
         }
         // set state to idle
         state = 1;
@@ -729,7 +766,29 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     }
 
     Integer currentStreamId() {
-        assert frame != null || lastFrame != null;
+        if (frame == null && lastFrame == null) {
+            // check whether this is a bug
+            boolean isBug = true;
+            StackTraceElement[] elems = Thread.currentThread().getStackTrace();
+            //noinspection ConstantConditions
+            if (elems == null || elems.length == 0) { // in case some vm doesn't support stacktrace
+                isBug = false;
+            } else {
+                for (StackTraceElement e : elems) {
+                    if ("remoteClosed".equals(e.getMethodName())) {
+                        isBug = false;
+                        break;
+                    }
+                }
+            }
+            if (isBug) {
+                Logger.shouldNotHappen("failed to retrieve current stream id, this method should not be called here");
+            } else {
+                assert Logger.lowLevelDebug("trying to retrieve current stream id while no frame is being handled, the frontend connection might be closing, so return -1 here");
+            }
+            return -1;
+        }
+
         if (frame != null) {
             return frame.streamIdentifier;
         }

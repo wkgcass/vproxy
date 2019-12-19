@@ -2,6 +2,7 @@ package vproxy.processor.http1;
 
 import vproxy.processor.Hint;
 import vproxy.processor.OOContext;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.net.InetSocketAddress;
@@ -12,6 +13,9 @@ public class HttpContext extends OOContext<HttpSubContext> {
 
     int currentBackend = -1;
 
+    private boolean hintExists = false;
+    private Hint hint;
+
     public HttpContext(InetSocketAddress clientSock) {
         clientAddress = clientSock == null ? null : Utils.ipStr(clientSock.getAddress().getAddress());
         clientPort = clientSock == null ? null : "" + clientSock.getPort();
@@ -19,6 +23,9 @@ public class HttpContext extends OOContext<HttpSubContext> {
 
     @Override
     public int connection(HttpSubContext front) {
+        if (!front.hostHeaderRetrieved) {
+            return 0; // do not send data for now
+        }
         if (front.isIdle()) {
             // the state may turn to idle after calling feed()
             // the connection() will be called after calling feed()
@@ -33,8 +40,27 @@ public class HttpContext extends OOContext<HttpSubContext> {
 
     @Override
     public Hint connectionHint(HttpSubContext front) {
-        // TODO
-        return null;
+        if (hintExists) {
+            return hint;
+        }
+        String host = front.theHostHeader;
+        if (host == null) {
+            return null;
+        }
+        assert Logger.lowLevelDebug("got Host from front sub context: " + host);
+        if (host.contains(":")) { // remove port in Host header
+            host = host.substring(0, host.lastIndexOf(":"));
+        }
+        if (Utils.isIpLiteral(host)) {
+            hintExists = true;
+            return null; // no hint if requesting directly using ip
+        }
+        if (host.startsWith("www.")) { // remove www. convention
+            host = host.substring("www.".length());
+        }
+        hintExists = true;
+        hint = new Hint(host);
+        return hint;
     }
 
     @Override

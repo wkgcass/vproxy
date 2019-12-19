@@ -25,11 +25,6 @@ public class Logger {
 
     static {
         {
-            String stackTrace = System.getProperty("vproxy.stacktrace", "off");
-            stackTraceOn = !"off".equals(stackTrace);
-        }
-
-        {
             String debug = System.getProperty("vproxy.debug");
             lowLevelDebugOn = !"off".equals(debug);
         }
@@ -37,6 +32,15 @@ public class Logger {
         {
             String debug = System.getProperty("javax.net.debug");
             lowLevelNetDebugOn = "all".equals(debug) || "vproxy".equals(debug);
+        }
+
+        {
+            if (lowLevelDebugOn) {
+                stackTraceOn = true;
+            } else {
+                String stackTrace = System.getProperty("vproxy.stacktrace", "off");
+                stackTraceOn = !"off".equals(stackTrace);
+            }
         }
     }
 

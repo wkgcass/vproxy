@@ -114,7 +114,8 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      *
      * @param ctx   context
      * @param front frontend sub context
-     * @return connection id, -1 for creating new connections or connection reuse, 0 is invalid for now
+     * @return connection id, -1 for creating new connections or connection reuse
+     * 0 means do not create connection for now, and the feed() result should be null or length == 0, otherwise it's invalid
      */
     int connection(CTX ctx, SUB front);
 

@@ -154,7 +154,14 @@ public class ChannelSelector implements FDSelector {
     public EventSet events(FD fd) {
         SelectionKey key = getKeyCheckNull(fd);
 
-        return events(key.interestOps());
+        int ops;
+        try {
+            ops = key.interestOps();
+        } catch (CancelledKeyException e) {
+            assert Logger.lowLevelDebug(fd + " is already canceled, consider it 0");
+            ops = 0;
+        }
+        return events(ops);
     }
 
     private EventSet events(int ops) {

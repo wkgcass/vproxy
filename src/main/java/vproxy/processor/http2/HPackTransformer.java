@@ -7,6 +7,7 @@ import vproxy.util.io.ArrayInputStream;
 import vproxy.util.io.ArrayOutputStream;
 
 import java.io.IOException;
+import java.util.function.Consumer;
 
 class HPackTransformer {
     private final int BUFFER_SIZE = 65536; // make the buffer big enough for almost all cases
@@ -15,10 +16,12 @@ class HPackTransformer {
     private final SyncOutputListener lsn;
     private final ArrayOutputStream outBuffer = ArrayOutputStream.to(ByteArray.from(new byte[BUFFER_SIZE]));
 
-    HPackTransformer(int maxHeaderTableSize, Header[] headers) {
+    HPackTransformer(int maxHeaderTableSize,
+                     Header[] additionalHeaders,
+                     Consumer<String> hostHeaderListener) {
         this.decoder = new Decoder(BUFFER_SIZE, maxHeaderTableSize);
         Encoder encoder = new Encoder(0);
-        this.lsn = new SyncOutputListener(encoder, outBuffer, headers);
+        this.lsn = new SyncOutputListener(encoder, outBuffer, additionalHeaders, hostHeaderListener);
     }
 
     ByteArray transform(ByteArray array, boolean addHeaders) throws IOException {

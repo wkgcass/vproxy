@@ -15,6 +15,8 @@ public class Http2Context extends OOContext<Http2SubContext> {
     boolean backendHandshaking = true;
     ByteArray clientHandshake = null; // PRI * ..... and SETTINGS frame as well
 
+    boolean frontendSettingsSent = false;
+
     // the streamMap keys are the ids seen by the frontend
     final Map<Integer, Http2SubContext> streamMap = new HashMap<>(); // streamId => subCtx
 
@@ -26,29 +28,59 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     ByteArray settingsFrameHeader = null; // this is a temporary field
 
+    private String host;
+    private boolean hintExists = false;
+    private Hint hint;
+
     public Http2Context(InetSocketAddress clientAddress) {
         String clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
         hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE,
             new Header[]{
                 new Header("x-forwarded-for", clientIpStr),
                 new Header("x-client-port", "" + clientAddress.getPort())
-            });
+            }, host -> this.host = host);
     }
 
     @Override
     public int connection(Http2SubContext front) {
         Integer streamId = front.currentStreamId();
         Http2SubContext sub = streamMap.get(streamId);
-        if (sub == null)
-            return -1;
-        else
+        if (sub == null) {
+            if (!frontendSettingsSent) { // the first settings frame should pass freely
+                return -1;
+            }
+            if (front.hostHeaderRetrieved) {
+                return -1;
+            }
+            return 0;
+        } else {
             return sub.connId;
+        }
     }
 
     @Override
     public Hint connectionHint(Http2SubContext front) {
-        // TODO
-        return null;
+        if (hintExists) {
+            return hint;
+        }
+        String host = this.host;
+        if (host == null) {
+            return null;
+        }
+        assert Logger.lowLevelDebug("got Host header: " + host);
+        if (host.contains(":")) { // remove port in Host header
+            host = host.substring(0, host.lastIndexOf(":"));
+        }
+        if (Utils.isIpLiteral(host)) {
+            hintExists = true;
+            return null; // no hint if requesting directly using ip
+        }
+        if (host.startsWith("www.")) { // remove www. convention
+            host = host.substring("www.".length());
+        }
+        hintExists = true;
+        hint = new Hint(host);
+        return hint;
     }
 
     @Override

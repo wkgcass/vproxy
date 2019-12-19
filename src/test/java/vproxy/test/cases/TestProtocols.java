@@ -61,16 +61,20 @@ public class TestProtocols {
         elg = new EventLoopGroup("elg0");
         elg.add("el0");
 
-        ServerGroup sg = new ServerGroup("sg0", elg,
+        ServerGroup sg1 = new ServerGroup("s1.test.com", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg.add("svr1", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port1), 10);
-        sg.add("svr2", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port2), 10);
+        sg1.add("svr1", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port1), 10);
+        ServerGroup sg2 = new ServerGroup("s2.test.com", elg,
+            new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
+        sg2.add("svr2", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port2), 10);
 
         // set to up
-        sg.getServerHandles().forEach(h -> h.healthy = true);
+        sg1.getServerHandles().forEach(h -> h.healthy = true);
+        sg2.getServerHandles().forEach(h -> h.healthy = true);
 
         sgs = new ServerGroups("sgs0");
-        sgs.add(sg, 10);
+        sgs.add(sg1, 10);
+        sgs.add(sg2, 10);
     }
 
     @After
@@ -184,6 +188,35 @@ public class TestProtocols {
             assertEquals(4, step);
             assertEquals(1, svr1[0]);
             assertEquals(1, svr2[0]);
+            assertEquals(1, conn[0]);
+
+            // =====
+            // test forwarding using host
+
+            client.close();
+            client = vertx.createHttpClient(new HttpClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setHttp2ClearTextUpgrade(false));
+            client.connectionHandler(connV -> ++conn[0]);
+            step = 0;
+            svr1[0] = 0;
+            svr2[0] = 0;
+            conn[0] = 0;
+
+
+            HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
+            req.headers().add("Host", "s2.test.com");
+            doWithReq.accept(req);
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+
+            while (step != 4 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(4, step);
+            assertEquals(0, svr1[0]);
+            assertEquals(2, svr2[0]);
             assertEquals(1, conn[0]);
         } finally {
             boolean[] closeDone = {false};
@@ -483,6 +516,50 @@ public class TestProtocols {
             assertEquals(2, svr1[0]);
             assertEquals(2, svr2[0]);
             assertEquals(1, conn[0]);
+
+            // =======
+            // test forwarding using Host
+
+            client.close();
+            client = vertx.createHttpClient(new HttpClientOptions()
+                .setMaxPoolSize(1)
+                .setKeepAlive(false));
+            client.connectionHandler(connV -> ++conn[0]);
+            step = 0;
+            svr1[0] = 0;
+            svr2[0] = 0;
+            conn[0] = 0;
+
+            {
+                HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
+                req.headers().add("Host", "s1.test.com");
+                doWithReq.accept(req);
+            }
+            {
+                HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
+                req.headers().add("Host", "s1.test.com");
+                doWithReq.accept(req);
+            }
+            {
+                HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
+                req.headers().add("Host", "s1.test.com");
+                doWithReq.accept(req);
+            }
+            {
+                HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
+                req.headers().add("Host", "s2.test.com");
+                doWithReq.accept(req);
+            }
+
+            while (step != 4 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(4, step);
+            assertEquals(3, svr1[0]);
+            assertEquals(1, svr2[0]);
+            assertEquals(4, conn[0]);
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);
@@ -550,23 +627,24 @@ public class TestProtocols {
                 req.end();
             };
 
-            doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
-            doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
+            for (int i = 0; i < 100; ++i) {
+                doWithReq.accept(h1client.get(lbPort, "127.0.0.1", "/"));
+            }
             Thread.sleep(1000);
-            doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
-            doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
+            for (int i = 0; i < 100; ++i) {
+                doWithReq.accept(h2client.get(lbPort, "127.0.0.1", "/"));
+            }
 
-            while (step != 4 && err[0] == null) {
+            while (step != 200 && err[0] == null) {
                 Thread.sleep(1);
             }
             if (err[0] != null)
                 throw err[0];
-            assertEquals(4, step);
-            assertEquals(2, svr1[0]);
-            assertEquals(2, svr2[0]);
+            assertEquals(200, step);
+            assertEquals(1d, ((double) svr1[0]) / svr2[0], 0.05);
             assertEquals(2, conn[0]);
-            assertEquals(2, ver1[0]);
-            assertEquals(2, ver2[0]);
+            assertEquals(100, ver1[0]);
+            assertEquals(100, ver2[0]);
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);
