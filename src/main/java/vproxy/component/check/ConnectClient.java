@@ -122,6 +122,12 @@ public class ConnectClient {
     }
 
     public void handle(Callback<Void, IOException> cb) {
+        // when the checkProtocol is `none`, nothing should be done and should directly return
+        if (checkProtocol == CheckProtocol.none) {
+            assert Logger.lowLevelDebug("checkProtocol == none, so directly return success");
+            cb.succeeded(null);
+            return;
+        }
         // connect to remote
         ConnectableConnection conn;
         try {

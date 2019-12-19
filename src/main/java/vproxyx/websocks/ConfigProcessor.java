@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.svrgroup.Method;
@@ -128,7 +129,7 @@ public class ConfigProcessor {
         if (servers.containsKey(alias))
             return servers.get(alias);
         ServerGroup grp = new ServerGroup(alias, hcLoopGroup,
-            new HealthCheckConfig(5_000, 30_000, 1, 2)
+            new HealthCheckConfig(5_000, 30_000, 1, 2, noHealthCheck ? CheckProtocol.none : CheckProtocol.tcp)
             , Method.wrr);
         servers.put(alias, grp);
         return grp;
@@ -492,17 +493,6 @@ public class ConfigProcessor {
         // check for ss
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             throw new Exception("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
-        }
-        // modify server group if noHealthCheck
-        if (noHealthCheck) {
-            for (ServerGroup g : servers.values()) {
-                g.setHealthCheckConfig(new HealthCheckConfig(
-                    Integer.MAX_VALUE, Integer.MAX_VALUE, 1, Integer.MAX_VALUE
-                ));
-                for (ServerGroup.ServerHandle svr : g.getServerHandles()) {
-                    svr.healthy = true;
-                }
-            }
         }
     }
 }
