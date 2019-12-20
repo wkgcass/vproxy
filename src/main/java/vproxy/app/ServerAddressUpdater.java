@@ -3,6 +3,7 @@ package vproxy.app;
 import vfd.FDProvider;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
+import vproxy.dns.Cache;
 import vproxy.dns.ResolveListener;
 import vproxy.dns.Resolver;
 import vproxy.util.Callback;
@@ -23,19 +24,19 @@ import java.util.concurrent.ConcurrentMap;
 public class ServerAddressUpdater implements ResolveListener {
     private static ServerAddressUpdater updater = new ServerAddressUpdater();
 
-    private ConcurrentMap<String, Resolver.Cache> cacheMap = new ConcurrentHashMap<>();
+    private ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
 
     private ServerAddressUpdater() {
     }
 
     public static void init() {
-        Resolver resolver = (Resolver) Resolver.getDefault();
+        Resolver resolver = Resolver.getDefault();
         resolver.addListener(updater);
     }
 
     @Override
-    public void onResolve(Resolver.Cache cache) {
-        Resolver.Cache old = cacheMap.put(cache.host, cache);
+    public void onResolve(Cache cache) {
+        Cache old = cacheMap.put(cache.host, cache);
         if (old == null) {
             // nothing to handle
             return;
@@ -43,7 +44,7 @@ public class ServerAddressUpdater implements ResolveListener {
         handle(cache, old);
     }
 
-    private static void handle(Resolver.Cache newCache, Resolver.Cache oldCache) {
+    private static void handle(Cache newCache, Cache oldCache) {
         long cur = FDProvider.get().currentTimeMillis();
         if (cur - oldCache.timestamp > 3600_000) { // scan the whole list every one hour
             checkAll(newCache.host, newCache);
@@ -52,7 +53,7 @@ public class ServerAddressUpdater implements ResolveListener {
         }
     }
 
-    private static void checkAll(String host, Resolver.Cache c) {
+    private static void checkAll(String host, Cache c) {
         Set<InetAddress> addresses = new HashSet<>();
         addresses.addAll(c.ipv4);
         addresses.addAll(c.ipv6);
@@ -78,7 +79,7 @@ public class ServerAddressUpdater implements ResolveListener {
         }
     }
 
-    private static void checkMissing(String host, Resolver.Cache newCache, Resolver.Cache oldCache) {
+    private static void checkMissing(String host, Cache newCache, Cache oldCache) {
         Set<InetAddress> missing = new HashSet<>();
         for (Inet4Address n : oldCache.ipv4) {
             if (!newCache.ipv4.contains(n)) {
@@ -97,7 +98,7 @@ public class ServerAddressUpdater implements ResolveListener {
         }
     }
 
-    private static void handleMissing(String host, Resolver.Cache c, Set<InetAddress> missing) {
+    private static void handleMissing(String host, Cache c, Set<InetAddress> missing) {
         List<String> groupNames = Application.get().serverGroupHolder.names();
 
         for (String groupName : groupNames) {
@@ -119,7 +120,7 @@ public class ServerAddressUpdater implements ResolveListener {
         }
     }
 
-    private static void doReplace(ServerGroup grp, Resolver.Cache c, ServerGroup.ServerHandle h) {
+    private static void doReplace(ServerGroup grp, Cache c, ServerGroup.ServerHandle h) {
         Tuple<Inet4Address, Inet6Address> tup = c.next();
         if (h.server.getAddress() instanceof Inet4Address) {
             if (tup.left != null) {
@@ -151,11 +152,11 @@ public class ServerAddressUpdater implements ResolveListener {
     }
 
     @Override
-    public void onRemove(Resolver.Cache cache) {
+    public void onRemove(Cache cache) {
         // re-resolve it
 
         String host = cache.host;
-        Resolver.getDefault().resolve(host, new Callback<InetAddress, UnknownHostException>() {
+        Resolver.getDefault().resolve(host, new Callback<>() {
             @Override
             protected void onSucceeded(InetAddress value) {
                 // ignore

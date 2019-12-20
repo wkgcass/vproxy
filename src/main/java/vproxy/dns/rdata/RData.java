@@ -24,5 +24,5 @@ public interface RData {
 
     DNSType type();
 
-    void fromByteArray(ByteArray data) throws InvalidDNSPacketException;
+    void fromByteArray(ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException;
 }

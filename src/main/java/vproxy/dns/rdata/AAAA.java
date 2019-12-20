@@ -44,7 +44,7 @@ public class AAAA implements RData {
     }
 
     @Override
-    public void fromByteArray(ByteArray data) throws InvalidDNSPacketException {
+    public void fromByteArray(ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
         if (data.length() != 16)
             throw new InvalidDNSPacketException("AAAA record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();

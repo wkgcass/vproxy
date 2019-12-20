@@ -13,7 +13,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
 import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
-import vproxy.dns.Resolver;
+import vproxy.dns.Cache;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -948,7 +948,7 @@ public class Command {
                         int cacheCnt = DnsCacheHandle.count();
                         return new CmdResult(cacheCnt, cacheCnt, "" + cacheCnt);
                     case L:
-                        List<Resolver.Cache> caches = DnsCacheHandle.detail();
+                        List<Cache> caches = DnsCacheHandle.detail();
                         List<Object> cacheStrList = caches.stream().map(c -> Arrays.asList(
                             c.host,
                             c.ipv4.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList()),

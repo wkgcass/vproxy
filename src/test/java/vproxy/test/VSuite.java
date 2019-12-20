@@ -11,7 +11,7 @@ import vproxy.test.cases.*;
     TestTcpLB.class,
     TestNetMask.class,
     TestTimer.class,
-    TestResolver.class,
+    TestJDKResolver.class,
     TestSocks5.class,
     TestDiscovery.class,
     TestKhala.class,
@@ -20,7 +20,7 @@ import vproxy.test.cases.*;
     TestSSL.class,
     TestProtocols.class,
     TestHttp1Parser.class,
-    TestDNS.class,
+    TestVResolver.class,
 
     AfterAll.class
 })

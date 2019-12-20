@@ -3,6 +3,7 @@ package vproxy.app.cmd.handle.resource;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
+import vproxy.dns.Cache;
 import vproxy.dns.Resolver;
 
 import java.util.LinkedList;
@@ -19,20 +20,20 @@ public class DnsCacheHandle {
     }
 
     public static int count() {
-        Resolver resolver = (Resolver) Resolver.getDefault();
+        Resolver resolver = Resolver.getDefault();
         return resolver.cacheCount();
     }
 
-    public static List<Resolver.Cache> detail() {
-        List<Resolver.Cache> caches = new LinkedList<>();
+    public static List<Cache> detail() {
+        List<Cache> caches = new LinkedList<>();
         Resolver.getDefault().copyCache(caches);
         return caches;
     }
 
     public static void remove(Command cmd) {
-        List<Resolver.Cache> caches = detail();
+        List<Cache> caches = detail();
         String host = cmd.resource.alias;
-        for (Resolver.Cache c : caches) {
+        for (Cache c : caches) {
             if (c.host.equals(host)) {
                 c.remove();
                 // there can be no other cache with the same host

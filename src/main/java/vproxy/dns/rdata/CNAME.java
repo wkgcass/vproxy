@@ -48,9 +48,10 @@ public class CNAME implements RData {
     }
 
     @Override
-    public void fromByteArray(ByteArray data) throws InvalidDNSPacketException {
-        String cname = Formatter.parseDomainName(data);
-        if (cname.length() + 1 != data.length()) {
+    public void fromByteArray(ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
+        int[] offsetHolder = {0};
+        String cname = Formatter.parseDomainName(data, rawPacket, offsetHolder);
+        if (offsetHolder[0] != data.length()) {
             throw new InvalidDNSPacketException("more bytes readable in the cname rdata field: cname=" + cname + ", data.len=" + data.length());
         }
         this.cname = cname;

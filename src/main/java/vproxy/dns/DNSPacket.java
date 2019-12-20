@@ -43,9 +43,9 @@ public class DNSPacket {
     public List<DNSResource> additionalResources = new ArrayList<>();
 
     public enum Opcode {
-        QUERY(1),
-        IQUERY(2),
-        STATUS(3),
+        QUERY(0),
+        IQUERY(1),
+        STATUS(2),
         ;
         public final int code;
 
@@ -61,6 +61,21 @@ public class DNSPacket {
         NameError(3),
         NotImplemented(4),
         Refused(5),
+        YXDomain(6),
+        YXRRSet(7),
+        NXRRSet(8),
+        NotAuth(9),
+        NotZone(10),
+        DSOTYPENI(11),
+
+        BADVERS(16),
+        BADKEY(17),
+        BADTIME(18),
+        BADMODE(19),
+        BADNAME(20),
+        BADALG(21),
+        BADTRUNC(22),
+        BADCOOKIE(23),
         ;
         public final int code;
 

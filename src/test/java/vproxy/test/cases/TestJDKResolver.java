@@ -3,7 +3,9 @@ package vproxy.test.cases;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import vproxy.dns.Resolver;
+import vproxy.dns.AbstractResolver;
+import vproxy.dns.Cache;
+import vproxy.dns.rdata.JDKResolver;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.Utils;
@@ -17,14 +19,14 @@ import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestResolver {
+public class TestJDKResolver {
     private SelectorEventLoop loop;
-    private Resolver resolver;
+    private AbstractResolver resolver;
 
     @Before
     public void setUp() throws IOException {
         loop = SelectorEventLoop.open();
-        resolver = new Resolver("TestResolver" + ((int) (Math.random() * 10000)));
+        resolver = new JDKResolver("TestResolver" + ((int) (Math.random() * 10000)));
         resolver.start();
     }
 
@@ -41,7 +43,7 @@ public class TestResolver {
         InetAddress address = cb.block();
         assertEquals("127.0.0.1", Utils.ipStr(address.getAddress()));
 
-        List<Resolver.Cache> cacheList = new LinkedList<>();
+        List<Cache> cacheList = new LinkedList<>();
         resolver.copyCache(cacheList);
         assertEquals(1, cacheList.size());
         assertEquals("localhost", cacheList.get(0).host);

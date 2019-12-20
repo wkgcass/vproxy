@@ -3,16 +3,16 @@ package vproxy.test.cases;
 import org.junit.Test;
 import vproxy.dns.*;
 import vproxy.dns.rdata.*;
+import vproxy.util.BlockCallback;
 import vproxy.util.ByteArray;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
+import java.net.*;
+import java.util.Collections;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
-public class TestDNS {
+public class TestVResolver {
     @Test
     public void packet() throws Exception {
         DNSPacket packet = new DNSPacket();
@@ -81,5 +81,21 @@ public class TestDNS {
         txt.texts.add("abcdefghijklmn");
         txt.texts.add("hello world");
         return getResource("some.text.com.", txt);
+    }
+
+    @Test
+    public void resolve() throws Exception {
+        Resolver resolver = new VResolver("my", Collections.singletonList(
+            new InetSocketAddress(InetAddress.getByAddress(new byte[]{8, 8, 8, 8}), 53)), Collections.emptyMap());
+        resolver.start();
+        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        resolver.resolve("github.com", cb);
+        InetAddress addr = cb.block();
+        assertTrue(addr instanceof Inet4Address);
+
+        cb = new BlockCallback<>();
+        resolver.resolve("ipv6.taobao.com", false, true, cb);
+        addr = cb.block();
+        assertTrue(addr instanceof Inet6Address);
     }
 }

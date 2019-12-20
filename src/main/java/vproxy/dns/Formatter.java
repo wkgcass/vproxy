@@ -160,32 +160,32 @@ public class Formatter {
                 for (int i = 0; i < packet.qdcount; ++i) {
                     DNSQuestion q = new DNSQuestion();
                     ByteArray sub = data.sub(offset, data.length() - offset);
-                    offset += parseQuestion(q, sub);
+                    offset += parseQuestion(q, sub, input);
                     packet.questions.add(q);
                 }
                 for (int i = 0; i < packet.ancount; ++i) {
                     DNSResource r = new DNSResource();
                     ByteArray sub = data.sub(offset, data.length() - offset);
-                    offset += parseResource(r, sub);
+                    offset += parseResource(r, sub, input);
                     packet.answers.add(r);
                 }
                 for (int i = 0; i < packet.nscount; ++i) {
                     DNSResource r = new DNSResource();
                     ByteArray sub = data.sub(offset, data.length() - offset);
-                    offset += parseResource(r, sub);
+                    offset += parseResource(r, sub, input);
                     packet.nameServers.add(r);
                 }
                 for (int i = 0; i < packet.arcount; ++i) {
                     DNSResource r = new DNSResource();
                     ByteArray sub = data.sub(offset, data.length() - offset);
-                    offset += parseResource(r, sub);
+                    offset += parseResource(r, sub, input);
                     packet.additionalResources.add(r);
                 }
                 packets.add(packet);
                 totalOffset += offset;
                 assert Logger.lowLevelDebug("parsed packet: " + packet);
             } catch (IndexOutOfBoundsException e) {
-                throw new InvalidDNSPacketException("not a complete packet");
+                throw new InvalidDNSPacketException("not a complete packet", e);
             }
         }
         assert totalOffset == input.length();
@@ -222,7 +222,19 @@ public class Formatter {
         }
     }
 
-    public static String parseDomainName(ByteArray data) {
+    public static String parseDomainName(ByteArray data, ByteArray rawPacket, int[] offsetHolder) {
+        // check whether it's domain name pointer
+        {
+            byte b = data.get(0);
+            if ((b & 0b11000000) == 0b11000000) {
+                // is pointer
+                int offset = (b & 0b00111111) << 8;
+                offset |= data.get(1);
+                String name = parseDomainName(rawPacket.sub(offset, rawPacket.length() - offset), rawPacket, offsetHolder);
+                offsetHolder[0] = 2;
+                return name;
+            }
+        }
         StringBuilder sb = new StringBuilder();
         int len = 0;
         for (int i = 0; ; ++i) {
@@ -242,7 +254,9 @@ public class Formatter {
                 }
             }
         }
-        return sb.toString();
+        String name = sb.toString();
+        offsetHolder[0] = name.length() + 1 /*the first length variable*/;
+        return name;
     }
 
     public static DNSType parseQuestionType(int qtype) throws InvalidDNSPacketException {
@@ -361,11 +375,10 @@ public class Formatter {
         }
     }
 
-    public static int parseQuestion(DNSQuestion q, ByteArray data) throws InvalidDNSPacketException {
-        String qname = parseDomainName(data);
-        q.qname = qname;
-        int offset = qname.length() /*ascii string, so string length is bytes length*/
-            + 1 /*head length byte*/;
+    public static int parseQuestion(DNSQuestion q, ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
+        int[] offsetHolder = {0};
+        q.qname = parseDomainName(data, rawPacket, offsetHolder);
+        int offset = offsetHolder[0];
         int qtype = data.uint16(offset);
         int qclass = data.uint16(offset + 2);
         q.qtype = parseQuestionType(qtype);
@@ -373,11 +386,10 @@ public class Formatter {
         return offset + 4;
     }
 
-    public static int parseResource(DNSResource r, ByteArray data) throws InvalidDNSPacketException {
-        String name = parseDomainName(data);
-        r.name = name;
-        int offset = name.length() /*ascii string, so string length is bytes length*/
-            + 1 /*head length byte*/;
+    public static int parseResource(DNSResource r, ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
+        int[] offsetHolder = {0};
+        r.name = parseDomainName(data, rawPacket, offsetHolder);
+        int offset = offsetHolder[0];
         int type = data.uint16(offset);
         int clazz = data.uint16(offset + 2);
         int ttl = data.int32(offset + 4);
@@ -395,7 +407,7 @@ public class Formatter {
         r.rdataBytes = rdataBytes;
         RData rData = RData.newRData(r.type);
         if (rData != null) {
-            rData.fromByteArray(rdataBytes);
+            rData.fromByteArray(rdataBytes, rawPacket);
             r.rdata = rData;
         }
         return offset + r.rdlen;

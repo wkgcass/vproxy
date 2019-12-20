@@ -51,7 +51,7 @@ public class TXT implements RData {
     }
 
     @Override
-    public void fromByteArray(ByteArray data) throws InvalidDNSPacketException {
+    public void fromByteArray(ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
         int offset = 0;
         List<String> tmp = new LinkedList<>();
         while (offset < data.length()) {

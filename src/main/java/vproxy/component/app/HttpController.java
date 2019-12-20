@@ -11,6 +11,7 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.connection.ServerSock;
+import vproxy.dns.Cache;
 import vproxy.dns.Resolver;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
@@ -1113,7 +1114,7 @@ public class HttpController {
     }
 
     private void listDnsCache(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var list = new LinkedList<Resolver.Cache>();
+        var list = new LinkedList<Cache>();
         Resolver.getDefault().copyCache(list);
         var ret = list.stream().map(c -> new ObjectBuilder()
             .put("host", c.host)

@@ -50,7 +50,7 @@ public class A implements RData {
     }
 
     @Override
-    public void fromByteArray(ByteArray data) throws InvalidDNSPacketException {
+    public void fromByteArray(ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
         if (data.length() != 4)
             throw new InvalidDNSPacketException("A record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();
