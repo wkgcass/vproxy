@@ -79,7 +79,7 @@ public class ConnectClient {
                 return;
             // "not done and closed" means the remote closed the connection
             // which means: remote is listening, but something went wrong
-            // maybe an lb with no healthy backends
+            // maybe an lb with no healthy backend
             // so we consider it an unhealthy check
             cancelTimers();
             if (!callback.isCalled() /*already called by timer*/ && !stopped)

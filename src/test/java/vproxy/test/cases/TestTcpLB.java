@@ -684,7 +684,7 @@ public class TestTcpLB {
         client1.close();
 
         sg1.replaceIp("svr2", InetAddress.getByName("127.1.2.3")); // a backend not exist
-        // now there should be 2 backends named svr2
+        // now there should be 2 backend named svr2
         List<ServerGroup.ServerHandle> list = sg1.getServerHandles();
         assertEquals("should be two servers", 2, list.size());
         assertEquals("name should be svr2", "svr2", list.get(0).alias);

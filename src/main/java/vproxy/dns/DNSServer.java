@@ -107,7 +107,11 @@ public class DNSServer {
                             }
                         }
                     }
-                    addresses.put(domain, ls);
+                    if (addresses.containsKey(domain)) {
+                        addresses.get(domain).addAll(ls);
+                    } else {
+                        addresses.put(domain, ls);
+                    }
                     break;
                 default:
                     runRecursive(p, remote);

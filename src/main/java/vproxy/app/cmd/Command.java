@@ -591,6 +591,7 @@ public class Command {
             case ups: // upstream
             case tl: // tcp lb
             case socks5: // socks5 server
+            case dns:
             case elg: // event loog group
             case secg: // security group
                 // these four are only exist on top level
@@ -611,6 +612,8 @@ public class Command {
                                 TcpLBHandle.checkCreateTcpLB(cmd);
                             } else if (cmd.resource.type == ResourceType.socks5) {
                                 Socks5ServerHandle.checkCreateSocks5Server(cmd);
+                            } else if (cmd.resource.type == ResourceType.dns) {
+                                DNSServerHandle.checkCreateDNSServer(cmd);
                             } else if (cmd.resource.type == ResourceType.secg) {
                                 SecurityGroupHandle.checkCreateSecurityGroup(cmd);
                             } // the other two does not need check
@@ -901,6 +904,24 @@ public class Command {
                         return new CmdResult();
                     case u:
                         Socks5ServerHandle.update(this);
+                        return new CmdResult();
+                }
+                throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
+            case dns:
+                switch (action) {
+                    case l:
+                        List<String> dnsServerNames = DNSServerHandle.names();
+                        return new CmdResult(dnsServerNames, dnsServerNames, utilJoinList(dnsServerNames));
+                    case L:
+                        List<DNSServerHandle.DNSServerRef> dnsServerRefList = DNSServerHandle.details();
+                        List<String> dnsServerRefStrList = dnsServerRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(dnsServerRefStrList, dnsServerRefStrList, utilJoinList(dnsServerRefList));
+                    case a:
+                        DNSServerHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        DNSServerHandle.forceRemove(this);
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);

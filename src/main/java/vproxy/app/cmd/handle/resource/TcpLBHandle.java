@@ -154,7 +154,7 @@ public class TcpLBHandle {
         public String toString() {
             return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
                 + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
-                + " backends " + tcpLB.backends.alias
+                + " backend " + tcpLB.backend.alias
                 + " timeout " + tcpLB.getTimeout()
                 + " in-buffer-size " + tcpLB.getInBufferSize() + " out-buffer-size " + tcpLB.getOutBufferSize()
                 + " protocol " + tcpLB.protocol

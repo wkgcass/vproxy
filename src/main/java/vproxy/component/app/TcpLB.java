@@ -69,7 +69,7 @@ public class TcpLB {
     public final EventLoopGroup acceptorGroup;
     public final EventLoopGroup workerGroup;
     public final InetSocketAddress bindAddress;
-    public final Upstream backends;
+    public final Upstream backend;
     private int timeout; // modifiable
     private int inBufferSize; // modifiable
     private int outBufferSize; // modifiable
@@ -97,18 +97,18 @@ public class TcpLB {
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
-                 Upstream backends,
+                 Upstream backend,
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
-        this(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, "tcp", null, null, securityGroup);
+        this(alias, acceptorGroup, workerGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, "tcp", null, null, securityGroup);
     }
 
     public TcpLB(String alias,
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
                  InetSocketAddress bindAddress,
-                 Upstream backends,
+                 Upstream backend,
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  String protocol,
@@ -119,7 +119,7 @@ public class TcpLB {
         this.acceptorGroup = acceptorGroup;
         this.workerGroup = workerGroup;
         this.bindAddress = bindAddress;
-        this.backends = backends;
+        this.backend = backend;
         this.timeout = timeout;
         this.inBufferSize = inBufferSize;
         this.outBufferSize = outBufferSize;
@@ -171,8 +171,8 @@ public class TcpLB {
 
         // we get a new connector
 
-        // get a server from backends
-        Connector connector = backends.next(connectableConn.remote, hint);
+        // get a server from backend
+        Connector connector = backend.next(connectableConn.remote, hint);
         if (connector == null)
             return null; // return null if cannot get any
         assert Logger.lowLevelDebug("got a backend: " + connector);

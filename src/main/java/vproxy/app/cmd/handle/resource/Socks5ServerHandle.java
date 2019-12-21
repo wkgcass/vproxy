@@ -154,7 +154,7 @@ public class Socks5ServerHandle {
         public String toString() {
             return socks5.alias + " -> acceptor " + socks5.acceptorGroup.alias + " worker " + socks5.workerGroup.alias
                 + " bind " + Utils.ipStr(socks5.bindAddress.getAddress().getAddress()) + ":" + socks5.bindAddress.getPort()
-                + " backends " + socks5.backends.alias
+                + " backend " + socks5.backend.alias
                 + " timeout " + socks5.getTimeout()
                 + " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize()
                 + " security-group " + socks5.securityGroup.alias

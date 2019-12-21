@@ -157,7 +157,7 @@ Retrieve detailed info of all tcp-loadbalancers.
 
 ```
 list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
 ```
 
 #### update
@@ -194,7 +194,7 @@ See `add tcp-lb` for more info.
 * acceptor-elg (aelg): *optional*, the acceptor event loop.
 * event-loop-group (elg): *optional*. the worker event loop.
 * address (addr): the bind address
-* upstream (ups): used as backends, the socks5 only supports servers added into this group
+* upstream (ups): used as backend, the socks5 only supports servers added into this group
 * in-buffer-size: *optional*. input buffer size.
 * out-buffer-size: *optional*. output buffer size.
 * security-group (secg): security group
@@ -224,7 +224,7 @@ Retrieve detailed info of socks5 servers.
 
 ```
 list-detail socks5-server
-1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0"
+1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backend backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0"
 ```
 
 #### update

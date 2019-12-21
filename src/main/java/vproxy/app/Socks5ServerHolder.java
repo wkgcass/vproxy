@@ -26,14 +26,14 @@ public class Socks5ServerHolder {
                             EventLoopGroup acceptorEventLoopGroup,
                             EventLoopGroup workerEventLoopGroup,
                             InetSocketAddress bindAddress,
-                            Upstream backends,
+                            Upstream backend,
                             int timeout,
                             int inBufferSize,
                             int outBufferSize,
                             SecurityGroup securityGroup) throws AlreadyExistException, IOException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("socks5-server", alias);
-        Socks5Server socks5Server = new Socks5Server(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
+        Socks5Server socks5Server = new Socks5Server(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, securityGroup);
         try {
             socks5Server.start();
         } catch (IOException e) {

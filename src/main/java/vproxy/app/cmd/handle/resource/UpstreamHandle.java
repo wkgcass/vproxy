@@ -36,7 +36,7 @@ public class UpstreamHandle {
         List<String> lbNames = Application.get().tcpLBHolder.names();
         for (String lbName : lbNames) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(lbName);
-            if (tcpLB.backends.equals(groups))
+            if (tcpLB.backend.equals(groups))
                 throw new Exception(ResourceType.ups.fullname + " " + cmd.resource.alias
                     + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
         }

@@ -88,6 +88,13 @@ public class Entities {
         @Optional @Modifiable boolean allowNonBackend;
     }
 
+    static class DNSServer {
+        String name;
+        InetSocketAddress address;
+        String backend;
+        @Optional String eventLoopGroup;
+    }
+
     static class EventLoop {
         String name;
     }

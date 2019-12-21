@@ -36,6 +36,7 @@ public class Application {
     public final UpstreamHolder upstreamHolder;
     public final TcpLBHolder tcpLBHolder;
     public final Socks5ServerHolder socks5ServerHolder;
+    public final DNSServerHolder dnsServerHolder;
     public final SecurityGroupHolder securityGroupHolder;
     public final CertKeyHolder certKeyHolder;
 
@@ -60,6 +61,7 @@ public class Application {
         this.respControllerHolder = new RESPControllerHolder();
         this.socks5ServerHolder = new Socks5ServerHolder();
         this.httpControllerHolder = new HttpControllerHolder();
+        this.dnsServerHolder = new DNSServerHolder();
 
         this.smartGroupDelegateHolder = new SmartGroupDelegateHolder();
         this.smartNodeDelegateHolder = new SmartNodeDelegateHolder();

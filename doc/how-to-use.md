@@ -244,7 +244,7 @@ To create a tcp loadbalancer, you can:
 4. `add tcp-lb lb0 addr 127.0.0.1:8899 upstream ups0`  
     which creates a tcp loadbalancer named `lb0`, using also `elg0` as its worker event loop group. the lb listens on `127.0.0.1:8899`, using `ups0` as it's backend upstream.
 
-Now the lb is running, you can telnet, however there are no valid backends, so the connection is closed instantly.
+Now the lb is running, you can telnet, however there are no valid backend, so the connection is closed instantly.
 
 To add a backend, you can:
 

@@ -7,7 +7,7 @@ The layer 4 TCP loadbalancer transfers all data from one frontend connection to 
 1. One backend load would be higher than others if the netflow of a single connection is very high but other connections are not busy.
 2. RPC is frequently used in the internal network (e.g. idc or vpc). Almost all impl of rpc protocols would create a connection with a few connnections, and won't be closed in normal cases. If using the L4 loadbalancing, the backend rpc services won't be able to scale out.
 
-So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backends in one connection.
+So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backend in one connection.
 
 Now, `vproxy` already uses the interfaces to construct some built-in protcols for `HTTP/2`, `dubbo` and `thrift (framed)`.  
 Actually these interfaces are built for the `HTTP/2`, which uses all functionality provided by these interfaces. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/http2/Http2SubContext.java).  

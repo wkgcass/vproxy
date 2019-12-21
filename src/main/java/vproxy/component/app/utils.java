@@ -21,6 +21,7 @@ import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
+import vproxy.dns.DNSServer;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
@@ -381,7 +382,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", socks5.alias)
             .put("address", Utils.l4addrStr(socks5.bindAddress))
-            .put("backend", socks5.backends.alias)
+            .put("backend", socks5.backend.alias)
             .put("acceptorLoopGroup", socks5.acceptorGroup.alias)
             .put("workerLoopGroup", socks5.workerGroup.alias)
             .put("inBufferSize", socks5.getInBufferSize())
@@ -395,13 +396,31 @@ class utils {
         return new ObjectBuilder()
             .put("name", socks5.alias)
             .put("address", Utils.l4addrStr(socks5.bindAddress))
-            .putInst("backend", formatUpstreamDetail(socks5.backends))
+            .putInst("backend", formatUpstreamDetail(socks5.backend))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(socks5.acceptorGroup))
             .putInst("workerLoopGroup", formatEventLoopGroupDetail(socks5.workerGroup))
             .put("inBufferSize", socks5.getInBufferSize())
             .put("outBufferSize", socks5.getOutBufferSize())
             .putInst("securityGroup", formatSecurityGroupDetail(socks5.securityGroup))
             .put("allowNonBackend", socks5.allowNonBackend)
+            .build();
+    }
+
+    static JSON.Object formatDNSServer(DNSServer dns) {
+        return new ObjectBuilder()
+            .put("name", dns.alias)
+            .put("address", Utils.l4addrStr(dns.bindAddress))
+            .put("backend", dns.backend.alias)
+            .put("eventLoopGroup", dns.eventLoopGroup.alias)
+            .build();
+    }
+
+    static JSON.Object formatDNSServerDetail(DNSServer dns) {
+        return new ObjectBuilder()
+            .put("name", dns.alias)
+            .put("address", Utils.l4addrStr(dns.bindAddress))
+            .putInst("backend", formatUpstreamDetail(dns.backend))
+            .putInst("eventLoopGroup", formatEventLoopGroupDetail(dns.eventLoopGroup))
             .build();
     }
 
@@ -419,7 +438,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", tl.alias)
             .put("address", Utils.l4addrStr(tl.bindAddress))
-            .put("backend", tl.backends.alias)
+            .put("backend", tl.backend.alias)
             .put("protocol", tl.protocol)
             .put("acceptorLoopGroup", tl.acceptorGroup.alias)
             .put("workerLoopGroup", tl.workerGroup.alias)
@@ -445,7 +464,7 @@ class utils {
             .put("name", tl.alias)
             .put("address", Utils.l4addrStr(tl.bindAddress))
             .put("protocol", tl.protocol)
-            .putInst("backend", formatUpstreamDetail(tl.backends))
+            .putInst("backend", formatUpstreamDetail(tl.backend))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(tl.acceptorGroup))
             .putInst("workerLoopGroup", formatEventLoopGroupDetail(tl.workerGroup))
             .put("inBufferSize", tl.getInBufferSize())
@@ -529,6 +548,14 @@ class utils {
                 arr.addInst(utils.formatSocks5ServerDetail(socks5Holder.get(name)));
             }
             ret.putInst("socks5ServerList", arr.build());
+        }
+        {
+            var arr = new ArrayBuilder();
+            var dnsHolder = Application.get().dnsServerHolder;
+            for (var name : dnsHolder.names()) {
+                arr.addInst(utils.formatDNSServerDetail(dnsHolder.get(name)));
+            }
+            ret.putInst("dnsServerList", arr.build());
         }
         {
             var arr = new ArrayBuilder();

@@ -75,7 +75,7 @@ public class TestSmart {
     }
 
     @Test
-    public void learnBackends() throws Exception {
+    public void learnBackend() throws Exception {
         Vertx vertx = Vertx.vertx();
         try {
             var httpServer = vertx.createHttpServer().requestHandler(req -> req.response().end("hello")).listen(19080);

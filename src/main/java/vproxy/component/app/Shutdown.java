@@ -17,6 +17,7 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
+import vproxy.dns.DNSServer;
 import vproxy.util.*;
 
 import java.io.*;
@@ -485,8 +486,8 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the elg " + tl.workerGroup.alias + " already removed");
                     continue;
                 }
-                if (!upstreamNames.contains(tl.backends.alias)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the ups " + tl.backends.alias + " already removed");
+                if (!upstreamNames.contains(tl.backend.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + tl.backend.alias + " already removed");
                     continue;
                 }
                 if (!securityGroupNames.contains(tl.securityGroup.alias) && !tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -503,7 +504,7 @@ public class Shutdown {
                 }
                 StringBuilder cmd = new StringBuilder("add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
-                    " address " + Utils.ipport(tl.bindAddress) + " upstream " + tl.backends.alias +
+                    " address " + Utils.ipport(tl.bindAddress) + " upstream " + tl.backend.alias +
                     " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " protocol " + tl.protocol);
@@ -540,8 +541,8 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the elg " + socks5.workerGroup.alias + " already removed");
                     continue;
                 }
-                if (!upstreamNames.contains(socks5.backends.alias)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the ups " + socks5.backends.alias + " already removed");
+                if (!upstreamNames.contains(socks5.backend.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + socks5.backend.alias + " already removed");
                     continue;
                 }
                 if (!securityGroupNames.contains(socks5.securityGroup.alias) && !socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
@@ -550,13 +551,40 @@ public class Shutdown {
                 }
                 String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
                     " event-loop-group " + socks5.workerGroup.alias +
-                    " address " + Utils.ipport(socks5.bindAddress) + " upstream " + socks5.backends.alias +
+                    " address " + Utils.ipport(socks5.bindAddress) + " upstream " + socks5.backend.alias +
                     " timeout " + socks5.getTimeout() +
                     " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
                     " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
                 if (!socks5.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + socks5.securityGroup.alias;
                 }
+                commands.add(cmd);
+            }
+        }
+        {
+            // create socks5 server
+            DNSServerHolder dnsh = app.dnsServerHolder;
+            List<String> names = dnsh.names();
+            for (String name : names) {
+                DNSServer dns;
+                try {
+                    dns = dnsh.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("dns not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                if (!eventLoopGroupNames.contains(dns.eventLoopGroup.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the elg " + dns.eventLoopGroup.alias + " already removed");
+                    continue;
+                }
+                if (!upstreamNames.contains(dns.backend.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + dns.backend.alias + " already removed");
+                    continue;
+                }
+                String cmd = "add dns-server " + dns.alias +
+                    " event-loop-group " + dns.eventLoopGroup.alias +
+                    " address " + Utils.ipport(dns.bindAddress) + " upstream " + dns.backend.alias;
                 commands.add(cmd);
             }
         }

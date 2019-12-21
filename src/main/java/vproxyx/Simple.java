@@ -38,7 +38,7 @@ public class Simple {
         "\n\t\tbind {port}                                          The lb listening port" +
         "\n" +
         "\n\t\tbackend {host1:port1,host2:port2}                    The proxy destination address:port" +
-        "\n\t\t                                                     Multiple backends are separated with `,`" +
+        "\n\t\t                                                     Multiple backend are separated with `,`" +
         "\n\t\thelp                                      [Optional] Show this message and exit" +
         "\n" +
         "\n\t\tssl {cert1-path,cert2-path} {key-path}    [Optional] SSL certificate and key file path (pem format)" +
@@ -143,8 +143,8 @@ public class Simple {
         }
         List<HostPort> backendList = new LinkedList<>();
         {
-            String[] backends = backend.split(",");
-            for (String b : backends) {
+            String[] backendSplit = backend.split(",");
+            for (String b : backendSplit) {
                 String[] foo = b.split(":");
                 if (foo.length != 2 || foo[0].isBlank() || foo[1].isBlank()) {
                     throw new Exception("invalid address format in `backend {host:port}`");

@@ -3,6 +3,7 @@ package vproxy.app.cmd;
 public enum ResourceType {
     tl("tcp-lb"),
     socks5("socks5-server"),
+    dns("dns-server"),
     elg("event-loop-group"),
     ups("upstream"),
     sg("server-group"),

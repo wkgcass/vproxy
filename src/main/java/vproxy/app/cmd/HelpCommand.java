@@ -471,7 +471,7 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail tcp-lb",
-                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backends ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0\""
+                        "1) \"lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of an lb",
@@ -529,7 +529,7 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail socks5-server",
-                        "1) \"s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backends backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0\""
+                        "1) \"s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backend backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0\""
                     )
                 ))
             , new ResActMan(ActMan.update, "update in-buffer-size or out-buffer-size of a socks5 server",
@@ -553,6 +553,44 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "remove socks5-server s5",
+                        "\"OK\""
+                    )
+                ))
+        )),
+        dns("dns-server", "dns", "dns server", Arrays.asList(
+            new ResActMan(ActMan.add, "create a dns server",
+                Arrays.asList(
+                    new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group to run the dns server", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
+                    , new ResActParamMan(ParamMan.address, "the bind address of the socks5 server")
+                    , new ResActParamMan(ParamMan.upstream, "the domains to be resolved")
+                ),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "add dns-server dns0 address 127.0.0.1:53 upstream backend-groups",
+                        "\"OK\""
+                    )
+                ))
+            , new ResActMan(ActMan.list, "retrieve names of dns servers",
+                Collections.emptyList(),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "list dns-server",
+                        "1) \"dns0\""
+                    )
+                ))
+            , new ResActMan(ActMan.listdetail, "retrieve detailed info of dns servers",
+                Collections.emptyList(),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail dns-server",
+                        "1) \"dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups\""
+                    )
+                ))
+            , new ResActMan(ActMan.remove, "remove a dns server",
+                Collections.emptyList(),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "remove dns-server dns0",
                         "\"OK\""
                     )
                 ))

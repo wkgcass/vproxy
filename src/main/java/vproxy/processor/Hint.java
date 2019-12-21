@@ -10,6 +10,10 @@ public class Hint {
     public static final int MAX_MATCH_LEVEL = 3;
 
     public int matchLevel(String s) {
+        if (s.contains(":")) { // remove the tailing port
+            s = s.substring(0, s.lastIndexOf(":"));
+        }
+
         if (hint.equals(s)) { // exact match
             return 3;
         }

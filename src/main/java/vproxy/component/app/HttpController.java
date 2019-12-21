@@ -99,6 +99,18 @@ public class HttpController {
             .put("allowNonBackend", false)
             .build()));
         server.del(moduleBase + "/socks5-server/:socks5", wrapAsync(this::deleteSocks5Server));
+        // dns-server
+        server.get(moduleBase + "/dns-server/:dns/detail", wrapAsync(this::getDNSServerDetail));
+        server.get(moduleBase + "/dns-server/:dns", wrapAsync(this::getDNSServer));
+        server.get(moduleBase + "/dns-server", wrapAsync(this::listDNSServer));
+        server.pst(moduleBase + "/dns-server", wrapAsync(this::createDNSServer, new ObjectBuilder()
+                .put("name", "alias of the dns server")
+                .put("address", "the bind address")
+                .put("backend", "the servers to be resolved")
+                .put("eventLoopGroup", "the event loop group to run the dns server")
+                .build(),
+            "name", "address", "backend"));
+        server.del(moduleBase + "/dns-server/:dns", wrapAsync(this::deleteDNSServer));
         // event-loop
         server.get(moduleBase + "/event-loop-group/:elg/event-loop/:el/detail", wrapAsync(this::getEventLoop));
         server.get(moduleBase + "/event-loop-group/:elg/event-loop/:el", wrapAsync(this::getEventLoop));
@@ -487,6 +499,47 @@ public class HttpController {
     private void deleteSocks5Server(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
             "remove", "socks5-server", rctx.param("socks5"));
+    }
+
+    private void getDNSServerDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var dns = Application.get().dnsServerHolder.get(rctx.param("dns"));
+        cb.succeeded(utils.formatDNSServerDetail(dns));
+    }
+
+    private void getDNSServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var dns = Application.get().dnsServerHolder.get(rctx.param("dns"));
+        cb.succeeded(utils.formatDNSServer(dns));
+    }
+
+    private void listDNSServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
+        var holder = Application.get().dnsServerHolder;
+        var names = holder.names();
+        var arr = new ArrayBuilder();
+        for (String name : names) {
+            var d = holder.get(name);
+            arr.addInst(utils.formatDNSServer(d));
+        }
+        cb.succeeded(arr.build());
+    }
+
+    private void createDNSServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var body = (JSON.Object) rctx.get(Tool.bodyJson);
+        var name = body.getString("name");
+        var address = body.getString("address");
+        var backend = body.getString("backend");
+        var options = new LinkedList<>(Arrays.asList(
+            "add", "dns-server", name, "address", address, "upstream", backend
+        ));
+        if (body.containsKey("eventLoopGroup")) {
+            options.add("event-loop-group");
+            options.add(body.getString("eventLoopGroup"));
+        }
+        utils.execute(cb, options);
+    }
+
+    private void deleteDNSServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        utils.execute(cb,
+            "remove", "dns-server", rctx.param("dns"));
     }
 
     private void getEventLoop(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

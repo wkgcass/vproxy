@@ -19,7 +19,7 @@ Assume we have the following network topology graph:
                    ADMIN
 ```
 
-The vproxy's host has three ip addresses, one in the CLIENT network `10.0.0.0/24`, one in the backends' network `10.0.2.0/24`, one in the admin network `10.0.3.0/24`.
+The vproxy's host has three ip addresses, one in the CLIENT network `10.0.0.0/24`, one in the backend' network `10.0.2.0/24`, one in the admin network `10.0.3.0/24`.
 
 And the vproxy's host has 4 cores.
 
@@ -79,7 +79,7 @@ add event-loop worker2 to event-loop-group worker
 add event-loop worker3 to event-loop-group worker
 ```
 
-#### 4. Backends
+#### 4. Backend
 
 Create a server group named `ngx`.
 
@@ -89,7 +89,7 @@ add server-group ngx timeout 500 period 1000 up 2 down 3 method wrr event-loop-g
 
 We use the worker event loop group to run health check.
 
-Attach backends to the group:
+Attach backend to the group:
 
 ```
 add server backend1 to server-group ngx address 10.0.2.1:80 weight 10

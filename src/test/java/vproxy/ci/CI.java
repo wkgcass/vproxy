@@ -232,6 +232,7 @@ public class CI {
 
     private List<String> tlNames = new ArrayList<>();
     private List<String> socks5Names = new ArrayList<>();
+    private List<String> dnsNames = new ArrayList<>();
     private List<String> elgNames = new ArrayList<>();
     private List<String> upsNames = new ArrayList<>();
     private List<String> sgNames = new ArrayList<>();
@@ -300,6 +301,11 @@ public class CI {
         for (String socks5 : socks5Names) {
             execute(createReq(remove, "socks5-server", socks5));
             checkRemove("socks5-server", socks5);
+        }
+        // remove dns
+        for (String dns : dnsNames) {
+            execute(createReq(remove, "dns-server", dns));
+            checkRemove("dns-server", dns);
         }
         // remove upstream
         for (String ups : upsNames) {
@@ -554,7 +560,7 @@ public class CI {
         assertEquals(elg0, detail.get("acceptor"));
         assertEquals(elg1, detail.get("worker"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
-        assertEquals(ups0, detail.get("backends"));
+        assertEquals(ups0, detail.get("backend"));
         assertEquals("16384", detail.get("in-buffer-size"));
         assertEquals("16384", detail.get("out-buffer-size"));
         assertEquals("tcp", detail.get("protocol"));
@@ -609,7 +615,7 @@ public class CI {
         assertEquals(elg0, detail.get("acceptor"));
         assertEquals(elg1, detail.get("worker"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
-        assertEquals(ups0, detail.get("backends"));
+        assertEquals(ups0, detail.get("backend"));
         assertEquals("16384", detail.get("in-buffer-size"));
         assertEquals("16384", detail.get("out-buffer-size"));
         assertEquals("(allow-all)", detail.get("security-group"));
@@ -661,6 +667,71 @@ public class CI {
                 String resp = requestViaProxy("myexample2.com", 8080);
                 assertEquals("7773", resp);
             }
+        }
+    }
+
+    @Test
+    public void dnsServer() throws Exception {
+        int port = 10053;
+        String dns = randomName("dns");
+        execute(createReq(add, "dns-server", dns,
+            "event-loop-group", elg1,
+            "address", "127.0.0.1:" + port,
+            "upstream", ups0));
+        dnsNames.add(dns);
+        checkCreate("dns-server", dns);
+        Map<String, String> detail = getDetail("dns-server", dns);
+        assertEquals(elg1, detail.get("event-loop-group"));
+        assertEquals("127.0.0.1:" + port, detail.get("bind"));
+        assertEquals(ups0, detail.get("backend"));
+
+        String domain0 = "example.com:80";
+        String domain1 = "test.com:8080";
+
+        execute(createReq(add, "server-group", domain0,
+            "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
+            "event-loop-group", elg0));
+        sgNames.add(domain0);
+        checkCreate("server-group", domain0);
+
+        execute(createReq(add, "server-group", domain1,
+            "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
+            "event-loop-group", elg0));
+        sgNames.add(domain1);
+        checkCreate("server-group", domain1);
+
+        execute(createReq(add, "server-group", domain0, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", domain0, "upstream", ups0);
+        execute(createReq(add, "server-group", domain1, "to", "upstream", ups0, "weight", "10"));
+        checkCreate("server-group", domain1, "upstream", ups0);
+
+        execute(createReq(add, "server", "svr1", "to", "server-group", domain0, "address", "10.1.2.3:7771", "weight", "10"));
+        checkCreate("server", "svr1", "server-group", domain0);
+        execute(createReq(add, "server", "svr2", "to", "server-group", domain0, "address", "10.4.5.6:7772", "weight", "10"));
+        checkCreate("server", "svr2", "server-group", domain0);
+
+        execute(createReq(add, "server", "svr3", "to", "server-group", domain1, "address", "10.7.8.9:7773", "weight", "10"));
+        checkCreate("server", "svr3", "server-group", domain1);
+
+        Thread.sleep(500); // wait for hc status
+
+        io.vertx.core.dns.DnsClient dnsClient = vertx.createDnsClient(port, "127.0.0.1");
+        boolean have1 = false;
+        boolean have2 = false;
+        for (int i = 0; i < 30; ++i) {
+            String res = block(f -> dnsClient.lookup("example.com", f));
+            assertTrue(res.equals("10.1.2.3") || res.equals("10.4.5.6"));
+            if (res.equals("10.1.2.3")) {
+                have1 = true;
+            } else {
+                have2 = true;
+            }
+        }
+        assertTrue(have1);
+        assertTrue(have2);
+        for (int i = 0; i < 30; ++i) {
+            String res = block(f -> dnsClient.lookup("test.com", f));
+            assertEquals("10.7.8.9", res);
         }
     }
 
@@ -1991,6 +2062,15 @@ public class CI {
     }
 
     @Test
+    public void apiV1DNSServer() throws Exception {
+        runNoUpdate("/dns-server", Entities.DNSServer.class,
+            "eventLoopGroup", randomEventLoopGroup(),
+            "backend", randomUpstream());
+        assertEquals(2, postCnt);
+        assertEquals(0, putCnt);
+    }
+
+    @Test
     public void apiV1EventLoop() throws Exception {
         var elg = randomEventLoopGroup();
         runNoUpdate("/event-loop-group/" + elg + "/event-loop", Entities.EventLoop.class);
@@ -2164,6 +2244,9 @@ public class CI {
             "security-group", secg,
             "allow-non-backend"));
         socks5Names.add(socks5);
+        var dns = randomName("dns");
+        execute(createReq(add, "dns-server", dns, "address", "0.0.0.0:11153", "upstream", ups, "event-loop-group", elg));
+        dnsNames.add(dns);
 
         var tlResp = "{\n" +
             "    \"name\": \"" + tl + "\",\n" +
@@ -2414,6 +2497,98 @@ public class CI {
         pretty = requestApi(HttpMethod.GET, "/socks5-server/" + socks5 + "/detail").pretty();
         System.out.println("socks5-server: " + pretty);
         assertEquals(JSON.parse(socks5Resp).pretty(), pretty);
+
+        var dnsResp = "{\n" +
+            "    \"name\": \"" + dns + "\",\n" +
+            "    \"address\": \"0.0.0.0:11153\",\n" +
+            "    \"backend\": {\n" +
+            "        \"name\": \"" + ups + "\",\n" +
+            "        \"serverGroupList\": [\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg0 + "\",\n" +
+            "                \"weight\": 10,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg0 + "\",\n" +
+            "                    \"timeout\": 1000,\n" +
+            "                    \"period\": 5000,\n" +
+            "                    \"up\": 2,\n" +
+            "                    \"down\": 3,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
+            "                    \"method\": \"wlc\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr00 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8080\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr01 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8081\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            },\n" +
+            "            {\n" +
+            "                \"name\": \"" + sg1 + "\",\n" +
+            "                \"weight\": 20,\n" +
+            "                \"serverGroup\": {\n" +
+            "                    \"name\": \"" + sg1 + "\",\n" +
+            "                    \"timeout\": 2000,\n" +
+            "                    \"period\": 2500,\n" +
+            "                    \"up\": 3,\n" +
+            "                    \"down\": 4,\n" +
+            "                    \"protocol\": \"tcp\",\n" +
+            "                    \"method\": \"wrr\",\n" +
+            "                    \"eventLoopGroup\": {\n" +
+            "                        \"name\": \"" + elg + "\",\n" +
+            "                        \"eventLoopList\": [\n" +
+            "                            { \"name\": \"" + el0 + "\" },\n" +
+            "                            { \"name\": \"" + el1 + "\" }\n" +
+            "                        ]\n" +
+            "                    },\n" +
+            "                    \"serverList\": [\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr10 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8082\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        },\n" +
+            "                        {\n" +
+            "                            \"name\": \"" + svr11 + "\",\n" +
+            "                            \"address\": \"127.0.0.1:8083\",\n" +
+            "                            \"weight\": 10,\n" +
+            "                            \"currentIp\": \"127.0.0.1\",\n" +
+            "                            \"status\": \"DOWN\"\n" +
+            "                        }\n" +
+            "                    ]\n" +
+            "                }\n" +
+            "            }\n" +
+            "        ]\n" +
+            "    },\n" +
+            "    \"eventLoopGroup\": {\n" +
+            "        \"name\": \"" + elg + "\",\n" +
+            "        \"eventLoopList\": [\n" +
+            "            { \"name\": \"" + el0 + "\" },\n" +
+            "            { \"name\": \"" + el1 + "\" }\n" +
+            "        ]\n" +
+            "    }\n" +
+            "}";
+        pretty = requestApi(HttpMethod.GET, "/dns-server/" + dns + "/detail").pretty();
+        System.out.println("dns:" + pretty);
+        assertEquals(JSON.parse(dnsResp).pretty(), pretty);
 
         var elResp = "{ \"name\": \"" + el0 + "\" }";
         pretty = requestApi(HttpMethod.GET, "/event-loop-group/" + elg + "/event-loop/" + el0 + "/detail").pretty();

@@ -58,7 +58,7 @@ public class Socks5Server extends TcpLB {
             }
 
             // then let's try to find a connector
-            Upstream upstream = Socks5Server.super.backends;
+            Upstream upstream = Socks5Server.super.backend;
             if (type == AddressType.domain) {
                 String addrport = address + ":" + port;
                 // search for a group with name same as the address:port
@@ -103,8 +103,8 @@ public class Socks5Server extends TcpLB {
     private final Socks5ServerConnectorProvider connectorProvider = new Socks5ServerConnectorProvider();
     public boolean allowNonBackend = false;
 
-    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backends, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
-        super(alias, acceptorGroup, workerGroup, bindAddress, backends, timeout, inBufferSize, outBufferSize, securityGroup);
+    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backend, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
+        super(alias, acceptorGroup, workerGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, securityGroup);
     }
 
     @Override
