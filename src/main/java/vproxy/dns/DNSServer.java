@@ -141,7 +141,7 @@ public class DNSServer {
                 DNSResource r = new DNSResource();
                 r.name = entry.getKey();
                 r.clazz = DNSClass.IN;
-                r.ttl = 1;
+                r.ttl = 0; // disable cache
 
                 DNSType type;
                 RData rdata;
