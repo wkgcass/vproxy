@@ -7,6 +7,8 @@ public enum DNSClass {
     HS(4), // Hesiod [Dyer 87]
 
     ANY(255), // only used as QClass
+
+    NOT_CLASS(-1), // some RR does not use this field as class name
     ;
     public final int code;
 

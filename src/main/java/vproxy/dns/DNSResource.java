@@ -37,6 +37,8 @@ public class DNSResource {
     public ByteArray rdataBytes;
     public RData rdata;
 
+    public ByteArray rawBytes; // this field will be directly used if set
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

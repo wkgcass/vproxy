@@ -2,6 +2,7 @@ package vproxy.dns;
 
 import vfd.DatagramFD;
 import vfd.EventSet;
+import vfd.FDProvider;
 import vproxy.app.Config;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
@@ -9,10 +10,7 @@ import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.PeriodicEvent;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArray;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
+import vproxy.util.*;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -28,6 +26,9 @@ import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
 public class DNSClient {
+    private static DNSClient DEFAULT_INSTANCE;
+    private static SelectorEventLoop DEFAULT_SELECTOR_EVENT_LOOP;
+
     private final SelectorEventLoop loop;
     private final DatagramFD sock;
     private List<InetSocketAddress> nameServers;
@@ -46,6 +47,80 @@ public class DNSClient {
         this.maxRetry = maxRetry;
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
+    }
+
+    private static SelectorEventLoop getDefaultSelectorEventLoop() {
+        if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
+            return DEFAULT_SELECTOR_EVENT_LOOP;
+        }
+        synchronized (DNSClient.class) {
+            if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
+                return DEFAULT_SELECTOR_EVENT_LOOP;
+            }
+            SelectorEventLoop loop;
+            try {
+                loop = SelectorEventLoop.open();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("open selector event loop for default dns client failed", e);
+                throw new RuntimeException(e);
+            }
+            loop.loop(r -> new Thread(r, "dns-client"));
+            DEFAULT_SELECTOR_EVENT_LOOP = loop;
+        }
+        return DEFAULT_SELECTOR_EVENT_LOOP;
+    }
+
+    public static DNSClient getDefault() {
+        if (DEFAULT_INSTANCE != null) {
+            return DEFAULT_INSTANCE;
+        }
+        synchronized (DNSClient.class) {
+            if (DEFAULT_INSTANCE != null) {
+                return DEFAULT_INSTANCE;
+            }
+            DatagramFD sock;
+            try {
+                sock = FDProvider.get().openDatagramFD();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("creating default DNSClient sock failed", e);
+                throw new RuntimeException(e);
+            }
+            try {
+                sock.configureBlocking(false);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("configure non-blocking failed", e);
+                try {
+                    sock.close();
+                } catch (IOException ignore) {
+                }
+                throw new RuntimeException(e);
+            }
+            try {
+                sock.bind(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), 0));
+            } catch (IOException e) {
+                Logger.shouldNotHappen("bind sock on random port failed", e);
+                try {
+                    sock.close();
+                } catch (IOException ignore) {
+                }
+                throw new RuntimeException(e);
+            }
+            SelectorEventLoop loop = getDefaultSelectorEventLoop();
+            DNSClient client;
+            try {
+                client = new DNSClient(loop, sock, Resolver.getNameServers(), 1_000, 2);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("creating default dns client failed", e);
+                try {
+                    sock.close();
+                } catch (IOException ignore) {
+                }
+                throw new RuntimeException(e);
+            }
+            loop.period(60_000, () -> client.setNameServers(Resolver.getNameServers()));
+            DEFAULT_INSTANCE = client;
+        }
+        return DEFAULT_INSTANCE;
     }
 
     public void setNameServers(List<InetSocketAddress> nameServers) {
@@ -111,10 +186,16 @@ public class DNSClient {
             var l4addr = nameServers.get(idx);
 
             byteBufferToSend.limit(byteBufferToSend.capacity()).position(0);
+            int len = byteBufferToSend.limit();
+            int sent;
             try {
-                sock.send(byteBufferToSend, l4addr);
+                sent = sock.send(byteBufferToSend, l4addr);
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "send dns question packet to " + l4addr + " failed", e);
+                return;
+            }
+            if (len != sent) {
+                Logger.error(LogType.CONN_ERROR, "sending dns response packet to " + l4addr + " failed, sent len = " + sent);
             }
         }
 
@@ -265,21 +346,39 @@ public class DNSClient {
     }
 
     public void resolveIPv4(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
-        getAllByName0(domain, true, cb);
+        getAllByName0(domain, true, new RunOnLoopCallback<>(cb));
     }
 
     public void resolveIPv6(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
-        getAllByName0(domain, false, cb);
+        getAllByName0(domain, false, new RunOnLoopCallback<>(cb));
     }
 
     public void request(DNSPacket reqPacket, Callback<DNSPacket, IOException> cb) {
-        new Request<>(reqPacket, (resp, holder) -> resp, SocketTimeoutException::new, cb);
+        new Request<>(reqPacket, (resp, holder) -> resp, SocketTimeoutException::new, new RunOnLoopCallback<>(cb));
     }
 
     public void close() {
         for (Request req : requests.values()) {
             req.timer.cancel();
         }
-        loop.remove(sock);
+        try {
+            loop.remove(sock);
+        } catch (Throwable ignore) {
+        }
+
+        if (this == DEFAULT_INSTANCE) { // should also remove the default instance ref
+            try {
+                sock.close();
+            } catch (IOException ignore) {
+            }
+            if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
+                try {
+                    DEFAULT_SELECTOR_EVENT_LOOP.close();
+                } catch (IOException ignore) {
+                }
+            }
+            DEFAULT_INSTANCE = null;
+            DEFAULT_SELECTOR_EVENT_LOOP = null;
+        }
     }
 }

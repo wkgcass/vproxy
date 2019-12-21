@@ -7,6 +7,7 @@ import vproxy.util.Logger;
 import java.util.LinkedList;
 import java.util.List;
 
+// rfc1035 impl
 public class Formatter {
     private Formatter() {
     }
@@ -94,6 +95,9 @@ public class Formatter {
     }
 
     public static ByteArray formatDomainName(String domain) {
+        if (domain.isEmpty()) {
+            return ByteArray.from((byte) 0);
+        }
         // add missing trailing dot
         if (!domain.endsWith(".")) {
             domain += ".";
@@ -140,13 +144,18 @@ public class Formatter {
     }
 
     public static ByteArray formatResource(DNSResource r) {
+        if (r.rawBytes != null) {
+            return r.rawBytes;
+        }
         ByteArray name = formatDomainName(r.name);
         ByteArray type_class_ttl_rdlen = ByteArray.allocate(10);
         type_class_ttl_rdlen.int16(0, r.type.code);
         type_class_ttl_rdlen.int16(2, r.clazz.code);
         type_class_ttl_rdlen.int32(4, r.ttl);
         type_class_ttl_rdlen.int16(8, r.rdlen);
-        return name.concat(type_class_ttl_rdlen).concat(r.rdataBytes);
+        ByteArray ret = name.concat(type_class_ttl_rdlen).concat(r.rdataBytes);
+        r.rawBytes = ret;
+        return ret;
     }
 
     public static List<DNSPacket> parsePackets(ByteArray input) throws InvalidDNSPacketException {
@@ -223,26 +232,23 @@ public class Formatter {
     }
 
     public static String parseDomainName(ByteArray data, ByteArray rawPacket, int[] offsetHolder) {
-        // check whether it's domain name pointer
-        {
-            byte b = data.get(0);
-            if ((b & 0b11000000) == 0b11000000) {
-                // is pointer
-                int offset = (b & 0b00111111) << 8;
-                offset |= data.get(1);
-                String name = parseDomainName(rawPacket.sub(offset, rawPacket.length() - offset), rawPacket, offsetHolder);
-                offsetHolder[0] = 2;
-                return name;
-            }
-        }
         StringBuilder sb = new StringBuilder();
         int len = 0;
-        for (int i = 0; ; ++i) {
+        int i = 0;
+        for (; ; ++i) {
             byte b = data.get(i);
             if (len == 0) {
                 // need to read a length
                 if (b == 0) {
                     break;
+                } else if ((b & 0b11000000) == 0b11000000) {
+                    // is pointer
+                    int offset = (b & 0b00111111) << 8;
+                    byte b2 = data.get(++i);
+                    offset |= (b2 & 0xff);
+                    String name = parseDomainName(rawPacket.sub(offset, rawPacket.length() - offset), rawPacket, offsetHolder);
+                    sb.append(name);
+                    break; // pointer must be the last piece of the domain name
                 } else {
                     len = b & 0xff;
                 }
@@ -255,7 +261,7 @@ public class Formatter {
             }
         }
         String name = sb.toString();
-        offsetHolder[0] = name.length() + 1 /*the first length variable*/;
+        offsetHolder[0] = i + 1;
         return name;
     }
 
@@ -308,6 +314,8 @@ public class Formatter {
             return DNSType.TXT;
         } else if (type == DNSType.AAAA.code) {
             return DNSType.AAAA;
+        } else if (type == DNSType.OPT.code) {
+            return DNSType.OPT;
         } else {
             throw new InvalidDNSPacketException("unknown type: " + type);
         }
@@ -395,7 +403,11 @@ public class Formatter {
         int ttl = data.int32(offset + 4);
         int rdlen = data.uint16(offset + 8);
         r.type = parseType(type);
-        r.clazz = parseClass(clazz);
+        if (r.type == DNSType.OPT) {
+            r.clazz = DNSClass.NOT_CLASS; // this field is not class
+        } else {
+            r.clazz = parseClass(clazz);
+        }
         r.ttl = ttl;
         r.rdlen = rdlen;
         if (r.rdlen < 0) {
@@ -410,6 +422,8 @@ public class Formatter {
             rData.fromByteArray(rdataBytes, rawPacket);
             r.rdata = rData;
         }
-        return offset + r.rdlen;
+        int len = offset + r.rdlen;
+        r.rawBytes = data.sub(0, len);
+        return len;
     }
 }

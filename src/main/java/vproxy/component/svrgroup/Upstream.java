@@ -171,23 +171,28 @@ public class Upstream {
         return next(source, null);
     }
 
+    public ServerGroupHandle searchForGroup(Hint hint) {
+        int maxLvl = Hint.MAX_MATCH_LEVEL;
+        int level = 0;
+        ServerGroupHandle lastMax = null;
+        for (ServerGroupHandle h : serverGroupHandles) {
+            int l = hint.matchLevel(h.alias);
+            if (l > level) {
+                level = l;
+                lastMax = h;
+            }
+            if (l == maxLvl) { // directly return if it's the best match
+                break;
+            }
+        }
+        return lastMax;
+    }
+
     public Connector next(InetSocketAddress source, Hint hint) {
         if (hint != null) {
-            int maxLvl = Hint.MAX_MATCH_LEVEL;
-            int level = 0;
-            ServerGroupHandle lastMax = null;
-            for (ServerGroupHandle h : serverGroupHandles) {
-                int l = hint.matchLevel(h.alias);
-                if (l == maxLvl) { // directly return if it's the best match
-                    return h.group.next(source);
-                }
-                if (l > level) {
-                    level = l;
-                    lastMax = h;
-                }
-            }
-            if (lastMax != null) { // return the most matched
-                return lastMax.group.next(source);
+            ServerGroupHandle h = searchForGroup(hint);
+            if (h != null) {
+                return h.group.next(source);
             }
             // not found, use normal process
             // fall through

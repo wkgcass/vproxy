@@ -1,16 +1,16 @@
 package vproxy.dns;
 
-import vfd.FDProvider;
-import vfd.VFDConfig;
-import vfd.jdk.ChannelFDs;
+import vfd.FDs;
 import vproxy.connection.NetEventLoop;
 import vproxy.dns.rdata.JDKResolver;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
-import java.io.*;
+import java.io.IOException;
 import java.net.*;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -78,15 +78,11 @@ public abstract class AbstractResolver implements Resolver {
     final ConcurrentMap<String, Cache> cacheMap = new ConcurrentHashMap<>();
     final CopyOnWriteArraySet<ResolveListener> resolveListeners = new CopyOnWriteArraySet<>();
 
-    public AbstractResolver(String alias) throws IOException {
+    protected AbstractResolver(String alias, FDs fds) throws IOException {
         // currently we only use java standard lib to resolve the address
         // so this loop is only used for handling events for now
         this.alias = alias;
-        this.loop = new NetEventLoop(SelectorEventLoop.open(
-            VFDConfig.useFStack
-                ? ChannelFDs.get()
-                : FDProvider.get().getProvided()
-            /*FIXME: we might implement nonblocking dns client, this can be modified at that time*/));
+        this.loop = new NetEventLoop(SelectorEventLoop.open(fds));
         // java resolve process will block the thread
         // so we start a new thread only for resolving
         // it will make a callback when resolve completed
@@ -206,7 +202,7 @@ public abstract class AbstractResolver implements Resolver {
         Cache r = cacheMap.get(host);
         if (r == null) {
             loop.getSelectorEventLoop().runOnLoop(() ->
-                doResolve(new ResolveTask(host, (Callback) cb, ipv4, ipv6)));
+                doResolve(new ResolveTask(host, new RunOnLoopCallback<>((Callback) cb), ipv4, ipv6)));
             return;
         }
         Tuple<Inet4Address, Inet6Address> tup = r.next();

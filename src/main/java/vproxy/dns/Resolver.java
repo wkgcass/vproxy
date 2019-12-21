@@ -1,5 +1,6 @@
 package vproxy.dns;
 
+import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -66,9 +67,14 @@ public interface Resolver {
                     Logger.shouldNotHappen("reading " + f + " got exception", e);
                     return ret;
                 }
+                if (line.contains("#")) {
+                    line = line.substring(0, line.indexOf("#")); // remove comment
+                }
                 line = line.trim();
                 if (line.startsWith("nameserver ")) {
                     line = line.substring("nameserver ".length());
+                } else {
+                    continue;
                 }
                 if (Utils.isIpLiteral(line)) {
                     InetSocketAddress addr;
@@ -132,17 +138,23 @@ public interface Resolver {
                     Logger.shouldNotHappen("reading " + f + " got exception", e);
                     return ret;
                 }
+                if (line.contains("#")) {
+                    line = line.substring(0, line.indexOf("#")); // remove comment
+                }
+                if (line.isBlank()) {
+                    continue; // ignore empty line or lines with only comment in it
+                }
                 line = line.trim();
-                List<String> split = Arrays.asList(line.split(" "));
+                List<String> split = Arrays.asList(line.split("[ \\t]"));
                 split = split.stream().map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
                 if (split.size() < 2) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config " + line);
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config: " + line);
                     continue;
                 }
                 String ip = split.get(0);
                 byte[] ipBytes = Utils.parseIpString(ip);
                 if (ipBytes == null) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config " + line);
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config: not ip: " + line);
                     continue;
                 }
                 InetAddress l3addr;

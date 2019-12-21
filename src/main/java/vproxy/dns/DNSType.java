@@ -18,6 +18,7 @@ public enum DNSType {
     MX(15), // mail exchange
     TXT(16), // text strings
     AAAA(28), // ipv6
+    OPT(41), // OPT pseudo-RR | meta-RR
 
     AXFR(252), // only available in qtype, A request for a transfer of an entire zone
     MAILB(253), // only available in qtype,  A request for mailbox-related records (MB, MG or MR)
