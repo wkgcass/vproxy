@@ -106,7 +106,7 @@ public class HttpController {
         server.pst(moduleBase + "/dns-server", wrapAsync(this::createDNSServer, new ObjectBuilder()
                 .put("name", "alias of the dns server")
                 .put("address", "the bind address")
-                .put("backend", "the servers to be resolved")
+                .put("rrsets", "the servers to be resolved")
                 .put("eventLoopGroup", "the event loop group to run the dns server")
                 .build(),
             "name", "address", "backend"));
@@ -526,9 +526,9 @@ public class HttpController {
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         var name = body.getString("name");
         var address = body.getString("address");
-        var backend = body.getString("backend");
+        var rrsets = body.getString("rrsets");
         var options = new LinkedList<>(Arrays.asList(
-            "add", "dns-server", name, "address", address, "upstream", backend
+            "add", "dns-server", name, "address", address, "upstream", rrsets
         ));
         if (body.containsKey("eventLoopGroup")) {
             options.add("event-loop-group");

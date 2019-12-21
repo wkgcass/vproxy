@@ -91,7 +91,7 @@ public class Entities {
     static class DNSServer {
         String name;
         InetSocketAddress address;
-        String backend;
+        String rrsets;
         @Optional String eventLoopGroup;
     }
 

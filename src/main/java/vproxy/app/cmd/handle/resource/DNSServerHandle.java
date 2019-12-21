@@ -75,7 +75,7 @@ public class DNSServerHandle {
         public String toString() {
             return dnsServer.alias + " -> event-loop-group " + dnsServer.eventLoopGroup.alias
                 + " bind " + Utils.ipStr(dnsServer.bindAddress.getAddress().getAddress()) + ":" + dnsServer.bindAddress.getPort()
-                + " backend " + dnsServer.backend.alias;
+                + " rrsets " + dnsServer.rrsets.alias;
         }
     }
 }

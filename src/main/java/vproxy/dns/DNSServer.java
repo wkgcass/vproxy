@@ -33,7 +33,7 @@ public class DNSServer {
     public final String alias;
     public final InetSocketAddress bindAddress;
     public final EventLoopGroup eventLoopGroup;
-    public final Upstream backend;
+    public final Upstream rrsets;
     public final DNSClient client;
     private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
@@ -42,11 +42,11 @@ public class DNSServer {
     private DatagramFD sock = null;
     private boolean needToStart = false;
 
-    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream backend) {
+    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets) {
         this.alias = alias;
         this.bindAddress = bindAddress;
         this.eventLoopGroup = eventLoopGroup;
-        this.backend = backend;
+        this.rrsets = rrsets;
         this.client = DNSClient.getDefault();
     }
 
@@ -84,7 +84,7 @@ public class DNSServer {
                     if (domain.endsWith(".")) { // remove tailing dot by convention
                         domain = domain.substring(0, domain.length() - 1);
                     }
-                    Upstream.ServerGroupHandle gh = backend.searchForGroup(new Hint(domain));
+                    Upstream.ServerGroupHandle gh = rrsets.searchForGroup(new Hint(domain));
                     if (gh == null) {
                         // usually one dns request only contain one question
                         // we currently do not consider the request of multiple domains and some of them do not require recursion

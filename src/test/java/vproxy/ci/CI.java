@@ -683,7 +683,7 @@ public class CI {
         Map<String, String> detail = getDetail("dns-server", dns);
         assertEquals(elg1, detail.get("event-loop-group"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
-        assertEquals(ups0, detail.get("backend"));
+        assertEquals(ups0, detail.get("rrsets"));
 
         String domain0 = "example.com:80";
         String domain1 = "test.com:8080";
@@ -2065,7 +2065,7 @@ public class CI {
     public void apiV1DNSServer() throws Exception {
         runNoUpdate("/dns-server", Entities.DNSServer.class,
             "eventLoopGroup", randomEventLoopGroup(),
-            "backend", randomUpstream());
+            "rrsets", randomUpstream());
         assertEquals(2, postCnt);
         assertEquals(0, putCnt);
     }
@@ -2501,7 +2501,7 @@ public class CI {
         var dnsResp = "{\n" +
             "    \"name\": \"" + dns + "\",\n" +
             "    \"address\": \"0.0.0.0:11153\",\n" +
-            "    \"backend\": {\n" +
+            "    \"rrsets\": {\n" +
             "        \"name\": \"" + ups + "\",\n" +
             "        \"serverGroupList\": [\n" +
             "            {\n" +

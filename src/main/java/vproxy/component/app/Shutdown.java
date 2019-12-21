@@ -578,13 +578,13 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the elg " + dns.eventLoopGroup.alias + " already removed");
                     continue;
                 }
-                if (!upstreamNames.contains(dns.backend.alias)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the ups " + dns.backend.alias + " already removed");
+                if (!upstreamNames.contains(dns.rrsets.alias)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the ups " + dns.rrsets.alias + " already removed");
                     continue;
                 }
                 String cmd = "add dns-server " + dns.alias +
                     " event-loop-group " + dns.eventLoopGroup.alias +
-                    " address " + Utils.ipport(dns.bindAddress) + " upstream " + dns.backend.alias;
+                    " address " + Utils.ipport(dns.bindAddress) + " upstream " + dns.rrsets.alias;
                 commands.add(cmd);
             }
         }
