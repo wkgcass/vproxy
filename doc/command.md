@@ -245,6 +245,62 @@ remove socks5-server s5
 "OK"
 ```
 
+## Resource: dns-server (dns)
+
+DNS Server
+
+#### add
+
+Create a dns server.
+
+* address (addr): The bind address of the socks5 server.
+* upstream (ups): The domains to be resolved.
+* ttl: *optional* The ttl of responded records. Default: 0
+* event-loop-group: *optional* Choose an event loop group to run the dns server. Default: (worker-elg)
+
+```
+add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
+"OK"
+```
+
+#### update
+
+Update config of a dns server.
+
+* ttl: *optional* The ttl of responded records. Default: not changed
+
+```
+update dns-server dns0 ttl 60
+"OK"
+```
+
+#### list
+
+Retrieve names of dns servers.
+
+```
+list dns-server
+1) "dns0"
+```
+
+#### list-detail
+
+Retrieve detailed info of dns servers.
+
+```
+list-detail dns-server
+1) "dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups"
+```
+
+#### remove
+
+Remove a dns server.
+
+```
+remove dns-server dns0
+"OK"
+```
+
 ## Resource: event-loop-group (elg)
 
 A group of event loops
