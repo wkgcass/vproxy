@@ -92,6 +92,7 @@ public class Entities {
         String name;
         InetSocketAddress address;
         String rrsets;
+        @Optional @Modifiable int ttl;
         @Optional String eventLoopGroup;
     }
 

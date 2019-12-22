@@ -677,6 +677,7 @@ public class CI {
         execute(createReq(add, "dns-server", dns,
             "event-loop-group", elg1,
             "address", "127.0.0.1:" + port,
+            "ttl", "123",
             "upstream", ups0));
         dnsNames.add(dns);
         checkCreate("dns-server", dns);
@@ -684,6 +685,7 @@ public class CI {
         assertEquals(elg1, detail.get("event-loop-group"));
         assertEquals("127.0.0.1:" + port, detail.get("bind"));
         assertEquals(ups0, detail.get("rrsets"));
+        assertEquals("123", detail.get("ttl"));
 
         String domain0 = "example.com:80";
         String domain1 = "test.com:8080";
@@ -2063,11 +2065,11 @@ public class CI {
 
     @Test
     public void apiV1DNSServer() throws Exception {
-        runNoUpdate("/dns-server", Entities.DNSServer.class,
+        run("/dns-server", Entities.DNSServer.class,
             "eventLoopGroup", randomEventLoopGroup(),
             "rrsets", randomUpstream());
-        assertEquals(2, postCnt);
-        assertEquals(0, putCnt);
+        assertEquals(CC(2), postCnt);
+        assertEquals(CC(2) * CC(1), putCnt);
     }
 
     @Test
@@ -2245,7 +2247,7 @@ public class CI {
             "allow-non-backend"));
         socks5Names.add(socks5);
         var dns = randomName("dns");
-        execute(createReq(add, "dns-server", dns, "address", "0.0.0.0:11153", "upstream", ups, "event-loop-group", elg));
+        execute(createReq(add, "dns-server", dns, "address", "0.0.0.0:11153", "upstream", ups, "event-loop-group", elg, "ttl", "123"));
         dnsNames.add(dns);
 
         var tlResp = "{\n" +
@@ -2501,6 +2503,7 @@ public class CI {
         var dnsResp = "{\n" +
             "    \"name\": \"" + dns + "\",\n" +
             "    \"address\": \"0.0.0.0:11153\",\n" +
+            "    \"ttl\": 123,\n" +
             "    \"rrsets\": {\n" +
             "        \"name\": \"" + ups + "\",\n" +
             "        \"serverGroupList\": [\n" +

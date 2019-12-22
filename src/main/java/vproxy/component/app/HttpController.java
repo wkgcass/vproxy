@@ -108,8 +108,12 @@ public class HttpController {
                 .put("address", "the bind address")
                 .put("rrsets", "the servers to be resolved")
                 .put("eventLoopGroup", "the event loop group to run the dns server")
+                .put("ttl", 0)
                 .build(),
             "name", "address", "backend"));
+        server.put(moduleBase + "/dns-server/:dns", wrapAsync(this::updateDNSServer, new ObjectBuilder()
+            .put("ttl", 0)
+            .build()));
         server.del(moduleBase + "/dns-server/:dns", wrapAsync(this::deleteDNSServer));
         // event-loop
         server.get(moduleBase + "/event-loop-group/:elg/event-loop/:el/detail", wrapAsync(this::getEventLoop));
@@ -533,6 +537,22 @@ public class HttpController {
         if (body.containsKey("eventLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("eventLoopGroup"));
+        }
+        if (body.containsKey("ttl")) {
+            options.add("ttl");
+            options.add("" + body.getInt("ttl"));
+        }
+        utils.execute(cb, options);
+    }
+
+    private void updateDNSServer(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var options = new LinkedList<>(Arrays.asList(
+            "update", "dns-server", rctx.param("dns")
+        ));
+        var body = (JSON.Object) rctx.get(Tool.bodyJson);
+        if (body.containsKey("ttl")) {
+            options.add("ttl");
+            options.add("" + body.getInt("ttl"));
         }
         utils.execute(cb, options);
     }

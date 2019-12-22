@@ -41,13 +41,15 @@ public class DNSServer {
     private NetEventLoop loop = null;
     private DatagramFD sock = null;
     private boolean needToStart = false;
+    public int ttl;
 
-    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets) {
+    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets, int ttl) {
         this.alias = alias;
         this.bindAddress = bindAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.rrsets = rrsets;
         this.client = DNSClient.getDefault();
+        this.ttl = ttl;
     }
 
     class Attach implements EventLoopGroupAttach {
@@ -141,7 +143,10 @@ public class DNSServer {
                 DNSResource r = new DNSResource();
                 r.name = entry.getKey();
                 r.clazz = DNSClass.IN;
-                r.ttl = 0; // disable cache
+                if (ttl < 0) {
+                    ttl = 0;
+                }
+                r.ttl = ttl;
 
                 DNSType type;
                 RData rdata;

@@ -5,6 +5,7 @@ import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.handle.param.AddrHandle;
+import vproxy.app.cmd.handle.param.TTLHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.Upstream;
@@ -27,6 +28,9 @@ public class DNSServerHandle {
             throw new Exception("missing argument " + Param.ups.fullname);
 
         AddrHandle.check(cmd);
+        if (cmd.args.containsKey(Param.ttl)) {
+            TTLHandle.check(cmd);
+        }
     }
 
     public static DNSServer get(Resource dnsServer) throws NotFoundException {
@@ -57,7 +61,26 @@ public class DNSServerHandle {
         EventLoopGroup eventLoopGroup = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         InetSocketAddress addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
-        Application.get().dnsServerHolder.add(alias, addr, eventLoopGroup, backend);
+        int ttl;
+        if (cmd.args.containsKey(Param.ttl)) {
+            ttl = TTLHandle.get(cmd);
+        } else {
+            ttl = 0;
+        }
+        Application.get().dnsServerHolder.add(alias, addr, eventLoopGroup, backend, ttl);
+    }
+
+    public static void checkUpdateDNSServer(Command cmd) throws Exception {
+        if (cmd.args.containsKey(Param.ttl))
+            TTLHandle.check(cmd);
+    }
+
+    public static void update(Command cmd) throws Exception {
+        DNSServer dnsServer = get(cmd.resource);
+
+        if (cmd.args.containsKey(Param.ttl)) {
+            dnsServer.ttl = TTLHandle.get(cmd);
+        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -75,7 +98,8 @@ public class DNSServerHandle {
         public String toString() {
             return dnsServer.alias + " -> event-loop-group " + dnsServer.eventLoopGroup.alias
                 + " bind " + Utils.ipStr(dnsServer.bindAddress.getAddress().getAddress()) + ":" + dnsServer.bindAddress.getPort()
-                + " rrsets " + dnsServer.rrsets.alias;
+                + " rrsets " + dnsServer.rrsets.alias
+                + " ttl " + dnsServer.ttl;
         }
     }
 }

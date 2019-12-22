@@ -25,7 +25,7 @@ public class DNSServerPOC {
         group.add("svr7", new InetSocketAddress("ff2e:0000:0000:3456:0114:5140:7f00:0001", 80), 10);
         Upstream upstream = new Upstream("ups0");
         upstream.add(group, 10);
-        DNSServer dnsServer = new DNSServer("dns0", new InetSocketAddress(53), elg, upstream);
+        DNSServer dnsServer = new DNSServer("dns0", new InetSocketAddress(53), elg, upstream, 0);
         dnsServer.start();
         elg.add("el0");
     }

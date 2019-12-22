@@ -24,11 +24,12 @@ public class DNSServerHolder {
     public void add(String alias,
                     InetSocketAddress bindAddress,
                     EventLoopGroup eventLoopGroup,
-                    Upstream backend) throws AlreadyExistException, ClosedException, IOException {
+                    Upstream backend,
+                    int ttl) throws AlreadyExistException, ClosedException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("dns-server", alias);
 
-        DNSServer dnsServer = new DNSServer(alias, bindAddress, eventLoopGroup, backend);
+        DNSServer dnsServer = new DNSServer(alias, bindAddress, eventLoopGroup, backend, ttl);
         try {
             dnsServer.start();
         } catch (IOException e) {

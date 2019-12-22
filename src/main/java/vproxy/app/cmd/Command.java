@@ -623,6 +623,8 @@ public class Command {
                                 TcpLBHandle.checkUpdateTcpLB(cmd);
                             } else if (cmd.resource.type == ResourceType.socks5) {
                                 Socks5ServerHandle.checkUpdateSocks5Server(cmd);
+                            } else if (cmd.resource.type == ResourceType.dns) {
+                                DNSServerHandle.checkUpdateDNSServer(cmd);
                             } else if (cmd.resource.type != ResourceType.secg)
                                 throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                         }
@@ -922,6 +924,9 @@ public class Command {
                     case r:
                     case R:
                         DNSServerHandle.forceRemove(this);
+                        return new CmdResult();
+                    case u:
+                        DNSServerHandle.update(this);
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);

@@ -410,6 +410,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", dns.alias)
             .put("address", Utils.l4addrStr(dns.bindAddress))
+            .put("ttl", dns.ttl)
             .put("rrsets", dns.rrsets.alias)
             .put("eventLoopGroup", dns.eventLoopGroup.alias)
             .build();
@@ -419,6 +420,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", dns.alias)
             .put("address", Utils.l4addrStr(dns.bindAddress))
+            .put("ttl", dns.ttl)
             .putInst("rrsets", formatUpstreamDetail(dns.rrsets))
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(dns.eventLoopGroup))
             .build();

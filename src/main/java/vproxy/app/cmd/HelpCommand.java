@@ -409,7 +409,7 @@ public class HelpCommand {
         certkey("cert-key", "ck", "cert-key resource"),
         cert("cert", null, "the certificate file path"),
         key("key", null, "the key file path"),
-        ;
+        ttl("ttl", null, "time to live");
         public final String param;
         public final String shortVer;
         public final String descr;
@@ -563,10 +563,21 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group to run the dns server", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.address, "the bind address of the socks5 server")
                     , new ResActParamMan(ParamMan.upstream, "the domains to be resolved")
+                    , new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "0")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
-                        "add dns-server dns0 address 127.0.0.1:53 upstream backend-groups",
+                        "add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0",
+                        "\"OK\""
+                    )
+                ))
+            , new ResActMan(ActMan.update, "update config of a dns server",
+                Arrays.asList(
+                    new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "not changed")
+                ),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "update dns-server dns0 ttl 60",
                         "\"OK\""
                     )
                 ))
