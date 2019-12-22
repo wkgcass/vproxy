@@ -14,7 +14,6 @@ import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
-import vproxy.util.HttpStatusCodeReasonMap;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;

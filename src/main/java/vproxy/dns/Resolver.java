@@ -1,6 +1,5 @@
 package vproxy.dns;
 
-import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;

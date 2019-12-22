@@ -4,7 +4,10 @@ import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 
-import java.io.*;
+import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 

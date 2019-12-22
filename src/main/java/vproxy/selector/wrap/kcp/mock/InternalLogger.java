@@ -3,7 +3,6 @@ package vproxy.selector.wrap.kcp.mock;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 
-import java.util.Arrays;
 import java.util.Objects;
 
 public class InternalLogger {

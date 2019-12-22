@@ -1,7 +1,7 @@
 package vproxy.component.proxy;
 
-import vproxy.processor.Hint;
 import vproxy.connection.*;
+import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;

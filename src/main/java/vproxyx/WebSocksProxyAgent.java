@@ -1,7 +1,6 @@
 package vproxyx;
 
 import vfd.VFDConfig;
-import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.ServerHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;

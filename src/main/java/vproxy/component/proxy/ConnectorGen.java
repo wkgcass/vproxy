@@ -1,8 +1,8 @@
 package vproxy.component.proxy;
 
-import vproxy.processor.Hint;
 import vproxy.connection.Connection;
 import vproxy.connection.Connector;
+import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.util.Callback;

@@ -24,14 +24,7 @@ SOFTWARE.
 
 package vproxy.util.ex;
 
-import java.util.AbstractSequentialList;
-import java.util.Collection;
-import java.util.ConcurrentModificationException;
-import java.util.Deque;
-import java.util.Iterator;
-import java.util.List;
-import java.util.NoSuchElementException;
-import java.util.Queue;
+import java.util.*;
 
 /**
  * LinkedList with reusable iterator

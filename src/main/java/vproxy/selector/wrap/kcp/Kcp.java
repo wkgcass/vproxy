@@ -24,13 +24,16 @@ SOFTWARE.
 
 package vproxy.selector.wrap.kcp;
 
-import java.util.*;
-
 import vproxy.selector.wrap.kcp.mock.*;
-import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.ex.*;
+import vproxy.util.ex.ReItrLinkedList;
+import vproxy.util.ex.ReusableListIterator;
+
+import java.util.Iterator;
+import java.util.LinkedList;
+import java.util.List;
+import java.util.ListIterator;
 
 /**
  * Java implementation of <a href="https://github.com/skywind3000/kcp">KCP</a>

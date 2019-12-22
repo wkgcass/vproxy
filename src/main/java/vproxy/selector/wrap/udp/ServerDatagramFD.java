@@ -14,7 +14,10 @@ import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Deque;
+import java.util.HashMap;
+import java.util.LinkedList;
+import java.util.Map;
 
 public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware {
     private final DatagramFD server;
