@@ -2,7 +2,6 @@ package vproxy.dns;
 
 import vfd.FDs;
 import vproxy.connection.NetEventLoop;
-import vproxy.dns.rdata.JDKResolver;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
@@ -41,12 +40,7 @@ public abstract class AbstractResolver implements Resolver {
                 return defaultResolver;
             List<InetSocketAddress> nameServers = Resolver.getNameServers();
             try {
-                String name = "Resolver";
-                if (nameServers.isEmpty()) {
-                    defaultResolver = new JDKResolver(name);
-                } else {
-                    defaultResolver = new VResolver(name, nameServers, Resolver.getHosts());
-                }
+                defaultResolver = new VResolver("Resolver", nameServers, Resolver.getHosts());
             } catch (IOException e) {
                 throw new RuntimeException("create resolver failed");
             }
@@ -165,15 +159,7 @@ public abstract class AbstractResolver implements Resolver {
         // check whether it's ipv4 or ipv6
         if (Utils.isIpv4(host)) {
             if (ipv4) {
-                Inet4Address addr;
-                try {
-                    addr = (Inet4Address) InetAddress.getByName(host);
-                } catch (UnknownHostException e) {
-                    // should not happen
-                    Logger.shouldNotHappen("resolving an ipv4 address string should success");
-                    cb.failed(e);
-                    return;
-                }
+                Inet4Address addr = (Inet4Address) Utils.l3addr(host);
                 cb.succeeded(addr);
             } else {
                 cb.failed(new UnknownHostException(host));
@@ -181,15 +167,7 @@ public abstract class AbstractResolver implements Resolver {
             return;
         } else if (Utils.isIpv6(host)) {
             if (ipv6) {
-                Inet6Address addr;
-                try {
-                    addr = (Inet6Address) InetAddress.getByName(host);
-                } catch (UnknownHostException e) {
-                    // should not happen
-                    Logger.shouldNotHappen("resolving an ipv6 address string should success");
-                    cb.failed(e);
-                    return;
-                }
+                Inet6Address addr = (Inet6Address) Utils.l3addr(host);
                 cb.succeeded(addr);
             } else {
                 cb.failed(new UnknownHostException(host));

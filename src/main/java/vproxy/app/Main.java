@@ -55,6 +55,7 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
+        OOMHandler.handleOOM();
         if (VFDConfig.useFStack) {
             try {
                 FStackUtil.init();

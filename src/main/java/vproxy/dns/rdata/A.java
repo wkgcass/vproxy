@@ -9,11 +9,9 @@ package vproxy.dns.rdata;
 import vproxy.dns.DNSType;
 import vproxy.dns.InvalidDNSPacketException;
 import vproxy.util.ByteArray;
-import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Objects;
 
 public class A implements RData {
@@ -54,10 +52,6 @@ public class A implements RData {
         if (data.length() != 4)
             throw new InvalidDNSPacketException("A record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();
-        try {
-            address = (Inet4Address) InetAddress.getByAddress(arr);
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("getting l3addr from ipv4 byte array failed", e);
-        }
+        address = (Inet4Address) Utils.l3addr(arr);
     }
 }

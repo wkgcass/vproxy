@@ -4,9 +4,7 @@ import vfd.DatagramFD;
 import vfd.FDProvider;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
@@ -98,7 +96,7 @@ public class Logger {
     }
 
     private static void privatePrintStackTrace(Throwable t) {
-        if (stackTraceOn) {
+        if (stackTraceOn || !(t instanceof Exception)) { // always print errors
             t.printStackTrace(System.out);
         } else {
             String msg = t.getMessage();
@@ -197,12 +195,7 @@ public class Logger {
     }
 
     private static InetSocketAddress getLogAddress() {
-        try {
-            return new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 23456);
-        } catch (UnknownHostException e) {
-            shouldNotHappen("get log address failed", e);
-            throw new RuntimeException(e);
-        }
+        return new InetSocketAddress(Utils.l3addr(127, 0, 0, 1), 23456);
     }
 
     public static void shouldNotHappen(String msg, Throwable err) {

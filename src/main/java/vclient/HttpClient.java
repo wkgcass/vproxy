@@ -1,19 +1,15 @@
 package vclient;
 
 import vclient.impl.Http1ClientImpl;
+import vproxy.util.Utils;
 import vserver.HttpMethod;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 
 public interface HttpClient {
     static HttpClient to(String host, int port) {
-        try {
-            return to(InetAddress.getByName(host), port);
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
+        return to(Utils.l3addr(host), port);
     }
 
     static HttpClient to(InetAddress l3addr, int port) {

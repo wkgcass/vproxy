@@ -3,7 +3,7 @@ package vproxy.dns;
 import vfd.DatagramFD;
 import vfd.FDProvider;
 import vproxy.util.Callback;
-import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -17,15 +17,10 @@ public class VResolver extends AbstractResolver {
     private static final InetAddress[] LOCALHOST;
 
     static {
-        try {
-            LOCALHOST = new InetAddress[]{
-                InetAddress.getByName("127.0.0.1"),
-                InetAddress.getByName("::1")
-            };
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("retrieving l3addr from 127.0.0.1 and ::1 failed", e);
-            throw new RuntimeException(e);
-        }
+        LOCALHOST = new InetAddress[]{
+            Utils.l3addr("127.0.0.1"),
+            Utils.l3addr("::1")
+        };
     }
 
     private static final int reloadConfigFilePeriod = 30_000;

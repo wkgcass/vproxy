@@ -18,7 +18,6 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.HashMap;
@@ -504,14 +503,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             byte b2 = (byte) ((streamId >> 16) & 0xff);
             byte b3 = (byte) ((streamId >> 8) & 0xff);
             byte b4 = (byte) (streamId & 0xff);
-            try {
-                virtualAddress = InetAddress.getByAddress(new byte[]{
-                    b1, b2, b3, b4
-                });
-            } catch (UnknownHostException e) {
-                fail(e);
-                return false;
-            }
+            virtualAddress = Utils.l3addr(b1, b2, b3, b4);
         }
         int virtualPort;
         {

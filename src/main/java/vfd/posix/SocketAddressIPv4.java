@@ -1,11 +1,8 @@
 package vfd.posix;
 
-import vproxy.util.Logger;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 
 public class SocketAddressIPv4 implements VSocketAddress {
     public final int ip;
@@ -18,14 +15,7 @@ public class SocketAddressIPv4 implements VSocketAddress {
 
     @Override
     public InetSocketAddress toInetSocketAddress() {
-        try {
-            return new InetSocketAddress(
-                InetAddress.getByAddress(Utils.ipv4Int2Bytes(ip)),
-                port);
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("parse ipv4 from int " + ip + " failed", e);
-            throw new RuntimeException(e);
-        }
+        return new InetSocketAddress(Utils.l3addr(Utils.ipv4Int2Bytes(ip)), port);
     }
 
     @Override

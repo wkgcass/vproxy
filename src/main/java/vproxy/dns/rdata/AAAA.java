@@ -3,11 +3,9 @@ package vproxy.dns.rdata;
 import vproxy.dns.DNSType;
 import vproxy.dns.InvalidDNSPacketException;
 import vproxy.util.ByteArray;
-import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.util.Objects;
 
 public class AAAA implements RData {
@@ -48,10 +46,6 @@ public class AAAA implements RData {
         if (data.length() != 16)
             throw new InvalidDNSPacketException("AAAA record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();
-        try {
-            address = (Inet6Address) InetAddress.getByAddress(arr);
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("getting l3addr from ipv6 byte array failed", e);
-        }
+        address = (Inet6Address) Utils.l3addr(arr);
     }
 }

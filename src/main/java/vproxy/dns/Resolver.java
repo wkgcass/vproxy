@@ -76,20 +76,14 @@ public interface Resolver {
                     continue;
                 }
                 if (Utils.isIpLiteral(line)) {
-                    InetSocketAddress addr;
-                    try {
-                        addr = new InetSocketAddress(InetAddress.getByName(line), 53);
-                    } catch (UnknownHostException e) {
-                        Logger.shouldNotHappen("creating l3addr from ip literal failed: " + line);
-                        continue;
-                    }
+                    InetSocketAddress addr = new InetSocketAddress(Utils.l3addr(line), 53);
                     // need to remove localhost addresses because it might be vproxy itself
                     {
                         String ipName = Utils.ipStr(addr.getAddress().getAddress());
-                        if (ipName.equals("127.0.0.1") ||
-                            ipName.equals("[0000:0000:0000:0000:0000:0000:0000:0001]") ||
-                            ipName.equals("[0000:0000:0000:0000:0000:ffff:7f00:0001]") || // v4-mapped v6
-                            ipName.equals("[0000:0000:0000:0000:0000:0000:7f00:0001]")) { // v4-compatible v6
+                        if (ipName.startsWith("127.") ||
+                            ipName.equals("[0000:0000:0000:0000:0000:0000:0000:0001]") || // only one ipv6 loopback address
+                            ipName.startsWith("[0000:0000:0000:0000:0000:ffff:7f]") || // v4-mapped v6
+                            ipName.startsWith("[0000:0000:0000:0000:0000:0000:7f]")) { // v4-compatible v6
                             continue;
                         }
                     }
@@ -97,6 +91,10 @@ public interface Resolver {
                 } else {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid nameserver config: " + line);
                 }
+            }
+            if (ret.isEmpty()) {
+                ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
+                ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
             }
             return ret;
         } finally {
@@ -156,13 +154,7 @@ public interface Resolver {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config: not ip: " + line);
                     continue;
                 }
-                InetAddress l3addr;
-                try {
-                    l3addr = InetAddress.getByAddress(ipBytes);
-                } catch (UnknownHostException e) {
-                    Logger.shouldNotHappen("retrieving l3addr failed", e);
-                    continue;
-                }
+                InetAddress l3addr = Utils.l3addr(ipBytes);
                 for (int i = 1; i < split.size(); ++i) {
                     ret.put(split.get(i), l3addr);
                 }

@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
@@ -590,6 +591,40 @@ public class Utils {
         return isIpv4(s) || isIpv6(s);
     }
 
+    public static InetAddress l3addr(String ip) {
+        try {
+            return InetAddress.getByName(ip);
+        } catch (UnknownHostException e) {
+            Logger.shouldNotHappen("creating l3addr from " + ip + " failed", e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static InetAddress l3addr(byte[] addr) {
+        try {
+            return InetAddress.getByAddress(addr);
+        } catch (UnknownHostException e) {
+            StringBuilder err = new StringBuilder("creating l3addr from ");
+            boolean isFirst = true;
+            for (byte x : addr) {
+                if (isFirst) isFirst = false;
+                else err.append(".");
+                err.append(x & 0xff);
+            }
+            err.append(" failed");
+            Logger.shouldNotHappen(err.toString(), e);
+            throw new RuntimeException(e);
+        }
+    }
+
+    public static InetAddress l3addr(int a, int b, int c, int d) {
+        return l3addr(new byte[]{(byte) a, (byte) b, (byte) c, (byte) d});
+    }
+
+    public static InetAddress l3addr(byte a, byte b, byte c, byte d) {
+        return l3addr(new byte[]{a, b, c, d});
+    }
+
     private static Unsafe U;
 
     static {
@@ -634,15 +669,7 @@ public class Utils {
                 providedCallback.accept(null);
                 return;
             }
-            InetAddress remote;
-            try {
-                remote = InetAddress.getByName(address);
-            } catch (UnknownHostException e) {
-                // should not happen when retrieving from an ip address
-                Logger.shouldNotHappen("getting " + address + " failed", e);
-                providedCallback.accept(null);
-                return;
-            }
+            InetAddress remote = l3addr(address);
             providedCallback.accept(new Connector(new InetSocketAddress(remote, port)));
         }
     }
@@ -806,7 +833,11 @@ public class Utils {
     }
 
     public static byte[] gzipCompress(ByteArrayOutputStream baos, byte[] plain) {
-        try (GZIPOutputStream gzip = new GZIPOutputStream(baos)) {
+        try (GZIPOutputStream gzip = new GZIPOutputStream(baos) {
+            {
+                this.def.setLevel(Deflater.BEST_COMPRESSION);
+            }
+        }) {
             gzip.write(plain);
         } catch (IOException e) {
             Logger.shouldNotHappen("running gzip compression failed", e);
