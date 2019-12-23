@@ -99,12 +99,22 @@ public class Logger {
         if (stackTraceOn || !(t instanceof Exception)) { // always print errors
             t.printStackTrace(System.out);
         } else {
-            String msg = t.getMessage();
-            if (msg == null || msg.isBlank()) {
-                System.out.println(t.getClass().getName());
-            } else {
-                System.out.println(t.getClass().getName() + ": " + msg.trim());
-            }
+            StringBuilder sb = new StringBuilder();
+            formatExceptionStackTrace(t, sb);
+            System.out.println(sb.toString());
+        }
+    }
+
+    private static void formatExceptionStackTrace(Throwable t, StringBuilder sb) {
+        String msg = t.getMessage();
+        if (msg == null || msg.isBlank()) {
+            sb.append(t.getClass().getName());
+        } else {
+            sb.append(t.getClass().getName()).append(": ").append(msg.trim());
+        }
+        if (t.getCause() != null) {
+            sb.append(" <= ");
+            formatExceptionStackTrace(t.getCause(), sb);
         }
     }
 
