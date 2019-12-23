@@ -44,3 +44,7 @@ build/
 *.dylib
 *.so
 *.dll
+
+# graal result
+/vproxy
+/vproxy-*
