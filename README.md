@@ -8,7 +8,43 @@ VProxy is a zero-dependency TCP Loadbalancer based on Java NIO. The project only
 
 Clone it, compile it, then everything is ready for running.
 
+## Features
+
+1. TCP Loadbalancer with TLS termination
+2. HTTP/1.x and HTTP/2 Loadbalancer with `Host` header consideration
+3. Other tcp based protocol loadbalancer, such as dubbo
+4. Socks5 server
+5. DNS server and customizable A|AAAA records
+6. Automatic service discovery
+7. Many other standalone extended apps, such as `WebSocksProxyAgent` and `WebSocksProxyServer`
+
 ## Make
+
+### directly use built releases
+
+See the [release page](https://github.com/wkgcass/vproxy/releases).
+
+#### For linux
+
+Use the latest `vproxy-linux` in release page.
+
+Or
+
+Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-linux.tar.gz).
+
+#### For macos
+
+Use the latest `vproxy-macos` in release page.
+
+#### For windows
+
+Java runtime can be found [here](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot).
+
+#### For musl
+
+Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz).
+
+>NOTE: the runtime is in beta state.
 
 ### pack
 
@@ -60,6 +96,7 @@ For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/w
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
 * TCP Loadbalancer: we now support TCP and TCP based protocols, also allow your own protocols.
+* Service mesh: provide simple service discovery mechanism and sidecar support
 
 ## How to use
 

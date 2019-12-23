@@ -10,6 +10,32 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 ### 打包
 
+### 直接使用已构建的版本
+
+查看 [release page](https://github.com/wkgcass/vproxy/releases).
+
+#### linux
+
+使用release页面中最新的`vproxy-linux`。
+
+或者
+
+使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-linux.tar.gz)下载。
+
+#### macos
+
+使用release页面中最新的`vproxy-macos`。
+
+#### windows
+
+Java运行时可以从[这里](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot)下载。
+
+#### For musl
+
+使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz)下载。
+
+>注意：该运行时仍然处于beta阶段
+
 ```
 ./gradlew clean jar
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
@@ -58,6 +84,7 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 * 运行时可修改：更新配置不需要重启。
 * 高效：性能是首要目标之一。
 * TCP负载均衡：支持TCP以及一些基于TCP的协议，也允许你使用自己的协议。
+* 服务网格: 提供简单的服务发现和Sidecar支持
 
 ## 如何使用
 
