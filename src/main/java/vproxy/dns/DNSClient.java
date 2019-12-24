@@ -47,6 +47,8 @@ public class DNSClient {
         this.maxRetry = maxRetry;
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
+
+        Logger.alert("using " + initialNameServers + " as name servers");
     }
 
     private static SelectorEventLoop getDefaultSelectorEventLoop() {
@@ -128,6 +130,8 @@ public class DNSClient {
             return;
         }
         this.nameServers = nameServers;
+
+        Logger.alert("using " + nameServers + " as name servers");
     }
 
     private class Request<RETURN, EXCEPTION extends IOException> {

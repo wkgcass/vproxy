@@ -8,6 +8,7 @@ import java.util.LinkedList;
 import java.util.List;
 
 // rfc1035 impl
+// enums: https://www.iana.org/assignments/dns-parameters/dns-parameters.xhtml
 public class Formatter {
     private Formatter() {
     }
@@ -208,6 +209,12 @@ public class Formatter {
             return DNSPacket.Opcode.IQUERY;
         } else if (opcode == DNSPacket.Opcode.STATUS.code) {
             return DNSPacket.Opcode.STATUS;
+        } else if (opcode == DNSPacket.Opcode.Notify.code) {
+            return DNSPacket.Opcode.Notify;
+        } else if (opcode == DNSPacket.Opcode.Update.code) {
+            return DNSPacket.Opcode.Update;
+        } else if (opcode == DNSPacket.Opcode.DSO.code) {
+            return DNSPacket.Opcode.DSO;
         } else {
             throw new InvalidDNSPacketException("unknown opcode: " + opcode);
         }
@@ -314,10 +321,12 @@ public class Formatter {
             return DNSType.TXT;
         } else if (type == DNSType.AAAA.code) {
             return DNSType.AAAA;
+        } else if (type == DNSType.SRV.code) {
+            return DNSType.SRV;
         } else if (type == DNSType.OPT.code) {
             return DNSType.OPT;
         } else {
-            throw new InvalidDNSPacketException("unknown type: " + type);
+            return DNSType.OTHER;
         }
     }
 
@@ -364,6 +373,8 @@ public class Formatter {
     public static DNSClass parseQuestionClass(int qclass) throws InvalidDNSPacketException {
         if (qclass == DNSClass.ANY.code) {
             return DNSClass.ANY;
+        } else if (qclass == DNSClass.NONE.code) {
+            return DNSClass.NONE;
         } else {
             return parseClass(qclass);
         }
@@ -372,8 +383,6 @@ public class Formatter {
     private static DNSClass parseClass(int clazz) throws InvalidDNSPacketException {
         if (clazz == DNSClass.IN.code) {
             return DNSClass.IN;
-        } else if (clazz == DNSClass.CS.code) {
-            return DNSClass.CS;
         } else if (clazz == DNSClass.CH.code) {
             return DNSClass.CH;
         } else if (clazz == DNSClass.HS.code) {

@@ -1,7 +1,10 @@
 package vproxyx.websocks;
 
+import vjson.JSON;
+import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.connection.Connector;
+import vproxy.dns.Resolver;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
 import vproxy.processor.http1.entity.Header;
@@ -17,13 +20,58 @@ import vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
 import java.util.function.Supplier;
 
 public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> {
-    private final HttpProtocolHandler httpProtocolHandler = new HttpProtocolHandler(false) {
+    private interface Tool {
+        String prefix();
+
+        void handle(WebSocksHttpProtocolHandler handler, ProtocolHandlerContext<HttpContext> ctx, String argument);
+    }
+
+    // some utils tools provided by the websocks-proxy-server through http
+    private static final String TOOLS_PREFIX = "/tools";
+    private static final Tool[] tools = new Tool[]{
+        new ResolveTool(),
+    };
+
+    static class ResolveTool implements Tool {
+        @Override
+        public String prefix() {
+            return "/resolve?domain=";
+        }
+
+        @Override
+        public void handle(WebSocksHttpProtocolHandler handler, ProtocolHandlerContext<HttpContext> ctx, String argument) {
+            Resolver.getDefault().resolve(argument, new Callback<>() {
+                @Override
+                protected void onSucceeded(InetAddress value) {
+                    JSON.Object object = new ObjectBuilder()
+                        .put("domain", argument)
+                        .putArray("addresses", arr -> arr.add(Utils.ipStr(value.getAddress()))).build();
+                    ctx.write(handler.response(object));
+                }
+
+                @Override
+                protected void onFailed(UnknownHostException err) {
+                    handler.fail(ctx, 400, "Cannot resolve host: " + Utils.formatErr(err));
+                }
+            });
+        }
+    }
+
+    private final HttpProtocolHandler httpProtocolHandler = new WebSocksHttpProtocolHandler();
+
+    class WebSocksHttpProtocolHandler extends HttpProtocolHandler {
+        protected WebSocksHttpProtocolHandler() {
+            super(false);
+        }
+
         @Override
         protected void request(ProtocolHandlerContext<HttpContext> ctx) {
             Request req = ctx.data.result;
@@ -43,6 +91,20 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                         // fall through
                     } else {
                         String uri = req.uri;
+                        // check for tools
+                        for (Tool tool : tools) {
+                            String prefix = TOOLS_PREFIX + tool.prefix();
+                            if (!uri.startsWith(prefix)) {
+                                continue;
+                            }
+                            String arg = uri.substring(prefix.length()).trim();
+                            if (arg.isEmpty()) {
+                                fail(ctx, 400, "Invalid argument");
+                                return;
+                            }
+                            tool.handle(this, ctx, arg);
+                            return;
+                        }
                         if (uri.contains("?")) {
                             uri = uri.substring(0, uri.indexOf("?"));
                         }
@@ -190,6 +252,24 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             return Base64.getEncoder().encodeToString(sha1.digest());
         }
 
+        private byte[] response(JSON.Instance body) {
+            String statusMsg = HttpStatusCodeReasonMap.get(200);
+            Response resp = new Response();
+            resp.version = "HTTP/1.1";
+            resp.statusCode = 200;
+            resp.reason = statusMsg;
+            resp.headers = new LinkedList<>();
+            resp.headers.add(new Header("Server", "vproxy/" + Application.VERSION));
+            resp.headers.add(new Header("Date", new Date().toString()));
+            resp.headers.add(new Header("Content-Type", "application/json"));
+            if (body != null) {
+                ByteArray foo = ByteArray.from(body.pretty().getBytes());
+                resp.headers.add(new Header("Content-Length", "" + foo.length()));
+                resp.body = foo;
+            }
+            return resp.toByteArray().toJavaArray();
+        }
+
         private byte[] response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
             // check whether the page exists when statusCode is 200
             PageProvider.PageResult page = null;
@@ -219,6 +299,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Sec-WebSocket-Protocol", "socks5"));
             } else if (statusCode == 200) {
                 resp.headers.add(new Header("Content-Type", page.mime));
+                assert page.content != null;
                 resp.headers.add(new Header("Content-Length", "" + page.content.length()));
                 resp.body = page.content;
             } else if (statusCode == 302) {
@@ -261,7 +342,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             }
             return resp.toByteArray().toJavaArray();
         }
-    };
+    }
 
     private final Socks5ProxyProtocolHandler socks5Handler = new Socks5ProxyProtocolHandler(
         (accepted, type, address, port, providedCallback) ->

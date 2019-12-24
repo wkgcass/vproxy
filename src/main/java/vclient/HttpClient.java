@@ -4,6 +4,7 @@ import vclient.impl.Http1ClientImpl;
 import vproxy.util.Utils;
 import vserver.HttpMethod;
 
+import javax.net.ssl.SSLContext;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
@@ -17,7 +18,11 @@ public interface HttpClient {
     }
 
     static HttpClient to(InetSocketAddress l4addr) {
-        return new Http1ClientImpl(l4addr);
+        return to(l4addr, new Options());
+    }
+
+    static HttpClient to(InetSocketAddress l4addr, Http1ClientImpl.Options opts) {
+        return new Http1ClientImpl(l4addr, opts);
     }
 
     default HttpRequest get(String uri) {
@@ -39,4 +44,20 @@ public interface HttpClient {
     HttpRequest request(HttpMethod method, String uri);
 
     void close();
+
+    class Options {
+        public SSLContext sslContext;
+
+        public Options() {
+        }
+
+        public Options(Options that) {
+            this.sslContext = that.sslContext;
+        }
+
+        public Options setSSLContext(SSLContext sslContext) {
+            this.sslContext = sslContext;
+            return this;
+        }
+    }
 }

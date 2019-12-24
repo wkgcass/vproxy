@@ -79,6 +79,8 @@ public class WebSocksProxyAgent {
 
         assert Logger.lowLevelDebug("listen on " + configProcessor.getListenPort());
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
+        assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getResolves());
+        assert Logger.lowLevelDebug("no-proxy domain patterns " + configProcessor.getNoProxyDomains());
         assert Logger.lowLevelDebug("proxy servers " +
             configProcessor.getServers().values().stream().map(server ->
                 server.getServerHandles().stream()
@@ -181,6 +183,17 @@ public class WebSocksProxyAgent {
                     configProcessor.getHttpConnectListenPort() // this port is http connect port
                 ));
             Logger.alert("pac server started on " + configProcessor.getPacServerPort());
+        }
+
+        // maybe we can start the dns server
+        if (configProcessor.getDnsListenPort() != 0) {
+            assert Logger.lowLevelDebug("start dns server");
+            var l4addr = new InetSocketAddress(
+                InetAddress.getByName("0.0.0.0"),
+                configProcessor.getDnsListenPort()
+            );
+            new HttpDNSServer("dns", l4addr, worker, configProcessor).start();
+            Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
         }
     }
 }

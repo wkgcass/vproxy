@@ -27,9 +27,12 @@ public class ConfigProcessor {
     private int httpConnectListenPort = 0;
     private int ssListenPort = 0;
     private String ssPassword = "";
+    private int dnsListenPort = 0;
     private boolean gateway = false;
     private Map<String, ServerGroup> servers = new HashMap<>();
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
+    private Map<String, List<DomainChecker>> resolves = new HashMap<>();
+    private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
     private String user;
     private String pass;
     private String cacertsPath;
@@ -64,6 +67,10 @@ public class ConfigProcessor {
         return ssPassword;
     }
 
+    public int getDnsListenPort() {
+        return dnsListenPort;
+    }
+
     public boolean isGateway() {
         return gateway;
     }
@@ -82,6 +89,34 @@ public class ConfigProcessor {
         // put DEFAULT to the last
         if (domains.containsKey("DEFAULT")) {
             ret.put("DEFAULT", domains.get("DEFAULT"));
+        }
+        return ret;
+    }
+
+    public LinkedHashMap<String, List<DomainChecker>> getResolves() {
+        LinkedHashMap<String, List<DomainChecker>> ret = new LinkedHashMap<>();
+        for (String key : resolves.keySet()) {
+            if (!key.equals("DEFAULT")) {
+                ret.put(key, resolves.get(key));
+            }
+        }
+        // put DEFAULT to the last
+        if (resolves.containsKey("DEFAULT")) {
+            ret.put("DEFAULT", resolves.get("DEFAULT"));
+        }
+        return ret;
+    }
+
+    public LinkedHashMap<String, List<DomainChecker>> getNoProxyDomains() {
+        LinkedHashMap<String, List<DomainChecker>> ret = new LinkedHashMap<>();
+        for (String key : noProxyDomains.keySet()) {
+            if (!key.equals("DEFAULT")) {
+                ret.put(key, noProxyDomains.get(key));
+            }
+        }
+        // put DEFAULT to the last
+        if (noProxyDomains.containsKey("DEFAULT")) {
+            ret.put("DEFAULT", noProxyDomains.get("DEFAULT"));
         }
         return ret;
     }
@@ -146,6 +181,28 @@ public class ConfigProcessor {
         return checkers;
     }
 
+    private List<DomainChecker> getResolveList(String alias) {
+        if (alias == null) {
+            alias = "DEFAULT";
+        }
+        if (resolves.containsKey(alias))
+            return resolves.get(alias);
+        List<DomainChecker> checkers = new LinkedList<>();
+        resolves.put(alias, checkers);
+        return checkers;
+    }
+
+    private List<DomainChecker> getNoProxyDomainList(String alias) {
+        if (alias == null) {
+            alias = "DEFAULT";
+        }
+        if (noProxyDomains.containsKey(alias))
+            return noProxyDomains.get(alias);
+        List<DomainChecker> checkers = new LinkedList<>();
+        noProxyDomains.put(alias, checkers);
+        return checkers;
+    }
+
     public void parse() throws Exception {
         FileInputStream inputStream = new FileInputStream(fileName);
         BufferedReader br = new BufferedReader(new InputStreamReader(inputStream));
@@ -154,6 +211,8 @@ public class ConfigProcessor {
         // 0 -> normal
         // 1 -> proxy.server.list
         // 2 -> proxy.domain.list
+        // 3 -> proxy.resolve.list
+        // 4 -> no-proxy.domain.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -190,6 +249,16 @@ public class ConfigProcessor {
                     }
                     if (ssListenPort < 1 || ssListenPort > 65535) {
                         throw new Exception("invalid agent.ss.listen, port number out of range");
+                    }
+                } else if (line.startsWith("agent.dns.listen ")) {
+                    String port = line.substring("agent.dns.listen ".length()).trim();
+                    try {
+                        dnsListenPort = Integer.parseInt(port);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.dns.listen, expecting an integer");
+                    }
+                    if (dnsListenPort < 1 || dnsListenPort > 65535) {
+                        throw new Exception("invalid agent.dns.listen, port number out of range");
                     }
                 } else if (line.startsWith("agent.ss.password ")) {
                     ssPassword = line.substring("agent.ss.password ".length()).trim();
@@ -300,6 +369,22 @@ public class ConfigProcessor {
                     step = 2;
                     if (!line.equals("proxy.domain.list.start")) {
                         String alias = line.substring("proxy.domain.list.start".length()).trim();
+                        if (alias.split(" ").length > 1)
+                            throw new Exception("symbol cannot contain spaces");
+                        currentAlias = alias;
+                    }
+                } else if (line.startsWith("proxy.resolve.list.start")) {
+                    step = 3;
+                    if (!line.equals("proxy.resolve.list.start")) {
+                        String alias = line.substring("proxy.resolve.list.start".length()).trim();
+                        if (alias.split(" ").length > 1)
+                            throw new Exception("symbol cannot contain spaces");
+                        currentAlias = alias;
+                    }
+                } else if (line.startsWith("no-proxy.domain.list.start")) {
+                    step = 4;
+                    if (!line.equals("no-proxy.domain.list.start")) {
+                        String alias = line.substring("no-proxy.domain.list.start".length()).trim();
                         if (alias.split(" ").length > 1)
                             throw new Exception("symbol cannot contain spaces");
                         currentAlias = alias;
@@ -425,49 +510,31 @@ public class ConfigProcessor {
                 }
                 // this will be used when connection establishes to remote
                 // in WebSocksProxyAgentConnectorProvider.java
+                // also in HttpDNSServer.java
                 handle.data = new SharedData(useSSL, useKCP, fds);
-            } else {
-                //noinspection ConstantConditions
-                assert step == 2;
+            } else if (step == 2) {
                 if (line.equals("proxy.domain.list.end")) {
                     step = 0;
                     currentAlias = null;
                     continue;
                 }
-                if (line.startsWith(":")) {
-                    String portStr = line.substring(1);
-                    int port;
-                    try {
-                        port = Integer.parseInt(portStr);
-                    } catch (NumberFormatException e) {
-                        throw new Exception("invalid port rule: " + portStr);
-                    }
-                    getDomainList(currentAlias).add(new PortChecker(port));
-                } else if (line.startsWith("/") && line.endsWith("/")) {
-                    String regexp = line.substring(1, line.length() - 1);
-                    getDomainList(currentAlias).add(new PatternDomainChecker(Pattern.compile(regexp)));
-                } else if (line.startsWith("[") && line.endsWith("]")) {
-                    String abpfile = line.substring(1, line.length() - 1);
-                    if (abpfile.startsWith("~")) {
-                        abpfile = System.getProperty("user.home") + File.separator + abpfile.substring(1);
-                    }
-
-                    ABP abp;
-                    try (FileReader fileABP = new FileReader(abpfile)) {
-                        StringBuilder sb = new StringBuilder();
-                        BufferedReader br2 = new BufferedReader(fileABP);
-                        String line2;
-                        while ((line2 = br2.readLine()) != null) {
-                            sb.append(line2.trim());
-                        }
-                        var content = sb.toString();
-                        abp = new ABP(true);
-                        abp.addBase64(content);
-                    }
-                    getDomainList(currentAlias).add(new ABPDomainChecker(abp));
-                } else {
-                    getDomainList(currentAlias).add(new SuffixDomainChecker(line));
+                getDomainList(currentAlias).add(formatDomainChecker(line));
+            } else if (step == 3) {
+                if (line.equals("proxy.resolve.list.end")) {
+                    step = 0;
+                    currentAlias = null;
+                    continue;
                 }
+                getResolveList(currentAlias).add(formatDomainChecker(line));
+            } else {
+                //noinspection ConstantConditions
+                assert step == 4;
+                if (line.equals("no-proxy.domain.list.end")) {
+                    step = 0;
+                    currentAlias = null;
+                    continue;
+                }
+                getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
             }
         }
 
@@ -475,13 +542,19 @@ public class ConfigProcessor {
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
         // check for consistency of server list and domain list
-        for (String k : servers.keySet()) {
-            if (!domains.containsKey(k))
-                throw new Exception(k + " is defined in server list, but not in domain list");
-        }
         for (String k : domains.keySet()) {
             if (!servers.containsKey(k))
                 throw new Exception(k + " is defined in domain list, but not in server list");
+        }
+        // check for consistency of server list and resolve list
+        for (String k : resolves.keySet()) {
+            if (!servers.containsKey(k))
+                throw new Exception(k + " is defined in resolve list, but not in server list");
+        }
+        // check for consistency of server list and no-proxy list
+        for (String k : noProxyDomains.keySet()) {
+            if (!servers.containsKey(k))
+                throw new Exception(k + " is defined in resolve list, but not in server list");
         }
         // check for listening ports
         if (listenPort == httpConnectListenPort) {
@@ -493,6 +566,43 @@ public class ConfigProcessor {
         // check for ss
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             throw new Exception("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
+        }
+    }
+
+    private DomainChecker formatDomainChecker(String line) throws Exception {
+        if (line.startsWith(":")) {
+            String portStr = line.substring(1);
+            int port;
+            try {
+                port = Integer.parseInt(portStr);
+            } catch (NumberFormatException e) {
+                throw new Exception("invalid port rule: " + portStr);
+            }
+            return new PortChecker(port);
+        } else if (line.startsWith("/") && line.endsWith("/")) {
+            String regexp = line.substring(1, line.length() - 1);
+            return new PatternDomainChecker(Pattern.compile(regexp));
+        } else if (line.startsWith("[") && line.endsWith("]")) {
+            String abpfile = line.substring(1, line.length() - 1);
+            if (abpfile.startsWith("~")) {
+                abpfile = System.getProperty("user.home") + File.separator + abpfile.substring(1);
+            }
+
+            ABP abp;
+            try (FileReader fileABP = new FileReader(abpfile)) {
+                StringBuilder sb = new StringBuilder();
+                BufferedReader br2 = new BufferedReader(fileABP);
+                String line2;
+                while ((line2 = br2.readLine()) != null) {
+                    sb.append(line2.trim());
+                }
+                var content = sb.toString();
+                abp = new ABP(true);
+                abp.addBase64(content);
+            }
+            return new ABPDomainChecker(abp);
+        } else {
+            return new SuffixDomainChecker(line);
         }
     }
 }

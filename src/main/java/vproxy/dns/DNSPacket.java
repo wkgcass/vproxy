@@ -46,6 +46,9 @@ public class DNSPacket {
         QUERY(0),
         IQUERY(1),
         STATUS(2),
+        Notify(4),
+        Update(5),
+        DSO(6), // dns stateful operations
         ;
         public final int code;
 

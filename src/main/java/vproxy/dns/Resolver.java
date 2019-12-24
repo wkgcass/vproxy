@@ -41,7 +41,7 @@ public interface Resolver {
 
     static List<InetSocketAddress> getNameServers() {
         // try ~/resolv.conf for customized resolve configuration
-        File f = new File(System.getProperty("user.home") + "/resolv.conf");
+        File f = new File(System.getProperty("user.home") + File.separator + "resolv.conf");
         if (!f.exists() || !f.isFile()) { // try linux|bsd resolve configuration
             f = new File("/etc/resolv.conf");
         }
@@ -55,6 +55,7 @@ public interface Resolver {
             Logger.shouldNotHappen("still getting FileNotFoundException while the file existence is already checked: " + f, e);
             return Collections.emptyList();
         }
+        Logger.alert("trying to get name servers from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             List<InetSocketAddress> ret = new ArrayList<>();
@@ -93,6 +94,7 @@ public interface Resolver {
                 }
             }
             if (ret.isEmpty()) {
+                Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
                 ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
                 ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
             }
@@ -107,7 +109,7 @@ public interface Resolver {
 
     static Map<String, InetAddress> getHosts() {
         // try ~/hosts for customized host config
-        File f = new File(System.getProperty("user.home") + "/hosts");
+        File f = new File(System.getProperty("user.home") + File.separator + "hosts");
         if (!f.exists() || !f.isFile()) { // try linux|bsd host file
             f = new File("/etc/hosts");
         }
@@ -124,6 +126,7 @@ public interface Resolver {
             Logger.shouldNotHappen("still getting FileNotFoundException while the file existence is already checked: " + f, e);
             return Collections.emptyMap();
         }
+        Logger.alert("trying to get hosts from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             Map<String, InetAddress> ret = new HashMap<>();

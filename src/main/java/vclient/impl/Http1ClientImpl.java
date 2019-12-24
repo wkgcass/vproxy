@@ -16,8 +16,10 @@ import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.ringbuffer.SSLUtils;
 import vserver.HttpMethod;
 
+import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
@@ -29,16 +31,22 @@ public class Http1ClientImpl implements HttpClient {
     private final boolean noInputLoop;
     private NetEventLoop loop;
     private final int timeout;
+    private final Options opts;
     private boolean closed = false;
 
-    public Http1ClientImpl(InetSocketAddress remote) {
-        this(remote, null, 10_000);
+    public Http1ClientImpl(InetSocketAddress remote, Options opts) {
+        this(remote, null, 10_000, opts);
     }
 
     public Http1ClientImpl(InetSocketAddress remote, NetEventLoop loop, int timeout) {
+        this(remote, loop, timeout, new Options());
+    }
+
+    public Http1ClientImpl(InetSocketAddress remote, NetEventLoop loop, int timeout, Options opts) {
         this.remote = remote;
         this.loop = loop;
         this.timeout = timeout;
+        this.opts = opts;
         noInputLoop = (loop == null);
     }
 
@@ -98,9 +106,20 @@ public class Http1ClientImpl implements HttpClient {
                 initLoop();
 
                 try {
+                    RingBuffer in;
+                    RingBuffer out;
+                    if (opts.sslContext != null) {
+                        SSLEngine engine = opts.sslContext.createSSLEngine();
+                        engine.setUseClientMode(true);
+                        SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
+                        in = pair.left;
+                        out = pair.right;
+                    } else {
+                        in = RingBuffer.allocate(1024);
+                        out = RingBuffer.allocate(1024);
+                    }
                     loop.addConnectableConnection(
-                        ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(timeout),
-                            RingBuffer.allocate(1024), RingBuffer.allocate(1024)),
+                        ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(timeout), in, out),
                         null,
                         new ConnectableConnectionHandler() {
                             private final HttpRespParser parser = new HttpRespParser(true);

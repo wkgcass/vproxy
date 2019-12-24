@@ -96,7 +96,7 @@ public class Logger {
     }
 
     private static void privatePrintStackTrace(Throwable t) {
-        if (stackTraceOn || !(t instanceof Exception)) { // always print errors
+        if (stackTraceOn || !(t instanceof Exception) || (t instanceof RuntimeException)) { // always print runtime exceptions and errors
             t.printStackTrace(System.out);
         } else {
             StringBuilder sb = new StringBuilder();

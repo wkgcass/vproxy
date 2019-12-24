@@ -615,6 +615,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
     private final boolean strictMode;
     private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
+    private final LinkedHashMap<String, List<DomainChecker>> noProxyDomains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
@@ -623,6 +624,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     public WebSocksProxyAgentConnectorProvider(ConfigProcessor config) {
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
+        this.noProxyDomains = config.getNoProxyDomains();
         this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
@@ -641,6 +643,14 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private String getProxy(String address, int port) {
+        for (Map.Entry<String, List<DomainChecker>> entry : noProxyDomains.entrySet()) {
+            for (DomainChecker checker : entry.getValue()) {
+                // HERE, needProxy means "DO NOT need proxy"
+                if (checker.needProxy(address, port)) {
+                    return null;
+                }
+            }
+        }
         for (Map.Entry<String, List<DomainChecker>> entry : proxyDomains.entrySet()) {
             for (DomainChecker checker : entry.getValue()) {
                 if (checker.needProxy(address, port)) {

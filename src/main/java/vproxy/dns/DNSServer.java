@@ -161,7 +161,7 @@ public class DNSServer {
         sendPacket(p.id, remote, resp);
     }
 
-    private void runRecursive(DNSPacket p, InetSocketAddress remote) {
+    protected void runRecursive(DNSPacket p, InetSocketAddress remote) {
         client.request(p, new Callback<>() {
             @Override
             protected void onSucceeded(DNSPacket value) {
@@ -175,7 +175,7 @@ public class DNSServer {
         });
     }
 
-    private void sendPacket(int id, InetSocketAddress remote, DNSPacket p) {
+    protected void sendPacket(int id, InetSocketAddress remote, DNSPacket p) {
         p.id = id;
         ByteBuffer buf = ByteBuffer.wrap(p.toByteArray().toJavaArray());
         int len = buf.limit();
@@ -191,7 +191,7 @@ public class DNSServer {
         }
     }
 
-    private void sendError(DNSPacket requestPacket, InetSocketAddress remote, IOException err) {
+    protected void sendError(DNSPacket requestPacket, InetSocketAddress remote, IOException err) {
         assert Logger.lowLevelDebug("sending error to " + remote + ": " + err);
         DNSPacket p = new DNSPacket();
         p.id = requestPacket.id;
