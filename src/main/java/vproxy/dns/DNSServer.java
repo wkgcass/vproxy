@@ -9,8 +9,8 @@ import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
-import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
+import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.dns.rdata.A;
@@ -27,10 +27,7 @@ import vproxy.util.Logger;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.LinkedHashMap;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DNSServer {
     public final String alias;
@@ -97,24 +94,19 @@ public class DNSServer {
                         runRecursive(p, remote);
                         return;
                     }
-                    List<InetAddress> ls = new LinkedList<>();
-                    for (ServerGroup.ServerHandle sh : gh.group.getServerHandles()) {
-                        if (!sh.healthy)
-                            continue; // do not return unhealthy records
-                        InetAddress addr = sh.server.getAddress();
-                        if (addr instanceof Inet4Address) {
-                            if (q.qtype == DNSType.A || q.qtype == DNSType.ANY) {
-                                ls.add(addr);
-                            }
-                        } else if (addr instanceof Inet6Address) {
-                            if (q.qtype == DNSType.AAAA || q.qtype == DNSType.ANY) {
-                                ls.add(addr);
-                            }
-                        }
+                    Connector connector;
+                    if (q.qtype == DNSType.A) {
+                        connector = gh.group.nextIPv4(remote);
+                    } else if (q.qtype == DNSType.AAAA) {
+                        connector = gh.group.nextIPv6(remote);
+                    } else {
+                        connector = gh.group.next(remote);
                     }
                     if (addresses.containsKey(domain)) {
-                        addresses.get(domain).addAll(ls);
+                        addresses.get(domain).add(connector.remote.getAddress());
                     } else {
+                        var ls = new ArrayList<InetAddress>();
+                        ls.add(connector.remote.getAddress());
                         addresses.put(domain, ls);
                     }
                     break;
@@ -136,13 +128,7 @@ public class DNSServer {
         resp.questions.addAll(p.questions);
         for (Map.Entry<String, List<InetAddress>> entry : addresses.entrySet()) {
             List<InetAddress> addrs = entry.getValue();
-            int respLen = addrs.size();
-            int offset = (int) (Math.random() * addrs.size());
-            if (respLen > 4) { // do not respond too long
-                respLen = 4;
-            }
-            for (int i = 0; i < respLen; i++) {
-                InetAddress l3addr = addrs.get((offset + i) % addrs.size());
+            for (InetAddress l3addr : addrs) {
                 DNSResource r = new DNSResource();
                 r.name = entry.getKey();
                 r.clazz = DNSClass.IN;

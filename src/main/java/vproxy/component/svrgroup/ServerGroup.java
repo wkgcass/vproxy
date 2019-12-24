@@ -18,9 +18,7 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
+import java.net.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -320,6 +318,8 @@ public class ServerGroup {
     }
 
     private WRR _wrr;
+    private WRR _wrrIPv4;
+    private WRR _wrrIPv6;
     // END fields for WRR
 
     // START fields for WLC
@@ -332,6 +332,8 @@ public class ServerGroup {
     }
 
     private WLC _wlc;
+    private WLC _wlcIPv4;
+    private WLC _wlcIPv6;
     // END fields for WLC
 
     // START fields for SOURCE
@@ -359,6 +361,8 @@ public class ServerGroup {
     }
 
     private SOURCE _source;
+    private SOURCE _sourceIPv4;
+    private SOURCE _sourceIPv6;
     // END fields for SOURCE
 
     public ServerGroup(String alias,
@@ -392,9 +396,47 @@ public class ServerGroup {
         }
     }
 
+    public SvrHandleConnector nextIPv4(InetSocketAddress source) {
+        if (method == Method.wrr) {
+            return wrrNextIPv4();
+        } else if (method == Method.wlc) {
+            return wlcNextIPv4();
+        } else if (method == Method.source) {
+            return sourceHashGetIPv4(source.getAddress());
+        } else {
+            Logger.shouldNotHappen("unsupported method " + method);
+            // use wrr instead
+            return wrrNextIPv4();
+        }
+    }
+
+    public SvrHandleConnector nextIPv6(InetSocketAddress source) {
+        if (method == Method.wrr) {
+            return wrrNextIPv6();
+        } else if (method == Method.wlc) {
+            return wlcNextIPv6();
+        } else if (method == Method.source) {
+            return sourceHashGetIPv6(source.getAddress());
+        } else {
+            Logger.shouldNotHappen("unsupported method " + method);
+            // use wrr instead
+            return wrrNextIPv6();
+        }
+    }
+
     private SvrHandleConnector sourceHashGet(InetAddress source) {
         byte[] bytes = source.getAddress();
         return sourceHashGet(_source, _source.hash(bytes), 0);
+    }
+
+    private SvrHandleConnector sourceHashGetIPv4(InetAddress source) {
+        byte[] bytes = source.getAddress();
+        return sourceHashGet(_sourceIPv4, _sourceIPv4.hash(bytes), 0);
+    }
+
+    private SvrHandleConnector sourceHashGetIPv6(InetAddress source) {
+        byte[] bytes = source.getAddress();
+        return sourceHashGet(_sourceIPv6, _sourceIPv6.hash(bytes), 0);
     }
 
     private SvrHandleConnector sourceHashGet(SOURCE source, int hash, int recurse) {
@@ -448,6 +490,14 @@ public class ServerGroup {
         return wlcNext(_wlc, 0);
     }
 
+    private SvrHandleConnector wlcNextIPv4() {
+        return wlcNext(_wlcIPv4, 0);
+    }
+
+    private SvrHandleConnector wlcNextIPv6() {
+        return wlcNext(_wlcIPv6, 0);
+    }
+
     private SvrHandleConnector wlcNext(WLC wlc, int mStart) {
         if (mStart >= wlc.servers.size())
             return null;
@@ -491,6 +541,14 @@ public class ServerGroup {
         return wrrNext(this._wrr, 0);
     }
 
+    private SvrHandleConnector wrrNextIPv4() {
+        return wrrNext(this._wrrIPv4, 0);
+    }
+
+    private SvrHandleConnector wrrNextIPv6() {
+        return wrrNext(this._wrrIPv6, 0);
+    }
+
     private SvrHandleConnector wrrNext(WRR wrr, int recursion) {
         if (recursion > wrr.seq.length)
             return null;
@@ -523,6 +581,12 @@ public class ServerGroup {
     }
 
     private void sourceReset() {
+        _source = sourceReset(servers);
+        _sourceIPv4 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof Inet4Address).collect(Collectors.toList()));
+        _sourceIPv6 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof Inet6Address).collect(Collectors.toList()));
+    }
+
+    private SOURCE sourceReset(List<ServerHandle> servers) {
         ArrayList<ServerHandle> svrs = new ArrayList<>(servers);
         svrs.sort((a, b) -> {
             byte[] ba = a.server.getAddress().getAddress();
@@ -539,8 +603,7 @@ public class ServerGroup {
             return a.server.getPort() - b.server.getPort();
         });
         if (svrs.size() == 0) {
-            _source = new SOURCE(new int[0], svrs);
-            return;
+            return new SOURCE(new int[0], svrs);
         }
         int g = svrs.size() > 1
             ? gcd(svrs.get(0).weight, svrs.get(1).weight)
@@ -559,17 +622,36 @@ public class ServerGroup {
         for (Integer integer : seqList) {
             seq[idx++] = integer;
         }
-        _source = new SOURCE(seq, svrs);
+        return new SOURCE(seq, svrs);
     }
 
     private void wlcReset() {
         this._wlc = new WLC(this.servers.stream().filter(s -> s.weight > 0).collect(Collectors.toList()));
+        this._wlcIPv4 = new WLC(this.servers.stream()
+            .filter(s -> s.weight > 0)
+            .filter(s -> s.server.getAddress() instanceof Inet4Address)
+            .collect(Collectors.toList()));
+        this._wlcIPv6 = new WLC(this.servers.stream()
+            .filter(s -> s.weight > 0)
+            .filter(s -> s.server.getAddress() instanceof Inet6Address)
+            .collect(Collectors.toList()));
     }
 
     private void wrrReset() {
-        WRR wrr = new WRR(this.servers.stream()
+        this._wrr = wrrReset(new WRR(this.servers.stream()
             .filter(s -> s.weight > 0) // only consider those weight > 0
-            .collect(Collectors.toList()));
+            .collect(Collectors.toList())));
+        this._wrrIPv4 = wrrReset(new WRR(this.servers.stream()
+            .filter(s -> s.weight > 0)
+            .filter(s -> s.server.getAddress() instanceof Inet4Address)
+            .collect(Collectors.toList())));
+        this._wrrIPv6 = wrrReset(new WRR(this.servers.stream()
+            .filter(s -> s.weight > 0)
+            .filter(s -> s.server.getAddress() instanceof Inet6Address)
+            .collect(Collectors.toList())));
+    }
+
+    private WRR wrrReset(WRR wrr) {
         if (wrr.servers.isEmpty()) {
             wrr.seq = new int[0];
         } else {
@@ -618,7 +700,7 @@ public class ServerGroup {
             wrr.seq = seq;
         }
 
-        this._wrr = wrr;
+        return wrr;
     }
 
     private int sum(int[] weights) {
