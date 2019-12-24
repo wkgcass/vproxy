@@ -666,14 +666,14 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         // check whether need to proxy to the WebSocks server
         String serverAlias = getProxy(address, port);
         if (serverAlias == null) {
-            Logger.alert("directly request " + address + ":" + port);
+            Logger.alert("[TCP] directly request " + address + ":" + port);
             // just directly connect to the endpoint
             Utils.directConnect(type, address, port, providedCallback);
             return;
         }
 
         // proxy the net flow using WebSocks
-        Logger.alert("proxy the request to " + address + ":" + port + " via " + serverAlias);
+        Logger.alert("[TCP] proxy the request to " + address + ":" + port + " via " + serverAlias);
 
         NetEventLoop loop = accepted.getEventLoop();
         if (loop == null) {

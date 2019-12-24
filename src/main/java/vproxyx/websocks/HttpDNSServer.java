@@ -56,14 +56,14 @@ public class HttpDNSServer extends DNSServer {
                 var ls = entry.getValue();
                 for (DomainChecker chk : ls) {
                     if (chk.needProxy(domain, 0)) {
-                        Logger.alert("dispatch resolving query for " + domain + " via " + servers);
+                        Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
                         requestAndResponse(p, serverGroups.get(servers), domain, remote);
                         return;
                     }
                 }
             }
         }
-        Logger.alert("directly resolve for " + domain);
+        Logger.alert("[DNS] directly resolve for " + domain);
         super.runRecursive(p, remote);
     }
 
