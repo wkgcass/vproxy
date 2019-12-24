@@ -108,7 +108,7 @@ public class DNSClient {
             SelectorEventLoop loop = getDefaultSelectorEventLoop();
             DNSClient client;
             try {
-                client = new DNSClient(loop, sock, Resolver.getNameServers(), 1_000, 2);
+                client = new DNSClient(loop, sock, Resolver.getNameServers(), 2_000, 2);
             } catch (IOException e) {
                 Logger.shouldNotHappen("creating default dns client failed", e);
                 try {
