@@ -1,6 +1,8 @@
 package vproxy.util.ringbuffer;
 
+import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import javax.net.ssl.SSLEngine;
@@ -36,5 +38,21 @@ public class SSLUtils {
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output) {
         return genbuf(engine, input, output, (Consumer<Runnable>) null);
+    }
+
+    public static SSLEngine getEngineFrom(Connection connection) {
+        RingBuffer buf = connection.getInBuffer();
+        if (!(buf instanceof SSLUnwrapRingBuffer)) {
+            throw new IllegalArgumentException();
+        }
+        SSLUnwrapRingBuffer sslRingBuffer = (SSLUnwrapRingBuffer) buf;
+        return sslRingBuffer.engine;
+    }
+
+    public static RingBuffer getPlainBufferFrom(RingBuffer buf) {
+        if (!(buf instanceof SSLUnwrapRingBuffer)) {
+            throw new IllegalArgumentException();
+        }
+        return ((SSLUnwrapRingBuffer) buf).plainBufferForApp;
     }
 }

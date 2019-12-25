@@ -294,6 +294,9 @@ public class Proxy {
                 sslParams.setNeedClientAuth(false);
                 sslParams.setWantClientAuth(false);
             }
+            if (config.sslEngineManipulator != null) {
+                config.sslEngineManipulator.accept(engine, sslParams);
+            }
             engine.setSSLParameters(sslParams);
             // try to use alpn
             if (config.connGen.type() == ConnectorGen.Type.processor) {

@@ -14,7 +14,10 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 
+import java.io.IOException;
 import java.net.*;
+import java.util.Enumeration;
+import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -22,6 +25,7 @@ import java.util.stream.Collectors;
 public class HttpDNSServer extends DNSServer {
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
+    public boolean directRelay = false;
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
@@ -54,8 +58,13 @@ public class HttpDNSServer extends DNSServer {
                 var ls = entry.getValue();
                 for (DomainChecker chk : ls) {
                     if (chk.needProxy(domain, 0)) {
-                        Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
-                        requestAndResponse(p, serverGroups.get(servers), domain, remote);
+                        if (directRelay) {
+                            Logger.alert("[DNS] resolve to local ip for " + domain);
+                            respondWithSelfIp(p, domain, remote);
+                        } else {
+                            Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
+                            requestAndResponse(p, serverGroups.get(servers), domain, remote);
+                        }
                         return;
                     }
                 }
@@ -133,35 +142,7 @@ public class HttpDNSServer extends DNSServer {
         requestAndGetResult(serverGroup, domain, new Callback<>() {
             @Override
             protected void onSucceeded(InetAddress value) {
-                final int ttl = 10 * 60; // set to 10 minutes, which would cause no trouble in most cases
-
-                DNSPacket dnsResp = new DNSPacket();
-                dnsResp.id = p.id;
-                dnsResp.isResponse = true;
-                dnsResp.opcode = p.opcode;
-                dnsResp.aa = p.aa;
-                dnsResp.tc = false;
-                dnsResp.rd = p.rd;
-                dnsResp.ra = true;
-                dnsResp.rcode = DNSPacket.RCode.NoError;
-                dnsResp.questions.addAll(p.questions);
-                DNSResource res = new DNSResource();
-                res.name = domain;
-                res.clazz = DNSClass.IN;
-                res.ttl = ttl;
-                if (value instanceof Inet4Address) {
-                    res.type = DNSType.A;
-                    A a = new A();
-                    a.address = (Inet4Address) value;
-                    res.rdata = a;
-                } else {
-                    res.type = DNSType.AAAA;
-                    AAAA aaaa = new AAAA();
-                    aaaa.address = (Inet6Address) value;
-                    res.rdata = aaaa;
-                }
-                dnsResp.answers.add(res);
-                sendPacket(p.id, remote, dnsResp);
+                respond(p, domain, value, remote);
             }
 
             @Override
@@ -169,5 +150,82 @@ public class HttpDNSServer extends DNSServer {
                 sendError(p, remote, err);
             }
         });
+    }
+
+    private void respondWithSelfIp(DNSPacket p, String domain, InetSocketAddress remote) {
+        Enumeration<NetworkInterface> nics;
+        try {
+            nics = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e) {
+            Logger.error(LogType.SYS_ERROR, "cannot get local interfaces", e);
+            sendError(p, remote, e);
+            return;
+        }
+
+        List<InterfaceAddress> candidates = new LinkedList<>();
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            candidates.addAll(nic.getInterfaceAddresses());
+        }
+        if (candidates.isEmpty()) {
+            Logger.error(LogType.SYS_ERROR, "cannot find ip address to return");
+            sendError(p, remote, new IOException("cannot find ip address to return"));
+            return;
+        }
+
+        // find ip in the same network
+        InetAddress result = null;
+        for (InterfaceAddress a : candidates) {
+            InetAddress addr = a.getAddress();
+            byte[] rule = addr.getAddress();
+            int mask = a.getNetworkPrefixLength();
+            byte[] maskBytes = Utils.parseMask(mask);
+            Utils.eraseToNetwork(rule, maskBytes);
+            if (Utils.maskMatch(remote.getAddress().getAddress(), rule, maskBytes)) {
+                result = addr;
+                break;
+            }
+        }
+
+        if (result == null) {
+            String msg = "cannot find ip address to return for remote " + Utils.l4addrStr(remote);
+            Logger.error(LogType.SYS_ERROR, msg);
+            sendError(p, remote, new IOException(msg));
+        } else {
+            Logger.alert("[DMS] choose local ip " + Utils.ipStr(result.getAddress()) + " for remote " + Utils.l4addrStr(remote));
+            respond(p, domain, result, remote);
+        }
+    }
+
+    private void respond(DNSPacket p, String domain, InetAddress result, InetSocketAddress remote) {
+        final int ttl = 10 * 60; // set to 10 minutes, which would cause no trouble in most cases
+
+        DNSPacket dnsResp = new DNSPacket();
+        dnsResp.id = p.id;
+        dnsResp.isResponse = true;
+        dnsResp.opcode = p.opcode;
+        dnsResp.aa = p.aa;
+        dnsResp.tc = false;
+        dnsResp.rd = p.rd;
+        dnsResp.ra = true;
+        dnsResp.rcode = DNSPacket.RCode.NoError;
+        dnsResp.questions.addAll(p.questions);
+        DNSResource res = new DNSResource();
+        res.name = domain;
+        res.clazz = DNSClass.IN;
+        res.ttl = ttl;
+        if (result instanceof Inet4Address) {
+            res.type = DNSType.A;
+            A a = new A();
+            a.address = (Inet4Address) result;
+            res.rdata = a;
+        } else {
+            res.type = DNSType.AAAA;
+            AAAA aaaa = new AAAA();
+            aaaa.address = (Inet6Address) result;
+            res.rdata = aaaa;
+        }
+        dnsResp.answers.add(res);
+        sendPacket(p.id, remote, dnsResp);
     }
 }

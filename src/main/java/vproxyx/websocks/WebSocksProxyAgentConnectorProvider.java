@@ -632,7 +632,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
         this.noProxyDomains = config.getNoProxyDomains();
-        this.tlsRelayDomains = config.getTLSRelayDomains();
+        if (config.isProxyRelay()) {
+            this.tlsRelayDomains = config.getTLSRelayDomains();
+        } else {
+            this.tlsRelayDomains = Collections.emptyList();
+        }
         this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
@@ -777,10 +781,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     cb.accept(null);
                     return;
                 }
-                waitUntilHandshakeDone(engine, conn, loop, cb);
-            }
-
-            private void waitUntilHandshakeDone(SSLEngine engine, ConnectableConnection conn, NetEventLoop loop, Consumer<Connector> cb) {
+                // wait until handshake done
                 try {
                     loop.addConnectableConnection(conn, null, new SSLHandshakeDoneConnectableConnectionHandler(
                         engine, new Callback<>() {
@@ -805,7 +806,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             protected void onFailed(Throwable o) {
                 UnknownHostException err = (UnknownHostException) o;
 
-                Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in tls relay" + err);
+                Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in tls relay", err);
                 cb.accept(null);
             }
         });

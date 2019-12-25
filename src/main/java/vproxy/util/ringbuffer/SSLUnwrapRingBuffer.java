@@ -20,7 +20,7 @@ import java.util.function.Consumer;
  * which can be retrieved by user
  */
 public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
-    private final SSLEngine engine;
+    final SSLEngine engine;
     private final Consumer<Runnable> resumer;
 
     // will call the pair's wrap/wrapHandshake when need to send data

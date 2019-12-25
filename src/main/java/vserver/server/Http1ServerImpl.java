@@ -85,6 +85,8 @@ public class Http1ServerImpl implements HttpServer {
         started = true;
         record(ALL_METHODS, Route.create("/*"), this::handle404);
 
+        ServerSock.checkBind(addr);
+
         initLoop();
 
         server = ServerSock.create(addr);
@@ -159,7 +161,9 @@ public class Http1ServerImpl implements HttpServer {
             response.statusCode = 200;
             response.reason = "OK";
         }
-        if (response.body != null) {
+        if (response.body == null) {
+            response.headers.add(new Header("Content-Length", "0"));
+        } else {
             response.headers.add(new Header("Content-Length", Integer.toString(response.body.length())));
         }
         _pctx.write(response.toByteArray().toJavaArray());

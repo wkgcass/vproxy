@@ -39,6 +39,8 @@ public class ConfigProcessor {
     private List<DomainChecker> tlsRelayDomains = new ArrayList<>();
     private List<List<String>> tlsRelayCertKeyFiles = new ArrayList<>();
     private List<CertKey> tlsRelayCertKeys = new ArrayList<>();
+    private boolean directRelay = false;
+    private Boolean proxyRelay = null; // null means auto
     private String user;
     private String pass;
     private String cacertsPath;
@@ -125,6 +127,14 @@ public class ConfigProcessor {
             ret.put("DEFAULT", noProxyDomains.get("DEFAULT"));
         }
         return ret;
+    }
+
+    public boolean isDirectRelay() {
+        return directRelay;
+    }
+
+    public boolean isProxyRelay() {
+        return proxyRelay == null ? !tlsRelayDomains.isEmpty() : proxyRelay;
     }
 
     public List<DomainChecker> getTLSRelayDomains() {
@@ -279,7 +289,7 @@ public class ConfigProcessor {
                         throw new Exception("invalid agent.dns.listen, port number out of range");
                     }
                 } else if (line.startsWith("agent.gateway ")) {
-                    String val = line.substring("agent.gateway ".length());
+                    String val = line.substring("agent.gateway ".length()).trim();
                     switch (val) {
                         case "on":
                             gateway = true;
@@ -289,6 +299,32 @@ public class ConfigProcessor {
                             break;
                         default:
                             throw new Exception("invalid value for agent.gateway: " + val);
+                    }
+                } else if (line.startsWith("agent.direct-relay ")) {
+                    String val = line.substring("agent.direct-relay ".length()).trim();
+                    switch (val) {
+                        case "on":
+                            directRelay = true;
+                            break;
+                        case "off":
+                            directRelay = false;
+                            break;
+                        default:
+                            throw new Exception("invalid value for agent.direct-relay: " + val);
+                    }
+                } else if (line.startsWith("agent.proxy-relay ")) {
+                    String val = line.substring("agent.proxy-relay ".length()).trim();
+                    switch (val) {
+                        case "on":
+                            proxyRelay = true;
+                            break;
+                        case "off":
+                            proxyRelay = false;
+                            break;
+                        case "auto":
+                            proxyRelay = null;
+                        default:
+                            throw new Exception("invalid value for agent.proxy-relay: " + val);
                     }
                 } else if (line.startsWith("proxy.server.auth ")) {
                     String auth = line.substring("proxy.server.auth ".length()).trim();
@@ -589,7 +625,13 @@ public class ConfigProcessor {
             }
         } else {
             if (!tlsRelayDomains.isEmpty()) {
-                throw new Exception("agent.tls-relay.cert and agent.tls-relay.cert are not set, but tls-relay.domain.list is not empty");
+                throw new Exception("agent.tls-relay.cert-key.list is empty, but tls-relay.domain.list is not empty");
+            }
+            if (directRelay) {
+                throw new Exception("agent.tls-relay.cert-key.list is empty, but agent.direct-relay is enabled");
+            }
+            if (proxyRelay != null && proxyRelay) {
+                throw new Exception("agent.tls-relay.cert-key.list is empty, but agent.proxy-relay is enabled");
             }
         }
         // check for consistency of server list and domain list

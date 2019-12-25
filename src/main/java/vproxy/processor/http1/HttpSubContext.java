@@ -112,6 +112,10 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         this.hostHeaderRetrieved = true; // set this field to true to let feed() respond bytes
     }
 
+    public RequestBuilder getParsingReq() {
+        return this.req;
+    }
+
     public Request getReq() {
         return this.req.build();
     }

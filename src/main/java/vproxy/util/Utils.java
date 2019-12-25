@@ -132,6 +132,22 @@ public class Utils {
         return 8;
     }
 
+    public static void eraseToNetwork(byte[] addr, byte[] mask) {
+        if (addr.length < mask.length)
+            throw new IllegalArgumentException();
+        // few bytes set to bitwise-and
+        for (int i = 0; i < mask.length; ++i) {
+            byte a = addr[i];
+            byte m = mask[i];
+            addr[i] = (byte) (a & m);
+        }
+        // last few bytes are all zero
+        // because mask is zero
+        for (int i = mask.length; i < addr.length; ++i) {
+            addr[i] = 0;
+        }
+    }
+
     public static boolean validNetwork(byte[] addr, byte[] mask) {
         if (addr.length < mask.length)
             return false; // ipv4 and mask > 32, absolutely wrong
