@@ -2,6 +2,7 @@ package vproxy.util.ringbuffer;
 
 import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.ByteArray;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
@@ -49,10 +50,8 @@ public class SSLUtils {
         return sslRingBuffer.engine;
     }
 
-    public static RingBuffer getPlainBufferFrom(RingBuffer buf) {
-        if (!(buf instanceof SSLUnwrapRingBuffer)) {
-            throw new IllegalArgumentException();
-        }
-        return ((SSLUnwrapRingBuffer) buf).plainBufferForApp;
+    public static ByteArray getPlainBufferBytes(SSLUnwrapRingBuffer buf) {
+        RingBuffer buffer = buf.plainBufferForApp;
+        return ByteArray.from(buffer.getBytes());
     }
 }

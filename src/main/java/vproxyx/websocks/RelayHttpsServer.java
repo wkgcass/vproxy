@@ -17,6 +17,7 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SSLEngine;
@@ -120,13 +121,7 @@ public class RelayHttpsServer {
 
             String hostname = null;
 
-            ByteArray data;
-            {
-                ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(ctx.inBuffer.used());
-                ctx.inBuffer.writeTo(chnl);
-                data = chnl.getArray(); // get the bytes
-                SSLUtils.getPlainBufferFrom(ctx.inBuffer).storeBytesFrom(chnl); // store the bytes back
-            }
+            ByteArray data = SSLUtils.getPlainBufferBytes((SSLUnwrapRingBuffer) ctx.inBuffer);
 
             // ok, let's parse the data then ...
             // assume it's http
