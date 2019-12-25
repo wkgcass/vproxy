@@ -1,8 +1,10 @@
 package vproxyx.websocks;
 
+import vproxy.app.CertKeyHolder;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.connection.NetEventLoop;
@@ -18,6 +20,7 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.regex.Pattern;
+import java.util.stream.Collectors;
 
 public class ConfigProcessor {
     public final String fileName;
@@ -33,6 +36,9 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
     private Map<String, List<DomainChecker>> resolves = new HashMap<>();
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
+    private List<DomainChecker> tlsRelayDomains = new ArrayList<>();
+    private List<List<String>> tlsRelayCertKeyFiles = new ArrayList<>();
+    private List<CertKey> tlsRelayCertKeys = new ArrayList<>();
     private String user;
     private String pass;
     private String cacertsPath;
@@ -119,6 +125,14 @@ public class ConfigProcessor {
             ret.put("DEFAULT", noProxyDomains.get("DEFAULT"));
         }
         return ret;
+    }
+
+    public List<DomainChecker> getTLSRelayDomains() {
+        return tlsRelayDomains;
+    }
+
+    public List<CertKey> getTLSRelayCertKeys() {
+        return tlsRelayCertKeys;
     }
 
     public String getUser() {
@@ -213,6 +227,8 @@ public class ConfigProcessor {
         // 2 -> proxy.domain.list
         // 3 -> proxy.resolve.list
         // 4 -> no-proxy.domain.list
+        // 5 -> tls-relay.domain.list
+        // 6 -> agent.tls-relay.cert-key.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -250,6 +266,8 @@ public class ConfigProcessor {
                     if (ssListenPort < 1 || ssListenPort > 65535) {
                         throw new Exception("invalid agent.ss.listen, port number out of range");
                     }
+                } else if (line.startsWith("agent.ss.password ")) {
+                    ssPassword = line.substring("agent.ss.password ".length()).trim();
                 } else if (line.startsWith("agent.dns.listen ")) {
                     String port = line.substring("agent.dns.listen ".length()).trim();
                     try {
@@ -260,8 +278,6 @@ public class ConfigProcessor {
                     if (dnsListenPort < 1 || dnsListenPort > 65535) {
                         throw new Exception("invalid agent.dns.listen, port number out of range");
                     }
-                } else if (line.startsWith("agent.ss.password ")) {
-                    ssPassword = line.substring("agent.ss.password ".length()).trim();
                 } else if (line.startsWith("agent.gateway ")) {
                     String val = line.substring("agent.gateway ".length());
                     switch (val) {
@@ -389,6 +405,10 @@ public class ConfigProcessor {
                             throw new Exception("symbol cannot contain spaces");
                         currentAlias = alias;
                     }
+                } else if (line.equals("tls-relay.domain.list.start")) {
+                    step = 5;
+                } else if (line.equals("agent.tls-relay.cert-key.list.start")) {
+                    step = 6;
                 } else {
                     throw new Exception("unknown line: " + line);
                 }
@@ -526,21 +546,52 @@ public class ConfigProcessor {
                     continue;
                 }
                 getResolveList(currentAlias).add(formatDomainChecker(line));
-            } else {
-                //noinspection ConstantConditions
-                assert step == 4;
+            } else if (step == 4) {
                 if (line.equals("no-proxy.domain.list.end")) {
                     step = 0;
                     currentAlias = null;
                     continue;
                 }
                 getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
+            } else if (step == 5) {
+                if (line.equals("tls-relay.domain.list.end")) {
+                    step = 0;
+                    continue;
+                }
+                tlsRelayDomains.add(formatDomainChecker(line));
+            } else {
+                //noinspection ConstantConditions
+                assert step == 6;
+                if (line.equals("agent.tls-relay.cert-key.list.end")) {
+                    step = 0;
+                    continue;
+                }
+                var ls = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+                if (ls.isEmpty())
+                    continue;
+                tlsRelayCertKeyFiles.add(ls);
             }
         }
 
         // check for variables must present
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
+        // check for tls relay
+        if (!tlsRelayCertKeyFiles.isEmpty()) {
+            for (List<String> files : tlsRelayCertKeyFiles) {
+                String[] certs = new String[files.size() - 1];
+                for (int i = 0; i < certs.length; ++i) {
+                    certs[i] = files.get(i);
+                }
+                String key = files.get(files.size() - 1);
+                CertKey certKey = CertKeyHolder.readFile("no-name", certs, key);
+                tlsRelayCertKeys.add(certKey);
+            }
+        } else {
+            if (!tlsRelayDomains.isEmpty()) {
+                throw new Exception("agent.tls-relay.cert and agent.tls-relay.cert are not set, but tls-relay.domain.list is not empty");
+            }
+        }
         // check for consistency of server list and domain list
         for (String k : domains.keySet()) {
             if (!servers.containsKey(k))
@@ -603,6 +654,21 @@ public class ConfigProcessor {
             return new ABPDomainChecker(abp);
         } else {
             return new SuffixDomainChecker(line);
+        }
+    }
+
+    private String readFile(String path) throws Exception {
+        if (path.startsWith("~")) {
+            path = System.getProperty("user.home") + File.separator + path.substring(1);
+        }
+        try (FileInputStream fis = new FileInputStream(path)) {
+            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
+            StringBuilder sb = new StringBuilder();
+            String line;
+            while ((line = br.readLine()) != null) {
+                sb.append(line).append("\n");
+            }
+            return sb.toString();
         }
     }
 }

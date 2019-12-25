@@ -18,7 +18,7 @@ import java.nio.ByteBuffer;
  * <br>
  * NOTE: storage/writableET is proxied to/from the plain buffer
  */
-public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuffer {
+public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implements RingBuffer {
     private final SSLEngine engine;
 
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
@@ -56,7 +56,7 @@ public class SSLWrapRingBuffer extends AbstractWrapRingBuffer implements RingBuf
 
         assert Logger.lowLevelDebug("wrap: " + result);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
-            Logger.error(LogType.SSL_ERROR, "the wrapping returned CLOSED");
+            assert Logger.lowLevelDebug("the wrapping returned CLOSED");
             errored[0] = true;
             ex[0] = new IOException("SSLEngine closed");
             return;

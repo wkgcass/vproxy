@@ -29,6 +29,7 @@ public class WrappedSelector implements FDSelector {
         }
     }
 
+    private final Lock VIRTUAL_LOCK; // only lock when calculating and registering, which would be enough for current code base
     private final Map<VirtualFD, REntry> virtualSocketFDs = new HashMap<>();
     private final Set<FD> readableFired = new HashSet<>();
     private final Set<FD> writableFired = new HashSet<>();
@@ -36,6 +37,11 @@ public class WrappedSelector implements FDSelector {
 
     public WrappedSelector(FDSelector selector) {
         this.selector = selector;
+        if (VFDConfig.useFStack) {
+            VIRTUAL_LOCK = Lock.createMock();
+        } else {
+            VIRTUAL_LOCK = Lock.create();
+        }
     }
 
     @Override
@@ -45,36 +51,39 @@ public class WrappedSelector implements FDSelector {
 
     private Set<SelectedEntry> calcVirtual() {
         Set<SelectedEntry> ret = new HashSet<>();
-        for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
-            FD fd = e.getKey();
-            REntry entry = e.getValue();
+        //noinspection unused
+        try (var unused = VIRTUAL_LOCK.lock()) {
+            for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
+                FD fd = e.getKey();
+                REntry entry = e.getValue();
 
-            boolean readable = false;
-            boolean writable = false;
-            if (entry.watchedEvents.have(Event.READABLE)) {
-                if (readableFired.contains(fd)) {
-                    assert Logger.lowLevelDebug("fire readable for " + fd);
-                    readable = true;
+                boolean readable = false;
+                boolean writable = false;
+                if (entry.watchedEvents.have(Event.READABLE)) {
+                    if (readableFired.contains(fd)) {
+                        assert Logger.lowLevelDebug("fire readable for " + fd);
+                        readable = true;
+                    }
                 }
-            }
-            if (entry.watchedEvents.have(Event.WRITABLE)) {
-                if (writableFired.contains(fd)) {
-                    assert Logger.lowLevelDebug("fire writable for " + fd);
-                    writable = true;
+                if (entry.watchedEvents.have(Event.WRITABLE)) {
+                    if (writableFired.contains(fd)) {
+                        assert Logger.lowLevelDebug("fire writable for " + fd);
+                        writable = true;
+                    }
                 }
-            }
-            EventSet eventSet;
-            if (readable && writable) {
-                eventSet = EventSet.readwrite();
-            } else if (readable) {
-                eventSet = EventSet.read();
-            } else if (writable) {
-                eventSet = EventSet.write();
-            } else {
-                eventSet = null;
-            }
-            if (eventSet != null) {
-                ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+                EventSet eventSet;
+                if (readable && writable) {
+                    eventSet = EventSet.readwrite();
+                } else if (readable) {
+                    eventSet = EventSet.read();
+                } else if (writable) {
+                    eventSet = EventSet.write();
+                } else {
+                    eventSet = null;
+                }
+                if (eventSet != null) {
+                    ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+                }
             }
         }
         return ret;
@@ -148,7 +157,10 @@ public class WrappedSelector implements FDSelector {
     public void register(FD fd, EventSet ops, Object registerData) throws ClosedChannelException {
         assert Logger.lowLevelDebug("register fd to selector " + fd);
         if (fd instanceof VirtualFD) {
-            virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
+            //noinspection unused
+            try (var unused = VIRTUAL_LOCK.lock()) {
+                virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
+            }
             // check fire
             if (readableFired.contains(fd) || writableFired.contains(fd)) {
                 wakeup();

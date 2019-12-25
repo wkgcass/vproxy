@@ -66,6 +66,9 @@ public class WebSocksUtils {
         // then payload continues
     };
 
+    // the http dns server registry, might be null
+    public static HttpDNSServer httpDNSServer = null;
+
     public static void sendWebSocketFrame(RingBuffer outBuffer) {
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage,AssertWithSideEffects
         assert ((Predicate<Void>) v -> {
@@ -195,9 +198,14 @@ public class WebSocksUtils {
     }
 
     private static volatile SSLContext sslContext;
+    private static volatile SSLContext tlsRelaySSLContext;
 
     public static SSLContext getSslContext() {
         return sslContext;
+    }
+
+    public static SSLContext getTlsRelaySSLContext() {
+        return tlsRelaySSLContext;
     }
 
     public static SSLEngine createEngine() {
@@ -281,6 +289,32 @@ public class WebSocksUtils {
             sslContext.init(kms, tms, null);
         } catch (KeyManagementException e) {
             sslContext = null;
+            throw e;
+        }
+    }
+
+    public static void initTLSRelayContext(List<CertKey> cks) throws Exception {
+        if (tlsRelaySSLContext != null) {
+            throw new Exception("ssl context already initiated");
+        }
+
+        KeyStore ks = KeyStore.getInstance("JKS");
+        ks.load(null);
+        for (CertKey ck : cks) {
+            ck.setInto(ks);
+        }
+
+        KeyManagerFactory kmf;
+        KeyManager[] kms;
+        kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(ks, "changeit".toCharArray());
+        kms = kmf.getKeyManagers();
+
+        try {
+            tlsRelaySSLContext = SSLContext.getInstance("TLS");
+            tlsRelaySSLContext.init(kms, null, null);
+        } catch (KeyManagementException e) {
+            tlsRelaySSLContext = null;
             throw e;
         }
     }

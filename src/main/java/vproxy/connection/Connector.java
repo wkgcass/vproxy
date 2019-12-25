@@ -12,6 +12,10 @@ public class Connector {
         this.remote = remote;
     }
 
+    public void beforeConnect(@SuppressWarnings("unused") Connection accepted) throws IOException {
+        // do nothing
+    }
+
     public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
         ConnectableConnection conn = ConnectableConnection.create(remote, opts, in, out);
         conn.connector = this;

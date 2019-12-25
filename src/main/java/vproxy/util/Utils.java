@@ -697,6 +697,10 @@ public class Utils {
         return BROKEN_PIPE_MSG.equals(t.getMessage());
     }
 
+    public static boolean isTerminatedIOException(IOException t) {
+        return isReset(t) || isBrokenPipe(t) || "SSLEngine closed".equals(t.getMessage());
+    }
+
     public static Process runSubProcess(String program) throws IOException {
         return Runtime.getRuntime().exec(program);
     }

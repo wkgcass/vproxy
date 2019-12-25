@@ -30,7 +30,7 @@ public class ProtocolConnectionHandler implements ConnectionHandler {
     public void exception(ConnectionHandlerContext ctx, IOException err) {
         assert Logger.lowLevelDebug("ProtocolConnectionHandler.exception: " + pctx);
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
+        if (Utils.isTerminatedIOException(err)) {
             handler.end(pctx);
         } else {
             handler.exception(pctx, err);

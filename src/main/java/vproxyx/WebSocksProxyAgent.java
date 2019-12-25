@@ -81,6 +81,7 @@ public class WebSocksProxyAgent {
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
         assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getResolves());
         assert Logger.lowLevelDebug("no-proxy domain patterns " + configProcessor.getNoProxyDomains());
+        assert Logger.lowLevelDebug("tls-relay domain patterns " + configProcessor.getTLSRelayDomains());
         assert Logger.lowLevelDebug("proxy servers " +
             configProcessor.getServers().values().stream().map(server ->
                 server.getServerHandles().stream()
@@ -93,6 +94,9 @@ public class WebSocksProxyAgent {
         // init the ssl context
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false, configProcessor.isVerifyCert());
+        if (!configProcessor.getTLSRelayCertKeys().isEmpty()) {
+            WebSocksUtils.initTLSRelayContext(configProcessor.getTLSRelayCertKeys());
+        }
 
         // initiate pool (it's inside the connector provider)
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(configProcessor);
@@ -192,8 +196,10 @@ public class WebSocksProxyAgent {
                 InetAddress.getByName("0.0.0.0"),
                 configProcessor.getDnsListenPort()
             );
-            new HttpDNSServer("dns", l4addr, worker, configProcessor).start();
+            HttpDNSServer httpDNSServer = new HttpDNSServer("dns", l4addr, worker, configProcessor);
+            httpDNSServer.start();
             Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+            WebSocksUtils.httpDNSServer = httpDNSServer;
         }
     }
 }

@@ -19,7 +19,7 @@ import java.util.function.Consumer;
  * and will be converted to plain bytes
  * which can be retrieved by user
  */
-public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements RingBuffer {
+public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
     private final SSLEngine engine;
     private final Consumer<Runnable> resumer;
 
@@ -83,7 +83,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapRingBuffer implements Rin
         }
         assert Logger.lowLevelDebug("unwrap: " + result);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
-            Logger.error(LogType.SSL_ERROR, "the unwrapping returned CLOSED");
+            assert Logger.lowLevelDebug("the unwrapping returned CLOSED");
             errored[0] = true;
             ex[0] = new IOException("SSLEngine closed");
             return;

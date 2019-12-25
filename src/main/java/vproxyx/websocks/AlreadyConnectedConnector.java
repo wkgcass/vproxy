@@ -10,8 +10,8 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class AlreadyConnectedConnector extends Connector {
-    private final ConnectableConnection conn;
-    private final NetEventLoop loop;
+    protected final ConnectableConnection conn;
+    protected final NetEventLoop loop;
 
     public AlreadyConnectedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop) {
         super(remote);

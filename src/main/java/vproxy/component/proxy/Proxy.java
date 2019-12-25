@@ -78,6 +78,15 @@ public class Proxy {
                 return;
             }
 
+            try {
+                connector.beforeConnect(connection);
+            } catch (IOException e) {
+                Logger.fatal(LogType.CONN_ERROR, "running beforeConnect on connector failed", e);
+                utilCloseConnectionAndReleaseBuffers(connection);
+                connector.close();
+                return;
+            }
+
             ConnectableConnection connectableConnection;
             try {
                 connectableConnection = connector.connect(
@@ -341,7 +350,7 @@ public class Proxy {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             String side = (session.active == ctx.connection) ? "active" : "passive";
-            if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
+            if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
             } else {
                 Logger.error(LogType.CONN_ERROR, "session " + session + " got exception on " + side + " side: " + err);
@@ -434,7 +443,7 @@ public class Proxy {
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
             String side = (session.active == ctx.connection) ? "active" : "passive";
-            if (Utils.isReset(err) || Utils.isBrokenPipe(err)) {
+            if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug("session " + session + " got exception on " + side + " side: " + err);
             } else {
                 Logger.error(LogType.CONN_ERROR, "session " + session + " got exception on " + side + " side: " + err);

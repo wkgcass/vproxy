@@ -9,14 +9,12 @@ import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.*;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
+import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 
-import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetSocketAddress;
+import java.net.*;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
@@ -67,10 +65,27 @@ public class HttpDNSServer extends DNSServer {
         super.runRecursive(p, remote);
     }
 
-    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String domain, InetSocketAddress remote) {
+    public void resolve(String domain, Callback<InetAddress, UnknownHostException> cb) {
+        if (domain.endsWith(".")) {
+            domain = domain.substring(0, domain.length() - 1);
+        }
+        for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
+            var servers = entry.getKey();
+            var ls = entry.getValue();
+            for (DomainChecker chk : ls) {
+                if (chk.needProxy(domain, 0)) {
+                    Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
+                    requestAndGetResult(serverGroups.get(servers), domain, cb);
+                    return;
+                }
+            }
+        }
+    }
+
+    private void requestAndGetResult(ServerGroup serverGroup, String domain, Callback<InetAddress, UnknownHostException> cb) {
         var svr = serverGroup.next(null /*will not use serverGroup*/);
         if (svr == null) {
-            sendError(p, remote, new IOException("cannot find server to send the dns request"));
+            cb.failed(new UnknownHostException("cannot find server to send the dns request - " + domain));
             return;
         }
         // see ConfigProcessor.java
@@ -82,16 +97,15 @@ public class HttpDNSServer extends DNSServer {
             cli.close(); // close the cli on response
             if (err != null) {
                 Logger.error(LogType.CONN_ERROR, "request " + svr.remote + " to resolve " + domain + "failed", err);
-                sendError(p, remote, err);
+                cb.failed(new UnknownHostException(Utils.formatErr(err) + " - " + domain));
                 return;
             }
             if (resp.status() != 200) {
                 String msg = "http dns response status is not 200 for resolving " + domain + " via " + svr.remote;
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, msg);
-                sendError(p, remote, new IOException(msg));
+                cb.failed(new UnknownHostException(msg));
                 return;
             }
-            int ttl = 10 * 60;
             String ip;
             byte[] ipBytes;
             try {
@@ -105,39 +119,55 @@ public class HttpDNSServer extends DNSServer {
             } catch (RuntimeException e) {
                 String msg = "http dns response format is not valid for resolving " + domain + " via " + svr.remote;
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, msg);
-                sendError(p, remote, new IOException(msg));
+                cb.failed(new UnknownHostException(msg));
                 return;
             }
 
-            Logger.alert("resolve: " + domain + " -> " + ip + ", ttl = " + ttl);
+            Logger.alert("resolve: " + domain + " -> " + ip);
 
-            DNSPacket dnsResp = new DNSPacket();
-            dnsResp.id = p.id;
-            dnsResp.isResponse = true;
-            dnsResp.opcode = p.opcode;
-            dnsResp.aa = p.aa;
-            dnsResp.tc = false;
-            dnsResp.rd = p.rd;
-            dnsResp.ra = true;
-            dnsResp.rcode = DNSPacket.RCode.NoError;
-            dnsResp.questions.addAll(p.questions);
-            DNSResource res = new DNSResource();
-            res.name = domain;
-            res.clazz = DNSClass.IN;
-            res.ttl = ttl; // set to 10 minutes, which would cause no trouble in most cases
-            if (ipBytes.length == 4) {
-                res.type = DNSType.A;
-                A a = new A();
-                a.address = (Inet4Address) Utils.l3addr(ipBytes);
-                res.rdata = a;
-            } else {
-                res.type = DNSType.AAAA;
-                AAAA aaaa = new AAAA();
-                aaaa.address = (Inet6Address) Utils.l3addr(ipBytes);
-                res.rdata = aaaa;
+            cb.succeeded(Utils.l3addr(ipBytes));
+        });
+    }
+
+    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String domain, InetSocketAddress remote) {
+        requestAndGetResult(serverGroup, domain, new Callback<>() {
+            @Override
+            protected void onSucceeded(InetAddress value) {
+                final int ttl = 10 * 60; // set to 10 minutes, which would cause no trouble in most cases
+
+                DNSPacket dnsResp = new DNSPacket();
+                dnsResp.id = p.id;
+                dnsResp.isResponse = true;
+                dnsResp.opcode = p.opcode;
+                dnsResp.aa = p.aa;
+                dnsResp.tc = false;
+                dnsResp.rd = p.rd;
+                dnsResp.ra = true;
+                dnsResp.rcode = DNSPacket.RCode.NoError;
+                dnsResp.questions.addAll(p.questions);
+                DNSResource res = new DNSResource();
+                res.name = domain;
+                res.clazz = DNSClass.IN;
+                res.ttl = ttl;
+                if (value instanceof Inet4Address) {
+                    res.type = DNSType.A;
+                    A a = new A();
+                    a.address = (Inet4Address) value;
+                    res.rdata = a;
+                } else {
+                    res.type = DNSType.AAAA;
+                    AAAA aaaa = new AAAA();
+                    aaaa.address = (Inet6Address) value;
+                    res.rdata = aaaa;
+                }
+                dnsResp.answers.add(res);
+                sendPacket(p.id, remote, dnsResp);
             }
-            dnsResp.answers.add(res);
-            sendPacket(p.id, remote, dnsResp);
+
+            @Override
+            protected void onFailed(UnknownHostException err) {
+                sendError(p, remote, err);
+            }
         });
     }
 }

@@ -3,6 +3,8 @@ package vproxyx.websocks;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.SvrHandleConnector;
 import vproxy.connection.*;
+import vproxy.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
+import vproxy.dns.Resolver;
 import vproxy.http.HttpRespParser;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
@@ -19,7 +21,11 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
+import java.net.InetAddress;
+import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.util.*;
+import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
@@ -616,6 +622,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private final boolean strictMode;
     private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
     private final LinkedHashMap<String, List<DomainChecker>> noProxyDomains;
+    private final List<DomainChecker> tlsRelayDomains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
@@ -625,6 +632,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
         this.noProxyDomains = config.getNoProxyDomains();
+        this.tlsRelayDomains = config.getTLSRelayDomains();
         this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
@@ -661,8 +669,34 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         return null;
     }
 
+    private boolean needHTTPSRelay(String address, int port) {
+        if (port != 443) { // only 443 (https)
+            return false;
+        }
+        for (DomainChecker checker : tlsRelayDomains) {
+            if (checker.needProxy(address, port)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
+        // event loop
+        NetEventLoop loop = accepted.getEventLoop();
+        if (loop == null) {
+            Logger.shouldNotHappen("the loop should be attached to the connection");
+            providedCallback.accept(null);
+            return;
+        }
+
+        // check whether to do tls relay
+        if (needHTTPSRelay(address, port)) {
+            Logger.alert("[TLS] tls relay for " + address + ":" + port);
+            handleTLSRelay(loop, address, providedCallback);
+            return;
+        }
         // check whether need to proxy to the WebSocks server
         String serverAlias = getProxy(address, port);
         if (serverAlias == null) {
@@ -674,13 +708,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         // proxy the net flow using WebSocks
         Logger.alert("[TCP] proxy the request to " + address + ":" + port + " via " + serverAlias);
-
-        NetEventLoop loop = accepted.getEventLoop();
-        if (loop == null) {
-            Logger.shouldNotHappen("the loop should be attached to the connection");
-            providedCallback.accept(null);
-            return;
-        }
 
         // try to fetch an existing connection from pool
         pool.get(serverAlias).get(loop.getSelectorEventLoop()).get(loop.getSelectorEventLoop(), conn -> {
@@ -722,6 +749,64 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             } catch (IOException e) {
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add " + conn + " to loop failed", e);
                 providedCallback.accept(null);
+            }
+        });
+    }
+
+    private void handleTLSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
+        //noinspection unchecked
+        BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
+        if (WebSocksUtils.httpDNSServer != null) {
+            //noinspection unchecked
+            resolveF = (a, b) -> WebSocksUtils.httpDNSServer.resolve(a, b);
+        }
+        resolveF.accept(address, new Callback() {
+            @Override
+            protected void onSucceeded(Object o) {
+                InetAddress value = (InetAddress) o;
+
+                SSLEngine engine = WebSocksUtils.createEngine();
+                engine.setUseClientMode(true);
+                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
+                ConnectableConnection conn;
+                try {
+                    conn = ConnectableConnection.create(new InetSocketAddress(value, 443), new ConnectionOpts().setTimeout(60_000),
+                        pair.left, pair.right);
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "connecting to " + address + "(" + value + "):443 failed");
+                    cb.accept(null);
+                    return;
+                }
+                waitUntilHandshakeDone(engine, conn, loop, cb);
+            }
+
+            private void waitUntilHandshakeDone(SSLEngine engine, ConnectableConnection conn, NetEventLoop loop, Consumer<Connector> cb) {
+                try {
+                    loop.addConnectableConnection(conn, null, new SSLHandshakeDoneConnectableConnectionHandler(
+                        engine, new Callback<>() {
+                        @Override
+                        protected void onSucceeded(Void value) {
+                            cb.accept(new TLSRelayForRawAcceptedConnector(conn.remote, conn, loop));
+                        }
+
+                        @Override
+                        protected void onFailed(IOException err) {
+                            cb.accept(null);
+                        }
+                    }
+                    ));
+                } catch (IOException e) {
+                    Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "adding conn for tls relay into event loop failed", e);
+                    cb.accept(null);
+                }
+            }
+
+            @Override
+            protected void onFailed(Throwable o) {
+                UnknownHostException err = (UnknownHostException) o;
+
+                Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in tls relay" + err);
+                cb.accept(null);
             }
         });
     }
