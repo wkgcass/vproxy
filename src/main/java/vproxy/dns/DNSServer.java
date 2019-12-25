@@ -38,7 +38,7 @@ public class DNSServer {
     private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
     private final Attach attach = new Attach();
-    private NetEventLoop loop = null;
+    protected NetEventLoop loop = null;
     private DatagramFD sock = null;
     private boolean needToStart = false;
     public int ttl;

@@ -209,10 +209,6 @@ public class WebSocksProxyAgent {
             Logger.alert("http relay server started on 80");
             RelayHttpsServer.launch(acceptor, worker);
             Logger.alert("https relay server started on 443");
-
-            if (WebSocksUtils.httpDNSServer != null) {
-                WebSocksUtils.httpDNSServer.directRelay = true;
-            }
         }
     }
 }

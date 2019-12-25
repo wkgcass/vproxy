@@ -6,6 +6,7 @@ import vjson.JSON;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
+import vproxy.connection.NetEventLoop;
 import vproxy.dns.*;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
@@ -16,21 +17,40 @@ import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.Enumeration;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class HttpDNSServer extends DNSServer {
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
-    public boolean directRelay = false;
+    private final Map<String, InetAddress> cache = new HashMap<>();
+    private final boolean directRelay;
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
         this.serverGroups = config.getServers();
         this.resolves = config.getResolves();
+        this.directRelay = config.isDirectRelay();
+    }
+
+    @Override
+    public void start() throws IOException {
+        super.start();
+
+        clearCacheTask();
+    }
+
+    private void clearCacheTask() {
+        if (loop == null) {
+            return;
+        }
+        NetEventLoop thisLoop = loop;
+        loop.getSelectorEventLoop().delay(5 * 60_000, () -> {
+            if (loop == thisLoop) {
+                cache.clear();
+            }
+            clearCacheTask();
+        });
     }
 
     @Override
@@ -50,6 +70,15 @@ public class HttpDNSServer extends DNSServer {
             }
         }
         if (domain != null) {
+            // try cache first
+            {
+                InetAddress l3addr = cache.get(domain);
+                if (l3addr != null) {
+                    Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
+                    respond(p, domain, l3addr, remote);
+                    return;
+                }
+            }
             if (domain.endsWith(".")) {
                 domain = domain.substring(0, domain.length() - 1);
             }
@@ -75,6 +104,15 @@ public class HttpDNSServer extends DNSServer {
     }
 
     public void resolve(String domain, Callback<InetAddress, UnknownHostException> cb) {
+        // try cache first
+        {
+            InetAddress l3addr = cache.get(domain);
+            if (l3addr != null) {
+                Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
+                cb.succeeded(l3addr);
+                return;
+            }
+        }
         if (domain.endsWith(".")) {
             domain = domain.substring(0, domain.length() - 1);
         }
@@ -133,8 +171,9 @@ public class HttpDNSServer extends DNSServer {
             }
 
             Logger.alert("resolve: " + domain + " -> " + ip);
-
-            cb.succeeded(Utils.l3addr(ipBytes));
+            InetAddress l3addr = Utils.l3addr(ipBytes);
+            cache.put(domain, l3addr);
+            cb.succeeded(l3addr);
         });
     }
 
