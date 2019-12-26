@@ -1,5 +1,6 @@
 package vserver;
 
+import vproxy.dns.Resolver;
 import vserver.server.Http1ServerImpl;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public interface HttpServer {
     default void listen(int port, String address) throws IOException {
         InetAddress l3addr;
         try {
-            l3addr = InetAddress.getByName(address);
+            l3addr = Resolver.getDefault().blockResolve(address);
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }

@@ -34,6 +34,7 @@ import vproxy.poc.grpc.GreeterGrpc;
 import vproxy.poc.grpc.HelloRequest;
 import vproxy.poc.grpc.HelloResponse;
 import vproxy.poc.thrift.HelloWorldService;
+import vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -63,10 +64,10 @@ public class TestProtocols {
 
         ServerGroup sg1 = new ServerGroup("s1.test.com", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg1.add("svr1", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port1), 10);
+        sg1.add("svr1", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("s2.test.com", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg2.add("svr2", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port2), 10);
+        sg2.add("svr2", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port2), 10);
 
         // set to up
         sg1.getServerHandles().forEach(h -> h.healthy = true);
@@ -102,8 +103,8 @@ public class TestProtocols {
             "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), ups, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
         );
         lb.start();
-        sg.add("svr3", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port3dubbo), 10);
-        sg.add("svr4", new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port4dubbo), 10);
+        sg.add("svr3", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port3dubbo), 10);
+        sg.add("svr4", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port4dubbo), 10);
     }
 
     @SuppressWarnings("deprecation")

@@ -23,6 +23,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.RingBuffer;
 import vproxy.util.RingBufferETHandler;
+import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
@@ -415,13 +416,13 @@ public class TestSSL {
 
             Thread.sleep(1000);
 
-            sg.add("svr", new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 39999), 10);
+            sg.add("svr", new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), 39999), 10);
 
             TcpLB tl = new TcpLB(
                 "testSslProxy",
                 elg,
                 elg,
-                new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), 19999),
+                new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), 19999),
                 ups,
                 1000,
                 4096,

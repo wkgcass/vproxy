@@ -14,6 +14,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
+import vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -81,7 +82,7 @@ public class TestSocks5 {
 
         socks5 = new Socks5Server(
             "socks5", elg0, elg0,
-            new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 18080),
+            new InetSocketAddress(Utils.l3addr("127.0.0.1"), 18080),
             ups0,
             Config.tcpTimeout, 16384, 16384, SecurityGroup.allowAll()
         );

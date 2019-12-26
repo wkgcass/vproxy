@@ -240,14 +240,6 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         if (pctx.reqType == AddressType.domain) {
             address = new String(pctx.address, StandardCharsets.UTF_8);
         } else {
-            try {
-                //noinspection ResultOfMethodCallIgnored
-                InetAddress.getByAddress(pctx.address);
-            } catch (UnknownHostException e) {
-                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "the input address " + Arrays.toString(pctx.address));
-                pctx.errType = Socks5ProxyContext.GENERAL_SOCKS_SERVER_FAILURE;
-                return -1;
-            }
             address = Utils.ipStr(pctx.address);
         }
         boolean[] sameThread = {false}; // tell the outside method, that callback and method are running in the same thread

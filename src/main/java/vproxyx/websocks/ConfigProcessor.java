@@ -524,18 +524,10 @@ public class ConfigProcessor {
 
                 ServerGroup.ServerHandle handle;
                 if (program != null) {
-                    InetAddress inet;
-                    if (Utils.isIpLiteral(hostPart)) {
-                        inet = InetAddress.getByAddress(new byte[]{127, 0, 0, 1});
-                    } else {
-                        inet = InetAddress.getByAddress(hostPart, new byte[]{127, 0, 0, 1});
-                    }
+                    InetAddress inet = Utils.l3addr(new byte[]{127, 0, 0, 1});
                     handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, programPort), 10);
-                } else if (Utils.parseIpv4StringConsiderV6Compatible(hostPart) != null) {
-                    InetAddress inet = InetAddress.getByName(hostPart);
-                    handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, port), 10);
-                } else if (Utils.isIpv6(hostPart)) {
-                    InetAddress inet = InetAddress.getByName(hostPart);
+                } else if (Utils.isIpLiteral(hostPart)) {
+                    InetAddress inet = Utils.l3addr(hostPart);
                     handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, port), 10);
                 } else {
                     BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();

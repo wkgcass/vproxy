@@ -609,7 +609,7 @@ public class Utils {
 
     public static InetAddress l3addr(String ip) {
         try {
-            return InetAddress.getByName(ip);
+            return InetAddress.getByAddress(Utils.parseIpString(ip));
         } catch (UnknownHostException e) {
             Logger.shouldNotHappen("creating l3addr from " + ip + " failed", e);
             throw new RuntimeException(e);

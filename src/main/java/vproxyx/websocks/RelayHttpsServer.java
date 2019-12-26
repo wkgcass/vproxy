@@ -34,7 +34,7 @@ public class RelayHttpsServer {
     }
 
     public static void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
-        InetSocketAddress l4addr = new InetSocketAddress(InetAddress.getByName("0.0.0.0"), 443);
+        InetSocketAddress l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), 443);
         ServerSock.checkBind(l4addr);
 
         ServerSock server = ServerSock.create(l4addr);

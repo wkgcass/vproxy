@@ -21,18 +21,10 @@ import static org.junit.Assert.*;
 public class TestHttp1Parser {
     private static final String forwardedFor = "1.2.3.4";
     private static final String clientPort = "1122";
-    private static final InetSocketAddress address;
-
-    static {
-        try {
-            address = new InetSocketAddress(
-                InetAddress.getByAddress(Objects.requireNonNull(Utils.parseIpv4String(forwardedFor))),
-                Integer.parseInt(clientPort)
-            );
-        } catch (UnknownHostException e) {
-            throw new RuntimeException(e);
-        }
-    }
+    private static final InetSocketAddress address = new InetSocketAddress(
+        Utils.l3addr(Objects.requireNonNull(Utils.parseIpv4String(forwardedFor))),
+        Integer.parseInt(clientPort)
+    );
 
     @Test
     public void simpleRequest() throws Exception {

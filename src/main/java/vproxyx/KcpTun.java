@@ -4,6 +4,7 @@ import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.connection.*;
+import vproxy.dns.Resolver;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.h2streamed.H2StreamedClientFDs;
 import vproxy.selector.wrap.h2streamed.H2StreamedServerFDs;
@@ -11,6 +12,7 @@ import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
+import vproxy.util.Utils;
 import vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.io.IOException;
@@ -122,7 +124,7 @@ public class KcpTun {
             if (targetPort < 1 || targetPort > 65535) {
                 throw new Exception("invalid port value range for `target`");
             }
-            InetAddress l3addr = InetAddress.getByName(hostPart);
+            InetAddress l3addr = Resolver.getDefault().blockResolve(hostPart);
             target = new InetSocketAddress(l3addr, targetPort);
             int fast;
             try {
@@ -155,14 +157,14 @@ public class KcpTun {
         ConnectorGen connectorGen;
         if (isServer) {
             // listen on kcptun
-            InetSocketAddress local = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
+            InetSocketAddress local = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port);
             ServerSock.checkBind(Protocol.UDP, local);
             sock = ServerSock.createUDP(local, sLoop, new H2StreamedServerFDs(kcpFDs, sLoop, local));
             // connect to remote server using raw tcp
             connectorGen = (v, hint) -> new Connector(target);
         } else {
             // listen on tcp
-            InetSocketAddress local = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), port);
+            InetSocketAddress local = new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), port);
             ServerSock.checkBind(local);
             sock = ServerSock.create(local);
             // connect to remote server using kcptun

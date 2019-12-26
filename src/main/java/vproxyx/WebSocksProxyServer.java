@@ -18,6 +18,7 @@ import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
+import vproxy.util.Utils;
 import vproxyx.websocks.*;
 
 import javax.net.ssl.SNIHostName;
@@ -217,7 +218,7 @@ public class WebSocksProxyServer {
         }
 
         // init the listening server
-        var listeningServerL4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port);
+        var listeningServerL4addr = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port);
         List<ServerSock> servers = new LinkedList<>();
         {
             ServerSock.checkBind(listeningServerL4addr);
@@ -233,7 +234,7 @@ public class WebSocksProxyServer {
         }
         ServerSock redirectServer = null;
         if (redirectPort != -1) {
-            var l4addr = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), redirectPort);
+            var l4addr = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), redirectPort);
             redirectServer = ServerSock.create(l4addr);
         }
 

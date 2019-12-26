@@ -761,13 +761,7 @@ public class Discovery {
             return null;
         }
 
-        InetAddress addr;
-        try {
-            addr = InetAddress.getByAddress(searchNetworkByte);
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("get InetAddress from " + Utils.ipStr(searchNetworkByte) + " failed " + e);
-            return null;
-        }
+        InetAddress addr = Utils.l3addr(searchNetworkByte);
 
         return new InetSocketAddress(addr, port);
     }

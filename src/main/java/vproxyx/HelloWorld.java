@@ -55,8 +55,8 @@ public class HelloWorld {
             });
         }
 
-        InetSocketAddress listenAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), listenPort);
-        InetSocketAddress connectAddress = new InetSocketAddress(InetAddress.getByAddress(new byte[]{127, 0, 0, 1}), listenPort);
+        InetSocketAddress listenAddress = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), listenPort);
+        InetSocketAddress connectAddress = new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), listenPort);
         final int bufferSize = 1024;
         ServerSock sock = ServerSock.createUDP(listenAddress, sLoop);
         nLoop.addServer(sock, null, new ServerHandler() {

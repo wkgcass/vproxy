@@ -98,7 +98,7 @@ public class DNSClient {
                 throw new RuntimeException(e);
             }
             try {
-                sock.bind(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), 0));
+                sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0));
             } catch (IOException e) {
                 Logger.shouldNotHappen("bind sock on random port failed", e);
                 try {

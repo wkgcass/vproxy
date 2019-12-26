@@ -40,7 +40,7 @@ public class VResolver extends AbstractResolver {
         try {
             sock = FDProvider.get().openDatagramFD();
             sock.configureBlocking(false);
-            sock.bind(new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), 0)); // bind any port
+            sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0)); // bind any port
             client = new DNSClient(loop.getSelectorEventLoop(), sock, initialNameServers, DNS_REQ_TIMEOUT, MAX_RETRY);
         } catch (IOException e) {
             try {

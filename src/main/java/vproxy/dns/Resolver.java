@@ -1,9 +1,6 @@
 package vproxy.dns;
 
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Utils;
+import vproxy.util.*;
 
 import java.io.*;
 import java.net.*;
@@ -18,6 +15,12 @@ public interface Resolver {
     void resolveV6(String host, Callback<? super Inet6Address, ? super UnknownHostException> cb);
 
     void resolveV4(String host, Callback<? super Inet4Address, ? super UnknownHostException> cb);
+
+    default InetAddress blockResolve(String host) throws UnknownHostException {
+        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        resolve(host, cb);
+        return cb.block();
+    }
 
     int cacheCount();
 

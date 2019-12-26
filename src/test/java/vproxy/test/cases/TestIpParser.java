@@ -50,7 +50,7 @@ public class TestIpParser {
     }
 
     private void check(String s) throws Exception {
-        InetAddress addr = InetAddress.getByName(s);
+        InetAddress addr = InetAddress.getByName(s); // check with JDK impl
         byte[] b1 = addr.getAddress();
         byte[] b2 = Utils.parseIpv6String(s);
         assert b2 != null;

@@ -683,7 +683,7 @@ public class TestTcpLB {
         assertEquals("requesting svr2 should return 2", "2", res);
         client1.close();
 
-        sg1.replaceIp("svr2", InetAddress.getByName("127.1.2.3")); // a backend not exist
+        sg1.replaceIp("svr2", Utils.l3addr("127.1.2.3")); // a backend not exist
         // now there should be 2 backend named svr2
         List<ServerGroup.ServerHandle> list = sg1.getServerHandles();
         assertEquals("should be two servers", 2, list.size());
@@ -701,7 +701,7 @@ public class TestTcpLB {
         assertFalse("old server is not logic deleted now", old.isLogicDelete());
 
         // let's try a server that will succeed
-        sg1.replaceIp("svr2", InetAddress.getByName(addressOtherThan127)); // use another one this time
+        sg1.replaceIp("svr2", Utils.l3addr(addressOtherThan127)); // use another one this time
         list = sg1.getServerHandles();
         assertEquals("should be two servers", 2, list.size());
 

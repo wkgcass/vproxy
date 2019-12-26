@@ -17,6 +17,7 @@ import vproxy.protocol.ProtocolServerHandler;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxy.util.Logger;
 import vproxy.util.Tuple3;
+import vproxy.util.Utils;
 import vproxyx.websocks.*;
 import vproxyx.websocks.ss.SSProtocolHandler;
 
@@ -147,7 +148,7 @@ public class WebSocksProxyAgent {
             var l3addr = tuple._3
                 ? "0.0.0.0"
                 : "127.0.0.1";
-            var l4addr = new InetSocketAddress(InetAddress.getByName(l3addr), port);
+            var l4addr = new InetSocketAddress(Utils.l3addr(l3addr), port);
             ServerSock.checkBind(l4addr);
             ServerSock server = ServerSock.create(l4addr);
 
@@ -174,7 +175,7 @@ public class WebSocksProxyAgent {
         if (configProcessor.getPacServerPort() != 0) {
             assert Logger.lowLevelDebug("start pac server");
             var l4addr = new InetSocketAddress(
-                InetAddress.getByName("0.0.0.0"),
+                Utils.l3addr("0.0.0.0"),
                 configProcessor.getPacServerPort()
             );
             ServerSock.checkBind(l4addr);
@@ -193,7 +194,7 @@ public class WebSocksProxyAgent {
         if (configProcessor.getDnsListenPort() != 0) {
             assert Logger.lowLevelDebug("start dns server");
             var l4addr = new InetSocketAddress(
-                InetAddress.getByName("0.0.0.0"),
+                Utils.l3addr("0.0.0.0"),
                 configProcessor.getDnsListenPort()
             );
             HttpDNSServer httpDNSServer = new HttpDNSServer("dns", l4addr, worker, configProcessor);

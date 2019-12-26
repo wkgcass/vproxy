@@ -85,13 +85,13 @@ public class TestResolver {
 
     private DNSResource getAResource() throws Exception {
         A a = new A();
-        a.address = (Inet4Address) InetAddress.getByAddress(new byte[]{1, 2, 3, 4});
+        a.address = (Inet4Address) Utils.l3addr(new byte[]{1, 2, 3, 4});
         return getResource("www.example.com.", a);
     }
 
     private DNSResource getAAAAResource() throws Exception {
         AAAA aaaa = new AAAA();
-        aaaa.address = (Inet6Address) InetAddress.getByName("ABCD:EF01:2345:6789:ABCD:EF01:2345:6789");
+        aaaa.address = (Inet6Address) Utils.l3addr("ABCD:EF01:2345:6789:ABCD:EF01:2345:6789");
         return getResource("www.example.com.", aaaa);
     }
 

@@ -157,13 +157,6 @@ public class SSProtocolHandler implements ProtocolHandler<Tuple<SSContext, Callb
         if (pctx.reqType == AddressType.domain) {
             address = new String(pctx.address, StandardCharsets.UTF_8);
         } else {
-            try {
-                //noinspection ResultOfMethodCallIgnored
-                InetAddress.getByAddress(pctx.address);
-            } catch (UnknownHostException e) {
-                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "the input address " + Arrays.toString(pctx.address));
-                return -1;
-            }
             address = Utils.ipStr(pctx.address);
         }
         connectorProvider.provide(ctx.connection, pctx.reqType, address, pctx.port, connector -> {

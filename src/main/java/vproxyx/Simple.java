@@ -9,6 +9,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
+import vproxy.dns.Resolver;
 import vproxy.util.Utils;
 
 import java.net.InetAddress;
@@ -183,11 +184,11 @@ public class Simple {
         int svrCnt = 0;
         for (HostPort svr : backendList) {
             if (Utils.isIpLiteral(svr.host)) {
-                group.add("backend" + (++svrCnt), new InetSocketAddress(InetAddress.getByName(svr.host), svr.port), 10);
+                group.add("backend" + (++svrCnt), new InetSocketAddress(Resolver.getDefault().blockResolve(svr.host), svr.port), 10);
             } else {
                 InetAddress addr;
                 try {
-                    addr = InetAddress.getByName(svr.host);
+                    addr = Resolver.getDefault().blockResolve(svr.host);
                 } catch (UnknownHostException e) {
                     throw new Exception("unknown host in `backend {host:port}`: " + svr.host);
                 }
@@ -199,7 +200,7 @@ public class Simple {
         Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
-            new InetSocketAddress(InetAddress.getByAddress(new byte[]{0, 0, 0, 0}), port),
+            new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port),
             Application.get().upstreamHolder.get("collection"),
             60_000,
             4096,

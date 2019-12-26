@@ -20,6 +20,7 @@ import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -44,9 +45,9 @@ public class GrpcOverH2Proxy {
 
         // start proxy
         NetEventLoop el = new NetEventLoop(SelectorEventLoop.open());
-        InetSocketAddress backend1 = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 17890);
-        InetSocketAddress backend2 = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 17891);
-        InetSocketAddress frontend = new InetSocketAddress(InetAddress.getByName("127.0.0.1"), 7890);
+        InetSocketAddress backend1 = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 17890);
+        InetSocketAddress backend2 = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 17891);
+        InetSocketAddress frontend = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 7890);
         ServerSock svr = ServerSock.create(frontend);
         Proxy proxy = new Proxy(new ProxyNetConfig()
             .setInBufferSize(8)
