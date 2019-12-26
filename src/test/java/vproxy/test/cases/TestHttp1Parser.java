@@ -10,9 +10,7 @@ import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
-import java.net.UnknownHostException;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 

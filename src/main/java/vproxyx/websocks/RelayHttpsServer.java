@@ -16,7 +16,6 @@ import vproxy.processor.http1.builder.RequestBuilder;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
-import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
 

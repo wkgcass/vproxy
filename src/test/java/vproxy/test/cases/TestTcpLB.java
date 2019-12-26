@@ -23,7 +23,6 @@ import vproxy.test.tool.IdServer;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;

@@ -36,7 +36,6 @@ import vproxy.poc.grpc.HelloResponse;
 import vproxy.poc.thrift.HelloWorldService;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 

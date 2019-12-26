@@ -17,7 +17,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class Http2Proxy {

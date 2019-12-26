@@ -5,7 +5,6 @@ import vproxy.util.Utils;
 import java.io.IOException;
 import java.net.DatagramPacket;
 import java.net.DatagramSocket;
-import java.net.InetAddress;
 import java.nio.charset.StandardCharsets;
 
 public class UDPClient {

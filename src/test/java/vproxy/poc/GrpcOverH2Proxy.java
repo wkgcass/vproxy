@@ -22,7 +22,6 @@ import vproxy.processor.ProcessorProvider;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;

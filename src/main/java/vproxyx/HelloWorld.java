@@ -11,7 +11,6 @@ import vproxy.util.nio.ByteArrayChannel;
 import vserver.HttpServer;
 
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 
 public class HelloWorld {

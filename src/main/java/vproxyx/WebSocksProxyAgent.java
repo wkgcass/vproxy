@@ -22,7 +22,6 @@ import vproxyx.websocks.*;
 import vproxyx.websocks.ss.SSProtocolHandler;
 
 import java.io.File;
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;

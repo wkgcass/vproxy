@@ -16,7 +16,6 @@ import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
 import vproxy.util.Utils;
 
-import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;

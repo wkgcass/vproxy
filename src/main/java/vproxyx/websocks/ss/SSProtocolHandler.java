@@ -5,17 +5,17 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
-import vproxy.util.*;
+import vproxy.util.Callback;
+import vproxy.util.Logger;
+import vproxy.util.Tuple;
+import vproxy.util.Utils;
 import vproxy.util.crypto.Aes256Key;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
 import vproxy.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class SSProtocolHandler implements ProtocolHandler<Tuple<SSContext, Callback<Connector, IOException>>> {
     private final String password;

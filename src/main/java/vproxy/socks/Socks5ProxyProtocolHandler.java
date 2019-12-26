@@ -7,10 +7,7 @@ import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 
 public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5ProxyContext, Callback<Connector, IOException>>> {
     private final Socks5ConnectorProvider connectorProvider;
