@@ -622,7 +622,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private final boolean strictMode;
     private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
     private final LinkedHashMap<String, List<DomainChecker>> noProxyDomains;
-    private final List<DomainChecker> tlsRelayDomains;
+    private final List<DomainChecker> httpsRelayDomains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
@@ -633,9 +633,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         this.proxyDomains = config.getDomains();
         this.noProxyDomains = config.getNoProxyDomains();
         if (config.isProxyRelay()) {
-            this.tlsRelayDomains = config.getTLSRelayDomains();
+            this.httpsRelayDomains = config.getHTTPSRelayDomains();
         } else {
-            this.tlsRelayDomains = Collections.emptyList();
+            this.httpsRelayDomains = Collections.emptyList();
         }
         this.servers = config.getServers();
         this.user = config.getUser();
@@ -677,7 +677,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         if (port != 443) { // only 443 (https)
             return false;
         }
-        for (DomainChecker checker : tlsRelayDomains) {
+        for (DomainChecker checker : httpsRelayDomains) {
             if (checker.needProxy(address, port)) {
                 return true;
             }
@@ -695,10 +695,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             return;
         }
 
-        // check whether to do tls relay
+        // check whether to do https relay
         if (needHTTPSRelay(address, port)) {
-            Logger.alert("[TLS] tls relay for " + address + ":" + port);
-            handleTLSRelay(loop, address, providedCallback);
+            Logger.alert("[HTTPS] https relay for " + address + ":" + port);
+            handleHTTPSRelay(loop, address, providedCallback);
             return;
         }
         // check whether need to proxy to the WebSocks server
@@ -757,7 +757,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         });
     }
 
-    private void handleTLSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
+    private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
         //noinspection unchecked
         BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
         if (WebSocksUtils.httpDNSServer != null) {
@@ -771,6 +771,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
                 SSLEngine engine = WebSocksUtils.createEngine();
                 engine.setUseClientMode(true);
+                engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
                 SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
                 ConnectableConnection conn;
                 try {
@@ -787,7 +788,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                         engine, new Callback<>() {
                         @Override
                         protected void onSucceeded(Void value) {
-                            cb.accept(new TLSRelayForRawAcceptedConnector(conn.remote, conn, loop));
+                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop));
                         }
 
                         @Override
@@ -797,7 +798,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     }
                     ));
                 } catch (IOException e) {
-                    Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "adding conn for tls relay into event loop failed", e);
+                    Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "adding conn for https relay into event loop failed", e);
                     cb.accept(null);
                 }
             }
@@ -806,7 +807,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             protected void onFailed(Throwable o) {
                 UnknownHostException err = (UnknownHostException) o;
 
-                Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in tls relay", err);
+                Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in https relay", err);
                 cb.accept(null);
             }
         });

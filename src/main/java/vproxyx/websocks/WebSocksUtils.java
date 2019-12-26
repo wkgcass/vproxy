@@ -198,14 +198,14 @@ public class WebSocksUtils {
     }
 
     private static volatile SSLContext sslContext;
-    private static volatile SSLContext tlsRelaySSLContext;
+    private static volatile SSLContext httpsRelaySSLContext;
 
     public static SSLContext getSslContext() {
         return sslContext;
     }
 
-    public static SSLContext getTlsRelaySSLContext() {
-        return tlsRelaySSLContext;
+    public static SSLContext getHTTPSRelaySSLContext() {
+        return httpsRelaySSLContext;
     }
 
     public static SSLEngine createEngine() {
@@ -293,8 +293,8 @@ public class WebSocksUtils {
         }
     }
 
-    public static void initTLSRelayContext(List<CertKey> cks) throws Exception {
-        if (tlsRelaySSLContext != null) {
+    public static void initHTTPSRelayContext(List<CertKey> cks) throws Exception {
+        if (httpsRelaySSLContext != null) {
             throw new Exception("ssl context already initiated");
         }
 
@@ -311,10 +311,10 @@ public class WebSocksUtils {
         kms = kmf.getKeyManagers();
 
         try {
-            tlsRelaySSLContext = SSLContext.getInstance("TLS");
-            tlsRelaySSLContext.init(kms, null, null);
+            httpsRelaySSLContext = SSLContext.getInstance("TLS");
+            httpsRelaySSLContext.init(kms, null, null);
         } catch (KeyManagementException e) {
-            tlsRelaySSLContext = null;
+            httpsRelaySSLContext = null;
             throw e;
         }
     }

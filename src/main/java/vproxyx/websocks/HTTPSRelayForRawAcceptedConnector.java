@@ -11,8 +11,8 @@ import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-public class TLSRelayForRawAcceptedConnector extends AlreadyConnectedConnector {
-    public TLSRelayForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop) {
+public class HTTPSRelayForRawAcceptedConnector extends AlreadyConnectedConnector {
+    public HTTPSRelayForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop) {
         super(remote, conn, loop);
     }
 
@@ -24,7 +24,7 @@ public class TLSRelayForRawAcceptedConnector extends AlreadyConnectedConnector {
         oldIn.writeTo(chnl);
 
         // construct and replace buffers
-        SSLEngine engine = WebSocksUtils.getTlsRelaySSLContext().createSSLEngine();
+        SSLEngine engine = WebSocksUtils.getHTTPSRelaySSLContext().createSSLEngine();
         engine.setUseClientMode(false); // is server
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
         accepted.UNSAFE_replaceBuffer(pair.left, pair.right);

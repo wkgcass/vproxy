@@ -36,9 +36,9 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
     private Map<String, List<DomainChecker>> resolves = new HashMap<>();
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
-    private List<DomainChecker> tlsRelayDomains = new ArrayList<>();
-    private List<List<String>> tlsRelayCertKeyFiles = new ArrayList<>();
-    private List<CertKey> tlsRelayCertKeys = new ArrayList<>();
+    private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
+    private List<List<String>> httpsRelayCertKeyFiles = new ArrayList<>();
+    private List<CertKey> httpsRelayCertKeys = new ArrayList<>();
     private boolean directRelay = false;
     private Boolean proxyRelay = null; // null means auto
     private String user;
@@ -134,15 +134,15 @@ public class ConfigProcessor {
     }
 
     public boolean isProxyRelay() {
-        return proxyRelay == null ? !tlsRelayDomains.isEmpty() : proxyRelay;
+        return proxyRelay == null ? !httpsRelayDomains.isEmpty() : proxyRelay;
     }
 
-    public List<DomainChecker> getTLSRelayDomains() {
-        return tlsRelayDomains;
+    public List<DomainChecker> getHTTPSRelayDomains() {
+        return httpsRelayDomains;
     }
 
-    public List<CertKey> getTLSRelayCertKeys() {
-        return tlsRelayCertKeys;
+    public List<CertKey> getHTTPSRelayCertKeys() {
+        return httpsRelayCertKeys;
     }
 
     public String getUser() {
@@ -237,8 +237,8 @@ public class ConfigProcessor {
         // 2 -> proxy.domain.list
         // 3 -> proxy.resolve.list
         // 4 -> no-proxy.domain.list
-        // 5 -> tls-relay.domain.list
-        // 6 -> agent.tls-relay.cert-key.list
+        // 5 -> https-relay.domain.list
+        // 6 -> agent.https-relay.cert-key.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -441,9 +441,9 @@ public class ConfigProcessor {
                             throw new Exception("symbol cannot contain spaces");
                         currentAlias = alias;
                     }
-                } else if (line.equals("tls-relay.domain.list.start")) {
+                } else if (line.equals("https-relay.domain.list.start")) {
                     step = 5;
-                } else if (line.equals("agent.tls-relay.cert-key.list.start")) {
+                } else if (line.equals("agent.https-relay.cert-key.list.start")) {
                     step = 6;
                 } else {
                     throw new Exception("unknown line: " + line);
@@ -582,48 +582,48 @@ public class ConfigProcessor {
                 }
                 getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
             } else if (step == 5) {
-                if (line.equals("tls-relay.domain.list.end")) {
+                if (line.equals("https-relay.domain.list.end")) {
                     step = 0;
                     continue;
                 }
-                tlsRelayDomains.add(formatDomainChecker(line));
+                httpsRelayDomains.add(formatDomainChecker(line));
             } else {
                 //noinspection ConstantConditions
                 assert step == 6;
-                if (line.equals("agent.tls-relay.cert-key.list.end")) {
+                if (line.equals("agent.https-relay.cert-key.list.end")) {
                     step = 0;
                     continue;
                 }
                 var ls = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
                 if (ls.isEmpty())
                     continue;
-                tlsRelayCertKeyFiles.add(ls);
+                httpsRelayCertKeyFiles.add(ls);
             }
         }
 
         // check for variables must present
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
-        // check for tls relay
-        if (!tlsRelayCertKeyFiles.isEmpty()) {
-            for (List<String> files : tlsRelayCertKeyFiles) {
+        // check for https relay
+        if (!httpsRelayCertKeyFiles.isEmpty()) {
+            for (List<String> files : httpsRelayCertKeyFiles) {
                 String[] certs = new String[files.size() - 1];
                 for (int i = 0; i < certs.length; ++i) {
                     certs[i] = files.get(i);
                 }
                 String key = files.get(files.size() - 1);
                 CertKey certKey = CertKeyHolder.readFile("no-name", certs, key);
-                tlsRelayCertKeys.add(certKey);
+                httpsRelayCertKeys.add(certKey);
             }
         } else {
-            if (!tlsRelayDomains.isEmpty()) {
-                throw new Exception("agent.tls-relay.cert-key.list is empty, but tls-relay.domain.list is not empty");
+            if (!httpsRelayDomains.isEmpty()) {
+                throw new Exception("agent.https-relay.cert-key.list is empty, but https-relay.domain.list is not empty");
             }
             if (directRelay) {
-                throw new Exception("agent.tls-relay.cert-key.list is empty, but agent.direct-relay is enabled");
+                throw new Exception("agent.https-relay.cert-key.list is empty, but agent.direct-relay is enabled");
             }
             if (proxyRelay != null && proxyRelay) {
-                throw new Exception("agent.tls-relay.cert-key.list is empty, but agent.proxy-relay is enabled");
+                throw new Exception("agent.https-relay.cert-key.list is empty, but agent.proxy-relay is enabled");
             }
         }
         // check for consistency of server list and domain list

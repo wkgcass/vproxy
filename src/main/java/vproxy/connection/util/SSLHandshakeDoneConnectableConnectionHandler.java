@@ -58,7 +58,7 @@ public class SSLHandshakeDoneConnectableConnectionHandler implements Connectable
 
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
-        Logger.error(LogType.CONN_ERROR, "handling tls relay handshaking failed: " + ctx.connection + ", got exception", err);
+        Logger.error(LogType.CONN_ERROR, "handling https relay handshaking failed: " + ctx.connection + ", got exception", err);
         callbackFail(ctx, err);
     }
 
@@ -69,14 +69,14 @@ public class SSLHandshakeDoneConnectableConnectionHandler implements Connectable
 
     @Override
     public void closed(ConnectionHandlerContext ctx) {
-        Logger.error(LogType.CONN_ERROR, "handling tls relay handshaking failed: " + ctx.connection + ", connection closed");
+        Logger.error(LogType.CONN_ERROR, "handling https relay handshaking failed: " + ctx.connection + ", connection closed");
         callbackFail(ctx, new IOException("closed"));
     }
 
     @Override
     public void removed(ConnectionHandlerContext ctx) {
         if (!handshakeDone(engine)) {
-            Logger.error(LogType.CONN_ERROR, "handling tls relay handshaking failed: " + ctx.connection + ", removed from loop");
+            Logger.error(LogType.CONN_ERROR, "handling https relay handshaking failed: " + ctx.connection + ", removed from loop");
             callbackFail(ctx, new IOException("removed from loop"));
         }
     }

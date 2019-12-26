@@ -81,7 +81,7 @@ public class WebSocksProxyAgent {
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
         assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getResolves());
         assert Logger.lowLevelDebug("no-proxy domain patterns " + configProcessor.getNoProxyDomains());
-        assert Logger.lowLevelDebug("tls-relay domain patterns " + configProcessor.getTLSRelayDomains());
+        assert Logger.lowLevelDebug("https-relay domain patterns " + configProcessor.getHTTPSRelayDomains());
         assert Logger.lowLevelDebug("proxy servers " +
             configProcessor.getServers().values().stream().map(server ->
                 server.getServerHandles().stream()
@@ -94,8 +94,8 @@ public class WebSocksProxyAgent {
         // init the ssl context
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false, configProcessor.isVerifyCert());
-        if (!configProcessor.getTLSRelayCertKeys().isEmpty()) {
-            WebSocksUtils.initTLSRelayContext(configProcessor.getTLSRelayCertKeys());
+        if (!configProcessor.getHTTPSRelayCertKeys().isEmpty()) {
+            WebSocksUtils.initHTTPSRelayContext(configProcessor.getHTTPSRelayCertKeys());
         }
 
         // initiate pool (it's inside the connector provider)

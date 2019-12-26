@@ -46,7 +46,7 @@ public class RelayHttpsServer {
                 .setHandleLoopProvider(worker::next)
                 .setServer(server)
                 .setConnGen(new RelayHttpsConnectorGen())
-                .setSslContext(WebSocksUtils.getTlsRelaySSLContext())
+                .setSslContext(WebSocksUtils.getHTTPSRelaySSLContext())
                 .setSslEngineManipulator(RelayHttpsServer::configureEngine),
             s -> {
                 // do nothing, won't happen
@@ -182,6 +182,7 @@ public class RelayHttpsServer {
 
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
+                    engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
                     SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
                     ConnectableConnection conn;
                     try {
