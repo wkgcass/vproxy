@@ -1,4 +1,4 @@
-package vproxyx.websocks;
+package vproxyx.websocks.relay;
 
 import vproxy.connection.ConnectableConnection;
 import vproxy.connection.Connection;
@@ -6,6 +6,8 @@ import vproxy.connection.NetEventLoop;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxyx.websocks.AlreadyConnectedConnector;
+import vproxyx.websocks.WebSocksUtils;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;

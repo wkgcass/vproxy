@@ -19,6 +19,8 @@ import vproxy.util.Logger;
 import vproxy.util.Tuple3;
 import vproxy.util.Utils;
 import vproxyx.websocks.*;
+import vproxyx.websocks.relay.RelayHttpServer;
+import vproxyx.websocks.relay.RelayHttpsServer;
 import vproxyx.websocks.ss.SSProtocolHandler;
 
 import java.io.File;

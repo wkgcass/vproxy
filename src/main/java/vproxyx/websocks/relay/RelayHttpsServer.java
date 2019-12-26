@@ -1,4 +1,4 @@
-package vproxyx.websocks;
+package vproxyx.websocks.relay;
 
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
@@ -18,6 +18,8 @@ import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.*;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxyx.websocks.AlreadyConnectedConnector;
+import vproxyx.websocks.WebSocksUtils;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;

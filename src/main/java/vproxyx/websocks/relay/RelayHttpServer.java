@@ -1,4 +1,4 @@
-package vproxyx.websocks;
+package vproxyx.websocks.relay;
 
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.util.ErrorPages;

@@ -16,6 +16,7 @@ import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxyx.websocks.relay.HTTPSRelayForRawAcceptedConnector;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
