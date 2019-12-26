@@ -27,10 +27,7 @@ import vproxy.util.Logger;
 import java.io.IOException;
 import java.net.*;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.LinkedHashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class DNSServer {
     public final String alias;
@@ -38,6 +35,7 @@ public class DNSServer {
     public final EventLoopGroup eventLoopGroup;
     public final Upstream rrsets;
     public final DNSClient client;
+    private Map<String, InetAddress> hosts;
     private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
     private final Attach attach = new Attach();
@@ -51,6 +49,7 @@ public class DNSServer {
         this.bindAddress = bindAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.rrsets = rrsets;
+        this.hosts = Resolver.getHosts();
         this.client = DNSClient.getDefault();
         this.ttl = ttl;
     }
@@ -86,6 +85,13 @@ public class DNSServer {
                 case A:
                 case ANY:
                     String domain = q.qname;
+
+                    InetAddress hostResult = hosts.get(domain);
+                    if (hostResult != null) {
+                        addresses.put(domain, Collections.singletonList(hostResult));
+                        break;
+                    }
+
                     if (domain.endsWith(".")) { // remove tailing dot by convention
                         domain = domain.substring(0, domain.length() - 1);
                     }
@@ -314,6 +320,9 @@ public class DNSServer {
                 }
             }
         });
+
+        // start reloading hosts
+        loop.getSelectorEventLoop().period(30_000, () -> hosts = Resolver.getHosts());
     }
 
     public void stop() {

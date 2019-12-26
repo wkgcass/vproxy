@@ -162,7 +162,18 @@ public interface Resolver {
                 }
                 InetAddress l3addr = Utils.l3addr(ipBytes);
                 for (int i = 1; i < split.size(); ++i) {
-                    ret.put(split.get(i), l3addr);
+                    String domain1 = split.get(i);
+                    String domain2;
+                    if (domain1.endsWith(".")) {
+                        domain2 = domain1.substring(0, domain1.length() - 1);
+                    } else {
+                        domain2 = domain1 + ".";
+                    }
+                    if (ret.containsKey(domain1) || ret.containsKey(domain2)) { // only consider the first present domain
+                        continue;
+                    }
+                    ret.put(domain1, l3addr);
+                    ret.put(domain2, l3addr);
                 }
             }
             return ret;

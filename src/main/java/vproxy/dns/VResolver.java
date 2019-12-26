@@ -31,9 +31,9 @@ public class VResolver extends AbstractResolver {
     private Map<String, InetAddress> hosts;
     private final DNSClient client;
 
-    public VResolver(String alias, List<InetSocketAddress> initialNameServers, Map<String, InetAddress> initialHosts) throws IOException {
+    public VResolver(String alias) throws IOException {
         super(alias, FDProvider.get().getProvided());
-        this.hosts = initialHosts;
+        this.hosts = Resolver.getHosts();
 
         DatagramFD sock = null;
         DNSClient client = null;
@@ -41,7 +41,7 @@ public class VResolver extends AbstractResolver {
             sock = FDProvider.get().openDatagramFD();
             sock.configureBlocking(false);
             sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0)); // bind any port
-            client = new DNSClient(loop.getSelectorEventLoop(), sock, initialNameServers, DNS_REQ_TIMEOUT, MAX_RETRY);
+            client = new DNSClient(loop.getSelectorEventLoop(), sock, Resolver.getNameServers(), DNS_REQ_TIMEOUT, MAX_RETRY);
         } catch (IOException e) {
             try {
                 loop.getSelectorEventLoop().close();
@@ -81,7 +81,7 @@ public class VResolver extends AbstractResolver {
     }
 
     private InetAddress[] searchInHosts(String domain) {
-        if (domain.equals("localhost")) {
+        if (domain.equals("localhost") || domain.equals("localhost.")) {
             return LOCALHOST;
         }
         if (hosts.containsKey(domain)) {

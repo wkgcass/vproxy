@@ -12,7 +12,6 @@ import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.net.*;
-import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -26,9 +25,7 @@ public class TestResolver {
     @Before
     public void setUp() throws IOException {
         loop = SelectorEventLoop.open();
-        resolver = new VResolver("TestResolver" + ((int) (Math.random() * 10000)), Collections.singletonList(
-            new InetSocketAddress(Utils.l3addr(8, 8, 8, 8), 53)),
-            Collections.emptyMap());
+        resolver = new VResolver("TestResolver" + ((int) (Math.random() * 10000)));
         resolver.start();
     }
 
@@ -83,13 +80,13 @@ public class TestResolver {
         return r;
     }
 
-    private DNSResource getAResource() throws Exception {
+    private DNSResource getAResource() {
         A a = new A();
         a.address = (Inet4Address) Utils.l3addr(new byte[]{1, 2, 3, 4});
         return getResource("www.example.com.", a);
     }
 
-    private DNSResource getAAAAResource() throws Exception {
+    private DNSResource getAAAAResource() {
         AAAA aaaa = new AAAA();
         aaaa.address = (Inet6Address) Utils.l3addr("ABCD:EF01:2345:6789:ABCD:EF01:2345:6789");
         return getResource("www.example.com.", aaaa);

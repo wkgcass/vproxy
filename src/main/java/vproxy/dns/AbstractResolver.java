@@ -9,7 +9,6 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
@@ -38,9 +37,8 @@ public abstract class AbstractResolver implements Resolver {
         synchronized (AbstractResolver.class) {
             if (defaultResolver != null)
                 return defaultResolver;
-            List<InetSocketAddress> nameServers = Resolver.getNameServers();
             try {
-                defaultResolver = new VResolver("Resolver", nameServers, Resolver.getHosts());
+                defaultResolver = new VResolver("Resolver");
             } catch (IOException e) {
                 throw new RuntimeException("create resolver failed");
             }
