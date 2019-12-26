@@ -105,6 +105,10 @@ public class DNSServer {
                     } else {
                         connector = gh.group.next(remote);
                     }
+                    if (connector == null) {
+                        assert Logger.lowLevelDebug("no active server for " + domain);
+                        continue;
+                    }
                     if (addresses.containsKey(domain)) {
                         addresses.get(domain).add(connector.remote.getAddress());
                     } else {
