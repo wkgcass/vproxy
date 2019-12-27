@@ -189,7 +189,7 @@ public class Shutdown {
     }
 
     public static String defaultFilePath() {
-        return System.getProperty("user.home") + File.separator + ".vproxy.last";
+        return Utils.homefile(".vproxy.last");
     }
 
     private static void backupAndRemove(String filepath) throws Exception {
@@ -206,11 +206,9 @@ public class Shutdown {
 
     public static void writePid(String filepath) throws Exception {
         if (filepath == null) {
-            filepath = System.getProperty("user.home") + File.separator + ".vproxy.pid";
+            filepath = Utils.homefile(".vproxy.pid");
         }
-        if (filepath.startsWith("~")) {
-            filepath = System.getProperty("user.home") + filepath.substring("~".length());
-        }
+        filepath = Utils.filename(filepath);
 
         backupAndRemove(filepath);
         File f = new File(filepath);
@@ -244,9 +242,7 @@ public class Shutdown {
         if (filepath == null) {
             filepath = defaultFilePath();
         }
-        if (filepath.startsWith("~")) {
-            filepath = System.getProperty("user.home") + filepath.substring("~".length());
-        }
+        filepath = Utils.filename(filepath);
         Logger.alert("Trying to save config into file: " + filepath);
         backupAndRemove(filepath);
         File f = new File(filepath);
@@ -649,9 +645,7 @@ public class Shutdown {
         if (filepath == null) {
             filepath = defaultFilePath();
         }
-        if (filepath.startsWith("~")) {
-            filepath = System.getProperty("user.home") + filepath.substring("~".length());
-        }
+        filepath = Utils.filename(filepath);
         File f = new File(filepath);
         FileInputStream fis = new FileInputStream(f);
         BufferedReader br = new BufferedReader(new InputStreamReader(fis));

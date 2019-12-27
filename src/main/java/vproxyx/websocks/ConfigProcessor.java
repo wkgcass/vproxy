@@ -495,7 +495,7 @@ public class ConfigProcessor {
                             sb.append(" ").append(split[i]);
                         }
                         program = sb.toString();
-                        program = program.replace("~", System.getProperty("user.home"));
+                        program = program.replace("~", Utils.homedir());
                         programPort = (int) (30000 + 10000 * Math.random());
                         program = program.replace("$LOCAL_PORT", "" + programPort);
                     }
@@ -688,9 +688,7 @@ public class ConfigProcessor {
             return new PatternDomainChecker(Pattern.compile(regexp));
         } else if (line.startsWith("[") && line.endsWith("]")) {
             String abpfile = line.substring(1, line.length() - 1);
-            if (abpfile.startsWith("~")) {
-                abpfile = System.getProperty("user.home") + File.separator + abpfile.substring(1);
-            }
+            abpfile = Utils.filename(abpfile);
 
             ABP abp;
             try (FileReader fileABP = new FileReader(abpfile)) {
@@ -711,9 +709,7 @@ public class ConfigProcessor {
     }
 
     private String readFile(String path) throws Exception {
-        if (path.startsWith("~")) {
-            path = System.getProperty("user.home") + File.separator + path.substring(1);
-        }
+        path = Utils.filename(path);
         try (FileInputStream fis = new FileInputStream(path)) {
             BufferedReader br = new BufferedReader(new InputStreamReader(fis));
             StringBuilder sb = new StringBuilder();

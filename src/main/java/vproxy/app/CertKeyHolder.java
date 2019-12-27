@@ -3,6 +3,7 @@ package vproxy.app;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.ssl.CertKey;
+import vproxy.util.Utils;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -18,9 +19,7 @@ public class CertKeyHolder {
     }
 
     private static List<String> readFile(String path) throws Exception {
-        if (path.startsWith("~")) {
-            path = System.getProperty("user.home") + path.substring(1);
-        }
+        path = Utils.filename(path);
         File f = new File(path);
         if (!f.exists())
             throw new FileNotFoundException("file not found: " + path);

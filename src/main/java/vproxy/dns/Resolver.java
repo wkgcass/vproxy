@@ -54,7 +54,7 @@ public interface Resolver {
 
     private static List<InetSocketAddress> getNameServersFromFile() {
         // try ~/resolv.conf for customized resolve configuration
-        File f = new File(System.getProperty("user.home") + File.separator + "resolv.conf");
+        File f = new File(Utils.homefile("resolv.conf"));
         if (!f.exists() || !f.isFile()) { // try linux|bsd resolve configuration
             f = new File("/etc/resolv.conf");
         }
@@ -117,7 +117,7 @@ public interface Resolver {
 
     static Map<String, InetAddress> getHosts() {
         // try ~/hosts for customized host config
-        File f = new File(System.getProperty("user.home") + File.separator + "hosts");
+        File f = new File(Utils.homefile("hosts"));
         if (!f.exists() || !f.isFile()) { // try linux|bsd host file
             f = new File("/etc/hosts");
         }

@@ -3,6 +3,7 @@ package vproxy.app.args;
 import vproxy.app.Config;
 import vproxy.app.MainCtx;
 import vproxy.app.MainOp;
+import vproxy.util.Utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -35,10 +36,7 @@ public class AutoSaveFileOp implements MainOp {
         }
         ctx.set("autoSaveFileExists", true);
 
-        var path = args[0];
-        if (path.startsWith("~")) {
-            path = System.getProperty("user.home") + path.substring(1);
-        }
+        var path = Utils.filename(args[0]);
         var file = new File(path);
         if (file.exists()) {
             if (file.isFile()) {

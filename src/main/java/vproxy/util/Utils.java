@@ -42,6 +42,21 @@ public class Utils {
         return s;
     }
 
+    public static String homedir() {
+        return System.getProperty("user.home");
+    }
+
+    public static String filename(String s) {
+        if (s.startsWith("~")) {
+            s = homedir() + s.substring(1);
+        }
+        return s;
+    }
+
+    public static String homefile(String s) {
+        return homedir() + File.separator + s;
+    }
+
     private static String addTo(@SuppressWarnings("SameParameterValue") int len, String s) {
         if (s.length() >= len)
             return s;

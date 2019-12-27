@@ -34,7 +34,7 @@ public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vproxy-websocks-agent.conf";
 
     public static void main0(String[] args) throws Exception {
-        String configFile = System.getProperty("user.home") + File.separator + defaultConfigName;
+        String configFile = Utils.homefile(defaultConfigName);
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
             System.out.println("If not specified, the config will be read from " + configFile);
@@ -46,14 +46,12 @@ public class WebSocksProxyAgent {
 
             File file = new File(configFile);
             if (!file.exists()) {
-                ConfigGenerator.interactive(System.getProperty("user.home"), defaultConfigName);
+                ConfigGenerator.interactive(Utils.homedir(), defaultConfigName);
             }
         } else {
             configFile = args[0];
         }
-        if (configFile.startsWith("~")) {
-            configFile = System.getProperty("user.home") + configFile.substring(1);
-        }
+        configFile = Utils.filename(configFile);
         assert Logger.lowLevelDebug("config file path: " + configFile);
 
         // get worker thread count

@@ -81,9 +81,7 @@ public class DiscoveryConfigLoader {
 
     // return 0 for success, positive integer for exit code
     public int load(String filepath) {
-        if (filepath.startsWith("~")) {
-            filepath = System.getProperty("user.home") + filepath.substring("~".length());
-        }
+        filepath = Utils.filename(filepath);
         File f = new File(filepath);
         if (!f.exists()) {
             return exit("specified discovery config file not exists");

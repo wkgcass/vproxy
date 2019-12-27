@@ -166,8 +166,8 @@ public class WebSocksProxyServer {
             if (pkcs12 != null || pkcs12pswd != null || certpem != null || keypem != null)
                 throw new IllegalArgumentException("pkcs12 or pem info specified but no `ssl` flag set.");
         }
-        if (pkcs12 != null && pkcs12.startsWith("~")) {
-            pkcs12 = System.getProperty("user.home") + pkcs12.substring(1);
+        if (pkcs12 != null) {
+            pkcs12 = Utils.filename(pkcs12);
         }
         if (pkcs12 != null) {
             if (certpem != null || keypem != null) {
