@@ -48,3 +48,9 @@ build/
 # graal result
 /vproxy
 /vproxy-*
+
+# cert, csr and key
+/misc/ca/*.key
+/misc/ca/*.csr
+/misc/ca/*.crt
+/misc/ca/*.srl
