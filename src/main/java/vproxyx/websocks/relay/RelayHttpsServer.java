@@ -209,8 +209,10 @@ public class RelayHttpsServer {
             connectorProvider.provide(ctx.connection, AddressType.domain, hostname, 443, connector -> {
                 assert Logger.lowLevelDebug("proxy https relay got a connector: " + connector);
                 if (ctx.data.left.errored) {
-                    assert Logger.lowLevelDebug("the connector successfully retrieved but the accepted connection errored, so close the connector");
-                    connector.close();
+                    if (connector != null) {
+                        assert Logger.lowLevelDebug("the connector successfully retrieved but the accepted connection errored, so close the connector");
+                        connector.close();
+                    }
                     return;
                 }
                 if (connector == null) {

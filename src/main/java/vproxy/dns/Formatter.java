@@ -233,6 +233,34 @@ public class Formatter {
             return DNSPacket.RCode.NotImplemented;
         } else if (rcode == DNSPacket.RCode.Refused.code) {
             return DNSPacket.RCode.Refused;
+        } else if (rcode == DNSPacket.RCode.YXDomain.code) {
+            return DNSPacket.RCode.YXDomain;
+        } else if (rcode == DNSPacket.RCode.YXRRSet.code) {
+            return DNSPacket.RCode.YXRRSet;
+        } else if (rcode == DNSPacket.RCode.NXRRSet.code) {
+            return DNSPacket.RCode.NXRRSet;
+        } else if (rcode == DNSPacket.RCode.NotAuth.code) {
+            return DNSPacket.RCode.NotAuth;
+        } else if (rcode == DNSPacket.RCode.NotZone.code) {
+            return DNSPacket.RCode.NotZone;
+        } else if (rcode == DNSPacket.RCode.DSOTYPENI.code) {
+            return DNSPacket.RCode.DSOTYPENI;
+        } else if (rcode == DNSPacket.RCode.BADVERS.code) {
+            return DNSPacket.RCode.BADVERS;
+        } else if (rcode == DNSPacket.RCode.BADKEY.code) {
+            return DNSPacket.RCode.BADKEY;
+        } else if (rcode == DNSPacket.RCode.BADTIME.code) {
+            return DNSPacket.RCode.BADTIME;
+        } else if (rcode == DNSPacket.RCode.BADMODE.code) {
+            return DNSPacket.RCode.BADMODE;
+        } else if (rcode == DNSPacket.RCode.BADNAME.code) {
+            return DNSPacket.RCode.BADNAME;
+        } else if (rcode == DNSPacket.RCode.BADALG.code) {
+            return DNSPacket.RCode.BADALG;
+        } else if (rcode == DNSPacket.RCode.BADTRUNC.code) {
+            return DNSPacket.RCode.BADTRUNC;
+        } else if (rcode == DNSPacket.RCode.BADCOOKIE.code) {
+            return DNSPacket.RCode.BADCOOKIE;
         } else {
             throw new InvalidDNSPacketException("unknown rcode: " + rcode);
         }
