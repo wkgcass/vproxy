@@ -620,14 +620,16 @@ public class ConfigProcessor {
             throw new Exception("proxy.server.auth not present");
         // check for https relay
         if (!httpsRelayCertKeyFiles.isEmpty()) {
+            int idx = 0;
             for (List<String> files : httpsRelayCertKeyFiles) {
                 String[] certs = new String[files.size() - 1];
                 for (int i = 0; i < certs.length; ++i) {
                     certs[i] = files.get(i);
                 }
                 String key = files.get(files.size() - 1);
-                CertKey certKey = CertKeyHolder.readFile("no-name", certs, key);
+                CertKey certKey = CertKeyHolder.readFile("agent.https-relay.cert-key." + idx, certs, key);
                 httpsRelayCertKeys.add(certKey);
+                ++idx;
             }
         } else {
             if (!httpsRelayDomains.isEmpty()) {
