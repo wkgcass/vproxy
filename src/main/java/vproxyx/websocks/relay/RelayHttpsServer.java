@@ -273,8 +273,10 @@ public class RelayHttpsServer {
                     return;
                 }
 
-                // register an event to let the `E` buffer unwrap data to `P` when `EE -> E` triggers
-                SSLUtils.unwrapAfterWritingToEncryptedBuffer(interTLSUnwrap, (SSLUnwrapRingBuffer) websocksConn.getInBuffer());
+                if (websocksConn.getInBuffer() instanceof SSLUnwrapRingBuffer) {
+                    // register an event to let the `E` buffer unwrap data to `P` when `EE -> E` triggers
+                    SSLUtils.unwrapAfterWritingToEncryptedBuffer(interTLSUnwrap, (SSLUnwrapRingBuffer) websocksConn.getInBuffer());
+                }
 
                 assert Logger.lowLevelDebug("proxy https relay is going to make a callback");
                 ctx.data.left.finished = true;
