@@ -54,4 +54,24 @@ public class SSLUtils {
         RingBuffer buffer = buf.plainBufferForApp;
         return ByteArray.from(buffer.getBytes());
     }
+
+    public static ByteBufferRingBuffer getPlainBuffer(SSLUnwrapRingBuffer buf) {
+        return buf.plainBufferForApp;
+    }
+
+    public static SimpleRingBuffer getEncryptedBuffer(SSLUnwrapRingBuffer buf) {
+        return buf.encryptedBufferForInput;
+    }
+
+    public static ByteBufferRingBuffer getPlainBuffer(SSLWrapRingBuffer buf) {
+        return buf.getPlainBufferForApp();
+    }
+
+    public static SimpleRingBuffer getEncryptedBuffer(SSLWrapRingBuffer buf) {
+        return buf.encryptedBufferForOutput;
+    }
+
+    public static void unwrapAfterWritingToEncryptedBuffer(SSLUnwrapRingBuffer unwrapBuf, SSLUnwrapRingBuffer triggerBuf) {
+        triggerBuf.registerUnwrapListener(unwrapBuf::generalUnwrap);
+    }
 }

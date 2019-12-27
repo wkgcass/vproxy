@@ -37,6 +37,7 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> resolves = new HashMap<>();
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
     private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
+    private List<DomainChecker> proxyHttpsRelayDomains = new ArrayList<>();
     private List<List<String>> httpsRelayCertKeyFiles = new ArrayList<>();
     private List<CertKey> httpsRelayCertKeys = new ArrayList<>();
     private boolean directRelay = false;
@@ -141,6 +142,10 @@ public class ConfigProcessor {
         return httpsRelayDomains;
     }
 
+    public List<DomainChecker> getProxyHTTPSRelayDomains() {
+        return proxyHttpsRelayDomains;
+    }
+
     public List<CertKey> getHTTPSRelayCertKeys() {
         return httpsRelayCertKeys;
     }
@@ -239,6 +244,7 @@ public class ConfigProcessor {
         // 4 -> no-proxy.domain.list
         // 5 -> https-relay.domain.list
         // 6 -> agent.https-relay.cert-key.list
+        // 7 -> proxy.https-relay.domain.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -445,6 +451,8 @@ public class ConfigProcessor {
                     step = 5;
                 } else if (line.equals("agent.https-relay.cert-key.list.start")) {
                     step = 6;
+                } else if (line.equals("proxy.https-relay.domain.list.start")) {
+                    step = 7;
                 } else {
                     throw new Exception("unknown line: " + line);
                 }
@@ -587,9 +595,7 @@ public class ConfigProcessor {
                     continue;
                 }
                 httpsRelayDomains.add(formatDomainChecker(line));
-            } else {
-                //noinspection ConstantConditions
-                assert step == 6;
+            } else if (step == 6) {
                 if (line.equals("agent.https-relay.cert-key.list.end")) {
                     step = 0;
                     continue;
@@ -598,6 +604,14 @@ public class ConfigProcessor {
                 if (ls.isEmpty())
                     continue;
                 httpsRelayCertKeyFiles.add(ls);
+            } else {
+                //noinspection ConstantConditions
+                assert step == 7;
+                if (line.equals("proxy.https-relay.domain.list.end")) {
+                    step = 0;
+                    continue;
+                }
+                proxyHttpsRelayDomains.add(formatDomainChecker(line));
             }
         }
 
@@ -618,6 +632,9 @@ public class ConfigProcessor {
         } else {
             if (!httpsRelayDomains.isEmpty()) {
                 throw new Exception("agent.https-relay.cert-key.list is empty, but https-relay.domain.list is not empty");
+            }
+            if (!proxyHttpsRelayDomains.isEmpty()) {
+                throw new Exception("agent.https-relay.cert-key.list is empty, but proxy.https-relay.domain.list is not empty");
             }
             if (directRelay) {
                 throw new Exception("agent.https-relay.cert-key.list is empty, but agent.direct-relay is enabled");

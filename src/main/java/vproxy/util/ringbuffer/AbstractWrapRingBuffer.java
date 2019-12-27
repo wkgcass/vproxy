@@ -28,7 +28,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     private static final int MAX_INTERMEDIATE_BUFFER_CAPACITY = 1024 * 1024; // 1M
 
     private /*might change when switching*/ ByteBufferRingBuffer plainBufferForApp;
-    private final SimpleRingBuffer encryptedBufferForOutput;
+    final SimpleRingBuffer encryptedBufferForOutput;
     private final ReadableHandler readableHandler = new ReadableHandler();
     private final Deque<ByteBufferRingBuffer> intermediateBuffers = new LinkedList<>();
     private ByteBuffer temporaryBuffer = null;

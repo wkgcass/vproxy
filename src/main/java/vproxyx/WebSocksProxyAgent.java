@@ -209,7 +209,7 @@ public class WebSocksProxyAgent {
             assert Logger.lowLevelDebug("start relay server");
             RelayHttpServer.launch(worker);
             Logger.alert("http relay server started on 80");
-            RelayHttpsServer.launch(acceptor, worker);
+            new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
             Logger.alert("https relay server started on 443");
         }
     }

@@ -15,11 +15,13 @@ import vproxy.processor.http1.builder.HeaderBuilder;
 import vproxy.processor.http1.builder.RequestBuilder;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
+import vproxy.socks.AddressType;
 import vproxy.util.*;
+import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
-import vproxyx.websocks.AlreadyConnectedConnector;
-import vproxyx.websocks.WebSocksUtils;
+import vproxy.util.ringbuffer.SSLWrapRingBuffer;
+import vproxyx.websocks.*;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -28,13 +30,21 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.List;
 import java.util.function.BiConsumer;
 
 public class RelayHttpsServer {
-    private RelayHttpsServer() {
+    private final WebSocksProxyAgentConnectorProvider connectorProvider;
+    private final List<DomainChecker> httpsRelayDomains;
+    private final List<DomainChecker> proxyHttpsRelayDomains;
+
+    public RelayHttpsServer(WebSocksProxyAgentConnectorProvider connectorProvider, ConfigProcessor config) {
+        this.connectorProvider = connectorProvider;
+        httpsRelayDomains = config.getHTTPSRelayDomains();
+        proxyHttpsRelayDomains = config.getProxyHTTPSRelayDomains();
     }
 
-    public static void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
+    public void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
         InetSocketAddress l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), 443);
         ServerSock.checkBind(l4addr);
 
@@ -49,7 +59,7 @@ public class RelayHttpsServer {
                 .setServer(server)
                 .setConnGen(new RelayHttpsConnectorGen())
                 .setSslContext(WebSocksUtils.getHTTPSRelaySSLContext())
-                .setSslEngineManipulator(RelayHttpsServer::configureEngine),
+                .setSslEngineManipulator(this::configureEngine),
             s -> {
                 // do nothing, won't happen
                 // when terminating, user should simply kill this process and won't close server
@@ -57,7 +67,7 @@ public class RelayHttpsServer {
         proxy.handle();
     }
 
-    private static void configureEngine(SSLEngine engine, SSLParameters parameters) {
+    private void configureEngine(SSLEngine engine, SSLParameters parameters) {
         /*
          * JDK doc says:
          * The function's result is an application protocol name, or null to indicate that none of the advertised names are acceptable.
@@ -70,7 +80,7 @@ public class RelayHttpsServer {
         engine.setHandshakeApplicationProtocolSelector((en, proto) -> "http/1.1");
     }
 
-    private static class RelayHttpsConnectorGen implements ConnectorGen<Void> {
+    private class RelayHttpsConnectorGen implements ConnectorGen<RelayHttpsProtocolContext> {
         @Override
         public Connector genConnector(Connection accepted, Hint hint) { // will not be called
             return null;
@@ -82,19 +92,21 @@ public class RelayHttpsServer {
         }
 
         @Override
-        public ProtocolHandler<Tuple<Void, Callback<Connector, IOException>>> handler() {
+        public ProtocolHandler<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> handler() {
             return new RelayHttpsProtocolHandler();
         }
     }
 
-    private static class RelayHttpsProtocolHandler implements ProtocolHandler<Tuple<Void, Callback<Connector, IOException>>> {
+    private static class RelayHttpsProtocolContext {
         private boolean startConnection = false;
         private boolean finished = false;
         private boolean errored = false;
+    }
 
+    private class RelayHttpsProtocolHandler implements ProtocolHandler<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> {
         @Override
-        public void init(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
-            ctx.data = new Tuple<>(null, null);
+        public void init(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx) {
+            ctx.data = new Tuple<>(new RelayHttpsProtocolContext(), null);
         }
 
         private boolean handshakeDone(SSLEngine engine) {
@@ -103,11 +115,11 @@ public class RelayHttpsServer {
         }
 
         @Override
-        public void readable(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
-            if (errored) {
+        public void readable(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx) {
+            if (ctx.data.left.errored) {
                 return;
             }
-            if (startConnection) { // new connection is starting, do not entry this method
+            if (ctx.data.left.startConnection) { // new connection is starting, do not entry this method
                 return;
             }
 
@@ -140,7 +152,7 @@ public class RelayHttpsServer {
                         sctx.feed(data.get(i));
                     } catch (Exception e) {
                         Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid request, or is not http", e);
-                        errored = true;
+                        ctx.data.left.errored = true;
                         ctx.data.right.failed(new IOException(e));
                         return;
                     }
@@ -161,13 +173,117 @@ public class RelayHttpsServer {
             }
 
             if (hostname == null) {
-                String msg = "sni not provided";
-                errored = true;
+                String msg = "host header not provided";
+                ctx.data.left.errored = true;
                 ctx.data.right.failed(new IOException(msg));
                 return;
             }
-            startConnection = true;
-            Logger.alert("[HTTPS] direct https relay for " + hostname);
+            ctx.data.left.startConnection = true;
+            handle(ctx, hostname);
+        }
+
+        private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
+            for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay will cover more conditions than direct relay
+                if (chk.needProxy(hostname, 443)) {
+                    handleProxy(ctx, hostname);
+                    return;
+                }
+            }
+            for (DomainChecker chk : httpsRelayDomains) {
+                if (chk.needProxy(hostname, 443)) {
+                    handleRelay(ctx, hostname);
+                    return;
+                }
+            }
+            // cannot handle the condition
+            ctx.data.left.errored = true;
+            ctx.data.right.failed(new IOException("unexpected request for " + hostname));
+        }
+
+        private void handleProxy(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
+            // no need to log the proxy event
+            // will be logged in the connector provider
+            connectorProvider.provide(ctx.connection, AddressType.domain, hostname, 443, connector -> {
+                assert Logger.lowLevelDebug("proxy https relay got a connector: " + connector);
+                if (ctx.data.left.errored) {
+                    assert Logger.lowLevelDebug("the connector successfully retrieved but the accepted connection errored, so close the connector");
+                    connector.close();
+                    return;
+                }
+                if (connector == null) {
+                    assert Logger.lowLevelDebug("no available remote server connector for now");
+                    ctx.data.right.failed(new IOException("no available remote server connector"));
+                    return;
+                }
+                if (!(connector instanceof AlreadyConnectedConnector)) {
+                    Logger.error(LogType.IMPROPER_USE, "The request domain will not be proxied " + hostname + ", configuration must be wrong");
+                    ctx.data.right.failed(new IOException("The request domain will not be proxied"));
+                    return;
+                }
+
+                // OK, here comes a ssl buffer wrapping another ssl buffer:
+                /*
+                 *                                                                        WebSocksWrap
+                 *                                                            +----------------+
+                 *                    HttpsUnwrap               InterTLSWrap  |                |
+                 *                      +-------------+               +-------|-------+        |
+                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
+                 *              in ------>| E | | P |-----------plain-->| P |-->| E |-->| EE |------->out
+                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
+                 *                      +-------------+               +-------|-------+        |
+                 *                                                            |                |
+                 *                                                            +----------------+
+                 *
+                 *                                                                        WebSocksUnwrap
+                 *                                                            +----------------+
+                 *                    HttpsWrap               InterTLSUnwrap  |                |
+                 *                      +-------------+               +-------|-------+        |
+                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
+                 *             out <------| E | | P |<---plain----------| P |<--| E |<--| EE |<------in
+                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
+                 *                      +-------------+               +-------|-------+        |
+                 *                                                            |                |
+                 *                                                            +----------------+
+                 */
+
+                SSLEngine engine = WebSocksUtils.createEngine(hostname, 443);
+                engine.setUseClientMode(true);
+                engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
+
+                ByteBufferRingBuffer bufI = SSLUtils.getPlainBuffer((SSLUnwrapRingBuffer) ctx.connection.getInBuffer());
+                ByteBufferRingBuffer bufO = SSLUtils.getPlainBuffer((SSLWrapRingBuffer) ctx.connection.getOutBuffer());
+
+                // built the inter(mediate) buffers
+                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, bufO, bufI,
+                    ctx.connection.getEventLoop().getSelectorEventLoop());
+                SSLUnwrapRingBuffer interTLSUnwrap = pair.left;
+                SSLWrapRingBuffer interTLSWrap = pair.right;
+
+                RingBuffer interTLSUnwrapEncryptedBuffer = SSLUtils.getEncryptedBuffer(interTLSUnwrap);
+                RingBuffer interTLSWrapEncryptedBuffer = SSLUtils.getEncryptedBuffer(interTLSWrap);
+
+                ConnectableConnection websocksConn = ((AlreadyConnectedConnector) connector).getConnection();
+
+                try {
+                    websocksConn.UNSAFE_replaceBuffer(interTLSUnwrapEncryptedBuffer, interTLSWrapEncryptedBuffer);
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("replace buffers failed", e);
+                    ctx.data.left.errored = true;
+                    ctx.data.right.failed(e);
+                    return;
+                }
+
+                // register an event to let the `E` buffer unwrap data to `P` when `EE -> E` triggers
+                SSLUtils.unwrapAfterWritingToEncryptedBuffer(interTLSUnwrap, (SSLUnwrapRingBuffer) websocksConn.getInBuffer());
+
+                assert Logger.lowLevelDebug("proxy https relay is going to make a callback");
+                ctx.data.left.finished = true;
+                ctx.data.right.succeeded(new SupplierConnector(websocksConn.remote, websocksConn, ctx.connection.getEventLoop()));
+            });
+        }
+
+        private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
+            Logger.alert("[RELAY] direct https relay for " + hostname);
 
             //noinspection unchecked
             BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
@@ -192,7 +308,7 @@ public class RelayHttpsServer {
                             pair.left, pair.right);
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "connecting to " + finalHostname + "(" + value + "):443 failed");
-                        errored = true;
+                        ctx.data.left.errored = true;
                         ctx.data.right.failed(e);
                         return;
                     }
@@ -202,20 +318,20 @@ public class RelayHttpsServer {
                             engine, new Callback<>() {
                             @Override
                             protected void onSucceeded(Void value) {
-                                finished = true;
+                                ctx.data.left.finished = true;
                                 ctx.data.right.succeeded(new AlreadyConnectedConnector(conn.remote, conn, loop));
                             }
 
                             @Override
                             protected void onFailed(IOException err) {
-                                errored = true;
+                                ctx.data.left.errored = true;
                                 ctx.data.right.failed(err);
                             }
                         }
                         ));
                     } catch (IOException e) {
                         Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "adding conn for https direct relay into event loop failed", e);
-                        errored = true;
+                        ctx.data.left.errored = true;
                         ctx.data.right.failed(e);
                     }
                 }
@@ -224,41 +340,41 @@ public class RelayHttpsServer {
                 protected void onFailed(Throwable o) {
                     UnknownHostException err = (UnknownHostException) o;
                     Logger.error(LogType.CONN_ERROR, "resolve for " + finalHostname + " failed in https direct relay", err);
-                    errored = true;
+                    ctx.data.left.errored = true;
                     ctx.data.right.failed(err);
                 }
             });
         }
 
         @Override
-        public void exception(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx, Throwable err) {
-            if (errored) {
+        public void exception(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, Throwable err) {
+            if (ctx.data.left.errored) {
                 return;
             }
-            if (finished) {
+            if (ctx.data.left.finished) {
                 return; // do nothing
             }
             ctx.connection.close();
-            errored = true;
+            ctx.data.left.errored = true;
             ctx.data.right.failed(new IOException(err));
         }
 
         @Override
-        public void end(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
-            if (errored) {
+        public void end(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx) {
+            if (ctx.data.left.errored) {
                 return;
             }
-            if (finished) {
+            if (ctx.data.left.finished) {
                 return; // do nothing
             }
-            errored = true;
+            ctx.data.left.errored = true;
             ctx.data.right.failed(new IOException("connection closed while handshaking"));
         }
 
         @Override
-        public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
+        public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx) {
             // close if it's not finished
-            return !finished;
+            return !ctx.data.left.finished;
         }
     }
 }

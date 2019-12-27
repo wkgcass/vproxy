@@ -159,6 +159,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         // 4: preserved for socks5 auth result
         // 5: expecting socks5 connect result first 4 bytes
         // 6: expecting socks5 connect result
+        // 7: done
         private int step = 0;
         private HttpRespParser httpRespParser;
         private ByteArrayChannel webSocketFrame;
@@ -263,7 +264,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 return;
             }
 
-            if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0) {
+            if (!ctx.connection.isClosed() && ctx.connection.getInBuffer().used() != 0 && step != 7) {
                 // we may proceed
                 readable(ctx);
             }
@@ -452,6 +453,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         private void done(ConnectionHandlerContext ctx) {
             assert Logger.lowLevelDebug("handshake operation done " + ctx.connection + ", providedCallback = " + providedCallback);
+            step = 7;
 
             socks5ConnectResult = null;
             // remove the connection from loop
@@ -698,7 +700,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
         // check whether to do https relay
         if (needHTTPSRelay(address, port)) {
-            Logger.alert("[HTTPS] https relay for " + address + ":" + port);
+            Logger.alert("[RELAY] https relay for " + address + ":" + port);
             handleHTTPSRelay(loop, address, providedCallback);
             return;
         }
@@ -712,7 +714,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         // proxy the net flow using WebSocks
-        Logger.alert("[TCP] proxy the request to " + address + ":" + port + " via " + serverAlias);
+        Logger.alert("[PROXY] proxy the request to " + address + ":" + port + " via " + serverAlias);
 
         // try to fetch an existing connection from pool
         pool.get(serverAlias).get(loop.getSelectorEventLoop()).get(loop.getSelectorEventLoop(), conn -> {

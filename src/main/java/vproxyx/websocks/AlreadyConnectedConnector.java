@@ -19,6 +19,10 @@ public class AlreadyConnectedConnector extends Connector {
         this.loop = loop;
     }
 
+    public ConnectableConnection getConnection() {
+        return conn;
+    }
+
     @Override
     public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
         RingBuffer oldI = conn.getInBuffer();

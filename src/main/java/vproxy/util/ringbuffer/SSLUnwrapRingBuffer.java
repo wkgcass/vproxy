@@ -4,6 +4,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
+import vproxy.util.Utils;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -85,7 +86,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
             assert Logger.lowLevelDebug("the unwrapping returned CLOSED");
             errored[0] = true;
-            ex[0] = new IOException("SSLEngine closed");
+            ex[0] = new IOException(Utils.SSL_ENGINE_CLOSED_MSG);
             return;
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
             // reset the position in case it's modified

@@ -20,6 +20,7 @@ import java.util.zip.GZIPOutputStream;
 public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
     public static final String BROKEN_PIPE_MSG = "Broken pipe";
+    public static final String SSL_ENGINE_CLOSED_MSG = "SSLEngine closed";
     @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
@@ -713,8 +714,12 @@ public class Utils {
         return BROKEN_PIPE_MSG.equals(t.getMessage());
     }
 
+    public static boolean isSSLEngineClosed(IOException t) {
+        return SSL_ENGINE_CLOSED_MSG.equals(t.getMessage());
+    }
+
     public static boolean isTerminatedIOException(IOException t) {
-        return isReset(t) || isBrokenPipe(t) || "SSLEngine closed".equals(t.getMessage());
+        return isReset(t) || isBrokenPipe(t) || isSSLEngineClosed(t);
     }
 
     public static Process runSubProcess(String program) throws IOException {
