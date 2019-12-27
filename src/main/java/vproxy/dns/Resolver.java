@@ -43,6 +43,16 @@ public interface Resolver {
     void stop() throws IOException;
 
     static List<InetSocketAddress> getNameServers() {
+        List<InetSocketAddress> ret = getNameServersFromFile();
+        if (ret.isEmpty()) {
+            Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
+            ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
+            ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
+        }
+        return ret;
+    }
+
+    private static List<InetSocketAddress> getNameServersFromFile() {
         // try ~/resolv.conf for customized resolve configuration
         File f = new File(System.getProperty("user.home") + File.separator + "resolv.conf");
         if (!f.exists() || !f.isFile()) { // try linux|bsd resolve configuration
@@ -95,11 +105,6 @@ public interface Resolver {
                 } else {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid nameserver config: " + line);
                 }
-            }
-            if (ret.isEmpty()) {
-                Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
-                ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
-                ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
             }
             return ret;
         } finally {

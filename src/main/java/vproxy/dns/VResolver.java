@@ -81,11 +81,11 @@ public class VResolver extends AbstractResolver {
     }
 
     private InetAddress[] searchInHosts(String domain) {
-        if (domain.equals("localhost") || domain.equals("localhost.")) {
-            return LOCALHOST;
-        }
         if (hosts.containsKey(domain)) {
             return new InetAddress[]{hosts.get(domain)};
+        }
+        if (domain.equals("localhost") || domain.equals("localhost.")) {
+            return LOCALHOST;
         }
         return null;
     }
