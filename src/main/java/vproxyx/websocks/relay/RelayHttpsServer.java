@@ -375,6 +375,9 @@ public class RelayHttpsServer {
                 return; // do nothing
             }
             ctx.data.left.errored = true;
+            if (ctx.inBuffer instanceof SSLUnwrapRingBuffer) {
+                Logger.error(LogType.CONN_ERROR, "connection closed while handshaking, sni of the ssl connection is " + ((SSLUnwrapRingBuffer) ctx.inBuffer).getSni());
+            }
             ctx.data.right.failed(new IOException("connection closed while handshaking"));
         }
 
