@@ -29,6 +29,7 @@ import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
 import vproxy.util.ringbuffer.SSLWrapRingBuffer;
 import vproxy.util.ringbuffer.SimpleRingBuffer;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -395,19 +396,9 @@ public class TestSSL {
 
             // build ssl context if needed
             // create ctx
-            SSLContext sslContext = SSLContext.getInstance("TLS");
-            // create empty key store
-            KeyStore keyStore = KeyStore.getInstance("JKS");
-            keyStore.load(null);
-            // init keystore
+            VSSLContext sslContext = new VSSLContext();
             CertKey ck = new CertKey("ck", new String[]{TEST_CERT}, TEST_KEY);
-            ck.setInto(keyStore);
-            // retrieve key manager array
-            KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-            kmf.init(keyStore, "changeit".toCharArray());
-            KeyManager[] km = kmf.getKeyManagers();
-            // init ctx
-            sslContext.init(km, null, null);
+            ck.setInto(sslContext);
 
             elg.add("el");
             Upstream ups = new Upstream("ups");

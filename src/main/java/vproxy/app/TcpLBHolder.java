@@ -9,13 +9,10 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.util.Logger;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
-import javax.net.ssl.KeyManager;
-import javax.net.ssl.KeyManagerFactory;
-import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.InetSocketAddress;
-import java.security.KeyStore;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,25 +39,15 @@ public class TcpLBHolder {
         if (map.containsKey(alias))
             throw new AlreadyExistException("tcp-lb", alias);
 
-        SSLContext sslContext;
+        VSSLContext sslContext;
         if (sslCertKeys != null) {
             try {
                 // build ssl context if needed
                 // create ctx
-                SSLContext ctx = SSLContext.getInstance("TLS");
-                // create empty key store
-                KeyStore keyStore = KeyStore.getInstance("JKS");
-                keyStore.load(null);
-                // init keystore
+                VSSLContext ctx = new VSSLContext();
                 for (CertKey ck : sslCertKeys) {
-                    ck.setInto(keyStore);
+                    ck.setInto(ctx);
                 }
-                // retrieve key manager array
-                KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
-                kmf.init(keyStore, "changeit".toCharArray());
-                KeyManager[] km = kmf.getKeyManagers();
-                // init ctx
-                ctx.init(km, null, null);
                 // assign
                 sslContext = ctx;
             } catch (Exception e) {

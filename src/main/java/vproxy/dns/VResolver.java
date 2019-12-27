@@ -6,6 +6,7 @@ import vproxy.util.Callback;
 import vproxy.util.Utils;
 
 import java.io.IOException;
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -82,7 +83,20 @@ public class VResolver extends AbstractResolver {
 
     private InetAddress[] searchInHosts(String domain) {
         if (hosts.containsKey(domain)) {
-            return new InetAddress[]{hosts.get(domain)};
+            InetAddress addr = hosts.get(domain);
+            if (domain.equals("localhost") || domain.equals("localhost.")) {
+                InetAddress[] ret = new InetAddress[2];
+                if (addr instanceof Inet4Address) {
+                    ret[0] = addr;
+                    ret[1] = LOCALHOST[1];
+                } else {
+                    ret[0] = LOCALHOST[0];
+                    ret[1] = addr;
+                }
+                return ret;
+            } else {
+                return new InetAddress[]{};
+            }
         }
         if (domain.equals("localhost") || domain.equals("localhost.")) {
             return LOCALHOST;

@@ -10,8 +10,8 @@ import vproxy.util.*;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.ProxyOutputRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 
-import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.util.Collection;
@@ -285,34 +285,34 @@ public class Proxy {
                 return new Tuple<>(inBuffer, outBuffer);
             }
 
-            SSLEngine engine = config.sslContext.createSSLEngine();
-            engine.setUseClientMode(false);
-            engine.setNeedClientAuth(false);
-            engine.setWantClientAuth(false);
+            SSLEngineBuilder builder = config.sslContext.sslEngineBuilder;
+            builder.configure(engine -> engine.setUseClientMode(false));
+            builder.configure(engine -> engine.setNeedClientAuth(false));
+            builder.configure(engine -> engine.setWantClientAuth(false));
             SSLParameters sslParams = new SSLParameters();
             {
                 sslParams.setNeedClientAuth(false);
                 sslParams.setWantClientAuth(false);
             }
             if (config.sslEngineManipulator != null) {
-                config.sslEngineManipulator.accept(engine, sslParams);
+                builder.configure(engine -> config.sslEngineManipulator.accept(engine, sslParams));
             }
-            engine.setSSLParameters(sslParams);
+            builder.configure(engine -> engine.setSSLParameters(sslParams));
             // try to use alpn
             if (config.connGen.type() == ConnectorGen.Type.processor) {
                 String[] alpn = config.connGen.processor().alpn();
                 if (alpn != null) {
                     final var fAlpn = alpn.clone();
-                    engine.setHandshakeApplicationProtocolSelector((e, ls) -> {
+                    builder.configure(engine -> engine.setHandshakeApplicationProtocolSelector((e, ls) -> {
                         for (String s : fAlpn) {
                             if (ls.contains(s))
                                 return s;
                         }
                         return null;
-                    });
+                    }));
                 }
             }
-            SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, inBuffer, (ByteBufferRingBuffer) outBuffer);
+            SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(config.sslContext, inBuffer, (ByteBufferRingBuffer) outBuffer);
             return new Tuple<>(pair.left, pair.right);
         }
 

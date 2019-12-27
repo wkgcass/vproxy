@@ -8,6 +8,7 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.*;
 import java.io.FileInputStream;
@@ -198,13 +199,13 @@ public class WebSocksUtils {
     }
 
     private static volatile SSLContext sslContext;
-    private static volatile SSLContext httpsRelaySSLContext;
+    private static volatile VSSLContext httpsRelaySSLContext;
 
     public static SSLContext getSslContext() {
         return sslContext;
     }
 
-    public static SSLContext getHTTPSRelaySSLContext() {
+    public static VSSLContext getHTTPSRelaySSLContext() {
         return httpsRelaySSLContext;
     }
 
@@ -298,25 +299,12 @@ public class WebSocksUtils {
             throw new Exception("ssl context already initiated");
         }
 
-        KeyStore ks = KeyStore.getInstance("JKS");
-        ks.load(null);
+        VSSLContext ctx = new VSSLContext();
         for (CertKey ck : cks) {
-            ck.setInto(ks);
+            ck.setInto(ctx);
         }
 
-        KeyManagerFactory kmf;
-        KeyManager[] kms;
-        kmf = KeyManagerFactory.getInstance("SunX509");
-        kmf.init(ks, "changeit".toCharArray());
-        kms = kmf.getKeyManagers();
-
-        try {
-            httpsRelaySSLContext = SSLContext.getInstance("TLS");
-            httpsRelaySSLContext.init(kms, null, null);
-        } catch (KeyManagementException e) {
-            httpsRelaySSLContext = null;
-            throw e;
-        }
+        httpsRelaySSLContext = ctx;
     }
 
     // base64str(base64str(sha256(password)) + str(minute_dec_digital)))

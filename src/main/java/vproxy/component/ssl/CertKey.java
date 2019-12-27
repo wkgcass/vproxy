@@ -1,5 +1,10 @@
 package vproxy.component.ssl;
 
+import vproxy.util.ringbuffer.ssl.VSSLContext;
+
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.KeyManagerFactory;
+import javax.net.ssl.SSLContext;
 import java.io.ByteArrayInputStream;
 import java.security.KeyFactory;
 import java.security.KeyStore;
@@ -35,7 +40,7 @@ public class CertKey {
         setInto(k);
     }
 
-    public void setInto(KeyStore keystore) throws Exception {
+    public X509Certificate[] setInto(KeyStore keystore) throws Exception {
         String[] keysplit = this.key
             .replace("-----BEGIN PRIVATE KEY-----", "")
             .replace("-----END PRIVATE KEY-----", "").split("\n");
@@ -61,6 +66,26 @@ public class CertKey {
             keystore.setCertificateEntry("cert" + i + ":" + alias, cert);
         }
         keystore.setKeyEntry("key:" + alias, key, "changeit".toCharArray(), x509certs);
+
+        return x509certs;
+    }
+
+    public void setInto(VSSLContext vsslContext) throws Exception {
+        // create ctx
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        // create empty key store
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(null);
+        // init keystore
+        X509Certificate[] certs = this.setInto(keyStore);
+        // retrieve key manager array
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(keyStore, "changeit".toCharArray());
+        KeyManager[] km = kmf.getKeyManagers();
+        // init ctx
+        ctx.init(km, null, null);
+
+        vsslContext.sslContextHolder.add(ctx, certs);
     }
 
     @Override

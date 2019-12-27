@@ -132,38 +132,41 @@ public class RelayHttpsServer {
                 return;
             }
 
-            String hostname = null;
+            String hostname = SSLUtils.getSNI(ctx.inBuffer);
 
-            ByteArray data = SSLUtils.getPlainBufferBytes((SSLUnwrapRingBuffer) ctx.inBuffer);
+            if (hostname == null) {
+                Logger.warn(LogType.ALERT, "SNI not retrieved, try to parse the cleartext data using http/1.x");
+                ByteArray data = SSLUtils.getPlainBufferBytes((SSLUnwrapRingBuffer) ctx.inBuffer);
 
-            // ok, let's parse the data then ...
-            // assume it's http
-            {
-                Processor p = ProcessorProvider.getInstance().get("http/1.x");
-                Processor.Context c = p.init(null);
-                //noinspection unchecked
-                Processor.SubContext s = p.initSub(c, 0, null);
-                HttpSubContext sctx = (HttpSubContext) s;
-                sctx.setParserMode();
+                // ok, let's parse the data then ...
+                // assume it's http
+                {
+                    Processor p = ProcessorProvider.getInstance().get("http/1.x");
+                    Processor.Context c = p.init(null);
+                    //noinspection unchecked
+                    Processor.SubContext s = p.initSub(c, 0, null);
+                    HttpSubContext sctx = (HttpSubContext) s;
+                    sctx.setParserMode();
 
-                out:
-                for (int i = 0; i < data.length(); ++i) {
-                    try {
-                        sctx.feed(data.get(i));
-                    } catch (Exception e) {
-                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid request, or is not http", e);
-                        ctx.data.left.errored = true;
-                        ctx.data.right.failed(new IOException(e));
-                        return;
-                    }
-                    RequestBuilder r = sctx.getParsingReq();
-                    if (r != null) {
-                        if (r.headers != null) {
-                            for (HeaderBuilder h : r.headers) {
-                                if (h.value != null) {
-                                    if (h.key.toString().toLowerCase().trim().equals("host")) {
-                                        hostname = h.value.toString().trim(); // hostname retrieved
-                                        break out;
+                    out:
+                    for (int i = 0; i < data.length(); ++i) {
+                        try {
+                            sctx.feed(data.get(i));
+                        } catch (Exception e) {
+                            Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid request, or is not http", e);
+                            ctx.data.left.errored = true;
+                            ctx.data.right.failed(new IOException(e));
+                            return;
+                        }
+                        RequestBuilder r = sctx.getParsingReq();
+                        if (r != null) {
+                            if (r.headers != null) {
+                                for (HeaderBuilder h : r.headers) {
+                                    if (h.value != null) {
+                                        if (h.key.toString().toLowerCase().trim().equals("host")) {
+                                            hostname = h.value.toString().trim(); // hostname retrieved
+                                            break out;
+                                        }
                                     }
                                 }
                             }
@@ -173,7 +176,7 @@ public class RelayHttpsServer {
             }
 
             if (hostname == null) {
-                String msg = "host header not provided";
+                String msg = "neither sni nor host header provided";
                 ctx.data.left.errored = true;
                 ctx.data.right.failed(new IOException(msg));
                 return;

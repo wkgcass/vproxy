@@ -17,8 +17,8 @@ import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
-import javax.net.ssl.SSLContext;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
@@ -75,7 +75,7 @@ public class TcpLB {
     private int outBufferSize; // modifiable
     public final String protocol;
     public final Processor processor;
-    public final SSLContext sslContext;
+    public final VSSLContext sslContext;
     public final CertKey[] certKeys;
     public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
@@ -112,7 +112,7 @@ public class TcpLB {
                  int timeout,
                  int inBufferSize, int outBufferSize,
                  String protocol,
-                 SSLContext sslContext,
+                 VSSLContext sslContext,
                  CertKey[] certKeys,
                  SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         this.alias = alias;

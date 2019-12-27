@@ -269,6 +269,7 @@ public class WebSocksProxyServer {
             final String finalDomain = domain;
             final int finalPort = port;
 
+            // only use one cert, so directly constructing the engine is ok
             if (domain == null) {
                 engineSupplier = () -> {
                     SSLEngine engine = WebSocksUtils.createEngine();

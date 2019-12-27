@@ -1,16 +1,18 @@
 package vproxy.util.ringbuffer;
 
+import tlschannel.impl.TlsExplorer;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
+import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
-import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
-import javax.net.ssl.SSLException;
+import javax.net.ssl.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ReadableByteChannel;
 import java.util.function.Consumer;
 
 /**
@@ -21,8 +23,10 @@ import java.util.function.Consumer;
  * which can be retrieved by user
  */
 public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
-    final SSLEngine engine;
+    private SSLEngine engine;
+    private final VSSLContext vsslContext;
     private final Consumer<Runnable> resumer;
+    private String sni;
 
     // will call the pair's wrap/wrapHandshake when need to send data
     private final SSLWrapRingBuffer pair;
@@ -30,6 +34,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // only used when resume if resumer not specified
     private SelectorEventLoop lastLoop = null;
 
+    // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
                         SSLEngine engine,
                         Consumer<Runnable> resumer,
@@ -38,11 +43,66 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         this.engine = engine;
         this.resumer = resumer;
         this.pair = pair;
+
+        // these fields will not be used
+        vsslContext = null;
+    }
+
+    // for server
+    SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
+                        VSSLContext vsslContext,
+                        Consumer<Runnable> resumer,
+                        SSLWrapRingBuffer pair) {
+        super(plainBufferForApp);
+        this.vsslContext = vsslContext;
+        this.resumer = resumer;
+        this.pair = pair;
+    }
+
+    public String getSni() {
+        return sni;
+    }
+
+    @Override
+    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+        int n = 0;
+        if (engine == null) {
+            n += createSSLEngine(channel);
+        }
+        return n + super.storeBytesFrom(channel);
+    }
+
+    private int createSSLEngine(ReadableByteChannel channel) throws IOException {
+        ByteBuffer buf = ByteBuffer.allocate(16384); // should be enough for CLIENT_HELLO message
+        int n = channel.read(buf);
+        buf.flip();
+        SNIServerName sni = TlsExplorer.explore(buf).get(StandardConstants.SNI_HOST_NAME);
+        String sniStr = null;
+        if (sni instanceof SNIHostName) {
+            sniStr = ((SNIHostName) sni).getAsciiName();
+        }
+        this.sni = sniStr;
+        SSLContext ctx = vsslContext.sslContextHolder.choose(sniStr);
+        if (ctx == null) {
+            throw new IOException("ssl context not provided");
+        }
+        engine = vsslContext.sslEngineBuilder.build(ctx);
+        pair.engine = engine;
+
+        ByteArrayChannel chnl = ByteArrayChannel.from(buf.array(), 0, n, 0);
+        int n2 = super.storeBytesFrom(chnl);
+        assert n == n2; // should not reach the limit of the encryptedBuffer
+        return n;
+    }
+
+    public SSLEngine getEngine() {
+        return engine;
     }
 
     // -------------------
     // helper functions BEGIN
     // -------------------
+
     private void doResume(Runnable r) {
         if (resumer == null && lastLoop == null) {
             Logger.fatal(LogType.IMPROPER_USE, "cannot get resumer or event loop to callback from the task");

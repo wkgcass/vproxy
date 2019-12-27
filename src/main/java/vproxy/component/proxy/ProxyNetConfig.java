@@ -3,8 +3,8 @@ package vproxy.component.proxy;
 import vproxy.app.Config;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
-import javax.net.ssl.SSLContext;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.util.function.BiConsumer;
@@ -19,7 +19,7 @@ public class ProxyNetConfig {
     int inBufferSize = 128;
     int outBufferSize = 128;
 
-    SSLContext sslContext = null;
+    VSSLContext sslContext = null;
     BiConsumer<SSLEngine, SSLParameters> sslEngineManipulator = null;
 
     public ProxyNetConfig setAcceptLoop(NetEventLoop acceptLoop) {
@@ -57,7 +57,7 @@ public class ProxyNetConfig {
         return this;
     }
 
-    public ProxyNetConfig setSslContext(SSLContext sslContext) {
+    public ProxyNetConfig setSslContext(VSSLContext sslContext) {
         this.sslContext = sslContext;
         return this;
     }
@@ -95,7 +95,7 @@ public class ProxyNetConfig {
         return timeout;
     }
 
-    public SSLContext getSslContext() {
+    public VSSLContext getSslContext() {
         return sslContext;
     }
 

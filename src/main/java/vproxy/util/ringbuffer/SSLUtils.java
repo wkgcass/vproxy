@@ -5,6 +5,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.ByteArray;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.SSLEngine;
 import java.util.function.Consumer;
@@ -35,10 +36,25 @@ public class SSLUtils {
         return new SSLBufferPair(unwrap, wrap);
     }
 
+    public static SSLBufferPair genbufForServer(VSSLContext vsslContext,
+                                                ByteBufferRingBuffer input,
+                                                ByteBufferRingBuffer output,
+                                                Consumer<Runnable> resumer) {
+        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, vsslContext, resumer, wrap);
+        return new SSLBufferPair(unwrap, wrap);
+    }
+
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output) {
         return genbuf(engine, input, output, (Consumer<Runnable>) null);
+    }
+
+    public static SSLBufferPair genbufForServer(VSSLContext vsslContext,
+                                                ByteBufferRingBuffer input,
+                                                ByteBufferRingBuffer output) {
+        return genbufForServer(vsslContext, input, output, null);
     }
 
     public static SSLEngine getEngineFrom(Connection connection) {
@@ -47,12 +63,19 @@ public class SSLUtils {
             throw new IllegalArgumentException();
         }
         SSLUnwrapRingBuffer sslRingBuffer = (SSLUnwrapRingBuffer) buf;
-        return sslRingBuffer.engine;
+        return sslRingBuffer.getEngine();
     }
 
     public static ByteArray getPlainBufferBytes(SSLUnwrapRingBuffer buf) {
         RingBuffer buffer = buf.plainBufferForApp;
         return ByteArray.from(buffer.getBytes());
+    }
+
+    public static String getSNI(RingBuffer buf) {
+        if (buf instanceof SSLUnwrapRingBuffer) {
+            return ((SSLUnwrapRingBuffer) buf).getSni();
+        }
+        return null;
     }
 
     public static ByteBufferRingBuffer getPlainBuffer(SSLUnwrapRingBuffer buf) {

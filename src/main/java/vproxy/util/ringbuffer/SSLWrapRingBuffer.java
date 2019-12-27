@@ -20,8 +20,9 @@ import java.nio.ByteBuffer;
  * NOTE: storage/writableET is proxied to/from the plain buffer
  */
 public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implements RingBuffer {
-    private final SSLEngine engine;
+    SSLEngine engine; // will be set when first bytes reaches if it's null
 
+    // for client
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
                       SSLEngine engine) {
         super(plainBytesBuffer);
@@ -29,6 +30,11 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
 
         // do init first few bytes
         init();
+    }
+
+    // for server
+    SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer) {
+        super(plainBytesBuffer);
     }
 
     // wrap the first bytes for handshake or data
