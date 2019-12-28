@@ -5,16 +5,15 @@ import vproxy.util.Logger;
 import javax.net.ssl.SSLContext;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class SSLContextHolder {
-    private static class Hodler {
+    private static class Holder {
         final SSLContext sslContext;
         final CertHolder[] certs;
 
-        private Hodler(SSLContext sslContext, X509Certificate[] certs) {
+        private Holder(SSLContext sslContext, X509Certificate[] certs) {
             this.sslContext = sslContext;
             this.certs = new CertHolder[certs.length];
             for (int i = 0; i < certs.length; ++i) {
@@ -33,10 +32,12 @@ public class SSLContextHolder {
         }
     }
 
-    private final List<Hodler> holders = new ArrayList<>();
+    private final List<Holder> holders = new ArrayList<>();
+    protected final Map<String, SSLContext> quickAccess = new ConcurrentHashMap<>();
+    // quickAccess stores those SAN name without wildcard symbol to the corresponding SSLContext
 
     public void add(SSLContext sslContext, X509Certificate[] certs) {
-        holders.add(new Hodler(sslContext, certs));
+        holders.add(new Holder(sslContext, certs));
     }
 
     public SSLContext choose(String sni) {
@@ -44,28 +45,40 @@ public class SSLContextHolder {
         if (holders.isEmpty()) {
             return null;
         }
-        if (sni != null) {
-            for (Hodler h : holders) {
-                if (checkSNI(h.certs, sni)) {
-                    return h.sslContext;
-                }
-            }
+        SSLContext ctx = chooseNoDefault(sni);
+        if (ctx != null) {
+            return ctx;
         }
         assert Logger.lowLevelDebug("cannot find corresponding cert for sni " + sni + ", return the default (first) one");
         return holders.get(0).sslContext;
     }
 
-    private boolean checkSNI(CertHolder[] certs, String sni) {
+    protected SSLContext chooseNoDefault(String sni) {
+        if (sni != null) {
+            SSLContext ctx = quickAccess.get(sni);
+            if (ctx != null) {
+                return ctx;
+            }
+            for (Holder h : holders) {
+                if (checkSNI(h, h.certs, sni)) {
+                    return h.sslContext;
+                }
+            }
+        }
+        return null;
+    }
+
+    private boolean checkSNI(Holder holder, CertHolder[] certs, String sni) {
         assert Logger.lowLevelDebug("visiting certs: with " + certs.length + " element(s)");
         for (CertHolder cert : certs) {
-            if (checkSNI(cert, sni)) {
+            if (checkSNI(holder, cert, sni)) {
                 return true;
             }
         }
         return false;
     }
 
-    private boolean checkSNI(CertHolder cert, String sni) {
+    private boolean checkSNI(Holder holder, CertHolder cert, String sni) {
         List<String> sanStrList;
         // san result example:
         // [[2, *.pixiv.net], [2, pixiv.net], [2, *.pixiv.org], [2, pixiv.org], [2, *.pximg.net], [2, pximg.net], [2, *.ads-pixiv.net], [2, ads-pixiv.net]]
@@ -119,6 +132,7 @@ public class SSLContextHolder {
             } else {
                 // plain
                 if (sni.equals(dnsName)) {
+                    quickAccess.put(dnsName, holder.sslContext);
                     return true;
                 }
             }

@@ -88,6 +88,23 @@ public class CertKey {
         vsslContext.sslContextHolder.add(ctx, certs);
     }
 
+    public SSLContext buildSSLContext() throws Exception {
+        // create ctx
+        SSLContext ctx = SSLContext.getInstance("TLS");
+        // create empty key store
+        KeyStore keyStore = KeyStore.getInstance("JKS");
+        keyStore.load(null);
+        // init keystore
+        this.setInto(keyStore);
+        // retrieve key manager array
+        KeyManagerFactory kmf = KeyManagerFactory.getInstance("SunX509");
+        kmf.init(keyStore, "changeit".toCharArray());
+        KeyManager[] km = kmf.getKeyManagers();
+        // init ctx
+        ctx.init(km, null, null);
+        return ctx;
+    }
+
     @Override
     public String toString() {
         return "CertKey{" +

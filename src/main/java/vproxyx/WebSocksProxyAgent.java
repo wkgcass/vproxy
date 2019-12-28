@@ -95,7 +95,7 @@ public class WebSocksProxyAgent {
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false, configProcessor.isVerifyCert());
         if (!configProcessor.getHTTPSRelayCertKeys().isEmpty()) {
-            WebSocksUtils.initHTTPSRelayContext(configProcessor.getHTTPSRelayCertKeys());
+            WebSocksUtils.initHTTPSRelayContext(configProcessor);
         }
 
         // initiate pool (it's inside the connector provider)

@@ -8,7 +8,9 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
+import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
+import vproxyx.websocks.ssl.AutoSignSSLContextHolder;
 
 import javax.net.ssl.*;
 import java.io.FileInputStream;
@@ -294,12 +296,23 @@ public class WebSocksUtils {
         }
     }
 
-    public static void initHTTPSRelayContext(List<CertKey> cks) throws Exception {
+    public static void initHTTPSRelayContext(ConfigProcessor config) throws Exception {
         if (httpsRelaySSLContext != null) {
             throw new Exception("ssl context already initiated");
         }
 
-        VSSLContext ctx = new VSSLContext();
+        List<CertKey> cks = config.getHTTPSRelayCertKeys();
+        VSSLContext ctx;
+        if (config.getAutoSignCert() == null) {
+            ctx = new VSSLContext();
+        } else {
+            Logger.alert("auto-sign is enabled");
+            ctx = new VSSLContext(new AutoSignSSLContextHolder(
+                config.getAutoSignCert(),
+                config.getAutoSignKey(),
+                config.getAutoSignWorkingDirectory()
+            ), new SSLEngineBuilder(SSLContext::createSSLEngine));
+        }
         for (CertKey ck : cks) {
             ck.setInto(ctx);
         }

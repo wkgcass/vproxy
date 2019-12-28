@@ -18,6 +18,8 @@ import vproxy.util.Utils;
 import java.io.*;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
@@ -38,6 +40,9 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
     private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
     private List<DomainChecker> proxyHttpsRelayDomains = new ArrayList<>();
+    private String autoSignCert;
+    private String autoSignKey;
+    private File autoSignWorkingDirectory;
     private List<List<String>> httpsRelayCertKeyFiles = new ArrayList<>();
     private List<CertKey> httpsRelayCertKeys = new ArrayList<>();
     private boolean directRelay = false;
@@ -144,6 +149,18 @@ public class ConfigProcessor {
 
     public List<DomainChecker> getProxyHTTPSRelayDomains() {
         return proxyHttpsRelayDomains;
+    }
+
+    public String getAutoSignCert() {
+        return autoSignCert;
+    }
+
+    public String getAutoSignKey() {
+        return autoSignKey;
+    }
+
+    public File getAutoSignWorkingDirectory() {
+        return autoSignWorkingDirectory;
     }
 
     public List<CertKey> getHTTPSRelayCertKeys() {
@@ -415,6 +432,29 @@ public class ConfigProcessor {
                     }
                     pacServerIp = ip;
                     pacServerPort = port;
+                } else if (line.startsWith("agent.auto-sign ")) {
+                    line = line.substring("agent.auto-sign ".length());
+                    var args = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
+                    if (args.isEmpty()) {
+                        continue;
+                    }
+                    if (args.size() != 2 && args.size() != 3) {
+                        throw new Exception("agent.auto-sign should take exactly two arguments");
+                    }
+                    autoSignCert = Utils.filename(args.get(0));
+                    autoSignKey = Utils.filename(args.get(1));
+                    if (!new File(autoSignCert).isFile()) throw new Exception("agent.auto-sign cert is not a file");
+                    if (!new File(autoSignKey).isFile()) throw new Exception("agent.auto-sign key is not a file");
+                    if (args.size() == 3) {
+                        autoSignWorkingDirectory = new File(Utils.filename(args.get(2)));
+                        if (!autoSignWorkingDirectory.isDirectory()) {
+                            throw new Exception("agent.auto-sign tempDir is not a directory");
+                        }
+                    } else {
+                        // allocate the temporary directory for auto signing
+                        autoSignWorkingDirectory = Files.createTempDirectory("vpws-agent-auto-sign").toFile();
+                        autoSignWorkingDirectory.deleteOnExit();
+                    }
                 } else if (line.startsWith("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                     if (!line.equals("proxy.server.list.start")) {
@@ -671,6 +711,44 @@ public class ConfigProcessor {
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             throw new Exception("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
         }
+        // load cert-key(s) in autoSignWorkingDirectory
+        if (autoSignWorkingDirectory != null) {
+            File[] files = autoSignWorkingDirectory.listFiles();
+            if (files == null) {
+                throw new Exception("cannot list files under " + autoSignWorkingDirectory.getAbsolutePath());
+            }
+            Set<String> crt = new HashSet<>();
+            Set<String> key = new HashSet<>();
+            for (File f : files) {
+                String name = f.getName();
+                String domain = name.substring(0, name.length() - 4);
+                if (name.endsWith(".key")) {
+                    key.add(name);
+                    if (!crt.contains(domain)) {
+                        continue;
+                    }
+                } else if (name.endsWith(".crt")) {
+                    crt.add(domain);
+                    if (!key.contains(domain)) {
+                        continue;
+                    }
+                } else {
+                    continue;
+                }
+                loadCertKeyInAutoSignWorkingDirectory(autoSignWorkingDirectory, domain);
+            }
+        }
+    }
+
+    private void loadCertKeyInAutoSignWorkingDirectory(File autoSignWorkingDirectory, String domain) throws Exception {
+        String crt = Path.of(autoSignWorkingDirectory.getAbsolutePath(), domain + ".crt").toString();
+        String key = Path.of(autoSignWorkingDirectory.getAbsolutePath(), domain + ".key").toString();
+        CertKey ck = CertKeyHolder.readFile("agent.auto-sign." + domain, new String[]{crt}, key);
+        addCertKeyToAllLists(ck);
+    }
+
+    private void addCertKeyToAllLists(CertKey ck) {
+        httpsRelayCertKeys.add(ck);
     }
 
     private DomainChecker formatDomainChecker(String line) throws Exception {
