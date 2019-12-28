@@ -131,7 +131,7 @@ public class ConfigGenerator {
 
         System.out.println("Do you want to customize other configurations here ?");
         System.out.println("You may refer to manual on github and modify the generated config file later: " +
-            "https://raw.githubusercontent.com/wkgcass/vproxy/master/src/test/resources/websocks-agent-example.conf");
+            "https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
         System.out.print("y/[N]> ");
         boolean customize = getBool(scanner, false);
 

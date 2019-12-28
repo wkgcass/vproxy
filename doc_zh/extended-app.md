@@ -95,4 +95,4 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
 
 如果没有指定，那么应用将使用`~/vproxy-websocks-agent.conf`作为配置文件。
 
-配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks-agent-example.conf)。
+配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf)。

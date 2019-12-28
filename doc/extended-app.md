@@ -97,4 +97,4 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 
 If not specified, the app will use `~/vproxy-websocks-agent.conf` instead.
 
-The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/src/test/resources/websocks-agent-example.conf).
+The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf).
