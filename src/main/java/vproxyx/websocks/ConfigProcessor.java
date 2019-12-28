@@ -373,7 +373,7 @@ public class ConfigProcessor {
                     String path = line.substring("agent.cacerts.path ".length()).trim();
                     if (path.isEmpty())
                         throw new Exception("cacert path not specified");
-                    cacertsPath = path;
+                    cacertsPath = Utils.filename(path);
                 } else if (line.startsWith("agent.cacerts.pswd ")) {
                     String pswd = line.substring("agent.cacerts.pswd ".length()).trim();
                     if (pswd.isEmpty())
