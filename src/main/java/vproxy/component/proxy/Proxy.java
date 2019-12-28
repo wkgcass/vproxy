@@ -10,6 +10,7 @@ import vproxy.util.*;
 import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.ProxyOutputRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxy.util.ringbuffer.ssl.SSL;
 import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 
 import javax.net.ssl.SSLParameters;
@@ -285,7 +286,8 @@ public class Proxy {
                 return new Tuple<>(inBuffer, outBuffer);
             }
 
-            SSLEngineBuilder builder = config.sslContext.sslEngineBuilder;
+            SSL ssl = config.sslContext.createSSL();
+            SSLEngineBuilder builder = ssl.sslEngineBuilder;
             builder.configure(engine -> engine.setUseClientMode(false));
             builder.configure(engine -> engine.setNeedClientAuth(false));
             builder.configure(engine -> engine.setWantClientAuth(false));
@@ -312,7 +314,7 @@ public class Proxy {
                     }));
                 }
             }
-            SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(config.sslContext, inBuffer, (ByteBufferRingBuffer) outBuffer);
+            SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, inBuffer, (ByteBufferRingBuffer) outBuffer);
             return new Tuple<>(pair.left, pair.right);
         }
 

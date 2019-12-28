@@ -7,7 +7,7 @@ import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
-import vproxy.util.ringbuffer.ssl.VSSLContext;
+import vproxy.util.ringbuffer.ssl.SSL;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -24,7 +24,7 @@ import java.util.function.Consumer;
  */
 public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
     private SSLEngine engine;
-    private final VSSLContext vsslContext;
+    private final SSL ssl;
     private final Consumer<Runnable> resumer;
     private String sni;
 
@@ -45,16 +45,16 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         this.pair = pair;
 
         // these fields will not be used
-        vsslContext = null;
+        ssl = null;
     }
 
     // for server
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
-                        VSSLContext vsslContext,
+                        SSL ssl,
                         Consumer<Runnable> resumer,
                         SSLWrapRingBuffer pair) {
         super(plainBufferForApp);
-        this.vsslContext = vsslContext;
+        this.ssl = ssl;
         this.resumer = resumer;
         this.pair = pair;
     }
@@ -88,11 +88,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             sniStr = ((SNIHostName) sni).getAsciiName();
         }
         this.sni = sniStr;
-        SSLContext ctx = vsslContext.sslContextHolder.choose(sniStr);
+        SSLContext ctx = ssl.sslContextHolder.choose(sniStr);
         if (ctx == null) {
             throw new IOException("ssl context not provided");
         }
-        engine = vsslContext.sslEngineBuilder.build(ctx);
+        engine = ssl.sslEngineBuilder.build(ctx);
         pair.engine = engine;
 
         ByteArrayChannel chnl = ByteArrayChannel.from(buf.array(), 0, n, 0);

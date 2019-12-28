@@ -4,14 +4,16 @@ import javax.net.ssl.SSLContext;
 
 public class VSSLContext {
     public final SSLContextHolder sslContextHolder;
-    public final SSLEngineBuilder sslEngineBuilder;
 
     public VSSLContext() {
-        this(new SSLContextHolder(), new SSLEngineBuilder(SSLContext::createSSLEngine));
+        this(new SSLContextHolder());
     }
 
-    public VSSLContext(SSLContextHolder sslContextHolder, SSLEngineBuilder sslEngineBuilder) {
+    public VSSLContext(SSLContextHolder sslContextHolder) {
         this.sslContextHolder = sslContextHolder;
-        this.sslEngineBuilder = sslEngineBuilder;
+    }
+
+    public SSL createSSL() {
+        return new SSL(sslContextHolder, new SSLEngineBuilder(SSLContext::createSSLEngine));
     }
 }

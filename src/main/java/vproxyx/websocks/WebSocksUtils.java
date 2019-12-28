@@ -8,7 +8,6 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
-import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
 import vproxyx.websocks.ssl.AutoSignSSLContextHolder;
 
@@ -311,7 +310,7 @@ public class WebSocksUtils {
                 config.getAutoSignCert(),
                 config.getAutoSignKey(),
                 config.getAutoSignWorkingDirectory()
-            ), new SSLEngineBuilder(SSLContext::createSSLEngine));
+            ));
         }
         for (CertKey ck : cks) {
             ck.setInto(ctx);

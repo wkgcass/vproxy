@@ -6,6 +6,7 @@ import vproxy.connection.NetEventLoop;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
+import vproxy.util.ringbuffer.ssl.SSL;
 import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
 import vproxyx.websocks.AlreadyConnectedConnector;
@@ -28,9 +29,10 @@ public class HTTPSRelayForRawAcceptedConnector extends AlreadyConnectedConnector
 
         // construct and replace buffers
         VSSLContext ctx = WebSocksUtils.getHTTPSRelaySSLContext();
-        SSLEngineBuilder builder = ctx.sslEngineBuilder;
+        SSL ssl = ctx.createSSL();
+        SSLEngineBuilder builder = ssl.sslEngineBuilder;
         builder.configure(engine -> engine.setUseClientMode(false)); // is server
-        SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ctx, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
+        SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
         accepted.UNSAFE_replaceBuffer(pair.left, pair.right);
 
         // write data back into the buffers
