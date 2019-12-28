@@ -253,7 +253,9 @@ public class RelayHttpsServer {
 
                 SSLEngine engine = WebSocksUtils.createEngine(hostname, 443);
                 engine.setUseClientMode(true);
-                engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
+                SSLParameters sslParams = new SSLParameters();
+                sslParams.setApplicationProtocols(new String[]{"http/1.1"});
+                engine.setSSLParameters(sslParams);
 
                 ByteBufferRingBuffer bufI = SSLUtils.getPlainBuffer((SSLUnwrapRingBuffer) ctx.connection.getInBuffer());
                 ByteBufferRingBuffer bufO = SSLUtils.getPlainBuffer((SSLWrapRingBuffer) ctx.connection.getOutBuffer());
@@ -307,7 +309,10 @@ public class RelayHttpsServer {
 
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
-                    engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
+                    SSLParameters sslParams = new SSLParameters();
+                    sslParams.setApplicationProtocols(new String[]{"http/1.1"});
+                    engine.setSSLParameters(sslParams);
+
                     SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
                     ConnectableConnection conn;
                     try {
