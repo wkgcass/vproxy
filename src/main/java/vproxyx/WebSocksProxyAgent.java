@@ -94,7 +94,7 @@ public class WebSocksProxyAgent {
         // init the ssl context
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false, configProcessor.isVerifyCert());
-        if (!configProcessor.getHTTPSRelayCertKeys().isEmpty()) {
+        if (!configProcessor.getHTTPSRelayCertKeys().isEmpty() || configProcessor.getAutoSignCert() != null) {
             WebSocksUtils.initHTTPSRelayContext(configProcessor);
         }
 

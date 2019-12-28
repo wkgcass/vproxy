@@ -671,18 +671,18 @@ public class ConfigProcessor {
                 httpsRelayCertKeys.add(certKey);
                 ++idx;
             }
-        } else {
+        } else if (autoSignCert == null) {
             if (!httpsRelayDomains.isEmpty()) {
-                throw new Exception("agent.https-relay.cert-key.list is empty, but https-relay.domain.list is not empty");
+                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but https-relay.domain.list is not empty");
             }
             if (!proxyHttpsRelayDomains.isEmpty()) {
-                throw new Exception("agent.https-relay.cert-key.list is empty, but proxy.https-relay.domain.list is not empty");
+                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but proxy.https-relay.domain.list is not empty");
             }
             if (directRelay) {
-                throw new Exception("agent.https-relay.cert-key.list is empty, but agent.direct-relay is enabled");
+                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
             }
             if (proxyRelay != null && proxyRelay) {
-                throw new Exception("agent.https-relay.cert-key.list is empty, but agent.proxy-relay is enabled");
+                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.proxy-relay is enabled");
             }
         }
         // check for consistency of server list and domain list

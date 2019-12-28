@@ -76,7 +76,13 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         ByteBuffer buf = ByteBuffer.allocate(16384); // should be enough for CLIENT_HELLO message
         int n = channel.read(buf);
         buf.flip();
-        SNIServerName sni = TlsExplorer.explore(buf).get(StandardConstants.SNI_HOST_NAME);
+        SNIServerName sni;
+        try {
+            sni = TlsExplorer.explore(buf).get(StandardConstants.SNI_HOST_NAME);
+        } catch (Throwable t) {
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "got exception when decoding CLIENT_HELLO", t);
+            throw new IOException(t);
+        }
         String sniStr = null;
         if (sni instanceof SNIHostName) {
             sniStr = ((SNIHostName) sni).getAsciiName();
