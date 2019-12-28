@@ -55,6 +55,7 @@ public class ConfigProcessor {
     private boolean strictMode = false;
     private int poolSize = 10;
     private boolean noHealthCheck = false;
+    private boolean proxyHttpsRelayDomainMerge = false;
 
     private String pacServerIp;
     private int pacServerPort;
@@ -455,6 +456,18 @@ public class ConfigProcessor {
                         autoSignWorkingDirectory = Files.createTempDirectory("vpws-agent-auto-sign").toFile();
                         autoSignWorkingDirectory.deleteOnExit();
                     }
+                } else if (line.startsWith("proxy.https-relay.domain.merge ")) {
+                    String val = line.substring("proxy.https-relay.domain.merge ".length()).trim();
+                    switch (val) {
+                        case "on":
+                            proxyHttpsRelayDomainMerge = true;
+                            break;
+                        case "off":
+                            proxyHttpsRelayDomainMerge = false;
+                            break;
+                        default:
+                            throw new Exception("invalid value for proxy.https-relay.domain.merge: " + val);
+                    }
                 } else if (line.startsWith("proxy.server.list.start")) {
                     step = 1; // retrieving server list
                     if (!line.equals("proxy.server.list.start")) {
@@ -658,6 +671,12 @@ public class ConfigProcessor {
         // check for variables must present
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
+        // merge lists
+        if (proxyHttpsRelayDomainMerge) {
+            for (List<DomainChecker> ls : domains.values()) {
+                proxyHttpsRelayDomains.addAll(ls);
+            }
+        }
         // check for https relay
         if (!httpsRelayCertKeyFiles.isEmpty()) {
             int idx = 0;

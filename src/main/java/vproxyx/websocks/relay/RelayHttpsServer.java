@@ -186,15 +186,15 @@ public class RelayHttpsServer {
         }
 
         private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
-            for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay will cover more conditions than direct relay
-                if (chk.needProxy(hostname, 443)) {
-                    handleProxy(ctx, hostname);
-                    return;
-                }
-            }
             for (DomainChecker chk : httpsRelayDomains) {
                 if (chk.needProxy(hostname, 443)) {
                     handleRelay(ctx, hostname);
+                    return;
+                }
+            }
+            for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay may cover more conditions than direct relay
+                if (chk.needProxy(hostname, 443)) {
+                    handleProxy(ctx, hostname);
                     return;
                 }
             }
