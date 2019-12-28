@@ -25,12 +25,17 @@ public class HttpDNSServer extends DNSServer {
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, InetAddress> cache = new HashMap<>();
     private final boolean directRelay;
+    private final List<DomainChecker> directDomains = new LinkedList<>();
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
         this.serverGroups = config.getServers();
         this.resolves = config.getResolves();
         this.directRelay = config.isDirectRelay();
+        if (this.directRelay) {
+            this.directDomains.addAll(config.getHTTPSRelayDomains());
+            this.directDomains.addAll(config.getProxyHTTPSRelayDomains());
+        }
     }
 
     @Override
@@ -81,6 +86,12 @@ public class HttpDNSServer extends DNSServer {
             }
             if (domain.endsWith(".")) {
                 domain = domain.substring(0, domain.length() - 1);
+            }
+            for (DomainChecker chk : directDomains) {
+                if (chk.needProxy(domain, 0)) {
+                    Logger.alert("[DNS] resolve to local ip for " + domain);
+                    respondWithSelfIp(p, domain, remote);
+                }
             }
             for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
                 var servers = entry.getKey();
