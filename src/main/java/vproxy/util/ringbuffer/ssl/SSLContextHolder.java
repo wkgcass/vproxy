@@ -42,6 +42,9 @@ public class SSLContextHolder {
 
     public SSLContext choose(String sni) {
         assert Logger.lowLevelDebug("choosing cert with sni " + sni + ", holders.size = " + holders.size());
+        if (holders.size() == 1) {
+            return holders.get(0).sslContext;
+        }
         if (holders.isEmpty()) {
             return null;
         }
@@ -125,6 +128,7 @@ public class SSLContextHolder {
                     if (sni.endsWith(suffix)) {
                         String prefix = sni.substring(0, sni.length() - suffix.length() - 1 /*also remove the `dot`*/);
                         if (!prefix.contains(".")) {
+                            quickAccess.put(dnsName, holder.sslContext);
                             return true;
                         }
                     }

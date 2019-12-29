@@ -76,10 +76,6 @@ public class AutoSignSSLContextHolder extends SSLContextHolder {
         if (ctx != null) {
             return ctx;
         }
-        if (sni.contains(" ")) {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "sni contains invalid character: " + sni);
-            return null;
-        }
         Logger.alert("signing new cert for " + sni);
         ctx = sign(sni);
         if (ctx != null) {
