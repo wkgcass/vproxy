@@ -16,8 +16,11 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 
 public class HTTPSRelayForRawAcceptedConnector extends AlreadyConnectedConnector {
-    public HTTPSRelayForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop) {
+    private boolean useH2;
+
+    public HTTPSRelayForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop, boolean useH2) {
         super(remote, conn, loop);
+        this.useH2 = useH2;
     }
 
     @Override
@@ -31,7 +34,8 @@ public class HTTPSRelayForRawAcceptedConnector extends AlreadyConnectedConnector
         VSSLContext ctx = WebSocksUtils.getHTTPSRelaySSLContext();
         SSL ssl = ctx.createSSL();
         SSLEngineBuilder builder = ssl.sslEngineBuilder;
-        builder.configure(engine -> engine.setUseClientMode(false)); // is server
+        builder.configure((engine, p, s) -> engine.setUseClientMode(false)); // is server
+        builder.configure((engine, p, s) -> engine.setHandshakeApplicationProtocolSelector((e, l) -> useH2 ? "h2" : "http/1.1"));
         SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
         accepted.UNSAFE_replaceBuffer(pair.left, pair.right);
 
