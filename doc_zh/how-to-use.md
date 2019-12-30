@@ -150,12 +150,13 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 在启动时指定discovery配置文件：
 
 ```
-java vproxy.app.Main discoveryConfig $path_to_config
+java vproxy.app.Main [discoveryConfig $path_to_config]
 ```
 
-如果指定了discovery配置文件，vproxy会自动搜索节点，也会将本节点中的变化通知给其他节点。  
+如果没有指定discovery配置文件，vproxy将会初始化一组默认配置。  
+如果（除了loopback网卡之外）只有一张网卡，那么默认配置就足以正常工作了。否则你可能需要手动进行配置。  
 
-如果指定了discovery配置文件，vproxy提供额外两种配置模块。
+vproxy提供两种与"自动节点发现"相关的配置模块。
 
 * smart-group-delegate: 监控节点变化，并更新托管的server-group资源
 * smart-node-delegate: 向discovery网络中注册一个服务，并通知其他节点

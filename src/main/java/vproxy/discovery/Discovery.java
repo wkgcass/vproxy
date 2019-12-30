@@ -2,6 +2,7 @@ package vproxy.discovery;
 
 import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
+import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.VFDConfig;
 import vfd.jdk.ChannelFDs;
@@ -353,7 +354,7 @@ public class Discovery {
     private final EventLoopGroup eventLoopGroup;
     private final SelectorEventLoop blockingUDPSendThread;
     private final SelectorEventLoop blockingUDPRecvThread;
-    private final DatagramSocket udpBlockingSock;
+    private final DatagramFD udpSock;
     private final DatagramSocket udpBlockingServer;
     private final HttpServer httpServer;
 
@@ -375,7 +376,7 @@ public class Discovery {
         ServerGroup hcGroup = null;
         ByteBuffer searchBuffer = null;
         ByteBuffer informBuffer = null;
-        DatagramSocket udpBlockingSock = null;
+        DatagramFD udpSock = null;
         DatagramSocket udpBlockingServer = null;
         HttpServer tcpServer = null;
 
@@ -410,15 +411,15 @@ public class Discovery {
             }
             hcGroup.addServerListener(new HealthListener());
 
-            searchBuffer = ByteBuffer.allocate(nodeName.getBytes().length + 256/*make it large enough*/);
-            informBuffer = ByteBuffer.allocate(nodeName.getBytes().length + 256/*make it large enough*/);
+            searchBuffer = ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/);
+            informBuffer = ByteBuffer.allocateDirect(nodeName.getBytes().length + 256/*make it large enough*/);
             Node n = new Node(nodeName, config.bindAddress, config.udpPort, config.tcpPort);
             n.healthy = true;
             this.localNode = n;
             String groupServerName = buildGroupServerName(nodeName, config.bindAddress, config.tcpPort);
             nodes.put(groupServerName, new NodeDetach(groupServerName, n, true));
 
-            udpBlockingSock = startUdpBlockingSock();
+            udpSock = startUdpBlockingSock();
             udpBlockingServer = createUdpBlockingServer();
             tcpServer = startHttpServer();
         } catch (Throwable t) {
@@ -435,8 +436,8 @@ public class Discovery {
                 Utils.clean(searchBuffer);
             if (informBuffer != null)
                 Utils.clean(informBuffer);
-            if (udpBlockingSock != null)
-                udpBlockingSock.close();
+            if (udpSock != null)
+                udpSock.close();
             if (udpBlockingServer != null)
                 udpBlockingServer.close();
             //noinspection ConstantConditions
@@ -458,7 +459,7 @@ public class Discovery {
         this.hcGroup = hcGroup;
         this.searchBuffer = searchBuffer;
         this.informBuffer = informBuffer;
-        this.udpBlockingSock = udpBlockingSock;
+        this.udpSock = udpSock;
         this.udpBlockingServer = udpBlockingServer;
         this.httpServer = tcpServer;
 
@@ -529,8 +530,9 @@ public class Discovery {
         System.arraycopy(config.searchNetworkByte, 0, searchNetworkByte, 0, searchNetworkByte.length);
     }
 
-    private DatagramSocket startUdpBlockingSock() throws IOException {
-        DatagramSocket sock = new DatagramSocket(null);
+    private DatagramFD startUdpBlockingSock() throws IOException {
+        DatagramFD sock = FDProvider.get().openDatagramFD();
+        sock.configureBlocking(false);
         sock.bind(new InetSocketAddress(config.bindInetAddress, config.udpSockPort));
         return sock;
     }
@@ -670,23 +672,30 @@ public class Discovery {
         Logger.warn(LogType.DISCOVERY_EVENT, "node " + groupServerName + " is REMOVED");
     }
 
+    private static final Set<String> hostNotReachableExceptionMessages = Set.of(
+        "Host is down",
+        "No route to host",
+        "Permission denied" // when requesting the network address or broadcast address
+    );
+
     private void sendBuffer(ByteBuffer buffer, InetSocketAddress sockAddr) {
-        int pos = buffer.position();
-        int lim = buffer.limit();
-        byte[] bytes = buffer.array();
-        DatagramPacket pkt = new DatagramPacket(bytes, lim);
-        pkt.setAddress(sockAddr.getAddress());
-        pkt.setPort(sockAddr.getPort());
         blockingUDPSendThread.runOnLoop(() -> {
             assert Logger.lowLevelDebug("run blocking udp sock to send data");
+            int pos = buffer.position();
+            int lim = buffer.limit();
             try {
-                udpBlockingSock.send(pkt);
+                udpSock.send(buffer, sockAddr);
             } catch (IOException e) {
-                Logger.shouldNotHappen("send udp pkt failed", e);
+                if (hostNotReachableExceptionMessages.contains(e.getMessage())) {
+                    assert Logger.lowLevelDebug("send udp pkt failed: " + Utils.l4addrStr(sockAddr) + ": " + e);
+                } else {
+                    Logger.shouldNotHappen("send udp pkt failed: " + Utils.l4addrStr(sockAddr), e);
+                }
+            } finally {
+                buffer.limit(lim).position(pos);
             }
+            assert Logger.lowLevelDebug("udpSock.send wrote " + (lim - pos) + " bytes");
         });
-        assert Logger.lowLevelDebug("udpSock.send wrote " + (lim - pos) + " bytes");
-        buffer.position(pos).limit(lim);
     }
 
     private void informNode(Node node) {
@@ -959,7 +968,11 @@ public class Discovery {
             Logger.shouldNotHappen("removing event loop failed", e);
             // we ignore the error because it's closing
         }
-        udpBlockingSock.close();
+        try {
+            udpSock.close();
+        } catch (IOException e) {
+            Logger.shouldNotHappen("closing udpSock failed", e);
+        }
 
         // then release the buffers
         Utils.clean(searchBuffer);

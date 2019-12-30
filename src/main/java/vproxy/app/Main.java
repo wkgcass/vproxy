@@ -2,6 +2,7 @@ package vproxy.app;
 
 import vfd.VFDConfig;
 import vproxy.app.args.*;
+import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.dns.Resolver;
@@ -256,6 +257,27 @@ public class Main {
                     System.exit(1);
                     return;
                 }
+            }
+        }
+        if (!ctx.get("discovery-loaded", false)) {
+            // load default discovery config
+            var ins = DiscoveryConfigLoader.getInstance();
+            try {
+                ins.loadDefault();
+                int exitCode = ins.check();
+                if (exitCode != 0) {
+                    System.exit(exitCode);
+                    return;
+                }
+                exitCode = ins.gen();
+                if (exitCode != 0) {
+                    System.exit(exitCode);
+                    return;
+                }
+            } catch (Exception e) {
+                Logger.error(LogType.ALERT, "got exception when loading default configuration for discovery: " + Utils.formatErr(e));
+                System.exit(1);
+                return;
             }
         }
 

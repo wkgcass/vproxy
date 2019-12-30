@@ -7,14 +7,14 @@ import vproxy.component.khala.KhalaConfig;
 import vproxy.discovery.DiscoveryConfig;
 import vproxy.discovery.TimeConfig;
 import vproxy.util.IPType;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.net.*;
-import java.util.Enumeration;
-import java.util.Properties;
+import java.util.*;
 
 public class DiscoveryConfigLoader {
     static class Discovery {
@@ -93,6 +93,10 @@ public class DiscoveryConfigLoader {
             return exit("loading config failed");
         }
 
+        return loadFrom(p);
+    }
+
+    private int loadFrom(Properties p) {
         Enumeration<?> keys = p.propertyNames();
         while (keys.hasMoreElements()) {
             String key = (String) keys.nextElement();
@@ -103,6 +107,88 @@ public class DiscoveryConfigLoader {
         }
 
         return 0;
+    }
+
+    public void loadDefault() throws Exception {
+        // find the nic to bind
+        Map<InterfaceAddress, String> addr2nicMap = new HashMap<>();
+        List<InterfaceAddress> addresses = new ArrayList<>();
+        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            var ls = nic.getInterfaceAddresses();
+            addresses.addAll(ls);
+            for (InterfaceAddress a : ls) {
+                addr2nicMap.put(a, nic.getName());
+            }
+        }
+        addresses.sort((a, b) -> {
+            var aa = a.getAddress();
+            var bb = b.getAddress();
+            // non-loopback better than loopback
+            {
+                if (!aa.isLoopbackAddress() && bb.isLoopbackAddress()) {
+                    return -1;
+                }
+                if (aa.isLoopbackAddress() && !bb.isLoopbackAddress()) {
+                    return 1;
+                }
+            }
+            // ipv4 better than ipv6
+            {
+                if (aa instanceof Inet4Address && !(bb instanceof Inet4Address)) {
+                    return -1;
+                }
+                if (!(aa instanceof Inet4Address) && bb instanceof Inet4Address) {
+                    return 1;
+                }
+            }
+            // other-127/::1 better than 127.0.0.1/::1
+            {
+                var strA = Utils.ipStr(aa.getAddress());
+                var strB = Utils.ipStr(bb.getAddress());
+                if (aa instanceof Inet4Address) {
+                    if (!strA.equals("127.0.0.1") && strB.equals("127.0.0.1")) {
+                        return -1;
+                    }
+                    if (strA.equals("127.0.0.1") && !strB.equals("127.0.0.1")) {
+                        return 1;
+                    }
+                } else {
+                    if (!strA.equals("[0000:0000:0000:0000:0000:0000:0000:0001]") && strB.equals("[0000:0000:0000:0000:0000:0000:0000:0001]")) {
+                        return -1;
+                    }
+                    if (strA.equals("[0000:0000:0000:0000:0000:0000:0000:0001]") && !strB.equals("[0000:0000:0000:0000:0000:0000:0000:0001]")) {
+                        return 1;
+                    }
+                }
+            }
+            return 0;
+        });
+        if (addresses.isEmpty()) {
+            throw new Exception("no address found on nics");
+        }
+        InterfaceAddress addr = addresses.get(0);
+        InetAddress l3addr = addr.getAddress();
+        int mask = addr.getNetworkPrefixLength();
+        String nic = addr2nicMap.get(addr);
+        String ipType = (l3addr instanceof Inet4Address) ? "v4" : "v6";
+        Logger.alert("DEFAULT DISCOVERY CONFIG: nic = " + nic + ", ip = " + Utils.ipStr(l3addr.getAddress()) + ", network mask = " + mask);
+
+        Properties p = new Properties();
+        p.setProperty("discovery.nic", nic);
+        p.setProperty("discovery.ip_type", ipType);
+        p.setProperty("discovery.udp_sock_port", "56565");
+        p.setProperty("discovery.udp_port", "31000");
+        p.setProperty("discovery.tcp_port", "31000");
+        p.setProperty("discovery.search.mask", "" + mask);
+        p.setProperty("discovery.search.min_udp_port", "31000");
+        p.setProperty("discovery.search.max_udp_port", "31000");
+        int ret = loadFrom(p);
+        if (ret != 0) {
+            Logger.shouldNotHappen("invalid default config: " + p);
+            throw new Exception("loading default config failed");
+        }
     }
 
     public int check() {

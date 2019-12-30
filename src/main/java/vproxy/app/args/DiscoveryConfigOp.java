@@ -1,6 +1,5 @@
 package vproxy.app.args;
 
-import vproxy.app.Config;
 import vproxy.app.MainCtx;
 import vproxy.app.MainOp;
 import vproxy.app.mesh.DiscoveryConfigLoader;
@@ -24,11 +23,11 @@ public class DiscoveryConfigOp implements MainOp {
 
     @Override
     public int pre(MainCtx ctx, String[] args) {
-        if (Config.discoveryConfigProvided) {
+        if (ctx.get("discovery-loaded", false)) {
             System.err.println("discoveryConfig already set");
             return 1;
         }
-        Config.discoveryConfigProvided = true;
+        ctx.set("discovery-loaded", true);
         return 0;
     }
 

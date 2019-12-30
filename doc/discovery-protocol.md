@@ -46,7 +46,7 @@ Wrapped into RESP.
 }
 ```
 
-The udp packet carries the sender's ip address, so the receiver will know which address to write back to. Sender will get the sender's receiving port via the message, and will `NOT` use the udp packet src port because they might be different.
+The udp packet carries the sender's ip address, so the receiver will know which address to write back to. Receiver will get the sender's receiving port via the message, and will `NOT` use the udp packet src port because they might be different.
 
 ### Discovery data message
 
@@ -64,7 +64,7 @@ HTTP request.
 }
 ```
 
-Request and response will be handled in the same connection. The connection will be closed after all the response bytes are transferred.
+Request and response will be handled in the same connection. The connection will be closed after all the response bytes being transferred.
 
 ### Procedure
 
@@ -77,7 +77,7 @@ Request and response will be handled in the same connection. The connection will
     Hash not same means that there are some nodes missing or redundant in the cache, and need to be fixed.  
     If the hash from the message and the hash in local are the same, no response will be sent.
 3. When receiving the `type=inform` message, the node will compare the hash and will make a tcp connection to the remote node to fetch node list if hash values do not match.
-4. The tcp requests and responses are `discovery data message`s. The sender and receiver will record all missing nodes into. They will not care about the redundant ones. Those nodes will be removed after being down for `detach-timeout (5 minutes)`.
+4. The tcp requests and responses are `discovery data message`s. The sender and receiver will record all missing nodes info. They will not care about the redundant ones. Those nodes will be removed after being down for `detach-timeout (5 minutes)`.
 5. The hash value only considers `healthy` node records. Those unhealthy nodes will not be calculated.
 6. Addition: When receiving a `type=inform` message and hash mismatches, the node `MAY` pause sending udp packets and go into the interval.  
     This is used to limit the rate when something changes in a stable network, no need to make multiple tcp connections just to retrieve the same node list.  
@@ -121,7 +121,7 @@ On receiving the response, A will make a tcp connection to B, and a tcp connecti
        C
 ```
 
-B and C will add A into their local cache, and start health check on A. A will and B, C to its local cache, and starts health check on B and C.
+B and C will add A into their local cache, and start health check on A. A will add B, C to its local cache, and start health check on B and C.
 
 ```
    A-.-.-.-B
@@ -141,7 +141,7 @@ The health check will soon turn to UP. And A,B,C now find each other.
        C
 ```
 
-### Interfaces
+### For Java Application
 
 The discovery lib can be registered with a `nodeListener`, when a node is up,down,or left, the corresponding listener event would be fired, with the node as the argument.
 
@@ -158,7 +158,7 @@ One discovery node can carry multiple khala nodes.
 Khala messages use the same http server of discovery, but uri not same.
 
 * A `type=khala.hash` message should carry hash of all cached khala nodes.
-* A `type=khala.sync` message should carry all cached khala nodes. If the message contains no node data, the message will not have any effect on the local cache. Othersie, the differed nodes (missing and redundant) will be extracted and requests of `type=khala.local` will be made to those discovery nodes and sync data.
+* A `type=khala.sync` message should carry all cached khala nodes. If the message contains no node data, the message will not have any effect on the local cache. Otherwise, the differed nodes (missing and redundant) will be extracted, and requests of `type=khala.local` will be made to those discovery nodes to sync data.
 * A `type=khala.add` message should carry only local discovery node and the added khala node.
 * A `type=khala.remove` message should carry only local discovery node and the removed khala node.
 * A `type=khala.local` message should carry local discovery node and all "local" khala nodes.
@@ -206,11 +206,11 @@ The khala is based on vproxy discovery lib. So it knows when a discovery node is
 3. When a node is down or left, the lib will remove all data related to the discovery node.
 4. When a node is added locally, the lib will send a `type=khala.add` message to inform other nodes about the new node.
 5. When a node is removed locally, the lib will send a `type=khala.remove` message to inform other nodes about the removed node. Sending rules are the same as `type=khala-add` message.
-6. For every 2 minutes, the lib chooses a nexus node randomly, and send a `type=khala.hash` and `type=khala.sync` message to sync node data.
+6. For every 2 minutes, the lib chooses a node randomly, and send a `type=khala.hash` and `type=khala.sync` message to sync node data.
 7. When receiving `type=khala.hash` message, the node will reply a `type=khala.hash` data.
 8. When receiving `type=khala.sync` message, the node will reply a `type=khala.sync` data, and differ the message nodes and local cached nodes. When a mismatch found, the lib will request the mismatched node with `type=khala-local` message, to fetch the remote khala nodes.
 
-### Interfaces
+### For Java Application
 
 1. addLocal: add a khala node
 2. removeLocal: remove a khala node

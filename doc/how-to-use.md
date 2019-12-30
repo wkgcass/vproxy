@@ -151,12 +151,13 @@ To stop a RESPController, you can type in:
 Specify the discovery config file when starting:
 
 ```
-java vproxy.app.Main discoveryConfig $path_to_config
+java vproxy.app.Main [discoveryConfig $path_to_config]
 ```
 
-When discovery config is specified, the vproxy instance will try to search or inform other nodes about local node info.  
+If discovery config not specified, the vproxy instance will load a default config.  
+The default config can work well if you have only one nic other than loopback (e.g. eth0), otherwise you may need to specify the configuration file.
 
-There are two additional modules provided by vproxy if discovery config is available.
+There are two modules related to discovery.
 
 * smart-group-delegate: watches the discovery network for node changes, and update the handled server-group resource.
 * smart-node-delegate: register a node into the discovery network for others to know.
@@ -203,7 +204,7 @@ add server-group sg0 to upstream ups0 weight 10
 add server s0 to server-group sg0 address 127.0.0.1:12345 weight 10
 ```
 
-and save it, perhaps you can save it into `~/vproxy.conf`.
+and save it, you may save it into `~/vproxy.conf`.
 
 Start the application via `vproxy.app.Main`
 

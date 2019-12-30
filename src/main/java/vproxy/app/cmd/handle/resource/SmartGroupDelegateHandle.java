@@ -27,9 +27,6 @@ public class SmartGroupDelegateHandle {
     }
 
     public static void checkCreate(Command cmd) throws XException {
-        if (!Config.discoveryConfigProvided) {
-            throw new XException("discovery config not provided, so the smart-group-delegate cannot be created");
-        }
         if (!cmd.args.containsKey(Param.service))
             throw new XException("missing argument " + Param.service.fullname);
         if (!cmd.args.containsKey(Param.zone))

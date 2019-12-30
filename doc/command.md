@@ -51,8 +51,8 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 |
 +---+ cert-key (ck)
 |
-+---+ smart-group-delegate   /* only available when discovery config is specified */
-+---+ smart-node-delegate /* only available when discovery config is specified */
++---+ smart-group-delegate
++---+ smart-node-delegate
 
    server-sock (ss) --+
   connection (conn)   +-- /* channel */

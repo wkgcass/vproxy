@@ -69,9 +69,6 @@ public class SmartNodeDelegateHandle {
     }
 
     public static void checkCreate(Command cmd) throws Exception {
-        if (!Config.discoveryConfigProvided) {
-            throw new XException("discovery config not provided, so the smart-node-delegate cannot be created");
-        }
         if (!cmd.args.containsKey(Param.service))
             throw new XException("missing argument " + Param.service.fullname);
         if (!cmd.args.containsKey(Param.zone))
