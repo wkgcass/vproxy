@@ -15,7 +15,6 @@ import vproxyx.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.security.Security;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -66,7 +65,6 @@ public class Main {
             }
         }
 
-        Security.setProperty("networkaddress.cache.ttl", "0");
         Resolver.getDefault();
     }
 
