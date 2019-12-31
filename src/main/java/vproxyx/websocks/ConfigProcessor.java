@@ -28,7 +28,7 @@ public class ConfigProcessor {
     public final String fileName;
     public final EventLoopGroup hcLoopGroup;
     public final EventLoopGroup workerLoopGroup;
-    private int listenPort = 1080;
+    private int socks5ListenPort = 1080;
     private int httpConnectListenPort = 0;
     private int ssListenPort = 0;
     private String ssPassword = "";
@@ -36,7 +36,7 @@ public class ConfigProcessor {
     private boolean gateway = false;
     private Map<String, ServerGroup> servers = new HashMap<>();
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
-    private Map<String, List<DomainChecker>> resolves = new HashMap<>();
+    private Map<String, List<DomainChecker>> proxyResolves = new HashMap<>();
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
     private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
     private List<DomainChecker> proxyHttpsRelayDomains = new ArrayList<>();
@@ -66,8 +66,8 @@ public class ConfigProcessor {
         this.workerLoopGroup = workerLoopGroup;
     }
 
-    public int getListenPort() {
-        return listenPort;
+    public int getSocks5ListenPort() {
+        return socks5ListenPort;
     }
 
     public int getHttpConnectListenPort() {
@@ -108,16 +108,16 @@ public class ConfigProcessor {
         return ret;
     }
 
-    public LinkedHashMap<String, List<DomainChecker>> getResolves() {
+    public LinkedHashMap<String, List<DomainChecker>> getProxyResolves() {
         LinkedHashMap<String, List<DomainChecker>> ret = new LinkedHashMap<>();
-        for (String key : resolves.keySet()) {
+        for (String key : proxyResolves.keySet()) {
             if (!key.equals("DEFAULT")) {
-                ret.put(key, resolves.get(key));
+                ret.put(key, proxyResolves.get(key));
             }
         }
         // put DEFAULT to the last
-        if (resolves.containsKey("DEFAULT")) {
-            ret.put("DEFAULT", resolves.get("DEFAULT"));
+        if (proxyResolves.containsKey("DEFAULT")) {
+            ret.put("DEFAULT", proxyResolves.get("DEFAULT"));
         }
         return ret;
     }
@@ -228,14 +228,14 @@ public class ConfigProcessor {
         return checkers;
     }
 
-    private List<DomainChecker> getResolveList(String alias) {
+    private List<DomainChecker> getProxyResolveList(String alias) {
         if (alias == null) {
             alias = "DEFAULT";
         }
-        if (resolves.containsKey(alias))
-            return resolves.get(alias);
+        if (proxyResolves.containsKey(alias))
+            return proxyResolves.get(alias);
         List<DomainChecker> checkers = new LinkedList<>();
-        resolves.put(alias, checkers);
+        proxyResolves.put(alias, checkers);
         return checkers;
     }
 
@@ -270,14 +270,15 @@ public class ConfigProcessor {
                 continue; // ignore whitespace lines and comment lines
 
             if (step == 0) {
-                if (line.startsWith("agent.listen ")) {
-                    String port = line.substring("agent.listen ".length()).trim();
+                if (line.startsWith("agent.listen ") || line.startsWith("agent.socks5.listen ")) {
+                    int prefixLen = (line.startsWith("agent.listen ")) ? "agent.listen ".length() : "agent.socks5.listen ".length();
+                    String port = line.substring(prefixLen).trim();
                     try {
-                        listenPort = Integer.parseInt(port);
+                        socks5ListenPort = Integer.parseInt(port);
                     } catch (NumberFormatException e) {
                         throw new Exception("invalid agent.listen, expecting an integer");
                     }
-                    if (listenPort < 1 || listenPort > 65535) {
+                    if (socks5ListenPort < 1 || socks5ListenPort > 65535) {
                         throw new Exception("invalid agent.listen, port number out of range");
                     }
                 } else if (line.startsWith("agent.httpconnect.listen ")) {
@@ -634,7 +635,7 @@ public class ConfigProcessor {
                     currentAlias = null;
                     continue;
                 }
-                getResolveList(currentAlias).add(formatDomainChecker(line));
+                getProxyResolveList(currentAlias).add(formatDomainChecker(line));
             } else if (step == 4) {
                 if (line.equals("no-proxy.domain.list.end")) {
                     step = 0;
@@ -694,14 +695,20 @@ public class ConfigProcessor {
             if (!httpsRelayDomains.isEmpty()) {
                 throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but https-relay.domain.list is not empty");
             }
-            if (!proxyHttpsRelayDomains.isEmpty()) {
-                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but proxy.https-relay.domain.list is not empty");
-            }
             if (directRelay) {
                 throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
             }
             if (proxyRelay != null && proxyRelay) {
                 throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.proxy-relay is enabled");
+            }
+        }
+        // check for direct relay switch
+        if (!directRelay) {
+            if (!httpsRelayDomains.isEmpty()) {
+                throw new Exception("agent.direct-relay is disabled, but https-relay.domain.list is not empty");
+            }
+            if (!proxyHttpsRelayDomains.isEmpty() || proxyHttpsRelayDomainMerge) {
+                throw new Exception("agent.direct-relay is disabled, but proxy.https-relay.domain.list is not empty");
             }
         }
         // check for consistency of server list and domain list
@@ -710,7 +717,7 @@ public class ConfigProcessor {
                 throw new Exception(k + " is defined in domain list, but not in server list");
         }
         // check for consistency of server list and resolve list
-        for (String k : resolves.keySet()) {
+        for (String k : proxyResolves.keySet()) {
             if (!servers.containsKey(k))
                 throw new Exception(k + " is defined in resolve list, but not in server list");
         }
@@ -719,12 +726,11 @@ public class ConfigProcessor {
             if (!servers.containsKey(k))
                 throw new Exception(k + " is defined in resolve list, but not in server list");
         }
-        // check for listening ports
-        if (listenPort == httpConnectListenPort) {
-            throw new Exception("agent.listen and agent.httpconnect.listen are the same");
-        }
-        if (listenPort == ssListenPort) {
-            throw new Exception("agent.listen and agent.ss.listen are the same");
+        // check for pac server
+        if (pacServerPort != 0) {
+            if (socks5ListenPort == 0 && httpConnectListenPort == 0) {
+                throw new Exception("pac server is defined, but neither socks5-server nor http-connect-server is defined");
+            }
         }
         // check for ss
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
@@ -802,19 +808,6 @@ public class ConfigProcessor {
             return new ABPDomainChecker(abp);
         } else {
             return new SuffixDomainChecker(line);
-        }
-    }
-
-    private String readFile(String path) throws Exception {
-        path = Utils.filename(path);
-        try (FileInputStream fis = new FileInputStream(path)) {
-            BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = br.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-            return sb.toString();
         }
     }
 }

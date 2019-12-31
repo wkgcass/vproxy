@@ -4,7 +4,6 @@ import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.SvrHandleConnector;
 import vproxy.connection.*;
 import vproxy.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
-import vproxy.dns.Resolver;
 import vproxy.http.HttpRespParser;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
@@ -26,7 +25,6 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
-import java.util.function.BiConsumer;
 import java.util.function.Consumer;
 
 public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvider {
@@ -761,18 +759,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
-        //noinspection unchecked,rawtypes
-        BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
-        if (WebSocksUtils.httpDNSServer != null) {
-            //noinspection unchecked
-            resolveF = (a, b) -> WebSocksUtils.httpDNSServer.resolve(a, b);
-        }
-        //noinspection rawtypes
-        resolveF.accept(address, new Callback() {
+        WebSocksUtils.httpDNSServer.resolve(address, new Callback<>() {
             @Override
-            protected void onSucceeded(Object o) {
-                InetAddress value = (InetAddress) o;
-
+            protected void onSucceeded(InetAddress value) {
                 SSLEngine engine = WebSocksUtils.createEngine();
                 engine.setUseClientMode(true);
                 SSLParameters params = new SSLParameters();
@@ -826,9 +815,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             }
 
             @Override
-            protected void onFailed(Throwable o) {
-                UnknownHostException err = (UnknownHostException) o;
-
+            protected void onFailed(UnknownHostException err) {
                 Logger.error(LogType.CONN_ERROR, "resolve for " + address + " failed in https relay", err);
                 cb.accept(null);
             }

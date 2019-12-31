@@ -26,13 +26,13 @@ public class PACHandler extends HttpProtocolHandler {
     ).split("\n")).map(String::trim).collect(Collectors.joining());
 
     private final String host;
-    private final int port;
+    private final int socks5Port;
     private final int httpConnectPort;
 
     public PACHandler(String host, int socksPort, int httpConnectPort) {
         super(false);
         this.host = host;
-        this.port = socksPort;
+        this.socks5Port = socksPort;
         this.httpConnectPort = httpConnectPort;
     }
 
@@ -103,7 +103,10 @@ public class PACHandler extends HttpProtocolHandler {
         }
         assert Logger.lowLevelDebug("got valid req, let's write response back");
         String ip = getIp(ctx.connection);
-        String socks5 = "SOCKS5 " + ip + ":" + port;
+        String socks5 = "";
+        if (socks5Port != 0) {
+            socks5 = "SOCKS5 " + ip + ":" + socks5Port;
+        }
         String proxy = "";
         if (httpConnectPort != 0) {
             proxy = "PROXY " + ip + ":" + httpConnectPort;

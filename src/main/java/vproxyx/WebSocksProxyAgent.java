@@ -77,9 +77,9 @@ public class WebSocksProxyAgent {
         ConfigProcessor configProcessor = new ConfigProcessor(configFile, worker, worker);
         configProcessor.parse();
 
-        assert Logger.lowLevelDebug("listen on " + configProcessor.getListenPort());
+        assert Logger.lowLevelDebug("socks5 listen on " + configProcessor.getSocks5ListenPort());
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
-        assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getResolves());
+        assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getProxyResolves());
         assert Logger.lowLevelDebug("no-proxy domain patterns " + configProcessor.getNoProxyDomains());
         assert Logger.lowLevelDebug("https-relay domain patterns " + configProcessor.getHTTPSRelayDomains());
         assert Logger.lowLevelDebug("proxy servers " +
@@ -98,16 +98,35 @@ public class WebSocksProxyAgent {
             WebSocksUtils.initHTTPSRelayContext(configProcessor);
         }
 
+        // init dns server
+        {
+            int port = configProcessor.getDnsListenPort();
+            if (port == 0) {
+                port = 53; // just a hint. if not configured, the dns server won't start
+            }
+            var l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), port);
+            WebSocksUtils.httpDNSServer = new HttpDNSServer("dns", l4addr, worker, configProcessor);
+            // may need to start dns server
+            if (configProcessor.getDnsListenPort() != 0) {
+                assert Logger.lowLevelDebug("start dns server");
+                WebSocksUtils.httpDNSServer.start();
+                Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+            }
+        }
+
         // initiate pool (it's inside the connector provider)
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(configProcessor);
         // initiate the agent
         // --------- port,   handler,         isGateway
+        //noinspection rawtypes
         List<Tuple3<Integer, ProtocolHandler, Boolean>> handlers = new LinkedList<>();
-        handlers.add(new Tuple3<>(
-            configProcessor.getListenPort(),
-            new Socks5ProxyProtocolHandler(connectorProvider),
-            configProcessor.isGateway()
-        ));
+        if (configProcessor.getSocks5ListenPort() != 0) {
+            handlers.add(new Tuple3<>(
+                configProcessor.getSocks5ListenPort(),
+                new Socks5ProxyProtocolHandler(connectorProvider),
+                configProcessor.isGateway()
+            ));
+        }
         if (configProcessor.getHttpConnectListenPort() != 0) {
             handlers.add(new Tuple3<>(
                 configProcessor.getHttpConnectListenPort(),
@@ -123,9 +142,12 @@ public class WebSocksProxyAgent {
             ));
         }
 
+        //noinspection rawtypes
         for (Tuple3<Integer, ProtocolHandler, Boolean> tuple : handlers) {
             int port = tuple._1;
+            //noinspection rawtypes
             ProtocolHandler handler = tuple._2;
+            //noinspection rawtypes
             ConnectorGen connGen = new ConnectorGen() {
                 @Override
                 public Type type() {
@@ -183,23 +205,10 @@ public class WebSocksProxyAgent {
                 new ProtocolServerConfig().setInBufferSize(256).setOutBufferSize(256),
                 new PACHandler(
                     configProcessor.getPacServerIp(),
-                    configProcessor.getListenPort(), // this port is socks5 port
+                    configProcessor.getSocks5ListenPort(), // this port is socks5 port
                     configProcessor.getHttpConnectListenPort() // this port is http connect port
                 ));
             Logger.alert("pac server started on " + configProcessor.getPacServerPort());
-        }
-
-        // maybe we can start the dns server
-        if (configProcessor.getDnsListenPort() != 0) {
-            assert Logger.lowLevelDebug("start dns server");
-            var l4addr = new InetSocketAddress(
-                Utils.l3addr("0.0.0.0"),
-                configProcessor.getDnsListenPort()
-            );
-            HttpDNSServer httpDNSServer = new HttpDNSServer("dns", l4addr, worker, configProcessor);
-            httpDNSServer.start();
-            Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
-            WebSocksUtils.httpDNSServer = httpDNSServer;
         }
 
         // maybe we can start the relay servers

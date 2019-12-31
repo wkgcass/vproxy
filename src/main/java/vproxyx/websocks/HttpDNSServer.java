@@ -24,15 +24,14 @@ public class HttpDNSServer extends DNSServer {
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, InetAddress> cache = new HashMap<>();
-    private final boolean directRelay;
     private final List<DomainChecker> directDomains = new LinkedList<>();
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
         this.serverGroups = config.getServers();
-        this.resolves = config.getResolves();
-        this.directRelay = config.isDirectRelay();
-        if (this.directRelay) {
+        this.resolves = config.getProxyResolves();
+        boolean directRelay = config.isDirectRelay();
+        if (directRelay) {
             this.directDomains.addAll(config.getHTTPSRelayDomains());
             this.directDomains.addAll(config.getProxyHTTPSRelayDomains());
         }
@@ -58,6 +57,20 @@ public class HttpDNSServer extends DNSServer {
         });
     }
 
+    private InetAddress getFromCache(String domain) {
+        InetAddress l3addr = cache.get(domain);
+        if (l3addr == null) {
+            String tmp;
+            if (domain.endsWith(".")) {
+                tmp = domain.substring(0, domain.length() - 1);
+            } else {
+                tmp = domain + ".";
+            }
+            l3addr = cache.get(tmp);
+        }
+        return l3addr;
+    }
+
     @Override
     protected void runRecursive(DNSPacket p, InetSocketAddress remote) {
         String domain = null;
@@ -75,22 +88,24 @@ public class HttpDNSServer extends DNSServer {
             }
         }
         if (domain != null) {
-            // try cache first
-            {
-                InetAddress l3addr = cache.get(domain);
-                if (l3addr != null) {
-                    Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
-                    respond(p, domain, l3addr, remote);
-                    return;
-                }
-            }
             if (domain.endsWith(".")) {
                 domain = domain.substring(0, domain.length() - 1);
             }
+            // check direct domains
             for (DomainChecker chk : directDomains) {
                 if (chk.needProxy(domain, 0)) {
                     Logger.alert("[DNS] resolve to local ip for " + domain);
                     respondWithSelfIp(p, domain, remote);
+                    return;
+                }
+            }
+            // try cache
+            {
+                InetAddress l3addr = getFromCache(domain);
+                if (l3addr != null) {
+                    Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
+                    respond(p, domain, l3addr, remote);
+                    return;
                 }
             }
             for (Map.Entry<String, List<DomainChecker>> entry : resolves.entrySet()) {
@@ -98,13 +113,8 @@ public class HttpDNSServer extends DNSServer {
                 var ls = entry.getValue();
                 for (DomainChecker chk : ls) {
                     if (chk.needProxy(domain, 0)) {
-                        if (directRelay) {
-                            Logger.alert("[DNS] resolve to local ip for " + domain);
-                            respondWithSelfIp(p, domain, remote);
-                        } else {
-                            Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
-                            requestAndResponse(p, serverGroups.get(servers), domain, remote);
-                        }
+                        Logger.alert("[DNS] dispatch resolving query for " + domain + " via " + servers);
+                        requestAndResponse(p, serverGroups.get(servers), domain, remote);
                         return;
                     }
                 }
@@ -117,7 +127,7 @@ public class HttpDNSServer extends DNSServer {
     public void resolve(String domain, Callback<InetAddress, UnknownHostException> cb) {
         // try cache first
         {
-            InetAddress l3addr = cache.get(domain);
+            InetAddress l3addr = getFromCache(domain);
             if (l3addr != null) {
                 Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
                 cb.succeeded(l3addr);
@@ -138,6 +148,8 @@ public class HttpDNSServer extends DNSServer {
                 }
             }
         }
+        // otherwise no need to do resolve proxy
+        Resolver.getDefault().resolve(domain, cb);
     }
 
     private void requestAndGetResult(ServerGroup serverGroup, String domain, Callback<InetAddress, UnknownHostException> cb) {
@@ -181,7 +193,7 @@ public class HttpDNSServer extends DNSServer {
                 return;
             }
 
-            Logger.alert("resolve: " + domain + " -> " + ip);
+            Logger.alert("[DNS] resolve: " + domain + " -> " + ip);
             InetAddress l3addr = Utils.l3addr(ipBytes);
             cache.put(domain, l3addr);
             cb.succeeded(l3addr);
@@ -249,6 +261,8 @@ public class HttpDNSServer extends DNSServer {
 
     private void respond(DNSPacket p, String domain, InetAddress result, InetSocketAddress remote) {
         final int ttl = 10 * 60; // set to 10 minutes, which would cause no trouble in most cases
+
+        Logger.alert("[DNS] respond " + domain + " -> " + Utils.ipStr(result.getAddress()) + " to " + Utils.l4addrStr(remote));
 
         DNSPacket dnsResp = new DNSPacket();
         dnsResp.id = p.id;

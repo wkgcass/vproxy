@@ -97,7 +97,7 @@ public class AutoSignSSLContextHolder extends SSLContextHolder {
     }
 
     private boolean prepareConfig(String sni) {
-        String config = opensslConfigTemplate.replaceAll("\\$NAME", sni);
+        String config = opensslConfigTemplate.replace("$NAME", sni);
         File configF = Path.of(workingDirectory.getAbsolutePath(), sni + ".cnf").toFile();
         try {
             //noinspection ResultOfMethodCallIgnored
@@ -120,7 +120,7 @@ public class AutoSignSSLContextHolder extends SSLContextHolder {
         String[] cmds = new String[template.length];
         for (int i = 0; i < template.length; ++i) {
             String cmd = template[i];
-            cmd = cmd.replaceAll("\\$CACRT", caCert).replaceAll("\\$CAKEY", caKey).replaceAll("\\$NAME", sni);
+            cmd = cmd.replace("$CACRT", caCert).replace("$CAKEY", caKey).replace("$NAME", sni);
             cmds[i] = cmd;
         }
         Logger.alert("executing command: " + Arrays.stream(cmds).flatMap(s -> Stream.of(s, " ")).collect(Collectors.joining()));

@@ -6,7 +6,6 @@ import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.connection.*;
 import vproxy.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
-import vproxy.dns.Resolver;
 import vproxy.processor.Hint;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
@@ -24,7 +23,6 @@ import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.List;
-import java.util.function.BiConsumer;
 
 public class RelayHttpsServer {
     private final WebSocksProxyAgentConnectorProvider connectorProvider;
@@ -171,20 +169,11 @@ public class RelayHttpsServer {
         private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, String[] alpn) {
             Logger.alert("[RELAY] direct https relay for " + hostname);
 
-            //noinspection unchecked,rawtypes
-            BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
-            if (WebSocksUtils.httpDNSServer != null) {
-                //noinspection unchecked
-                resolveF = (a, b) -> WebSocksUtils.httpDNSServer.resolve(a, b);
-            }
             final NetEventLoop loop = ctx.connection.getEventLoop();
             final String finalHostname = hostname;
-            //noinspection rawtypes
-            resolveF.accept(hostname, new Callback() {
+            WebSocksUtils.httpDNSServer.resolve(hostname, new Callback<>() {
                 @Override
-                protected void onSucceeded(Object o) {
-                    InetAddress value = (InetAddress) o;
-
+                protected void onSucceeded(InetAddress value) {
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
                     SSLParameters sslParams = new SSLParameters();
@@ -240,8 +229,7 @@ public class RelayHttpsServer {
                 }
 
                 @Override
-                protected void onFailed(Throwable o) {
-                    UnknownHostException err = (UnknownHostException) o;
+                protected void onFailed(UnknownHostException err) {
                     Logger.error(LogType.CONN_ERROR, "resolve for " + finalHostname + " failed in https direct relay", err);
                     ctx.data.left.errored = true;
                     ctx.data.right.failed(err);
