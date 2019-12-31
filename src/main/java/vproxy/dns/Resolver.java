@@ -72,6 +72,7 @@ public interface Resolver {
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             List<InetSocketAddress> ret = new ArrayList<>();
+            List<InetSocketAddress> unreachable = new ArrayList<>();
             while (true) {
                 String line;
                 try {
@@ -101,10 +102,28 @@ public interface Resolver {
                             continue;
                         }
                     }
+                    // need to check whether it's reachable
+                    {
+                        boolean reachable;
+                        try {
+                            reachable = addr.getAddress().isReachable(100);
+                        } catch (IOException e) {
+                            Logger.error(LogType.SYS_ERROR, "got error when trying to test whether " + Utils.ipStr(addr.getAddress().getAddress()) + " is reachable");
+                            continue;
+                        }
+                        if (!reachable) {
+                            unreachable.add(addr);
+                            continue;
+                        }
+                    }
+
                     ret.add(addr);
                 } else {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid nameserver config: " + line);
                 }
+            }
+            if (!unreachable.isEmpty()) {
+                Logger.warn(LogType.ALERT, "some endpoints are unreachable and removed from the name server list: " + unreachable);
             }
             return ret;
         } finally {
