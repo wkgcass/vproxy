@@ -45,6 +45,7 @@ public interface Resolver {
     static List<InetSocketAddress> getNameServers() {
         List<InetSocketAddress> ret = getNameServersFromFile();
         if (ret.isEmpty()) {
+            ret = new ArrayList<>(2);
             Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
