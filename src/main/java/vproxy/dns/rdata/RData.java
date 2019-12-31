@@ -15,6 +15,8 @@ public interface RData {
                 return new CNAME();
             case TXT:
                 return new TXT();
+            case SRV:
+                return new SRV();
             default:
                 return null;
         }

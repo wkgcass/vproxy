@@ -16,13 +16,11 @@ import vproxy.connection.ServerSock;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
 import vproxy.dns.rdata.RData;
+import vproxy.dns.rdata.SRV;
 import vproxy.processor.Hint;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
-import vproxy.util.ByteArray;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
+import vproxy.util.*;
 
 import java.io.IOException;
 import java.net.*;
@@ -78,17 +76,19 @@ public class DNSServer {
     }
 
     private void handleRequest(DNSPacket p, InetSocketAddress remote) {
-        Map<String, List<InetAddress>> addresses = new LinkedHashMap<>();
+        Map<String, Map<DNSType, List<Record>>> addresses = new LinkedHashMap<>();
         for (DNSQuestion q : p.questions) {
+            String domain = q.qname;
+            Map<DNSType, List<Record>> domainMap = addresses.computeIfAbsent(domain, k -> new LinkedHashMap<>());
             switch (q.qtype) {
                 case AAAA:
                 case A:
-                case ANY:
-                    String domain = q.qname;
+                case SRV:
+                    List<Record> records = domainMap.computeIfAbsent(q.qtype, k -> new ArrayList<>());
 
                     InetAddress hostResult = hosts.get(domain);
                     if (hostResult != null) {
-                        addresses.put(domain, Collections.singletonList(hostResult));
+                        records.add(new Record(hostResult));
                         break;
                     }
 
@@ -97,30 +97,57 @@ public class DNSServer {
                     }
                     Upstream.ServerGroupHandle gh = rrsets.searchForGroup(new Hint(domain));
                     if (gh == null) {
+                        // not found in user defined rrsets
+                        // try some internal queries
+                        if (Utils.isIpLiteral(domain)) {
+                            InetAddress l3addr = Utils.l3addr(domain);
+                            if ((q.qtype == DNSType.A && l3addr instanceof Inet4Address)
+                                ||
+                                (q.qtype == DNSType.AAAA && l3addr instanceof Inet6Address)
+                                ||
+                                q.qtype == DNSType.SRV) {
+                                records.add(new Record(l3addr));
+                            }
+                            continue;
+                        } else if (domain.endsWith(".vproxy.local")) {
+                            List<Record> res = runInternal(domain.substring(0, domain.length() - ".vproxy.local".length()), remote);
+                            if (res != null && !res.isEmpty()) {
+                                records.addAll(res);
+                            }
+                            // .vproxy.local. should not be requested from outside
+                            continue;
+                        }
+
+                        // all not found, run recursive lookup
+
                         // usually one dns request only contain one question
                         // we currently do not consider the request of multiple domains and some of them do not require recursion
                         // keep the logic simple
                         runRecursive(p, remote);
                         return;
                     }
-                    Connector connector;
-                    if (q.qtype == DNSType.A) {
-                        connector = gh.group.nextIPv4(remote);
-                    } else if (q.qtype == DNSType.AAAA) {
-                        connector = gh.group.nextIPv6(remote);
+                    if (q.qtype == DNSType.SRV) {
+                        var servers = gh.group.getServerHandles();
+                        for (var svr : servers) {
+                            if (!svr.healthy) {
+                                continue;
+                            }
+                            records.add(new Record(svr.server, svr.getWeight()));
+                        }
                     } else {
-                        connector = gh.group.next(remote);
-                    }
-                    if (connector == null) {
-                        assert Logger.lowLevelDebug("no active server for " + domain);
-                        continue;
-                    }
-                    if (addresses.containsKey(domain)) {
-                        addresses.get(domain).add(connector.remote.getAddress());
-                    } else {
-                        var ls = new ArrayList<InetAddress>();
-                        ls.add(connector.remote.getAddress());
-                        addresses.put(domain, ls);
+                        Connector connector;
+                        if (q.qtype == DNSType.A) {
+                            connector = gh.group.nextIPv4(remote);
+                        } else if (q.qtype == DNSType.AAAA) {
+                            connector = gh.group.nextIPv6(remote);
+                        } else {
+                            connector = gh.group.next(remote);
+                        }
+                        if (connector == null) {
+                            assert Logger.lowLevelDebug("no active server for " + domain);
+                            continue;
+                        }
+                        records.add(new Record(connector.remote));
                     }
                     break;
                 default:
@@ -139,39 +166,107 @@ public class DNSServer {
         resp.ra = true;
         resp.rcode = DNSPacket.RCode.NoError;
         resp.questions.addAll(p.questions);
-        for (Map.Entry<String, List<InetAddress>> entry : addresses.entrySet()) {
-            List<InetAddress> addrs = entry.getValue();
-            for (InetAddress l3addr : addrs) {
-                DNSResource r = new DNSResource();
-                r.name = entry.getKey();
-                r.clazz = DNSClass.IN;
-                if (ttl < 0) {
-                    ttl = 0;
+        for (Map.Entry<String, Map<DNSType, List<Record>>> entry : addresses.entrySet()) {
+            Map<DNSType, List<Record>> map = entry.getValue();
+            for (Map.Entry<DNSType, List<Record>> entry2 : map.entrySet()) {
+                DNSType type = entry2.getKey();
+                for (Record record : entry2.getValue()) {
+                    DNSResource r = new DNSResource();
+                    r.name = entry.getKey();
+                    r.clazz = DNSClass.IN;
+                    if (ttl < 0) {
+                        ttl = 0;
+                    }
+                    r.ttl = ttl;
+
+                    RData rdata;
+                    if (type == DNSType.SRV) {
+                        SRV srv = new SRV();
+                        srv.priority = 50; // this value not used for now
+                        srv.port = record.port;
+                        srv.weight = record.weight;
+                        srv.target = Utils.ipStr(record.target.getAddress());
+                        rdata = srv;
+                    } else if (record.target instanceof Inet4Address) {
+                        A a = new A();
+                        a.address = (Inet4Address) record.target;
+                        rdata = a;
+                    } else {
+                        assert record.target instanceof Inet6Address;
+                        AAAA aaaa = new AAAA();
+                        aaaa.address = (Inet6Address) record.target;
+                        rdata = aaaa;
+                    }
+
+                    r.type = type;
+                    r.rdata = rdata;
+
+                    resp.answers.add(r);
                 }
-                r.ttl = ttl;
-
-                DNSType type;
-                RData rdata;
-                if (l3addr instanceof Inet4Address) {
-                    type = DNSType.A;
-                    A a = new A();
-                    a.address = (Inet4Address) l3addr;
-                    rdata = a;
-                } else {
-                    assert l3addr instanceof Inet6Address;
-                    type = DNSType.AAAA;
-                    AAAA aaaa = new AAAA();
-                    aaaa.address = (Inet6Address) l3addr;
-                    rdata = aaaa;
-                }
-
-                r.type = type;
-                r.rdata = rdata;
-
-                resp.answers.add(r);
             }
         }
         sendPacket(p.id, remote, resp);
+    }
+
+    protected InetAddress getLocalAddressFor(InetSocketAddress remote) {
+        // we may create a new sock to respond to the remote
+        {
+            try (DatagramFD channel = FDProvider.get().openDatagramFD()) {
+                channel.connect(remote);
+                InetAddress addr = ((InetSocketAddress) channel.getLocalAddress()).getAddress();
+                if (!addr.isAnyLocalAddress()) {
+                    return addr;
+                }
+            } catch (IOException e) {
+                Logger.shouldNotHappen("got error when trying to retrieve local address of udp packet from " + remote);
+            }
+        }
+
+        // try to fetch from interfaces
+        Enumeration<NetworkInterface> nics;
+        try {
+            nics = NetworkInterface.getNetworkInterfaces();
+        } catch (SocketException e) {
+            Logger.error(LogType.SYS_ERROR, "cannot get local interfaces", e);
+            return null;
+        }
+
+        List<InterfaceAddress> candidates = new LinkedList<>();
+        while (nics.hasMoreElements()) {
+            NetworkInterface nic = nics.nextElement();
+            candidates.addAll(nic.getInterfaceAddresses());
+        }
+        if (candidates.isEmpty()) {
+            Logger.error(LogType.SYS_ERROR, "cannot find ip address to return");
+            return null;
+        }
+
+        // find ip in the same network
+        InetAddress result = null;
+        for (InterfaceAddress a : candidates) {
+            InetAddress addr = a.getAddress();
+            byte[] rule = addr.getAddress();
+            int mask = a.getNetworkPrefixLength();
+            byte[] maskBytes = Utils.parseMask(mask);
+            Utils.eraseToNetwork(rule, maskBytes);
+            if (Utils.maskMatch(remote.getAddress().getAddress(), rule, maskBytes)) {
+                result = addr;
+                break;
+            }
+        }
+        return result;
+    }
+
+    protected List<Record> runInternal(String domain, InetSocketAddress remote) {
+        if (domain.equals("who.am.i")) {
+            return Collections.singletonList(new Record(remote.getAddress()));
+        } else if (domain.equals("who.are.you")) {
+            InetAddress l3addr = getLocalAddressFor(remote);
+            if (l3addr != null) {
+                return Collections.singletonList(new Record(getLocalAddressFor(remote)));
+            }
+        }
+        return null;
     }
 
     protected void runRecursive(DNSPacket p, InetSocketAddress remote) {

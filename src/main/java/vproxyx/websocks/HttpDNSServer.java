@@ -25,6 +25,7 @@ public class HttpDNSServer extends DNSServer {
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, InetAddress> cache = new HashMap<>();
     private final List<DomainChecker> directDomains = new LinkedList<>();
+    private final ConfigProcessor config;
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
@@ -35,6 +36,7 @@ public class HttpDNSServer extends DNSServer {
             this.directDomains.addAll(config.getHTTPSRelayDomains());
             this.directDomains.addAll(config.getProxyHTTPSRelayDomains());
         }
+        this.config = config;
     }
 
     @Override
@@ -69,6 +71,45 @@ public class HttpDNSServer extends DNSServer {
             l3addr = cache.get(tmp);
         }
         return l3addr;
+    }
+
+    @Override
+    protected List<Record> runInternal(String domain, InetSocketAddress remote) {
+        var res = super.runInternal(domain, remote);
+        if (res != null && !res.isEmpty()) {
+            return res;
+        }
+        switch (domain) {
+            case "socks5.agent":
+                if (config.getSocks5ListenPort() != 0) {
+                    return Collections.singletonList(
+                        new Record(getLocalAddressFor(remote), config.getSocks5ListenPort())
+                    );
+                }
+                break;
+            case "httpconnect.agent":
+                if (config.getHttpConnectListenPort() != 0) {
+                    return Collections.singletonList(
+                        new Record(getLocalAddressFor(remote), config.getHttpConnectListenPort())
+                    );
+                }
+                break;
+            case "ss.agent":
+                if (config.getSsListenPort() != 0) {
+                    return Collections.singletonList(
+                        new Record(getLocalAddressFor(remote), config.getSsListenPort())
+                    );
+                }
+                break;
+            case "pac.agent":
+                if (config.getPacServerPort() != 0) {
+                    return Collections.singletonList(
+                        new Record(getLocalAddressFor(remote), config.getPacServerPort())
+                    );
+                }
+                break;
+        }
+        return null;
     }
 
     @Override
@@ -215,39 +256,7 @@ public class HttpDNSServer extends DNSServer {
     }
 
     private void respondWithSelfIp(DNSPacket p, String domain, InetSocketAddress remote) {
-        Enumeration<NetworkInterface> nics;
-        try {
-            nics = NetworkInterface.getNetworkInterfaces();
-        } catch (SocketException e) {
-            Logger.error(LogType.SYS_ERROR, "cannot get local interfaces", e);
-            sendError(p, remote, e);
-            return;
-        }
-
-        List<InterfaceAddress> candidates = new LinkedList<>();
-        while (nics.hasMoreElements()) {
-            NetworkInterface nic = nics.nextElement();
-            candidates.addAll(nic.getInterfaceAddresses());
-        }
-        if (candidates.isEmpty()) {
-            Logger.error(LogType.SYS_ERROR, "cannot find ip address to return");
-            sendError(p, remote, new IOException("cannot find ip address to return"));
-            return;
-        }
-
-        // find ip in the same network
-        InetAddress result = null;
-        for (InterfaceAddress a : candidates) {
-            InetAddress addr = a.getAddress();
-            byte[] rule = addr.getAddress();
-            int mask = a.getNetworkPrefixLength();
-            byte[] maskBytes = Utils.parseMask(mask);
-            Utils.eraseToNetwork(rule, maskBytes);
-            if (Utils.maskMatch(remote.getAddress().getAddress(), rule, maskBytes)) {
-                result = addr;
-                break;
-            }
-        }
+        InetAddress result = getLocalAddressFor(remote);
 
         if (result == null) {
             String msg = "cannot find ip address to return for remote " + Utils.l4addrStr(remote);
