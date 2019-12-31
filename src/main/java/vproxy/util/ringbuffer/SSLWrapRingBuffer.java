@@ -112,7 +112,9 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_TASK) {
-            Logger.shouldNotHappen("ssl engine returns NEED_TASK when wrapping");
+            // simply ignore the task
+            // which should be done in unwrap buffer
+            assert Logger.lowLevelDebug("ssl engine returns NEED_TASK when wrapping");
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {

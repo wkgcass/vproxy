@@ -10,13 +10,8 @@ import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.util.Deque;
 import java.util.LinkedList;
-import java.util.List;
 
 public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
-    public interface UnwrapListener {
-        void onUnwrap();
-    }
-
     protected class WritableHandler implements RingBufferETHandler {
         @Override
         public void readableET() {
@@ -41,8 +36,6 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
 
     private IOException exceptionToThrow = null;
 
-    private final List<UnwrapListener> unwrapListeners = new LinkedList<>();
-
     public AbstractUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp) {
         this.plainBufferForApp = plainBufferForApp;
 
@@ -50,10 +43,6 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         plainBufferForApp.addHandler(writableHandler);
 
         this.encryptedBufferForInput = RingBuffer.allocateDirect(plainBufferForApp.capacity());
-    }
-
-    public void registerUnwrapListener(UnwrapListener ul) {
-        unwrapListeners.add(ul);
     }
 
     private void checkException() throws IOException {
@@ -158,11 +147,6 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
             int wrote = 0;
             if (buf.used() != 0) {
                 wrote = buf.writeTo(plainBufferForApp, Integer.MAX_VALUE);
-                if (wrote > 0) {
-                    for (UnwrapListener ul : unwrapListeners) {
-                        ul.onUnwrap();
-                    }
-                }
             }
             assert Logger.lowLevelDebug("wrote " + wrote + " bytes to plain buffer");
             // remove the buffer if all data wrote

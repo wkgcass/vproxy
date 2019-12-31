@@ -761,12 +761,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
-        //noinspection unchecked
+        //noinspection unchecked,rawtypes
         BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
         if (WebSocksUtils.httpDNSServer != null) {
             //noinspection unchecked
             resolveF = (a, b) -> WebSocksUtils.httpDNSServer.resolve(a, b);
         }
+        //noinspection rawtypes
         resolveF.accept(address, new Callback() {
             @Override
             protected void onSucceeded(Object o) {
@@ -774,7 +775,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
                 SSLEngine engine = WebSocksUtils.createEngine();
                 engine.setUseClientMode(true);
-                engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
+                SSLParameters params = new SSLParameters();
+                // we cannot get alpn from the accepted connection
+                // because CLIENT_HELLO has not been sent yet (socks5 not done yet)
+                // so here we assume it's h2,http/1.1
+                params.setApplicationProtocols(new String[]{"h2", "http/1.1"});
+                engine.setSSLParameters(params);
+
                 SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
                 ConnectableConnection conn;
                 try {
@@ -791,7 +798,19 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                         engine, new Callback<>() {
                         @Override
                         protected void onSucceeded(Void value) {
-                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop));
+                            String selectedAlpn;
+                            try {
+                                selectedAlpn = engine.getApplicationProtocol();
+                            } catch (UnsupportedOperationException e) {
+                                String msg = "engine.getApplicationProtocol is not supported";
+                                Logger.shouldNotHappen(msg, e);
+                                // release the connection
+                                conn.close();
+                                cb.accept(null);
+                                return;
+                            }
+                            Logger.alert("[SERVER_HELLO] from " + address + ", alpn = " + selectedAlpn);
+                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
                         }
 
                         @Override

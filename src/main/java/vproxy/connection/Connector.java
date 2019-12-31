@@ -16,7 +16,11 @@ public class Connector {
         // do nothing
     }
 
-    public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+    public final ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+        return connect(null, opts, in, out);
+    }
+
+    public ConnectableConnection connect(Connection accepted, ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
         ConnectableConnection conn = ConnectableConnection.create(remote, opts, in, out);
         conn.connector = this;
         return conn;

@@ -1,9 +1,6 @@
 package vproxyx.websocks;
 
-import vproxy.connection.ConnectableConnection;
-import vproxy.connection.ConnectionOpts;
-import vproxy.connection.Connector;
-import vproxy.connection.NetEventLoop;
+import vproxy.connection.*;
 import vproxy.util.RingBuffer;
 
 import java.io.IOException;
@@ -24,17 +21,31 @@ public class AlreadyConnectedConnector extends Connector {
     }
 
     @Override
-    public ConnectableConnection connect(ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
+    public ConnectableConnection connect(Connection accepted, ConnectionOpts opts, RingBuffer in, RingBuffer out) throws IOException {
         RingBuffer oldI = conn.getInBuffer();
         RingBuffer oldO = conn.getOutBuffer();
 
-        conn.UNSAFE_replaceBuffer(in, out);
+        if (oldI.used() == 0 && oldO.used() == 0) {
+            conn.UNSAFE_replaceBuffer(in, out);
 
-        if (conn.getInBuffer() != oldI) {
-            oldI.clean();
-        }
-        if (conn.getOutBuffer() != oldO) {
-            oldO.clean();
+            if (conn.getInBuffer() != oldI) {
+                oldI.clean();
+            }
+            if (conn.getOutBuffer() != oldO) {
+                oldO.clean();
+            }
+        } else if (accepted.getInBuffer().used() == 0 && accepted.getOutBuffer().used() == 0) {
+            // may try to replace the accepted connection buffers
+            accepted.UNSAFE_replaceBuffer(oldO, oldI);
+
+            if (accepted.getInBuffer() != out) {
+                out.clean();
+            }
+            if (accepted.getOutBuffer() != in) {
+                in.clean();
+            }
+        } else {
+            throw new IOException("cannot replace buffers because they are not empty");
         }
 
         return conn;

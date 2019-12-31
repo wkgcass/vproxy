@@ -91,6 +91,7 @@ public class Proxy {
             ConnectableConnection connectableConnection;
             try {
                 connectableConnection = connector.connect(
+                    connection,
                     new ConnectionOpts().setTimeout(config.timeout),
                     /*switch the two buffers to make a PROXY*/connection.getOutBuffer(), connection.getInBuffer());
             } catch (IOException e) {

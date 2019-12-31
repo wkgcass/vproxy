@@ -8,28 +8,21 @@ import vproxy.connection.*;
 import vproxy.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
 import vproxy.dns.Resolver;
 import vproxy.processor.Hint;
-import vproxy.processor.Processor;
-import vproxy.processor.ProcessorProvider;
-import vproxy.processor.http1.HttpSubContext;
-import vproxy.processor.http1.builder.HeaderBuilder;
-import vproxy.processor.http1.builder.RequestBuilder;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.socks.AddressType;
 import vproxy.util.*;
-import vproxy.util.ringbuffer.ByteBufferRingBuffer;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
-import vproxy.util.ringbuffer.SSLWrapRingBuffer;
 import vproxyx.websocks.*;
 
 import javax.net.ssl.SSLEngine;
-import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
+import java.util.Arrays;
 import java.util.List;
 import java.util.function.BiConsumer;
 
@@ -57,27 +50,12 @@ public class RelayHttpsServer {
                 .setOutBufferSize(24576)
                 .setHandleLoopProvider(worker::next)
                 .setServer(server)
-                .setConnGen(new RelayHttpsConnectorGen())
-                .setSslContext(WebSocksUtils.getHTTPSRelaySSLContext())
-                .setSslEngineManipulator(this::configureEngine),
+                .setConnGen(new RelayHttpsConnectorGen()),
             s -> {
                 // do nothing, won't happen
                 // when terminating, user should simply kill this process and won't close server
             });
         proxy.handle();
-    }
-
-    private void configureEngine(SSLEngine engine, SSLParameters parameters) {
-        /*
-         * JDK doc says:
-         * The function's result is an application protocol name, or null to indicate that none of the advertised names are acceptable.
-         * If the return value is an empty String then application protocol indications will not be used.
-         * If the return value is null (no value chosen) or is a value that was not advertised by the peer,
-         * the underlying protocol will determine what action to take.
-         * (For example, ALPN will send a "no_application_protocol" alert and terminate the connection.)
-         */
-        // simply return http/1.1 here
-        engine.setHandshakeApplicationProtocolSelector((en, proto) -> "http/1.1");
     }
 
     private class RelayHttpsConnectorGen implements ConnectorGen<RelayHttpsProtocolContext> {
@@ -109,11 +87,6 @@ public class RelayHttpsServer {
             ctx.data = new Tuple<>(new RelayHttpsProtocolContext(), null);
         }
 
-        private boolean handshakeDone(SSLEngine engine) {
-            var status = engine.getHandshakeStatus();
-            return status == SSLEngineResult.HandshakeStatus.NOT_HANDSHAKING || status == SSLEngineResult.HandshakeStatus.FINISHED;
-        }
-
         @Override
         public void readable(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx) {
             if (ctx.data.left.errored) {
@@ -123,75 +96,43 @@ public class RelayHttpsServer {
                 return;
             }
 
-            SSLEngine engine = SSLUtils.getEngineFrom(ctx.connection);
-            if (!handshakeDone(engine)) { // still handshaking, ignore
-                return;
-            }
-            if (ctx.inBuffer.used() == 0) {
-                assert Logger.lowLevelDebug("no data for now, do not consume");
-                return;
-            }
-
-            String hostname = SSLUtils.getSNI(ctx.inBuffer);
-
-            if (hostname == null) {
-                Logger.warn(LogType.ALERT, "SNI not retrieved, try to parse the cleartext data using http/1.x");
-                ByteArray data = SSLUtils.getPlainBufferBytes((SSLUnwrapRingBuffer) ctx.inBuffer);
-
-                // ok, let's parse the data then ...
-                // assume it's http
-                {
-                    Processor p = ProcessorProvider.getInstance().get("http/1.x");
-                    Processor.Context c = p.init(null);
-                    //noinspection unchecked
-                    Processor.SubContext s = p.initSub(c, 0, null);
-                    HttpSubContext sctx = (HttpSubContext) s;
-                    sctx.setParserMode();
-
-                    out:
-                    for (int i = 0; i < data.length(); ++i) {
-                        try {
-                            sctx.feed(data.get(i));
-                        } catch (Exception e) {
-                            Logger.error(LogType.INVALID_EXTERNAL_DATA, "invalid request, or is not http", e);
-                            ctx.data.left.errored = true;
-                            ctx.data.right.failed(new IOException(e));
-                            return;
-                        }
-                        RequestBuilder r = sctx.getParsingReq();
-                        if (r != null) {
-                            if (r.headers != null) {
-                                for (HeaderBuilder h : r.headers) {
-                                    if (h.value != null) {
-                                        if (h.key.toString().toLowerCase().trim().equals("host")) {
-                                            hostname = h.value.toString().trim(); // hostname retrieved
-                                            break out;
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
+            String sni;
+            {
+                String[] arrSni = new String[1];
+                IOException err = SSLHelper.extractSniFromClientHello(ctx.inBuffer, arrSni);
+                if (err != null) {
+                    ctx.data.left.errored = true;
+                    ctx.data.right.failed(err);
+                    return;
                 }
+                sni = arrSni[0];
             }
 
-            if (hostname == null) {
-                String msg = "neither sni nor host header provided";
-                ctx.data.left.errored = true;
-                ctx.data.right.failed(new IOException(msg));
-                return;
-            }
             ctx.data.left.startConnection = true;
-            handle(ctx, hostname);
+            handle(ctx, sni);
         }
 
         private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
             for (DomainChecker chk : httpsRelayDomains) {
                 if (chk.needProxy(hostname, 443)) {
-                    handleRelay(ctx, hostname);
+                    // get alpn
+                    String[][] alpn = new String[1][];
+                    {
+                        IOException err = SSLHelper.extractAlpnFromClientHello(ctx.inBuffer, alpn);
+                        if (err != null) {
+                            ctx.data.left.errored = true;
+                            ctx.data.right.failed(err);
+                            return;
+                        }
+                    }
+
+                    Logger.alert("[CLIENT_HELLO] sni = " + hostname + ", alpn = " + (alpn[0] == null ? "null" : Arrays.toString(alpn[0])));
+                    handleRelay(ctx, hostname, alpn[0]);
                     return;
                 }
             }
+
+            Logger.alert("[CLIENT_HELLO] sni = " + hostname);
             for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay may cover more conditions than direct relay
                 if (chk.needProxy(hostname, 443)) {
                     handleProxy(ctx, hostname);
@@ -220,81 +161,17 @@ public class RelayHttpsServer {
                     ctx.data.right.failed(new IOException("no available remote server connector"));
                     return;
                 }
-                if (!(connector instanceof AlreadyConnectedConnector)) {
-                    Logger.error(LogType.IMPROPER_USE, "The request domain will not be proxied " + hostname + ", configuration must be wrong");
-                    ctx.data.right.failed(new IOException("The request domain will not be proxied"));
-                    return;
-                }
-
-                // OK, here comes a ssl buffer wrapping another ssl buffer:
-                /*
-                 *                                                                        WebSocksWrap
-                 *                                                            +----------------+
-                 *                    HttpsUnwrap               InterTLSWrap  |                |
-                 *                      +-------------+               +-------|-------+        |
-                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
-                 *              in ------>| E | | P |-----------plain-->| P |-->| E |-->| EE |------->out
-                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
-                 *                      +-------------+               +-------|-------+        |
-                 *                                                            |                |
-                 *                                                            +----------------+
-                 *
-                 *                                                                        WebSocksUnwrap
-                 *                                                            +----------------+
-                 *                    HttpsWrap               InterTLSUnwrap  |                |
-                 *                      +-------------+               +-------|-------+        |
-                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
-                 *             out <------| E | | P |<---plain----------| P |<--| E |<--| EE |<------in
-                 *                      | +---+ +---+ |               | +---+ | +---+ | +----+ |
-                 *                      +-------------+               +-------|-------+        |
-                 *                                                            |                |
-                 *                                                            +----------------+
-                 */
-
-                SSLEngine engine = WebSocksUtils.createEngine(hostname, 443);
-                engine.setUseClientMode(true);
-                SSLParameters sslParams = new SSLParameters();
-                sslParams.setApplicationProtocols(new String[]{"http/1.1"});
-                engine.setSSLParameters(sslParams);
-
-                ByteBufferRingBuffer bufI = SSLUtils.getPlainBuffer((SSLUnwrapRingBuffer) ctx.connection.getInBuffer());
-                ByteBufferRingBuffer bufO = SSLUtils.getPlainBuffer((SSLWrapRingBuffer) ctx.connection.getOutBuffer());
-
-                // built the inter(mediate) buffers
-                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, bufO, bufI,
-                    ctx.connection.getEventLoop().getSelectorEventLoop());
-                SSLUnwrapRingBuffer interTLSUnwrap = pair.left;
-                SSLWrapRingBuffer interTLSWrap = pair.right;
-
-                RingBuffer interTLSUnwrapEncryptedBuffer = SSLUtils.getEncryptedBuffer(interTLSUnwrap);
-                RingBuffer interTLSWrapEncryptedBuffer = SSLUtils.getEncryptedBuffer(interTLSWrap);
-
-                ConnectableConnection websocksConn = ((AlreadyConnectedConnector) connector).getConnection();
-
-                try {
-                    websocksConn.UNSAFE_replaceBuffer(interTLSUnwrapEncryptedBuffer, interTLSWrapEncryptedBuffer);
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("replace buffers failed", e);
-                    ctx.data.left.errored = true;
-                    ctx.data.right.failed(e);
-                    return;
-                }
-
-                if (websocksConn.getInBuffer() instanceof SSLUnwrapRingBuffer) {
-                    // register an event to let the `E` buffer unwrap data to `P` when `EE -> E` triggers
-                    SSLUtils.unwrapAfterWritingToEncryptedBuffer(interTLSUnwrap, (SSLUnwrapRingBuffer) websocksConn.getInBuffer());
-                }
 
                 assert Logger.lowLevelDebug("proxy https relay is going to make a callback");
                 ctx.data.left.finished = true;
-                ctx.data.right.succeeded(new SupplierConnector(websocksConn.remote, websocksConn, ctx.connection.getEventLoop()));
+                ctx.data.right.succeeded(connector);
             });
         }
 
-        private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
+        private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, String[] alpn) {
             Logger.alert("[RELAY] direct https relay for " + hostname);
 
-            //noinspection unchecked
+            //noinspection unchecked,rawtypes
             BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
             if (WebSocksUtils.httpDNSServer != null) {
                 //noinspection unchecked
@@ -302,6 +179,7 @@ public class RelayHttpsServer {
             }
             final NetEventLoop loop = ctx.connection.getEventLoop();
             final String finalHostname = hostname;
+            //noinspection rawtypes
             resolveF.accept(hostname, new Callback() {
                 @Override
                 protected void onSucceeded(Object o) {
@@ -310,7 +188,9 @@ public class RelayHttpsServer {
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
                     SSLParameters sslParams = new SSLParameters();
-                    sslParams.setApplicationProtocols(new String[]{"http/1.1"});
+                    if (alpn != null) {
+                        sslParams.setApplicationProtocols(alpn);
+                    }
                     engine.setSSLParameters(sslParams);
 
                     SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
@@ -330,8 +210,19 @@ public class RelayHttpsServer {
                             engine, new Callback<>() {
                             @Override
                             protected void onSucceeded(Void value) {
+                                String selectedAlpn;
+                                try {
+                                    selectedAlpn = engine.getApplicationProtocol();
+                                } catch (UnsupportedOperationException e) {
+                                    String msg = "engine.getApplicationProtocol is not supported";
+                                    Logger.shouldNotHappen(msg, e);
+                                    ctx.data.left.errored = true;
+                                    ctx.data.right.failed(new IOException(msg));
+                                    return;
+                                }
+                                Logger.alert("[SERVER_HELLO] from " + hostname + ", alpn = " + selectedAlpn);
                                 ctx.data.left.finished = true;
-                                ctx.data.right.succeeded(new AlreadyConnectedConnector(conn.remote, conn, loop));
+                                ctx.data.right.succeeded(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
                             }
 
                             @Override

@@ -1,9 +1,6 @@
 package vproxy.util.ringbuffer;
 
-import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.ByteArray;
-import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 import vproxy.util.ringbuffer.ssl.SSL;
 
@@ -55,46 +52,5 @@ public class SSLUtils {
                                                 ByteBufferRingBuffer input,
                                                 ByteBufferRingBuffer output) {
         return genbufForServer(ssl, input, output, null);
-    }
-
-    public static SSLEngine getEngineFrom(Connection connection) {
-        RingBuffer buf = connection.getInBuffer();
-        if (!(buf instanceof SSLUnwrapRingBuffer)) {
-            throw new IllegalArgumentException();
-        }
-        SSLUnwrapRingBuffer sslRingBuffer = (SSLUnwrapRingBuffer) buf;
-        return sslRingBuffer.getEngine();
-    }
-
-    public static ByteArray getPlainBufferBytes(SSLUnwrapRingBuffer buf) {
-        RingBuffer buffer = buf.plainBufferForApp;
-        return ByteArray.from(buffer.getBytes());
-    }
-
-    public static String getSNI(RingBuffer buf) {
-        if (buf instanceof SSLUnwrapRingBuffer) {
-            return ((SSLUnwrapRingBuffer) buf).getSni();
-        }
-        return null;
-    }
-
-    public static ByteBufferRingBuffer getPlainBuffer(SSLUnwrapRingBuffer buf) {
-        return buf.plainBufferForApp;
-    }
-
-    public static SimpleRingBuffer getEncryptedBuffer(SSLUnwrapRingBuffer buf) {
-        return buf.encryptedBufferForInput;
-    }
-
-    public static ByteBufferRingBuffer getPlainBuffer(SSLWrapRingBuffer buf) {
-        return buf.getPlainBufferForApp();
-    }
-
-    public static SimpleRingBuffer getEncryptedBuffer(SSLWrapRingBuffer buf) {
-        return buf.encryptedBufferForOutput;
-    }
-
-    public static void unwrapAfterWritingToEncryptedBuffer(SSLUnwrapRingBuffer unwrapBuf, SSLUnwrapRingBuffer triggerBuf) {
-        triggerBuf.registerUnwrapListener(unwrapBuf::generalUnwrap);
     }
 }
