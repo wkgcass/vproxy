@@ -626,8 +626,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
     private final LinkedHashMap<String, List<DomainChecker>> noProxyDomains;
     private final List<DomainChecker> httpsRelayDomains;
-    private final List<DomainChecker> h2Domains;
-    private final List<DomainChecker> noH2Domains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
@@ -642,8 +640,6 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         } else {
             this.httpsRelayDomains = Collections.emptyList();
         }
-        h2Domains = config.getH2Domains();
-        noH2Domains = config.getNoH2Domains();
         this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
@@ -765,13 +761,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
-        //noinspection unchecked,rawtypes
+        //noinspection unchecked
         BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
         if (WebSocksUtils.httpDNSServer != null) {
             //noinspection unchecked
             resolveF = (a, b) -> WebSocksUtils.httpDNSServer.resolve(a, b);
         }
-        //noinspection rawtypes
         resolveF.accept(address, new Callback() {
             @Override
             protected void onSucceeded(Object o) {
@@ -779,35 +774,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
                 SSLEngine engine = WebSocksUtils.createEngine();
                 engine.setUseClientMode(true);
-                SSLParameters params = new SSLParameters();
-                boolean useH2;
-                { // choose to use http/2 or http/1.1
-                    boolean noH2 = false;
-                    for (var c : noH2Domains) {
-                        if (c.needProxy(address, 443)) {
-                            noH2 = true;
-                            break;
-                        }
-                    }
-                    boolean xUseH2 = false;
-                    if (!noH2) {
-                        for (var c : h2Domains) {
-                            if (c.needProxy(address, 443)) {
-                                xUseH2 = true;
-                                break;
-                            }
-                        }
-                    }
-                    useH2 = xUseH2;
-                    if (useH2) {
-                        Logger.alert("[H2] use h2 for " + address + " in proxy");
-                    } else {
-                        Logger.alert("[H1] use http/1.1 for " + address + " in proxy");
-                    }
-                    params.setApplicationProtocols(new String[]{useH2 ? "h2" : "http/1.1"});
-                }
-                engine.setSSLParameters(params);
-
+                engine.setHandshakeApplicationProtocolSelector((e, ls) -> "http/1.1");
                 SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
                 ConnectableConnection conn;
                 try {
@@ -824,7 +791,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                         engine, new Callback<>() {
                         @Override
                         protected void onSucceeded(Void value) {
-                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop, useH2));
+                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop));
                         }
 
                         @Override

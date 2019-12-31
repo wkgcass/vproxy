@@ -40,8 +40,6 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
     private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
     private List<DomainChecker> proxyHttpsRelayDomains = new ArrayList<>();
-    private List<DomainChecker> h2Domains = new ArrayList<>();
-    private List<DomainChecker> noH2Domains = new ArrayList<>();
     private String autoSignCert;
     private String autoSignKey;
     private File autoSignWorkingDirectory;
@@ -136,14 +134,6 @@ public class ConfigProcessor {
             ret.put("DEFAULT", noProxyDomains.get("DEFAULT"));
         }
         return ret;
-    }
-
-    public List<DomainChecker> getH2Domains() {
-        return h2Domains;
-    }
-
-    public List<DomainChecker> getNoH2Domains() {
-        return noH2Domains;
     }
 
     public boolean isDirectRelay() {
@@ -273,8 +263,6 @@ public class ConfigProcessor {
         // 5 -> https-relay.domain.list
         // 6 -> agent.https-relay.cert-key.list
         // 7 -> proxy.https-relay.domain.list
-        // 8 -> h2.domain.list
-        // 9 -> no-h2.domain.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -518,10 +506,6 @@ public class ConfigProcessor {
                     step = 6;
                 } else if (line.equals("proxy.https-relay.domain.list.start")) {
                     step = 7;
-                } else if (line.equals("h2.domain.list.start")) {
-                    step = 8;
-                } else if (line.equals("no-h2.domain.list.start")) {
-                    step = 9;
                 } else {
                     throw new Exception("unknown line: " + line);
                 }
@@ -673,26 +657,14 @@ public class ConfigProcessor {
                 if (ls.isEmpty())
                     continue;
                 httpsRelayCertKeyFiles.add(ls);
-            } else if (step == 7) {
+            } else {
+                //noinspection ConstantConditions
+                assert step == 7;
                 if (line.equals("proxy.https-relay.domain.list.end")) {
                     step = 0;
                     continue;
                 }
                 proxyHttpsRelayDomains.add(formatDomainChecker(line));
-            } else if (step == 8) {
-                if (line.equals("h2.domain.list.end")) {
-                    step = 0;
-                    continue;
-                }
-                h2Domains.add(formatDomainChecker(line));
-            } else {
-                //noinspection ConstantConditions
-                assert step == 9;
-                if (line.equals("no-h2.domain.list.end")) {
-                    step = 0;
-                    continue;
-                }
-                noH2Domains.add(formatDomainChecker(line));
             }
         }
 

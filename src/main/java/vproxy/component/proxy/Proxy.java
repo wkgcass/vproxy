@@ -13,6 +13,7 @@ import vproxy.util.ringbuffer.SSLUtils;
 import vproxy.util.ringbuffer.ssl.SSL;
 import vproxy.util.ringbuffer.ssl.SSLEngineBuilder;
 
+import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.util.Collection;
 
@@ -287,19 +288,24 @@ public class Proxy {
 
             SSL ssl = config.sslContext.createSSL();
             SSLEngineBuilder builder = ssl.sslEngineBuilder;
-            builder.configure((engine, p, s) -> engine.setUseClientMode(false));
-            builder.configure((engine, p, s) -> engine.setNeedClientAuth(false));
-            builder.configure((engine, p, s) -> engine.setWantClientAuth(false));
-            builder.configure((e, sslParams, s) -> {
+            builder.configure(engine -> engine.setUseClientMode(false));
+            builder.configure(engine -> engine.setNeedClientAuth(false));
+            builder.configure(engine -> engine.setWantClientAuth(false));
+            SSLParameters sslParams = new SSLParameters();
+            {
                 sslParams.setNeedClientAuth(false);
                 sslParams.setWantClientAuth(false);
-            });
+            }
+            if (config.sslEngineManipulator != null) {
+                builder.configure(engine -> config.sslEngineManipulator.accept(engine, sslParams));
+            }
+            builder.configure(engine -> engine.setSSLParameters(sslParams));
             // try to use alpn
             if (config.connGen.type() == ConnectorGen.Type.processor) {
                 String[] alpn = config.connGen.processor().alpn();
                 if (alpn != null) {
                     final var fAlpn = alpn.clone();
-                    builder.configure((engine, p, sni) -> engine.setHandshakeApplicationProtocolSelector((e, ls) -> {
+                    builder.configure(engine -> engine.setHandshakeApplicationProtocolSelector((e, ls) -> {
                         for (String s : fAlpn) {
                             if (ls.contains(s))
                                 return s;
@@ -307,10 +313,6 @@ public class Proxy {
                         return null;
                     }));
                 }
-            }
-            // customized manipulator
-            if (config.sslEngineManipulator != null) {
-                builder.configure(config.sslEngineManipulator);
             }
             SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, inBuffer, (ByteBufferRingBuffer) outBuffer);
             return new Tuple<>(pair.left, pair.right);

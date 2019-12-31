@@ -37,15 +37,11 @@ public class RelayHttpsServer {
     private final WebSocksProxyAgentConnectorProvider connectorProvider;
     private final List<DomainChecker> httpsRelayDomains;
     private final List<DomainChecker> proxyHttpsRelayDomains;
-    private final List<DomainChecker> h2Domains;
-    private final List<DomainChecker> noH2Domains;
 
     public RelayHttpsServer(WebSocksProxyAgentConnectorProvider connectorProvider, ConfigProcessor config) {
         this.connectorProvider = connectorProvider;
         httpsRelayDomains = config.getHTTPSRelayDomains();
         proxyHttpsRelayDomains = config.getProxyHTTPSRelayDomains();
-        h2Domains = config.getH2Domains();
-        noH2Domains = config.getNoH2Domains();
     }
 
     public void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
@@ -71,38 +67,17 @@ public class RelayHttpsServer {
         proxy.handle();
     }
 
-    private void configureEngine(SSLEngine engine, SSLParameters parameters, String sni) {
-        if (sni == null) {
-            return;
-        }
-        engine.setHandshakeApplicationProtocolSelector((en, proto) -> {
-            boolean noH2 = false;
-            for (var c : noH2Domains) {
-                if (c.needProxy(sni, 443)) {
-                    noH2 = true;
-                    break;
-                }
-            }
-            boolean allowH2 = false;
-            if (!noH2) {
-                for (var c : h2Domains) {
-                    if (c.needProxy(sni, 443)) {
-                        allowH2 = true;
-                        break;
-                    }
-                }
-            }
-            if (allowH2) {
-                for (String p : proto) {
-                    if (p.equals("h2")) {
-                        Logger.alert("[H2] choose h2 for " + sni);
-                        return "h2";
-                    }
-                }
-            }
-            Logger.alert("[H1] choose http/1.1 for " + sni);
-            return "http/1.1";
-        });
+    private void configureEngine(SSLEngine engine, SSLParameters parameters) {
+        /*
+         * JDK doc says:
+         * The function's result is an application protocol name, or null to indicate that none of the advertised names are acceptable.
+         * If the return value is an empty String then application protocol indications will not be used.
+         * If the return value is null (no value chosen) or is a value that was not advertised by the peer,
+         * the underlying protocol will determine what action to take.
+         * (For example, ALPN will send a "no_application_protocol" alert and terminate the connection.)
+         */
+        // simply return http/1.1 here
+        engine.setHandshakeApplicationProtocolSelector((en, proto) -> "http/1.1");
     }
 
     private class RelayHttpsConnectorGen implements ConnectorGen<RelayHttpsProtocolContext> {
@@ -158,18 +133,14 @@ public class RelayHttpsServer {
             }
 
             String hostname = SSLUtils.getSNI(ctx.inBuffer);
-            boolean useH2 = false;
 
-            // parse the payload to see if it's h2, or hostname is null
-            {
-                if (hostname == null) {
-                    Logger.warn(LogType.ALERT, "SNI not retrieved, try to parse the cleartext data using http/1.x");
-                }
+            if (hostname == null) {
+                Logger.warn(LogType.ALERT, "SNI not retrieved, try to parse the cleartext data using http/1.x");
                 ByteArray data = SSLUtils.getPlainBufferBytes((SSLUnwrapRingBuffer) ctx.inBuffer);
 
+                // ok, let's parse the data then ...
                 // assume it's http
                 {
-                    //noinspection rawtypes
                     Processor p = ProcessorProvider.getInstance().get("http/1.x");
                     Processor.Context c = p.init(null);
                     //noinspection unchecked
@@ -189,22 +160,6 @@ public class RelayHttpsServer {
                         }
                         RequestBuilder r = sctx.getParsingReq();
                         if (r != null) {
-                            if (r.method != null) {
-                                if (r.method.length() >= 3) {
-                                    if (r.method.toString().equals("PRI")) {
-                                        useH2 = true;
-                                        if (hostname == null) {
-                                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "currently we cannot parse http2 payload to retrieve the hostname");
-                                            ctx.data.left.errored = true;
-                                            ctx.data.right.failed(new IOException("cannot parse http2 payload for hostname"));
-                                            return;
-                                        } else {
-                                            // no need to continue parsing if already found
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
                             if (r.headers != null) {
                                 for (HeaderBuilder h : r.headers) {
                                     if (h.value != null) {
@@ -227,19 +182,19 @@ public class RelayHttpsServer {
                 return;
             }
             ctx.data.left.startConnection = true;
-            handle(ctx, hostname, useH2);
+            handle(ctx, hostname);
         }
 
-        private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, boolean useH2) {
+        private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
             for (DomainChecker chk : httpsRelayDomains) {
                 if (chk.needProxy(hostname, 443)) {
-                    handleRelay(ctx, hostname, useH2);
+                    handleRelay(ctx, hostname);
                     return;
                 }
             }
             for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay may cover more conditions than direct relay
                 if (chk.needProxy(hostname, 443)) {
-                    handleProxy(ctx, hostname, useH2);
+                    handleProxy(ctx, hostname);
                     return;
                 }
             }
@@ -248,7 +203,7 @@ public class RelayHttpsServer {
             ctx.data.right.failed(new IOException("unexpected request for " + hostname));
         }
 
-        private void handleProxy(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, boolean useH2) {
+        private void handleProxy(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
             // no need to log the proxy event
             // will be logged in the connector provider
             connectorProvider.provide(ctx.connection, AddressType.domain, hostname, 443, connector -> {
@@ -299,12 +254,7 @@ public class RelayHttpsServer {
                 SSLEngine engine = WebSocksUtils.createEngine(hostname, 443);
                 engine.setUseClientMode(true);
                 SSLParameters sslParams = new SSLParameters();
-                if (useH2) {
-                    Logger.alert("[H2] use h2 for " + hostname);
-                } else {
-                    Logger.alert("[H1] use http/1.1 for " + hostname);
-                }
-                sslParams.setApplicationProtocols(new String[]{useH2 ? "h2" : "http/1.1"});
+                sslParams.setApplicationProtocols(new String[]{"http/1.1"});
                 engine.setSSLParameters(sslParams);
 
                 ByteBufferRingBuffer bufI = SSLUtils.getPlainBuffer((SSLUnwrapRingBuffer) ctx.connection.getInBuffer());
@@ -341,10 +291,10 @@ public class RelayHttpsServer {
             });
         }
 
-        private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, boolean useH2) {
+        private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
             Logger.alert("[RELAY] direct https relay for " + hostname);
 
-            //noinspection unchecked,rawtypes
+            //noinspection unchecked
             BiConsumer<String, Callback> resolveF = (a, b) -> Resolver.getDefault().resolve(a, b);
             if (WebSocksUtils.httpDNSServer != null) {
                 //noinspection unchecked
@@ -352,7 +302,6 @@ public class RelayHttpsServer {
             }
             final NetEventLoop loop = ctx.connection.getEventLoop();
             final String finalHostname = hostname;
-            //noinspection rawtypes
             resolveF.accept(hostname, new Callback() {
                 @Override
                 protected void onSucceeded(Object o) {
@@ -361,12 +310,7 @@ public class RelayHttpsServer {
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
                     SSLParameters sslParams = new SSLParameters();
-                    if (useH2) {
-                        Logger.alert("[H2] use h2 for " + hostname);
-                    } else {
-                        Logger.alert("[H1] use http/1.1 for " + hostname);
-                    }
-                    sslParams.setApplicationProtocols(new String[]{useH2 ? "h2" : "http/1.1"});
+                    sslParams.setApplicationProtocols(new String[]{"http/1.1"});
                     engine.setSSLParameters(sslParams);
 
                     SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());

@@ -92,7 +92,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         if (ctx == null) {
             throw new IOException("ssl context not provided");
         }
-        engine = ssl.sslEngineBuilder.build(ctx, sniStr);
+        engine = ssl.sslEngineBuilder.build(ctx);
         pair.engine = engine;
 
         ByteArrayChannel chnl = ByteArrayChannel.from(buf.array(), 0, n, 0);
