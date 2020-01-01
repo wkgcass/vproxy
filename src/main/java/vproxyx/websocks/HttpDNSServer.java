@@ -320,8 +320,6 @@ public class HttpDNSServer extends DNSServer {
     }
 
     private void respond(DNSPacket p, String domain, InetAddress result, InetSocketAddress remote) {
-        final int ttl = 10 * 60; // set to 10 minutes, which would cause no trouble in most cases
-
         Logger.alert("[DNS] respond " + domain + " -> " + Utils.ipStr(result.getAddress()) + " to " + Utils.l4addrStr(remote));
 
         DNSPacket dnsResp = new DNSPacket();
