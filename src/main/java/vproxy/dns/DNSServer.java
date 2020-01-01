@@ -132,7 +132,7 @@ public class DNSServer {
                             if (!svr.healthy) {
                                 continue;
                             }
-                            records.add(new Record(svr.server, svr.getWeight()));
+                            records.add(new Record(svr.server.getAddress(), svr.server.getPort(), svr.getWeight(), svr.hostName));
                         }
                     } else {
                         Connector connector;
@@ -156,6 +156,10 @@ public class DNSServer {
             }
         }
         // it means we can directly respond when reaches here
+
+        // a map of additional A/AAAA records for srv records
+        Map<String, List<InetAddress>> additional = new LinkedHashMap<>();
+
         DNSPacket resp = new DNSPacket();
         resp.id = p.id;
         resp.isResponse = true;
@@ -185,7 +189,13 @@ public class DNSServer {
                         srv.priority = 50; // this value not used for now
                         srv.port = record.port;
                         srv.weight = record.weight;
-                        srv.target = Utils.ipStr(record.target.getAddress());
+                        srv.target =
+                            record.name == null
+                                ? Utils.ipStr(record.target.getAddress())
+                                : record.name;
+                        if (record.name != null) {
+                            additional.computeIfAbsent(record.name, n -> new ArrayList<>()).add(record.target);
+                        }
                         rdata = srv;
                     } else if (record.target instanceof Inet4Address) {
                         A a = new A();
@@ -203,6 +213,37 @@ public class DNSServer {
 
                     resp.answers.add(r);
                 }
+            }
+        }
+        for (Map.Entry<String, List<InetAddress>> entry : additional.entrySet()) {
+            for (InetAddress l3addr : entry.getValue()) {
+                DNSResource r = new DNSResource();
+                r.name = entry.getKey();
+                r.clazz = DNSClass.IN;
+                if (ttl < 0) {
+                    ttl = 0;
+                }
+                r.ttl = ttl;
+
+                DNSType type;
+                RData rdata;
+                if (l3addr instanceof Inet4Address) {
+                    type = DNSType.A;
+                    A a = new A();
+                    a.address = (Inet4Address) l3addr;
+                    rdata = a;
+                } else {
+                    assert l3addr instanceof Inet6Address;
+                    type = DNSType.AAAA;
+                    AAAA aaaa = new AAAA();
+                    aaaa.address = (Inet6Address) l3addr;
+                    rdata = aaaa;
+                }
+
+                r.type = type;
+                r.rdata = rdata;
+
+                resp.additionalResources.add(r);
             }
         }
         sendPacket(p.id, remote, resp);

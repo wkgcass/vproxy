@@ -7,6 +7,7 @@ public class Record {
     public final InetAddress target;
     public final int port;
     public final int weight;
+    public final String name;
 
     public Record(InetAddress target) {
         this(target, 0, 0);
@@ -25,8 +26,13 @@ public class Record {
     }
 
     public Record(InetAddress target, int port, int weight) {
+        this(target, port, weight, null);
+    }
+
+    public Record(InetAddress target, int port, int weight, String name) {
         this.target = target;
         this.port = port;
         this.weight = weight;
+        this.name = name;
     }
 }
