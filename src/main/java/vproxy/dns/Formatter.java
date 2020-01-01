@@ -203,67 +203,23 @@ public class Formatter {
     }
 
     public static DNSPacket.Opcode parseOpcode(int opcode) throws InvalidDNSPacketException {
-        if (opcode == DNSPacket.Opcode.QUERY.code) {
-            return DNSPacket.Opcode.QUERY;
-        } else if (opcode == DNSPacket.Opcode.IQUERY.code) {
-            return DNSPacket.Opcode.IQUERY;
-        } else if (opcode == DNSPacket.Opcode.STATUS.code) {
-            return DNSPacket.Opcode.STATUS;
-        } else if (opcode == DNSPacket.Opcode.Notify.code) {
-            return DNSPacket.Opcode.Notify;
-        } else if (opcode == DNSPacket.Opcode.Update.code) {
-            return DNSPacket.Opcode.Update;
-        } else if (opcode == DNSPacket.Opcode.DSO.code) {
-            return DNSPacket.Opcode.DSO;
-        } else {
-            throw new InvalidDNSPacketException("unknown opcode: " + opcode);
+        DNSPacket.Opcode[] opcodeArr = DNSPacket.Opcode.values();
+        for (DNSPacket.Opcode o : opcodeArr) {
+            if (o.code == opcode) {
+                return o;
+            }
         }
+        throw new InvalidDNSPacketException("unknown opcode: " + opcode);
     }
 
     public static DNSPacket.RCode parseRCode(int rcode) throws InvalidDNSPacketException {
-        if (rcode == DNSPacket.RCode.NoError.code) {
-            return DNSPacket.RCode.NoError;
-        } else if (rcode == DNSPacket.RCode.FormatError.code) {
-            return DNSPacket.RCode.FormatError;
-        } else if (rcode == DNSPacket.RCode.ServerFailure.code) {
-            return DNSPacket.RCode.ServerFailure;
-        } else if (rcode == DNSPacket.RCode.NameError.code) {
-            return DNSPacket.RCode.NameError;
-        } else if (rcode == DNSPacket.RCode.NotImplemented.code) {
-            return DNSPacket.RCode.NotImplemented;
-        } else if (rcode == DNSPacket.RCode.Refused.code) {
-            return DNSPacket.RCode.Refused;
-        } else if (rcode == DNSPacket.RCode.YXDomain.code) {
-            return DNSPacket.RCode.YXDomain;
-        } else if (rcode == DNSPacket.RCode.YXRRSet.code) {
-            return DNSPacket.RCode.YXRRSet;
-        } else if (rcode == DNSPacket.RCode.NXRRSet.code) {
-            return DNSPacket.RCode.NXRRSet;
-        } else if (rcode == DNSPacket.RCode.NotAuth.code) {
-            return DNSPacket.RCode.NotAuth;
-        } else if (rcode == DNSPacket.RCode.NotZone.code) {
-            return DNSPacket.RCode.NotZone;
-        } else if (rcode == DNSPacket.RCode.DSOTYPENI.code) {
-            return DNSPacket.RCode.DSOTYPENI;
-        } else if (rcode == DNSPacket.RCode.BADVERS.code) {
-            return DNSPacket.RCode.BADVERS;
-        } else if (rcode == DNSPacket.RCode.BADKEY.code) {
-            return DNSPacket.RCode.BADKEY;
-        } else if (rcode == DNSPacket.RCode.BADTIME.code) {
-            return DNSPacket.RCode.BADTIME;
-        } else if (rcode == DNSPacket.RCode.BADMODE.code) {
-            return DNSPacket.RCode.BADMODE;
-        } else if (rcode == DNSPacket.RCode.BADNAME.code) {
-            return DNSPacket.RCode.BADNAME;
-        } else if (rcode == DNSPacket.RCode.BADALG.code) {
-            return DNSPacket.RCode.BADALG;
-        } else if (rcode == DNSPacket.RCode.BADTRUNC.code) {
-            return DNSPacket.RCode.BADTRUNC;
-        } else if (rcode == DNSPacket.RCode.BADCOOKIE.code) {
-            return DNSPacket.RCode.BADCOOKIE;
-        } else {
-            throw new InvalidDNSPacketException("unknown rcode: " + rcode);
+        DNSPacket.RCode[] rCodeArr = DNSPacket.RCode.values();
+        for (DNSPacket.RCode r : rCodeArr) {
+            if (r.code == rcode) {
+                return r;
+            }
         }
+        throw new InvalidDNSPacketException("unknown rcode: " + rcode);
     }
 
     public static String parseDomainName(ByteArray data, ByteArray rawPacket, int[] offsetHolder) {
@@ -300,62 +256,20 @@ public class Formatter {
         return name;
     }
 
-    public static DNSType parseQuestionType(int qtype) throws InvalidDNSPacketException {
-        if (qtype == DNSType.AXFR.code) {
-            return DNSType.AXFR;
-        } else if (qtype == DNSType.MAILB.code) {
-            return DNSType.MAILB;
-        } else if (qtype == DNSType.MAILA.code) {
-            return DNSType.MAILA;
-        } else if (qtype == DNSType.ANY.code) {
-            return DNSType.ANY;
-        } else {
-            return parseType(qtype);
+    public static DNSType parseType(int type, boolean question) throws InvalidDNSPacketException {
+        DNSType[] typeArr = DNSType.values();
+        for (DNSType t : typeArr) {
+            if (t.code == type) {
+                if (!question) {
+                    if (t.question) {
+                        throw new InvalidDNSPacketException("the type " + t + " is only allowed for questions");
+                    }
+                }
+                return t;
+            }
         }
-    }
-
-    public static DNSType parseType(int type) throws InvalidDNSPacketException {
-        if (type == DNSType.A.code) {
-            return DNSType.A;
-        } else if (type == DNSType.NS.code) {
-            return DNSType.NS;
-        } else if (type == DNSType.MD.code) {
-            return DNSType.MD;
-        } else if (type == DNSType.MF.code) {
-            return DNSType.MF;
-        } else if (type == DNSType.CNAME.code) {
-            return DNSType.CNAME;
-        } else if (type == DNSType.SOA.code) {
-            return DNSType.SOA;
-        } else if (type == DNSType.MB.code) {
-            return DNSType.MB;
-        } else if (type == DNSType.MG.code) {
-            return DNSType.MG;
-        } else if (type == DNSType.MR.code) {
-            return DNSType.MR;
-        } else if (type == DNSType.NULL.code) {
-            return DNSType.NULL;
-        } else if (type == DNSType.WKS.code) {
-            return DNSType.WKS;
-        } else if (type == DNSType.PTR.code) {
-            return DNSType.PTR;
-        } else if (type == DNSType.HINFO.code) {
-            return DNSType.HINFO;
-        } else if (type == DNSType.MINFO.code) {
-            return DNSType.MINFO;
-        } else if (type == DNSType.MX.code) {
-            return DNSType.MX;
-        } else if (type == DNSType.TXT.code) {
-            return DNSType.TXT;
-        } else if (type == DNSType.AAAA.code) {
-            return DNSType.AAAA;
-        } else if (type == DNSType.SRV.code) {
-            return DNSType.SRV;
-        } else if (type == DNSType.OPT.code) {
-            return DNSType.OPT;
-        } else {
-            return DNSType.OTHER;
-        }
+        // there are so many types for us to record, so allow unknown classes
+        return DNSType.OTHER;
     }
 
     public static int parseHeader(DNSPacket packet, ByteArray data) throws InvalidDNSPacketException {
@@ -398,26 +312,19 @@ public class Formatter {
         return 12;
     }
 
-    public static DNSClass parseQuestionClass(int qclass) throws InvalidDNSPacketException {
-        if (qclass == DNSClass.ANY.code) {
-            return DNSClass.ANY;
-        } else if (qclass == DNSClass.NONE.code) {
-            return DNSClass.NONE;
-        } else {
-            return parseClass(qclass);
+    private static DNSClass parseClass(int clazz, boolean question) throws InvalidDNSPacketException {
+        DNSClass[] classArr = DNSClass.values();
+        for (DNSClass c : classArr) {
+            if (c.code == clazz) {
+                if (!question) {
+                    if (c.question) {
+                        throw new InvalidDNSPacketException("the class " + c + " is only allowed for questions");
+                    }
+                }
+                return c;
+            }
         }
-    }
-
-    private static DNSClass parseClass(int clazz) throws InvalidDNSPacketException {
-        if (clazz == DNSClass.IN.code) {
-            return DNSClass.IN;
-        } else if (clazz == DNSClass.CH.code) {
-            return DNSClass.CH;
-        } else if (clazz == DNSClass.HS.code) {
-            return DNSClass.HS;
-        } else {
-            throw new InvalidDNSPacketException("unknown class: " + clazz);
-        }
+        throw new InvalidDNSPacketException("unknown class: " + clazz);
     }
 
     public static int parseQuestion(DNSQuestion q, ByteArray data, ByteArray rawPacket) throws InvalidDNSPacketException {
@@ -426,8 +333,8 @@ public class Formatter {
         int offset = offsetHolder[0];
         int qtype = data.uint16(offset);
         int qclass = data.uint16(offset + 2);
-        q.qtype = parseQuestionType(qtype);
-        q.qclass = parseQuestionClass(qclass);
+        q.qtype = parseType(qtype, true);
+        q.qclass = parseClass(qclass, true);
         return offset + 4;
     }
 
@@ -439,11 +346,11 @@ public class Formatter {
         int clazz = data.uint16(offset + 2);
         int ttl = data.int32(offset + 4);
         int rdlen = data.uint16(offset + 8);
-        r.type = parseType(type);
+        r.type = parseType(type, false);
         if (r.type == DNSType.OPT) {
             r.clazz = DNSClass.NOT_CLASS; // this field is not class
         } else {
-            r.clazz = parseClass(clazz);
+            r.clazz = parseClass(clazz, false);
         }
         r.ttl = ttl;
         r.rdlen = rdlen;
