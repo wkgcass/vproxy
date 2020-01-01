@@ -1,6 +1,9 @@
 package vproxy.dns;
 
+import vfd.FDProvider;
 import vfd.FDs;
+import vfd.VFDConfig;
+import vfd.jdk.ChannelFDs;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
@@ -37,8 +40,17 @@ public abstract class AbstractResolver implements Resolver {
         synchronized (AbstractResolver.class) {
             if (defaultResolver != null)
                 return defaultResolver;
+            // the fstack is usually exposed to public network
+            // and services usually do dns resolving in the idc network, which will fail if use fstack to do resolve
+            // so we start the resolver using traditional network stack
+            FDs fds;
+            if (VFDConfig.useFStack) {
+                fds = ChannelFDs.get();
+            } else {
+                fds = FDProvider.get().getProvided();
+            }
             try {
-                defaultResolver = new VResolver("Resolver");
+                defaultResolver = new VResolver("Resolver", fds);
             } catch (IOException e) {
                 throw new RuntimeException("create resolver failed");
             }

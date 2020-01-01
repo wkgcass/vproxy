@@ -9,9 +9,14 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
+import vproxy.connection.Protocol;
+import vproxy.connection.ServerSock;
 import vproxy.dns.Resolver;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
+import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
@@ -177,8 +182,10 @@ public class Simple {
             Application.get().certKeyHolder.add("crt", certpath, keypath);
         }
         // create group
-        Application.get().upstreamHolder.add("collection");
-        ServerGroup group = Application.get().serverGroupHolder.add("backend",
+        final String upstreamName = "collection";
+        final String serverGroupName = "my.service.local";
+        Application.get().upstreamHolder.add(upstreamName);
+        ServerGroup group = Application.get().serverGroupHolder.add(serverGroupName,
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr);
         int svrCnt = 0;
@@ -195,19 +202,40 @@ public class Simple {
                 group.add("backend" + (++svrCnt), svr.host, new InetSocketAddress(addr, svr.port), 10);
             }
         }
-        Application.get().upstreamHolder.get("collection").add(group, 10);
+        Application.get().upstreamHolder.get(upstreamName).add(group, 10);
         // create lb
         Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
             new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port),
-            Application.get().upstreamHolder.get("collection"),
+            Application.get().upstreamHolder.get(upstreamName),
             60_000,
             4096,
             4096,
             protocol,
             certpath == null ? null : new CertKey[]{Application.get().certKeyHolder.get("crt")},
             SecurityGroup.allowAll());
+
+        // might be able to run dns?
+        Logger.alert("try to launch dns server on 53 (optional)");
+        // try to bind 53 first
+        boolean launchUdp = true;
+        InetSocketAddress dnsBind = new InetSocketAddress(Utils.l3addr(0, 0, 0, 0), 53);
+        try {
+            ServerSock.checkBind(Protocol.UDP, dnsBind);
+        } catch (IOException ignore) {
+            Logger.warn(LogType.ALERT, "unable to bind :53 UDP, dns server will not start");
+            launchUdp = false;
+        }
+        if (launchUdp) {
+            Application.get().dnsServerHolder.add(
+                "dns0",
+                dnsBind,
+                Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
+                Application.get().upstreamHolder.get(upstreamName),
+                0);
+        }
+
         // done
 
         System.err.print(Shutdown.currentConfig());
@@ -220,6 +248,9 @@ public class Simple {
         }
 
         // show that everything is running
-        System.out.println("launched");
+        System.out.println("tcp-lb launched");
+        if (launchUdp) {
+            System.out.println("dns-server launched");
+        }
     }
 }

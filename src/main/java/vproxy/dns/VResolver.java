@@ -1,7 +1,7 @@
 package vproxy.dns;
 
 import vfd.DatagramFD;
-import vfd.FDProvider;
+import vfd.FDs;
 import vproxy.util.Callback;
 import vproxy.util.Utils;
 
@@ -32,14 +32,14 @@ public class VResolver extends AbstractResolver {
     private Map<String, InetAddress> hosts;
     private final DNSClient client;
 
-    public VResolver(String alias) throws IOException {
-        super(alias, FDProvider.get().getProvided());
+    public VResolver(String alias, FDs fds) throws IOException {
+        super(alias, fds);
         this.hosts = Resolver.getHosts();
 
         DatagramFD sock = null;
         DNSClient client = null;
         try {
-            sock = FDProvider.get().openDatagramFD();
+            sock = fds.openDatagramFD();
             sock.configureBlocking(false);
             sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0)); // bind any port
             client = new DNSClient(loop.getSelectorEventLoop(), sock, Resolver.getNameServers(), DNS_REQ_TIMEOUT, MAX_RETRY);

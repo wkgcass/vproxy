@@ -3,6 +3,7 @@ package vproxy.test.cases;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import vfd.FDProvider;
 import vproxy.dns.*;
 import vproxy.dns.rdata.*;
 import vproxy.selector.SelectorEventLoop;
@@ -25,7 +26,7 @@ public class TestResolver {
     @Before
     public void setUp() throws IOException {
         loop = SelectorEventLoop.open();
-        resolver = new VResolver("TestResolver" + ((int) (Math.random() * 10000)));
+        resolver = new VResolver("TestResolver" + ((int) (Math.random() * 10000)), FDProvider.get().getProvided());
         resolver.start();
     }
 
