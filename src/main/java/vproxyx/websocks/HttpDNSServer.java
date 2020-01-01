@@ -79,37 +79,88 @@ public class HttpDNSServer extends DNSServer {
         if (res != null && !res.isEmpty()) {
             return res;
         }
+        List<Record> ret = new ArrayList<>();
+        InetAddress localAddr = getLocalAddressFor(remote);
         switch (domain) {
             case "socks5.agent":
-                if (config.getSocks5ListenPort() != 0) {
-                    return Collections.singletonList(
-                        new Record(getLocalAddressFor(remote), config.getSocks5ListenPort())
-                    );
+                Record r = getSocks5Record(localAddr);
+                if (r != null) {
+                    ret.add(r);
                 }
                 break;
             case "httpconnect.agent":
-                if (config.getHttpConnectListenPort() != 0) {
-                    return Collections.singletonList(
-                        new Record(getLocalAddressFor(remote), config.getHttpConnectListenPort())
-                    );
+                r = getHttpConnectRecord(localAddr);
+                if (r != null) {
+                    ret.add(r);
                 }
                 break;
             case "ss.agent":
-                if (config.getSsListenPort() != 0) {
-                    return Collections.singletonList(
-                        new Record(getLocalAddressFor(remote), config.getSsListenPort())
-                    );
+                r = getSsRecord(localAddr);
+                if (r != null) {
+                    ret.add(r);
                 }
                 break;
             case "pac.agent":
-                if (config.getPacServerPort() != 0) {
-                    return Collections.singletonList(
-                        new Record(getLocalAddressFor(remote), config.getPacServerPort())
-                    );
+                r = getPacServerRecord(localAddr);
+                if (r != null) {
+                    ret.add(r);
                 }
                 break;
+            case "dns.agent":
+                r = getDNSServerRecord(localAddr);
+                if (r != null) {
+                    ret.add(r);
+                }
+                break;
+            case "agent":
+                r = getSocks5Record(localAddr);
+                if (r != null) ret.add(r);
+                r = getHttpConnectRecord(localAddr);
+                if (r != null) ret.add(r);
+                r = getSsRecord(localAddr);
+                if (r != null) ret.add(r);
+                r = getPacServerRecord(localAddr);
+                if (r != null) ret.add(r);
+                r = getDNSServerRecord(localAddr);
+                if (r != null) ret.add(r);
+                break;
         }
-        return null;
+        return ret;
+    }
+
+    private Record getSocks5Record(InetAddress localAddr) {
+        if (config.getSocks5ListenPort() == 0) {
+            return null;
+        }
+        return new Record(localAddr, config.getSocks5ListenPort(), "socks5.agent.vproxy.local");
+    }
+
+    private Record getHttpConnectRecord(InetAddress localAddr) {
+        if (config.getHttpConnectListenPort() == 0) {
+            return null;
+        }
+        return new Record(localAddr, config.getHttpConnectListenPort(), "httpconnect.agent.vproxy.local");
+    }
+
+    private Record getSsRecord(InetAddress localAddr) {
+        if (config.getSsListenPort() == 0) {
+            return null;
+        }
+        return new Record(localAddr, config.getSsListenPort(), "ss.agent.vproxy.local");
+    }
+
+    private Record getPacServerRecord(InetAddress localAddr) {
+        if (config.getPacServerPort() == 0) {
+            return null;
+        }
+        return new Record(localAddr, config.getPacServerPort(), "pac.agent.vproxy.local");
+    }
+
+    private Record getDNSServerRecord(InetAddress localAddr) {
+        if (config.getDnsListenPort() == 0) {
+            return null;
+        }
+        return new Record(localAddr, config.getDnsListenPort(), "dns.agent.vproxy.local");
     }
 
     @Override

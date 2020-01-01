@@ -186,7 +186,7 @@ public class DNSServer {
                     RData rdata;
                     if (type == DNSType.SRV) {
                         SRV srv = new SRV();
-                        srv.priority = 50; // this value not used for now
+                        srv.priority = 0; // this value not used for now
                         srv.port = record.port;
                         srv.weight = record.weight;
                         srv.target =

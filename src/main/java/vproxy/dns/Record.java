@@ -21,6 +21,10 @@ public class Record {
         this(target, port, 0);
     }
 
+    public Record(InetAddress target, int port, String name) {
+        this(target, port, 0, name);
+    }
+
     public Record(InetSocketAddress target, int weight) {
         this(target.getAddress(), target.getPort(), weight);
     }
