@@ -117,7 +117,6 @@ public class Discovery {
             assert Logger.lowLevelDebug("received external data, expected to be node existence msg: " + s);
             JSON.Object json;
             {
-                //noinspection rawtypes
                 JSON.Instance inst;
                 try {
                     inst = JSON.parse(s);
@@ -572,7 +571,6 @@ public class Discovery {
         server.all("/*", Tool.bodyJsonHandler());
         server.put("/discovery/api/v1/exchange/:type", rctx -> {
             assert Logger.lowLevelDebug("received exchange request: " + rctx.param("type") + " " + rctx.get(Tool.bodyJson));
-            //noinspection rawtypes
             JSON.Instance inst = rctx.get(Tool.bodyJson);
             if (inst == null) {
                 rctx.response().status(400).end("{\"code\":400,\"message\":\"request body should not be null\"}");
@@ -587,7 +585,6 @@ public class Discovery {
                 for (NodeDataHandler h : externalHandlers) {
                     if (h.canHandle(type)) {
                         found = true;
-                        //noinspection rawtypes
                         h.handle(1, type, inst, new Callback<>() {
                             @Override
                             protected void onSucceeded(JSON.Instance value) {
@@ -793,7 +790,6 @@ public class Discovery {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, "the node-exchange request failed");
                 return;
             }
-            //noinspection rawtypes
             JSON.Instance inst = resp.bodyAsJson();
             if (inst == null) {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, "the node-exchange response body is empty");

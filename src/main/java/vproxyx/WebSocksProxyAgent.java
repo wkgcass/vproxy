@@ -118,7 +118,6 @@ public class WebSocksProxyAgent {
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(configProcessor);
         // initiate the agent
         // --------- port,   handler,         isGateway
-        //noinspection rawtypes
         List<Tuple3<Integer, ProtocolHandler, Boolean>> handlers = new LinkedList<>();
         if (configProcessor.getSocks5ListenPort() != 0) {
             handlers.add(new Tuple3<>(
@@ -142,12 +141,9 @@ public class WebSocksProxyAgent {
             ));
         }
 
-        //noinspection rawtypes
         for (Tuple3<Integer, ProtocolHandler, Boolean> tuple : handlers) {
             int port = tuple._1;
-            //noinspection rawtypes
             ProtocolHandler handler = tuple._2;
-            //noinspection rawtypes
             ConnectorGen connGen = new ConnectorGen() {
                 @Override
                 public Type type() {
