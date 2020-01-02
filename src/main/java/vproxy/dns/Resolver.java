@@ -46,7 +46,7 @@ public interface Resolver {
         List<InetSocketAddress> ret = getNameServersFromFile();
         if (ret.isEmpty()) {
             ret = new ArrayList<>(2);
-            Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
+            Logger.trace(LogType.ALERT, "using 8.8.8.8 and 8.8.4.4 as name servers");
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
         }
@@ -69,7 +69,7 @@ public interface Resolver {
             Logger.shouldNotHappen("still getting FileNotFoundException while the file existence is already checked: " + f, e);
             return Collections.emptyList();
         }
-        Logger.alert("trying to get name servers from " + f.getAbsolutePath());
+        Logger.trace(LogType.ALERT, "trying to get name servers from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             List<InetSocketAddress> ret = new ArrayList<>();

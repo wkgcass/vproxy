@@ -48,7 +48,7 @@ public class DNSClient {
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
 
-        Logger.alert("using " + initialNameServers + " as name servers");
+        Logger.trace(LogType.ALERT, "using " + initialNameServers + " as name servers");
     }
 
     private static SelectorEventLoop getDefaultSelectorEventLoop() {
@@ -131,7 +131,7 @@ public class DNSClient {
         }
         this.nameServers = nameServers;
 
-        Logger.alert("using " + nameServers + " as name servers");
+        Logger.trace(LogType.ALERT, "using " + nameServers + " as name servers");
     }
 
     private class Request<RETURN, EXCEPTION extends IOException> {
