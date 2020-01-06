@@ -103,8 +103,9 @@ public interface Resolver {
                             continue;
                         }
                     }
-                    // need to check whether it's reachable
-                    {
+                    // need to check whether it's reachable if it's not windows
+                    // isReachable() does not work properly on windows
+                    if (!System.getProperty("os.name", "").toLowerCase().contains("win")) {
                         boolean reachable;
                         try {
                             reachable = addr.getAddress().isReachable(100);
