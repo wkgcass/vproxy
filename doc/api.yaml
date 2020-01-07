@@ -1,0 +1,1853 @@
+swagger: "2.0"
+info:
+  description: "The vproxy http controller api."
+  version: "1.0.0"
+  title: "vproxy"
+basePath: "/api/v1/module"
+schemes:
+- "http"
+########################
+# Begin Generated Code #
+########################
+tags:
+- name: "tcp-lb"
+  description: "tcp loadbalancer"
+- name: "socks5-server"
+  description: "socks5 server"
+- name: "dns-server"
+  description: "dns server"
+- name: "event-loop-group"
+  description: "a group of event loop(s)"
+- name: "event-loop"
+  description: "event loop (thread with a selector)"
+- name: "upstream"
+  description: "the upstream servers, containing server-group(s)"
+- name: "server-group"
+  description: "a group of server(s)"
+- name: "server"
+  description: "a remote endpoint"
+- name: "security-group"
+  description: "a group of security-group-rule(s)"
+- name: "security-group-rule"
+  description: "a rule for accessible or forbidden remote/local address(es)"
+- name: "smart-group-delegate"
+  description: "a binding for a server group and endpoints in a service"
+- name: "smart-node-delegate"
+  description: "a registered record for an endpoint in a service"
+- name: "cert-key"
+  description: "a pem format cert(s)/key tuple"
+
+paths:
+  /tcp-lb:
+    get:
+      tags:
+      - "tcp-lb"
+      summary: "retrieve tcp-lb list"
+      operationId: "listTcpLb"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/TcpLb'
+    post:
+      tags:
+      - "tcp-lb"
+      summary: "add tcp-lb"
+      operationId: "addTcpLb"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/TcpLbCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /tcp-lb/{tl}:
+    get:
+      tags:
+      - "tcp-lb"
+      summary: "get tcp-lb"
+      operationId: "getTcpLb"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "tl"
+        in: "path"
+        description: "name of the tcp-lb"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/TcpLb'
+# {{{[[[
+    put:
+      tags:
+      - "tcp-lb"
+      summary: "update tcp-lb"
+      operationId: "updateTcpLb"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "tl"
+        in: "path"
+        description: "name of the tcp-lb"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/TcpLbUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "TcpLb not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "tcp-lb"
+      summary: "remove tcp-lb"
+      operationId: "removeTcpLb"
+      parameters:
+      - name: "tl"
+        in: "path"
+        description: "name of the tcp-lb"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "TcpLb not found"
+  /tcp-lb/{tl}/detail:
+    get:
+      tags:
+      - "tcp-lb"
+      summary: "get detailed info of one tcp-lb"
+      operationId: "describeTcpLb"
+      parameters:
+      - name: "tl"
+        in: "path"
+        description: "name of the tcp-lb"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/TcpLbDetail'
+  /socks5-server:
+    get:
+      tags:
+      - "socks5-server"
+      summary: "retrieve socks5-server list"
+      operationId: "listSocks5Server"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Socks5Server'
+    post:
+      tags:
+      - "socks5-server"
+      summary: "add socks5-server"
+      operationId: "addSocks5Server"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/Socks5ServerCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /socks5-server/{socks5}:
+    get:
+      tags:
+      - "socks5-server"
+      summary: "get socks5-server"
+      operationId: "getSocks5Server"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "socks5"
+        in: "path"
+        description: "name of the socks5-server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/Socks5Server'
+# {{{[[[
+    put:
+      tags:
+      - "socks5-server"
+      summary: "update socks5-server"
+      operationId: "updateSocks5Server"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "socks5"
+        in: "path"
+        description: "name of the socks5-server"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/Socks5ServerUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "Socks5Server not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "socks5-server"
+      summary: "remove socks5-server"
+      operationId: "removeSocks5Server"
+      parameters:
+      - name: "socks5"
+        in: "path"
+        description: "name of the socks5-server"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "Socks5Server not found"
+  /socks5-server/{socks5}/detail:
+    get:
+      tags:
+      - "socks5-server"
+      summary: "get detailed info of one socks5-server"
+      operationId: "describeSocks5Server"
+      parameters:
+      - name: "socks5"
+        in: "path"
+        description: "name of the socks5-server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/Socks5ServerDetail'
+  /dns-server:
+    get:
+      tags:
+      - "dns-server"
+      summary: "retrieve dns-server list"
+      operationId: "listDnsServer"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/DnsServer'
+    post:
+      tags:
+      - "dns-server"
+      summary: "add dns-server"
+      operationId: "addDnsServer"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/DnsServerCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /dns-server/{dns}:
+    get:
+      tags:
+      - "dns-server"
+      summary: "get dns-server"
+      operationId: "getDnsServer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "dns"
+        in: "path"
+        description: "name of the dns-server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/DnsServer'
+# {{{[[[
+    put:
+      tags:
+      - "dns-server"
+      summary: "update dns-server"
+      operationId: "updateDnsServer"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "dns"
+        in: "path"
+        description: "name of the dns-server"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/DnsServerUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "DnsServer not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "dns-server"
+      summary: "remove dns-server"
+      operationId: "removeDnsServer"
+      parameters:
+      - name: "dns"
+        in: "path"
+        description: "name of the dns-server"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "DnsServer not found"
+  /dns-server/{dns}/detail:
+    get:
+      tags:
+      - "dns-server"
+      summary: "get detailed info of one dns-server"
+      operationId: "describeDnsServer"
+      parameters:
+      - name: "dns"
+        in: "path"
+        description: "name of the dns-server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/DnsServerDetail'
+  /event-loop-group/{elg}/event-loop:
+    get:
+      tags:
+      - "event-loop"
+      summary: "retrieve event-loop list from event-loop-group"
+      operationId: "listEventLoop"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/EventLoop'
+    post:
+      tags:
+      - "event-loop"
+      summary: "add event-loop into event-loop-group"
+      operationId: "addEventLoop"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/EventLoopCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /event-loop-group/{elg}/event-loop/{el}:
+    get:
+      tags:
+      - "event-loop"
+      summary: "get event-loop in event-loop-group"
+      operationId: "getEventLoop"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      - name: "el"
+        in: "path"
+        description: "name of the event-loop"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/EventLoop'
+
+    delete:
+      tags:
+      - "event-loop"
+      summary: "remove event-loop from event-loop-group"
+      operationId: "removeEventLoop"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      - name: "el"
+        in: "path"
+        description: "name of the event-loop"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "EventLoop not found"
+  /event-loop-group/{elg}/event-loop/{el}/detail:
+    get:
+      tags:
+      - "event-loop"
+      summary: "get detailed info of one event-loop in event-loop-group"
+      operationId: "describeEventLoop"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      - name: "el"
+        in: "path"
+        description: "name of the event-loop"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/EventLoopDetail'
+  /event-loop-group:
+    get:
+      tags:
+      - "event-loop-group"
+      summary: "retrieve event-loop-group list"
+      operationId: "listEventLoopGroup"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/EventLoopGroup'
+    post:
+      tags:
+      - "event-loop-group"
+      summary: "add event-loop-group"
+      operationId: "addEventLoopGroup"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/EventLoopGroupCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /event-loop-group/{elg}:
+    get:
+      tags:
+      - "event-loop-group"
+      summary: "get event-loop-group"
+      operationId: "getEventLoopGroup"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/EventLoopGroup'
+
+    delete:
+      tags:
+      - "event-loop-group"
+      summary: "remove event-loop-group"
+      operationId: "removeEventLoopGroup"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "EventLoopGroup not found"
+  /event-loop-group/{elg}/detail:
+    get:
+      tags:
+      - "event-loop-group"
+      summary: "get detailed info of one event-loop-group"
+      operationId: "describeEventLoopGroup"
+      parameters:
+      - name: "elg"
+        in: "path"
+        description: "name of the event-loop-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/EventLoopGroupDetail'
+  /upstream/{ups}/server-group:
+    get:
+      tags:
+      - "server-group"
+      summary: "retrieve server-group list from upstream"
+      operationId: "listServerGroupInUpstream"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ServerGroupInUpstream'
+    post:
+      tags:
+      - "server-group"
+      summary: "add server-group into upstream"
+      operationId: "addServerGroupInUpstream"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerGroupInUpstreamCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /upstream/{ups}/server-group/{sg}:
+    get:
+      tags:
+      - "server-group"
+      summary: "get server-group in upstream"
+      operationId: "getServerGroupInUpstream"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/ServerGroupInUpstream'
+# {{{[[[
+    put:
+      tags:
+      - "server-group"
+      summary: "update server-group in upstream"
+      operationId: "updateServerGroupInUpstream"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerGroupInUpstreamUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "ServerGroupInUpstream not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "server-group"
+      summary: "remove server-group from upstream"
+      operationId: "removeServerGroupInUpstream"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "ServerGroupInUpstream not found"
+  /upstream/{ups}/server-group/{sg}/detail:
+    get:
+      tags:
+      - "server-group"
+      summary: "get detailed info of one server-group in upstream"
+      operationId: "describeServerGroupInUpstream"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/ServerGroupInUpstreamDetail'
+  /upstream:
+    get:
+      tags:
+      - "upstream"
+      summary: "retrieve upstream list"
+      operationId: "listUpstream"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Upstream'
+    post:
+      tags:
+      - "upstream"
+      summary: "add upstream"
+      operationId: "addUpstream"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/UpstreamCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /upstream/{ups}:
+    get:
+      tags:
+      - "upstream"
+      summary: "get upstream"
+      operationId: "getUpstream"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/Upstream'
+
+    delete:
+      tags:
+      - "upstream"
+      summary: "remove upstream"
+      operationId: "removeUpstream"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "Upstream not found"
+  /upstream/{ups}/detail:
+    get:
+      tags:
+      - "upstream"
+      summary: "get detailed info of one upstream"
+      operationId: "describeUpstream"
+      parameters:
+      - name: "ups"
+        in: "path"
+        description: "name of the upstream"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/UpstreamDetail'
+  /server-group/{sg}/server:
+    get:
+      tags:
+      - "server"
+      summary: "retrieve server list from server-group"
+      operationId: "listServer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/Server'
+    post:
+      tags:
+      - "server"
+      summary: "add server into server-group"
+      operationId: "addServer"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /server-group/{sg}/server/{svr}:
+    get:
+      tags:
+      - "server"
+      summary: "get server in server-group"
+      operationId: "getServer"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - name: "svr"
+        in: "path"
+        description: "name of the server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/Server'
+# {{{[[[
+    put:
+      tags:
+      - "server"
+      summary: "update server in server-group"
+      operationId: "updateServer"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - name: "svr"
+        in: "path"
+        description: "name of the server"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "Server not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "server"
+      summary: "remove server from server-group"
+      operationId: "removeServer"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - name: "svr"
+        in: "path"
+        description: "name of the server"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "Server not found"
+  /server-group/{sg}/server/{svr}/detail:
+    get:
+      tags:
+      - "server"
+      summary: "get detailed info of one server in server-group"
+      operationId: "describeServer"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - name: "svr"
+        in: "path"
+        description: "name of the server"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/ServerDetail'
+  /server-group:
+    get:
+      tags:
+      - "server-group"
+      summary: "retrieve server-group list"
+      operationId: "listServerGroup"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/ServerGroup'
+    post:
+      tags:
+      - "server-group"
+      summary: "add server-group"
+      operationId: "addServerGroup"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerGroupCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /server-group/{sg}:
+    get:
+      tags:
+      - "server-group"
+      summary: "get server-group"
+      operationId: "getServerGroup"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/ServerGroup'
+# {{{[[[
+    put:
+      tags:
+      - "server-group"
+      summary: "update server-group"
+      operationId: "updateServerGroup"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/ServerGroupUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "ServerGroup not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "server-group"
+      summary: "remove server-group"
+      operationId: "removeServerGroup"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "ServerGroup not found"
+  /server-group/{sg}/detail:
+    get:
+      tags:
+      - "server-group"
+      summary: "get detailed info of one server-group"
+      operationId: "describeServerGroup"
+      parameters:
+      - name: "sg"
+        in: "path"
+        description: "name of the server-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/ServerGroupDetail'
+  /security-group/{secg}/security-group-rule:
+    get:
+      tags:
+      - "security-group-rule"
+      summary: "retrieve security-group-rule list from security-group"
+      operationId: "listSecurityGroupRule"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SecurityGroupRule'
+    post:
+      tags:
+      - "security-group-rule"
+      summary: "add security-group-rule into security-group"
+      operationId: "addSecurityGroupRule"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/SecurityGroupRuleCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /security-group/{secg}/security-group-rule/{secgr}:
+    get:
+      tags:
+      - "security-group-rule"
+      summary: "get security-group-rule in security-group"
+      operationId: "getSecurityGroupRule"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      - name: "secgr"
+        in: "path"
+        description: "name of the security-group-rule"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SecurityGroupRule'
+
+    delete:
+      tags:
+      - "security-group-rule"
+      summary: "remove security-group-rule from security-group"
+      operationId: "removeSecurityGroupRule"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      - name: "secgr"
+        in: "path"
+        description: "name of the security-group-rule"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "SecurityGroupRule not found"
+  /security-group/{secg}/security-group-rule/{secgr}/detail:
+    get:
+      tags:
+      - "security-group-rule"
+      summary: "get detailed info of one security-group-rule in security-group"
+      operationId: "describeSecurityGroupRule"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      - name: "secgr"
+        in: "path"
+        description: "name of the security-group-rule"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SecurityGroupRuleDetail'
+  /security-group:
+    get:
+      tags:
+      - "security-group"
+      summary: "retrieve security-group list"
+      operationId: "listSecurityGroup"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SecurityGroup'
+    post:
+      tags:
+      - "security-group"
+      summary: "add security-group"
+      operationId: "addSecurityGroup"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/SecurityGroupCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /security-group/{secg}:
+    get:
+      tags:
+      - "security-group"
+      summary: "get security-group"
+      operationId: "getSecurityGroup"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SecurityGroup'
+# {{{[[[
+    put:
+      tags:
+      - "security-group"
+      summary: "update security-group"
+      operationId: "updateSecurityGroup"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/SecurityGroupUpdate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "SecurityGroup not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "security-group"
+      summary: "remove security-group"
+      operationId: "removeSecurityGroup"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "SecurityGroup not found"
+  /security-group/{secg}/detail:
+    get:
+      tags:
+      - "security-group"
+      summary: "get detailed info of one security-group"
+      operationId: "describeSecurityGroup"
+      parameters:
+      - name: "secg"
+        in: "path"
+        description: "name of the security-group"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SecurityGroupDetail'
+
+######################
+# End Generated Code #
+######################
+
+definitions:
+  Protocol:
+    type: "string"
+    enum:
+      - tcp
+      - http
+      - h2
+      - http/1.x
+      - framed-int32
+      - dubbo
+  CheckProtocol:
+    type: string
+    description: "default: tcp"
+    enum:
+      - tcp
+      - none
+  SecurityGroupProtocol:
+    type: string
+    enum:
+      - TCP
+      - UDP
+  ServerGroupMethod:
+    type: string
+    description: "default: wrr"
+    enum:
+      - wrr
+      - wlc
+      - source
+  Rule:
+    type: string
+    enum:
+      - allow
+      - deny
+  TcpLb:
+    type: "object"
+    required:
+      - "name"
+      - "address"
+      - "backend"
+    properties:
+      name:
+        type: "string"
+      address:
+        type: "string"
+        description: "binding l4addr"
+      backend:
+        type: "string"
+        description: "upstream reference for backend servers"
+      protocol:
+        $ref: '#/definitions/Protocol'
+      acceptorLoopGroup:
+        type: "string"
+        description: "event loop group for accepting connections"
+      workerLoopGroup:
+        type: "string"
+        description: "event loop group for handling netflow"
+      inBufferSize:
+        type: "integer"
+        description: "input buffer size"
+      outBufferSize:
+        type: "integer"
+        description: "output buffer size"
+      listOfCertKey:
+        type: "array"
+        items:
+          type: "string"
+          description: "cert-key reference for enabling TLS"
+      securityGroup:
+        type: "string"
+        description: "security group reference for access control"
+  TcpLbCreate:
+    $ref: '#/definitions/TcpLb'
+  TcpLbUpdate:
+    type: "object"
+    properties:
+      inBufferSize:
+        type: "integer"
+      outBufferSize:
+        type: "integer"
+      securityGroup:
+        type: "string"
+        description: "security group reference for access control"
+  TcpLbDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "l4addr"
+      backend:
+        $ref: '#/definitions/UpstreamDetail'
+      protocol:
+        $ref: '#/definitions/Protocol'
+      acceptorLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+      workerLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+      inBufferSize:
+        type: integer
+        description: "input buffer size"
+      outBufferSize:
+        type: integer
+        description: "output buffer size"
+      listOfCertKey:
+        type: array
+        items:
+          $ref: '#/definitions/CertKeyDetail'
+      securityGroup:
+        $ref: '#/definitions/SecurityGroupDetail'
+  Socks5Server:
+    type: object
+    required:
+      - name
+      - address
+      - backend
+    properties:
+      name:
+        type: string
+      address:
+        type: "string"
+        description: "binding l4addr"
+      backend:
+        type: "string"
+        description: "upstream reference for backend servers"
+      acceptorLoopGroup:
+        type: "string"
+        description: "event loop group for accepting connections"
+      workerLoopGroup:
+        type: "string"
+        description: "event loop group for handling netflow"
+      inBufferSize:
+        type: "integer"
+        description: "input buffer size"
+      outBufferSize:
+        type: "integer"
+        description: "output buffer size"
+      securityGroup:
+        type: "string"
+        description: "security group reference for access control"
+      allowNonBackend:
+        type: boolean
+        description: "allow or disallow to proxy to non-backend endpoints"
+  Socks5ServerCreate:
+    $ref: '#/definitions/Socks5Server'
+  Socks5ServerUpdate:
+    type: object
+    properties:
+      inBufferSize:
+        type: integer
+      outBufferSize:
+        type: integer
+      securityGroup:
+        type: string
+        description: "security group reference for access control"
+      allowNonBackend:
+        type: boolean
+        description: "allow or disallow to proxy to non-backend endpoints"
+  Socks5ServerDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: "string"
+        description: "binding l4addr"
+      backend:
+        $ref: '#/definitions/UpstreamDetail'
+      acceptorLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+      workerLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+      inBufferSize:
+        type: "integer"
+        description: "input buffer size"
+      outBufferSize:
+        type: "integer"
+        description: "output buffer size"
+      securityGroup:
+        $ref: '#/definitions/SecurityGroupDetail'
+      allowNonBackend:
+        type: boolean
+        description: "allow or disallow to proxy to non-backend endpoints"
+  DnsServer:
+    type: object
+    required:
+      - name
+      - address
+      - rrsets
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "binding l4addr"
+      rrsets:
+        type: string
+        description: "answer records"
+      ttl:
+        type: integer
+        description: "ttl of answer records"
+      eventLoopGroup:
+        type: string
+        description: "reference to the running event loop group"
+  DnsServerCreate:
+    $ref: '#/definitions/DnsServer'
+  DnsServerUpdate:
+    type: object
+    properties:
+      ttl:
+        type: integer
+        description: "ttl of answer records"
+  DnsServerDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "binding l4addr"
+      rrsets:
+        $ref: '#/definitions/UpstreamDetail'
+      ttl:
+        type: integer
+        description: "ttl of answer records"
+      eventLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+  EventLoopGroup:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+  EventLoopGroupCreate:
+    $ref: '#/definitions/EventLoopGroup'
+  EventLoopGroupDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      eventLoopList:
+        type: array
+        items:
+          $ref: '#/definitions/EventLoopDetail'
+  EventLoop:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+  EventLoopCreate:
+    $ref: '#/definitions/EventLoop'
+  EventLoopDetail:
+    type: object
+    properties:
+      name:
+        type: string
+  ServerGroupInUpstream:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+      weight:
+        type: integer
+        description: "weight of the server-group in the upstream"
+  ServerGroupInUpstreamCreate:
+    $ref: '#/definitions/ServerGroupInUpstream'
+  ServerGroupInUpstreamUpdate:
+    type: object
+    properties:
+      weight:
+        type: integer
+        description: "weight of the server-group in the upstream"
+  ServerGroupInUpstreamDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      weight:
+        type: integer
+        description: "weight of the server-group in the upstream"
+      serverGroup:
+        type: array
+        items:
+          $ref: '#/definitions/ServerGroupDetail'
+  Upstream:
+    type: object
+    required:
+      - name
+    properties:
+      name:
+        type: string
+  UpstreamCreate:
+    $ref: '#/definitions/Upstream'
+  UpstreamDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      serverGroupList:
+        type: "array"
+        items:
+          $ref: '#/definitions/ServerGroupInUpstreamDetail'
+  ServerGroup:
+    type: object
+    required:
+      - name
+      - timeout
+      - period
+      - up
+      - down
+    properties:
+      name:
+        type: string
+      timeout:
+        type: integer
+        description: "health check timeout (ms) (timeout before getting expected response)"
+      period:
+        type: integer
+        description: "health check period (ms) (interval between two hc)"
+      up:
+        type: integer
+        description: "consider the server healthy after $up times of successful health checks"
+      down:
+        type: integer
+        description: "consider the server unhealthy after $down times of failed health checks"
+      protocol:
+        $ref: '#/definitions/CheckProtocol'
+      method:
+        $ref: '#/definitions/ServerGroupMethod'
+      eventLoopGroup:
+        type: string
+        description: "the event loop group to run health check on"
+  ServerGroupCreate:
+    $ref: "#/definitions/ServerGroup"
+  ServerGroupUpdate:
+    type: object
+    properties:
+      timeout:
+        type: integer
+        description: "health check timeout (ms) (timeout before getting expected response)"
+      period:
+        type: integer
+        description: "health check period (ms) (interval between two hc)"
+      up:
+        type: integer
+        description: "consider the server healthy after $up times of successful health checks"
+      down:
+        type: integer
+        description: "consider the server unhealthy after $down times of failed health checks"
+      protocol:
+        $ref: '#/definitions/CheckProtocol'
+      method:
+        $ref: '#/definitions/ServerGroupMethod'
+  ServerGroupDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      timeout:
+        type: integer
+        description: "health check timeout (ms) (timeout before getting expected response)"
+      period:
+        type: integer
+        description: "health check period (ms) (interval between two hc)"
+      up:
+        type: integer
+        description: "consider the server healthy after $up times of successful health checks"
+      down:
+        type: integer
+        description: "consider the server unhealthy after $down times of failed health checks"
+      protocol:
+        $ref: '#/definitions/CheckProtocol'
+      method:
+        $ref: '#/definitions/ServerGroupMethod'
+      eventLoopGroup:
+        $ref: '#/definitions/EventLoopGroupDetail'
+      serverList:
+        type: "array"
+        items:
+          $ref: '#/definitions/ServerDetail'
+  Server:
+    type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "l4addr or hostname:port"
+      weight:
+        type: integer
+        description: "weight of the server in the server group"
+      currentIp:
+        type: string
+        description: "l3addr"
+      status:
+        type: string
+        enum:
+          - UP
+          - DOWN
+  ServerCreate:
+    type: object
+    required:
+      - name
+      - address
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "l4addr or hostname:port"
+      weight:
+        type: integer
+        description: "weight of the server in the server group"
+  ServerUpdate:
+    type: object
+    properties:
+      weight:
+        type: integer
+        description: "weight of the server in the server group"
+  ServerDetail:
+    $ref: '#/definitions/Server'
+  CertKeyDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      certs:
+        type: array
+        items:
+          type: string
+          description: "file path of the cert"
+      certPemList:
+        type: array
+        items:
+          type: string
+          description: "pem content of the cert"
+      key:
+        type: string
+        description: "file path of the key"
+      keySHA1:
+        type: string
+        description: "SHA1 of the pem of the key"
+  SecurityGroup:
+    type: object
+    required:
+      - name
+      - defaultRule
+    properties:
+      name:
+        type: string
+      defaultRule:
+        $ref: '#/definitions/Rule'
+  SecurityGroupCreate:
+    $ref: "#/definitions/SecurityGroup"
+  SecurityGroupUpdate:
+    type: object
+    properties:
+      defaultRule:
+        $ref: '#/definitions/Rule'
+  SecurityGroupDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      defaultRule:
+        $ref: '#/definitions/Rule'
+      ruleList:
+        type: array
+        items:
+          $ref: '#/definitions/SecurityGroupRuleDetail'
+  SecurityGroupRule:
+    type: object
+    required:
+      - name
+      - clientNetwork
+      - protocol
+      - serverPortMin
+      - serverPortMax
+      - rule
+    properties:
+      name:
+        type: string
+      clientNetwork:
+        type: string
+        description: "network cidr"
+      protocol:
+        $ref: '#/definitions/SecurityGroupProtocol'
+      serverPortMin:
+        type: integer
+        description: "port range min for server (inclusive)"
+      serverPortMax:
+        type: integer
+        description: "port range max for server (inclusive)"
+      rule:
+        $ref: '#/definitions/Rule'
+  SecurityGroupRuleCreate:
+    $ref: "#/definitions/SecurityGroupRule"
+  SecurityGroupRuleDetail:
+    $ref: "#/definitions/SecurityGroupRule"
+
+
+
+

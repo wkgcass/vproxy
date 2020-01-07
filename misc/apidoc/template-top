@@ -1,0 +1,118 @@
+  /{{res-url-name}}:
+    get:
+      tags:
+      - "{{res-url-name}}"
+      summary: "retrieve {{res-url-name}} list"
+      operationId: "list{{res-name}}"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/{{res-name}}'
+    post:
+      tags:
+      - "{{res-url-name}}"
+      summary: "add {{res-url-name}}"
+      operationId: "add{{res-name}}"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/{{res-name}}Create'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /{{res-url-name}}/{{{res-short-name}}}:
+    get:
+      tags:
+      - "{{res-url-name}}"
+      summary: "get {{res-url-name}}"
+      operationId: "get{{res-name}}"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "{{res-short-name}}"
+        in: "path"
+        description: "name of the {{res-url-name}}"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/{{res-name}}'
+# {{{[[[
+    put:
+      tags:
+      - "{{res-url-name}}"
+      summary: "update {{res-url-name}}"
+      operationId: "update{{res-name}}"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "{{res-short-name}}"
+        in: "path"
+        description: "name of the {{res-url-name}}"
+        required: true
+        type: string
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/{{res-name}}Update'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "{{res-name}} not found"
+# ]]]}}}
+    delete:
+      tags:
+      - "{{res-url-name}}"
+      summary: "remove {{res-url-name}}"
+      operationId: "remove{{res-name}}"
+      parameters:
+      - name: "{{res-short-name}}"
+        in: "path"
+        description: "name of the {{res-url-name}}"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "{{res-name}} not found"
+  /{{res-url-name}}/{{{res-short-name}}}/detail:
+    get:
+      tags:
+      - "{{res-url-name}}"
+      summary: "get detailed info of one {{res-url-name}}"
+      operationId: "describe{{res-name}}"
+      parameters:
+      - name: "{{res-short-name}}"
+        in: "path"
+        description: "name of the {{res-url-name}}"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/{{res-name}}Detail'
