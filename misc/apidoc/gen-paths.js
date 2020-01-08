@@ -43,6 +43,8 @@ var resources = [
   sgInUps, ups,
   svrInSg, sg,
   secgr, secg,
+  sgd, snd,
+  ck,
 ];
 
 var tagResults = [];

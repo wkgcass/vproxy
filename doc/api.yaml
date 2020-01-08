@@ -1338,6 +1338,276 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupDetail'
+  /smart-group-delegate:
+    get:
+      tags:
+      - "smart-group-delegate"
+      summary: "retrieve smart-group-delegate list"
+      operationId: "listSmartGroupDelegate"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SmartGroupDelegate'
+    post:
+      tags:
+      - "smart-group-delegate"
+      summary: "add smart-group-delegate"
+      operationId: "addSmartGroupDelegate"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/SmartGroupDelegateCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /smart-group-delegate/{sgd}:
+    get:
+      tags:
+      - "smart-group-delegate"
+      summary: "get smart-group-delegate"
+      operationId: "getSmartGroupDelegate"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "sgd"
+        in: "path"
+        description: "name of the smart-group-delegate"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SmartGroupDelegate'
+
+    delete:
+      tags:
+      - "smart-group-delegate"
+      summary: "remove smart-group-delegate"
+      operationId: "removeSmartGroupDelegate"
+      parameters:
+      - name: "sgd"
+        in: "path"
+        description: "name of the smart-group-delegate"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "SmartGroupDelegate not found"
+  /smart-group-delegate/{sgd}/detail:
+    get:
+      tags:
+      - "smart-group-delegate"
+      summary: "get detailed info of one smart-group-delegate"
+      operationId: "describeSmartGroupDelegate"
+      parameters:
+      - name: "sgd"
+        in: "path"
+        description: "name of the smart-group-delegate"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SmartGroupDelegateDetail'
+  /smart-node-delegate:
+    get:
+      tags:
+      - "smart-node-delegate"
+      summary: "retrieve smart-node-delegate list"
+      operationId: "listSmartNodeDelegate"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/SmartNodeDelegate'
+    post:
+      tags:
+      - "smart-node-delegate"
+      summary: "add smart-node-delegate"
+      operationId: "addSmartNodeDelegate"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/SmartNodeDelegateCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /smart-node-delegate/{snd}:
+    get:
+      tags:
+      - "smart-node-delegate"
+      summary: "get smart-node-delegate"
+      operationId: "getSmartNodeDelegate"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "snd"
+        in: "path"
+        description: "name of the smart-node-delegate"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SmartNodeDelegate'
+
+    delete:
+      tags:
+      - "smart-node-delegate"
+      summary: "remove smart-node-delegate"
+      operationId: "removeSmartNodeDelegate"
+      parameters:
+      - name: "snd"
+        in: "path"
+        description: "name of the smart-node-delegate"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "SmartNodeDelegate not found"
+  /smart-node-delegate/{snd}/detail:
+    get:
+      tags:
+      - "smart-node-delegate"
+      summary: "get detailed info of one smart-node-delegate"
+      operationId: "describeSmartNodeDelegate"
+      parameters:
+      - name: "snd"
+        in: "path"
+        description: "name of the smart-node-delegate"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/SmartNodeDelegateDetail'
+  /cert-key:
+    get:
+      tags:
+      - "cert-key"
+      summary: "retrieve cert-key list"
+      operationId: "listCertKey"
+      produces:
+      - "application/json"
+      responses:
+        200:
+          description: "ok"
+          schema:
+            type: array
+            items:
+              $ref: '#/definitions/CertKey'
+    post:
+      tags:
+      - "cert-key"
+      summary: "add cert-key"
+      operationId: "addCertKey"
+      consumes:
+      - "application/json"
+      produces:
+      - "application/json"
+      parameters:
+      - in: "body"
+        name: "body"
+        required: true
+        schema:
+          $ref: '#/definitions/CertKeyCreate'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+  /cert-key/{ck}:
+    get:
+      tags:
+      - "cert-key"
+      summary: "get cert-key"
+      operationId: "getCertKey"
+      produces:
+      - "application/json"
+      parameters:
+      - name: "ck"
+        in: "path"
+        description: "name of the cert-key"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/CertKey'
+
+    delete:
+      tags:
+      - "cert-key"
+      summary: "remove cert-key"
+      operationId: "removeCertKey"
+      parameters:
+      - name: "ck"
+        in: "path"
+        description: "name of the cert-key"
+        required: true
+        type: string
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "Invalid input"
+        404:
+          description: "CertKey not found"
+  /cert-key/{ck}/detail:
+    get:
+      tags:
+      - "cert-key"
+      summary: "get detailed info of one cert-key"
+      operationId: "describeCertKey"
+      parameters:
+      - name: "ck"
+        in: "path"
+        description: "name of the cert-key"
+        required: true
+        type: string
+      responses:
+        200:
+          description: "ok"
+          schema:
+            $ref: '#/definitions/CertKeyDetail'
 
 ######################
 # End Generated Code #
@@ -1355,7 +1625,8 @@ definitions:
       - dubbo
   CheckProtocol:
     type: string
-    description: "default: tcp"
+    description: "the protocol for health check"
+    default: tcp
     enum:
       - tcp
       - none
@@ -1366,7 +1637,8 @@ definitions:
       - UDP
   ServerGroupMethod:
     type: string
-    description: "default: wrr"
+    description: "the loadbalancing method"
+    default: wrr
     enum:
       - wrr
       - wlc
@@ -1376,6 +1648,13 @@ definitions:
     enum:
       - allow
       - deny
+  IPType:
+    type: string
+    description: "binds ipv4 or ipv6"
+    default: v4
+    enum:
+      - v4
+      - v6
   TcpLb:
     type: "object"
     required:
@@ -1598,10 +1877,7 @@ definitions:
   EventLoopCreate:
     $ref: '#/definitions/EventLoop'
   EventLoopDetail:
-    type: object
-    properties:
-      name:
-        type: string
+    $ref: '#/definitions/EventLoop'
   ServerGroupInUpstream:
     type: object
     required:
@@ -1629,9 +1905,7 @@ definitions:
         type: integer
         description: "weight of the server-group in the upstream"
       serverGroup:
-        type: array
-        items:
-          $ref: '#/definitions/ServerGroupDetail'
+        $ref: '#/definitions/ServerGroupDetail'
   Upstream:
     type: object
     required:
@@ -1769,6 +2043,25 @@ definitions:
         description: "weight of the server in the server group"
   ServerDetail:
     $ref: '#/definitions/Server'
+  CertKey:
+    type: object
+    required:
+      - name
+      - certs
+      - key
+    properties:
+      name:
+        type: string
+      certs:
+        type: array
+        items:
+          type: string
+          description: "file path of the cert"
+      key:
+        type: string
+        description: "file path of the key"
+  CertKeyCreate:
+    $ref: '#/definitions/CertKey'
   CertKeyDetail:
     type: object
     properties:
@@ -1847,6 +2140,96 @@ definitions:
     $ref: "#/definitions/SecurityGroupRule"
   SecurityGroupRuleDetail:
     $ref: "#/definitions/SecurityGroupRule"
+  SmartGroupDelegate:
+    type: object
+    required:
+      - name
+      - service
+      - zone
+      - handledGroup
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the watched service"
+      zone:
+        type: string
+        description: "name of the watched zone"
+      handledGroup:
+        type: string
+        description: "name of the delegated group"
+  SmartGroupDelegateCreate:
+    $ref: '#/definitions/SmartGroupDelegate'
+  SmartGroupDelegateDetail:
+    type: object
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the watched service"
+      zone:
+        type: string
+        description: "name of the watched zone"
+      handledGroup:
+        $ref: '#/definitions/ServerGroupDetail'
+  SmartNodeDelegate:
+    type: object
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the service to register application node into"
+      zone:
+        type: string
+        description: "name of the working zone"
+      nic:
+        type: string
+        description: "name of the nic which the application binds on"
+      ipType:
+        $ref: '#/definitions/IPType'
+      exposedPort:
+        type: integer
+        description: "port of the application"
+      weight:
+        type: integer
+        description: "weight of the application node in the service"
+      status:
+        type: string
+        enum:
+          - UP
+          - DOWN
+  SmartNodeDelegateCreate:
+    type: object
+    required:
+      - name
+      - service
+      - zone
+      - nic
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the service to register application node into"
+      zone:
+        type: string
+        description: "name of the working zone"
+      nic:
+        type: string
+        description: "name of the nic which the application binds on"
+      ipType:
+        $ref: '#/definitions/IPType'
+      exposedPort:
+        type: integer
+        description: "port of the application"
+      weight:
+        type: integer
+        description: "weight of the application node in the service"
+  SmartNodeDelegateDetail:
+    $ref: '#/definitions/SmartNodeDelegate'
 
 
 
