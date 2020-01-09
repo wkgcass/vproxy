@@ -1658,6 +1658,39 @@ definitions:
       - v6
   TcpLb:
     type: "object"
+    properties:
+      name:
+        type: "string"
+      address:
+        type: "string"
+        description: "binding l4addr"
+      backend:
+        type: "string"
+        description: "upstream reference for backend servers"
+      protocol:
+        $ref: '#/definitions/Protocol'
+      acceptorLoopGroup:
+        type: "string"
+        description: "event loop group for accepting connections"
+      workerLoopGroup:
+        type: "string"
+        description: "event loop group for handling netflow"
+      inBufferSize:
+        type: "integer"
+        description: "input buffer size"
+      outBufferSize:
+        type: "integer"
+        description: "output buffer size"
+      listOfCertKey:
+        type: "array"
+        items:
+          type: "string"
+          description: "cert-key reference for enabling TLS"
+      securityGroup:
+        type: "string"
+        description: "security group reference for access control"
+  TcpLbCreate:
+    type: "object"
     required:
       - "name"
       - "address"
@@ -1693,8 +1726,6 @@ definitions:
       securityGroup:
         type: "string"
         description: "security group reference for access control"
-  TcpLbCreate:
-    $ref: '#/definitions/TcpLb'
   TcpLbUpdate:
     type: "object"
     properties:
@@ -1735,6 +1766,35 @@ definitions:
         $ref: '#/definitions/SecurityGroupDetail'
   Socks5Server:
     type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: "string"
+        description: "binding l4addr"
+      backend:
+        type: "string"
+        description: "upstream reference for backend servers"
+      acceptorLoopGroup:
+        type: "string"
+        description: "event loop group for accepting connections"
+      workerLoopGroup:
+        type: "string"
+        description: "event loop group for handling netflow"
+      inBufferSize:
+        type: "integer"
+        description: "input buffer size"
+      outBufferSize:
+        type: "integer"
+        description: "output buffer size"
+      securityGroup:
+        type: "string"
+        description: "security group reference for access control"
+      allowNonBackend:
+        type: boolean
+        description: "allow or disallow to proxy to non-backend endpoints"
+  Socks5ServerCreate:
+    type: object
     required:
       - name
       - address
@@ -1766,8 +1826,6 @@ definitions:
       allowNonBackend:
         type: boolean
         description: "allow or disallow to proxy to non-backend endpoints"
-  Socks5ServerCreate:
-    $ref: '#/definitions/Socks5Server'
   Socks5ServerUpdate:
     type: object
     properties:
@@ -1808,6 +1866,23 @@ definitions:
         description: "allow or disallow to proxy to non-backend endpoints"
   DnsServer:
     type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "binding l4addr"
+      rrsets:
+        type: string
+        description: "answer records"
+      ttl:
+        type: integer
+        description: "ttl of answer records"
+      eventLoopGroup:
+        type: string
+        description: "reference to the running event loop group"
+  DnsServerCreate:
+    type: object
     required:
       - name
       - address
@@ -1827,8 +1902,6 @@ definitions:
       eventLoopGroup:
         type: string
         description: "reference to the running event loop group"
-  DnsServerCreate:
-    $ref: '#/definitions/DnsServer'
   DnsServerUpdate:
     type: object
     properties:
@@ -1852,13 +1925,16 @@ definitions:
         $ref: '#/definitions/EventLoopGroupDetail'
   EventLoopGroup:
     type: object
+    properties:
+      name:
+        type: string
+  EventLoopGroupCreate:
+    type: object
     required:
       - name
     properties:
       name:
         type: string
-  EventLoopGroupCreate:
-    $ref: '#/definitions/EventLoopGroup'
   EventLoopGroupDetail:
     type: object
     properties:
@@ -1870,16 +1946,30 @@ definitions:
           $ref: '#/definitions/EventLoopDetail'
   EventLoop:
     type: object
+    properties:
+      name:
+        type: string
+  EventLoopCreate:
+    type: object
     required:
       - name
     properties:
       name:
         type: string
-  EventLoopCreate:
-    $ref: '#/definitions/EventLoop'
   EventLoopDetail:
-    $ref: '#/definitions/EventLoop'
+    type: object
+    properties:
+      name:
+        type: string
   ServerGroupInUpstream:
+    type: object
+    properties:
+      name:
+        type: string
+      weight:
+        type: integer
+        description: "weight of the server-group in the upstream"
+  ServerGroupInUpstreamCreate:
     type: object
     required:
       - name
@@ -1889,8 +1979,6 @@ definitions:
       weight:
         type: integer
         description: "weight of the server-group in the upstream"
-  ServerGroupInUpstreamCreate:
-    $ref: '#/definitions/ServerGroupInUpstream'
   ServerGroupInUpstreamUpdate:
     type: object
     properties:
@@ -1909,13 +1997,16 @@ definitions:
         $ref: '#/definitions/ServerGroupDetail'
   Upstream:
     type: object
+    properties:
+      name:
+        type: string
+  UpstreamCreate:
+    type: object
     required:
       - name
     properties:
       name:
         type: string
-  UpstreamCreate:
-    $ref: '#/definitions/Upstream'
   UpstreamDetail:
     type: object
     properties:
@@ -1926,6 +2017,30 @@ definitions:
         items:
           $ref: '#/definitions/ServerGroupInUpstreamDetail'
   ServerGroup:
+    type: object
+    properties:
+      name:
+        type: string
+      timeout:
+        type: integer
+        description: "health check timeout (ms) (timeout before getting expected response)"
+      period:
+        type: integer
+        description: "health check period (ms) (interval between two hc)"
+      up:
+        type: integer
+        description: "consider the server healthy after $up times of successful health checks"
+      down:
+        type: integer
+        description: "consider the server unhealthy after $down times of failed health checks"
+      protocol:
+        $ref: '#/definitions/CheckProtocol'
+      method:
+        $ref: '#/definitions/ServerGroupMethod'
+      eventLoopGroup:
+        type: string
+        description: "the event loop group to run health check on"
+  ServerGroupCreate:
     type: object
     required:
       - name
@@ -1955,8 +2070,6 @@ definitions:
       eventLoopGroup:
         type: string
         description: "the event loop group to run health check on"
-  ServerGroupCreate:
-    $ref: "#/definitions/ServerGroup"
   ServerGroupUpdate:
     type: object
     properties:
@@ -2043,8 +2156,38 @@ definitions:
         type: integer
         description: "weight of the server in the server group"
   ServerDetail:
-    $ref: '#/definitions/Server'
+    type: object
+    properties:
+      name:
+        type: string
+      address:
+        type: string
+        description: "l4addr or hostname:port"
+      weight:
+        type: integer
+        description: "weight of the server in the server group"
+      currentIp:
+        type: string
+        description: "l3addr"
+      status:
+        type: string
+        enum:
+          - UP
+          - DOWN
   CertKey:
+    type: object
+    properties:
+      name:
+        type: string
+      certs:
+        type: array
+        items:
+          type: string
+          description: "file path of the cert"
+      key:
+        type: string
+        description: "file path of the key"
+  CertKeyCreate:
     type: object
     required:
       - name
@@ -2061,8 +2204,6 @@ definitions:
       key:
         type: string
         description: "file path of the key"
-  CertKeyCreate:
-    $ref: '#/definitions/CertKey'
   CertKeyDetail:
     type: object
     properties:
@@ -2086,6 +2227,13 @@ definitions:
         description: "SHA1 of the pem of the key"
   SecurityGroup:
     type: object
+    properties:
+      name:
+        type: string
+      defaultRule:
+        $ref: '#/definitions/Rule'
+  SecurityGroupCreate:
+    type: object
     required:
       - name
       - defaultRule
@@ -2094,8 +2242,6 @@ definitions:
         type: string
       defaultRule:
         $ref: '#/definitions/Rule'
-  SecurityGroupCreate:
-    $ref: "#/definitions/SecurityGroup"
   SecurityGroupUpdate:
     type: object
     properties:
@@ -2113,6 +2259,24 @@ definitions:
         items:
           $ref: '#/definitions/SecurityGroupRuleDetail'
   SecurityGroupRule:
+    type: object
+    properties:
+      name:
+        type: string
+      clientNetwork:
+        type: string
+        description: "network cidr"
+      protocol:
+        $ref: '#/definitions/SecurityGroupProtocol'
+      serverPortMin:
+        type: integer
+        description: "port range min for server (inclusive)"
+      serverPortMax:
+        type: integer
+        description: "port range max for server (inclusive)"
+      rule:
+        $ref: '#/definitions/Rule'
+  SecurityGroupRuleCreate:
     type: object
     required:
       - name
@@ -2137,11 +2301,39 @@ definitions:
         description: "port range max for server (inclusive)"
       rule:
         $ref: '#/definitions/Rule'
-  SecurityGroupRuleCreate:
-    $ref: "#/definitions/SecurityGroupRule"
   SecurityGroupRuleDetail:
-    $ref: "#/definitions/SecurityGroupRule"
+    type: object
+    properties:
+      name:
+        type: string
+      clientNetwork:
+        type: string
+        description: "network cidr"
+      protocol:
+        $ref: '#/definitions/SecurityGroupProtocol'
+      serverPortMin:
+        type: integer
+        description: "port range min for server (inclusive)"
+      serverPortMax:
+        type: integer
+        description: "port range max for server (inclusive)"
+      rule:
+        $ref: '#/definitions/Rule'
   SmartGroupDelegate:
+    type: object
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the watched service"
+      zone:
+        type: string
+        description: "name of the watched zone"
+      handledGroup:
+        type: string
+        description: "name of the delegated group"
+  SmartGroupDelegateCreate:
     type: object
     required:
       - name
@@ -2160,8 +2352,6 @@ definitions:
       handledGroup:
         type: string
         description: "name of the delegated group"
-  SmartGroupDelegateCreate:
-    $ref: '#/definitions/SmartGroupDelegate'
   SmartGroupDelegateDetail:
     type: object
     properties:
@@ -2230,7 +2420,32 @@ definitions:
         type: integer
         description: "weight of the application node in the service"
   SmartNodeDelegateDetail:
-    $ref: '#/definitions/SmartNodeDelegate'
+    type: object
+    properties:
+      name:
+        type: string
+      service:
+        type: string
+        description: "name of the service to register application node into"
+      zone:
+        type: string
+        description: "name of the working zone"
+      nic:
+        type: string
+        description: "name of the nic which the application binds on"
+      ipType:
+        $ref: '#/definitions/IPType'
+      exposedPort:
+        type: integer
+        description: "port of the application"
+      weight:
+        type: integer
+        description: "weight of the application node in the service"
+      status:
+        type: string
+        enum:
+          - UP
+          - DOWN
 
 
 
