@@ -3,6 +3,7 @@ info:
   description: "The vproxy http controller api."
   version: "1.0.0"
   title: "vproxy"
+host: "127.0.0.1:18776"
 basePath: "/api/v1/module"
 schemes:
 - "http"
