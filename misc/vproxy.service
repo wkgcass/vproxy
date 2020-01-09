@@ -10,7 +10,7 @@ Environment="PIDFILE=/run/vproxy.daemon.pid"
 # jvm options
 Environment="JVM_OPTS="
 # vproxy startup arguments
-Environment="ARGS=pidFile /run/vproxy.pid autoSaveFile /etc/vproxy/vproxy.conf load /etc/vproxy/vproxy.conf resp-controller 0.0.0.0:16379 123456 http-controller 0.0.0.0:18080 allowSystemCallInNonStdIOController"
+Environment="ARGS=pidFile /run/vproxy.pid autoSaveFile /etc/vproxy/vproxy.conf load /etc/vproxy/vproxy.conf resp-controller 0.0.0.0:16379 123456 http-controller 0.0.0.0:18776 allowSystemCallInNonStdIOController"
 # ExecStartPre=
 # no need to set ExecStartPre, the Daemon will execute check before launching the program
 ExecStart=/usr/bin/env ${JAVA_HOME}/bin/java -Xmx8m -Deploy=Daemon -jar $VPROXY_JAR ${JAVA_HOME}/bin/java $JVM_OPTS -jar $VPROXY_JAR $ARGS
