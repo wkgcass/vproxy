@@ -34,6 +34,9 @@ public abstract class AbstractResolver implements Resolver {
 
     private static volatile AbstractResolver defaultResolver;
 
+    static long fileNameServerUpdateTimestamp = 0; // set this field to -1 to indicate that the file not exists
+    static long fileHostUpdateTimestamp = 0;
+
     static Resolver getDefault() {
         if (defaultResolver != null)
             return defaultResolver;

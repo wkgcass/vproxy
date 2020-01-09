@@ -48,7 +48,7 @@ public class DNSClient {
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
 
-        Logger.trace(LogType.ALERT, "using " + initialNameServers + " as name servers");
+        Logger.alert("using " + initialNameServers + " as name servers");
     }
 
     private static SelectorEventLoop getDefaultSelectorEventLoop() {
@@ -129,9 +129,9 @@ public class DNSClient {
         if (nameServers.isEmpty()) {
             return;
         }
+        if (!this.nameServers.equals(nameServers))
+            Logger.alert("using " + nameServers + " as name servers");
         this.nameServers = nameServers;
-
-        Logger.trace(LogType.ALERT, "using " + nameServers + " as name servers");
     }
 
     private class Request<RETURN, EXCEPTION extends IOException> {

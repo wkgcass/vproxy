@@ -43,25 +43,54 @@ public interface Resolver {
     void stop() throws IOException;
 
     static List<InetSocketAddress> getNameServers() {
-        List<InetSocketAddress> ret = getNameServersFromFile();
+        File f = getNameServerFile();
+        boolean needLog = true;
+        if (f == null) {
+            if (AbstractResolver.fileNameServerUpdateTimestamp == -1) {
+                needLog = false;
+            } else {
+                AbstractResolver.fileNameServerUpdateTimestamp = -1;
+            }
+        } else {
+            long lastUpdate = f.lastModified();
+            if (AbstractResolver.fileNameServerUpdateTimestamp == lastUpdate) {
+                needLog = false;
+            } else {
+                AbstractResolver.fileNameServerUpdateTimestamp = lastUpdate;
+            }
+        }
+        List<InetSocketAddress> ret;
+        if (f == null) {
+            ret = Collections.emptyList();
+        } else {
+            ret = getNameServersFromFile(f, needLog);
+        }
         if (ret.isEmpty()) {
             ret = new ArrayList<>(2);
-            Logger.trace(LogType.ALERT, "using 8.8.8.8 and 8.8.4.4 as name servers");
+            if (needLog)
+                Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
             ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
         }
         return ret;
     }
 
-    private static List<InetSocketAddress> getNameServersFromFile() {
+    private static File getNameServerFile() {
         // try ~/resolv.conf for customized resolve configuration
         File f = new File(Utils.homefile("resolv.conf"));
-        if (!f.exists() || !f.isFile()) { // try linux|bsd resolve configuration
-            f = new File("/etc/resolv.conf");
+        if (f.exists() && f.isFile()) {
+            return f;
         }
-        if (!f.exists() || !f.isFile()) { // still not found
-            return Collections.emptyList();
+        // try linux|bsd resolve configuration
+        f = new File("/etc/resolv.conf");
+        if (f.exists() && f.isFile()) {
+            return f;
         }
+        // still not found
+        return null;
+    }
+
+    private static List<InetSocketAddress> getNameServersFromFile(File f, boolean needLog) {
         FileInputStream stream;
         try {
             stream = new FileInputStream(f);
@@ -69,7 +98,8 @@ public interface Resolver {
             Logger.shouldNotHappen("still getting FileNotFoundException while the file existence is already checked: " + f, e);
             return Collections.emptyList();
         }
-        Logger.trace(LogType.ALERT, "trying to get name servers from " + f.getAbsolutePath());
+        if (needLog)
+            Logger.alert("trying to get name servers from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             List<InetSocketAddress> ret = new ArrayList<>();
@@ -125,7 +155,8 @@ public interface Resolver {
                 }
             }
             if (!unreachable.isEmpty()) {
-                Logger.warn(LogType.ALERT, "some endpoints are unreachable and removed from the name server list: " + unreachable);
+                if (needLog)
+                    Logger.warn(LogType.ALERT, "some endpoints are unreachable and removed from the name server list: " + unreachable);
             }
             return ret;
         } finally {
@@ -155,7 +186,11 @@ public interface Resolver {
             Logger.shouldNotHappen("still getting FileNotFoundException while the file existence is already checked: " + f, e);
             return Collections.emptyMap();
         }
-        Logger.alert("trying to get hosts from " + f.getAbsolutePath());
+        boolean needLog = f.lastModified() != AbstractResolver.fileHostUpdateTimestamp;
+        AbstractResolver.fileHostUpdateTimestamp = f.lastModified();
+
+        if (needLog)
+            Logger.alert("trying to get hosts from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
             Map<String, InetAddress> ret = new HashMap<>();
