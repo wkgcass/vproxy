@@ -257,6 +257,7 @@ Create a dns server.
 * upstream (ups): The domains to be resolved.
 * ttl: *optional* The ttl of responded records. Default: 0
 * event-loop-group: *optional* Choose an event loop group to run the dns server. Default: (worker-elg)
+* security-group: *optional* The security group to use. Default: (allow-all)
 
 ```
 add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
@@ -268,6 +269,7 @@ add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
 Update config of a dns server.
 
 * ttl: *optional* The ttl of responded records. Default: not changed
+* security-group: *optional* The security group to use. Default: not changed
 
 ```
 update dns-server dns0 ttl 60
@@ -289,7 +291,7 @@ Retrieve detailed info of dns servers.
 
 ```
 list-detail dns-server
-1) "dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups"
+1) "dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups security-group (allow-all)"
 ```
 
 #### remove

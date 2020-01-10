@@ -67,13 +67,13 @@ public class HttpController {
                 .put("inBufferSize", 16384)
                 .put("outBufferSize", 16384)
                 .putArray("listOfCertKey", arr -> arr.add("alias of the cert-key to be used"))
-                .put("securityGroup", "alias of the security group")
+                .put("securityGroup", "alias of the security group, default: (allow-all)")
                 .build(),
             "name", "address", "backend"));
         server.put(moduleBase + "/tcp-lb/:tl", wrapAsync(this::updateTcpLb, new ObjectBuilder()
             .put("inBufferSize", 16384)
             .put("outBufferSize", 16384)
-            .put("securityGroup", "alias of the security group, default: (allow-all)")
+            .put("securityGroup", "alias of the security group")
             .build()));
         server.del(moduleBase + "/tcp-lb/:tl", wrapAsync(this::deleteTcpLb));
         // socks5-server
@@ -88,14 +88,14 @@ public class HttpController {
                 .put("workerLoopGroup", "the worker event loop")
                 .put("inBufferSize", 16384)
                 .put("outBufferSize", 16384)
-                .put("securityGroup", "alias of the security group")
+                .put("securityGroup", "alias of the security group, default: (allow-all)")
                 .put("allowNonBackend", false)
                 .build(),
             "name", "address", "backend"));
         server.put(moduleBase + "/socks5-server/:socks5", wrapAsync(this::updateSocks5Server, new ObjectBuilder()
             .put("inBufferSize", 16384)
             .put("outBufferSize", 16384)
-            .put("securityGroup", "alias of the security group, default: (allow-all)")
+            .put("securityGroup", "alias of the security group")
             .put("allowNonBackend", false)
             .build()));
         server.del(moduleBase + "/socks5-server/:socks5", wrapAsync(this::deleteSocks5Server));
@@ -109,10 +109,12 @@ public class HttpController {
                 .put("rrsets", "the servers to be resolved")
                 .put("eventLoopGroup", "the event loop group to run the dns server")
                 .put("ttl", 0)
+                .put("securityGroup", "alias of the security group, default: (allow-all)")
                 .build(),
             "name", "address", "backend"));
         server.put(moduleBase + "/dns-server/:dns", wrapAsync(this::updateDNSServer, new ObjectBuilder()
             .put("ttl", 0)
+            .put("securityGroup", "alias of the security group")
             .build()));
         server.del(moduleBase + "/dns-server/:dns", wrapAsync(this::deleteDNSServer));
         // event-loop
@@ -546,6 +548,10 @@ public class HttpController {
             options.add("ttl");
             options.add("" + body.getInt("ttl"));
         }
+        if (body.containsKey("securityGroup")) {
+            options.add("security-group");
+            options.add(body.getString("securityGroup"));
+        }
         utils.execute(cb, options);
     }
 
@@ -557,6 +563,10 @@ public class HttpController {
         if (body.containsKey("ttl")) {
             options.add("ttl");
             options.add("" + body.getInt("ttl"));
+        }
+        if (body.containsKey("securityGroup")) {
+            options.add("security-group");
+            options.add(body.getString("securityGroup"));
         }
         utils.execute(cb, options);
     }

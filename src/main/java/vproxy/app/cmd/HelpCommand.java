@@ -506,7 +506,7 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.upstream, "used as the backend servers")
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
-                    , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
+                    , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the socks5 server", "allow any")
                 ),
                 Arrays.asList(
                     new ResActFlagMan(FlagMan.allownonbackend, "allow to access non backend endpoints", false),
@@ -566,6 +566,7 @@ public class HelpCommand {
                     , new ResActParamMan(ParamMan.address, "the bind address of the socks5 server")
                     , new ResActParamMan(ParamMan.upstream, "the domains to be resolved")
                     , new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "0")
+                    , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the dns server", "allow any")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
@@ -576,6 +577,7 @@ public class HelpCommand {
             , new ResActMan(ActMan.update, "update config of a dns server",
                 Arrays.asList(
                     new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "not changed")
+                    , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
@@ -596,7 +598,7 @@ public class HelpCommand {
                 Collections.singletonList(
                     new Tuple<>(
                         "list-detail dns-server",
-                        "1) \"dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups\""
+                        "1) \"dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups security-group (allow-all)\""
                     )
                 ))
             , new ResActMan(ActMan.remove, "remove a dns server",

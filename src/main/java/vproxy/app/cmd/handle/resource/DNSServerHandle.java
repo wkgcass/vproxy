@@ -8,6 +8,7 @@ import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.TTLHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 import vproxy.util.Utils;
@@ -67,7 +68,13 @@ public class DNSServerHandle {
         } else {
             ttl = 0;
         }
-        Application.get().dnsServerHolder.add(alias, addr, eventLoopGroup, backend, ttl);
+        SecurityGroup secg;
+        if (cmd.args.containsKey(Param.secg)) {
+            secg = SecurityGroupHandle.get(cmd.args.get(Param.secg));
+        } else {
+            secg = SecurityGroup.allowAll();
+        }
+        Application.get().dnsServerHolder.add(alias, addr, eventLoopGroup, backend, ttl, secg);
     }
 
     public static void checkUpdateDNSServer(Command cmd) throws Exception {
@@ -80,6 +87,9 @@ public class DNSServerHandle {
 
         if (cmd.args.containsKey(Param.ttl)) {
             dnsServer.ttl = TTLHandle.get(cmd);
+        }
+        if (cmd.args.containsKey(Param.secg)) {
+            dnsServer.securityGroup = SecurityGroupHandle.get(cmd.args.get(Param.secg));
         }
     }
 
@@ -99,7 +109,8 @@ public class DNSServerHandle {
             return dnsServer.alias + " -> event-loop-group " + dnsServer.eventLoopGroup.alias
                 + " bind " + Utils.ipStr(dnsServer.bindAddress.getAddress().getAddress()) + ":" + dnsServer.bindAddress.getPort()
                 + " rrsets " + dnsServer.rrsets.alias
-                + " ttl " + dnsServer.ttl;
+                + " ttl " + dnsServer.ttl
+                + " security-group " + dnsServer.securityGroup.alias;
         }
     }
 }

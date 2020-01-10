@@ -437,6 +437,7 @@ class utils {
             .put("ttl", dns.ttl)
             .put("rrsets", dns.rrsets.alias)
             .put("eventLoopGroup", dns.eventLoopGroup.alias)
+            .put("securityGroup", dns.securityGroup.alias)
             .build();
     }
 
@@ -447,6 +448,7 @@ class utils {
             .put("ttl", dns.ttl)
             .putInst("rrsets", formatUpstreamDetail(dns.rrsets))
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(dns.eventLoopGroup))
+            .putInst("securityGroup", formatSecurityGroupDetail(dns.securityGroup))
             .build();
     }
 

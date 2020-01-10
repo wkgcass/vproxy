@@ -233,7 +233,8 @@ public class Simple {
                 dnsBind,
                 Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
                 Application.get().upstreamHolder.get(upstreamName),
-                0);
+                0,
+                SecurityGroup.allowAll());
         }
 
         // done

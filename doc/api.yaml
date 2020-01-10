@@ -6,47 +6,47 @@ info:
 host: "127.0.0.1:18776"
 basePath: "/api/v1/module"
 schemes:
-- "http"
+  - "http"
 ########################
 # Begin Generated Code #
 ########################
 tags:
-- name: "tcp-lb"
-  description: "tcp loadbalancer"
-- name: "socks5-server"
-  description: "socks5 server"
-- name: "dns-server"
-  description: "dns server"
-- name: "event-loop-group"
-  description: "a group of event loop(s)"
-- name: "event-loop"
-  description: "event loop (thread with a selector)"
-- name: "upstream"
-  description: "the upstream servers, containing server-group(s)"
-- name: "server-group"
-  description: "a group of server(s)"
-- name: "server"
-  description: "a remote endpoint"
-- name: "security-group"
-  description: "a group of security-group-rule(s)"
-- name: "security-group-rule"
-  description: "a rule for accessible or forbidden remote/local address(es)"
-- name: "smart-group-delegate"
-  description: "a binding for a server group and endpoints in a service"
-- name: "smart-node-delegate"
-  description: "a registered record for an endpoint in a service"
-- name: "cert-key"
-  description: "a pem format cert(s)/key tuple"
+  - name: "tcp-lb"
+    description: "tcp loadbalancer"
+  - name: "socks5-server"
+    description: "socks5 server"
+  - name: "dns-server"
+    description: "dns server"
+  - name: "event-loop-group"
+    description: "a group of event loop(s)"
+  - name: "event-loop"
+    description: "event loop (thread with a selector)"
+  - name: "upstream"
+    description: "the upstream servers, containing server-group(s)"
+  - name: "server-group"
+    description: "a group of server(s)"
+  - name: "server"
+    description: "a remote endpoint"
+  - name: "security-group"
+    description: "a group of security-group-rule(s)"
+  - name: "security-group-rule"
+    description: "a rule for accessible or forbidden remote/local address(es)"
+  - name: "smart-group-delegate"
+    description: "a binding for a server group and endpoints in a service"
+  - name: "smart-node-delegate"
+    description: "a registered record for an endpoint in a service"
+  - name: "cert-key"
+    description: "a pem format cert(s)/key tuple"
 
 paths:
   /tcp-lb:
     get:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "retrieve tcp-lb list"
       operationId: "listTcpLb"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -56,19 +56,19 @@ paths:
               $ref: '#/definitions/TcpLb'
     post:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "add tcp-lb"
       operationId: "addTcpLb"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/TcpLbCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/TcpLbCreate'
       responses:
         204:
           description: "ok"
@@ -77,43 +77,43 @@ paths:
   /tcp-lb/{tl}:
     get:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "get tcp-lb"
       operationId: "getTcpLb"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "tl"
-        in: "path"
-        description: "name of the tcp-lb"
-        required: true
-        type: string
+        - name: "tl"
+          in: "path"
+          description: "name of the tcp-lb"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/TcpLb'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "update tcp-lb"
       operationId: "updateTcpLb"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "tl"
-        in: "path"
-        description: "name of the tcp-lb"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/TcpLbUpdate'
+        - name: "tl"
+          in: "path"
+          description: "name of the tcp-lb"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/TcpLbUpdate'
       responses:
         204:
           description: "ok"
@@ -121,18 +121,18 @@ paths:
           description: "Invalid input"
         404:
           description: "TcpLb not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "remove tcp-lb"
       operationId: "removeTcpLb"
       parameters:
-      - name: "tl"
-        in: "path"
-        description: "name of the tcp-lb"
-        required: true
-        type: string
+        - name: "tl"
+          in: "path"
+          description: "name of the tcp-lb"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -143,15 +143,15 @@ paths:
   /tcp-lb/{tl}/detail:
     get:
       tags:
-      - "tcp-lb"
+        - "tcp-lb"
       summary: "get detailed info of one tcp-lb"
       operationId: "describeTcpLb"
       parameters:
-      - name: "tl"
-        in: "path"
-        description: "name of the tcp-lb"
-        required: true
-        type: string
+        - name: "tl"
+          in: "path"
+          description: "name of the tcp-lb"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -160,11 +160,11 @@ paths:
   /socks5-server:
     get:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "retrieve socks5-server list"
       operationId: "listSocks5Server"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -174,19 +174,19 @@ paths:
               $ref: '#/definitions/Socks5Server'
     post:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "add socks5-server"
       operationId: "addSocks5Server"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/Socks5ServerCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/Socks5ServerCreate'
       responses:
         204:
           description: "ok"
@@ -195,43 +195,43 @@ paths:
   /socks5-server/{socks5}:
     get:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "get socks5-server"
       operationId: "getSocks5Server"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "socks5"
-        in: "path"
-        description: "name of the socks5-server"
-        required: true
-        type: string
+        - name: "socks5"
+          in: "path"
+          description: "name of the socks5-server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/Socks5Server'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "update socks5-server"
       operationId: "updateSocks5Server"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "socks5"
-        in: "path"
-        description: "name of the socks5-server"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/Socks5ServerUpdate'
+        - name: "socks5"
+          in: "path"
+          description: "name of the socks5-server"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/Socks5ServerUpdate'
       responses:
         204:
           description: "ok"
@@ -239,18 +239,18 @@ paths:
           description: "Invalid input"
         404:
           description: "Socks5Server not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "remove socks5-server"
       operationId: "removeSocks5Server"
       parameters:
-      - name: "socks5"
-        in: "path"
-        description: "name of the socks5-server"
-        required: true
-        type: string
+        - name: "socks5"
+          in: "path"
+          description: "name of the socks5-server"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -261,15 +261,15 @@ paths:
   /socks5-server/{socks5}/detail:
     get:
       tags:
-      - "socks5-server"
+        - "socks5-server"
       summary: "get detailed info of one socks5-server"
       operationId: "describeSocks5Server"
       parameters:
-      - name: "socks5"
-        in: "path"
-        description: "name of the socks5-server"
-        required: true
-        type: string
+        - name: "socks5"
+          in: "path"
+          description: "name of the socks5-server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -278,11 +278,11 @@ paths:
   /dns-server:
     get:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "retrieve dns-server list"
       operationId: "listDnsServer"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -292,19 +292,19 @@ paths:
               $ref: '#/definitions/DnsServer'
     post:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "add dns-server"
       operationId: "addDnsServer"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/DnsServerCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/DnsServerCreate'
       responses:
         204:
           description: "ok"
@@ -313,43 +313,43 @@ paths:
   /dns-server/{dns}:
     get:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "get dns-server"
       operationId: "getDnsServer"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "dns"
-        in: "path"
-        description: "name of the dns-server"
-        required: true
-        type: string
+        - name: "dns"
+          in: "path"
+          description: "name of the dns-server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/DnsServer'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "update dns-server"
       operationId: "updateDnsServer"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "dns"
-        in: "path"
-        description: "name of the dns-server"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/DnsServerUpdate'
+        - name: "dns"
+          in: "path"
+          description: "name of the dns-server"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/DnsServerUpdate'
       responses:
         204:
           description: "ok"
@@ -357,18 +357,18 @@ paths:
           description: "Invalid input"
         404:
           description: "DnsServer not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "remove dns-server"
       operationId: "removeDnsServer"
       parameters:
-      - name: "dns"
-        in: "path"
-        description: "name of the dns-server"
-        required: true
-        type: string
+        - name: "dns"
+          in: "path"
+          description: "name of the dns-server"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -379,15 +379,15 @@ paths:
   /dns-server/{dns}/detail:
     get:
       tags:
-      - "dns-server"
+        - "dns-server"
       summary: "get detailed info of one dns-server"
       operationId: "describeDnsServer"
       parameters:
-      - name: "dns"
-        in: "path"
-        description: "name of the dns-server"
-        required: true
-        type: string
+        - name: "dns"
+          in: "path"
+          description: "name of the dns-server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -396,17 +396,17 @@ paths:
   /event-loop-group/{elg}/event-loop:
     get:
       tags:
-      - "event-loop"
+        - "event-loop"
       summary: "retrieve event-loop list from event-loop-group"
       operationId: "listEventLoop"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -416,24 +416,24 @@ paths:
               $ref: '#/definitions/EventLoop'
     post:
       tags:
-      - "event-loop"
+        - "event-loop"
       summary: "add event-loop into event-loop-group"
       operationId: "addEventLoop"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/EventLoopCreate'
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/EventLoopCreate'
       responses:
         204:
           description: "ok"
@@ -442,22 +442,22 @@ paths:
   /event-loop-group/{elg}/event-loop/{el}:
     get:
       tags:
-      - "event-loop"
+        - "event-loop"
       summary: "get event-loop in event-loop-group"
       operationId: "getEventLoop"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
-      - name: "el"
-        in: "path"
-        description: "name of the event-loop"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
+        - name: "el"
+          in: "path"
+          description: "name of the event-loop"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -466,20 +466,20 @@ paths:
 
     delete:
       tags:
-      - "event-loop"
+        - "event-loop"
       summary: "remove event-loop from event-loop-group"
       operationId: "removeEventLoop"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
-      - name: "el"
-        in: "path"
-        description: "name of the event-loop"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
+        - name: "el"
+          in: "path"
+          description: "name of the event-loop"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -490,20 +490,20 @@ paths:
   /event-loop-group/{elg}/event-loop/{el}/detail:
     get:
       tags:
-      - "event-loop"
+        - "event-loop"
       summary: "get detailed info of one event-loop in event-loop-group"
       operationId: "describeEventLoop"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
-      - name: "el"
-        in: "path"
-        description: "name of the event-loop"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
+        - name: "el"
+          in: "path"
+          description: "name of the event-loop"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -512,11 +512,11 @@ paths:
   /event-loop-group:
     get:
       tags:
-      - "event-loop-group"
+        - "event-loop-group"
       summary: "retrieve event-loop-group list"
       operationId: "listEventLoopGroup"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -526,19 +526,19 @@ paths:
               $ref: '#/definitions/EventLoopGroup'
     post:
       tags:
-      - "event-loop-group"
+        - "event-loop-group"
       summary: "add event-loop-group"
       operationId: "addEventLoopGroup"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/EventLoopGroupCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/EventLoopGroupCreate'
       responses:
         204:
           description: "ok"
@@ -547,17 +547,17 @@ paths:
   /event-loop-group/{elg}:
     get:
       tags:
-      - "event-loop-group"
+        - "event-loop-group"
       summary: "get event-loop-group"
       operationId: "getEventLoopGroup"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -566,15 +566,15 @@ paths:
 
     delete:
       tags:
-      - "event-loop-group"
+        - "event-loop-group"
       summary: "remove event-loop-group"
       operationId: "removeEventLoopGroup"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -585,15 +585,15 @@ paths:
   /event-loop-group/{elg}/detail:
     get:
       tags:
-      - "event-loop-group"
+        - "event-loop-group"
       summary: "get detailed info of one event-loop-group"
       operationId: "describeEventLoopGroup"
       parameters:
-      - name: "elg"
-        in: "path"
-        description: "name of the event-loop-group"
-        required: true
-        type: string
+        - name: "elg"
+          in: "path"
+          description: "name of the event-loop-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -602,17 +602,17 @@ paths:
   /upstream/{ups}/server-group:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "retrieve server-group list from upstream"
       operationId: "listServerGroupInUpstream"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -622,24 +622,24 @@ paths:
               $ref: '#/definitions/ServerGroupInUpstream'
     post:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "add server-group into upstream"
       operationId: "addServerGroupInUpstream"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerGroupInUpstreamCreate'
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerGroupInUpstreamCreate'
       responses:
         204:
           description: "ok"
@@ -648,53 +648,53 @@ paths:
   /upstream/{ups}/server-group/{sg}:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "get server-group in upstream"
       operationId: "getServerGroupInUpstream"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupInUpstream'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "update server-group in upstream"
       operationId: "updateServerGroupInUpstream"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerGroupInUpstreamUpdate'
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerGroupInUpstreamUpdate'
       responses:
         204:
           description: "ok"
@@ -702,23 +702,23 @@ paths:
           description: "Invalid input"
         404:
           description: "ServerGroupInUpstream not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "remove server-group from upstream"
       operationId: "removeServerGroupInUpstream"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -729,20 +729,20 @@ paths:
   /upstream/{ups}/server-group/{sg}/detail:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "get detailed info of one server-group in upstream"
       operationId: "describeServerGroupInUpstream"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -751,11 +751,11 @@ paths:
   /upstream:
     get:
       tags:
-      - "upstream"
+        - "upstream"
       summary: "retrieve upstream list"
       operationId: "listUpstream"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -765,19 +765,19 @@ paths:
               $ref: '#/definitions/Upstream'
     post:
       tags:
-      - "upstream"
+        - "upstream"
       summary: "add upstream"
       operationId: "addUpstream"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/UpstreamCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/UpstreamCreate'
       responses:
         204:
           description: "ok"
@@ -786,17 +786,17 @@ paths:
   /upstream/{ups}:
     get:
       tags:
-      - "upstream"
+        - "upstream"
       summary: "get upstream"
       operationId: "getUpstream"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -805,15 +805,15 @@ paths:
 
     delete:
       tags:
-      - "upstream"
+        - "upstream"
       summary: "remove upstream"
       operationId: "removeUpstream"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -824,15 +824,15 @@ paths:
   /upstream/{ups}/detail:
     get:
       tags:
-      - "upstream"
+        - "upstream"
       summary: "get detailed info of one upstream"
       operationId: "describeUpstream"
       parameters:
-      - name: "ups"
-        in: "path"
-        description: "name of the upstream"
-        required: true
-        type: string
+        - name: "ups"
+          in: "path"
+          description: "name of the upstream"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -841,17 +841,17 @@ paths:
   /server-group/{sg}/server:
     get:
       tags:
-      - "server"
+        - "server"
       summary: "retrieve server list from server-group"
       operationId: "listServer"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -861,24 +861,24 @@ paths:
               $ref: '#/definitions/Server'
     post:
       tags:
-      - "server"
+        - "server"
       summary: "add server into server-group"
       operationId: "addServer"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerCreate'
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerCreate'
       responses:
         204:
           description: "ok"
@@ -887,53 +887,53 @@ paths:
   /server-group/{sg}/server/{svr}:
     get:
       tags:
-      - "server"
+        - "server"
       summary: "get server in server-group"
       operationId: "getServer"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - name: "svr"
-        in: "path"
-        description: "name of the server"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - name: "svr"
+          in: "path"
+          description: "name of the server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/Server'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "server"
+        - "server"
       summary: "update server in server-group"
       operationId: "updateServer"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - name: "svr"
-        in: "path"
-        description: "name of the server"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerUpdate'
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - name: "svr"
+          in: "path"
+          description: "name of the server"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerUpdate'
       responses:
         204:
           description: "ok"
@@ -941,23 +941,23 @@ paths:
           description: "Invalid input"
         404:
           description: "Server not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "server"
+        - "server"
       summary: "remove server from server-group"
       operationId: "removeServer"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - name: "svr"
-        in: "path"
-        description: "name of the server"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - name: "svr"
+          in: "path"
+          description: "name of the server"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -968,20 +968,20 @@ paths:
   /server-group/{sg}/server/{svr}/detail:
     get:
       tags:
-      - "server"
+        - "server"
       summary: "get detailed info of one server in server-group"
       operationId: "describeServer"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - name: "svr"
-        in: "path"
-        description: "name of the server"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - name: "svr"
+          in: "path"
+          description: "name of the server"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -990,11 +990,11 @@ paths:
   /server-group:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "retrieve server-group list"
       operationId: "listServerGroup"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -1004,19 +1004,19 @@ paths:
               $ref: '#/definitions/ServerGroup'
     post:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "add server-group"
       operationId: "addServerGroup"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerGroupCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerGroupCreate'
       responses:
         204:
           description: "ok"
@@ -1025,43 +1025,43 @@ paths:
   /server-group/{sg}:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "get server-group"
       operationId: "getServerGroup"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroup'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "update server-group"
       operationId: "updateServerGroup"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/ServerGroupUpdate'
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/ServerGroupUpdate'
       responses:
         204:
           description: "ok"
@@ -1069,18 +1069,18 @@ paths:
           description: "Invalid input"
         404:
           description: "ServerGroup not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "remove server-group"
       operationId: "removeServerGroup"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1091,15 +1091,15 @@ paths:
   /server-group/{sg}/detail:
     get:
       tags:
-      - "server-group"
+        - "server-group"
       summary: "get detailed info of one server-group"
       operationId: "describeServerGroup"
       parameters:
-      - name: "sg"
-        in: "path"
-        description: "name of the server-group"
-        required: true
-        type: string
+        - name: "sg"
+          in: "path"
+          description: "name of the server-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1108,17 +1108,17 @@ paths:
   /security-group/{secg}/security-group-rule:
     get:
       tags:
-      - "security-group-rule"
+        - "security-group-rule"
       summary: "retrieve security-group-rule list from security-group"
       operationId: "listSecurityGroupRule"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1128,24 +1128,24 @@ paths:
               $ref: '#/definitions/SecurityGroupRule'
     post:
       tags:
-      - "security-group-rule"
+        - "security-group-rule"
       summary: "add security-group-rule into security-group"
       operationId: "addSecurityGroupRule"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/SecurityGroupRuleCreate'
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/SecurityGroupRuleCreate'
       responses:
         204:
           description: "ok"
@@ -1154,22 +1154,22 @@ paths:
   /security-group/{secg}/security-group-rule/{secgr}:
     get:
       tags:
-      - "security-group-rule"
+        - "security-group-rule"
       summary: "get security-group-rule in security-group"
       operationId: "getSecurityGroupRule"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
-      - name: "secgr"
-        in: "path"
-        description: "name of the security-group-rule"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
+        - name: "secgr"
+          in: "path"
+          description: "name of the security-group-rule"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1178,20 +1178,20 @@ paths:
 
     delete:
       tags:
-      - "security-group-rule"
+        - "security-group-rule"
       summary: "remove security-group-rule from security-group"
       operationId: "removeSecurityGroupRule"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
-      - name: "secgr"
-        in: "path"
-        description: "name of the security-group-rule"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
+        - name: "secgr"
+          in: "path"
+          description: "name of the security-group-rule"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1202,20 +1202,20 @@ paths:
   /security-group/{secg}/security-group-rule/{secgr}/detail:
     get:
       tags:
-      - "security-group-rule"
+        - "security-group-rule"
       summary: "get detailed info of one security-group-rule in security-group"
       operationId: "describeSecurityGroupRule"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
-      - name: "secgr"
-        in: "path"
-        description: "name of the security-group-rule"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
+        - name: "secgr"
+          in: "path"
+          description: "name of the security-group-rule"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1224,11 +1224,11 @@ paths:
   /security-group:
     get:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "retrieve security-group list"
       operationId: "listSecurityGroup"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -1238,19 +1238,19 @@ paths:
               $ref: '#/definitions/SecurityGroup'
     post:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "add security-group"
       operationId: "addSecurityGroup"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/SecurityGroupCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/SecurityGroupCreate'
       responses:
         204:
           description: "ok"
@@ -1259,43 +1259,43 @@ paths:
   /security-group/{secg}:
     get:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "get security-group"
       operationId: "getSecurityGroup"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroup'
-# {{{[[[
+    # {{{[[[
     put:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "update security-group"
       operationId: "updateSecurityGroup"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/SecurityGroupUpdate'
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/SecurityGroupUpdate'
       responses:
         204:
           description: "ok"
@@ -1303,18 +1303,18 @@ paths:
           description: "Invalid input"
         404:
           description: "SecurityGroup not found"
-# ]]]}}}
+    # ]]]}}}
     delete:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "remove security-group"
       operationId: "removeSecurityGroup"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1325,15 +1325,15 @@ paths:
   /security-group/{secg}/detail:
     get:
       tags:
-      - "security-group"
+        - "security-group"
       summary: "get detailed info of one security-group"
       operationId: "describeSecurityGroup"
       parameters:
-      - name: "secg"
-        in: "path"
-        description: "name of the security-group"
-        required: true
-        type: string
+        - name: "secg"
+          in: "path"
+          description: "name of the security-group"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1342,11 +1342,11 @@ paths:
   /smart-group-delegate:
     get:
       tags:
-      - "smart-group-delegate"
+        - "smart-group-delegate"
       summary: "retrieve smart-group-delegate list"
       operationId: "listSmartGroupDelegate"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -1356,19 +1356,19 @@ paths:
               $ref: '#/definitions/SmartGroupDelegate'
     post:
       tags:
-      - "smart-group-delegate"
+        - "smart-group-delegate"
       summary: "add smart-group-delegate"
       operationId: "addSmartGroupDelegate"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/SmartGroupDelegateCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/SmartGroupDelegateCreate'
       responses:
         204:
           description: "ok"
@@ -1377,17 +1377,17 @@ paths:
   /smart-group-delegate/{sgd}:
     get:
       tags:
-      - "smart-group-delegate"
+        - "smart-group-delegate"
       summary: "get smart-group-delegate"
       operationId: "getSmartGroupDelegate"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "sgd"
-        in: "path"
-        description: "name of the smart-group-delegate"
-        required: true
-        type: string
+        - name: "sgd"
+          in: "path"
+          description: "name of the smart-group-delegate"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1396,15 +1396,15 @@ paths:
 
     delete:
       tags:
-      - "smart-group-delegate"
+        - "smart-group-delegate"
       summary: "remove smart-group-delegate"
       operationId: "removeSmartGroupDelegate"
       parameters:
-      - name: "sgd"
-        in: "path"
-        description: "name of the smart-group-delegate"
-        required: true
-        type: string
+        - name: "sgd"
+          in: "path"
+          description: "name of the smart-group-delegate"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1415,15 +1415,15 @@ paths:
   /smart-group-delegate/{sgd}/detail:
     get:
       tags:
-      - "smart-group-delegate"
+        - "smart-group-delegate"
       summary: "get detailed info of one smart-group-delegate"
       operationId: "describeSmartGroupDelegate"
       parameters:
-      - name: "sgd"
-        in: "path"
-        description: "name of the smart-group-delegate"
-        required: true
-        type: string
+        - name: "sgd"
+          in: "path"
+          description: "name of the smart-group-delegate"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1432,11 +1432,11 @@ paths:
   /smart-node-delegate:
     get:
       tags:
-      - "smart-node-delegate"
+        - "smart-node-delegate"
       summary: "retrieve smart-node-delegate list"
       operationId: "listSmartNodeDelegate"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -1446,19 +1446,19 @@ paths:
               $ref: '#/definitions/SmartNodeDelegate'
     post:
       tags:
-      - "smart-node-delegate"
+        - "smart-node-delegate"
       summary: "add smart-node-delegate"
       operationId: "addSmartNodeDelegate"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/SmartNodeDelegateCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/SmartNodeDelegateCreate'
       responses:
         204:
           description: "ok"
@@ -1467,17 +1467,17 @@ paths:
   /smart-node-delegate/{snd}:
     get:
       tags:
-      - "smart-node-delegate"
+        - "smart-node-delegate"
       summary: "get smart-node-delegate"
       operationId: "getSmartNodeDelegate"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "snd"
-        in: "path"
-        description: "name of the smart-node-delegate"
-        required: true
-        type: string
+        - name: "snd"
+          in: "path"
+          description: "name of the smart-node-delegate"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1486,15 +1486,15 @@ paths:
 
     delete:
       tags:
-      - "smart-node-delegate"
+        - "smart-node-delegate"
       summary: "remove smart-node-delegate"
       operationId: "removeSmartNodeDelegate"
       parameters:
-      - name: "snd"
-        in: "path"
-        description: "name of the smart-node-delegate"
-        required: true
-        type: string
+        - name: "snd"
+          in: "path"
+          description: "name of the smart-node-delegate"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1505,15 +1505,15 @@ paths:
   /smart-node-delegate/{snd}/detail:
     get:
       tags:
-      - "smart-node-delegate"
+        - "smart-node-delegate"
       summary: "get detailed info of one smart-node-delegate"
       operationId: "describeSmartNodeDelegate"
       parameters:
-      - name: "snd"
-        in: "path"
-        description: "name of the smart-node-delegate"
-        required: true
-        type: string
+        - name: "snd"
+          in: "path"
+          description: "name of the smart-node-delegate"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1522,11 +1522,11 @@ paths:
   /cert-key:
     get:
       tags:
-      - "cert-key"
+        - "cert-key"
       summary: "retrieve cert-key list"
       operationId: "listCertKey"
       produces:
-      - "application/json"
+        - "application/json"
       responses:
         200:
           description: "ok"
@@ -1536,19 +1536,19 @@ paths:
               $ref: '#/definitions/CertKey'
     post:
       tags:
-      - "cert-key"
+        - "cert-key"
       summary: "add cert-key"
       operationId: "addCertKey"
       consumes:
-      - "application/json"
+        - "application/json"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - in: "body"
-        name: "body"
-        required: true
-        schema:
-          $ref: '#/definitions/CertKeyCreate'
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/CertKeyCreate'
       responses:
         204:
           description: "ok"
@@ -1557,17 +1557,17 @@ paths:
   /cert-key/{ck}:
     get:
       tags:
-      - "cert-key"
+        - "cert-key"
       summary: "get cert-key"
       operationId: "getCertKey"
       produces:
-      - "application/json"
+        - "application/json"
       parameters:
-      - name: "ck"
-        in: "path"
-        description: "name of the cert-key"
-        required: true
-        type: string
+        - name: "ck"
+          in: "path"
+          description: "name of the cert-key"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1576,15 +1576,15 @@ paths:
 
     delete:
       tags:
-      - "cert-key"
+        - "cert-key"
       summary: "remove cert-key"
       operationId: "removeCertKey"
       parameters:
-      - name: "ck"
-        in: "path"
-        description: "name of the cert-key"
-        required: true
-        type: string
+        - name: "ck"
+          in: "path"
+          description: "name of the cert-key"
+          required: true
+          type: string
       responses:
         204:
           description: "ok"
@@ -1595,15 +1595,15 @@ paths:
   /cert-key/{ck}/detail:
     get:
       tags:
-      - "cert-key"
+        - "cert-key"
       summary: "get detailed info of one cert-key"
       operationId: "describeCertKey"
       parameters:
-      - name: "ck"
-        in: "path"
-        description: "name of the cert-key"
-        required: true
-        type: string
+        - name: "ck"
+          in: "path"
+          description: "name of the cert-key"
+          required: true
+          type: string
       responses:
         200:
           description: "ok"
@@ -1881,6 +1881,9 @@ definitions:
       eventLoopGroup:
         type: string
         description: "reference to the running event loop group"
+      securityGroup:
+        type: string
+        description: "security group for the dns server to use"
   DnsServerCreate:
     type: object
     required:
@@ -1902,12 +1905,18 @@ definitions:
       eventLoopGroup:
         type: string
         description: "reference to the running event loop group"
+      securityGroup:
+        type: string
+        description: "security group for the dns server to use"
   DnsServerUpdate:
     type: object
     properties:
       ttl:
         type: integer
         description: "ttl of answer records"
+      securityGroup:
+        type: string
+        description: "security group for the dns server to use"
   DnsServerDetail:
     type: object
     properties:
@@ -1923,6 +1932,8 @@ definitions:
         description: "ttl of answer records"
       eventLoopGroup:
         $ref: '#/definitions/EventLoopGroupDetail'
+      securityGroup:
+        $ref: '#/definitions/SecurityGroupDetail'
   EventLoopGroup:
     type: object
     properties:

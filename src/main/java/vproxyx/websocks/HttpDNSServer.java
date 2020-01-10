@@ -4,6 +4,7 @@ import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
 import vjson.JSON;
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.NetEventLoop;
@@ -28,7 +29,7 @@ public class HttpDNSServer extends DNSServer {
     private final ConfigProcessor config;
 
     public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
-        super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0);
+        super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0, SecurityGroup.allowAll());
         this.serverGroups = config.getServers();
         this.resolves = config.getProxyResolves();
         boolean directRelay = config.isDirectRelay();

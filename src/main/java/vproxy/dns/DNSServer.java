@@ -9,9 +9,11 @@ import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Connector;
 import vproxy.connection.NetEventLoop;
+import vproxy.connection.Protocol;
 import vproxy.connection.ServerSock;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
@@ -41,8 +43,9 @@ public class DNSServer {
     private DatagramFD sock = null;
     private boolean needToStart = false;
     public int ttl;
+    public SecurityGroup securityGroup;
 
-    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets, int ttl) {
+    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets, int ttl, SecurityGroup securityGroup) {
         this.alias = alias;
         this.bindAddress = bindAddress;
         this.eventLoopGroup = eventLoopGroup;
@@ -50,6 +53,7 @@ public class DNSServer {
         this.hosts = Resolver.getHosts();
         this.client = DNSClient.getDefault();
         this.ttl = ttl;
+        this.securityGroup = securityGroup;
     }
 
     class Attach implements EventLoopGroupAttach {
@@ -408,6 +412,10 @@ public class DNSServer {
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "reading data from dns sock " + ctx.getChannel() + " failed", e);
                         return;
+                    }
+                    if (!securityGroup.allow(Protocol.UDP, remote.getAddress(), remote.getPort())) {
+                        assert Logger.lowLevelDebug("remote " + remote + " rejected by security-group " + securityGroup.alias);
+                        continue;
                     }
                     int read = buffer.position();
                     if (read == 0) {

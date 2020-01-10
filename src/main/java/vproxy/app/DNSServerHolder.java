@@ -4,6 +4,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 
@@ -25,11 +26,12 @@ public class DNSServerHolder {
                     InetSocketAddress bindAddress,
                     EventLoopGroup eventLoopGroup,
                     Upstream backend,
-                    int ttl) throws AlreadyExistException, ClosedException, IOException {
+                    int ttl,
+                    SecurityGroup securityGroup) throws AlreadyExistException, ClosedException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("dns-server", alias);
 
-        DNSServer dnsServer = new DNSServer(alias, bindAddress, eventLoopGroup, backend, ttl);
+        DNSServer dnsServer = new DNSServer(alias, bindAddress, eventLoopGroup, backend, ttl, securityGroup);
         try {
             dnsServer.start();
         } catch (IOException e) {

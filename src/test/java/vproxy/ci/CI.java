@@ -2071,9 +2071,10 @@ public class CI {
     public void apiV1DNSServer() throws Exception {
         run("/dns-server", Entities.DNSServer.class,
             "eventLoopGroup", randomEventLoopGroup(),
-            "rrsets", randomUpstream());
-        assertEquals(CC(2), postCnt);
-        assertEquals(CC(2) * CC(1), putCnt);
+            "rrsets", randomUpstream(),
+            "securityGroup", randomSecurityGroup());
+        assertEquals(CC(3), postCnt);
+        assertEquals(CC(3) * CC(2), putCnt);
     }
 
     @Test
@@ -2603,6 +2604,11 @@ public class CI {
             "            { \"name\": \"" + el0 + "\" },\n" +
             "            { \"name\": \"" + el1 + "\" }\n" +
             "        ]\n" +
+            "    },\n" +
+            "    \"securityGroup\": {\n" +
+            "        \"name\": \"(allow-all)\",\n" +
+            "        \"defaultRule\": \"allow\",\n" +
+            "        \"ruleList\": []\n" +
             "    }\n" +
             "}";
         pretty = requestApi(HttpMethod.GET, "/dns-server/" + dns + "/detail").pretty();

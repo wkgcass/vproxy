@@ -96,6 +96,7 @@ public class Entities {
         String rrsets;
         @Optional @Modifiable int ttl;
         @Optional String eventLoopGroup;
+        @Optional @Modifiable String securityGroup;
     }
 
     static class EventLoop {

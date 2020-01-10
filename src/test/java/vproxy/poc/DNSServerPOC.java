@@ -3,6 +3,7 @@ package vproxy.poc;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Method;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
@@ -27,7 +28,7 @@ public class DNSServerPOC {
         group.add("svr7", new InetSocketAddress("ff2e:0000:0000:3456:0114:5140:7f00:0001", 80), 10);
         Upstream upstream = new Upstream("ups0");
         upstream.add(group, 10);
-        DNSServer dnsServer = new DNSServer("dns0", new InetSocketAddress(553), elg, upstream, 0);
+        DNSServer dnsServer = new DNSServer("dns0", new InetSocketAddress(553), elg, upstream, 0, SecurityGroup.allowAll());
         dnsServer.start();
         elg.add("el0");
     }
