@@ -187,7 +187,7 @@ public class Simple {
         Application.get().upstreamHolder.add(upstreamName);
         ServerGroup group = Application.get().serverGroupHolder.add(serverGroupName,
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
-            new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr);
+            new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr, null);
         int svrCnt = 0;
         for (HostPort svr : backendList) {
             if (Utils.isIpLiteral(svr.host)) {

@@ -1,11 +1,13 @@
 package vproxy.app.cmd.handle.resource;
 
+import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.ServerGroupHolder;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
+import vproxy.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.app.cmd.handle.param.HealthCheckHandle;
 import vproxy.app.cmd.handle.param.MethHandle;
 import vproxy.app.cmd.handle.param.WeightHandle;
@@ -18,6 +20,7 @@ import vproxy.component.svrgroup.Upstream;
 
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ServerGroupHandle {
@@ -73,6 +76,10 @@ public class ServerGroupHandle {
         } else {
             cmd.args.put(Param.meth, "wrr");
         }
+
+        if (cmd.args.containsKey(Param.anno)) {
+            AnnotationsHandle.check(cmd);
+        }
     }
 
     public static void checkUpdateServerGroup(Command cmd) throws Exception {
@@ -97,6 +104,9 @@ public class ServerGroupHandle {
                 } catch (Exception e) {
                     throw new Exception("invalid method");
                 }
+            }
+            if (cmd.args.containsKey(Param.anno)) {
+                AnnotationsHandle.check(cmd);
             }
         } else {
             // can modify the weight in a upstream
@@ -148,7 +158,11 @@ public class ServerGroupHandle {
             String eventLoopGroupName = cmd.args.get(Param.elg);
             EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);
             HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
-            Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd));
+            Map<String, String> anno = null;
+            if (cmd.args.containsKey(Param.anno)) {
+                anno = AnnotationsHandle.get(cmd);
+            }
+            Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd), anno);
         } else {
             // add into upstream
             int weight = WeightHandle.get(cmd);
@@ -199,6 +213,9 @@ public class ServerGroupHandle {
             if (cmd.args.containsKey(Param.meth)) {
                 g.setMethod(MethHandle.get(cmd));
             }
+            if (cmd.args.containsKey(Param.anno)) {
+                g.annotations = AnnotationsHandle.get(cmd);
+            }
         } else {
             Upstream.ServerGroupHandle h = getHandle(cmd.resource);
             if (cmd.args.containsKey(Param.w)) {
@@ -231,7 +248,19 @@ public class ServerGroupHandle {
                 " up " + c.up + " down " + c.down + " protocol " + c.checkProtocol.name() +
                 " method " + g.getMethod() +
                 " event-loop-group " + g.eventLoopGroup.alias +
+                " annotations " + formatAnno() +
                 (h == null ? "" : " weight " + h.getWeight());
+        }
+
+        private String formatAnno() {
+            if (g.annotations == null) {
+                return "{}";
+            }
+            ObjectBuilder ob = new ObjectBuilder();
+            for (Map.Entry<String, String> entry : g.annotations.entrySet()) {
+                ob.put(entry.getKey(), entry.getValue());
+            }
+            return ob.build().stringify();
         }
     }
 }

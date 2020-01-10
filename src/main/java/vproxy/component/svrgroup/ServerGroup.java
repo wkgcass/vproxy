@@ -305,6 +305,7 @@ public class ServerGroup {
     private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
     private final CopyOnWriteArraySet<ServerListener> serverListeners = new CopyOnWriteArraySet<>();
+    public Map<String, String> annotations = null;
 
     // START fields for WRR
     static class WRR {

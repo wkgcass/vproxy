@@ -1684,6 +1684,8 @@ public class CI {
             ob.put(key, (boolean) value);
         } else if (valueType.isEnum() || valueType == InetSocketAddress.class) {
             ob.put(key, value.toString());
+        } else if (valueType == JSON.Object.class) {
+            ob.putInst(key, (JSON.Object) value);
         } else {
             throw new UnsupportedOperationException();
         }
@@ -1721,6 +1723,8 @@ public class CI {
             putValue(ob, key, valueType, "0.0.0.0:" + port);
         } else if (valueType == boolean.class) {
             putValue(ob, key, valueType, (Math.random() < 0.5) ? true : false);
+        } else if (valueType == JSON.Object.class) {
+            putValue(ob, key, JSON.Object.class, new ObjectBuilder().put(randomName("key"), randomName("value")).build());
         } else {
             throw new UnsupportedOperationException();
         }
@@ -2110,16 +2114,16 @@ public class CI {
         run("/server-group", Entities.ServerGroup.class,
             "protocol", "tcp",
             "eventLoopGroup", randomEventLoopGroup());
-        assertEquals(CC(2), postCnt);
-        assertEquals(CC(2) * CC(2), putCnt);
+        assertEquals(CC(3), postCnt);
+        assertEquals(CC(3) * CC(3), putCnt);
     }
 
     @Test
     public void apiV1ServerGroupNoProtocol() throws Exception {
         run("/server-group", Entities.ServerGroupNoProtocol.class,
             "eventLoopGroup", randomEventLoopGroup());
-        assertEquals(CC(2), postCnt);
-        assertEquals(CC(2) * CC(2), putCnt);
+        assertEquals(CC(3), postCnt);
+        assertEquals(CC(3) * CC(3), putCnt);
     }
 
     @Test
@@ -2204,8 +2208,8 @@ public class CI {
         upsNames.add(ups);
         var sg0 = randomName("sg0");
         var sg1 = randomName("sg1");
-        execute(createReq(add, "server-group", sg0, "timeout", "1000", "period", "5000", "up", "2", "down", "3", "method", "wlc", "event-loop-group", elg));
-        execute(createReq(add, "server-group", sg1, "timeout", "2000", "period", "2500", "up", "3", "down", "4", "method", "wrr", "event-loop-group", elg));
+        execute(createReq(add, "server-group", sg0, "timeout", "1000", "period", "5000", "up", "2", "down", "3", "method", "wlc", "event-loop-group", elg, "annotations", "{\"x\":\"y\"}"));
+        execute(createReq(add, "server-group", sg1, "timeout", "2000", "period", "2500", "up", "3", "down", "4", "method", "wrr", "event-loop-group", elg, "annotations", "{\"a\":\"b\"}"));
         sgNames.add(sg0);
         sgNames.add(sg1);
         execute(createReq(add, "server-group", sg0, "to", "upstream", ups, "weight", "10"));
@@ -2268,6 +2272,7 @@ public class CI {
             "                    \"down\": 3,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wlc\",\n" +
+            "                    \"annotations\": { \"x\": \"y\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2304,6 +2309,7 @@ public class CI {
             "                    \"down\": 4,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wrr\",\n" +
+            "                    \"annotations\": { \"a\": \"b\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2396,6 +2402,7 @@ public class CI {
             "                    \"down\": 3,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wlc\",\n" +
+            "                    \"annotations\": { \"x\": \"y\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2432,6 +2439,7 @@ public class CI {
             "                    \"down\": 4,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wrr\",\n" +
+            "                    \"annotations\": { \"a\": \"b\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2518,6 +2526,7 @@ public class CI {
             "                    \"down\": 3,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wlc\",\n" +
+            "                    \"annotations\": { \"x\": \"y\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2554,6 +2563,7 @@ public class CI {
             "                    \"down\": 4,\n" +
             "                    \"protocol\": \"tcp\",\n" +
             "                    \"method\": \"wrr\",\n" +
+            "                    \"annotations\": { \"a\": \"b\" },\n" +
             "                    \"eventLoopGroup\": {\n" +
             "                        \"name\": \"" + elg + "\",\n" +
             "                        \"eventLoopList\": [\n" +
@@ -2620,6 +2630,7 @@ public class CI {
             "        \"down\": 3,\n" +
             "        \"protocol\": \"tcp\",\n" +
             "        \"method\": \"wlc\",\n" +
+            "        \"annotations\": { \"x\": \"y\" },\n" +
             "        \"eventLoopGroup\": {\n" +
             "            \"name\": \"" + elg + "\",\n" +
             "            \"eventLoopList\": [\n" +
@@ -2663,6 +2674,7 @@ public class CI {
             "                \"down\": 3,\n" +
             "                \"protocol\": \"tcp\",\n" +
             "                \"method\": \"wlc\",\n" +
+            "                \"annotations\": { \"x\": \"y\" },\n" +
             "                \"eventLoopGroup\": {\n" +
             "                    \"name\": \"" + elg + "\",\n" +
             "                    \"eventLoopList\": [\n" +
@@ -2699,6 +2711,7 @@ public class CI {
             "                \"down\": 4,\n" +
             "                \"protocol\": \"tcp\",\n" +
             "                \"method\": \"wrr\",\n" +
+            "                \"annotations\": { \"a\": \"b\" },\n" +
             "                \"eventLoopGroup\": {\n" +
             "                    \"name\": \"" + elg + "\",\n" +
             "                    \"eventLoopList\": [\n" +
@@ -2749,6 +2762,7 @@ public class CI {
             "    \"down\": 3,\n" +
             "    \"protocol\": \"tcp\",\n" +
             "    \"method\": \"wlc\",\n" +
+            "    \"annotations\": { \"x\": \"y\" },\n" +
             "    \"eventLoopGroup\": {\n" +
             "        \"name\": \"" + elg + "\",\n" +
             "        \"eventLoopList\": [\n" +
@@ -2817,7 +2831,7 @@ public class CI {
 
         var sg2 = randomName("sg2");
         execute(createReq(add, "server-group", sg2, "timeout", "2000", "period", "5000", "up", "2", "down", "3",
-            "event-loop-group", elg, "method", "source"));
+            "event-loop-group", elg, "method", "source", "annotations", "{\"m\":\"n\"}"));
         sgNames.add(sg2);
         var sgd = randomName("sgd");
         execute(createReq(add, "smart-group-delegate", sgd,
@@ -2837,6 +2851,7 @@ public class CI {
             "        \"down\": 3,\n" +
             "        \"protocol\": \"tcp\",\n" +
             "        \"method\": \"source\",\n" +
+            "        \"annotations\": { \"m\": \"n\" },\n" +
             "        \"eventLoopGroup\": {\n" +
             "            \"name\": \"" + elg + "\",\n" +
             "            \"eventLoopList\": [\n" +

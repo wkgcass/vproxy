@@ -181,6 +181,7 @@ public class HttpController {
                 .put("down", 3)
                 .put("protocol", "the protocol used to do health check")
                 .put("method", "load balancing method")
+                .putInst("annotations", new ObjectBuilder().put("key", "value").build())
                 .put("eventLoopGroup", "choose a event-loop-group for the server group. health check operations will be performed on the event loop group")
                 .build(),
             "name", "timeout", "period", "up", "down"));
@@ -191,6 +192,7 @@ public class HttpController {
             .put("down", 3)
             .put("protocol", "the protocol used to do health check")
             .put("method", "load balancing method")
+            .putInst("annotations", new ObjectBuilder().put("key", "value").build())
             .build()));
         server.del(moduleBase + "/server-group/:sg", wrapAsync(this::deleteServerGroup));
         // security-group-rule
@@ -816,6 +818,10 @@ public class HttpController {
             options.add("event-loop-group");
             options.add(body.getString("eventLoopGroup"));
         }
+        if (body.containsKey("annotations")) {
+            options.add("annotations");
+            options.add(body.getObject("annotations").stringify());
+        }
         utils.execute(cb, options);
     }
 
@@ -855,6 +861,10 @@ public class HttpController {
         if (body.containsKey("method")) {
             options.add("method");
             options.add(body.getString("method"));
+        }
+        if (body.containsKey("annotations")) {
+            options.add("annotations");
+            options.add(body.getObject("annotations").stringify());
         }
 
         utils.execute(cb, options);

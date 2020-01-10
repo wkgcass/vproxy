@@ -1,5 +1,7 @@
 package vproxy.ci;
 
+import vjson.JSON;
+
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.net.InetSocketAddress;
@@ -123,6 +125,7 @@ public class Entities {
         @Modifiable @Sticky(1) int down;
         @Modifiable @Sticky(1) String protocol;
         @Modifiable @Optional LoadBalancingMethod method;
+        @Modifiable @Optional JSON.Object annotations;
         @Optional String eventLoopGroup;
     }
 
@@ -135,6 +138,7 @@ public class Entities {
         @Modifiable @Sticky(1) int up;
         @Modifiable @Sticky(1) int down;
         @Modifiable @Optional LoadBalancingMethod method;
+        @Modifiable @Optional JSON.Object annotations;
         @Optional String eventLoopGroup;
     }
 

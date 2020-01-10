@@ -252,6 +252,16 @@ class utils {
                         }
                     }
                 }
+                if (expected instanceof JSON.Object) {
+                    // we only check one depth into this
+                    JSON.Instance expectedElem = ((JSON.Object) expected).get(((JSON.Object) expected).keyList().get(0));
+                    JSON.Object actualObj = (JSON.Object) actual;
+                    for (String k : actualObj.keySet()) {
+                        if (typeNe(actualObj.get(k).getClass(), expectedElem.getClass())) {
+                            return "value type is wrong for " + key + "[" + k + "], expecting " + typeName(expectedElem.getClass());
+                        }
+                    }
+                }
             } else {
                 if (requiredKeys.contains(key)) {
                     return key + " is required by this api, you may refer to: " + bodyTemplate.stringify();
@@ -294,6 +304,16 @@ class utils {
             .build();
     }
 
+    static JSON.Object formatAnnotations(Map<String, String> map) {
+        if (map == null) {
+            return new ObjectBuilder().build();
+        } else {
+            ObjectBuilder ob = new ObjectBuilder();
+            map.forEach(ob::put);
+            return ob.build();
+        }
+    }
+
     static JSON.Object formatServerGroup(ServerGroup sg) {
         return new ObjectBuilder()
             .put("name", sg.alias)
@@ -303,6 +323,7 @@ class utils {
             .put("down", sg.getHealthCheckConfig().down)
             .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
+            .putInst("annotations", formatAnnotations(sg.annotations))
             .put("eventLoopGroup", sg.eventLoopGroup.alias)
             .build();
     }
@@ -316,6 +337,7 @@ class utils {
             .put("down", sg.getHealthCheckConfig().down)
             .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
+            .putInst("annotations", formatAnnotations(sg.annotations))
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(sg.eventLoopGroup))
             .putArray("serverList", arr -> sg.getServerHandles().forEach(svr -> arr.addInst(utils.formatServer(svr))))
             .build();

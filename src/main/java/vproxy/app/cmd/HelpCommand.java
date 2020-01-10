@@ -398,6 +398,8 @@ public class HelpCommand {
         protocol("protocol", null, "" +
             "for tcp-lb: the application layer protocol, " +
             "for security-group: the transport layer protocol: tcp or udp"),
+        annotations("annotations", "anno",
+            "a string:string json representing metadata for the resource"),
         portrange("port-range", null, "an integer tuple $i,$j"),
         service("service", null, "service name"),
         zone("zone", null, "zone name"),
@@ -678,6 +680,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.down, "set server status to DOWN after failed for `${down}` times"),
                         new ResActParamMan(ParamMan.protocol, "the protocol used for checking the servers, you may choose `tcp`, `none`", "tcp"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "wrr"),
+                        new ResActParamMan(ParamMan.annotations, "extra info for the server-group, such as host info, health check url. Must be a json and values must be strings", "{}"),
                         new ResActParamMan(ParamMan.eventloopgroup, "choose a event-loop-group for the server group. health check operations will be performed on the event loop group", Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME)
                     ),
                     Collections.singletonList(
@@ -713,11 +716,11 @@ public class HelpCommand {
                     Arrays.asList(
                         new Tuple<>(
                             "list-detail server-group",
-                            "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0\""
+                            "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {}\""
                         ),
                         new Tuple<>(
                             "list-detail server-group in upstream ups0",
-                            "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 weight 10\""
+                            "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {} weight 10\""
                         )
                     )),
                 new ResActMan(ActMan.update, "change health check config or load balancing algorithm.\n" +

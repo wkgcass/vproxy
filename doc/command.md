@@ -381,6 +381,7 @@ Specify name, event loop, load balancing method, health check config and create 
 * down: set server status to DOWN after failed for `${down}` times
 * protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `none`. default `tcp`
 * method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
+* annotations: *optional*. extra info for the server-group, such as host info, health check url. Must be a json and values must be strings. default `{}`
 * event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
 
 ```
@@ -417,10 +418,10 @@ Retrieve detailed info of all server group (s).
 
 ```
 list-detail server-group
-1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0"
+1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {}"
 
 list-detail server-group in upstream ups0
-1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 weight 10"
+1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {} weight 10"
 ```
 
 #### update

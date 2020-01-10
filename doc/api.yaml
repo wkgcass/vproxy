@@ -2037,6 +2037,10 @@ definitions:
         $ref: '#/definitions/CheckProtocol'
       method:
         $ref: '#/definitions/ServerGroupMethod'
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
       eventLoopGroup:
         type: string
         description: "the event loop group to run health check on"
@@ -2067,6 +2071,10 @@ definitions:
         $ref: '#/definitions/CheckProtocol'
       method:
         $ref: '#/definitions/ServerGroupMethod'
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
       eventLoopGroup:
         type: string
         description: "the event loop group to run health check on"
@@ -2089,6 +2097,10 @@ definitions:
         $ref: '#/definitions/CheckProtocol'
       method:
         $ref: '#/definitions/ServerGroupMethod'
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
   ServerGroupDetail:
     type: object
     properties:
@@ -2110,6 +2122,10 @@ definitions:
         $ref: '#/definitions/CheckProtocol'
       method:
         $ref: '#/definitions/ServerGroupMethod'
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
       eventLoopGroup:
         $ref: '#/definitions/EventLoopGroupDetail'
       serverList:

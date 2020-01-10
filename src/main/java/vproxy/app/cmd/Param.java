@@ -21,6 +21,7 @@ public enum Param {
     tl("tcp-lb"),
     sg("server-group"),
     ttl("ttl"),
+    anno("annotations"),
 
     service("service"),
     zone("zone"),

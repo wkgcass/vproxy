@@ -23,10 +23,12 @@ public class ServerGroupHolder {
     public ServerGroup add(String alias,
                            EventLoopGroup eventLoopGroup,
                            HealthCheckConfig healthCheckConfig,
-                           Method method) throws AlreadyExistException, ClosedException {
+                           Method method,
+                           Map<String, String> annotations) throws AlreadyExistException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("server-group", alias);
         ServerGroup serverGroup = new ServerGroup(alias, eventLoopGroup, healthCheckConfig, method);
+        serverGroup.annotations = annotations;
         map.put(alias, serverGroup);
         return serverGroup;
     }
