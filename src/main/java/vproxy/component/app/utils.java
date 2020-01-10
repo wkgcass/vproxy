@@ -370,6 +370,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
+            .putInst("annotations", formatAnnotations(sg.annotations))
             .build();
     }
 
@@ -377,6 +378,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
+            .putInst("annotations", formatAnnotations(sg.annotations))
             .putInst("serverGroup", formatServerGroupDetail(sg.group))
             .build();
     }

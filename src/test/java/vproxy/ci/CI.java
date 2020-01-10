@@ -2090,8 +2090,8 @@ public class CI {
         var sg = randomServerGroup();
         run("/upstream/" + ups + "/server-group", Entities.ServerGroupInUpstream.class,
             "name", sg);
-        assertEquals(CC(1), postCnt);
-        assertEquals(CC(1) * CC(1), putCnt);
+        assertEquals(CC(2), postCnt);
+        assertEquals(CC(2) * CC(2), putCnt);
     }
 
     @Test
@@ -2212,8 +2212,8 @@ public class CI {
         execute(createReq(add, "server-group", sg1, "timeout", "2000", "period", "2500", "up", "3", "down", "4", "method", "wrr", "event-loop-group", elg, "annotations", "{\"a\":\"b\"}"));
         sgNames.add(sg0);
         sgNames.add(sg1);
-        execute(createReq(add, "server-group", sg0, "to", "upstream", ups, "weight", "10"));
-        execute(createReq(add, "server-group", sg1, "to", "upstream", ups, "weight", "20"));
+        execute(createReq(add, "server-group", sg0, "to", "upstream", ups, "weight", "10", "annotations", "{\"xx\":\"yy\"}"));
+        execute(createReq(add, "server-group", sg1, "to", "upstream", ups, "weight", "20", "annotations", "{\"aa\":\"bb\"}"));
         var svr00 = randomName("svr00");
         var svr01 = randomName("svr01");
         execute(createReq(add, "server", svr00, "to", "server-group", sg0, "address", "127.0.0.1:8080", "weight", "10"));
@@ -2264,6 +2264,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
             "                \"weight\": 10,\n" +
+            "                \"annotations\": { \"xx\": \"yy\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg0 + "\",\n" +
             "                    \"timeout\": 1000,\n" +
@@ -2301,6 +2302,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg1 + "\",\n" +
             "                \"weight\": 20,\n" +
+            "                \"annotations\": { \"aa\": \"bb\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg1 + "\",\n" +
             "                    \"timeout\": 2000,\n" +
@@ -2394,6 +2396,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
             "                \"weight\": 10,\n" +
+            "                \"annotations\": { \"xx\": \"yy\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg0 + "\",\n" +
             "                    \"timeout\": 1000,\n" +
@@ -2431,6 +2434,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg1 + "\",\n" +
             "                \"weight\": 20,\n" +
+            "                \"annotations\": { \"aa\": \"bb\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg1 + "\",\n" +
             "                    \"timeout\": 2000,\n" +
@@ -2518,6 +2522,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
             "                \"weight\": 10,\n" +
+            "                \"annotations\": { \"xx\": \"yy\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg0 + "\",\n" +
             "                    \"timeout\": 1000,\n" +
@@ -2555,6 +2560,7 @@ public class CI {
             "            {\n" +
             "                \"name\": \"" + sg1 + "\",\n" +
             "                \"weight\": 20,\n" +
+            "                \"annotations\": { \"aa\": \"bb\" },\n" +
             "                \"serverGroup\": {\n" +
             "                    \"name\": \"" + sg1 + "\",\n" +
             "                    \"timeout\": 2000,\n" +
@@ -2622,6 +2628,7 @@ public class CI {
         var sgInSgsResp = "{\n" +
             "    \"name\": \"" + sg0 + "\",\n" +
             "    \"weight\": 10,\n" +
+            "    \"annotations\": { \"xx\": \"yy\" },\n" +
             "    \"serverGroup\": {\n" +
             "        \"name\": \"" + sg0 + "\",\n" +
             "        \"timeout\": 1000,\n" +
@@ -2666,6 +2673,7 @@ public class CI {
             "        {\n" +
             "            \"name\": \"" + sg0 + "\",\n" +
             "            \"weight\": 10,\n" +
+            "            \"annotations\": { \"xx\": \"yy\" },\n" +
             "            \"serverGroup\": {\n" +
             "                \"name\": \"" + sg0 + "\",\n" +
             "                \"timeout\": 1000,\n" +
@@ -2703,6 +2711,7 @@ public class CI {
             "        {\n" +
             "            \"name\": \"" + sg1 + "\",\n" +
             "            \"weight\": 20,\n" +
+            "            \"annotations\": { \"aa\": \"bb\" },\n" +
             "            \"serverGroup\": {\n" +
             "                \"name\": \"" + sg1 + "\",\n" +
             "                \"timeout\": 2000,\n" +

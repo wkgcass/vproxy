@@ -6,10 +6,7 @@ import vproxy.connection.Connector;
 import vproxy.processor.Hint;
 
 import java.net.InetSocketAddress;
-import java.util.ArrayList;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
@@ -18,6 +15,7 @@ public class Upstream {
         public final String alias;
         public final ServerGroup group;
         private int weight;
+        public Map<String, String> annotations = null;
 
         public ServerGroupHandle(ServerGroup group, int weight) {
             this.alias = group.alias;
@@ -132,15 +130,17 @@ public class Upstream {
         return maxIdx;
     }
 
-    public void add(ServerGroup group, int weight) throws AlreadyExistException {
+    public ServerGroupHandle add(ServerGroup group, int weight) throws AlreadyExistException {
         List<ServerGroupHandle> groups = serverGroupHandles;
         if (groups.stream().anyMatch(g -> g.group.equals(group)))
             throw new AlreadyExistException("server-group in upstream " + this.alias, group.alias);
         ArrayList<ServerGroupHandle> newLs = new ArrayList<>(groups.size() + 1);
         newLs.addAll(groups);
-        newLs.add(new ServerGroupHandle(group, weight));
+        ServerGroupHandle h = new ServerGroupHandle(group, weight);
+        newLs.add(h);
         serverGroupHandles = newLs;
         recalculateWRR();
+        return h;
     }
 
     public synchronized void remove(ServerGroup group) throws NotFoundException {
@@ -176,7 +176,8 @@ public class Upstream {
         int level = 0;
         ServerGroupHandle lastMax = null;
         for (ServerGroupHandle h : serverGroupHandles) {
-            int l = hint.matchLevel(h.group.annotations);
+            //noinspection unchecked
+            int l = hint.matchLevel(h.annotations, h.group.annotations);
             if (l > level) {
                 level = l;
                 lastMax = h;

@@ -140,10 +140,12 @@ public class HttpController {
         server.pst(moduleBase + "/upstream/:ups/server-group", wrapAsync(this::createServerGroupInUpstream, new ObjectBuilder()
                 .put("name", "alias of the server group to be added")
                 .put("weight", 10)
+                .putInst("annotations", new ObjectBuilder().put("key", "value").build())
                 .build(),
             "name"));
         server.put(moduleBase + "/upstream/:ups/server-group/:sg", wrapAsync(this::updateServerGroupInUpstream, new ObjectBuilder()
             .put("weight", 10)
+            .putInst("annotations", new ObjectBuilder().put("key", "value").build())
             .build()));
         server.del(moduleBase + "/upstream/:ups/server-group/:sg", wrapAsync(this::deleteServerGroupInUpstream));
         // upstream
@@ -663,6 +665,10 @@ public class HttpController {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }
+        if (body.containsKey("annotations")) {
+            options.add("annotations");
+            options.add(body.getObject("annotations").stringify());
+        }
         utils.execute(cb, options);
     }
 
@@ -676,6 +682,10 @@ public class HttpController {
         if (body.containsKey("weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
+        }
+        if (body.containsKey("annotations")) {
+            options.add("annotations");
+            options.add(body.getObject("annotations").stringify());
         }
         utils.execute(cb, options);
     }

@@ -430,7 +430,7 @@ Change health check config or load balancing algorithm.
 
 Param list is the same as add, but not all required. Note that if you change the health check related params and not specifying `procotol`, it will be set to `tcp` as default.
 
-Also you can change the weight of a group in a `upstream` resource.
+Also you can change the weight/annotations of a group in a `upstream` resource.
 
 ```
 update server-group sg0 timeout 500 period 600 up 3 down 2 protocol tcp

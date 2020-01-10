@@ -690,8 +690,9 @@ public class HelpCommand {
                         )
                     )),
                 new ResActMan(ActMan.addto, "attach an existing server group into an `upstream` resource",
-                    Collections.singletonList(
-                        new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource")
+                    Arrays.asList(
+                        new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource", "10"),
+                        new ResActParamMan(ParamMan.annotations, "extra info for the server-group inside upstream, such as host info. Must be a json and values must be strings", "{}")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -736,7 +737,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.protocol, "the protocol used for checking the servers, you may choose `tcp`, `none`. " +
                             "Note: this field will be set to `tcp` as default when updating other hc options", "not changed"),
                         new ResActParamMan(ParamMan.method, "loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`", "not changed"),
-                        new ResActParamMan(ParamMan.weight, "the weight of group in this upstream resource", "not changed")
+                        new ResActParamMan(ParamMan.weight, "the weight of group in the upstream resource (only available for server-group in upstream)", "not changed"),
+                        new ResActParamMan(ParamMan.annotations, "annotation of the group itself, or the group in the upstream", "not changed")
                     ),
                     Arrays.asList(
                         new Tuple<>(
@@ -805,7 +807,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "specify name, remote ip:port, weight, and attach the server into the server group",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.address, "remote address, ip:port"),
-                        new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr, wlc and source algorithm")
+                        new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr, wlc and source algorithm", "10")
                     ),
                     Collections.singletonList(
                         new Tuple<>(

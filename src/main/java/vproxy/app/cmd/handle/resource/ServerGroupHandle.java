@@ -21,6 +21,7 @@ import vproxy.component.svrgroup.Upstream;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ServerGroupHandle {
@@ -50,6 +51,8 @@ public class ServerGroupHandle {
     public static void checkAttachServerGroup(Command cmd) throws Exception {
         if (cmd.args.containsKey(Param.w))
             WeightHandle.check(cmd);
+        if (cmd.args.containsKey(Param.anno))
+            AnnotationsHandle.check(cmd);
     }
 
     public static void checkCreateServerGroup(Command cmd) throws Exception {
@@ -115,6 +118,9 @@ public class ServerGroupHandle {
             if (cmd.args.containsKey(Param.w)) {
                 WeightHandle.check(cmd);
             }
+            if (cmd.args.containsKey(Param.anno)) {
+                AnnotationsHandle.check(cmd);
+            }
         }
     }
 
@@ -166,8 +172,11 @@ public class ServerGroupHandle {
         } else {
             // add into upstream
             int weight = WeightHandle.get(cmd);
-            Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
+            var h = Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
                 .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
+            if (cmd.args.containsKey(Param.anno)) {
+                h.annotations = AnnotationsHandle.get(cmd);
+            }
         }
     }
 
@@ -221,6 +230,9 @@ public class ServerGroupHandle {
             if (cmd.args.containsKey(Param.w)) {
                 h.setWeight(WeightHandle.get(cmd));
             }
+            if (cmd.args.containsKey(Param.anno)) {
+                h.annotations = AnnotationsHandle.get(cmd);
+            }
         }
     }
 
@@ -253,11 +265,15 @@ public class ServerGroupHandle {
         }
 
         private String formatAnno() {
-            if (g.annotations == null) {
-                return "{}";
+            Map<String, String> annos;
+            if (h == null) {
+                annos = Objects.requireNonNullElseGet(g.annotations, Map::of);
+            } else {
+                annos = Objects.requireNonNullElseGet(h.annotations, Map::of);
             }
+
             ObjectBuilder ob = new ObjectBuilder();
-            for (Map.Entry<String, String> entry : g.annotations.entrySet()) {
+            for (Map.Entry<String, String> entry : annos.entrySet()) {
                 ob.put(entry.getKey(), entry.getValue());
             }
             return ob.build().stringify();

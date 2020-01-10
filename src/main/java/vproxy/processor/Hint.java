@@ -25,12 +25,25 @@ public class Hint {
 
     public static final int MAX_MATCH_LEVEL = 3;
 
-    public int matchLevel(Map<String, String> annotations) {
+    @SuppressWarnings("unchecked")
+    public int matchLevel(Map<String, String>... annotations) {
         if (annotations == null) {
             return 0;
         }
-        String annoHost = annotations.get("host");
-        String annoPort = annotations.get("port");
+        String annoHost = null;
+        String annoPort = null;
+
+        for (Map<String, String> a : annotations) {
+            if (a == null) {
+                continue;
+            }
+            if (annoHost == null) {
+                annoHost = a.get("host");
+            }
+            if (annoPort == null) {
+                annoPort = a.get("port");
+            }
+        }
 
         if (annoHost == null && annoPort == null) {
             return 0;

@@ -1969,6 +1969,10 @@ definitions:
       weight:
         type: integer
         description: "weight of the server-group in the upstream"
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
   ServerGroupInUpstreamCreate:
     type: object
     required:
@@ -1979,12 +1983,20 @@ definitions:
       weight:
         type: integer
         description: "weight of the server-group in the upstream"
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
   ServerGroupInUpstreamUpdate:
     type: object
     properties:
       weight:
         type: integer
         description: "weight of the server-group in the upstream"
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
   ServerGroupInUpstreamDetail:
     type: object
     properties:
@@ -1993,6 +2005,10 @@ definitions:
       weight:
         type: integer
         description: "weight of the server-group in the upstream"
+      annotations:
+        type: object
+        additionalProperties:
+          type: string
       serverGroup:
         $ref: '#/definitions/ServerGroupDetail'
   Upstream:

@@ -105,6 +105,7 @@ public class Entities {
     static class ServerGroupInUpstream {
         String name;
         @Optional @Modifiable int weight;
+        @Optional @Modifiable JSON.Object annotations;
     }
 
     static class Upstream {
