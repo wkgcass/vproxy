@@ -19,6 +19,7 @@ import vproxy.util.Utils;
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
@@ -66,7 +67,8 @@ public class TestSocks5 {
         for (ServerGroup.ServerHandle h : sg0.getServerHandles()) {
             h.healthy = true;
         }
-        domainDotComGroup = new ServerGroup("domain.com:80", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
+        domainDotComGroup = new ServerGroup("test-domain", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
+        domainDotComGroup.annotations = Map.of("host", "domain.com", "port", "80");
         domainDotComGroup.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
         domainDotComGroup.add("svr3", new InetSocketAddress("127.0.0.1", 19083), 10);
         // manually set to healthy

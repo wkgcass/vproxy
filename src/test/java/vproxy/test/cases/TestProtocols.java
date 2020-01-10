@@ -37,6 +37,7 @@ import vproxy.poc.thrift.HelloWorldService;
 import vproxy.util.Utils;
 
 import java.net.InetSocketAddress;
+import java.util.Map;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
@@ -61,11 +62,13 @@ public class TestProtocols {
         elg = new EventLoopGroup("elg0");
         elg.add("el0");
 
-        ServerGroup sg1 = new ServerGroup("s1.test.com", elg,
+        ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
+        sg1.annotations = Map.of("host", "s1.test.com");
         sg1.add("svr1", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port1), 10);
-        ServerGroup sg2 = new ServerGroup("s2.test.com", elg,
+        ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
+        sg2.annotations = Map.of("host", "s2.test.com");
         sg2.add("svr2", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port2), 10);
 
         // set to up

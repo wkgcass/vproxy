@@ -176,7 +176,7 @@ public class Upstream {
         int level = 0;
         ServerGroupHandle lastMax = null;
         for (ServerGroupHandle h : serverGroupHandles) {
-            int l = hint.matchLevel(h.alias);
+            int l = hint.matchLevel(h.group.annotations);
             if (l > level) {
                 level = l;
                 lastMax = h;

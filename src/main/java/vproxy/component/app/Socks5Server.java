@@ -59,15 +59,11 @@ public class Socks5Server extends TcpLB {
 
             // then let's try to find a connector
             Upstream upstream = Socks5Server.super.backend;
-            if (type == AddressType.domain) {
-                String addrport = address + ":" + port;
-                // search for a group with name same as the address:port
-                for (Upstream.ServerGroupHandle gh : upstream.getServerGroupHandles()) {
-                    if (gh.alias.equals(addrport)) { // matches
-                        providedCallback.accept(gh.group.next(accepted.remote));
-                        return;
-                    }
-                }
+            if (type == AddressType.domain && !Utils.isIpLiteral(address) /*some implementation may always send domain socks5 request event if it's plain ip*/) {
+                Hint hint = new Hint(address + ":" + port);
+                Connector connector = upstream.next(accepted.remote, hint);
+                providedCallback.accept(connector);
+                return;
             } else {
                 // we do a search regardless of the `allowNonBackend` flag
                 // because connection and netflow can be recorded, and down process can be accelerated
@@ -103,7 +99,7 @@ public class Socks5Server extends TcpLB {
     private final Socks5ServerConnectorProvider connectorProvider = new Socks5ServerConnectorProvider();
     public boolean allowNonBackend = false;
 
-    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backend, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws IOException, AlreadyExistException, ClosedException {
+    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backend, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         super(alias, acceptorGroup, workerGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, securityGroup);
     }
 

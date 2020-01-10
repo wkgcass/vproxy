@@ -622,17 +622,17 @@ public class CI {
         assertEquals("", detail.get("deny-non-backend"));
         assertNull(detail.get("allow-non-backend"));
 
-        String sg0 = "myexample.com:8080";
+        String sg0 = randomName("example1");
         execute(createReq(add, "server-group", sg0,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0));
+            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample.com\",\"port\":\"8080\"}"));
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
-        String sg1 = "myexample2.com:8080";
+        String sg1 = randomName("example2");
         execute(createReq(add, "server-group", sg1,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0));
+            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample2.com\",\"port\":\"8080\"}"));
         sgNames.add(sg1);
         checkCreate("server-group", sg1);
 
@@ -687,18 +687,18 @@ public class CI {
         assertEquals(ups0, detail.get("rrsets"));
         assertEquals("123", detail.get("ttl"));
 
-        String domain0 = "example.com:80";
-        String domain1 = "test.com:8080";
+        String domain0 = "example.com";
+        String domain1 = "test.com";
 
         execute(createReq(add, "server-group", domain0,
             "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
-            "event-loop-group", elg0));
+            "event-loop-group", elg0, "annotations", "{\"host\":\"" + domain0 + "\"}"));
         sgNames.add(domain0);
         checkCreate("server-group", domain0);
 
         execute(createReq(add, "server-group", domain1,
             "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
-            "event-loop-group", elg0));
+            "event-loop-group", elg0, "annotations", "{\"host\":\"" + domain1 + "\"}"));
         sgNames.add(domain1);
         checkCreate("server-group", domain1);
 
@@ -1057,10 +1057,10 @@ public class CI {
         socks5Names.add(socks5Name);
         checkCreate("socks5-server", socks5Name);
 
-        String sg0 = "myexample.com:8080";
+        String sg0 = randomName("example");
         execute(createReq(add, "server-group", sg0,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0));
+            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample.com\",\"port\":\"8080\"}"));
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
