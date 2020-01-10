@@ -11,6 +11,7 @@ import java.lang.reflect.Field;
 import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
 import java.util.zip.Deflater;
@@ -908,5 +909,37 @@ public class Utils {
         } catch (AssertionError ignore) {
             return true;
         }
+    }
+
+    public interface UtilSupplier<T> {
+        T get() throws Exception;
+    }
+
+    public static <T> T runBlockWithTimeout(int millis, UtilSupplier<T> f) throws Exception {
+        BlockCallback<T, Exception> cb = new BlockCallback<>();
+        new Thread(() -> {
+            T t;
+            try {
+                t = f.get();
+            } catch (Exception e) {
+                if (!cb.isCalled()) {
+                    cb.onFailed(e);
+                }
+                return;
+            }
+            if (!cb.isCalled()) {
+                cb.onSucceeded(t);
+            }
+        }).start();
+        new Thread(() -> {
+            try {
+                Thread.sleep(millis);
+            } catch (InterruptedException ignore) {
+            }
+            if (!cb.isCalled()) {
+                cb.onFailed(new TimeoutException("operation time out"));
+            }
+        }).start();
+        return cb.block();
     }
 }

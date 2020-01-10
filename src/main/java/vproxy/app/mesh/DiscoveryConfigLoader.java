@@ -173,7 +173,7 @@ public class DiscoveryConfigLoader {
         int mask = addr.getNetworkPrefixLength();
         String nic = addr2nicMap.get(addr);
         String ipType = (l3addr instanceof Inet4Address) ? "v4" : "v6";
-        Logger.alert("DEFAULT DISCOVERY CONFIG: nic = " + nic + ", ip = " + Utils.ipStr(l3addr.getAddress()) + ", network mask = " + mask);
+        Logger.alert("using default discovery config: nic = " + nic + ", ip = " + Utils.ipStr(l3addr.getAddress()) + ", network mask = " + mask);
 
         Properties p = new Properties();
         p.setProperty("discovery.nic", nic);
@@ -216,6 +216,7 @@ public class DiscoveryConfigLoader {
             e.printStackTrace();
             return exit("got exception: " + Utils.formatErr(e));
         }
+        Logger.alert("discovery module launched");
         return 0;
     }
 
@@ -229,7 +230,11 @@ public class DiscoveryConfigLoader {
         InetAddress addr = getNicAddress(discovery.nic, discovery.ipType);
         if (addr == null)
             throw new XException("discovery nic address not found");
-        discovery.name = addr.getHostName();
+        try {
+            discovery.name = Utils.runBlockWithTimeout(1000, addr::getHostName);
+        } catch (Exception e) {
+            discovery.name = Utils.ipStr(addr.getAddress());
+        }
 
         checkNull("discovery.search", discovery.search);
         checkNull("discovery.search.mask", discovery.search.mask);
