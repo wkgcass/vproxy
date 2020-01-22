@@ -233,6 +233,11 @@ class utils {
             if (input.containsKey(key)) {
                 JSON.Instance actual = input.get(key);
                 if (typeNe(expected.getClass(), actual.getClass())) {
+                    if (!requiredKeys.contains(key)) {
+                        if (actual instanceof JSON.Null) {
+                            continue;
+                        }
+                    }
                     return "value type is wrong for " + key + ", expecting " + typeName(expected.getClass());
                 }
                 if (key.equals("name") && expected instanceof JSON.String) {

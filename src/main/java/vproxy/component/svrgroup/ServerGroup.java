@@ -588,7 +588,8 @@ public class ServerGroup {
     }
 
     private SOURCE sourceReset(List<ServerHandle> servers) {
-        ArrayList<ServerHandle> svrs = new ArrayList<>(servers);
+        //noinspection FuseStreamOperations
+        ArrayList<ServerHandle> svrs = new ArrayList<>(servers.stream().filter(s -> s.weight > 0).collect(Collectors.toList()));
         svrs.sort((a, b) -> {
             byte[] ba = a.server.getAddress().getAddress();
             byte[] bb = b.server.getAddress().getAddress();

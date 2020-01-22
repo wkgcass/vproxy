@@ -68,6 +68,8 @@
           description: "ok"
           schema:
             $ref: '#/definitions/{{res-name}}'
+        404:
+          description: "not found"
 # {{{[[[
     put:
       tags:
@@ -147,3 +149,5 @@
           description: "ok"
           schema:
             $ref: '#/definitions/{{res-name}}Detail'
+        404:
+          description: "not found"

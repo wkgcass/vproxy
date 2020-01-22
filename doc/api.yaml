@@ -93,6 +93,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/TcpLb'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -157,6 +159,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/TcpLbDetail'
+        404:
+          description: "not found"
   /socks5-server:
     get:
       tags:
@@ -211,6 +215,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Socks5Server'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -275,6 +281,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Socks5ServerDetail'
+        404:
+          description: "not found"
   /dns-server:
     get:
       tags:
@@ -329,6 +337,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/DnsServer'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -393,6 +403,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/DnsServerDetail'
+        404:
+          description: "not found"
   /event-loop-group/{elg}/event-loop:
     get:
       tags:
@@ -463,6 +475,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoop'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -509,6 +523,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopDetail'
+        404:
+          description: "not found"
   /event-loop-group:
     get:
       tags:
@@ -563,6 +579,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopGroup'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -599,6 +617,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopGroupDetail'
+        404:
+          description: "not found"
   /upstream/{ups}/server-group:
     get:
       tags:
@@ -669,6 +689,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupInUpstream'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -748,6 +770,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupInUpstreamDetail'
+        404:
+          description: "not found"
   /upstream:
     get:
       tags:
@@ -802,6 +826,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Upstream'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -838,6 +864,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/UpstreamDetail'
+        404:
+          description: "not found"
   /server-group/{sg}/server:
     get:
       tags:
@@ -908,6 +936,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Server'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -987,6 +1017,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerDetail'
+        404:
+          description: "not found"
   /server-group:
     get:
       tags:
@@ -1041,6 +1073,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroup'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -1105,6 +1139,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupDetail'
+        404:
+          description: "not found"
   /security-group/{secg}/security-group-rule:
     get:
       tags:
@@ -1175,6 +1211,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupRule'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -1221,6 +1259,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupRuleDetail'
+        404:
+          description: "not found"
   /security-group:
     get:
       tags:
@@ -1275,6 +1315,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroup'
+        404:
+          description: "not found"
     # {{{[[[
     put:
       tags:
@@ -1339,6 +1381,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupDetail'
+        404:
+          description: "not found"
   /smart-group-delegate:
     get:
       tags:
@@ -1393,6 +1437,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartGroupDelegate'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -1429,6 +1475,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartGroupDelegateDetail'
+        404:
+          description: "not found"
   /smart-node-delegate:
     get:
       tags:
@@ -1483,6 +1531,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartNodeDelegate'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -1519,6 +1569,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartNodeDelegateDetail'
+        404:
+          description: "not found"
   /cert-key:
     get:
       tags:
@@ -1573,6 +1625,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/CertKey'
+        404:
+          description: "not found"
 
     delete:
       tags:
@@ -1609,6 +1663,8 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/CertKeyDetail'
+        404:
+          description: "not found"
 
 ######################
 # End Generated Code #

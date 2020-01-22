@@ -346,6 +346,13 @@ public class HttpController {
         cb.succeeded(arr.build());
     }
 
+    private boolean bodyContainsKey(JSON.Object body, String key) {
+        if (!body.containsKey(key)) {
+            return false;
+        }
+        return !(body.get(key) instanceof JSON.Null);
+    }
+
     private void createTcpLb(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
         var name = body.getString("name");
@@ -354,27 +361,27 @@ public class HttpController {
         var options = new LinkedList<>(Arrays.asList(
             "add", "tcp-lb", name, "address", address, "upstream", backend
         ));
-        if (body.containsKey("protocol")) {
+        if (bodyContainsKey(body, "protocol")) {
             options.add("protocol");
             options.add(body.getString("protocol"));
         }
-        if (body.containsKey("acceptorLoopGroup")) {
+        if (bodyContainsKey(body, "acceptorLoopGroup")) {
             options.add("acceptor-elg");
             options.add(body.getString("acceptorLoopGroup"));
         }
-        if (body.containsKey("workerLoopGroup")) {
+        if (bodyContainsKey(body, "workerLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("workerLoopGroup"));
         }
-        if (body.containsKey("inBufferSize")) {
+        if (bodyContainsKey(body, "inBufferSize")) {
             options.add("in-buffer-size");
             options.add("" + body.getInt("inBufferSize"));
         }
-        if (body.containsKey("outBufferSize")) {
+        if (bodyContainsKey(body, "outBufferSize")) {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
         }
-        if (body.containsKey("listOfCertKey")) {
+        if (bodyContainsKey(body, "listOfCertKey")) {
             options.add("cert-key");
             var arr = body.getArray("listOfCertKey");
             StringBuilder sb = new StringBuilder();
@@ -386,7 +393,7 @@ public class HttpController {
             }
             options.add(sb.toString());
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
@@ -398,15 +405,15 @@ public class HttpController {
             "update", "tcp-lb", rctx.param("tl")
         ));
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
-        if (body.containsKey("inBufferSize")) {
+        if (bodyContainsKey(body, "inBufferSize")) {
             options.add("in-buffer-size");
             options.add("" + body.getInt("inBufferSize"));
         }
-        if (body.containsKey("outBufferSize")) {
+        if (bodyContainsKey(body, "outBufferSize")) {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
@@ -447,27 +454,27 @@ public class HttpController {
         var options = new LinkedList<>(Arrays.asList(
             "add", "socks5-server", name, "address", address, "upstream", backend
         ));
-        if (body.containsKey("acceptorLoopGroup")) {
+        if (bodyContainsKey(body, "acceptorLoopGroup")) {
             options.add("acceptor-elg");
             options.add(body.getString("acceptorLoopGroup"));
         }
-        if (body.containsKey("workerLoopGroup")) {
+        if (bodyContainsKey(body, "workerLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("workerLoopGroup"));
         }
-        if (body.containsKey("inBufferSize")) {
+        if (bodyContainsKey(body, "inBufferSize")) {
             options.add("in-buffer-size");
             options.add("" + body.getInt("inBufferSize"));
         }
-        if (body.containsKey("outBufferSize")) {
+        if (bodyContainsKey(body, "outBufferSize")) {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
-        if (body.containsKey("allowNonBackend")) {
+        if (bodyContainsKey(body, "allowNonBackend")) {
             boolean allowNonBackend = body.getBool("allowNonBackend");
             if (allowNonBackend) {
                 options.add("allow-non-backend");
@@ -483,19 +490,19 @@ public class HttpController {
             "update", "socks5-server", rctx.param("socks5")
         ));
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
-        if (body.containsKey("inBufferSize")) {
+        if (bodyContainsKey(body, "inBufferSize")) {
             options.add("in-buffer-size");
             options.add("" + body.getInt("inBufferSize"));
         }
-        if (body.containsKey("outBufferSize")) {
+        if (bodyContainsKey(body, "outBufferSize")) {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
-        if (body.containsKey("allowNonBackend")) {
+        if (bodyContainsKey(body, "allowNonBackend")) {
             boolean allowNonBackend = body.getBool("allowNonBackend");
             if (allowNonBackend) {
                 options.add("allow-non-backend");
@@ -540,15 +547,15 @@ public class HttpController {
         var options = new LinkedList<>(Arrays.asList(
             "add", "dns-server", name, "address", address, "upstream", rrsets
         ));
-        if (body.containsKey("eventLoopGroup")) {
+        if (bodyContainsKey(body, "eventLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("eventLoopGroup"));
         }
-        if (body.containsKey("ttl")) {
+        if (bodyContainsKey(body, "ttl")) {
             options.add("ttl");
             options.add("" + body.getInt("ttl"));
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
@@ -560,11 +567,11 @@ public class HttpController {
             "update", "dns-server", rctx.param("dns")
         ));
         var body = (JSON.Object) rctx.get(Tool.bodyJson);
-        if (body.containsKey("ttl")) {
+        if (bodyContainsKey(body, "ttl")) {
             options.add("ttl");
             options.add("" + body.getInt("ttl"));
         }
-        if (body.containsKey("securityGroup")) {
+        if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
             options.add(body.getString("securityGroup"));
         }
@@ -671,11 +678,11 @@ public class HttpController {
         List<String> options = new LinkedList<>(Arrays.asList(
             "add", "server-group", sg, "to", "upstream", ups
         ));
-        if (body.containsKey("weight")) {
+        if (bodyContainsKey(body, "weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }
-        if (body.containsKey("annotations")) {
+        if (bodyContainsKey(body, "annotations")) {
             options.add("annotations");
             options.add(body.getObject("annotations").stringify());
         }
@@ -689,11 +696,11 @@ public class HttpController {
         List<String> options = new LinkedList<>(Arrays.asList(
             "update", "server-group", sg, "in", "upstream", ups
         ));
-        if (body.containsKey("weight")) {
+        if (bodyContainsKey(body, "weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }
-        if (body.containsKey("annotations")) {
+        if (bodyContainsKey(body, "annotations")) {
             options.add("annotations");
             options.add(body.getObject("annotations").stringify());
         }
@@ -764,7 +771,7 @@ public class HttpController {
             "add", "server", body.getString("name"), "to", "server-group", rctx.param("sg"),
             "address", body.getString("address")
         ));
-        if (body.containsKey("weight")) {
+        if (bodyContainsKey(body, "weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }
@@ -780,7 +787,7 @@ public class HttpController {
         options.add("in");
         options.add("server-group");
         options.add(rctx.param("sg"));
-        if (body.containsKey("weight")) {
+        if (bodyContainsKey(body, "weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }
@@ -826,19 +833,19 @@ public class HttpController {
         options.add("" + body.getInt("up"));
         options.add("down");
         options.add("" + body.getInt("down"));
-        if (body.containsKey("protocol")) {
+        if (bodyContainsKey(body, "protocol")) {
             options.add("protocol");
             options.add(body.getString("protocol"));
         }
-        if (body.containsKey("method")) {
+        if (bodyContainsKey(body, "method")) {
             options.add("method");
             options.add(body.getString("method"));
         }
-        if (body.containsKey("eventLoopGroup")) {
+        if (bodyContainsKey(body, "eventLoopGroup")) {
             options.add("event-loop-group");
             options.add(body.getString("eventLoopGroup"));
         }
-        if (body.containsKey("annotations")) {
+        if (bodyContainsKey(body, "annotations")) {
             options.add("annotations");
             options.add(body.getObject("annotations").stringify());
         }
@@ -852,12 +859,12 @@ public class HttpController {
         options.add("server-group");
         options.add(rctx.param("sg"));
 
-        if (body.containsKey("timeout") || body.containsKey("period") || body.containsKey("up") || body.containsKey("down") || body.containsKey("protocol")) {
+        if (bodyContainsKey(body, "timeout") || bodyContainsKey(body, "period") || bodyContainsKey(body, "up") || bodyContainsKey(body, "down") || bodyContainsKey(body, "protocol")) {
             // health check options should be set all together
-            if (!body.containsKey("timeout")
-                || !body.containsKey("period")
-                || !body.containsKey("up")
-                || !body.containsKey("down")) {
+            if (!bodyContainsKey(body, "timeout")
+                || !bodyContainsKey(body, "period")
+                || !bodyContainsKey(body, "up")
+                || !bodyContainsKey(body, "down")) {
                 cb.failed(new Err(400, "health check options should be set together"));
                 return;
             }
@@ -873,16 +880,16 @@ public class HttpController {
             options.add("" + up);
             options.add("down");
             options.add("" + down);
-            if (body.containsKey("protocol")) {
+            if (bodyContainsKey(body, "protocol")) {
                 options.add("protocol");
                 options.add(body.getString("protocol"));
             }
         }
-        if (body.containsKey("method")) {
+        if (bodyContainsKey(body, "method")) {
             options.add("method");
             options.add(body.getString("method"));
         }
-        if (body.containsKey("annotations")) {
+        if (bodyContainsKey(body, "annotations")) {
             options.add("annotations");
             options.add(body.getObject("annotations").stringify());
         }
@@ -966,7 +973,7 @@ public class HttpController {
         var options = new LinkedList<>(Arrays.asList(
             "update", "security-group", rctx.param("secg")
         ));
-        if (body.containsKey("defaultRule")) {
+        if (bodyContainsKey(body, "defaultRule")) {
             options.add("default");
             options.add(body.getString("defaultRule"));
         }
@@ -1034,15 +1041,15 @@ public class HttpController {
             "zone", body.getString("zone"),
             "nic", body.getString("nic")
         ));
-        if (body.containsKey("ipType")) {
+        if (bodyContainsKey(body, "ipType")) {
             options.add("ip-type");
             options.add(body.getString("ipType"));
         }
-        if (body.containsKey("exposedPort")) {
+        if (bodyContainsKey(body, "exposedPort")) {
             options.add("port");
             options.add("" + body.getInt("exposedPort"));
         }
-        if (body.containsKey("weight")) {
+        if (bodyContainsKey(body, "weight")) {
             options.add("weight");
             options.add("" + body.getInt("weight"));
         }

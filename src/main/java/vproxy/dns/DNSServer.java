@@ -6,6 +6,7 @@ import vfd.FDProvider;
 import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
+import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
@@ -383,7 +384,7 @@ public class DNSServer {
         if (sock != null) { // already started
             return;
         }
-        assert Logger.lowLevelDebug("dns server " + alias + " started");
+        Logger.alert("dns server " + alias + " " + bindAddress + " starts on loop " + ((EventLoopWrapper) loop).alias);
 
         sock = FDProvider.get().openDatagramFD();
         sock.configureBlocking(false);
@@ -412,6 +413,9 @@ public class DNSServer {
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "reading data from dns sock " + ctx.getChannel() + " failed", e);
                         return;
+                    }
+                    if (remote == null) {
+                        return; // nothing received
                     }
                     if (!securityGroup.allow(Protocol.UDP, remote.getAddress(), remote.getPort())) {
                         assert Logger.lowLevelDebug("remote " + remote + " rejected by security-group " + securityGroup.alias);
@@ -455,7 +459,7 @@ public class DNSServer {
 
             @Override
             public void removed(HandlerContext<DatagramFD> ctx) {
-                Logger.error(LogType.ALERT, "the current event loop is closed, restart the dns server (" + alias + ") on another event loop");
+                Logger.alert("the current dns server (" + alias + ") is removed from event loop");
                 stop();
                 try {
                     start();

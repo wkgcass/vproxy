@@ -242,7 +242,7 @@ public class TcpLB {
                 }
 
                 servers.put(server, proxy);
-                Logger.info(LogType.ALERT, "server " + bindAddress + " starts on loop: " + w.alias);
+                Logger.info(LogType.ALERT, "server " + alias + " " + bindAddress + " starts on loop: " + w.alias);
             }
 
             assert Logger.lowLevelDebug("lb " + alias + " started");
