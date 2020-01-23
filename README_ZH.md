@@ -108,6 +108,16 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 ## 如何使用
 
+<details><summary>vpctl</summary>
+
+<br>
+
+我们提供一个命令行客户端应用，来帮助你操作vproxy实例。你可以参考[vpctl的仓库](https://github.com/vproxy-tools/vpctl)以获取更多信息。
+
+该工具经过完整的测试，并且非常简单易用。该工具的仓库里提供了一些例子供参考。
+
+</details>
+
 <details><summary>简易模式</summary>
 
 <br>
@@ -130,7 +140,15 @@ java -Deploy=Simple -jar vproxy.jar \
 
 <br>
 
-请参考如下文档。  
+使用`--help`查看启动参数。
+
+你可以在启动vproxy实例的同时，开启一个`http-controller`和一个`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
+
+```
+java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
+```
+
+查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/vproxy-tools/vproxy-java-client)以获取更多信息。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。
 
 </details>

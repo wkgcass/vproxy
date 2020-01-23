@@ -13,13 +13,12 @@ Use the `--no-cache` flag because the Dockerfile dynamically retrieves the lates
 ## Run
 
 ```
-docker run -d -v $AUTO_SAVE_DIR:/root -p 16379:16379 vproxy:latest
+docker run -d -v $AUTO_SAVE_DIR:/root vproxy:latest
 ```
 
 The `$AUTO_SAVE_DIR` is a directory for you to load and store automatically saved file (named `.vproxy.last`).  
-The `16379` is the resp-controller port defined in Dockerfile, expose it then you can manage the vproxy instance using `redis-cli`.
 
-If you have more ports, expose them as well. Or simply use the `--net=host` option if it's possible.
+If you have some ports, you may need to expose them using `-p` option. Or simply use the `--net=host` option if it's possible.
 
 ## Check
 
@@ -37,12 +36,4 @@ docker stop $CONTAINER_ID
 
 ## Customized launch parameters
 
-* Use `java` for the java program.
-* Use `/vproxy.jar` or `vproxy.jar` for the vproxy jar.
-* And remember to escape `"~"` if you are trying to use the home directory inside the container.
-
-e.g.
-
-```
-docker run -p 1080:1080 --read-only -v /path-to-config-dir:/root vproxy:latest java -Deploy=WebSocksProxyAgent -jar vproxy.jar "~/vproxy-websocks-agent.conf"
-```
+The dockerfile uses entrypoint, so any param can be simply added when `run`ning the container. You may directly specify system properties using `-Dxxx=yyy` just as using normal application params, the vproxy `main` function will convert them to system properties.

@@ -124,6 +124,16 @@ For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/w
 
 ## How to use
 
+<details><summary>vpctl</summary>
+
+<br>
+
+A command line client application is provided to manipulate the vproxy instance. You may see more info in [vpctl repo](https://github.com/vproxy-tools/vpctl).
+
+This tool is fully tested and simple to use. Some examples are provided in the tool repo for reference.
+
+</details>
+
 <details><summary>Simple mode</summary>
 
 <br>
@@ -146,7 +156,15 @@ Use `help` to view the parameters.
 
 <br>
 
-See docs for help.  
+Use `--help` to view the launching parameters.
+
+You may launch the vproxy instance with a `http-controller` and a `resp-controller`. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
+
+```
+java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
+```
+
+See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/vproxy-tools/vproxy-java-client) for more info.  
 Questions about implementation detail are also welcome (in issues).
 
 </details>
