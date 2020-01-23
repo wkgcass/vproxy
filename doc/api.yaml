@@ -54,6 +54,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/TcpLb'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "tcp-lb"
@@ -73,7 +85,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /tcp-lb/{tl}:
     get:
       tags:
@@ -93,8 +119,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/TcpLb'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -120,9 +160,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "TcpLb not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -139,9 +191,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "TcpLb not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /tcp-lb/{tl}/detail:
     get:
       tags:
@@ -159,8 +223,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/TcpLbDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /socks5-server:
     get:
       tags:
@@ -176,6 +254,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Socks5Server'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "socks5-server"
@@ -195,7 +285,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /socks5-server/{socks5}:
     get:
       tags:
@@ -215,8 +319,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Socks5Server'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -242,9 +360,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "Socks5Server not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -261,9 +391,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "Socks5Server not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /socks5-server/{socks5}/detail:
     get:
       tags:
@@ -281,8 +423,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Socks5ServerDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /dns-server:
     get:
       tags:
@@ -298,6 +454,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/DnsServer'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "dns-server"
@@ -317,7 +485,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /dns-server/{dns}:
     get:
       tags:
@@ -337,8 +519,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/DnsServer'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -364,9 +560,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "DnsServer not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -383,9 +591,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "DnsServer not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /dns-server/{dns}/detail:
     get:
       tags:
@@ -403,8 +623,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/DnsServerDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group/{elg}/event-loop:
     get:
       tags:
@@ -426,6 +660,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/EventLoop'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "event-loop"
@@ -450,7 +696,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group/{elg}/event-loop/{el}:
     get:
       tags:
@@ -475,8 +735,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoop'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -498,9 +772,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "EventLoop not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group/{elg}/event-loop/{el}/detail:
     get:
       tags:
@@ -523,8 +809,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group:
     get:
       tags:
@@ -540,6 +840,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/EventLoopGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "event-loop-group"
@@ -559,7 +871,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group/{elg}:
     get:
       tags:
@@ -579,8 +905,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -597,9 +937,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "EventLoopGroup not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /event-loop-group/{elg}/detail:
     get:
       tags:
@@ -617,8 +969,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/EventLoopGroupDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream/{ups}/server-group:
     get:
       tags:
@@ -640,6 +1006,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/ServerGroupInUpstream'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "server-group"
@@ -664,7 +1042,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream/{ups}/server-group/{sg}:
     get:
       tags:
@@ -689,8 +1081,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupInUpstream'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -721,9 +1127,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "ServerGroupInUpstream not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -745,9 +1163,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "ServerGroupInUpstream not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream/{ups}/server-group/{sg}/detail:
     get:
       tags:
@@ -770,8 +1200,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupInUpstreamDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream:
     get:
       tags:
@@ -787,6 +1231,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Upstream'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "upstream"
@@ -806,7 +1262,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream/{ups}:
     get:
       tags:
@@ -826,8 +1296,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Upstream'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -844,9 +1328,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "Upstream not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /upstream/{ups}/detail:
     get:
       tags:
@@ -864,8 +1360,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/UpstreamDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group/{sg}/server:
     get:
       tags:
@@ -887,6 +1397,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/Server'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "server"
@@ -911,7 +1433,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group/{sg}/server/{svr}:
     get:
       tags:
@@ -936,8 +1472,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/Server'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -968,9 +1518,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "Server not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -992,9 +1554,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "Server not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group/{sg}/server/{svr}/detail:
     get:
       tags:
@@ -1017,8 +1591,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group:
     get:
       tags:
@@ -1034,6 +1622,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/ServerGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "server-group"
@@ -1053,7 +1653,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group/{sg}:
     get:
       tags:
@@ -1073,8 +1687,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -1100,9 +1728,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "ServerGroup not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -1119,9 +1759,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "ServerGroup not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /server-group/{sg}/detail:
     get:
       tags:
@@ -1139,8 +1791,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/ServerGroupDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group/{secg}/security-group-rule:
     get:
       tags:
@@ -1162,6 +1828,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/SecurityGroupRule'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "security-group-rule"
@@ -1186,7 +1864,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group/{secg}/security-group-rule/{secgr}:
     get:
       tags:
@@ -1211,8 +1903,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupRule'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -1234,9 +1940,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "SecurityGroupRule not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group/{secg}/security-group-rule/{secgr}/detail:
     get:
       tags:
@@ -1259,8 +1977,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupRuleDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group:
     get:
       tags:
@@ -1276,6 +2008,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/SecurityGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "security-group"
@@ -1295,7 +2039,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group/{secg}:
     get:
       tags:
@@ -1315,8 +2073,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroup'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # {{{[[[
     put:
       tags:
@@ -1342,9 +2114,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "SecurityGroup not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     # ]]]}}}
     delete:
       tags:
@@ -1361,9 +2145,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "SecurityGroup not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /security-group/{secg}/detail:
     get:
       tags:
@@ -1381,8 +2177,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SecurityGroupDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-group-delegate:
     get:
       tags:
@@ -1398,6 +2208,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/SmartGroupDelegate'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "smart-group-delegate"
@@ -1417,7 +2239,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-group-delegate/{sgd}:
     get:
       tags:
@@ -1437,8 +2273,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartGroupDelegate'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -1455,9 +2305,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "SmartGroupDelegate not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-group-delegate/{sgd}/detail:
     get:
       tags:
@@ -1475,8 +2337,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartGroupDelegateDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-node-delegate:
     get:
       tags:
@@ -1492,6 +2368,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/SmartNodeDelegate'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "smart-node-delegate"
@@ -1511,7 +2399,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-node-delegate/{snd}:
     get:
       tags:
@@ -1531,8 +2433,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartNodeDelegate'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -1549,9 +2465,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "SmartNodeDelegate not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /smart-node-delegate/{snd}/detail:
     get:
       tags:
@@ -1569,8 +2497,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/SmartNodeDelegateDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /cert-key:
     get:
       tags:
@@ -1586,6 +2528,18 @@ paths:
             type: array
             items:
               $ref: '#/definitions/CertKey'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
         - "cert-key"
@@ -1605,7 +2559,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /cert-key/{ck}:
     get:
       tags:
@@ -1625,8 +2593,22 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/CertKey'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
     delete:
       tags:
@@ -1643,9 +2625,21 @@ paths:
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "CertKey not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /cert-key/{ck}/detail:
     get:
       tags:
@@ -1663,14 +2657,58 @@ paths:
           description: "ok"
           schema:
             $ref: '#/definitions/CertKeyDetail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 
 ######################
 # End Generated Code #
 ######################
 
 definitions:
+  Error400:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+      message:
+        type: "string"
+  Error404:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+      message:
+        type: "string"
+  Error409:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+      message:
+        type: "string"
+  Error500:
+    type: "object"
+    properties:
+      code:
+        type: "integer"
+      errId:
+        type: "string"
+      message:
+        type: "string"
   Protocol:
     type: "string"
     enum:

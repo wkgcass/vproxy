@@ -19,6 +19,18 @@
             type: array
             items:
               $ref: '#/definitions/{{res-name}}'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
     post:
       tags:
       - "{{res-url-name}}"
@@ -43,7 +55,21 @@
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /{{top-res-url-name}}/{{{top-res-short-name}}}/{{res-url-name}}/{{{res-short-name}}}:
     get:
       tags:
@@ -68,8 +94,22 @@
           description: "ok"
           schema:
             $ref: '#/definitions/{{res-name}}'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 # {{{[[[
     put:
       tags:
@@ -100,9 +140,21 @@
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "{{res-name}} not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 # ]]]}}}
     delete:
       tags:
@@ -124,9 +176,21 @@
         204:
           description: "ok"
         400:
-          description: "Invalid input"
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "{{res-name}} not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
   /{{top-res-url-name}}/{{{top-res-short-name}}}/{{res-url-name}}/{{{res-short-name}}}/detail:
     get:
       tags:
@@ -149,5 +213,19 @@
           description: "ok"
           schema:
             $ref: '#/definitions/{{res-name}}Detail'
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
         404:
-          description: "not found"
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
