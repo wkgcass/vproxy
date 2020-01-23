@@ -12,6 +12,8 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 <details><summary>直接使用已构建的版本</summary>
 
+<br>
+
 查看 [release page](https://github.com/wkgcass/vproxy/releases).
 
 #### linux
@@ -45,6 +47,8 @@ java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 
 <details><summary>jlink</summary>
 
+<br>
+
 ```
 ./gradlew clean jlink
 ./build/image/bin/vproxy -Deploy=HelloWorld
@@ -53,6 +57,8 @@ java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 </details>
 
 <details><summary>docker</summary>
+
+<br>
 
 ```
 docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
@@ -63,6 +69,8 @@ docker run --rm vproxy -Deploy=HelloWorld
 
 <details><summary>graal native-image</summary>
 
+<br>
+
 ```
 ./gradlew clean jar
 native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fallback --no-server vproxy
@@ -72,6 +80,8 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 </details>
 
 <details><summary>native fds impl</summary>
+
+<br>
 
 仅支持macos(bsd)/linux。另外在编译前，你可能需要配置`JAVA_HOME`环境变量。
 
@@ -100,6 +110,8 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 <details><summary>简易模式</summary>
 
+<br>
+
 你可以用一行命令启动一个简单的负载均衡:
 
 ```
@@ -115,6 +127,8 @@ java -Deploy=Simple -jar vproxy.jar \
 </details>
 
 <details><summary>标准模式</summary>
+
+<br>
 
 请参考如下文档。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。

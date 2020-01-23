@@ -22,6 +22,8 @@ Clone it, compile it, then everything is ready for running.
 
 <details><summary>use pre-built releases</summary>
 
+<br>
+
 See the [release page](https://github.com/wkgcass/vproxy/releases).
 
 #### For linux
@@ -50,6 +52,8 @@ Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/do
 
 <details><summary>pack</summary>
 
+<br>
+
 ```
 ./gradlew clean jar
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
@@ -58,6 +62,8 @@ java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 </details>
 
 <details><summary>jlink</summary>
+
+<br>
 
 ```
 ./gradlew clean jlink
@@ -68,6 +74,8 @@ java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 
 <details><summary>docker</summary>
 
+<br>
+
 ```
 docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 docker run --rm vproxy -Deploy=HelloWorld
@@ -76,6 +84,8 @@ docker run --rm vproxy -Deploy=HelloWorld
 </details>
 
 <details><summary>graal native-image</summary>
+
+<br>
 
 ```
 ./gradlew clean jar
@@ -86,6 +96,8 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 </details>
 
 <details><summary>use native fds impl</summary>
+
+<br>
 
 Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.
 
@@ -114,6 +126,8 @@ For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/w
 
 <details><summary>Simple mode</summary>
 
+<br>
+
 You can start a simple loadbalancer in one command:
 
 ```
@@ -129,6 +143,8 @@ Use `help` to view the parameters.
 </details>
 
 <details><summary>Standard mode</summary>
+
+<br>
 
 See docs for help.  
 Questions about implementation detail are also welcome (in issues).
