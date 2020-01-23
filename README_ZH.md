@@ -140,7 +140,7 @@ java -Deploy=Simple -jar vproxy.jar \
 
 <br>
 
-使用`--help`查看启动参数。
+使用`help`查看启动参数。
 
 你可以在启动vproxy实例的同时，开启一个`http-controller`和一个`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
 

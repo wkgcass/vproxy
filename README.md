@@ -156,7 +156,7 @@ Use `help` to view the parameters.
 
 <br>
 
-Use `--help` to view the launching parameters.
+Use `help` to view the launching parameters.
 
 You may launch the vproxy instance with a `http-controller` and a `resp-controller`. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
 
