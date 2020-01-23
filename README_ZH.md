@@ -10,7 +10,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 ### 打包
 
-### 直接使用已构建的版本
+<details><summary>直接使用已构建的版本</summary>
 
 查看 [release page](https://github.com/wkgcass/vproxy/releases).
 
@@ -41,21 +41,27 @@ Java运行时可以从[这里](https://adoptopenjdk.net/?variant=openjdk11&jvmVa
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-### jlink
+</details>
+
+<details><summary>jlink</summary>
 
 ```
 ./gradlew clean jlink
 ./build/image/bin/vproxy -Deploy=HelloWorld
 ```
 
-### docker
+</details>
+
+<details><summary>docker</summary>
 
 ```
 docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 docker run --rm vproxy -Deploy=HelloWorld
 ```
 
-### graal native-image
+</details>
+
+<details><summary>graal native-image</summary>
 
 ```
 ./gradlew clean jar
@@ -63,7 +69,9 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 ./vproxy -Deploy=HelloWorld
 ```
 
-### native fds impl
+</details>
+
+<details><summary>native fds impl</summary>
 
 仅支持macos(bsd)/linux。另外在编译前，你可能需要配置`JAVA_HOME`环境变量。
 
@@ -77,6 +85,8 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
 
+</details>
+
 ## 模板
 
 * 零依赖: 除了java标准库外不加任何依赖，也不使用jni扩展。
@@ -88,7 +98,7 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 ## 如何使用
 
-### 简易模式
+<details><summary>简易模式</summary>
 
 你可以用一行命令启动一个简单的负载均衡:
 
@@ -102,10 +112,14 @@ java -Deploy=Simple -jar vproxy.jar \
 
 可以输入`help`检查参数列表。
 
-### 标准模式
+</details>
+
+<details><summary>标准模式</summary>
 
 请参考如下文档。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。
+
+</details>
 
 ### 文档
 

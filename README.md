@@ -20,7 +20,7 @@ Clone it, compile it, then everything is ready for running.
 
 ## Make
 
-### directly use built releases
+<details><summary>use pre-built releases</summary>
 
 See the [release page](https://github.com/wkgcass/vproxy/releases).
 
@@ -46,28 +46,36 @@ Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/do
 
 >NOTE: the runtime is in beta state.
 
-### pack
+</details>
+
+<details><summary>pack</summary>
 
 ```
 ./gradlew clean jar
 java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-### jlink
+</details>
+
+<details><summary>jlink</summary>
 
 ```
 ./gradlew clean jlink
 ./build/image/bin/vproxy -Deploy=HelloWorld
 ```
 
-### docker
+</details>
+
+<details><summary>docker</summary>
 
 ```
 docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
 docker run --rm vproxy -Deploy=HelloWorld
 ```
 
-### graal native-image
+</details>
+
+<details><summary>graal native-image</summary>
 
 ```
 ./gradlew clean jar
@@ -75,7 +83,9 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 ./vproxy -Deploy=HelloWorld
 ```
 
-### use native fds impl
+</details>
+
+<details><summary>use native fds impl</summary>
 
 Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.
 
@@ -89,6 +99,8 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
+</details>
+
 ## Aim
 
 * Zero dependency: no dependency other than java standard library, and no jni extensions.
@@ -100,7 +112,7 @@ For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/w
 
 ## How to use
 
-### Simple mode
+<details><summary>Simple mode</summary>
 
 You can start a simple loadbalancer in one command:
 
@@ -114,10 +126,14 @@ java -Deploy=Simple -jar vproxy.jar \
 
 Use `help` to view the parameters.
 
-### Standard mode
+</details>
+
+<details><summary>Standard mode</summary>
 
 See docs for help.  
 Questions about implementation detail are also welcome (in issues).
+
+</details>
 
 ### Doc
 
