@@ -93,7 +93,7 @@ cd ../../../
 java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
+如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
 
 </details>
 
@@ -165,7 +165,7 @@ java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:1
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
 * [using-application-layer-protocols.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md): 关于如何使用(自定义的)应用层协议。
-* [f-stack-how-to.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md): 如何在`F-Stack`上运行vproxy。
+* [fstack-how-to.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): 如何在`F-Stack`上运行vproxy。
 
 ## 贡献
 

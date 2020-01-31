@@ -109,7 +109,7 @@ cd ../../../
 java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-For info about `F-Stack`, check the doc [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
+For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
 </details>
 
@@ -181,7 +181,7 @@ Questions about implementation detail are also welcome (in issues).
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
 * [using-application-layer-protocols.md](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
-* [f-stack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/f-stack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
+* [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
 
 ## Contribute
 
