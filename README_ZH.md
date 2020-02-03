@@ -148,7 +148,7 @@ java -Deploy=Simple -jar vproxy.jar \
 java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
 ```
 
-查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/vproxy-tools/vproxy-java-client)以获取更多信息。  
+查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)以获取更多信息。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。
 
 </details>

@@ -164,7 +164,7 @@ You may launch the vproxy instance with a `http-controller` and a `resp-controll
 java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
 ```
 
-See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/vproxy-tools/vproxy-java-client) for more info.  
+See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml) for more info.  
 Questions about implementation detail are also welcome (in issues).
 
 </details>
