@@ -15,6 +15,7 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.socks.Socks5ProxyProtocolHandler;
+import vproxyx.util.Browser;
 import vproxy.util.Logger;
 import vproxy.util.Tuple3;
 import vproxy.util.Utils;
@@ -25,6 +26,8 @@ import vproxyx.websocks.ss.SSProtocolHandler;
 
 import java.io.File;
 import java.net.InetSocketAddress;
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -49,6 +52,7 @@ public class WebSocksProxyAgent {
                 System.out.println("Config file not found at " + configFile);
                 System.out.println("Please visit https://vproxy-tools.github.io/vpwsui/ to generate a config file");
                 System.out.println("Or you may refer to the config file example https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
+                Browser.open("https://vproxy-tools.github.io/vpwsui/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
                 System.exit(1);
                 return;
             }

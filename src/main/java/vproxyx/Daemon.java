@@ -5,6 +5,7 @@ import vproxy.component.app.Shutdown;
 import vproxy.connection.ServerSock;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.OS;
 import vproxy.util.SignalHook;
 
 import java.io.*;
@@ -45,14 +46,10 @@ public class Daemon {
 
         // check platform
         {
-            var os = System.getProperty("os.name");
-            if (os != null) {
-                os = os.toLowerCase();
-                if (os.contains("windows")) {
-                    System.err.println("Daemon is not supported on Windows");
-                    System.exit(1);
-                    return;
-                }
+            if (OS.isWindows()) {
+                System.err.println("Daemon is not supported on Windows");
+                System.exit(1);
+                return;
             }
         }
         // check reuseport

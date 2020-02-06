@@ -1,6 +1,7 @@
 package vproxy.app;
 
 import vproxy.util.Logger;
+import vproxy.util.OS;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -79,9 +80,9 @@ public class Config {
         if (supportReusePortLB == 1) {
             return true;
         }
-        String os = System.getProperty("os.name", "");
-        String version = System.getProperty("os.version", "");
-        if (os.toLowerCase().contains("linux")) {
+        String os = OS.name();
+        String version = OS.version();
+        if (OS.isLinux()) {
             if (version.contains(".")) {
                 String majorStr = version.substring(0, version.indexOf("."));
                 String reset = version.substring(version.indexOf(".") + 1);
