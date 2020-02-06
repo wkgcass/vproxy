@@ -3,6 +3,7 @@ package vproxyx.websocks;
 import vproxy.connection.Connection;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
+import vproxy.processor.http1.entity.Header;
 import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.LogType;
@@ -13,6 +14,7 @@ import java.io.IOException;
 import java.net.*;
 import java.util.Arrays;
 import java.util.Enumeration;
+import java.util.List;
 import java.util.stream.Collectors;
 
 public class PACHandler extends HttpProtocolHandler {
@@ -25,22 +27,37 @@ public class PACHandler extends HttpProtocolHandler {
         "\n}"
     ).split("\n")).map(String::trim).collect(Collectors.joining());
 
-    private final String host;
     private final int socks5Port;
     private final int httpConnectPort;
 
-    public PACHandler(String host, int socksPort, int httpConnectPort) {
+    public PACHandler(int socksPort, int httpConnectPort) {
         super(false);
-        this.host = host;
         this.socks5Port = socksPort;
         this.httpConnectPort = httpConnectPort;
     }
 
-    private String getIp(Connection conn) {
-        if (!host.equals("*"))
-            return host;
-
+    private String getIp(ProtocolHandlerContext<HttpContext> ctx) {
+        // try to get address from Host header
+        List<Header> headers = ctx.data.result.headers;
+        if (headers != null) {
+            for (Header h : headers) {
+                if (h.key.equalsIgnoreCase("host")) {
+                    String v = h.value.trim();
+                    if (v.isEmpty()) {
+                        continue;
+                    }
+                    if (Utils.isIpLiteral(v)) {
+                        return v;
+                    }
+                    if (v.contains(":")) {
+                        v = v.substring(0, v.lastIndexOf(':'));
+                    }
+                    return v;
+                }
+            }
+        }
         // try to get local address from connection
+        Connection conn = ctx.connection;
         try {
             return Utils.ipStr(((InetSocketAddress) conn.channel.getLocalAddress()).getAddress().getAddress());
         } catch (IOException ignore) {
@@ -102,7 +119,7 @@ public class PACHandler extends HttpProtocolHandler {
             return;
         }
         assert Logger.lowLevelDebug("got valid req, let's write response back");
-        String ip = getIp(ctx.connection);
+        String ip = getIp(ctx);
         String socks5 = "";
         if (socks5Port != 0) {
             socks5 = "SOCKS5 " + ip + ":" + socks5Port;

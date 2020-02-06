@@ -31,7 +31,7 @@ import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class WebSocksProxyAgent {
-    private static final String defaultConfigName = "vproxy-websocks-agent.conf";
+    private static final String defaultConfigName = "vpws-agent.conf";
 
     public static void main0(String[] args) throws Exception {
         String configFile = Utils.homefile(defaultConfigName);
@@ -46,7 +46,11 @@ public class WebSocksProxyAgent {
 
             File file = new File(configFile);
             if (!file.exists()) {
-                ConfigGenerator.interactive(Utils.homedir(), defaultConfigName);
+                System.out.println("Config file not found at " + configFile);
+                System.out.println("Please visit https://vproxy-tools.github.io/vpwsui/ to generate a config file");
+                System.out.println("Or you may refer to the config file example https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
+                System.exit(1);
+                return;
             }
         } else {
             configFile = args[0];
@@ -200,7 +204,6 @@ public class WebSocksProxyAgent {
             ProtocolServerHandler.apply(acceptor.next(), lsn,
                 new ProtocolServerConfig().setInBufferSize(256).setOutBufferSize(256),
                 new PACHandler(
-                    configProcessor.getPacServerIp(),
                     configProcessor.getSocks5ListenPort(), // this port is socks5 port
                     configProcessor.getHttpConnectListenPort() // this port is http connect port
                 ));

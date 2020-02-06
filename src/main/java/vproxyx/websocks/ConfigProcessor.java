@@ -28,7 +28,7 @@ public class ConfigProcessor {
     public final String fileName;
     public final EventLoopGroup hcLoopGroup;
     public final EventLoopGroup workerLoopGroup;
-    private int socks5ListenPort = 1080;
+    private int socks5ListenPort = 0;
     private int httpConnectListenPort = 0;
     private int ssListenPort = 0;
     private String ssPassword = "";
@@ -57,7 +57,6 @@ public class ConfigProcessor {
     private boolean noHealthCheck = false;
     private boolean proxyHttpsRelayDomainMerge = false;
 
-    private String pacServerIp;
     private int pacServerPort;
 
     public ConfigProcessor(String fileName, EventLoopGroup hcLoopGroup, EventLoopGroup workerLoopGroup) {
@@ -194,10 +193,6 @@ public class ConfigProcessor {
 
     public int getPoolSize() {
         return poolSize;
-    }
-
-    public String getPacServerIp() {
-        return pacServerIp;
     }
 
     public int getPacServerPort() {
@@ -417,22 +412,14 @@ public class ConfigProcessor {
                         throw new Exception("invalid agent.pool, should not be negative");
                     }
                     poolSize = intSize;
-                } else if (line.startsWith("agent.gateway.pac.address ")) {
-                    String val = line.substring("agent.gateway.pac.address ".length()).trim();
-                    String[] split = val.split(":");
-                    if (split.length != 2)
-                        throw new Exception("invalid agent.gateway.pac.address, should be $ip:$port");
-                    String ip = split[0];
-                    if (!ip.equals("*") && !Utils.isIpLiteral(ip))
-                        throw new Exception("invalid agent.gateway.pac.address, the ip is invalid");
-                    String portStr = split[1];
+                } else if (line.startsWith("agent.gateway.pac.listen ")) {
+                    String val = line.substring("agent.gateway.pac.listen ".length()).trim();
                     int port;
                     try {
-                        port = Integer.parseInt(portStr);
+                        port = Integer.parseInt(val);
                     } catch (NumberFormatException e) {
-                        throw new Exception("invalid agent.gateway.pac.address, the port is invalid");
+                        throw new Exception("invalid agent.gateway.pac.listen, the port is invalid");
                     }
-                    pacServerIp = ip;
                     pacServerPort = port;
                 } else if (line.startsWith("agent.auto-sign ")) {
                     line = line.substring("agent.auto-sign ".length());
