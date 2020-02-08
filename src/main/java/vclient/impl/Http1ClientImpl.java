@@ -19,10 +19,13 @@ import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
 import vserver.HttpMethod;
 
+import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
+import javax.net.ssl.SSLParameters;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -87,6 +90,11 @@ public class Http1ClientImpl implements HttpClient {
 
             @Override
             public void send(ByteArray body, ResponseHandler handler) {
+                if (!headers.containsKey("host")) {
+                    if (opts.host != null) {
+                        headers.put("host", opts.host);
+                    }
+                }
                 request.headers = new ArrayList<>(headers.size() + 2);
                 for (Map.Entry<String, String> entry : headers.entrySet()) {
                     request.headers.add(new Header(entry.getKey(), entry.getValue()));
@@ -111,6 +119,11 @@ public class Http1ClientImpl implements HttpClient {
                     if (opts.sslContext != null) {
                         SSLEngine engine = opts.sslContext.createSSLEngine();
                         engine.setUseClientMode(true);
+                        SSLParameters params = new SSLParameters();
+                        if (opts.host != null) {
+                            params.setServerNames(Collections.singletonList(new SNIHostName(opts.host)));
+                        }
+                        engine.setSSLParameters(params);
                         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
                         in = pair.left;
                         out = pair.right;

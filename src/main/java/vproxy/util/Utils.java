@@ -315,6 +315,15 @@ public class Utils {
         return cb.block();
     }
 
+    public static InetAddress blockParseAddressToInet(String address) throws IllegalArgumentException {
+        byte[] arr = blockParseAddress(address);
+        try {
+            return InetAddress.getByAddress(arr);
+        } catch (UnknownHostException e) {
+            throw new IllegalArgumentException("cannot get inet from byte array");
+        }
+    }
+
     public static byte[] parseMask(int mask) {
         if (mask > 128) { // mask should not greater than 128
             throw new IllegalArgumentException("unknown mask " + mask);

@@ -4,10 +4,14 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Tuple;
 import vproxy.util.ringbuffer.ssl.SSL;
 
-import javax.net.ssl.SSLEngine;
+import javax.net.ssl.*;
+import java.security.KeyManagementException;
+import java.security.NoSuchAlgorithmException;
 import java.util.function.Consumer;
 
 public class SSLUtils {
+    private static SSLContext defaultClientSSLContext;
+
     private SSLUtils() {
     }
 
@@ -52,5 +56,25 @@ public class SSLUtils {
                                                 ByteBufferRingBuffer input,
                                                 ByteBufferRingBuffer output) {
         return genbufForServer(ssl, input, output, null);
+    }
+
+    public static SSLContext getDefaultClientSSLContext() {
+        if (defaultClientSSLContext != null) {
+            return defaultClientSSLContext;
+        }
+
+        KeyManager[] kms = null;
+        TrustManager[] tms = null;
+
+        SSLContext sslContext;
+        try {
+            sslContext = SSLContext.getInstance("TLS");
+            //noinspection ConstantConditions
+            sslContext.init(kms, tms, null);
+        } catch (KeyManagementException | NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        defaultClientSSLContext = sslContext;
+        return sslContext;
     }
 }

@@ -1,5 +1,7 @@
 package vproxyx.websocks;
 
+import vclient.HttpClient;
+import vclient.HttpResponse;
 import vproxy.app.CertKeyHolder;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
@@ -13,6 +15,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.h2streamed.H2StreamedClientFDs;
 import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.BlockCallback;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.*;
@@ -777,21 +780,69 @@ public class ConfigProcessor {
             String regexp = line.substring(1, line.length() - 1);
             return new PatternDomainChecker(Pattern.compile(regexp));
         } else if (line.startsWith("[") && line.endsWith("]")) {
-            String abpfile = line.substring(1, line.length() - 1);
-            abpfile = Utils.filename(abpfile);
-
-            ABP abp;
-            try (FileReader fileABP = new FileReader(abpfile)) {
-                StringBuilder sb = new StringBuilder();
-                BufferedReader br2 = new BufferedReader(fileABP);
-                String line2;
-                while ((line2 = br2.readLine()) != null) {
-                    sb.append(line2.trim());
+            String abpfile = line.substring(1, line.length() - 1).trim();
+            String content;
+            if (abpfile.contains("://")) {
+                Logger.alert("getting abp from " + abpfile);
+                String protocolAndHostAndPort;
+                String uri;
+                {
+                    String protocol;
+                    String hostAndPortAndUri;
+                    if (abpfile.startsWith("http://")) {
+                        protocol = "http://";
+                        hostAndPortAndUri = abpfile.substring("http://".length());
+                    } else if (abpfile.startsWith("https://")) {
+                        protocol = "https://";
+                        hostAndPortAndUri = abpfile.substring("https://".length());
+                    } else {
+                        throw new Exception("unknown protocol in " + abpfile);
+                    }
+                    if (hostAndPortAndUri.contains("/")) {
+                        protocolAndHostAndPort = protocol + hostAndPortAndUri.substring(0, hostAndPortAndUri.indexOf("/"));
+                        uri = hostAndPortAndUri.substring(hostAndPortAndUri.indexOf("/"));
+                    } else {
+                        protocolAndHostAndPort = hostAndPortAndUri;
+                        uri = "/";
+                    }
                 }
-                var content = sb.toString();
-                abp = new ABP(true);
-                abp.addBase64(content);
+                BlockCallback<HttpResponse, IOException> cb = new BlockCallback<>();
+                HttpClient.to(protocolAndHostAndPort).get(uri).send((err, response) -> {
+                    if (err != null) {
+                        cb.failed(err);
+                    } else {
+                        cb.succeeded(response);
+                    }
+                });
+                HttpResponse resp;
+                try {
+                    resp = cb.block();
+                } catch (IOException e) {
+                    throw new IOException("requesting " + abpfile + " failed", e);
+                }
+                if (resp.status() != 200) {
+                    throw new IOException("requesting " + abpfile + " failed, response status not 200: " + resp.status());
+                }
+                if (resp.body() == null) {
+                    throw new IOException("requesting " + abpfile + " failed, no response body");
+                }
+                content = new String(resp.body().toJavaArray());
+                content = Arrays.stream(content.split("\n")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.joining());
+            } else {
+                abpfile = Utils.filename(abpfile);
+                try (FileReader fileABP = new FileReader(abpfile)) {
+                    StringBuilder sb = new StringBuilder();
+                    BufferedReader br2 = new BufferedReader(fileABP);
+                    String line2;
+                    while ((line2 = br2.readLine()) != null) {
+                        sb.append(line2.trim());
+                    }
+                    content = sb.toString();
+                }
             }
+
+            ABP abp = new ABP(true);
+            abp.addBase64(content);
             return new ABPDomainChecker(abp);
         } else {
             return new SuffixDomainChecker(line);

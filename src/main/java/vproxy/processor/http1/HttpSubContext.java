@@ -79,6 +79,8 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         void handle(ByteArray b) throws Exception;
     }
 
+    private byte[] buf;
+    private int bufOffset = 0;
     private RequestBuilder req;
     private ResponseBuilder resp;
     private List<HeaderBuilder> headers;
@@ -101,6 +103,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     // if it's a backend sub context, the field will be set but never used
     // when this field is set to true, it will not be set to false again
     boolean hostHeaderRetrieved;
+    boolean parserMode;
 
     public HttpSubContext(HttpContext httpContext, int connId) {
         super(httpContext, connId);
@@ -109,6 +112,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     }
 
     public void setParserMode() {
+        this.parserMode = true;
         this.hostHeaderRetrieved = true; // set this field to true to let feed() respond bytes
     }
 
@@ -461,18 +465,41 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     private void state10(ByteArray data) {
         assert data.length() <= proxyLen;
+        int contentLength = proxyLen;
         proxyLen -= data.length();
         if (frontend) {
-            if (req.body == null) {
-                req.body = data;
+            if (parserMode) { // use a byte array buffer to hold the data
+                if (req.body == null) {
+                    buf = new byte[contentLength];
+                    bufOffset = 0;
+                    req.body = ByteArray.from(buf);
+                }
+                for (int i = 0; i < data.length(); ++i) {
+                    buf[bufOffset++] = data.get(i);
+                }
             } else {
-                req.body = req.body.concat(data);
+                if (req.body == null) {
+                    req.body = data;
+                } else {
+                    req.body = req.body.concat(data);
+                }
             }
         } else {
-            if (resp.body == null) {
-                resp.body = data;
+            if (parserMode) {
+                if (resp.body == null) {
+                    buf = new byte[contentLength];
+                    bufOffset = 0;
+                    resp.body = ByteArray.from(buf);
+                }
+                for (int i = 0; i < data.length(); ++i) {
+                    buf[bufOffset++] = data.get(i);
+                }
             } else {
-                resp.body = resp.body.concat(data);
+                if (resp.body == null) {
+                    resp.body = data;
+                } else {
+                    resp.body = resp.body.concat(data);
+                }
             }
         }
         if (proxyLen == 0) {
