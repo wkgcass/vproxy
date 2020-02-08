@@ -10,6 +10,7 @@ mainClassName = 'vproxy.app.Main'
 sourceCompatibility = 11.0
 
 repositories {
+    mavenLocal()
     mavenCentral()
 }
 
