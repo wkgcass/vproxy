@@ -747,35 +747,6 @@ public class Utils {
         return isReset(t) || isBrokenPipe(t) || isSSLEngineClosed(t);
     }
 
-    public static Process runSubProcess(String program) throws IOException {
-        return Runtime.getRuntime().exec(program);
-    }
-
-    private static void proxyProcessOutput(InputStream subProcess, PrintStream output) {
-        new Thread(() -> {
-            while (true) {
-                int intB;
-                try {
-                    intB = subProcess.read();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                    break;
-                }
-                if (intB == -1) {
-                    // EOF, so break
-                    break;
-                }
-                byte b = (byte) intB;
-                output.write(b);
-            }
-        }).start();
-    }
-
-    public static void proxyProcessOutput(Process process) {
-        proxyProcessOutput(process.getInputStream(), System.out);
-        proxyProcessOutput(process.getErrorStream(), System.err);
-    }
-
     public static String stackTrace() {
         StringWriter s = new StringWriter();
         new Throwable().printStackTrace(new PrintWriter(s));
