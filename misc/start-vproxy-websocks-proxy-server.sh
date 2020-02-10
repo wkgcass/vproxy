@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 runtime="vproxy-runtime-linux"
 listenPort="443"
 
@@ -59,7 +61,7 @@ else
 	echo "vproxy.jar exists"
 fi
 
-check=`ls certkey.p12 2>/dev/null`
+check=`ls cert.pem 2>/dev/null`
 
 if [ -z "$check" ]
 then
@@ -68,10 +70,8 @@ then
 	rm -f key.pem
 	openssl req -x509 -newkey rsa:2048 -nodes -keyout key.pem -out cert.pem -days 36500 -subj "/C=GB/ST=London/L=London/O=Global Security/OU=IT Department/CN=example.com" 2>/dev/null
 else
-	echo "PKCS12 file exists"
+	echo "Certificate files exist"
 fi
-
-cd ../
 
 # user
 read -p "your username: " user
@@ -91,13 +91,17 @@ then
 	kill "$check"
 fi
 
+cd ../
+
 echo "launching..."
 
-nohup "$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy.jar \
+nohup "vproxy/$runtime/bin/java" -Deploy=WebSocksProxyServer -jar vproxy/vproxy.jar \
 	listen "$listenPort" \
 	ssl certpem cert.pem keypem key.pem \
 	auth "$user:$pass" \
 	kcp \
 	2>&1 >> vproxy.log &
+
+sleep 0.5s
 
 echo ""
