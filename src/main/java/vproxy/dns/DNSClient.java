@@ -117,7 +117,7 @@ public class DNSClient {
             ServerGroup serverGroup;
             try {
                 serverGroup = new ServerGroup("default-dns-client", getDefaultEventLoopGroup(), new HealthCheckConfig(
-                    1_000, 5_000, 1, 2, CheckProtocol.dns
+                    1_000, 5_000, 1, 2, CheckProtocol.domainSystem
                 ), Method.wrr);
             } catch (AlreadyExistException | ClosedException e) {
                 Logger.shouldNotHappen("creating server-group failed", e);

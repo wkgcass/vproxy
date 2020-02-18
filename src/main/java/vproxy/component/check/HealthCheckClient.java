@@ -8,10 +8,10 @@ import vproxy.util.Logger;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 
-public class TCPHealthCheckClient {
+public class HealthCheckClient {
     class ConnectResultHandler {
-        void onSucceeded() {
-            handler.upOnce(connectClient.remote);
+        void onSucceeded(ConnectResult result) {
+            handler.upOnce(connectClient.remote, result);
             if (currentDown > 0) {
                 // decrease down count if it's not zero
                 --currentDown;
@@ -74,11 +74,11 @@ public class TCPHealthCheckClient {
 
     private boolean stopped = true;
 
-    public TCPHealthCheckClient(NetEventLoop eventLoop,
-                                InetSocketAddress remote,
-                                HealthCheckConfig healthCheckConfig,
-                                boolean initialIsUp,
-                                HealthCheckHandler handler) {
+    public HealthCheckClient(NetEventLoop eventLoop,
+                             InetSocketAddress remote,
+                             HealthCheckConfig healthCheckConfig,
+                             boolean initialIsUp,
+                             HealthCheckHandler handler) {
         this.connectClient = new ConnectClient(
             eventLoop, remote,
             healthCheckConfig.checkProtocol,
@@ -108,10 +108,10 @@ public class TCPHealthCheckClient {
             return;
         }
 
-        connectClient.handle(new Callback<Void, IOException>() {
+        connectClient.handle(new Callback<>() {
             @Override
-            protected void onSucceeded(Void value) {
-                connectResultHandler.onSucceeded();
+            protected void onSucceeded(ConnectResult result) {
+                connectResultHandler.onSucceeded(result);
                 cb.run();
             }
 

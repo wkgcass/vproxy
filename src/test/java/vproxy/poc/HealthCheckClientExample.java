@@ -1,8 +1,9 @@
 package vproxy.poc;
 
+import vproxy.component.check.ConnectResult;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.check.HealthCheckHandler;
-import vproxy.component.check.TCPHealthCheckClient;
+import vproxy.component.check.HealthCheckClient;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 
@@ -14,7 +15,7 @@ public class HealthCheckClientExample {
     public static void main(String[] args) throws IOException, InterruptedException {
         SelectorEventLoop loop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(loop);
-        TCPHealthCheckClient client = new TCPHealthCheckClient(eventLoop,
+        HealthCheckClient client = new HealthCheckClient(eventLoop,
             new InetSocketAddress("127.0.0.1", 18080),
             new HealthCheckConfig(200, 800, 4, 5),
             true, new HealthCheckHandler() {
@@ -29,7 +30,7 @@ public class HealthCheckClientExample {
             }
 
             @Override
-            public void upOnce(SocketAddress remote) {
+            public void upOnce(SocketAddress remote, ConnectResult cost) {
                 System.out.println("health check got \033[0;32mone up\033[0m");
             }
 

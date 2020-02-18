@@ -1,6 +1,7 @@
 package vproxy.component.check;
 
 import vfd.DatagramFD;
+import vfd.FDProvider;
 import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.dns.DNSClient;
@@ -136,7 +137,7 @@ public class ConnectClient {
             case none:
                 handleFunc = this::handleNone;
                 break;
-            case dns:
+            case domainSystem:
                 handleFunc = this::handleDns;
                 break;
             default:
@@ -208,8 +209,21 @@ public class ConnectClient {
         });
     }
 
-    public void handle(Callback<Void, IOException> cb) {
-        this.handleFunc.accept(cb);
+    public void handle(Callback<ConnectResult, IOException> cb) {
+        long start = FDProvider.get().currentTimeMillis(); // need precise time, so do not use time recorded in Config
+        this.handleFunc.accept(new Callback<>() {
+            @Override
+            protected void onSucceeded(Void value) {
+                cb.succeeded(new ConnectResult(
+                    FDProvider.get().currentTimeMillis() - start
+                ));
+            }
+
+            @Override
+            protected void onFailed(IOException err) {
+                cb.failed(err);
+            }
+        });
     }
 
     public void stop() {

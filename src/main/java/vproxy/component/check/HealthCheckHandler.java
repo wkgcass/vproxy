@@ -7,7 +7,7 @@ public interface HealthCheckHandler {
 
     void down(SocketAddress remote);
 
-    void upOnce(SocketAddress remote);
+    void upOnce(SocketAddress remote, ConnectResult cost);
 
     void downOnce(SocketAddress remote);
 }

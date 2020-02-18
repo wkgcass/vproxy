@@ -355,6 +355,7 @@ class utils {
             .put("weight", svr.getWeight())
             .put("currentIp", Utils.ipStr(svr.server.getAddress().getAddress()))
             .put("status", svr.healthy ? "UP" : "DOWN")
+            .put("cost", svr.getHcCost())
             .build();
     }
 

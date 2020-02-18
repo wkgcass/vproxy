@@ -1,9 +1,10 @@
 package vproxy.component.auto;
 
 import vjson.util.ObjectBuilder;
+import vproxy.component.check.ConnectResult;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.check.HealthCheckHandler;
-import vproxy.component.check.TCPHealthCheckClient;
+import vproxy.component.check.HealthCheckClient;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.khala.KhalaNode;
 import vproxy.connection.ServerSock;
@@ -25,7 +26,7 @@ public class SmartNodeDelegate {
     public final int exposedPort;
     public final int weight;
     public final AutoConfig config;
-    private final TCPHealthCheckClient hcClient;
+    private final HealthCheckClient hcClient;
     private boolean healthy = false;
 
     private final KhalaNode kNode;
@@ -82,7 +83,7 @@ public class SmartNodeDelegate {
         }
 
         @Override
-        public void upOnce(SocketAddress remote) {
+        public void upOnce(SocketAddress remote, ConnectResult cost) {
             if (healthy)
                 return;
             Logger.alert("health check up for " + alias + ", register " + kNode);
@@ -135,7 +136,7 @@ public class SmartNodeDelegate {
         }
 
         // init hc
-        hcClient = new TCPHealthCheckClient(
+        hcClient = new HealthCheckClient(
             config.discovery.loop, new InetSocketAddress(address, exposedPort),
             new HealthCheckConfig(1000, 10_000, 1, 1), true,
             new HcHandler()

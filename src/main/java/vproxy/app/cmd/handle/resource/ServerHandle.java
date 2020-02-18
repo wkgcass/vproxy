@@ -104,7 +104,8 @@ public class ServerHandle {
                 + (h.hostName == null ? "" : " host " + h.hostName /* now connected to */)
                 + " connect-to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
                 + " weight " + h.getWeight()
-                + " currently " + (h.healthy ? "UP" : "DOWN");
+                + " currently " + (h.healthy ? "UP" : "DOWN")
+                + " cost " + h.getHcCost();
         }
     }
 }

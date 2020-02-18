@@ -3272,6 +3272,9 @@ definitions:
         enum:
           - UP
           - DOWN
+      cost:
+        type: integer
+        description: the milliseconds cost for one successful health check
   ServerCreate:
     type: object
     required:
@@ -3311,6 +3314,9 @@ definitions:
         enum:
           - UP
           - DOWN
+      cost:
+        type: integer
+        description: the milliseconds cost for one successful health check
   CertKey:
     type: object
     properties:

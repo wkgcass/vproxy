@@ -1,8 +1,9 @@
 package vproxy.component.svrgroup;
 
+import vproxy.component.check.ConnectResult;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.check.HealthCheckHandler;
-import vproxy.component.check.TCPHealthCheckClient;
+import vproxy.component.check.HealthCheckClient;
 import vproxy.component.elgroup.EventLoopAttach;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
@@ -58,15 +59,18 @@ public class ServerGroup {
             }
 
             @Override
-            public void upOnce(SocketAddress remote) {
-                // do nothing but debug log
-                assert Logger.lowLevelDebug("up once for " + ServerHandle.this.alias + "(" + server + ")");
+            public void upOnce(SocketAddress remote, ConnectResult result) {
+                assert Logger.lowLevelDebug("up once for " + ServerHandle.this.alias + "(" + server + "), cost = " + result.cost);
+                hcCost.addLast(result.cost);
+                if (hcCost.size() > 10) {
+                    hcCost.removeFirst();
+                }
             }
 
             @Override
             public void downOnce(SocketAddress remote) {
-                // do nothing but debug log
                 assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + ")");
+                hcCost.clear();
 
                 // the server handle is default DOWN when added
                 // so there's no chance for the `down()` to be called if it's actually DOWN
@@ -108,8 +112,9 @@ public class ServerGroup {
         boolean valid = true;
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
+        private final LinkedList<Long> hcCost = new LinkedList<>(); // the time cost for one healthy checking result of this endpoint
         private boolean logicDelete = false; // if true, it will not be checked for dup alias nor saved to cfg file
-        TCPHealthCheckClient healthCheckClient;
+        HealthCheckClient healthCheckClient;
 
         private final LongAdder fromRemoteBytes = new LongAdder();
         private final LongAdder toRemoteBytes = new LongAdder();
@@ -184,6 +189,10 @@ public class ServerGroup {
             return weight;
         }
 
+        public long getHcCost() {
+            return (long) hcCost.stream().mapToLong(l -> l).average().orElse(-1);
+        }
+
         void start() {
             if (el != null)
                 return;
@@ -199,7 +208,7 @@ public class ServerGroup {
                 return;
             }
             el = w;
-            healthCheckClient = new TCPHealthCheckClient(el, server, healthCheckConfig, healthy, handler);
+            healthCheckClient = new HealthCheckClient(el, server, healthCheckConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {

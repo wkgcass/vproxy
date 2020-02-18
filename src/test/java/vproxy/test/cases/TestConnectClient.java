@@ -3,6 +3,7 @@ package vproxy.test.cases;
 import org.junit.*;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.ConnectClient;
+import vproxy.component.check.ConnectResult;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.test.tool.DirectCloseServer;
@@ -63,7 +64,7 @@ public class TestConnectClient {
             new InetSocketAddress(targetAddress, port),
             protocol,
             100);
-        BlockCallback<Void, IOException> cb = new BlockCallback<>();
+        BlockCallback<ConnectResult, IOException> cb = new BlockCallback<>();
         client.handle(cb);
         cb.block();
     }
