@@ -63,6 +63,10 @@ public class Config {
     // do not initialize the field statically
     // graalvm native image might initialize the field and won't be changed at runtime
 
+    // this field is used as the domain to be resolved for health checking for dns
+    // -DomainWhichShouldResolve
+    public static final String domainWhichShouldResolve;
+
     static {
         appClass = System.getProperty("eploy"); // -Deploy
         String probeConf = System.getProperty("probe", "");
@@ -71,6 +75,7 @@ public class Config {
         } else {
             probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
         }
+        domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
     }
 
     public static boolean supportReusePortLB() {

@@ -4,6 +4,14 @@ import vfd.DatagramFD;
 import vfd.EventSet;
 import vfd.FDProvider;
 import vproxy.app.Config;
+import vproxy.component.check.CheckProtocol;
+import vproxy.component.check.HealthCheckConfig;
+import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.exception.AlreadyExistException;
+import vproxy.component.exception.ClosedException;
+import vproxy.component.exception.NotFoundException;
+import vproxy.component.svrgroup.Method;
+import vproxy.component.svrgroup.ServerGroup;
 import vproxy.dns.rdata.A;
 import vproxy.dns.rdata.AAAA;
 import vproxy.selector.Handler;
@@ -27,7 +35,7 @@ import java.util.function.Supplier;
 
 public class DNSClient {
     private static DNSClient DEFAULT_INSTANCE;
-    private static SelectorEventLoop DEFAULT_SELECTOR_EVENT_LOOP;
+    private static EventLoopGroup DEFAULT_EVENT_LOOP_GROUP;
 
     private final SelectorEventLoop loop;
     private final DatagramFD sock;
@@ -47,29 +55,57 @@ public class DNSClient {
         this.maxRetry = maxRetry;
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
-
-        Logger.alert("using " + initialNameServers + " as name servers");
     }
 
-    private static SelectorEventLoop getDefaultSelectorEventLoop() {
-        if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
-            return DEFAULT_SELECTOR_EVENT_LOOP;
+    private static EventLoopGroup getDefaultEventLoopGroup() {
+        if (DEFAULT_EVENT_LOOP_GROUP != null) {
+            return DEFAULT_EVENT_LOOP_GROUP;
         }
         synchronized (DNSClient.class) {
-            if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
-                return DEFAULT_SELECTOR_EVENT_LOOP;
+            if (DEFAULT_EVENT_LOOP_GROUP != null) {
+                return DEFAULT_EVENT_LOOP_GROUP;
             }
-            SelectorEventLoop loop;
+            EventLoopGroup group = new EventLoopGroup("default-dns-client-event-loop-group");
             try {
-                loop = SelectorEventLoop.open();
-            } catch (IOException e) {
-                Logger.shouldNotHappen("open selector event loop for default dns client failed", e);
+                group.add("el0");
+            } catch (AlreadyExistException | IOException | ClosedException e) {
+                Logger.shouldNotHappen("creating event loop group failed", e);
                 throw new RuntimeException(e);
             }
-            loop.loop(r -> new Thread(r, "dns-client"));
-            DEFAULT_SELECTOR_EVENT_LOOP = loop;
+            DEFAULT_EVENT_LOOP_GROUP = group;
         }
-        return DEFAULT_SELECTOR_EVENT_LOOP;
+        return DEFAULT_EVENT_LOOP_GROUP;
+    }
+
+    public static DatagramFD getSocketForDNS() {
+        DatagramFD sock;
+        try {
+            sock = FDProvider.get().openDatagramFD();
+        } catch (IOException e) {
+            Logger.shouldNotHappen("creating default DNSClient sock failed", e);
+            throw new RuntimeException(e);
+        }
+        try {
+            sock.configureBlocking(false);
+        } catch (IOException e) {
+            Logger.shouldNotHappen("configure non-blocking failed", e);
+            try {
+                sock.close();
+            } catch (IOException ignore) {
+            }
+            throw new RuntimeException(e);
+        }
+        try {
+            sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0));
+        } catch (IOException e) {
+            Logger.shouldNotHappen("bind sock on random port failed", e);
+            try {
+                sock.close();
+            } catch (IOException ignore) {
+            }
+            throw new RuntimeException(e);
+        }
+        return sock;
     }
 
     public static DNSClient getDefault() {
@@ -77,40 +113,26 @@ public class DNSClient {
             return DEFAULT_INSTANCE;
         }
         synchronized (DNSClient.class) {
-            if (DEFAULT_INSTANCE != null) {
-                return DEFAULT_INSTANCE;
-            }
-            DatagramFD sock;
+            DatagramFD sock = getSocketForDNS();
+            ServerGroup serverGroup;
             try {
-                sock = FDProvider.get().openDatagramFD();
-            } catch (IOException e) {
-                Logger.shouldNotHappen("creating default DNSClient sock failed", e);
+                serverGroup = new ServerGroup("default-dns-client", getDefaultEventLoopGroup(), new HealthCheckConfig(
+                    1_000, 5_000, 1, 2, CheckProtocol.dns
+                ), Method.wrr);
+            } catch (AlreadyExistException | ClosedException e) {
+                Logger.shouldNotHappen("creating server-group failed", e);
                 throw new RuntimeException(e);
             }
+            SelectorEventLoop loop;
             try {
-                sock.configureBlocking(false);
-            } catch (IOException e) {
-                Logger.shouldNotHappen("configure non-blocking failed", e);
-                try {
-                    sock.close();
-                } catch (IOException ignore) {
-                }
+                loop = getDefaultEventLoopGroup().get("el0").getSelectorEventLoop();
+            } catch (NotFoundException e) {
+                Logger.shouldNotHappen("el0 not found in default elg", e);
                 throw new RuntimeException(e);
             }
-            try {
-                sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0));
-            } catch (IOException e) {
-                Logger.shouldNotHappen("bind sock on random port failed", e);
-                try {
-                    sock.close();
-                } catch (IOException ignore) {
-                }
-                throw new RuntimeException(e);
-            }
-            SelectorEventLoop loop = getDefaultSelectorEventLoop();
             DNSClient client;
             try {
-                client = new DNSClient(loop, sock, Resolver.getNameServers(), 2_000, 2);
+                client = new ServerGroupDNSClient(loop, sock, serverGroup, 2_000, 2);
             } catch (IOException e) {
                 Logger.shouldNotHappen("creating default dns client failed", e);
                 try {
@@ -119,6 +141,7 @@ public class DNSClient {
                 }
                 throw new RuntimeException(e);
             }
+            client.setNameServers(Resolver.getNameServers());
             loop.period(60_000, () -> client.setNameServers(Resolver.getNameServers()));
             DEFAULT_INSTANCE = client;
         }
@@ -129,8 +152,6 @@ public class DNSClient {
         if (nameServers.isEmpty()) {
             return;
         }
-        if (!this.nameServers.equals(nameServers))
-            Logger.alert("using " + nameServers + " as name servers");
         this.nameServers = nameServers;
     }
 
@@ -180,7 +201,7 @@ public class DNSClient {
                     ++retry;
                     nameServerIndex = 0;
                 } else {
-                    // not found
+                    // still not found
                     release();
                     cb.failed(retryFailErr.get());
                     return;
@@ -375,14 +396,11 @@ public class DNSClient {
                 sock.close();
             } catch (IOException ignore) {
             }
-            if (DEFAULT_SELECTOR_EVENT_LOOP != null) {
-                try {
-                    DEFAULT_SELECTOR_EVENT_LOOP.close();
-                } catch (IOException ignore) {
-                }
+            if (DEFAULT_EVENT_LOOP_GROUP != null) {
+                DEFAULT_EVENT_LOOP_GROUP.close();
             }
             DEFAULT_INSTANCE = null;
-            DEFAULT_SELECTOR_EVENT_LOOP = null;
+            DEFAULT_EVENT_LOOP_GROUP = null;
         }
     }
 }

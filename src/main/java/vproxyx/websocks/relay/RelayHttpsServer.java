@@ -139,7 +139,7 @@ public class RelayHttpsServer {
             }
             // cannot handle the condition
             ctx.data.left.errored = true;
-            ctx.data.right.failed(new IOException("unexpected request for " + hostname));
+            ctx.data.right.failed(new IOException("unexpected request for " + hostname + ", the domain is not relayed nor proxied"));
         }
 
         private void handleProxy(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {

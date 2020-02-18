@@ -923,6 +923,10 @@ public class ServerGroup {
         this.serverListeners.add(serverListener);
     }
 
+    public void removeServerListener(ServerListener serverListener) {
+        this.serverListeners.remove(serverListener);
+    }
+
     public List<ServerHandle> getServerHandles() {
         return new ArrayList<>(servers);
     }

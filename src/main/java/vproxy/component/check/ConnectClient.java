@@ -1,14 +1,22 @@
 package vproxy.component.check;
 
+import vfd.DatagramFD;
+import vproxy.app.Config;
 import vproxy.connection.*;
+import vproxy.dns.DNSClient;
 import vproxy.selector.TimerEvent;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 
 import java.io.IOException;
+import java.net.InetAddress;
 import java.net.InetSocketAddress;
+import java.net.UnknownHostException;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.util.Collections;
+import java.util.List;
+import java.util.function.Consumer;
 
 // connect to target address then close the connection
 // it's useful when running health check
@@ -110,6 +118,10 @@ public class ConnectClient {
     public final CheckProtocol checkProtocol;
     public final int timeout;
     private boolean stopped = false;
+    private final Consumer<Callback<Void, IOException>> handleFunc;
+
+    private DatagramFD dnsSocket = null;
+    private DNSClient dnsClient = null;
 
     public ConnectClient(NetEventLoop eventLoop,
                          InetSocketAddress remote,
@@ -119,15 +131,27 @@ public class ConnectClient {
         this.remote = remote;
         this.checkProtocol = checkProtocol;
         this.timeout = timeout;
+
+        switch (this.checkProtocol) {
+            case none:
+                handleFunc = this::handleNone;
+                break;
+            case dns:
+                handleFunc = this::handleDns;
+                break;
+            default:
+                assert this.checkProtocol == CheckProtocol.tcp || this.checkProtocol == CheckProtocol.tcpDelay;
+                handleFunc = this::handleTcp;
+                break;
+        }
     }
 
-    public void handle(Callback<Void, IOException> cb) {
-        // when the checkProtocol is `none`, nothing should be done and should directly return
-        if (checkProtocol == CheckProtocol.none) {
-            assert Logger.lowLevelDebug("checkProtocol == none, so directly return success");
-            cb.succeeded(null);
-            return;
-        }
+    private void handleNone(Callback<Void, IOException> cb) {
+        assert Logger.lowLevelDebug("checkProtocol == none, so directly return success");
+        cb.succeeded(null);
+    }
+
+    public void handleTcp(Callback<Void, IOException> cb) {
         // connect to remote
         ConnectableConnection conn;
         try {
@@ -157,7 +181,49 @@ public class ConnectClient {
         }
     }
 
+    public void handleDns(Callback<Void, IOException> cb) {
+        if (dnsSocket == null) {
+            dnsSocket = DNSClient.getSocketForDNS();
+        }
+        if (dnsClient == null) {
+            try {
+                dnsClient = new DNSClient(eventLoop.getSelectorEventLoop(), dnsSocket, Collections.singletonList(remote), timeout, 1);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("start dns client failed", e);
+                cb.failed(e);
+                return;
+            }
+        }
+        dnsClient.resolveIPv4(Config.domainWhichShouldResolve, new Callback<>() {
+            @Override
+            protected void onSucceeded(List<InetAddress> value) {
+                cb.succeeded(null);
+            }
+
+            @Override
+            protected void onFailed(UnknownHostException err) {
+                // we expect the address to be resolved
+                cb.failed(err);
+            }
+        });
+    }
+
+    public void handle(Callback<Void, IOException> cb) {
+        this.handleFunc.accept(cb);
+    }
+
     public void stop() {
         stopped = true;
+        if (dnsClient != null) {
+            dnsClient.close();
+            dnsClient = null;
+        }
+        if (dnsSocket != null) {
+            try {
+                dnsSocket.close();
+            } catch (IOException ignore) {
+            }
+            dnsSocket = null;
+        }
     }
 }

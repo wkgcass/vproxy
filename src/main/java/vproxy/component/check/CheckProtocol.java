@@ -4,4 +4,5 @@ public enum CheckProtocol {
     none,
     tcp,
     tcpDelay,
+    dns,
 }
