@@ -5,4 +5,5 @@ public enum CheckProtocol {
     tcp,
     tcpDelay,
     domainSystem,
+    http,
 }

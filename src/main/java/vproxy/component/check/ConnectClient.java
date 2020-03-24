@@ -2,35 +2,97 @@ package vproxy.component.check;
 
 import vfd.DatagramFD;
 import vfd.FDProvider;
+import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.dns.DNSClient;
+import vproxy.http.HttpRespParser;
+import vproxy.processor.http1.entity.Header;
+import vproxy.processor.http1.entity.Request;
+import vproxy.processor.http1.entity.Response;
 import vproxy.selector.TimerEvent;
-import vproxy.util.Callback;
-import vproxy.util.Logger;
-import vproxy.util.RingBuffer;
+import vproxy.util.*;
+import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.InterruptedByTimeoutException;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
-// connect to target address then close the connection
+// connect to target address and send/receive some data then close the connection
 // it's useful when running health check
 public class ConnectClient {
-    class ConnectConnectableConnectionHandler implements ConnectableConnectionHandler {
+    abstract class BaseHealthCheckConnectableConnectionHandler implements ConnectableConnectionHandler {
         private final Callback<Void, IOException> callback;
-        private final TimerEvent connectionTimeoutEvent;
+        private final TimerEvent timeoutEvent;
         private boolean done = false;
+
+        BaseHealthCheckConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent timeoutEvent) {
+            this.callback = callback;
+            this.timeoutEvent = timeoutEvent;
+        }
+
+        @Override
+        public final void exception(ConnectionHandlerContext ctx, IOException err) {
+            cancelTimers(); // cancel timer if possible
+            ctx.connection.close(true); // close the connection with reset
+
+            assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
+
+            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.failed(err);
+        }
+
+        @Override
+        public final void remoteClosed(ConnectionHandlerContext ctx) {
+            ctx.connection.close(true);
+            closed(ctx);
+        }
+
+        @Override
+        public final void closed(ConnectionHandlerContext ctx) {
+            // check whether is done
+            if (done)
+                return;
+            // "not done and closed" means the remote closed the connection
+            // which means: remote is listening, but something went wrong
+            // maybe an lb with no healthy backend
+            // so we consider it an unhealthy check
+            cancelTimers();
+            closeAndCallFail(ctx, "remote closed");
+        }
+
+        @Override
+        public final void removed(ConnectionHandlerContext ctx) {
+            ctx.connection.close(true);
+        }
+
+        protected void cancelTimers() {
+            timeoutEvent.cancel(); // cancel the connection timeout event
+        }
+
+        protected final void closeAndCallFail(ConnectionHandlerContext ctx, String err) {
+            ctx.connection.close();
+            if (!callback.isCalled() /*already called by timer*/ && !stopped)
+                callback.failed(new IOException(err));
+        }
+
+        protected final void closeAndCallSucc(ConnectionHandlerContext ctx) {
+            done = true;
+            ctx.connection.close(true);
+            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
+        }
+    }
+
+    class ConnectConnectableConnectionHandler extends BaseHealthCheckConnectableConnectionHandler {
         private TimerEvent delayTimeoutEvent;
 
         ConnectConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent connectionTimeoutEvent) {
-            this.callback = callback;
-            this.connectionTimeoutEvent = connectionTimeoutEvent;
+            super(callback, connectionTimeoutEvent);
         }
 
         @Override
@@ -66,51 +128,56 @@ public class ConnectClient {
         }
 
         @Override
-        public void exception(ConnectionHandlerContext ctx, IOException err) {
-            cancelTimers(); // cancel timer if possible
-            ctx.connection.close(true); // close the connection with reset
-
-            assert Logger.lowLevelDebug("exception when doing health check, conn = " + ctx.connection + ", err = " + err);
-
-            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.failed(err);
-        }
-
-        @Override
-        public void remoteClosed(ConnectionHandlerContext ctx) {
-            ctx.connection.close(true);
-            closed(ctx);
-        }
-
-        @Override
-        public void closed(ConnectionHandlerContext ctx) {
-            // check whether is done
-            if (done)
-                return;
-            // "not done and closed" means the remote closed the connection
-            // which means: remote is listening, but something went wrong
-            // maybe an lb with no healthy backend
-            // so we consider it an unhealthy check
-            cancelTimers();
-            if (!callback.isCalled() /*already called by timer*/ && !stopped)
-                callback.failed(new IOException("remote closed"));
-        }
-
-        @Override
-        public void removed(ConnectionHandlerContext ctx) {
-            ctx.connection.close(true);
-        }
-
-        private void cancelTimers() {
-            connectionTimeoutEvent.cancel(); // cancel the connection timeout event
-            if (delayTimeoutEvent != null) { // cancel the delay event if exists
+        protected void cancelTimers() {
+            super.cancelTimers();
+            if (delayTimeoutEvent != null) {
                 delayTimeoutEvent.cancel();
             }
         }
+    }
 
-        private void closeAndCallSucc(ConnectionHandlerContext ctx) {
-            done = true;
-            ctx.connection.close(true);
-            if (!callback.isCalled() /*already called by timer*/ && !stopped) callback.succeeded(null);
+    class HttpHCConnectableConnectionHandler extends BaseHealthCheckConnectableConnectionHandler {
+        HttpHCConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent timeoutEvent) {
+            super(callback, timeoutEvent);
+        }
+
+        @Override
+        public void connected(ConnectableConnectionHandlerContext ctx) {
+            // ignore event, data will flush
+        }
+
+        @Override
+        public void readable(ConnectionHandlerContext ctx) {
+            RingBuffer inBuf = ctx.connection.getInBuffer();
+            HttpRespParser parser = new HttpRespParser(false);
+            int res = parser.feed(inBuf);
+            if (res == -1) {
+                String err = parser.getErrorMessage();
+                if (err == null) {
+                    // input data not fulfilled yet
+                    // wait for more data
+                    return;
+                }
+                // got error
+                cancelTimers();
+                closeAndCallFail(ctx, "response not http: " + err);
+                return;
+            }
+            Response resp = parser.getResult();
+            assert resp != null;
+            int status = resp.statusCode;
+            cancelTimers();
+            if (status >= 100 && status < 500) {
+                // 1xx,2xx,3xx,4xx all considered to be ok
+                closeAndCallSucc(ctx);
+            } else {
+                closeAndCallFail(ctx, "unexpected http response status " + status);
+            }
+        }
+
+        @Override
+        public void writable(ConnectionHandlerContext ctx) {
+            // ignore event, data will flush
         }
     }
 
@@ -140,6 +207,9 @@ public class ConnectClient {
             case domainSystem:
                 handleFunc = this::handleDns;
                 break;
+            case http:
+                handleFunc = this::handleHttp;
+                break;
             default:
                 assert this.checkProtocol == CheckProtocol.tcp || this.checkProtocol == CheckProtocol.tcpDelay;
                 handleFunc = this::handleTcp;
@@ -152,7 +222,7 @@ public class ConnectClient {
         cb.succeeded(null);
     }
 
-    public void handleTcp(Callback<Void, IOException> cb) {
+    private void handleTcp(Callback<Void, IOException> cb) {
         // connect to remote
         ConnectableConnection conn;
         try {
@@ -182,7 +252,7 @@ public class ConnectClient {
         }
     }
 
-    public void handleDns(Callback<Void, IOException> cb) {
+    private void handleDns(Callback<Void, IOException> cb) {
         if (dnsSocket == null) {
             dnsSocket = DNSClient.getSocketForDNS();
         }
@@ -191,7 +261,7 @@ public class ConnectClient {
                 dnsClient = new DNSClient(eventLoop.getSelectorEventLoop(), dnsSocket, Collections.singletonList(remote), timeout, 1);
             } catch (IOException e) {
                 Logger.shouldNotHappen("start dns client failed", e);
-                cb.failed(e);
+                if (!stopped) cb.failed(e);
                 return;
             }
         }
@@ -204,9 +274,45 @@ public class ConnectClient {
             @Override
             protected void onFailed(UnknownHostException err) {
                 // we expect the address to be resolved
-                cb.failed(err);
+                if (!stopped) cb.failed(err);
             }
         });
+    }
+
+    private void handleHttp(Callback<Void, IOException> cb) {
+        // http request
+        Request req = new Request();
+        req.method = "GET";
+        req.uri = "/";
+        req.version = "HTTP/1.1";
+        req.headers = new ArrayList<>(1);
+        req.headers.add(new Header("User-Agent", "vproxy/" + Application.VERSION));
+        ByteArray bytes = req.toByteArray();
+        RingBuffer sendBuffer = RingBuffer.allocate(bytes.length());
+        sendBuffer.storeBytesFrom(ByteArrayChannel.fromFull(bytes));
+        // expecting response HTTP/1.? ??? ......
+        // connect to remote
+        ConnectableConnection conn;
+        try {
+            conn = ConnectableConnection.create(remote, ConnectionOpts.getDefault(),
+                RingBuffer.allocate(128), sendBuffer);
+        } catch (IOException e) {
+            if (!stopped) cb.failed(e);
+            return;
+        }
+        // create a timer handling the connecting timeout
+        TimerEvent timer = eventLoop.getSelectorEventLoop().delay(timeout, () -> {
+            assert Logger.lowLevelDebug("timeout when doing http health check " + conn);
+            conn.close(true);
+            if (!cb.isCalled() /*called by connection*/ && !stopped) cb.failed(new InterruptedByTimeoutException());
+        });
+        try {
+            eventLoop.addConnectableConnection(conn, null, new HttpHCConnectableConnectionHandler(cb, timer));
+        } catch (IOException e) {
+            if (!stopped) cb.failed(e);
+            // exception occurred, so ignore timeout
+            timer.cancel();
+        }
     }
 
     public void handle(Callback<ConnectResult, IOException> cb) {
