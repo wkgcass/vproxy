@@ -11,7 +11,6 @@ import vproxy.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.app.cmd.handle.param.HealthCheckHandle;
 import vproxy.app.cmd.handle.param.MethHandle;
 import vproxy.app.cmd.handle.param.WeightHandle;
-import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
@@ -191,13 +190,6 @@ public class ServerGroupHandle {
             Upstream groups = Application.get().upstreamHolder.get(upstreamName);
             if (groups.getServerGroupHandles().stream().anyMatch(h -> h.group.equals(serverGroup))) {
                 throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.ups.fullname + " " + groups.alias);
-            }
-        }
-        // check smart-group-delegate
-        for (String slgName : Application.get().smartGroupDelegateHolder.names()) {
-            SmartGroupDelegate slg = Application.get().smartGroupDelegateHolder.get(slgName);
-            if (slg.handledGroup.equals(serverGroup)) {
-                throw new Exception(ResourceType.sgd.fullname + " " + serverGroup.alias + " is used by " + ResourceType.sgd.fullname + " " + slg.alias);
             }
         }
     }

@@ -1,8 +1,6 @@
 package vproxy.app;
 
 import vfd.VFDConfig;
-import vproxy.app.mesh.SmartGroupDelegateHolder;
-import vproxy.app.mesh.SmartNodeDelegateHolder;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
@@ -44,9 +42,6 @@ public class Application {
     public final RESPControllerHolder respControllerHolder;
     public final HttpControllerHolder httpControllerHolder;
 
-    public final SmartGroupDelegateHolder smartGroupDelegateHolder;
-    public final SmartNodeDelegateHolder smartNodeDelegateHolder;
-
     private Application() throws IOException {
         this.version = VERSION;
 
@@ -62,9 +57,6 @@ public class Application {
         this.socks5ServerHolder = new Socks5ServerHolder();
         this.httpControllerHolder = new HttpControllerHolder();
         this.dnsServerHolder = new DNSServerHolder();
-
-        this.smartGroupDelegateHolder = new SmartGroupDelegateHolder();
-        this.smartNodeDelegateHolder = new SmartNodeDelegateHolder();
     }
 
     public static boolean isDefaultEventLoopGroupName(String name) {

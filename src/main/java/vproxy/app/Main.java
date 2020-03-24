@@ -2,7 +2,6 @@ package vproxy.app;
 
 import vfd.VFDConfig;
 import vproxy.app.args.*;
-import vproxy.app.mesh.DiscoveryConfigLoader;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.dns.Resolver;
@@ -38,8 +37,6 @@ public class Main {
         "\n\t\tnoStdIOController                            StdIOController will not start" +
         "\n\t\t                                             if the flag is set" +
         "\n\t\tsigIntDirectlyShutdown                       Directly shutdown when got sig int" +
-        "\n" +
-        "\n\t\tdiscoveryConfig ${filename}                  Specify discovery config file" +
         "\n" +
         "\n\t\tpidFile                                      Set the pid file path" +
         "\n" +
@@ -177,7 +174,6 @@ public class Main {
         MainCtx ctx = new MainCtx();
         ctx.addOp(new AllowSystemCallInNonStdIOControllerOp());
         ctx.addOp(new CheckOp());
-        ctx.addOp(new DiscoveryConfigOp());
         ctx.addOp(new HttpControllerOp());
         ctx.addOp(new LoadOp());
         ctx.addOp(new NoLoadLastOp());
@@ -255,27 +251,6 @@ public class Main {
                     System.exit(1);
                     return;
                 }
-            }
-        }
-        if (!ctx.get("discovery-loaded", false)) {
-            // load default discovery config
-            var ins = DiscoveryConfigLoader.getInstance();
-            try {
-                ins.loadDefault();
-                int exitCode = ins.check();
-                if (exitCode != 0) {
-                    System.exit(exitCode);
-                    return;
-                }
-                exitCode = ins.gen();
-                if (exitCode != 0) {
-                    System.exit(exitCode);
-                    return;
-                }
-            } catch (Exception e) {
-                Logger.error(LogType.ALERT, "got exception when loading default configuration for discovery: " + Utils.formatErr(e));
-                System.exit(1);
-                return;
             }
         }
 

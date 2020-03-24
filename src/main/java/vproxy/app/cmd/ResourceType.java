@@ -19,8 +19,6 @@ public enum ResourceType {
     secgr("security-group-rule"),
     resolver("resolver"),
     dnscache("dns-cache"),
-    sgd("smart-group-delegate"),
-    snd("smart-node-delegate"),
     ck("cert-key"),
 
     respcontroller("resp-controller"),

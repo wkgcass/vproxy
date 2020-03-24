@@ -3,14 +3,9 @@ package vproxy.component.app;
 import vproxy.app.*;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.Command;
-import vproxy.app.mesh.DiscoveryConfigLoader;
-import vproxy.app.mesh.SmartGroupDelegateHolder;
-import vproxy.component.auto.AutoConfig;
-import vproxy.component.auto.SmartGroupDelegate;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
-import vproxy.component.exception.NoException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
@@ -180,12 +175,7 @@ public class Shutdown {
     }
 
     private static void end() {
-        AutoConfig autoConfig = DiscoveryConfigLoader.getInstance().getAutoConfig();
-        if (autoConfig != null) {
-            BlockCallback<Void, NoException> cb = new BlockCallback<>();
-            autoConfig.khala.discovery.close(cb);
-            cb.block();
-        }
+        // do nothing for now
     }
 
     public static String defaultFilePath() {
@@ -277,8 +267,6 @@ public class Shutdown {
 
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
-
-        List<SmartGroupDelegate> smartGroupDelegates = new LinkedList<>();
 
         {
             // NOTE
@@ -585,36 +573,8 @@ public class Shutdown {
             }
         }
         {
-            // create smart-group-delegate
-            SmartGroupDelegateHolder slgh = app.smartGroupDelegateHolder;
-            List<String> names = slgh.names();
-            for (String name : names) {
-                SmartGroupDelegate s;
-                try {
-                    s = slgh.get(name);
-                } catch (NotFoundException e) {
-                    assert Logger.lowLevelDebug("smart-group-delegate not found " + name);
-                    assert Logger.printStackTrace(e);
-                    continue;
-                }
-                if (!serverGroupList.contains(s.handledGroup)) {
-                    Logger.warn(LogType.IMPROPER_USE, "the sg " + s.handledGroup.alias + " already removed");
-                    continue;
-                }
-                String cmd = "add smart-group-delegate " + s.alias +
-                    " service " + s.service + " zone " + s.zone +
-                    " server-group " + s.handledGroup.alias;
-                commands.add(cmd);
-                smartGroupDelegates.add(s);
-            }
-        }
-        {
             // create server
             for (ServerGroup sg : serverGroupList) {
-                if (smartGroupDelegates.stream().anyMatch(s -> s.handledGroup.equals(sg))) {
-                    // do not init servers if it's attached to a smartGroupDelegate
-                    continue;
-                }
                 for (ServerGroup.ServerHandle sh : sg.getServerHandles()) {
                     if (sh.isLogicDelete()) // ignore logic deleted servers
                         continue;

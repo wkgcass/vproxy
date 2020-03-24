@@ -8,8 +8,6 @@ import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.Command;
-import vproxy.component.auto.SmartGroupDelegate;
-import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.NotFoundException;
@@ -534,37 +532,6 @@ class utils {
             .build();
     }
 
-    static JSON.Object formatSmartGroupDelegate(SmartGroupDelegate sgd) {
-        return new ObjectBuilder()
-            .put("name", sgd.alias)
-            .put("service", sgd.service)
-            .put("zone", sgd.zone)
-            .put("handledGroup", sgd.handledGroup.alias)
-            .build();
-    }
-
-    static JSON.Object formatSmartGroupDelegateDetail(SmartGroupDelegate sgd) {
-        return new ObjectBuilder()
-            .put("name", sgd.alias)
-            .put("service", sgd.service)
-            .put("zone", sgd.zone)
-            .putInst("handledGroup", formatServerGroupDetail(sgd.handledGroup))
-            .build();
-    }
-
-    static JSON.Object formatSmartNodeDelegate(SmartNodeDelegate snd) {
-        return new ObjectBuilder()
-            .put("name", snd.alias)
-            .put("service", snd.service)
-            .put("zone", snd.zone)
-            .put("nic", snd.nic)
-            .put("ipType", snd.ipType.name())
-            .put("exposedPort", snd.exposedPort)
-            .put("weight", snd.weight)
-            .put("status", snd.isHealthy() ? "UP" : "DOWN")
-            .build();
-    }
-
     static JSON.Object all() throws NotFoundException {
         var ret = new ObjectBuilder();
         {
@@ -622,22 +589,6 @@ class utils {
                 arr.addInst(utils.formatSecurityGroupDetail(secgHolder.get(name)));
             }
             ret.putInst("securityGroupList", arr.build());
-        }
-        {
-            var arr = new ArrayBuilder();
-            var sgdHolder = Application.get().smartGroupDelegateHolder;
-            for (var name : sgdHolder.names()) {
-                arr.addInst(utils.formatSmartGroupDelegateDetail(sgdHolder.get(name)));
-            }
-            ret.putInst("smartGroupDelegateList", arr.build());
-        }
-        {
-            var arr = new ArrayBuilder();
-            var sndHolder = Application.get().smartNodeDelegateHolder;
-            for (var name : sndHolder.names()) {
-                arr.addInst(utils.formatSmartNodeDelegate(sndHolder.get(name)));
-            }
-            ret.putInst("smartNodeDelegate", arr.build());
         }
         {
             var arr = new ArrayBuilder();

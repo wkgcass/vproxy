@@ -226,33 +226,6 @@ public class HttpController {
             .put("defaultRule", "allow or deny access if no match in the rule list")
             .build()));
         server.del(moduleBase + "/security-group/:secg", wrapAsync(this::deleteSecurityGroup));
-        // smart-group-delegate
-        server.get(moduleBase + "/smart-group-delegate/:sgd/detail", wrapAsync(this::getSmartGroupDelegateDetail));
-        server.get(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::getSmartGroupDelegate));
-        server.get(moduleBase + "/smart-group-delegate", wrapAsync(this::listSmartGroupDelegate));
-        server.pst(moduleBase + "/smart-group-delegate", wrapAsync(this::createSmartGroupDelegate, new ObjectBuilder()
-                .put("name", "alias of the smart-group-delegate")
-                .put("service", "watched service name")
-                .put("zone", "watched zone name")
-                .put("handledGroup", "name of the handled server-group")
-                .build(),
-            "name", "service", "zone", "handledGroup"));
-        server.del(moduleBase + "/smart-group-delegate/:sgd", wrapAsync(this::deleteSmartGroupDelegate));
-        // smart-node-delegate
-        server.get(moduleBase + "/smart-node-delegate/:snd/detail", wrapAsync(this::getSmartNodeDelegate));
-        server.get(moduleBase + "/smart-node-delegate/:snd", wrapAsync(this::getSmartNodeDelegate));
-        server.get(moduleBase + "/smart-node-delegate", wrapAsync(this::listSmartNodeDelegate));
-        server.pst(moduleBase + "/smart-node-delegate", wrapAsync(this::createSmartNodeDelegate, new ObjectBuilder()
-                .put("name", "alias of the smart-node-delegate")
-                .put("service", "handled service name")
-                .put("zone", "handled zone name")
-                .put("nic", "nic name")
-                .put("ipType", "ip type: v4 or v6")
-                .put("exposedPort", 8080)
-                .put("weight", 10)
-                .build(),
-            "name", "service", "zone", "nic"));
-        server.del(moduleBase + "/smart-node-delegate/:snd", wrapAsync(this::deleteSmartNodeDelegate));
         // cert-key
         server.get(moduleBase + "/cert-key/:ck/detail", wrapAsync(this::getCertKeyDetail));
         server.get(moduleBase + "/cert-key/:ck", wrapAsync(this::getCertKey));
@@ -983,81 +956,6 @@ public class HttpController {
     private void deleteSecurityGroup(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
         utils.execute(cb,
             "remove", "security-group", rctx.param("secg"));
-    }
-
-    private void getSmartGroupDelegateDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgd = Application.get().smartGroupDelegateHolder.get(rctx.param("sgd"));
-        cb.succeeded(utils.formatSmartGroupDelegateDetail(sgd));
-    }
-
-    private void getSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var sgd = Application.get().smartGroupDelegateHolder.get(rctx.param("sgd"));
-        cb.succeeded(utils.formatSmartGroupDelegate(sgd));
-    }
-
-    private void listSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var holder = Application.get().smartGroupDelegateHolder;
-        var names = holder.names();
-        var list = new LinkedList<JSON.Object>();
-        for (var name : names) {
-            list.add(utils.formatSmartGroupDelegate(holder.get(name)));
-        }
-        cb.succeeded(new SimpleArray(list));
-    }
-
-    private void createSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var body = (JSON.Object) rctx.get(Tool.bodyJson);
-        utils.execute(cb,
-            "add", "smart-group-delegate", body.getString("name"),
-            "service", body.getString("service"),
-            "zone", body.getString("zone"),
-            "server-group", body.getString("handledGroup"));
-    }
-
-    private void deleteSmartGroupDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        utils.execute(cb, "remove", "smart-group-delegate", rctx.param("sgd"));
-    }
-
-    private void getSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var snd = Application.get().smartNodeDelegateHolder.get(rctx.param("snd"));
-        cb.succeeded(utils.formatSmartNodeDelegate(snd));
-    }
-
-    private void listSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        var holder = Application.get().smartNodeDelegateHolder;
-        var names = holder.names();
-        var list = new LinkedList<JSON.Object>();
-        for (var name : names) {
-            list.add(utils.formatSmartNodeDelegate(holder.get(name)));
-        }
-        cb.succeeded(new SimpleArray(list));
-    }
-
-    private void createSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        var body = (JSON.Object) rctx.get(Tool.bodyJson);
-        var options = new LinkedList<>(Arrays.asList(
-            "add", "smart-node-delegate", body.getString("name"),
-            "service", body.getString("service"),
-            "zone", body.getString("zone"),
-            "nic", body.getString("nic")
-        ));
-        if (bodyContainsKey(body, "ipType")) {
-            options.add("ip-type");
-            options.add(body.getString("ipType"));
-        }
-        if (bodyContainsKey(body, "exposedPort")) {
-            options.add("port");
-            options.add("" + body.getInt("exposedPort"));
-        }
-        if (bodyContainsKey(body, "weight")) {
-            options.add("weight");
-            options.add("" + body.getInt("weight"));
-        }
-        utils.execute(cb, options);
-    }
-
-    private void deleteSmartNodeDelegate(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
-        utils.execute(cb, "remove", "smart-node-delegate", rctx.param("snd"));
     }
 
     private void getCertKeyDetail(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {

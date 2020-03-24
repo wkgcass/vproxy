@@ -14,15 +14,11 @@ import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
 import org.junit.*;
 import vjson.JSON;
-import vjson.simple.SimpleObject;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.Config;
-import vproxy.app.mesh.DiscoveryConfigLoader;
-import vproxy.component.khala.KhalaNode;
 import vproxy.connection.ServerSock;
 import vproxy.test.cases.TestSSL;
-import vproxy.test.cases.TestSmart;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
 
@@ -151,17 +147,6 @@ public class CI {
         throw new RuntimeException();
     }
 
-    private static byte[] discoveryConfig = ("" +
-        "\ndiscovery.nic = " + loopbackNic() +
-        "\ndiscovery.ip_type = v4" +
-        "\ndiscovery.udp_sock_port = 56565" +
-        "\ndiscovery.udp_port = 31000" +
-        "\ndiscovery.tcp_port = 31000" +
-        "\ndiscovery.search.mask = 32" +
-        "\ndiscovery.search.min_udp_port = 31000" +
-        "\ndiscovery.search.max_udp_port = 31000" +
-        "\n").getBytes();
-
     @BeforeClass
     public static void setUpClass() throws Exception {
         {
@@ -188,18 +173,10 @@ public class CI {
         if (password == null)
             password = "123456";
 
-        File discoveryConfigF = File.createTempFile("discovery", ".conf");
-        discoveryConfigF.deleteOnExit();
-        FileOutputStream fos = new FileOutputStream(discoveryConfigF);
-        fos.write(discoveryConfig);
-        fos.flush();
-        fos.close();
-
         if (System.getProperty("vproxy_exists") == null && System.getenv("vproxy_exists") == null) {
             vproxy.app.Main.main(new String[]{
                 "resp-controller", "localhost:" + vproxyRESPPort, password,
                 "http-controller", "localhost:" + vproxyHTTPPort,
-                "discoveryConfig", discoveryConfigF.getAbsolutePath(),
                 "allowSystemCallInNonStdIOController",
                 "noStdIOController",
                 "noLoadLast",
@@ -237,8 +214,6 @@ public class CI {
     private List<String> upsNames = new ArrayList<>();
     private List<String> sgNames = new ArrayList<>();
     private List<String> securgNames = new ArrayList<>();
-    private List<String> sgdNames = new ArrayList<>();
-    private List<String> sndNames = new ArrayList<>();
     private List<String> certKeyNames = new ArrayList<>();
 
     private String elg0;
@@ -282,16 +257,6 @@ public class CI {
     @After
     public void tearDown() {
         // remove one another according to dependency
-        // remove smart-group-delegate
-        for (String slg : sgdNames) {
-            execute(createReq(remove, "smart-group-delegate", slg));
-            checkRemove("smart-group-delegate", slg);
-        }
-        // remove smart-node-delegate
-        for (String snd : sndNames) {
-            execute(createReq(remove, "smart-node-delegate", snd));
-            checkRemove("smart-node-delegate", snd);
-        }
         // remove tl
         for (String tl : tlNames) {
             execute(createReq(remove, "tcp-lb", tl));
@@ -1530,90 +1495,6 @@ public class CI {
         assertEquals("7771", res);
     }
 
-    @Test
-    public void smartGroupDelegate() throws Exception {
-        String sg0 = "sg0";
-        execute(createReq(add, "server-group", sg0,
-            "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0));
-        checkCreate("server-group", sg0);
-        sgNames.add(sg0);
-
-        String sgd = randomName("sgd");
-        execute(createReq(add, "smart-group-delegate", sgd, "service", "myservice", "zone", "ci", "server-group", sg0));
-        checkCreate("smart-group-delegate", sgd);
-        sgdNames.add(sgd);
-
-        var detail = getDetail("smart-group-delegate", sgd);
-        assertEquals(3, detail.size());
-        assertEquals("myservice", detail.get("service"));
-        assertEquals("ci", detail.get("zone"));
-        assertEquals(sg0, detail.get("server-group"));
-
-        var khala = DiscoveryConfigLoader.getInstance().getAutoConfig().khala;
-        var kn = new KhalaNode("myservice", "ci", "127.0.0.1", 12345, new SimpleObject(Collections.emptyMap()));
-        khala.addLocal(kn);
-
-        Thread.sleep(100);
-
-        var sg = Application.get().serverGroupHolder.get(sg0);
-        assertEquals(1, sg.getServerHandles().size());
-        assertEquals(12345, sg.getServerHandles().get(0).server.getPort());
-
-        khala.removeLocal(kn);
-
-        Thread.sleep(100);
-
-        assertEquals(0, sg.getServerHandles().size());
-
-        execute(createReq(remove, "smart-group-delegate", sgd));
-        checkRemove("smart-group-delegate", sgd);
-        sgdNames.remove(sgd);
-    }
-
-    @Test
-    public void smartNodeDelegate() throws Exception {
-        String snd = randomName("snd");
-        execute(createReq(add, "smart-node-delegate", snd, "service", "myservice", "zone", "ci", "nic", TestSmart.loopbackNic(), "port", "7771", "weight", "123"));
-        checkCreate("smart-node-delegate", snd);
-        sndNames.add(snd);
-
-        Thread.sleep(100);
-
-        var detail = getDetail("smart-node-delegate", snd);
-        assertEquals(7, detail.size());
-        assertEquals("myservice", detail.get("service"));
-        assertEquals("ci", detail.get("zone"));
-        assertEquals(TestSmart.loopbackNic(), detail.get("nic"));
-        assertEquals("v4", detail.get("ip-type"));
-        assertEquals("7771", detail.get("port"));
-        assertEquals("123", detail.get("weight"));
-        assertEquals("UP", detail.get("currently"));
-
-        Thread.sleep(100);
-
-        var khala = DiscoveryConfigLoader.getInstance().getAutoConfig().khala;
-        var n2knMap = khala.getNodeToKhalaNodesMap();
-        var localNode = DiscoveryConfigLoader.getInstance().getAutoConfig().discovery.localNode;
-        var kns = n2knMap.get(localNode);
-        assertEquals(1, kns.size());
-        var kn = kns.iterator().next();
-        assertEquals("myservice", kn.service);
-        assertEquals("ci", kn.zone);
-        assertEquals("127.0.0.1", kn.address);
-        assertEquals(7771, kn.port);
-
-        execute(createReq(remove, "smart-node-delegate", snd));
-        checkRemove("smart-node-delegate", snd);
-        sndNames.remove(snd);
-
-        Thread.sleep(100);
-
-        n2knMap = khala.getNodeToKhalaNodesMap();
-        kns = n2knMap.get(localNode);
-        assertEquals(0, kns.size());
-    }
-
     // ====================================
     // ====================================
     // ====================================
@@ -2174,23 +2055,6 @@ public class CI {
     }
 
     @Test
-    public void apiV1SmartGroupDelegate() throws Exception {
-        var sg = randomServerGroup();
-        runNoUpdate("/smart-group-delegate", Entities.SmartGroupDelegate.class,
-            "handledGroup", sg);
-        assertEquals(1, postCnt);
-        assertEquals(0, putCnt);
-    }
-
-    @Test
-    public void apiV1SmartNodeDelegate() throws Exception {
-        runNoUpdate("/smart-node-delegate", Entities.SmartNodeDelegate.class,
-            "nic", TestSmart.loopbackNic());
-        assertEquals(CC(3), postCnt);
-        assertEquals(0, putCnt);
-    }
-
-    @Test
     public void apiV1detail() throws Exception {
         var aelg = randomName("aelg");
         execute(createReq(add, "event-loop-group", aelg));
@@ -2288,14 +2152,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8080\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8081\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2326,14 +2192,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8082\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8083\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2420,14 +2288,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8080\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8081\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2458,14 +2328,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8082\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8083\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2546,14 +2418,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8080\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8081\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2584,14 +2458,16 @@ public class CI {
             "                            \"address\": \"127.0.0.1:8082\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
             "                            \"address\": \"127.0.0.1:8083\",\n" +
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
-            "                            \"status\": \"DOWN\"\n" +
+            "                            \"status\": \"DOWN\",\n" +
+            "                            \"cost\": -1" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2657,14 +2533,16 @@ public class CI {
             "                \"address\": \"127.0.0.1:8080\",\n" +
             "                \"weight\": 10,\n" +
             "                \"currentIp\": \"127.0.0.1\",\n" +
-            "                \"status\": \"DOWN\"\n" +
+            "                \"status\": \"DOWN\",\n" +
+            "                \"cost\": -1" +
             "            },\n" +
             "            {\n" +
             "                \"name\": \"" + svr01 + "\",\n" +
             "                \"address\": \"127.0.0.1:8081\",\n" +
             "                \"weight\": 10,\n" +
             "                \"currentIp\": \"127.0.0.1\",\n" +
-            "                \"status\": \"DOWN\"\n" +
+            "                \"status\": \"DOWN\",\n" +
+            "                \"cost\": -1" +
             "            }\n" +
             "        ]\n" +
             "    }\n" +
@@ -2702,14 +2580,16 @@ public class CI {
             "                        \"address\": \"127.0.0.1:8080\",\n" +
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
-            "                        \"status\": \"DOWN\"\n" +
+            "                        \"status\": \"DOWN\",\n" +
+            "                        \"cost\": -1" +
             "                    },\n" +
             "                    {\n" +
             "                        \"name\": \"" + svr01 + "\",\n" +
             "                        \"address\": \"127.0.0.1:8081\",\n" +
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
-            "                        \"status\": \"DOWN\"\n" +
+            "                        \"status\": \"DOWN\",\n" +
+            "                        \"cost\": -1" +
             "                    }\n" +
             "                ]\n" +
             "            }\n" +
@@ -2740,14 +2620,16 @@ public class CI {
             "                        \"address\": \"127.0.0.1:8082\",\n" +
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
-            "                        \"status\": \"DOWN\"\n" +
+            "                        \"status\": \"DOWN\",\n" +
+            "                        \"cost\": -1" +
             "                    },\n" +
             "                    {\n" +
             "                        \"name\": \"" + svr11 + "\",\n" +
             "                        \"address\": \"127.0.0.1:8083\",\n" +
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
-            "                        \"status\": \"DOWN\"\n" +
+            "                        \"status\": \"DOWN\",\n" +
+            "                        \"cost\": -1" +
             "                    }\n" +
             "                ]\n" +
             "            }\n" +
@@ -2763,7 +2645,8 @@ public class CI {
             "    \"address\": \"127.0.0.1:8080\",\n" +
             "    \"weight\": 10,\n" +
             "    \"currentIp\": \"127.0.0.1\",\n" +
-            "    \"status\": \"DOWN\"\n" +
+            "    \"status\": \"DOWN\",\n" +
+            "    \"cost\": -1" +
             "}";
         pretty = requestApi(HttpMethod.GET, "/server-group/" + sg0 + "/server/" + svr00 + "/detail").pretty();
         System.out.println("server: " + pretty);
@@ -2791,14 +2674,16 @@ public class CI {
             "            \"address\": \"127.0.0.1:8080\",\n" +
             "            \"weight\": 10,\n" +
             "            \"currentIp\": \"127.0.0.1\",\n" +
-            "            \"status\": \"DOWN\"\n" +
+            "            \"status\": \"DOWN\",\n" +
+            "            \"cost\": -1" +
             "        },\n" +
             "        {\n" +
             "            \"name\": \"" + svr01 + "\",\n" +
             "            \"address\": \"127.0.0.1:8081\",\n" +
             "            \"weight\": 10,\n" +
             "            \"currentIp\": \"127.0.0.1\",\n" +
-            "            \"status\": \"DOWN\"\n" +
+            "            \"status\": \"DOWN\",\n" +
+            "            \"cost\": -1" +
             "        }\n" +
             "    ]\n" +
             "}";
@@ -2843,62 +2728,6 @@ public class CI {
         pretty = requestApi(HttpMethod.GET, "/security-group/" + secg + "/detail").pretty();
         System.out.println("security-group: " + pretty);
         assertEquals(JSON.parse(secgResp).pretty(), pretty);
-
-        var sg2 = randomName("sg2");
-        execute(createReq(add, "server-group", sg2, "timeout", "2000", "period", "5000", "up", "2", "down", "3",
-            "event-loop-group", elg, "method", "source", "annotations", "{\"m\":\"n\"}"));
-        sgNames.add(sg2);
-        var sgd = randomName("sgd");
-        execute(createReq(add, "smart-group-delegate", sgd,
-            "service", "foo-service",
-            "zone", "bar-zone",
-            "server-group", sg2));
-        sgdNames.add(sgd);
-        var sgdResp = "{\n" +
-            "    \"name\": \"" + sgd + "\",\n" +
-            "    \"service\": \"foo-service\",\n" +
-            "    \"zone\": \"bar-zone\",\n" +
-            "    \"handledGroup\": " + "{\n" +
-            "        \"name\": \"" + sg2 + "\",\n" +
-            "        \"timeout\": 2000,\n" +
-            "        \"period\": 5000,\n" +
-            "        \"up\": 2,\n" +
-            "        \"down\": 3,\n" +
-            "        \"protocol\": \"tcp\",\n" +
-            "        \"method\": \"source\",\n" +
-            "        \"annotations\": { \"m\": \"n\" },\n" +
-            "        \"eventLoopGroup\": {\n" +
-            "            \"name\": \"" + elg + "\",\n" +
-            "            \"eventLoopList\": [\n" +
-            "                { \"name\": \"" + el0 + "\" },\n" +
-            "                { \"name\": \"" + el1 + "\" }\n" +
-            "            ]\n" +
-            "        },\n" +
-            "        \"serverList\": []\n" +
-            "    }" +
-            "}";
-        pretty = requestApi(HttpMethod.GET, "/smart-group-delegate/" + sgd + "/detail").pretty();
-        System.out.println("smart-group-delegate: " + pretty);
-        assertEquals(JSON.parse(sgdResp).pretty(), pretty);
-
-        var nic = loopbackNic();
-        var snd = randomName("snd");
-        execute(createReq(add, "smart-node-delegate", snd, "service", "bar-service", "zone", "foo-zone",
-            "nic", nic, "ip-type", "v4", "port", "11223"));
-        sndNames.add(snd);
-        var sndResp = "{\n" +
-            "    \"name\": \"" + snd + "\",\n" +
-            "    \"service\": \"bar-service\",\n" +
-            "    \"zone\": \"foo-zone\",\n" +
-            "    \"nic\": \"" + nic + "\",\n" +
-            "    \"ipType\": \"v4\",\n" +
-            "    \"exposedPort\": 11223,\n" +
-            "    \"weight\": 10," +
-            "    \"status\": \"DOWN\"\n" +
-            "}";
-        pretty = requestApi(HttpMethod.GET, "/smart-node-delegate/" + snd + "/detail").pretty();
-        System.out.println("smart-node-delegate: " + pretty);
-        assertEquals(JSON.parse(sndResp).pretty(), pretty);
 
         var ckResp = "{\n" +
             "    \"name\": \"" + ck + "\",\n" +

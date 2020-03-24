@@ -3,8 +3,6 @@ package vproxy.app.cmd;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.*;
-import vproxy.component.auto.SmartGroupDelegate;
-import vproxy.component.auto.SmartNodeDelegate;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
@@ -636,38 +634,6 @@ public class Command {
             case resolver:
                 // disallow all operations on resolver
                 throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
-            case sgd:
-                switch (cmd.action) {
-                    case a:
-                    case r:
-                    case R:
-                    case L:
-                    case l:
-                        SmartGroupDelegateHandle.check(targetResource);
-                        if (cmd.action == Action.a) {
-                            SmartGroupDelegateHandle.checkCreate(cmd);
-                        }
-                        break;
-                    default:
-                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
-                }
-                break;
-            case snd:
-                switch (cmd.action) {
-                    case a:
-                    case r:
-                    case R:
-                    case L:
-                    case l:
-                        SmartNodeDelegateHandle.check(targetResource);
-                        if (cmd.action == Action.a) {
-                            SmartNodeDelegateHandle.checkCreate(cmd);
-                        }
-                        break;
-                    default:
-                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
-                }
-                break;
             case ck:
                 switch (cmd.action) {
                     case a:
@@ -983,51 +949,6 @@ public class Command {
                         return new CmdResult(caches, cacheStrList, utilJoinList(caches));
                     case R:
                         DnsCacheHandle.remove(this);
-                        return new CmdResult();
-                }
-            case sgd:
-                switch (action) {
-                    case l:
-                        List<String> names = SmartGroupDelegateHandle.names();
-                        return new CmdResult(names, names, utilJoinList(names));
-                    case L:
-                        List<SmartGroupDelegate> slgList = SmartGroupDelegateHandle.detail();
-                        List<String> slgStrList = slgList.stream().map(l ->
-                            l.alias + " -> service " + l.service + " zone " + l.zone + " server-group " + l.handledGroup.alias)
-                            .collect(Collectors.toList());
-                        return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
-                    case r:
-                    case R:
-                        SmartGroupDelegateHandle.remove(this);
-                        return new CmdResult();
-                    case a:
-                        SmartGroupDelegateHandle.add(this);
-                        return new CmdResult();
-                }
-            case snd:
-                switch (action) {
-                    case l:
-                        List<String> names = SmartNodeDelegateHandle.names();
-                        return new CmdResult(names, names, utilJoinList(names));
-                    case L:
-                        List<SmartNodeDelegate> slgList = SmartNodeDelegateHandle.detail();
-                        List<String> slgStrList = slgList.stream().map(l ->
-                            l.alias + " ->" +
-                                " service " + l.service +
-                                " zone " + l.zone +
-                                " nic " + l.nic +
-                                " ip-type " + l.ipType +
-                                " port " + l.exposedPort +
-                                " weight " + l.weight +
-                                " currently " + (l.isHealthy() ? "UP" : "DOWN"))
-                            .collect(Collectors.toList());
-                        return new CmdResult(slgList, slgStrList, utilJoinList(slgStrList));
-                    case r:
-                    case R:
-                        SmartNodeDelegateHandle.remove(this);
-                        return new CmdResult();
-                    case a:
-                        SmartNodeDelegateHandle.add(this);
                         return new CmdResult();
                 }
             case ck:
