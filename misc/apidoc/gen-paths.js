@@ -30,12 +30,10 @@ var sg = new RT('ServerGroup', 'server-group', 'sg', 'a group of server(s)', fal
 var svrInSg = new RS(sg, 'Server', 'server', 'svr', 'a remote endpoint', false);
 var secg = new RT('SecurityGroup', 'security-group', 'secg', 'a group of security-group-rule(s)', false);
 var secgr = new RS(secg, 'SecurityGroupRule', 'security-group-rule', 'secgr', 'a rule for accessible or forbidden remote/local address(es)', true);
-var sgd = new RT('SmartGroupDelegate', 'smart-group-delegate', 'sgd', 'a binding for a server group and endpoints in a service', true);
-var snd = new RT('SmartNodeDelegate', 'smart-node-delegate', 'snd', 'a registered record for an endpoint in a service', true);
 var ck = new RT('CertKey', 'cert-key', 'ck', 'a pem format cert(s)/key tuple', true);
 
 var tags = [
-  tcpLb, socks5, dns, elg, elInElg, ups, sg, svrInSg, secg, secgr, sgd, snd, ck
+  tcpLb, socks5, dns, elg, elInElg, ups, sg, svrInSg, secg, secgr, ck
 ];
 var resources = [
   tcpLb, socks5, dns,
@@ -43,7 +41,6 @@ var resources = [
   sgInUps, ups,
   svrInSg, sg,
   secgr, secg,
-  sgd, snd,
   ck,
 ];
 
