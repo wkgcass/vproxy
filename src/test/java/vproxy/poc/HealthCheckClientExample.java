@@ -23,8 +23,8 @@ public class HealthCheckClientExample {
             }
 
             @Override
-            public void down(SocketAddress remote) {
-                System.out.println("health check status change to \033[1;31mdown\033[0m");
+            public void down(SocketAddress remote, String reason) {
+                System.out.println("health check status change to \033[1;31mdown\033[0m, " + reason);
             }
 
             @Override
@@ -33,8 +33,8 @@ public class HealthCheckClientExample {
             }
 
             @Override
-            public void downOnce(SocketAddress remote) {
-                System.out.println("health check got \033[0;31mone down\033[0m");
+            public void downOnce(SocketAddress remote, String reason) {
+                System.out.println("health check got \033[0;31mone down\033[0m, " + reason);
             }
         });
         client.start();

@@ -46,10 +46,10 @@ public class ServerGroup {
             }
 
             @Override
-            public void down(SocketAddress remote) {
+            public void down(SocketAddress remote, String reason) {
                 healthy = false;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
-                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN");
+                    "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN, reason: " + reason);
 
                 // alert event
                 alertListeners(lsn -> lsn.down(ServerHandle.this));
@@ -65,8 +65,8 @@ public class ServerGroup {
             }
 
             @Override
-            public void downOnce(SocketAddress remote) {
-                assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + ")");
+            public void downOnce(SocketAddress remote, String reason) {
+                assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + "), reason: " + reason);
                 hcCost.clear();
 
                 // the server handle is default DOWN when added

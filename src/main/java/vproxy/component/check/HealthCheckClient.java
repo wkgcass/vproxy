@@ -34,8 +34,8 @@ public class HealthCheckClient {
             }
         }
 
-        void onFailed() {
-            handler.downOnce(connectClient.remote);
+        void onFailed(String reason) {
+            handler.downOnce(connectClient.remote, reason);
             if (currentUp > 0) {
                 // decrease up count if it's not zero
                 --currentUp;
@@ -48,7 +48,7 @@ public class HealthCheckClient {
                 if (currentDown == down - 1) {
                     // should trigger down event
                     nowIsUp = false;
-                    handler.down(connectClient.remote);
+                    handler.down(connectClient.remote, reason);
                     currentDown = 0;
                     return;
                 }
@@ -119,7 +119,12 @@ public class HealthCheckClient {
 
             @Override
             protected void onFailed(IOException err) {
-                connectResultHandler.onFailed();
+                String reason = err.getClass().getSimpleName();
+                String msg = err.getMessage();
+                if (msg != null && !msg.isBlank()) {
+                    reason = reason + ": " + msg;
+                }
+                connectResultHandler.onFailed(reason);
                 cb.run();
             }
         });
@@ -152,7 +157,7 @@ public class HealthCheckClient {
         // should run on event loop thread
         // because the callback not thread safe
         connectClient.eventLoop.getSelectorEventLoop().runOnLoop(
-            connectResultHandler::onFailed
+            () -> connectResultHandler.onFailed("passive down")
         );
     }
 }
