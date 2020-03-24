@@ -17,6 +17,7 @@ import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.Config;
+import vproxy.app.util.AnnotationKeys;
 import vproxy.connection.ServerSock;
 import vproxy.test.cases.TestSSL;
 import vproxy.util.Logger;
@@ -590,14 +591,14 @@ public class CI {
         String sg0 = randomName("example1");
         execute(createReq(add, "server-group", sg0,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample.com\",\"port\":\"8080\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost + "\":\"myexample.com\",\"" + AnnotationKeys.ServerGroup_HintPort + "\":\"8080\"}"));
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
         String sg1 = randomName("example2");
         execute(createReq(add, "server-group", sg1,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample2.com\",\"port\":\"8080\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost + "\":\"myexample2.com\",\"" + AnnotationKeys.ServerGroup_HintPort + "\":\"8080\"}"));
         sgNames.add(sg1);
         checkCreate("server-group", sg1);
 
@@ -657,13 +658,13 @@ public class CI {
 
         execute(createReq(add, "server-group", domain0,
             "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
-            "event-loop-group", elg0, "annotations", "{\"host\":\"" + domain0 + "\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost+ "\":\"" + domain0 + "\"}"));
         sgNames.add(domain0);
         checkCreate("server-group", domain0);
 
         execute(createReq(add, "server-group", domain1,
             "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
-            "event-loop-group", elg0, "annotations", "{\"host\":\"" + domain1 + "\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost + "\":\"" + domain1 + "\"}"));
         sgNames.add(domain1);
         checkCreate("server-group", domain1);
 
@@ -1025,7 +1026,7 @@ public class CI {
         String sg0 = randomName("example");
         execute(createReq(add, "server-group", sg0,
             "timeout", "500", "period", "200", "up", "2", "down", "5",
-            "event-loop-group", elg0, "annotations", "{\"host\":\"myexample.com\",\"port\":\"8080\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost + "\":\"myexample.com\",\"" + AnnotationKeys.ServerGroup_HintPort + "\":\"8080\"}"));
         sgNames.add(sg0);
         checkCreate("server-group", sg0);
 
@@ -2153,7 +2154,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1,\n" +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
@@ -2161,7 +2163,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2193,7 +2196,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
@@ -2201,7 +2205,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2289,7 +2294,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
@@ -2297,7 +2303,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2329,7 +2336,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
@@ -2337,7 +2345,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2419,7 +2428,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr01 + "\",\n" +
@@ -2427,7 +2437,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2459,7 +2470,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        },\n" +
             "                        {\n" +
             "                            \"name\": \"" + svr11 + "\",\n" +
@@ -2467,7 +2479,8 @@ public class CI {
             "                            \"weight\": 10,\n" +
             "                            \"currentIp\": \"127.0.0.1\",\n" +
             "                            \"status\": \"DOWN\",\n" +
-            "                            \"cost\": -1" +
+            "                            \"cost\": -1," +
+            "                            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                        }\n" +
             "                    ]\n" +
             "                }\n" +
@@ -2534,7 +2547,8 @@ public class CI {
             "                \"weight\": 10,\n" +
             "                \"currentIp\": \"127.0.0.1\",\n" +
             "                \"status\": \"DOWN\",\n" +
-            "                \"cost\": -1" +
+            "                \"cost\": -1," +
+            "                \"downReason\": \"ConnectException: Connection refused\"\n" +
             "            },\n" +
             "            {\n" +
             "                \"name\": \"" + svr01 + "\",\n" +
@@ -2542,7 +2556,8 @@ public class CI {
             "                \"weight\": 10,\n" +
             "                \"currentIp\": \"127.0.0.1\",\n" +
             "                \"status\": \"DOWN\",\n" +
-            "                \"cost\": -1" +
+            "                \"cost\": -1," +
+            "                \"downReason\": \"ConnectException: Connection refused\"\n" +
             "            }\n" +
             "        ]\n" +
             "    }\n" +
@@ -2581,7 +2596,8 @@ public class CI {
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
             "                        \"status\": \"DOWN\",\n" +
-            "                        \"cost\": -1" +
+            "                        \"cost\": -1," +
+            "                        \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                    },\n" +
             "                    {\n" +
             "                        \"name\": \"" + svr01 + "\",\n" +
@@ -2589,7 +2605,8 @@ public class CI {
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
             "                        \"status\": \"DOWN\",\n" +
-            "                        \"cost\": -1" +
+            "                        \"cost\": -1," +
+            "                        \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                    }\n" +
             "                ]\n" +
             "            }\n" +
@@ -2621,7 +2638,8 @@ public class CI {
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
             "                        \"status\": \"DOWN\",\n" +
-            "                        \"cost\": -1" +
+            "                        \"cost\": -1," +
+            "                        \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                    },\n" +
             "                    {\n" +
             "                        \"name\": \"" + svr11 + "\",\n" +
@@ -2629,7 +2647,8 @@ public class CI {
             "                        \"weight\": 10,\n" +
             "                        \"currentIp\": \"127.0.0.1\",\n" +
             "                        \"status\": \"DOWN\",\n" +
-            "                        \"cost\": -1" +
+            "                        \"cost\": -1," +
+            "                        \"downReason\": \"ConnectException: Connection refused\"\n" +
             "                    }\n" +
             "                ]\n" +
             "            }\n" +
@@ -2646,7 +2665,8 @@ public class CI {
             "    \"weight\": 10,\n" +
             "    \"currentIp\": \"127.0.0.1\",\n" +
             "    \"status\": \"DOWN\",\n" +
-            "    \"cost\": -1" +
+            "    \"cost\": -1," +
+            "    \"downReason\": \"ConnectException: Connection refused\"\n" +
             "}";
         pretty = requestApi(HttpMethod.GET, "/server-group/" + sg0 + "/server/" + svr00 + "/detail").pretty();
         System.out.println("server: " + pretty);
@@ -2675,7 +2695,8 @@ public class CI {
             "            \"weight\": 10,\n" +
             "            \"currentIp\": \"127.0.0.1\",\n" +
             "            \"status\": \"DOWN\",\n" +
-            "            \"cost\": -1" +
+            "            \"cost\": -1," +
+            "            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "        },\n" +
             "        {\n" +
             "            \"name\": \"" + svr01 + "\",\n" +
@@ -2683,7 +2704,8 @@ public class CI {
             "            \"weight\": 10,\n" +
             "            \"currentIp\": \"127.0.0.1\",\n" +
             "            \"status\": \"DOWN\",\n" +
-            "            \"cost\": -1" +
+            "            \"cost\": -1," +
+            "            \"downReason\": \"ConnectException: Connection refused\"\n" +
             "        }\n" +
             "    ]\n" +
             "}";

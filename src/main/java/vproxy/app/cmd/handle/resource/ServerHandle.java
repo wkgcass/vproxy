@@ -105,7 +105,8 @@ public class ServerHandle {
                 + " connect-to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
                 + " weight " + h.getWeight()
                 + " currently " + (h.healthy ? "UP" : "DOWN")
-                + " cost " + h.getHcCost();
+                + " cost " + h.getHcCost()
+                + " down-reason " + h.getHcDownReason();
         }
     }
 }

@@ -21,6 +21,7 @@ import org.apache.thrift.transport.TTransport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import vproxy.app.util.AnnotationKeys;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
@@ -64,11 +65,11 @@ public class TestProtocols {
 
         ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg1.annotations = Map.of("host", "s1.test.com");
+        sg1.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s1.test.com"));
         sg1.add("svr1", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg2.annotations = Map.of("host", "s2.test.com");
+        sg2.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s2.test.com"));
         sg2.add("svr2", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port2), 10);
 
         // set to up

@@ -2,6 +2,7 @@ package vproxy.test.cases;
 
 import org.junit.*;
 import vproxy.app.Config;
+import vproxy.app.util.AnnotationKeys;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -68,7 +69,7 @@ public class TestSocks5 {
             h.healthy = true;
         }
         domainDotComGroup = new ServerGroup("test-domain", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        domainDotComGroup.annotations = Map.of("host", "domain.com", "port", "80");
+        domainDotComGroup.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "domain.com", AnnotationKeys.ServerGroup_HintPort, "80"));
         domainDotComGroup.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
         domainDotComGroup.add("svr3", new InetSocketAddress("127.0.0.1", 19083), 10);
         // manually set to healthy

@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vproxy.app.util.AnnotationKeys;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -18,7 +19,7 @@ public class DNSServerPOC {
         ServerGroup group = new ServerGroup("sg0",
             elg, new HealthCheckConfig(0, 5000, 1, 1, CheckProtocol.none),
             Method.wrr);
-        group.annotations = Map.of("host", "example.com");
+        group.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "example.com"));
         group.add("svr1", new InetSocketAddress("192.168.3.4", 80), 10);
         group.add("svr2", new InetSocketAddress("192.168.2.1", 80), 10);
         group.add("svr3", new InetSocketAddress("10.1.2.3", 80), 10);

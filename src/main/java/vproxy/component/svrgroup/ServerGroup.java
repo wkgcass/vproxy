@@ -31,6 +31,7 @@ public class ServerGroup {
             @Override
             public void up(SocketAddress remote) {
                 healthy = true;
+                hcDownReason = null;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
                     "server " + ServerHandle.this.alias + "(" + server + ") status changed to UP");
 
@@ -68,6 +69,7 @@ public class ServerGroup {
             public void downOnce(SocketAddress remote, String reason) {
                 assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + "), reason: " + reason);
                 hcCost.clear();
+                hcDownReason = reason;
 
                 // the server handle is default DOWN when added
                 // so there's no chance for the `down()` to be called if it's actually DOWN
@@ -110,6 +112,7 @@ public class ServerGroup {
         // NOTE: healthy state is public
         public boolean healthy = false; // considered to be unhealthy when firstly created
         private final LinkedList<Long> hcCost = new LinkedList<>(); // the time cost for one healthy checking result of this endpoint
+        private String hcDownReason = null; // the reason for the failed health checks
         private boolean logicDelete = false; // if true, it will not be checked for dup alias nor saved to cfg file
         HealthCheckClient healthCheckClient;
 
@@ -188,6 +191,10 @@ public class ServerGroup {
 
         public long getHcCost() {
             return (long) hcCost.stream().mapToLong(l -> l).average().orElse(-1);
+        }
+
+        public String getHcDownReason() {
+            return hcDownReason;
         }
 
         void start() {

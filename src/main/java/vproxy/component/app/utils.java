@@ -354,6 +354,7 @@ class utils {
             .put("currentIp", Utils.ipStr(svr.server.getAddress().getAddress()))
             .put("status", svr.healthy ? "UP" : "DOWN")
             .put("cost", svr.getHcCost())
+            .put("downReason", svr.getHcDownReason())
             .build();
     }
 
