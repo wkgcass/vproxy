@@ -1,9 +1,6 @@
 package vproxy.poc;
 
-import vproxy.component.check.ConnectResult;
-import vproxy.component.check.HealthCheckConfig;
-import vproxy.component.check.HealthCheckHandler;
-import vproxy.component.check.HealthCheckClient;
+import vproxy.component.check.*;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 
@@ -18,6 +15,7 @@ public class HealthCheckClientExample {
         HealthCheckClient client = new HealthCheckClient(eventLoop,
             new InetSocketAddress("127.0.0.1", 18080),
             new HealthCheckConfig(200, 800, 4, 5),
+            new AnnotatedHcConfig(),
             true, new HealthCheckHandler() {
             @Override
             public void up(SocketAddress remote) {

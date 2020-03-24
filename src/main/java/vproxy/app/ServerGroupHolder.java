@@ -28,7 +28,7 @@ public class ServerGroupHolder {
         if (map.containsKey(alias))
             throw new AlreadyExistException("server-group", alias);
         ServerGroup serverGroup = new ServerGroup(alias, eventLoopGroup, healthCheckConfig, method);
-        serverGroup.annotations = annotations;
+        serverGroup.setAnnotations(annotations);
         map.put(alias, serverGroup);
         return serverGroup;
     }

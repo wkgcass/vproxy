@@ -2,7 +2,6 @@ package vproxy.component.check;
 
 import vfd.DatagramFD;
 import vfd.FDProvider;
-import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.dns.DNSClient;
@@ -167,12 +166,36 @@ public class ConnectClient {
             assert resp != null;
             int status = resp.statusCode;
             cancelTimers();
-            if (status >= 100 && status < 500) {
-                // 1xx,2xx,3xx,4xx all considered to be ok
-                closeAndCallSucc(ctx);
-            } else {
+            if (status < 100 || status >= 600) {
                 closeAndCallFail(ctx, "unexpected http response status " + status);
+                return;
             }
+            String expectedStatus = annotatedHcConfig.getHttpStatus();
+            if (status < 200) {
+                if (expectedStatus.contains("1xx")) {
+                    closeAndCallSucc(ctx);
+                    return;
+                }
+            } else if (status < 300) {
+                if (expectedStatus.contains("2xx")) {
+                    closeAndCallSucc(ctx);
+                    return;
+                }
+            } else if (status < 400) {
+                if (expectedStatus.contains("3xx")) {
+                    closeAndCallSucc(ctx);
+                    return;
+                }
+            } else if (status < 500) {
+                if (expectedStatus.contains("4xx")) {
+                    closeAndCallSucc(ctx);
+                }
+            } else {
+                if (expectedStatus.contains("5xx")) {
+                    closeAndCallSucc(ctx);
+                }
+            }
+            closeAndCallFail(ctx, "unexpected http response status " + status);
         }
 
         @Override
@@ -185,6 +208,7 @@ public class ConnectClient {
     public final InetSocketAddress remote;
     public final CheckProtocol checkProtocol;
     public final int timeout;
+    public final AnnotatedHcConfig annotatedHcConfig;
     private boolean stopped = false;
     private final Consumer<Callback<Void, IOException>> handleFunc;
 
@@ -194,11 +218,13 @@ public class ConnectClient {
     public ConnectClient(NetEventLoop eventLoop,
                          InetSocketAddress remote,
                          CheckProtocol checkProtocol,
-                         int timeout) {
+                         int timeout,
+                         AnnotatedHcConfig annotatedHcConfig) {
         this.eventLoop = eventLoop;
         this.remote = remote;
         this.checkProtocol = checkProtocol;
         this.timeout = timeout;
+        this.annotatedHcConfig = annotatedHcConfig;
 
         switch (this.checkProtocol) {
             case none:
@@ -282,11 +308,17 @@ public class ConnectClient {
     private void handleHttp(Callback<Void, IOException> cb) {
         // http request
         Request req = new Request();
-        req.method = "GET";
-        req.uri = "/";
+        req.method = annotatedHcConfig.getHttpMethod();
+        req.uri = annotatedHcConfig.getHttpUrl();
         req.version = "HTTP/1.1";
         req.headers = new ArrayList<>(1);
-        req.headers.add(new Header("User-Agent", "vproxy/" + Application.VERSION));
+        String host = annotatedHcConfig.getHttpHost();
+        //noinspection ReplaceNullCheck
+        if (host == null) {
+            req.headers.add(new Header("Host", Utils.l4addrStr(remote)));
+        } else {
+            req.headers.add(new Header("Host", host));
+        }
         ByteArray bytes = req.toByteArray();
         RingBuffer sendBuffer = RingBuffer.allocate(bytes.length());
         sendBuffer.storeBytesFrom(ByteArrayChannel.fromFull(bytes));

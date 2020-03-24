@@ -1,5 +1,6 @@
 package vproxy.processor;
 
+import vproxy.app.util.AnnotationKeys;
 import vproxy.util.Utils;
 
 import java.util.Map;
@@ -38,10 +39,10 @@ public class Hint {
                 continue;
             }
             if (annoHost == null) {
-                annoHost = a.get("host");
+                annoHost = a.get(AnnotationKeys.ServerGroup_HintHost);
             }
             if (annoPort == null) {
-                annoPort = a.get("port");
+                annoPort = a.get(AnnotationKeys.ServerGroup_HintPort);
             }
         }
 

@@ -1,9 +1,6 @@
 package vproxy.component.svrgroup;
 
-import vproxy.component.check.ConnectResult;
-import vproxy.component.check.HealthCheckConfig;
-import vproxy.component.check.HealthCheckHandler;
-import vproxy.component.check.HealthCheckClient;
+import vproxy.component.check.*;
 import vproxy.component.elgroup.EventLoopAttach;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
@@ -208,7 +205,7 @@ public class ServerGroup {
                 return;
             }
             el = w;
-            healthCheckClient = new HealthCheckClient(el, server, healthCheckConfig, healthy, handler);
+            healthCheckClient = new HealthCheckClient(el, server, healthCheckConfig, annotatedHcConfig, healthy, handler);
             try {
                 el.attachResource(this);
             } catch (AlreadyExistException e) {
@@ -310,11 +307,12 @@ public class ServerGroup {
     public final String alias;
     public final EventLoopGroup eventLoopGroup;
     private HealthCheckConfig healthCheckConfig;
+    private final AnnotatedHcConfig annotatedHcConfig = new AnnotatedHcConfig();
     private Method method;
     private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
     private final CopyOnWriteArraySet<ServerListener> serverListeners = new CopyOnWriteArraySet<>();
-    public Map<String, String> annotations = null;
+    private Map<String, String> annotations = null;
 
     // START fields for WRR
     static class WRR {
@@ -765,6 +763,21 @@ public class ServerGroup {
 
     public HealthCheckConfig getHealthCheckConfig() {
         return new HealthCheckConfig(healthCheckConfig);
+    }
+
+    public Map<String, String> getAnnotations() {
+        return annotations;
+    }
+
+    public void setAnnotations(Map<String, String> annotations) {
+        this.annotations = annotations;
+
+        // set hc client annotations
+        if (annotations == null) {
+            annotatedHcConfig.clear();
+        } else {
+            annotatedHcConfig.set(annotations);
+        }
     }
 
     public synchronized ServerHandle add(String alias, InetSocketAddress server, int weight) throws AlreadyExistException {

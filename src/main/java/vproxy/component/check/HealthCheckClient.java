@@ -77,12 +77,14 @@ public class HealthCheckClient {
     public HealthCheckClient(NetEventLoop eventLoop,
                              InetSocketAddress remote,
                              HealthCheckConfig healthCheckConfig,
+                             AnnotatedHcConfig annotatedHcConfig,
                              boolean initialIsUp,
                              HealthCheckHandler handler) {
         this.connectClient = new ConnectClient(
             eventLoop, remote,
             healthCheckConfig.checkProtocol,
-            healthCheckConfig.timeout);
+            healthCheckConfig.timeout,
+            annotatedHcConfig);
 
         this.period = healthCheckConfig.period;
         this.up = healthCheckConfig.up;

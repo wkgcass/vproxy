@@ -326,7 +326,7 @@ class utils {
             .put("down", sg.getHealthCheckConfig().down)
             .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
-            .putInst("annotations", formatAnnotations(sg.annotations))
+            .putInst("annotations", formatAnnotations(sg.getAnnotations()))
             .put("eventLoopGroup", sg.eventLoopGroup.alias)
             .build();
     }
@@ -340,7 +340,7 @@ class utils {
             .put("down", sg.getHealthCheckConfig().down)
             .put("protocol", sg.getHealthCheckConfig().checkProtocol.name())
             .put("method", sg.getMethod().toString())
-            .putInst("annotations", formatAnnotations(sg.annotations))
+            .putInst("annotations", formatAnnotations(sg.getAnnotations()))
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(sg.eventLoopGroup))
             .putArray("serverList", arr -> sg.getServerHandles().forEach(svr -> arr.addInst(utils.formatServer(svr))))
             .build();

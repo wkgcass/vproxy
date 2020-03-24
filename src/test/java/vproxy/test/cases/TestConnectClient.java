@@ -1,6 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.*;
+import vproxy.component.check.AnnotatedHcConfig;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.ConnectClient;
 import vproxy.component.check.ConnectResult;
@@ -63,7 +64,8 @@ public class TestConnectClient {
         ConnectClient client = new ConnectClient(netEventLoop,
             new InetSocketAddress(targetAddress, port),
             protocol,
-            100);
+            100,
+            new AnnotatedHcConfig());
         BlockCallback<ConnectResult, IOException> cb = new BlockCallback<>();
         client.handle(cb);
         cb.block();

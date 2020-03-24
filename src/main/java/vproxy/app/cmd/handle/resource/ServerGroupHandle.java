@@ -215,7 +215,7 @@ public class ServerGroupHandle {
                 g.setMethod(MethHandle.get(cmd));
             }
             if (cmd.args.containsKey(Param.anno)) {
-                g.annotations = AnnotationsHandle.get(cmd);
+                g.setAnnotations(AnnotationsHandle.get(cmd));
             }
         } else {
             Upstream.ServerGroupHandle h = getHandle(cmd.resource);
@@ -259,7 +259,7 @@ public class ServerGroupHandle {
         private String formatAnno() {
             Map<String, String> annos;
             if (h == null) {
-                annos = Objects.requireNonNullElseGet(g.annotations, Map::of);
+                annos = Objects.requireNonNullElseGet(g.getAnnotations(), Map::of);
             } else {
                 annos = Objects.requireNonNullElseGet(h.annotations, Map::of);
             }
