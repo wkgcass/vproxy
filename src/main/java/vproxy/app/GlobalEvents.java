@@ -40,9 +40,10 @@ public class GlobalEvents {
         Set<Consumer> ls;
         synchronized (listeners) {
             ls = listeners.get(event);
-        }
-        if (ls == null) {
-            return;
+            if (ls == null) {
+                return;
+            }
+            ls = new HashSet<>(ls);
         }
         for (Consumer c : ls) {
             try {
