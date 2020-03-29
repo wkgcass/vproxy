@@ -6,6 +6,7 @@ import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
 import vproxy.app.Config;
+import vproxy.app.GlobalEvents;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
@@ -13,10 +14,7 @@ import vproxy.component.exception.XException;
 import vproxy.connection.ServerSock;
 import vproxy.dns.Cache;
 import vproxy.dns.Resolver;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Utils;
+import vproxy.util.*;
 import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.RoutingHandler;
@@ -29,6 +27,7 @@ import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.UUID;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class HttpController {
@@ -38,6 +37,7 @@ public class HttpController {
     private static final String channelBase = apiV1Base + "/channel";
     private static final String stateBase = apiV1Base + "/state";
     private static final String statistics = apiV1Base + "/statistics";
+    private static final String watch = apiV1Base + "/watch";
 
     public final String alias;
     public final InetSocketAddress address;
@@ -282,6 +282,9 @@ public class HttpController {
         // accepted-conn-count
         server.get(statistics + "/tcp-lb/:tl/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrTl));
         server.get(statistics + "/socks5-server/:socks5/server-sock/:l4addr/accepted-conn", wrapAsync(this::getAcceptedConnFromL4AddrSocks5));
+
+        // watch
+        server.get(watch + "/server-group/-/server/-/health-check", this::watchHealthCheck);
 
         // start
         if (Config.checkBind) {
@@ -1219,6 +1222,30 @@ public class HttpController {
         String l4addrStr = rctx.param("l4addr");
         Socks5Server socks5 = Application.get().socks5ServerHolder.get(socks5Str);
         utils.respondAcceptedConnFromL4AddrTl(l4addrStr, socks5, cb);
+    }
+
+    private void watchHealthCheck(RoutingContext rctx) {
+        rctx.response().status(200).sendHeadersWithChunked();
+        //noinspection unchecked
+        Consumer<GlobalEvents.Messages.HealthCheck>[] handler = new Consumer[1];
+        handler[0] = msg -> {
+            try {
+                var svr = msg.server;
+                var sg = msg.serverGroup;
+                var builder = new ObjectBuilder()
+                    .putInst("server", utils.formatServer(svr))
+                    .putInst("serverGroup", utils.formatServerGroup(sg));
+                rctx.response().sendChunk(ByteArray.from(builder.build().stringify().getBytes()));
+            } catch (Exception e) {
+                if ("connection closed".equals(e.getMessage())) {
+                    assert Logger.lowLevelDebug("connection closed while sending data, should deregister the handler");
+                    GlobalEvents.getInstance().deregister(GlobalEvents.HEALTH_CHECK, handler[0]);
+                } else {
+                    Logger.error(LogType.IMPROPER_USE, "", e);
+                }
+            }
+        };
+        GlobalEvents.getInstance().register(GlobalEvents.HEALTH_CHECK, handler[0]);
     }
 
     static class Err extends RuntimeException {

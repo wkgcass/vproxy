@@ -13,6 +13,8 @@ public interface HttpResponse {
 
     HttpResponse header(String key, String value);
 
+    HttpResponse sendHeadersWithChunked();
+
     default void end() {
         end((ByteArray) null);
     }
@@ -27,4 +29,6 @@ public interface HttpResponse {
     }
 
     void end(ByteArray body);
+
+    HttpResponse sendChunk(ByteArray chunk);
 }

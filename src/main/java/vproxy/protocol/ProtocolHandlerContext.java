@@ -75,6 +75,9 @@ public class ProtocolHandlerContext<T> {
     }
 
     public void write(byte[] bytes) {
+        if (connection.isClosed()) {
+            throw new IllegalStateException("connection closed");
+        }
         if (bytes.length == 0)
             return; // do not write if the input array is empty
         bytesSeq.add(bytes); // only record in this thread

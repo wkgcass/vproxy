@@ -1,5 +1,6 @@
 package vproxy.component.svrgroup;
 
+import vproxy.app.GlobalEvents;
 import vproxy.component.check.*;
 import vproxy.component.elgroup.EventLoopAttach;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -44,6 +45,9 @@ public class ServerGroup {
 
                 // alert event
                 alertListeners(lsn -> lsn.up(ServerHandle.this));
+                // alert global event
+                GlobalEvents.getInstance().trigger(GlobalEvents.HEALTH_CHECK,
+                    new GlobalEvents.Messages.HealthCheck(ServerHandle.this, ServerGroup.this));
             }
 
             @Override
@@ -54,6 +58,9 @@ public class ServerGroup {
 
                 // alert event
                 alertListeners(lsn -> lsn.down(ServerHandle.this));
+                // alert global event
+                GlobalEvents.getInstance().trigger(GlobalEvents.HEALTH_CHECK,
+                    new GlobalEvents.Messages.HealthCheck(ServerHandle.this, ServerGroup.this));
             }
 
             @Override

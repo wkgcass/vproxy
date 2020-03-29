@@ -161,10 +161,21 @@ public class Http1ServerImpl implements HttpServer {
             response.statusCode = 200;
             response.reason = "OK";
         }
-        if (response.body == null) {
-            response.headers.add(new Header("Content-Length", "0"));
-        } else {
-            response.headers.add(new Header("Content-Length", Integer.toString(response.body.length())));
+        boolean chunked = false;
+        for (Header h : response.headers) {
+            if (h.key.equalsIgnoreCase("transfer-encoding")) {
+                if (h.value.equalsIgnoreCase("chunked")) {
+                    chunked = true;
+                    break;
+                }
+            }
+        }
+        if (!chunked) {
+            if (response.body == null) {
+                response.headers.add(new Header("Content-Length", "0"));
+            } else {
+                response.headers.add(new Header("Content-Length", Integer.toString(response.body.length())));
+            }
         }
         _pctx.write(response.toByteArray().toJavaArray());
     }
@@ -264,11 +275,16 @@ public class Http1ServerImpl implements HttpServer {
                 response = new HttpResponse() {
                     Response response = new Response();
                     boolean isEnd = false;
+                    boolean headersSent = false;
+                    boolean allowChunked = false;
 
                     @Override
                     public HttpResponse status(int code, String msg) {
                         if (isEnd) {
                             throw new IllegalStateException("This response is already ended");
+                        }
+                        if (headersSent) {
+                            throw new IllegalStateException("Headers of this response is already sent");
                         }
                         response.statusCode = code;
                         response.reason = msg;
@@ -280,10 +296,42 @@ public class Http1ServerImpl implements HttpServer {
                         if (isEnd) {
                             throw new IllegalStateException("This response is already ended");
                         }
+                        if (headersSent) {
+                            throw new IllegalStateException("Headers of this response is already sent");
+                        }
                         if (response.headers == null) {
                             response.headers = new LinkedList<>();
                         }
                         response.headers.add(new Header(key, value));
+                        return this;
+                    }
+
+                    @Override
+                    public HttpResponse sendHeadersWithChunked() {
+                        if (headersSent) {
+                            throw new IllegalStateException("Headers of this response is already sent");
+                        }
+                        if (response.headers == null) {
+                            response.headers = new LinkedList<>();
+                        }
+                        boolean hasTransferEncoding = false;
+                        String transferEncoding = "chunked";
+                        for (Header h : response.headers) {
+                            if (h.key.toLowerCase().equals("transfer-encoding")) {
+                                hasTransferEncoding = true;
+                                transferEncoding = h.value;
+                                break;
+                            }
+                        }
+                        if (!transferEncoding.equals("chunked")) {
+                            throw new IllegalStateException("The response has Transfer-Encoding set to " + transferEncoding + ", cannot run in chunked mode");
+                        }
+                        if (!hasTransferEncoding) {
+                            response.headers.add(new Header("Transfer-Encoding", transferEncoding));
+                        }
+                        headersSent = true;
+                        allowChunked = true;
+                        sendResponse(_pctx, response);
                         return this;
                     }
 
@@ -307,6 +355,18 @@ public class Http1ServerImpl implements HttpServer {
                         isEnd = true;
                         response.body = body;
                         sendResponse(_pctx, response);
+                    }
+
+                    @Override
+                    public HttpResponse sendChunk(ByteArray chunk) {
+                        if (!allowChunked) {
+                            throw new IllegalStateException("You have to call sendHeadersWithChunked() first");
+                        }
+                        Chunk c = new Chunk();
+                        c.size = chunk.length();
+                        c.content = chunk;
+                        _pctx.write(c.toByteArray().toJavaArray());
+                        return this;
                     }
                 };
             }
