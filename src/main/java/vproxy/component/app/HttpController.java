@@ -1235,7 +1235,7 @@ public class HttpController {
                 var builder = new ObjectBuilder()
                     .putInst("server", utils.formatServer(svr))
                     .putInst("serverGroup", utils.formatServerGroup(sg));
-                rctx.response().sendChunk(ByteArray.from(builder.build().stringify().getBytes()));
+                rctx.response().sendChunk(ByteArray.from((builder.build().stringify() + "\r\n").getBytes()));
             } catch (Exception e) {
                 if ("connection closed".equals(e.getMessage())) {
                     assert Logger.lowLevelDebug("connection closed while sending data, should deregister the handler");

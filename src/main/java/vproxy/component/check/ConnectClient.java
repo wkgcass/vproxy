@@ -136,8 +136,11 @@ public class ConnectClient {
     }
 
     class HttpHCConnectableConnectionHandler extends BaseHealthCheckConnectableConnectionHandler {
+        private final HttpRespParser parser;
+
         HttpHCConnectableConnectionHandler(Callback<Void, IOException> callback, TimerEvent timeoutEvent) {
             super(callback, timeoutEvent);
+            parser = new HttpRespParser(false);
         }
 
         @Override
@@ -148,7 +151,6 @@ public class ConnectClient {
         @Override
         public void readable(ConnectionHandlerContext ctx) {
             RingBuffer inBuf = ctx.connection.getInBuffer();
-            HttpRespParser parser = new HttpRespParser(false);
             int res = parser.feed(inBuf);
             if (res == -1) {
                 String err = parser.getErrorMessage();

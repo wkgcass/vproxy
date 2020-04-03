@@ -705,11 +705,14 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state23(ByteArray data) {
+    private void state23(ByteArray data) throws Exception {
         int b = data.uint8(0);
         if (b == ' ') {
             state = 24;
         } else {
+            if (b < '0' || b > '9') {
+                throw new Exception("invalid character in http response status code: " + ((char) b));
+            }
             resp.statusCode.append((char) b);
         }
     }
