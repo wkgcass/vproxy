@@ -240,6 +240,15 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setTcpNoDelay
     }
 }
 
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setIpTransparent
+  (JNIEnv* env, jobject self, jint fd, jboolean v) {
+    int i = v ? 1 : 0;
+    int res = v_setsockopt(fd, V_SOL_IP, V_IP_TRANSPARENT, &i, sizeof(int));
+    if (res < 0) {
+      throwIOExceptionBasedOnErrno(env);
+    }
+}
+
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_close
   (JNIEnv* env, jobject self, jint fd) {
     int res = v_close(fd);

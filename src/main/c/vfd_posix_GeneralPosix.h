@@ -161,6 +161,14 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setTcpNoDelay
 
 /*
  * Class:     vfd_posix_GeneralPosix
+ * Method:    setIpTransparent
+ * Signature: (IZ)V
+ */
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setIpTransparent
+  (JNIEnv *, jobject, jint, jboolean);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
  * Method:    close
  * Signature: (I)V
  */

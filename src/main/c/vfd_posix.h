@@ -15,6 +15,7 @@
 
 
     #include <sys/socket.h>
+    #include <netinet/ip.h>
 
     #define V_AF_INET      AF_INET
     #define V_AF_INET6     AF_INET6
@@ -26,8 +27,21 @@
     #define V_SO_REUSEADDR SO_REUSEADDR
     #define V_SO_RCVBUF    SO_RCVBUF
     #define V_IPPROTO_TCP  IPPROTO_TCP
+    #define V_SOL_IP       SOL_IP
     #define V_SHUT_WR      SHUT_WR
     typedef struct linger v_linger;
+
+    #ifdef FSTACK
+        // disable, let it fail
+        #define V_IP_TRANSPARENT -1
+    #else
+        #ifdef IP_TRANSPARENT
+            #define V_IP_TRANSPARENT IP_TRANSPARENT
+        #else
+            // unsupported, let it fail
+            #define V_IP_TRANSPARENT -1
+        #endif
+    #endif
 
     #ifdef FSTACK
         #define v_socket      ff_socket
