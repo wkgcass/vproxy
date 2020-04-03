@@ -3,6 +3,7 @@ package vproxy.connection;
 import vfd.DatagramFD;
 import vfd.FDProvider;
 import vfd.ServerSocketFD;
+import vfd.SocketOptions;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.udp.ServerDatagramFD;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
@@ -11,6 +12,7 @@ import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.net.BindException;
 import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
@@ -18,6 +20,7 @@ import java.util.concurrent.atomic.LongAdder;
 
 public class ServerSock implements NetFlowRecorder {
     private static int supportReusePort = -1; // 1:true 0:false -1:not decided yet
+    private static int supportTransparent = -1; // 1:true 0:false -1:not decided yet
 
     public final InetSocketAddress bind;
     private final String _id;
@@ -65,6 +68,48 @@ public class ServerSock implements NetFlowRecorder {
         return true;
     }
 
+    public static boolean supportTransparent() {
+        if (supportTransparent == 1) return true;
+        if (supportTransparent == 0) return false;
+        ServerSocketFD chnl;
+        try {
+            chnl = FDProvider.get().openServerSocketFD();
+        } catch (IOException e) {
+            // should not happen
+            Logger.shouldNotHappen("creating channel failed", e);
+            return false; // return false as default
+        }
+        try {
+            chnl.setOption(SocketOptions.IP_TRANSPARENT, true);
+            chnl.bind(new InetSocketAddress(Utils.l3addr(new byte[]{100, 66, 77, 88}), 11223));
+        } catch (UnsupportedOperationException ignore) {
+            Logger.warn(LogType.SYS_ERROR, "the operating system or implementation does not support IP_TRANSPARENT");
+            supportTransparent = 0;
+            return false;
+        } catch (IOException e) {
+            // should not happen
+            Logger.shouldNotHappen("setting IP_TRANSPARENT throws IOException", e);
+            return false; // return false as default
+        } finally {
+            try {
+                chnl.close();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("closing channel failed", e);
+            }
+        }
+        supportTransparent = 1;
+        return true;
+    }
+
+    public static class BindOptions {
+        public boolean transparent = false;
+
+        public BindOptions setTransparent(boolean transparent) {
+            this.transparent = transparent;
+            return this;
+        }
+    }
+
     public static void checkBind(InetSocketAddress bindAddress) throws IOException {
         try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
             foo.bind(bindAddress);
@@ -85,10 +130,16 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    private static ServerSock create(ServerSocketFD channel, InetSocketAddress bindAddress) throws IOException {
+    private static ServerSock create(ServerSocketFD channel, InetSocketAddress bindAddress, BindOptions opts) throws IOException {
         channel.configureBlocking(false);
         if (supportReusePort()) {
             channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
+        }
+        if (opts.transparent) {
+            if (!supportTransparent()) {
+                throw new UnsupportedEncodingException("IP_TRANSPARENT not supported");
+            }
+            channel.setOption(SocketOptions.IP_TRANSPARENT, true);
         }
         channel.bind(bindAddress);
         try {
@@ -100,19 +151,23 @@ public class ServerSock implements NetFlowRecorder {
     }
 
     public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
+        return create(bindAddress, new BindOptions());
+    }
+
+    public static ServerSock create(InetSocketAddress bindAddress, BindOptions opts) throws IOException {
         ServerSocketFD channel = FDProvider.get().openServerSocketFD();
-        return create(channel, bindAddress);
+        return create(channel, bindAddress, opts);
     }
 
     // note: the input loop should be the same that would be added
     public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop) throws IOException {
         DatagramFD channel = FDProvider.get().openDatagramFD();
         ServerDatagramFD fd = new ServerDatagramFD(channel, loop);
-        return create(fd, bindAddress);
+        return create(fd, bindAddress, new BindOptions());
     }
 
     public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop, UDPBasedFDs fds) throws IOException {
-        return create(fds.openServerSocketFD(loop), bindAddress);
+        return create(fds.openServerSocketFD(loop), bindAddress, new BindOptions());
     }
 
     private ServerSock(ServerSocketFD channel) throws IOException {
