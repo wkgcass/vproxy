@@ -15,20 +15,25 @@ import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
+import vproxyx.websocks.relay.DomainBinder;
 
 import java.io.IOException;
 import java.net.*;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class HttpDNSServer extends DNSServer {
+public class AgentDNSServer extends DNSServer {
+    private static final int TTL_FOR_DOMAIN_BINDER = 10_000;
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, InetAddress> cache = new HashMap<>();
     private final List<DomainChecker> directDomains = new LinkedList<>();
     private final ConfigProcessor config;
+    private final DomainBinder domainBinder;
 
-    public HttpDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config) {
+    public AgentDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
+                          // domainBinder is optional, respond managed domains with self ip if null
+                          DomainBinder domainBinder) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0, SecurityGroup.allowAll());
         this.serverGroups = config.getServers();
         this.resolves = config.getProxyResolves();
@@ -38,6 +43,7 @@ public class HttpDNSServer extends DNSServer {
             this.directDomains.addAll(config.getProxyHTTPSRelayDomains());
         }
         this.config = config;
+        this.domainBinder = domainBinder;
     }
 
     @Override
@@ -188,7 +194,7 @@ public class HttpDNSServer extends DNSServer {
             for (DomainChecker chk : directDomains) {
                 if (chk.needProxy(domain, 0)) {
                     Logger.alert("[DNS] resolve to local ip for " + domain);
-                    respondWithSelfIp(p, domain, remote);
+                    respondWithAgentManagedIp(p, domain, remote);
                     return;
                 }
             }
@@ -307,6 +313,14 @@ public class HttpDNSServer extends DNSServer {
         });
     }
 
+    private void respondWithAgentManagedIp(DNSPacket p, String domain, InetSocketAddress remote) {
+        if (domainBinder == null) {
+            respondWithSelfIp(p, domain, remote);
+        } else {
+            respondWithHandledIp(p, domain, remote);
+        }
+    }
+
     private void respondWithSelfIp(DNSPacket p, String domain, InetSocketAddress remote) {
         InetAddress result = getLocalAddressFor(remote);
 
@@ -315,8 +329,20 @@ public class HttpDNSServer extends DNSServer {
             Logger.error(LogType.SYS_ERROR, msg);
             sendError(p, remote, new IOException(msg));
         } else {
-            Logger.alert("[DMS] choose local ip " + Utils.ipStr(result.getAddress()) + " for remote " + Utils.l4addrStr(remote));
+            Logger.alert("[DNS] choose local ip " + Utils.ipStr(result.getAddress()) + " for remote " + Utils.l4addrStr(remote) + " and domain " + domain);
             respond(p, domain, result, remote);
+        }
+    }
+
+    private void respondWithHandledIp(DNSPacket p, String domain, InetSocketAddress remote) {
+        InetAddress l3addr = domainBinder.assignForDomain(domain, TTL_FOR_DOMAIN_BINDER);
+        if (l3addr == null) {
+            String msg = "[DNS] cannot assign ip for domain " + domain;
+            Logger.error(LogType.SYS_ERROR, msg);
+            sendError(p, remote, new IOException(msg));
+        } else {
+            Logger.alert("[DNS] assigned ip " + Utils.ipStr(l3addr.getAddress()) + " for domain " + domain);
+            respond(p, domain, l3addr, remote);
         }
     }
 

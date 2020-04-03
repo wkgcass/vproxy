@@ -69,7 +69,7 @@ public class WebSocksUtils {
     };
 
     // the http dns server registry, might be null
-    public static HttpDNSServer httpDNSServer = null;
+    public static AgentDNSServer agentDNSServer = null;
 
     public static void sendWebSocketFrame(RingBuffer outBuffer) {
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage,AssertWithSideEffects

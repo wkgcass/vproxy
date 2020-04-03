@@ -1,6 +1,7 @@
 package vfd.posix;
 
 import vfd.FD;
+import vfd.SocketOptions;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -79,7 +80,8 @@ public class PosixFD implements FD {
             if (name != StandardSocketOptions.SO_LINGER
                 && name != StandardSocketOptions.SO_REUSEPORT
                 && name != StandardSocketOptions.TCP_NODELAY
-                && name != StandardSocketOptions.SO_RCVBUF) {
+                && name != StandardSocketOptions.SO_RCVBUF
+                && name != SocketOptions.IP_TRANSPARENT) {
                 throw new IOException("not supported " + name);
             }
             opts.put(name, value);
@@ -92,6 +94,8 @@ public class PosixFD implements FD {
                 posix.setRcvBuf(fd, (Integer) value);
             } else if (name == StandardSocketOptions.TCP_NODELAY) {
                 posix.setTcpNoDelay(fd, (Boolean) value);
+            } else if (name == SocketOptions.IP_TRANSPARENT) {
+                posix.setIpTransparent(fd, (Boolean) value);
             } else {
                 throw new IOException("not supported " + name);
             }

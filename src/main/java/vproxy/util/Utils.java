@@ -22,6 +22,7 @@ public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
     public static final String BROKEN_PIPE_MSG = "Broken pipe";
     public static final String SSL_ENGINE_CLOSED_MSG = "SSLEngine closed";
+    public static final String Host_IS_DOWN_MSG = "Host is down";
     @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
@@ -147,6 +148,72 @@ public class Utils {
         if ((b & /*-*/0b1000000) == /*-*/0b1000000) return 6;
         if ((b & /**/0b10000000) == /**/0b10000000) return 7;
         return 8;
+    }
+
+    public static boolean validNetworkStr(String net) {
+        if (!net.contains("/")) {
+            return false;
+        }
+        String[] arrs = net.split("/");
+        if (arrs.length != 2) {
+            return false;
+        }
+        int intMask;
+        try {
+            intMask = Integer.parseInt(arrs[1]);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        String nStr = arrs[0];
+        byte[] nBytes = parseIpString(nStr);
+        if (nBytes == null) {
+            return false;
+        }
+        byte[] maskBytes;
+        try {
+            maskBytes = parseMask(intMask);
+        } catch (Exception e) {
+            return false;
+        }
+        return validNetwork(nBytes, maskBytes);
+    }
+
+    public static boolean validL4AddrStr(String l4addr) {
+        if (!l4addr.contains(":")) {
+            return false;
+        }
+        String portStr = l4addr.substring(l4addr.lastIndexOf(":") + 1);
+        String l3addr = l4addr.substring(0, l4addr.lastIndexOf(":"));
+        if (parseIpString(l3addr) == null) {
+            return false;
+        }
+        int port;
+        try {
+            port = Integer.parseInt(portStr);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        //noinspection RedundantIfStatement
+        if (port < 0 || port > 65535) {
+            return false;
+        }
+        return true;
+    }
+
+    public static byte[] long2bytes(long v) {
+        LinkedList<Byte> bytes = new LinkedList<>();
+        while (v != 0) {
+            byte b = (byte) (v & 0xff);
+            bytes.addFirst(b);
+            v = v >> 8;
+        }
+        byte[] ret = new byte[bytes.size()];
+        int idx = 0;
+        for (byte b : bytes) {
+            ret[idx] = b;
+            ++idx;
+        }
+        return ret;
     }
 
     public static void eraseToNetwork(byte[] addr, byte[] mask) {
@@ -745,6 +812,10 @@ public class Utils {
 
     public static boolean isTerminatedIOException(IOException t) {
         return isReset(t) || isBrokenPipe(t) || isSSLEngineClosed(t);
+    }
+
+    public static boolean isHostIsDown(IOException t) {
+        return Host_IS_DOWN_MSG.equals(t.getMessage());
     }
 
     public static String stackTrace() {

@@ -759,7 +759,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     }
 
     private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
-        WebSocksUtils.httpDNSServer.resolve(address, new Callback<>() {
+        WebSocksUtils.agentDNSServer.resolve(address, new Callback<>() {
             @Override
             protected void onSucceeded(InetAddress value) {
                 SSLEngine engine = WebSocksUtils.createEngine();

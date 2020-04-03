@@ -171,7 +171,7 @@ public class RelayHttpsServer {
 
             final NetEventLoop loop = ctx.connection.getEventLoop();
             final String finalHostname = hostname;
-            WebSocksUtils.httpDNSServer.resolve(hostname, new Callback<>() {
+            WebSocksUtils.agentDNSServer.resolve(hostname, new Callback<>() {
                 @Override
                 protected void onSucceeded(InetAddress value) {
                     SSLEngine engine = WebSocksUtils.createEngine();

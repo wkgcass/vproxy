@@ -62,6 +62,9 @@ public class GeneralPosix implements Posix {
     native public void setTcpNoDelay(int fd, boolean v) throws IOException;
 
     @Override
+    native public void setIpTransparent(int fd, boolean v) throws IOException;
+
+    @Override
     native public void close(int fd) throws IOException;
 
     @Override

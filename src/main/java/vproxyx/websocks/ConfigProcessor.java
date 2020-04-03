@@ -49,6 +49,8 @@ public class ConfigProcessor {
     private List<List<String>> httpsRelayCertKeyFiles = new ArrayList<>();
     private List<CertKey> httpsRelayCertKeys = new ArrayList<>();
     private boolean directRelay = false;
+    private String directRelayIpRange = null;
+    private InetSocketAddress directRelayListen = null;
     private Boolean proxyRelay = null; // null means auto
     private String user;
     private String pass;
@@ -140,6 +142,14 @@ public class ConfigProcessor {
 
     public boolean isDirectRelay() {
         return directRelay;
+    }
+
+    public InetSocketAddress getDirectRelayListen() {
+        return directRelayListen;
+    }
+
+    public String getDirectRelayIpRange() {
+        return directRelayIpRange;
     }
 
     public boolean isProxyRelay() {
@@ -335,6 +345,20 @@ public class ConfigProcessor {
                         default:
                             throw new Exception("invalid value for agent.direct-relay: " + val);
                     }
+                } else if (line.startsWith("agent.direct-relay.ip-range ")) {
+                    String val = line.substring("agent.direct-relay.ip-range ".length()).trim();
+                    if (!Utils.validNetworkStr(val)) {
+                        throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
+                    }
+                    directRelayIpRange = val;
+                } else if (line.startsWith("agent.direct-relay.listen ")) {
+                    String val = line.substring("agent.direct-relay.listen ".length()).trim();
+                    if (!Utils.validL4AddrStr(val)) {
+                        throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
+                    }
+                    String host = val.substring(0, val.lastIndexOf(":"));
+                    int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
+                    directRelayListen = new InetSocketAddress(Utils.l3addr(host), port);
                 } else if (line.startsWith("agent.proxy-relay ")) {
                     String val = line.substring("agent.proxy-relay ".length()).trim();
                     switch (val) {
@@ -650,14 +674,16 @@ public class ConfigProcessor {
                 ++idx;
             }
         } else if (autoSignCert == null) {
-            if (!httpsRelayDomains.isEmpty()) {
-                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but https-relay.domain.list is not empty");
-            }
-            if (directRelay) {
-                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
-            }
-            if (proxyRelay != null && proxyRelay) {
-                throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.proxy-relay is enabled");
+            if (directRelayIpRange == null) {
+                if (!httpsRelayDomains.isEmpty()) {
+                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but https-relay.domain.list is not empty");
+                }
+                if (directRelay) {
+                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
+                }
+                if (proxyRelay != null && proxyRelay) {
+                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.proxy-relay is enabled");
+                }
             }
         }
         // check for direct relay switch
@@ -668,6 +694,19 @@ public class ConfigProcessor {
             if (!proxyHttpsRelayDomains.isEmpty() || proxyHttpsRelayDomainMerge) {
                 throw new Exception("agent.direct-relay is disabled, but proxy.https-relay.domain.list is not empty");
             }
+            if (directRelayIpRange != null) {
+                throw new Exception("agent.direct-relay is disabled, but agent.direct-relay.ip-range is set");
+            }
+            if (directRelayListen != null) {
+                throw new Exception("agent.direct-relay is disabled, but agent.direct-relay.listen is set");
+            }
+        }
+        // check for direct-relay.ip-range/listen
+        if (directRelayIpRange != null && directRelayListen == null) {
+            throw new Exception("agent.direct-relay.ip-range is set, but agent.direct-relay.listen is not set");
+        }
+        if (directRelayIpRange == null && directRelayListen != null) {
+            throw new Exception("agent.direct-relay.ip-range is not set, but agent.direct-relay.listen is set");
         }
         // check for consistency of server list and domain list
         for (String k : domains.keySet()) {

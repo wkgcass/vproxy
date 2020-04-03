@@ -20,6 +20,8 @@ import vproxy.util.Logger;
 import vproxy.util.Tuple3;
 import vproxy.util.Utils;
 import vproxyx.websocks.*;
+import vproxyx.websocks.relay.DomainBinder;
+import vproxyx.websocks.relay.RelayBindAnyPortServer;
 import vproxyx.websocks.relay.RelayHttpServer;
 import vproxyx.websocks.relay.RelayHttpsServer;
 import vproxyx.websocks.ss.SSProtocolHandler;
@@ -106,6 +108,12 @@ public class WebSocksProxyAgent {
             WebSocksUtils.initHTTPSRelayContext(configProcessor);
         }
 
+        // domain binder
+        DomainBinder domainBinder = null;
+        if (configProcessor.getDirectRelayIpRange() != null) {
+            domainBinder = new DomainBinder(worker.get("worker-loop-0").getSelectorEventLoop(), configProcessor.getDirectRelayIpRange());
+        }
+
         // init dns server
         {
             int port = configProcessor.getDnsListenPort();
@@ -113,11 +121,11 @@ public class WebSocksProxyAgent {
                 port = 53; // just a hint. if not configured, the dns server won't start
             }
             var l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), port);
-            WebSocksUtils.httpDNSServer = new HttpDNSServer("dns", l4addr, worker, configProcessor);
+            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", l4addr, worker, configProcessor, domainBinder);
             // may need to start dns server
             if (configProcessor.getDnsListenPort() != 0) {
                 assert Logger.lowLevelDebug("start dns server");
-                WebSocksUtils.httpDNSServer.start();
+                WebSocksUtils.agentDNSServer.start();
                 Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
             }
         }
@@ -217,10 +225,17 @@ public class WebSocksProxyAgent {
         // maybe we can start the relay servers
         if (configProcessor.isDirectRelay()) {
             assert Logger.lowLevelDebug("start relay server");
-            RelayHttpServer.launch(worker);
-            Logger.alert("http relay server started on 80");
-            new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
-            Logger.alert("https relay server started on 443");
+            if (configProcessor.getDirectRelayIpRange() == null) {
+                RelayHttpServer.launch(worker);
+                Logger.alert("http relay server started on 80");
+                new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
+                Logger.alert("https relay server started on 443");
+            } else {
+                InetSocketAddress listen = configProcessor.getDirectRelayListen();
+                String ipRange = configProcessor.getDirectRelayIpRange();
+                new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
+                Logger.alert("relay-bind-any-port-server started on " + Utils.l4addrStr(listen) + " which handles " + ipRange);
+            }
         }
     }
 }

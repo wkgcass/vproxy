@@ -216,7 +216,9 @@ public class DNSClient {
             try {
                 sent = sock.send(byteBufferToSend, l4addr);
             } catch (IOException e) {
-                Logger.error(LogType.CONN_ERROR, "send dns question packet to " + l4addr + " failed", e);
+                if (!Utils.isHostIsDown(e)) {
+                    Logger.error(LogType.CONN_ERROR, "send dns question packet to " + l4addr + " failed", e);
+                }
                 return;
             }
             if (len != sent) {
