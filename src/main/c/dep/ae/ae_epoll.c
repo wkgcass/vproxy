@@ -84,10 +84,7 @@ static int aeApiAddEvent(aeEventLoop *eventLoop, int fd, int mask) {
     if (mask & AE_WRITABLE) ee.events |= EPOLLOUT;
     ee.data.fd = fd;
     if (mask == 0) {
-        /* Note, Kernel < 2.6.9 requires a non null event pointer even for
-         * EPOLL_CTL_DEL. */
-        epoll_ctl(state->epfd,EPOLL_CTL_DEL,fd,&ee);
-        return 0;
+        ee.events |= EPOLLET; // if we got EPOLLHUP, we would only get it once
     }
     if (epoll_ctl(state->epfd,op,fd,&ee) == -1 && errno == ENOENT) {
         op = EPOLL_CTL_ADD;

@@ -46,7 +46,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             public void readable(ConnectionHandlerContext ctx) {
                 CommonProcess.parseUpgradeResp(ctx, httpRespParser,
                     /* fail */() -> {
-                        assert Logger.lowLevelDebug("handshake for the pool failed");
+                        Logger.error(LogType.CONN_ERROR, "handshake for the pool failed");
                         cb.connectionError((ConnectableConnection) ctx.connection);
                     },
                     /* succ */() -> {

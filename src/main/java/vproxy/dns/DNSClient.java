@@ -193,6 +193,9 @@ public class DNSClient {
         }
 
         void request() {
+            // retrieve the field to local variable because it might be switched
+            List<InetSocketAddress> nameServers = DNSClient.this.nameServers;
+
             assert Logger.lowLevelDebug("request() called on dns request: " + id);
             if (nameServerIndex >= nameServers.size()) {
                 // all nameservers in the list are already tried

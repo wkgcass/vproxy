@@ -82,8 +82,9 @@ public class RelayBindAnyPortServer {
                     var l3addr = l4addr.getAddress();
                     String hostname = domainBinder.getDomain(l3addr);
                     if (hostname == null) {
-                        assert Logger.lowLevelDebug("no recorded entry for " + l3addr);
-                        ctx.data.right.failed(new IOException("no available remote server connector"));
+                        String msg = "no recorded entry for " + l3addr;
+                        assert Logger.lowLevelDebug(msg);
+                        ctx.data.right.failed(new IOException(msg));
                         return;
                     } else {
                         Logger.alert("[PROXY] ipMap: " + Utils.l4addrStr(l4addr) + " -> " + hostname + ":" + port);
