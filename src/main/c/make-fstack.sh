@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [[ -z "$JAVA_HOME" ]]
 then
 	echo "You need to set JAVA_HOME in env"

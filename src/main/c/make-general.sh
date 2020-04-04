@@ -1,3 +1,5 @@
+#!/bin/bash
+
 if [[ -z "$JAVA_HOME" ]]
 then
 	JAVA_HOME="/Library/Java/JavaVirtualMachines/jdk-11.0.2.jdk/Contents/Home"
