@@ -3,6 +3,8 @@ package vproxyx.websocks.relay;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.TimerEvent;
 import vproxy.util.Lock;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.net.InetAddress;
@@ -37,6 +39,7 @@ public class DomainBinder {
             entry = new EntryWithTimeout(domain, l3addr, timeout);
             domainMap.put(domain, entry);
             ipMap.put(l3addr, entry);
+            Logger.trace(LogType.ALERT, "the bond domains now consume " + ipMap.size() + " ips in total " + ipLimit);
             return l3addr;
         }
     }
