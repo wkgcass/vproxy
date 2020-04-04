@@ -350,7 +350,25 @@ class HandlerForConnection implements Handler<SocketFD> {
     public void writable(HandlerContext<SocketFD> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
         if (cctx.connection.getOutBuffer().used() == 0) {
-            Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
+            // prepare for error message
+            try {
+                SocketFD fd = ctx.getChannel();
+                EventSet events = ctx.getEventLoop().getOps(fd);
+                if (events.have(Event.WRITABLE)) {
+                    Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection + " but events still have WRITABLE");
+                } else {
+                    if (VFDConfig.vfdImpl.equals("posix") && OS.isLinux()) {
+                        Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection +
+                            ", firing without WRITABLE event watched" +
+                            ", vproxy detects that you are using vfdposix impl on Linux, which uses epoll" +
+                            ", you MAY IGNORE this log if it doesn't keep printing.");
+                    } else {
+                        Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection + ", firing without WRITABLE event watched");
+                    }
+                }
+            } catch (Exception ignore) {
+                Logger.shouldNotHappen("the connection has nothing to write " + cctx.connection);
+            }
             return;
         }
 

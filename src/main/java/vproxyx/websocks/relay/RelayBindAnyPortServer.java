@@ -86,7 +86,7 @@ public class RelayBindAnyPortServer {
                         ctx.data.right.failed(new IOException("no available remote server connector"));
                         return;
                     } else {
-                        Logger.alert("[ANY-PORT] ipMap: " + Utils.l4addrStr(l4addr) + " -> " + hostname + ":" + port);
+                        Logger.alert("[PROXY] ipMap: " + Utils.l4addrStr(l4addr) + " -> " + hostname + ":" + port);
                     }
                     connectorProvider.provide(ctx.connection, AddressType.domain, hostname, port, connector -> {
                         assert Logger.lowLevelDebug("relay-bind-any-port-server got a connector: " + connector);

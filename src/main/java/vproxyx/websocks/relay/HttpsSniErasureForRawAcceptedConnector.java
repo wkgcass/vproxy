@@ -7,10 +7,10 @@ import vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.net.InetSocketAddress;
 
-public class HTTPSRelayForRawAcceptedConnector extends AlreadyConnectedConnector {
+public class HttpsSniErasureForRawAcceptedConnector extends AlreadyConnectedConnector {
     private final String alpn;
 
-    public HTTPSRelayForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop, String alpn) {
+    public HttpsSniErasureForRawAcceptedConnector(InetSocketAddress remote, ConnectableConnection conn, NetEventLoop loop, String alpn) {
         super(remote, conn, loop);
         this.alpn = alpn;
     }

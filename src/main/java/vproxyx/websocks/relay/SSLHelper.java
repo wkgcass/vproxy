@@ -53,7 +53,7 @@ public class SSLHelper {
         ByteBuffer clientHello = ByteBuffer.wrap(inBuffer.getBytes());
         // retrieve ALPN
         {
-            SSLContext sslContext = WebSocksUtils.getHTTPSRelaySSLContext().sslContextHolder.choose("www.example.com"); // get any of them
+            SSLContext sslContext = WebSocksUtils.getHttpsSniErasureSSLContext().sslContextHolder.choose("www.example.com"); // get any of them
             if (sslContext == null) {
                 String msg = "no cert/key provided";
                 Logger.error(LogType.IMPROPER_USE, msg);
@@ -108,7 +108,7 @@ public class SSLHelper {
         oldIn.writeTo(chnl);
 
         // construct and replace buffers
-        VSSLContext ctx = WebSocksUtils.getHTTPSRelaySSLContext();
+        VSSLContext ctx = WebSocksUtils.getHttpsSniErasureSSLContext();
         SSL ssl = ctx.createSSL();
         SSLEngineBuilder builder = ssl.sslEngineBuilder;
         builder.configure(engine -> engine.setUseClientMode(false)); // is server

@@ -107,11 +107,14 @@ public class DomainBinder {
         }
 
         private void resetTimer(int timeout) {
-            if (timeout != -1) {
+            if (timeout <= 0) {
                 lastTimeout = timeout;
             }
             if (e != null) {
                 e.cancel();
+            }
+            if (timeout <= 0) {
+                return; // ignore timeout if set to <= 0
             }
             e = loop.delay(lastTimeout, () -> {
                 //noinspection unused

@@ -15,7 +15,7 @@ import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUtils;
-import vproxyx.websocks.relay.HTTPSRelayForRawAcceptedConnector;
+import vproxyx.websocks.relay.HttpsSniErasureForRawAcceptedConnector;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -623,7 +623,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private final boolean strictMode;
     private final LinkedHashMap<String, List<DomainChecker>> proxyDomains;
     private final LinkedHashMap<String, List<DomainChecker>> noProxyDomains;
-    private final List<DomainChecker> httpsRelayDomains;
+    private final List<DomainChecker> httpsSniErasureDomains;
     private final Map<String, ServerGroup> servers;
     private final String user;
     private final String pass;
@@ -633,11 +633,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         this.strictMode = config.isStrictMode();
         this.proxyDomains = config.getDomains();
         this.noProxyDomains = config.getNoProxyDomains();
-        if (config.isProxyRelay()) {
-            this.httpsRelayDomains = config.getHTTPSRelayDomains();
-        } else {
-            this.httpsRelayDomains = Collections.emptyList();
-        }
+        this.httpsSniErasureDomains = config.getHttpsSniErasureDomains();
         this.servers = config.getServers();
         this.user = config.getUser();
         this.pass = config.getPass();
@@ -674,11 +670,11 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         return null;
     }
 
-    private boolean needHTTPSRelay(String address, int port) {
+    private boolean needHttpsSniErasure(String address, int port) {
         if (port != 443) { // only 443 (https)
             return false;
         }
-        for (DomainChecker checker : httpsRelayDomains) {
+        for (DomainChecker checker : httpsSniErasureDomains) {
             if (checker.needProxy(address, port)) {
                 return true;
             }
@@ -697,9 +693,9 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         // check whether to do https relay
-        if (needHTTPSRelay(address, port)) {
-            Logger.alert("[RELAY] https relay for " + address + ":" + port);
-            handleHTTPSRelay(loop, address, providedCallback);
+        if (needHttpsSniErasure(address, port)) {
+            Logger.alert("[HTTPS SNI ERASURE] https relay for " + address + ":" + port);
+            handleHttpsSniErasure(loop, address, providedCallback);
             return;
         }
         // check whether need to proxy to the WebSocks server
@@ -758,7 +754,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         });
     }
 
-    private void handleHTTPSRelay(NetEventLoop loop, String address, Consumer<Connector> cb) {
+    private void handleHttpsSniErasure(NetEventLoop loop, String address, Consumer<Connector> cb) {
         WebSocksUtils.agentDNSServer.resolve(address, new Callback<>() {
             @Override
             protected void onSucceeded(InetAddress value) {
@@ -799,7 +795,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                                 return;
                             }
                             Logger.alert("[SERVER_HELLO] from " + address + ", alpn = " + selectedAlpn);
-                            cb.accept(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
+                            cb.accept(new HttpsSniErasureForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
                         }
 
                         @Override

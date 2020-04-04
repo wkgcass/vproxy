@@ -91,7 +91,7 @@ public class WebSocksProxyAgent {
         assert Logger.lowLevelDebug("proxy domain patterns " + configProcessor.getDomains());
         assert Logger.lowLevelDebug("proxy resolve patterns " + configProcessor.getProxyResolves());
         assert Logger.lowLevelDebug("no-proxy domain patterns " + configProcessor.getNoProxyDomains());
-        assert Logger.lowLevelDebug("https-relay domain patterns " + configProcessor.getHTTPSRelayDomains());
+        assert Logger.lowLevelDebug("https-sni-erasure domain patterns " + configProcessor.getHttpsSniErasureDomains());
         assert Logger.lowLevelDebug("proxy servers " +
             configProcessor.getServers().values().stream().map(server ->
                 server.getServerHandles().stream()
@@ -104,8 +104,8 @@ public class WebSocksProxyAgent {
         // init the ssl context
         WebSocksUtils.initSslContext(configProcessor.getCacertsPath(), configProcessor.getCacertsPswd()
             , "JKS", false, configProcessor.isVerifyCert());
-        if (!configProcessor.getHTTPSRelayCertKeys().isEmpty() || configProcessor.getAutoSignCert() != null) {
-            WebSocksUtils.initHTTPSRelayContext(configProcessor);
+        if (!configProcessor.getHttpsSniErasureRelayCertKeys().isEmpty() || configProcessor.getAutoSignCert() != null) {
+            WebSocksUtils.initHttpsSniErasureContext(configProcessor);
         }
 
         // domain binder
@@ -225,12 +225,11 @@ public class WebSocksProxyAgent {
         // maybe we can start the relay servers
         if (configProcessor.isDirectRelay()) {
             assert Logger.lowLevelDebug("start relay server");
-            if (configProcessor.getDirectRelayIpRange() == null) {
-                RelayHttpServer.launch(worker);
-                Logger.alert("http relay server started on 80");
-                new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
-                Logger.alert("https relay server started on 443");
-            } else {
+            RelayHttpServer.launch(worker);
+            Logger.alert("http relay server started on 80");
+            new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
+            Logger.alert("https relay server started on 443");
+            if (configProcessor.getDirectRelayIpRange() != null) {
                 InetSocketAddress listen = configProcessor.getDirectRelayListen();
                 String ipRange = configProcessor.getDirectRelayIpRange();
                 new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);

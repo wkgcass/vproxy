@@ -200,14 +200,14 @@ public class WebSocksUtils {
     }
 
     private static volatile SSLContext sslContext;
-    private static volatile VSSLContext httpsRelaySSLContext;
+    private static volatile VSSLContext httpsSniErasureSSLContext;
 
     public static SSLContext getSslContext() {
         return sslContext;
     }
 
-    public static VSSLContext getHTTPSRelaySSLContext() {
-        return httpsRelaySSLContext;
+    public static VSSLContext getHttpsSniErasureSSLContext() {
+        return httpsSniErasureSSLContext;
     }
 
     public static SSLEngine createEngine() {
@@ -295,12 +295,12 @@ public class WebSocksUtils {
         }
     }
 
-    public static void initHTTPSRelayContext(ConfigProcessor config) throws Exception {
-        if (httpsRelaySSLContext != null) {
+    public static void initHttpsSniErasureContext(ConfigProcessor config) throws Exception {
+        if (httpsSniErasureSSLContext != null) {
             throw new Exception("ssl context already initiated");
         }
 
-        List<CertKey> cks = config.getHTTPSRelayCertKeys();
+        List<CertKey> cks = config.getHttpsSniErasureRelayCertKeys();
         VSSLContext ctx;
         if (config.getAutoSignCert() == null) {
             ctx = new VSSLContext();
@@ -316,7 +316,7 @@ public class WebSocksUtils {
             ck.setInto(ctx);
         }
 
-        httpsRelaySSLContext = ctx;
+        httpsSniErasureSSLContext = ctx;
     }
 
     // base64str(base64str(sha256(password)) + str(minute_dec_digital)))

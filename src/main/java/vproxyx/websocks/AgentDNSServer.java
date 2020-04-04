@@ -23,11 +23,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 public class AgentDNSServer extends DNSServer {
-    private static final int TTL_FOR_DOMAIN_BINDER = 10_000;
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
     private final Map<String, InetAddress> cache = new HashMap<>();
-    private final List<DomainChecker> directDomains = new LinkedList<>();
+    private final List<DomainChecker> selfDomains = new LinkedList<>();
+    private final List<DomainChecker> bondDomains = new LinkedList<>();
     private final ConfigProcessor config;
     private final DomainBinder domainBinder;
 
@@ -39,8 +39,14 @@ public class AgentDNSServer extends DNSServer {
         this.resolves = config.getProxyResolves();
         boolean directRelay = config.isDirectRelay();
         if (directRelay) {
-            this.directDomains.addAll(config.getHTTPSRelayDomains());
-            this.directDomains.addAll(config.getProxyHTTPSRelayDomains());
+            this.selfDomains.addAll(config.getHttpsSniErasureDomains());
+            for (List<DomainChecker> domains : config.getDomains().values()) {
+                if (domainBinder == null) {
+                    this.selfDomains.addAll(domains);
+                } else {
+                    this.bondDomains.addAll(domains);
+                }
+            }
         }
         this.config = config;
         this.domainBinder = domainBinder;
@@ -190,11 +196,19 @@ public class AgentDNSServer extends DNSServer {
             if (domain.endsWith(".")) {
                 domain = domain.substring(0, domain.length() - 1);
             }
-            // check direct domains
-            for (DomainChecker chk : directDomains) {
+            // check self domains
+            for (DomainChecker chk : selfDomains) {
                 if (chk.needProxy(domain, 0)) {
-                    Logger.alert("[DNS] resolve to local ip for " + domain);
-                    respondWithAgentManagedIp(p, domain, remote);
+                    Logger.alert("[DNS] resolve to self ip for " + domain);
+                    respondWithSelfIp(p, domain, remote);
+                    return;
+                }
+            }
+            // check bond domains
+            for (DomainChecker chk : bondDomains) {
+                if (chk.needProxy(domain, 0)) {
+                    Logger.alert("[DNS] resolve to bond ip for " + domain);
+                    respondWithBondIp(p, domain, remote);
                     return;
                 }
             }
@@ -313,14 +327,6 @@ public class AgentDNSServer extends DNSServer {
         });
     }
 
-    private void respondWithAgentManagedIp(DNSPacket p, String domain, InetSocketAddress remote) {
-        if (domainBinder == null) {
-            respondWithSelfIp(p, domain, remote);
-        } else {
-            respondWithHandledIp(p, domain, remote);
-        }
-    }
-
     private void respondWithSelfIp(DNSPacket p, String domain, InetSocketAddress remote) {
         InetAddress result = getLocalAddressFor(remote);
 
@@ -334,8 +340,8 @@ public class AgentDNSServer extends DNSServer {
         }
     }
 
-    private void respondWithHandledIp(DNSPacket p, String domain, InetSocketAddress remote) {
-        InetAddress l3addr = domainBinder.assignForDomain(domain, TTL_FOR_DOMAIN_BINDER);
+    private void respondWithBondIp(DNSPacket p, String domain, InetSocketAddress remote) {
+        InetAddress l3addr = domainBinder.assignForDomain(domain, config.getDirectRelayIpBondTimeout());
         if (l3addr == null) {
             String msg = "[DNS] cannot assign ip for domain " + domain;
             Logger.error(LogType.SYS_ERROR, msg);

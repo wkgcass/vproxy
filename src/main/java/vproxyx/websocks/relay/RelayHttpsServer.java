@@ -22,17 +22,21 @@ import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
 
 public class RelayHttpsServer {
     private final WebSocksProxyAgentConnectorProvider connectorProvider;
-    private final List<DomainChecker> httpsRelayDomains;
-    private final List<DomainChecker> proxyHttpsRelayDomains;
+    private final List<DomainChecker> httpsSniErasureDomains;
+    private final List<DomainChecker> proxyDomains;
 
     public RelayHttpsServer(WebSocksProxyAgentConnectorProvider connectorProvider, ConfigProcessor config) {
         this.connectorProvider = connectorProvider;
-        httpsRelayDomains = config.getHTTPSRelayDomains();
-        proxyHttpsRelayDomains = config.getProxyHTTPSRelayDomains();
+        httpsSniErasureDomains = config.getHttpsSniErasureDomains();
+        proxyDomains = new LinkedList<>();
+        for (List<DomainChecker> domains : config.getDomains().values()) {
+            proxyDomains.addAll(domains);
+        }
     }
 
     public void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
@@ -111,7 +115,7 @@ public class RelayHttpsServer {
         }
 
         private void handle(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname) {
-            for (DomainChecker chk : httpsRelayDomains) {
+            for (DomainChecker chk : httpsSniErasureDomains) {
                 if (chk.needProxy(hostname, 443)) {
                     // get alpn
                     String[][] alpn = new String[1][];
@@ -131,7 +135,7 @@ public class RelayHttpsServer {
             }
 
             Logger.alert("[CLIENT_HELLO] sni = " + hostname);
-            for (DomainChecker chk : proxyHttpsRelayDomains) { // proxy relay may cover more conditions than direct relay
+            for (DomainChecker chk : proxyDomains) { // proxy relay may cover more conditions than direct relay
                 if (chk.needProxy(hostname, 443)) {
                     handleProxy(ctx, hostname);
                     return;
@@ -167,7 +171,7 @@ public class RelayHttpsServer {
         }
 
         private void handleRelay(ProtocolHandlerContext<Tuple<RelayHttpsProtocolContext, Callback<Connector, IOException>>> ctx, String hostname, String[] alpn) {
-            Logger.alert("[RELAY] direct https relay for " + hostname);
+            Logger.alert("[HTTPS SNI ERASURE] direct https relay for " + hostname);
 
             final NetEventLoop loop = ctx.connection.getEventLoop();
             final String finalHostname = hostname;
@@ -211,7 +215,7 @@ public class RelayHttpsServer {
                                 }
                                 Logger.alert("[SERVER_HELLO] from " + hostname + ", alpn = " + selectedAlpn);
                                 ctx.data.left.finished = true;
-                                ctx.data.right.succeeded(new HTTPSRelayForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
+                                ctx.data.right.succeeded(new HttpsSniErasureForRawAcceptedConnector(conn.remote, conn, loop, selectedAlpn));
                             }
 
                             @Override

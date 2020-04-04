@@ -41,17 +41,16 @@ public class ConfigProcessor {
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
     private Map<String, List<DomainChecker>> proxyResolves = new HashMap<>();
     private Map<String, List<DomainChecker>> noProxyDomains = new HashMap<>();
-    private List<DomainChecker> httpsRelayDomains = new ArrayList<>();
-    private List<DomainChecker> proxyHttpsRelayDomains = new ArrayList<>();
+    private List<DomainChecker> httpsSniErasureDomains = new ArrayList<>();
     private String autoSignCert;
     private String autoSignKey;
     private File autoSignWorkingDirectory;
-    private List<List<String>> httpsRelayCertKeyFiles = new ArrayList<>();
-    private List<CertKey> httpsRelayCertKeys = new ArrayList<>();
+    private List<List<String>> httpsSniErasureCertKeyFiles = new ArrayList<>();
+    private List<CertKey> httpsSniErasureCertKeys = new ArrayList<>();
     private boolean directRelay = false;
     private String directRelayIpRange = null;
     private InetSocketAddress directRelayListen = null;
-    private Boolean proxyRelay = null; // null means auto
+    private int directRelayIpBondTimeout = 10_000;
     private String user;
     private String pass;
     private String cacertsPath;
@@ -60,7 +59,6 @@ public class ConfigProcessor {
     private boolean strictMode = false;
     private int poolSize = 10;
     private boolean noHealthCheck = false;
-    private boolean proxyHttpsRelayDomainMerge = false;
 
     private int pacServerPort;
 
@@ -152,16 +150,12 @@ public class ConfigProcessor {
         return directRelayIpRange;
     }
 
-    public boolean isProxyRelay() {
-        return proxyRelay == null ? !httpsRelayDomains.isEmpty() : proxyRelay;
+    public int getDirectRelayIpBondTimeout() {
+        return directRelayIpBondTimeout;
     }
 
-    public List<DomainChecker> getHTTPSRelayDomains() {
-        return httpsRelayDomains;
-    }
-
-    public List<DomainChecker> getProxyHTTPSRelayDomains() {
-        return proxyHttpsRelayDomains;
+    public List<DomainChecker> getHttpsSniErasureDomains() {
+        return httpsSniErasureDomains;
     }
 
     public String getAutoSignCert() {
@@ -176,8 +170,8 @@ public class ConfigProcessor {
         return autoSignWorkingDirectory;
     }
 
-    public List<CertKey> getHTTPSRelayCertKeys() {
-        return httpsRelayCertKeys;
+    public List<CertKey> getHttpsSniErasureRelayCertKeys() {
+        return httpsSniErasureCertKeys;
     }
 
     public String getUser() {
@@ -268,9 +262,8 @@ public class ConfigProcessor {
         // 2 -> proxy.domain.list
         // 3 -> proxy.resolve.list
         // 4 -> no-proxy.domain.list
-        // 5 -> https-relay.domain.list
-        // 6 -> agent.https-relay.cert-key.list
-        // 7 -> proxy.https-relay.domain.list
+        // 5 -> https-sni-erasure.domain.list
+        // 6 -> agent.https-sni-erasure.cert-key.list
         String line;
         while ((line = br.readLine()) != null) {
             line = line.trim();
@@ -359,20 +352,15 @@ public class ConfigProcessor {
                     String host = val.substring(0, val.lastIndexOf(":"));
                     int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
                     directRelayListen = new InetSocketAddress(Utils.l3addr(host), port);
-                } else if (line.startsWith("agent.proxy-relay ")) {
-                    String val = line.substring("agent.proxy-relay ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            proxyRelay = true;
-                            break;
-                        case "off":
-                            proxyRelay = false;
-                            break;
-                        case "auto":
-                            proxyRelay = null;
-                        default:
-                            throw new Exception("invalid value for agent.proxy-relay: " + val);
+                } else if (line.startsWith("agent.direct-relay.ip-bond-timeout ")) {
+                    String val = line.substring("agent.direct-relay.ip-bond-timeout ".length()).trim();
+                    int timeout;
+                    try {
+                        timeout = Integer.parseInt(val);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid value for agent.direct-relay.ip-bond-timeout, should be a number: " + val);
                     }
+                    directRelayIpBondTimeout = timeout * 1000;
                 } else if (line.startsWith("proxy.server.auth ")) {
                     String auth = line.substring("proxy.server.auth ".length()).trim();
                     String[] userpass = auth.split(":");
@@ -448,40 +436,30 @@ public class ConfigProcessor {
                         throw new Exception("invalid agent.gateway.pac.listen, the port is invalid");
                     }
                     pacServerPort = port;
-                } else if (line.startsWith("agent.auto-sign ")) {
-                    line = line.substring("agent.auto-sign ".length());
+                } else if (line.startsWith("agent.https-sni-erasure.cert-key.auto-sign ")) {
+                    line = line.substring("agent.https-sni-erasure.cert-key.auto-sign ".length());
                     var args = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
                     if (args.isEmpty()) {
                         continue;
                     }
                     if (args.size() != 2 && args.size() != 3) {
-                        throw new Exception("agent.auto-sign should take exactly two arguments");
+                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign should take exactly two arguments");
                     }
                     autoSignCert = Utils.filename(args.get(0));
                     autoSignKey = Utils.filename(args.get(1));
-                    if (!new File(autoSignCert).isFile()) throw new Exception("agent.auto-sign cert is not a file");
-                    if (!new File(autoSignKey).isFile()) throw new Exception("agent.auto-sign key is not a file");
+                    if (!new File(autoSignCert).isFile())
+                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign cert is not a file");
+                    if (!new File(autoSignKey).isFile())
+                        throw new Exception("agent.https-sni-erasure.cert-key.auto-sign key is not a file");
                     if (args.size() == 3) {
                         autoSignWorkingDirectory = new File(Utils.filename(args.get(2)));
                         if (!autoSignWorkingDirectory.isDirectory()) {
-                            throw new Exception("agent.auto-sign tempDir is not a directory");
+                            throw new Exception("agent.https-sni-erasure.cert-key.auto-sign tempDir is not a directory");
                         }
                     } else {
                         // allocate the temporary directory for auto signing
                         autoSignWorkingDirectory = Files.createTempDirectory("vpws-agent-auto-sign").toFile();
                         autoSignWorkingDirectory.deleteOnExit();
-                    }
-                } else if (line.startsWith("proxy.https-relay.domain.merge ")) {
-                    String val = line.substring("proxy.https-relay.domain.merge ".length()).trim();
-                    switch (val) {
-                        case "on":
-                            proxyHttpsRelayDomainMerge = true;
-                            break;
-                        case "off":
-                            proxyHttpsRelayDomainMerge = false;
-                            break;
-                        default:
-                            throw new Exception("invalid value for proxy.https-relay.domain.merge: " + val);
                     }
                 } else if (line.startsWith("proxy.server.list.start")) {
                     step = 1; // retrieving server list
@@ -515,12 +493,10 @@ public class ConfigProcessor {
                             throw new Exception("symbol cannot contain spaces");
                         currentAlias = alias;
                     }
-                } else if (line.equals("https-relay.domain.list.start")) {
+                } else if (line.equals("https-sni-erasure.domain.list.start")) {
                     step = 5;
-                } else if (line.equals("agent.https-relay.cert-key.list.start")) {
+                } else if (line.equals("agent.https-sni-erasure.cert-key.list.start")) {
                     step = 6;
-                } else if (line.equals("proxy.https-relay.domain.list.start")) {
-                    step = 7;
                 } else {
                     throw new Exception("unknown line: " + line);
                 }
@@ -626,74 +602,53 @@ public class ConfigProcessor {
                 }
                 getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
             } else if (step == 5) {
-                if (line.equals("https-relay.domain.list.end")) {
+                if (line.equals("https-sni-erasure.domain.list.end")) {
                     step = 0;
                     continue;
                 }
-                httpsRelayDomains.add(formatDomainChecker(line));
-            } else if (step == 6) {
-                if (line.equals("agent.https-relay.cert-key.list.end")) {
+                httpsSniErasureDomains.add(formatDomainChecker(line));
+            } else {
+                //noinspection ConstantConditions
+                assert step == 6;
+                if (line.equals("agent.https-sni-erasure.cert-key.list.end")) {
                     step = 0;
                     continue;
                 }
                 var ls = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
                 if (ls.isEmpty())
                     continue;
-                httpsRelayCertKeyFiles.add(ls);
-            } else {
-                //noinspection ConstantConditions
-                assert step == 7;
-                if (line.equals("proxy.https-relay.domain.list.end")) {
-                    step = 0;
-                    continue;
-                }
-                proxyHttpsRelayDomains.add(formatDomainChecker(line));
+                httpsSniErasureCertKeyFiles.add(ls);
             }
         }
 
         // check for variables must present
         if (user == null || pass == null)
             throw new Exception("proxy.server.auth not present");
-        // merge lists
-        if (proxyHttpsRelayDomainMerge) {
-            for (List<DomainChecker> ls : domains.values()) {
-                proxyHttpsRelayDomains.addAll(ls);
-            }
-        }
         // check for https relay
-        if (!httpsRelayCertKeyFiles.isEmpty()) {
+        if (!httpsSniErasureCertKeyFiles.isEmpty()) {
             int idx = 0;
-            for (List<String> files : httpsRelayCertKeyFiles) {
+            for (List<String> files : httpsSniErasureCertKeyFiles) {
                 String[] certs = new String[files.size() - 1];
                 for (int i = 0; i < certs.length; ++i) {
                     certs[i] = files.get(i);
                 }
                 String key = files.get(files.size() - 1);
-                CertKey certKey = CertKeyHolder.readFile("agent.https-relay.cert-key." + idx, certs, key);
-                httpsRelayCertKeys.add(certKey);
+                CertKey certKey = CertKeyHolder.readFile("agent.https-sni-erasure.cert-key." + idx, certs, key);
+                httpsSniErasureCertKeys.add(certKey);
                 ++idx;
             }
         } else if (autoSignCert == null) {
             if (directRelayIpRange == null) {
-                if (!httpsRelayDomains.isEmpty()) {
-                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but https-relay.domain.list is not empty");
+                if (!httpsSniErasureDomains.isEmpty()) {
+                    throw new Exception("agent.https-sni-erasure.cert-key.list is empty and auto-sign is disabled, but https-sni-erasure.domain.list is not empty");
                 }
                 if (directRelay) {
-                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
-                }
-                if (proxyRelay != null && proxyRelay) {
-                    throw new Exception("agent.https-relay.cert-key.list is empty and auto-sign is disabled, but agent.proxy-relay is enabled");
+                    throw new Exception("agent.https-sni-erasure.cert-key.list is empty and auto-sign is disabled, but agent.direct-relay is enabled");
                 }
             }
         }
         // check for direct relay switch
         if (!directRelay) {
-            if (!httpsRelayDomains.isEmpty()) {
-                throw new Exception("agent.direct-relay is disabled, but https-relay.domain.list is not empty");
-            }
-            if (!proxyHttpsRelayDomains.isEmpty() || proxyHttpsRelayDomainMerge) {
-                throw new Exception("agent.direct-relay is disabled, but proxy.https-relay.domain.list is not empty");
-            }
             if (directRelayIpRange != null) {
                 throw new Exception("agent.direct-relay is disabled, but agent.direct-relay.ip-range is set");
             }
@@ -707,6 +662,12 @@ public class ConfigProcessor {
         }
         if (directRelayIpRange == null && directRelayListen != null) {
             throw new Exception("agent.direct-relay.ip-range is not set, but agent.direct-relay.listen is set");
+        }
+        // check for https-sni-erasure and certificates configuration
+        if (!httpsSniErasureDomains.isEmpty()) {
+            if (autoSignCert == null && httpsSniErasureCertKeyFiles.isEmpty()) {
+                throw new Exception("https-sni-erasure.domain.list is set, but neither agent.https-sni-erasure.cert-key.auto-sign nor agent.https-sni-erasure.cert-key.list set");
+            }
         }
         // check for consistency of server list and domain list
         for (String k : domains.keySet()) {
@@ -743,9 +704,12 @@ public class ConfigProcessor {
             Set<String> key = new HashSet<>();
             for (File f : files) {
                 String name = f.getName();
+                if (!name.endsWith(".key") && !name.endsWith(".crt")) {
+                    continue;
+                }
                 String domain = name.substring(0, name.length() - 4);
                 if (name.endsWith(".key")) {
-                    key.add(name);
+                    key.add(domain);
                     if (!crt.contains(domain)) {
                         continue;
                     }
@@ -770,7 +734,7 @@ public class ConfigProcessor {
     }
 
     private void addCertKeyToAllLists(CertKey ck) {
-        httpsRelayCertKeys.add(ck);
+        httpsSniErasureCertKeys.add(ck);
     }
 
     private DomainChecker formatDomainChecker(String line) throws Exception {
