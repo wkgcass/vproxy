@@ -68,6 +68,7 @@ public class RelayBindAnyPortServer {
         @Override
         public ProtocolHandler<Tuple<Void, Callback<Connector, IOException>>> handler() {
             return new ProtocolHandler<>() {
+                private boolean finished = false;
                 private boolean done = false;
 
                 @Override
@@ -90,15 +91,20 @@ public class RelayBindAnyPortServer {
                         Logger.alert("[PROXY] ipMap: " + Utils.l4addrStr(l4addr) + " -> " + hostname + ":" + port);
                     }
                     connectorProvider.provide(ctx.connection, AddressType.domain, hostname, port, connector -> {
-                        assert Logger.lowLevelDebug("relay-bind-any-port-server got a connector: " + connector);
+                        assert Logger.lowLevelDebug("relay-bind-any-port-server got a connector: " + connector + ", finished?: " + finished);
 
                         if (connector == null) {
                             assert Logger.lowLevelDebug("no available remote server connector for now");
                             ctx.data.right.failed(new IOException("no available remote server connector"));
                             return;
                         }
+                        if (finished) {
+                            connector.close();
+                            return;
+                        }
 
                         assert Logger.lowLevelDebug("relay-bind-any-port-server is going to make a callback");
+                        finished = true;
                         done = true;
                         ctx.data.right.succeeded(connector);
                     });
@@ -106,12 +112,24 @@ public class RelayBindAnyPortServer {
 
                 @Override
                 public void exception(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx, Throwable err) {
-                    // ignore
+                    if (finished) {
+                        // ignore
+                        return;
+                    }
+                    finished = true;
+                    ctx.data.right.failed(new IOException(err));
+                    ctx.connection.close();
                 }
 
                 @Override
                 public void end(ProtocolHandlerContext<Tuple<Void, Callback<Connector, IOException>>> ctx) {
-                    // ignore
+                    if (finished) {
+                        // ignore
+                        return;
+                    }
+                    finished = true;
+                    ctx.data.right.failed(new IOException("frontend connection closed"));
+                    ctx.connection.close();
                 }
 
                 @Override
