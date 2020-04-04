@@ -85,6 +85,7 @@ public class RelayBindAnyPortServer {
                     if (hostname == null) {
                         String msg = "no recorded entry for " + l3addr;
                         assert Logger.lowLevelDebug(msg);
+                        finished = true;
                         ctx.data.right.failed(new IOException(msg));
                         return;
                     } else {
@@ -95,6 +96,7 @@ public class RelayBindAnyPortServer {
 
                         if (connector == null) {
                             assert Logger.lowLevelDebug("no available remote server connector for now");
+                            finished = true;
                             ctx.data.right.failed(new IOException("no available remote server connector"));
                             return;
                         }
