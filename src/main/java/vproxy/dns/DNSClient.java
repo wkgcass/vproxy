@@ -175,6 +175,7 @@ public class DNSClient {
                 Request r = requests.get(id);
                 if (r == null) {
                     assert Logger.lowLevelDebug("the request is already handled in another event");
+                    release();
                     return;
                 }
                 r.request();
