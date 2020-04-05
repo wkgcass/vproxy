@@ -2,15 +2,36 @@
 
 本篇文章介绍了如何搭建最完整的vproxy WebSocksProxyAgent的direct-relay功能。在搭建成功后，客户端机器只需配置DNS解析，即可对**任意**使用域名访问网络服务的程序提供代理转发。
 
+vpws-agent的配置可以在[这里](https://vproxy-tools.github.io/vpwsui/index.html)生成。
+
 ## 功能介绍
 
 1. vproxy提供了一个代理方案，叫做WebSocks，简称vpws（**VP**roxy **W**eb**S**ocks）。
-2. vpws提供一个agent，用来起端口监听各种代理协议，例如socks5、http-connect、ss，并提供PAC、DNS功能。agent会将流量转发到vpws server。当然，agent和server还有各种功能细节配置，提供各种场景下的代理解决方案。
-3. vpws agent提供一个功能，叫做`direct-relay`。该功能原理是通过DNS将需要代理的域名解析到agent，并且agent监听相应的ip地址。当客户端访问这个地址的时候，代理转发到远端。由于客户端直接访问agent而非通过socks5等带额外header的协议，所以这里取名为`direct`-relay。
+2. vpws提供一个agent，用来监听各种代理协议，例如socks5、http-connect、ss。并提供PAC、DNS功能。agent会将流量转发到vpws server。agent和server有各种功能细节配置，提供各种场景下的代理解决方案。
+3. vpws agent提供一个功能，叫做`direct-relay`。该功能原理是通过DNS将“需要代理的域名”解析到agent，并且agent监听相应的ip地址。当客户端访问这个ip地址的时候，代理转发到远端。由于客户端直接访问agent而非通过socks5等带额外header的协议，所以这里取名为`direct`-relay。
 4. 这个功能分为两块，基础版支持任何操作系统，但是仅对tls协议+443端口生效（http+80端口会自动返回3xx重定向到https+443）。
 5. 高级版仅支持Linux，可以支持任何协议任何端口。非linux操作系统仅需VirtualBox即可运行。
 
 本篇文章介绍direct-relay基础版和高级版的工作原理、配置细节。
+
+## 概念
+
+vpws网络流如下所示：
+
+```
+CLIENT <---> AGENT ---> FIREWALL ---> SERVER ---> TARGET
+  |            |                                    ^
+  |            |                                    |
+  |            +------------------------------------+
+  |                                                 |
+  +-------------------------------------------------+
+```
+
+* CLIENT：客户端，流量的发起者。例如浏览器、APP等。
+* AGENT：vpws agent，代理的一部分，运行于CLIENT一侧的网络环境下。
+* FIREWALL：防火墙
+* SERVER：vpws server，代理的一部分，运行于TARGET一侧的网络环境下。
+* TARGET：CLIENT要访问的目标。
 
 ## 基础版
 
@@ -22,11 +43,24 @@ DNS将需要代理的域名解析到agent上。例如解析`baidu.com`到`127.0.
 
 在浏览器中输入`baidu.com`回车后，首先浏览器会进行DNS解析，并获取agent地址。
 
-然后浏览器会对发起http请求，`GET http://baidu.com:80`，此时浏览器回看到agent返回的重定向response，此时浏览器将请求变为`GET https://baidu.com:443`。
+然后浏览器会对agent发起http请求，`GET http://baidu.com:80`，此时浏览器回看到agent返回的重定向response，此时浏览器将请求变为`GET https://baidu.com:443`再次请求agent。
 
-agent收到443口的请求后，会解析请求中的`CLIENT_HELLO`，获取其中的SNI字段。SNI字段会记录请求的域名。在这里就是`baidu.com`。
+agent收到443口的请求后，会按照TLS的`CLIENT_HELLO`对第一个包做解析，获取其中的SNI字段。SNI字段会记录请求的域名。在这里就是`baidu.com`。
 
 有了域名信息，agent就能运行代理了。代理通道建立后，请求会被原封不动的发往远端服务器、并从远端原封不动的返回回来。中途不会进行任何TLS处理，所以客户端并不需要配置任何证书信任。
+
+```
+CLIENT --------1. dns req-------> AGENT                     SERVER                  TARGET
+       <-------2. dns resp-------
+       --------3. http req------>
+       <-----4. http resp 3xx----
+       ----------5. tls--------->
+                                        ----6. proxy tcp--->
+                                                                    -----7. tcp---->
+                                                                    <----8. tcp-----
+                                        <---9. proxy tcp----
+       <---------10. tcp---------
+```
 
 ### 前置准备
 
@@ -54,7 +88,7 @@ agent.direct-relay on
 
 ### 工作原理
 
-和基础版本类似，高级版的agent工作时，也是通过DNS将请求解析到agent，并对流入的流量做转发。但是相比基础版仅监听`0.0.0.0:80/443`，高级版本会同时“监听”整个大网段所有ip和所有端口号，比如`100.64.0.0/10`，有`4194304`个ip \* `65535`个端口。
+和基础版本类似，高级版的agent工作时，也是通过DNS将请求解析到agent，并对流入的流量做转发。但是相比基础版仅监听`0.0.0.0:80/443`，高级版本会同时“监听”**整个**网段所有ip和所有端口号，比如`100.64.0.0/10`，有`4194304`个ip \* `65535`个端口。
 
 显然，我们不可能采用通常的思路绑定这些ip和端口。首先在网卡上配置`2^22`个ip就相当不现实，更别说应用里面开启`274873712640`个监听socket了。
 
@@ -62,13 +96,25 @@ agent.direct-relay on
 
 详细原理分析见这里：[https://blog.cloudflare.com/how-we-built-spectrum/](https://blog.cloudflare.com/how-we-built-spectrum/)。
 
-通过配置，我们只监听一个端口，并配置`IP_TRANSPARENT`，就可以接收整个网段\*任意端口的流量。
+通过配置，我们只监听一个`IP_TRANSPARENT`端口，就可以接收整个网段\*任意端口的流量。
 
 agent在处理DNS解析请求时，从指定网段中分配一个地址，并记录分配的ip地址到域名映射：（ip -> domain），然后返回这个ip给客户端。
 
-客户端将请求它拿到的ip。这时，agent检查收到的连接的目地ip，并从映射中找到对应的域名，执行代理。
+客户端将会请求它拿到的ip。这时，agent检查收到的连接的目的ip，并从映射中找到对应的域名，执行代理。
 
 这种方式对于请求没有任何限制，即使不是http、tls，即使端口号不是80、443，也可以正常进行代理。并且无需做任何解析，仅通过连接元数据就可以代理，适用范围非常广。
+
+```
+CLIENT --------1. dns req-------> AGENT                     SERVER                  TARGET
+                           2. bind ip->domain
+       <-------3. dns resp-------
+       ----------4. tcp--------->
+                                        ----5. proxy tcp--->
+                                                                    -----6. tcp---->
+                                                                    <----7. tcp-----
+                                        <---8. proxy tcp----
+       <---------9. tcp----------
+```
 
 ### 前置准备
 
@@ -137,17 +183,33 @@ agent在处理DNS解析请求时，从指定网段中分配一个地址，并记
     ```sh
     #!/bin/bash
 
-    BIND_IP="127.0.0.1"
-    BIND_PORT="8888"
-    sudo ip route add local 100.96.0.0/11 dev lo src "$BIND_IP"
-    sudo iptables -t mangle -I PREROUTING -d 100.96.0.0/11 -p tcp -j TPROXY --on-port="$BIND_PORT" --on-ip="$BIND_IP"
-    ```
+    NETWORK="100.96.0.0/11"
+    IP="127.0.0.1"
+    PORT="8888"
 
-    这个脚本没有做状态检查，所以不要多次执行（不过执行多次也没什么特别的后果，可以手动删下，放着不管也没事）。
+    IP_ROUTE_DEV="dev lo"
+    IP_ROUTE_SRC="src 127.0.0.1"
+
+    ip_route_rule=`ip route show table local | grep "$NETWORK" | grep "$IP_ROUTE_DEV" | grep "$IP_ROUTE_SRC"`
+    if [ -z "$ip_route_rule" ]
+    then
+        sudo ip route add local "$NETWORK" $IP_ROUTE_DEV $IP_ROUTE_SRC
+    else
+        echo "ip route already configured"
+    fi
+
+    ip_tables_rule=`sudo iptables --table mangle --list --numeric | grep TPROXY | grep "$NETWORK" | grep "$IP:$PORT"`
+    if [ -z "$ip_tables_rule" ]
+    then
+        sudo iptables -t mangle -I PREROUTING -d "$NETWORK" -p tcp -j TPROXY --on-port="$PORT" --on-ip="$IP"
+    else
+        echo "iptables already configured"
+    fi
+    ```
 
     这里的BIND_IP最好写127.0.0.1，BIND_PORT可以随便填写，只需和后续配置文件一致即可。
 
-13. 可以使用一个简单的脚本文件检查路由和iptables配置是否正确和生效：`sudo ./server.sh 127.0.0.1 8888 hello-world`
+13. 可以使用一个简单的脚本文件检查路由和iptables配置是否生效：`sudo ./server.sh 127.0.0.1 8888 hello-world`
 
     ```python
     #!/usr/bin/env python3
@@ -220,6 +282,10 @@ make vfdposix          # 编译vfdposix库
 ```
 sudo java -Deploy=WebSocksProxyAgent -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar "$配置文件路径"
 ```
+
+### 客户端配置
+
+将DNS服务器配置为`100.64.0.3`。
 
 ### 期望结果
 
