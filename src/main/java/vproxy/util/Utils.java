@@ -22,7 +22,8 @@ public class Utils {
     public static final String RESET_MSG = "Connection reset by peer";
     public static final String BROKEN_PIPE_MSG = "Broken pipe";
     public static final String SSL_ENGINE_CLOSED_MSG = "SSLEngine closed";
-    public static final String Host_IS_DOWN_MSG = "Host is down";
+    public static final String HOST_IS_DOWN_MSG = "Host is down";
+    public static final String NO_ROUTE_TO_HOST_MSG = "No route to host";
     @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
 
@@ -815,7 +816,11 @@ public class Utils {
     }
 
     public static boolean isHostIsDown(IOException t) {
-        return Host_IS_DOWN_MSG.equals(t.getMessage());
+        return HOST_IS_DOWN_MSG.equals(t.getMessage());
+    }
+
+    public static boolean isNoRouteToHost(IOException t) {
+        return NO_ROUTE_TO_HOST_MSG.equals(t.getMessage());
     }
 
     public static String stackTrace() {

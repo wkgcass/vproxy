@@ -220,7 +220,7 @@ public class DNSClient {
             try {
                 sent = sock.send(byteBufferToSend, l4addr);
             } catch (IOException e) {
-                if (!Utils.isHostIsDown(e)) {
+                if (!Utils.isHostIsDown(e) && !Utils.isNoRouteToHost(e)) {
                     Logger.error(LogType.CONN_ERROR, "send dns question packet to " + l4addr + " failed", e);
                 }
                 return;
