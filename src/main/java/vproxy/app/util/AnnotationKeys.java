@@ -7,4 +7,5 @@ public class AnnotationKeys {
     public static final String ServerGroup_HCHttpUrl = "vproxy/hc-http-url";
     public static final String ServerGroup_HCHttpHost = "vproxy/hc-http-host";
     public static final String ServerGroup_HCHttpStatus = "vproxy/hc-http-status";
+    public static final String ServerGroup_HCDnsDomain = "vproxy/hc-dns-domain";
 }

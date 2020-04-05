@@ -2,7 +2,6 @@ package vproxy.component.check;
 
 import vfd.DatagramFD;
 import vfd.FDProvider;
-import vproxy.app.Config;
 import vproxy.connection.*;
 import vproxy.dns.DNSClient;
 import vproxy.http.HttpRespParser;
@@ -293,7 +292,7 @@ public class ConnectClient {
                 return;
             }
         }
-        dnsClient.resolveIPv4(Config.domainWhichShouldResolve, new Callback<>() {
+        dnsClient.resolveIPv4(annotatedHcConfig.getDnsDomain(), new Callback<>() {
             @Override
             protected void onSucceeded(List<InetAddress> value) {
                 cb.succeeded(null);

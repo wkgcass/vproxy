@@ -1,5 +1,6 @@
 package vproxy.component.check;
 
+import vproxy.app.Config;
 import vproxy.app.util.AnnotationKeys;
 
 import java.util.Map;
@@ -9,12 +10,14 @@ public class AnnotatedHcConfig {
     private String httpUrl;
     private String httpHost;
     private String httpStatus;
+    private String dnsDomain;
 
     public void clear() {
         httpMethod = null;
         httpUrl = null;
         httpHost = null;
         httpStatus = null;
+        dnsDomain = null;
     }
 
     public void set(Map<String, String> map) {
@@ -37,6 +40,8 @@ public class AnnotatedHcConfig {
             }
         }
         httpStatus = x;
+
+        dnsDomain = map.get(AnnotationKeys.ServerGroup_HCDnsDomain);
     }
 
     public String getHttpMethod() {
@@ -53,5 +58,9 @@ public class AnnotatedHcConfig {
 
     public String getHttpUrl() {
         return httpUrl == null ? "/" : httpUrl;
+    }
+
+    public String getDnsDomain() {
+        return dnsDomain == null ? Config.domainWhichShouldResolve : dnsDomain;
     }
 }
