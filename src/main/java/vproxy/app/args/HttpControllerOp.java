@@ -35,6 +35,7 @@ public class HttpControllerOp implements MainOp {
 
     @Override
     public int execute(MainCtx ctx, String[] args) {
+        ctx.set("hasHttpController", true);
         //noinspection StringBufferReplaceableByString
         StringBuilder call = new StringBuilder();
         call.append("System call: add ")
@@ -48,7 +49,7 @@ public class HttpControllerOp implements MainOp {
         try {
             cb.block();
         } catch (XException e) {
-            System.err.println("start http-controller failed");
+            System.err.println("start http-controller on " + args[0] + " failed");
             e.printStackTrace();
             return 1;
         }

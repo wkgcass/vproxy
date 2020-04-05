@@ -35,6 +35,7 @@ public class RespControllerOp implements MainOp {
 
     @Override
     public int execute(MainCtx ctx, String[] args) {
+        ctx.set("hasHttpController", true);
         //noinspection StringBufferReplaceableByString
         StringBuilder call = new StringBuilder();
         call.append("System call: add ")

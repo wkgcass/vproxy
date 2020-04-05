@@ -253,6 +253,25 @@ public class Main {
                 }
             }
         }
+        // launch the default http controller
+        if (!ctx.get("hasHttpController", false)) {
+            String hostport = "127.0.0.1:18776";
+            int ret = new HttpControllerOp().execute(ctx, new String[]{hostport});
+            if (ret != 0) {
+                System.exit(ret);
+            }
+            Logger.alert("default http-controller started on " + hostport);
+        }
+        // launch the default resp controller
+        if (!ctx.get("hasRespController", false)) {
+            String hostport = "127.0.0.1:16379";
+            String pass = "123456";
+            int ret = new RespControllerOp().execute(ctx, new String[]{hostport, pass});
+            if (ret != 0) {
+                System.exit(ret);
+            }
+            Logger.alert("default resp-controller started on " + hostport + " with password " + pass);
+        }
 
         // write pid file
         if (!ctx.get("isCheck", false)) {
