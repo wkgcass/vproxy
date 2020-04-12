@@ -358,16 +358,18 @@ public class HttpController {
             options.add("" + body.getInt("outBufferSize"));
         }
         if (bodyContainsKey(body, "listOfCertKey")) {
-            options.add("cert-key");
             var arr = body.getArray("listOfCertKey");
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < arr.length(); ++i) {
-                if (i != 0) {
-                    sb.append(",");
+            if (arr.length() > 0) {
+                options.add("cert-key");
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < arr.length(); ++i) {
+                    if (i != 0) {
+                        sb.append(",");
+                    }
+                    sb.append(arr.getString(i));
                 }
-                sb.append(arr.getString(i));
+                options.add(sb.toString());
             }
-            options.add(sb.toString());
         }
         if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");
