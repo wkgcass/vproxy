@@ -36,7 +36,7 @@ public class TestHealthCheck {
 
     @Test
     public void dns() throws Exception {
-        serverGroup = new ServerGroup("sg0", eventLoopGroup, new HealthCheckConfig(1000, 1000, 2, 3, CheckProtocol.domainSystem), Method.wrr);
+        serverGroup = new ServerGroup("sg0", eventLoopGroup, new HealthCheckConfig(1000, 1000, 2, 3, CheckProtocol.dns), Method.wrr);
         serverGroup.add("a", new InetSocketAddress("8.8.8.8", 53), 10);
         serverGroup.add("b", new InetSocketAddress("8.8.4.4", 53), 10);
         serverGroup.add("c", new InetSocketAddress("127.0.0.1", 33241), 10);

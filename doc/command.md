@@ -382,7 +382,7 @@ Specify name, event loop, load balancing method, health check config and create 
 * period: do check every `${period}` milliseconds
 * up: set server status to UP after succeeded for `${up}` times
 * down: set server status to DOWN after failed for `${down}` times
-* protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `none`. default `tcp`
+* protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `http`, `tcpDelay`, `dns`, `none`. default `tcp`
 * method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
 * annotations: *optional*. extra info for the server-group, such as host info, health check url. Must be a json and values must be strings. default `{}`
 * event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.

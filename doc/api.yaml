@@ -2400,6 +2400,9 @@ definitions:
     default: tcp
     enum:
       - tcp
+      - http
+      - dns
+      - tcpDelay
       - none
   SecurityGroupProtocol:
     type: string

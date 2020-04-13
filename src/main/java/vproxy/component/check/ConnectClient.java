@@ -231,7 +231,7 @@ public class ConnectClient {
             case none:
                 handleFunc = this::handleNone;
                 break;
-            case domainSystem:
+            case dns:
                 handleFunc = this::handleDns;
                 break;
             case http:
