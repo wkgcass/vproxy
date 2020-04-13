@@ -78,6 +78,19 @@ public class Entities {
         @Optional @Modifiable String securityGroup;
     }
 
+    static class TcpLBWithTLS {
+        String name;
+        InetSocketAddress address;
+        String backend;
+        @Optional Protocol protocol;
+        @Optional String acceptorLoopGroup;
+        @Optional String workerLoopGroup;
+        @Optional @Modifiable int inBufferSize;
+        @Optional @Modifiable int outBufferSize;
+        @Modifiable String[] listOfCertKey;
+        @Optional @Modifiable String securityGroup;
+    }
+
     static class Socks5Server {
         String name;
         InetSocketAddress address;

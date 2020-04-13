@@ -43,8 +43,8 @@ public class CertKeyHandle {
         List<String> names = Application.get().tcpLBHolder.names();
         for (String name : names) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(name);
-            if (tcpLB.certKeys != null) {
-                for (CertKey ck : tcpLB.certKeys) {
+            if (tcpLB.getCertKeys() != null) {
+                for (CertKey ck : tcpLB.getCertKeys()) {
                     if (ck.alias.equals(toRemove)) {
                         throw new Exception(ResourceType.ck.fullname + " " + toRemove + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
                     }

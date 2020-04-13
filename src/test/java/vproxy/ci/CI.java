@@ -658,7 +658,7 @@ public class CI {
 
         execute(createReq(add, "server-group", domain0,
             "timeout", "500", "period", "200", "up", "2", "down", "5", "protocol", "none",
-            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost+ "\":\"" + domain0 + "\"}"));
+            "event-loop-group", elg0, "annotations", "{\"" + AnnotationKeys.ServerGroup_HintHost + "\":\"" + domain0 + "\"}"));
         sgNames.add(domain0);
         checkCreate("server-group", domain0);
 
@@ -1936,6 +1936,18 @@ public class CI {
             "securityGroup", randomSecurityGroup());
         assertEquals(CC(7), postCnt);
         assertEquals(CC(7) * CC(3), putCnt);
+    }
+
+    @Test
+    public void apiV1TcpLBWithTLS() throws Exception {
+        run("/tcp-lb", Entities.TcpLBWithTLS.class,
+            "backend", randomUpstream(),
+            "acceptorLoopGroup", randomEventLoopGroup(),
+            "workerLoopGroup", randomEventLoopGroup(),
+            "listOfCertKey", new String[]{randomCertKey()},
+            "securityGroup", randomSecurityGroup());
+        assertEquals(CC(6), postCnt);
+        assertEquals(CC(6) * CC(4), putCnt);
     }
 
     @Test

@@ -261,10 +261,10 @@ public class SystemCommand {
                 Application.get().httpControllerHolder.add(cmd.resource.alias, addr);
             }
         } catch (AlreadyExistException e) {
-            cb.failed(new XException("the RESPController is already started"));
+            cb.failed(new XException("the " + type.toUpperCase() + "Controller is already started"));
             return;
         } catch (IOException e) {
-            cb.failed(new XException("got exception when starting RESPController: " + Utils.formatErr(e)));
+            cb.failed(new XException("got exception when starting " + type.toUpperCase() + "Controller: " + Utils.formatErr(e)));
             return;
         }
         cb.succeeded(new CmdResult());

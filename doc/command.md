@@ -136,6 +136,7 @@ Create a loadbalancer.
 * out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
 * protocol: *optional*. the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
 * security-group (secg): *optional*. specify a security group for the lb. default allow any
+* cert-key (ck): *optional*. the list of cert-key resources to be applied. if specified, tls is enabled
 
 ```
 add tcp-lb lb0 address 127.0.0.1:18080 upstream ups0
@@ -162,7 +163,7 @@ list-detail tcp-lb
 
 #### update
 
-Update in-buffer-size or out-buffer-size or security-group of an lb.
+Update in-buffer-size or out-buffer-size or security-group or cert-key of an lb.
 
 ```
 update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768 security-group secg0

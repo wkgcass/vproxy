@@ -2503,6 +2503,11 @@ definitions:
         type: "integer"
       outBufferSize:
         type: "integer"
+      listOfCertKey:
+        type: "array"
+        items:
+          type: "string"
+          description: "cert-key reference for enabling TLS"
       securityGroup:
         type: "string"
         description: "security group reference for access control"

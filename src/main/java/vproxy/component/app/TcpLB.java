@@ -75,8 +75,8 @@ public class TcpLB {
     private int outBufferSize; // modifiable
     public final String protocol;
     public final Processor processor;
-    public final VSSLContext sslContext;
-    public final CertKey[] certKeys;
+    private VSSLContext sslContext;
+    private CertKey[] certKeys;
     public SecurityGroup securityGroup;
     // the modifiable fields only have effect when new connection arrives
 
@@ -312,6 +312,13 @@ public class TcpLB {
         }
     }
 
+    public void setCertKeys(VSSLContext sslContext, CertKey[] certKeys) {
+        this.sslContext = sslContext;
+        this.certKeys = certKeys;
+
+        servers.forEach((k, v) -> v.config.setSslContext(sslContext));
+    }
+
     public int getInBufferSize() {
         return inBufferSize;
     }
@@ -322,5 +329,9 @@ public class TcpLB {
 
     public int getTimeout() {
         return timeout;
+    }
+
+    public CertKey[] getCertKeys() {
+        return certKeys;
     }
 }

@@ -459,11 +459,11 @@ class utils {
 
     static JSON.Object formatTcpLb(TcpLB tl) {
         JSON.Instance listOfCertKey;
-        if (tl.certKeys == null) {
+        if (tl.getCertKeys() == null) {
             listOfCertKey = new SimpleNull();
         } else {
             var arr = new ArrayBuilder();
-            for (var ck : tl.certKeys) {
+            for (var ck : tl.getCertKeys()) {
                 arr.add(ck.alias);
             }
             listOfCertKey = arr.build();
@@ -484,11 +484,11 @@ class utils {
 
     static JSON.Object formatTcpLbDetail(TcpLB tl) {
         JSON.Instance listOfCertKey;
-        if (tl.certKeys == null) {
+        if (tl.getCertKeys() == null) {
             listOfCertKey = new SimpleNull();
         } else {
             var arr = new ArrayBuilder();
-            for (var ck : tl.certKeys) {
+            for (var ck : tl.getCertKeys()) {
                 arr.addInst(formatCertKeyDetail(ck));
             }
             listOfCertKey = arr.build();

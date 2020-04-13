@@ -73,6 +73,7 @@ public class HttpController {
         server.put(moduleBase + "/tcp-lb/:tl", wrapAsync(this::updateTcpLb, new ObjectBuilder()
             .put("inBufferSize", 16384)
             .put("outBufferSize", 16384)
+            .putArray("listOfCertKey", arr -> arr.add("alias of the cert-key to be used"))
             .put("securityGroup", "alias of the security group")
             .build()));
         server.del(moduleBase + "/tcp-lb/:tl", wrapAsync(this::deleteTcpLb));
@@ -390,6 +391,33 @@ public class HttpController {
         if (bodyContainsKey(body, "outBufferSize")) {
             options.add("out-buffer-size");
             options.add("" + body.getInt("outBufferSize"));
+        }
+        if (bodyContainsKey(body, "listOfCertKey")) {
+            var arr = body.getArray("listOfCertKey");
+            if (arr.length() > 0) {
+                options.add("cert-key");
+                StringBuilder sb = new StringBuilder();
+                for (int i = 0; i < arr.length(); ++i) {
+                    if (i != 0) {
+                        sb.append(",");
+                    }
+                    sb.append(arr.getString(i));
+                }
+                options.add(sb.toString());
+            } else {
+                // additional check
+                TcpLB tl;
+                try {
+                    tl = Application.get().tcpLBHolder.get(rctx.param("tl"));
+                } catch (NotFoundException e) {
+                    cb.failed(e);
+                    return;
+                }
+                if (tl.getCertKeys() != null && tl.getCertKeys().length > 0) {
+                    cb.failed(new Err(400, "Cannot configure the tcp-lb to use plain TCP when it's originally using TLS"));
+                    return;
+                }
+            }
         }
         if (bodyContainsKey(body, "securityGroup")) {
             options.add("security-group");

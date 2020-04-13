@@ -39,6 +39,19 @@ public class TcpLBHolder {
         if (map.containsKey(alias))
             throw new AlreadyExistException("tcp-lb", alias);
 
+        VSSLContext sslContext = buildVSSLContext(sslCertKeys);
+
+        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, protocol, sslContext, sslCertKeys, securityGroup);
+        try {
+            tcpLB.start();
+        } catch (IOException e) {
+            tcpLB.destroy();
+            throw e;
+        }
+        map.put(alias, tcpLB);
+    }
+
+    public VSSLContext buildVSSLContext(CertKey[] sslCertKeys) throws Exception {
         VSSLContext sslContext;
         if (sslCertKeys != null) {
             try {
@@ -57,15 +70,7 @@ public class TcpLBHolder {
         } else {
             sslContext = null;
         }
-
-        TcpLB tcpLB = new TcpLB(alias, acceptorEventLoopGroup, workerEventLoopGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, protocol, sslContext, sslCertKeys, securityGroup);
-        try {
-            tcpLB.start();
-        } catch (IOException e) {
-            tcpLB.destroy();
-            throw e;
-        }
-        map.put(alias, tcpLB);
+        return sslContext;
     }
 
     public TcpLB get(String alias) throws NotFoundException {

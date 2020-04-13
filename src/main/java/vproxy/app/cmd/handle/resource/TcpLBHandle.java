@@ -16,6 +16,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.util.Utils;
+import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import java.net.InetSocketAddress;
 import java.util.LinkedList;
@@ -140,6 +141,19 @@ public class TcpLBHandle {
         }
         if (cmd.args.containsKey(Param.secg)) {
             tcpLB.securityGroup = Application.get().securityGroupHolder.get(cmd.args.get(Param.secg));
+        }
+        if (cmd.args.containsKey(Param.ck)) {
+            if (tcpLB.getCertKeys() == null || tcpLB.getCertKeys().length == 0) {
+                throw new Exception("Cannot configure the tcp-lb to use TLS when it's originally using plain TCP");
+            }
+
+            String[] cks = cmd.args.get(Param.ck).split(",");
+            CertKey[] certKeys = new CertKey[cks.length];
+            for (int i = 0; i < cks.length; ++i) {
+                certKeys[i] = Application.get().certKeyHolder.get(cks[i]);
+            }
+            VSSLContext vsslContext = Application.get().tcpLBHolder.buildVSSLContext(certKeys);
+            tcpLB.setCertKeys(vsslContext, certKeys);
         }
     }
 

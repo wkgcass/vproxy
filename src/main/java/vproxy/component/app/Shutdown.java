@@ -478,8 +478,8 @@ public class Shutdown {
                     Logger.warn(LogType.IMPROPER_USE, "the secg " + tl.securityGroup.alias + " already removed");
                     continue;
                 }
-                if (tl.certKeys != null) {
-                    for (CertKey ck : tl.certKeys) {
+                if (tl.getCertKeys() != null) {
+                    for (CertKey ck : tl.getCertKeys()) {
                         if (!certKeyNames.contains(ck.alias)) {
                             Logger.warn(LogType.IMPROPER_USE, "the cert-key " + ck.alias + " already removed");
                             continue tl;
@@ -495,10 +495,10 @@ public class Shutdown {
                 if (!tl.securityGroup.alias.equals(SecurityGroup.defaultName)) {
                     cmd.append(" security-group ").append(tl.securityGroup.alias);
                 }
-                if (tl.certKeys != null) {
-                    cmd.append(" cert-key ").append(tl.certKeys[0].alias);
-                    for (int i = 1; i < tl.certKeys.length; ++i) {
-                        cmd.append(",").append(tl.certKeys[i].alias);
+                if (tl.getCertKeys() != null) {
+                    cmd.append(" cert-key ").append(tl.getCertKeys()[0].alias);
+                    for (int i = 1; i < tl.getCertKeys().length; ++i) {
+                        cmd.append(",").append(tl.getCertKeys()[i].alias);
                     }
                 }
                 commands.add(cmd.toString());

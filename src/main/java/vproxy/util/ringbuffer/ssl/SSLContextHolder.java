@@ -127,12 +127,17 @@ public class SSLContextHolder {
                 cert.sanRetrieved = true;
                 return false;
             }
-            List<String> ls = new ArrayList<>(san.size());
-            for (List<?> o : san) {
-                int n = (Integer) o.get(0);
-                if (n == 2) {
-                    String dnsName = (String) o.get(1);
-                    ls.add(dnsName);
+            List<String> ls;
+            if (san == null) {
+                ls = new ArrayList<>();
+            } else {
+                ls = new ArrayList<>(san.size());
+                for (List<?> o : san) {
+                    int n = (Integer) o.get(0);
+                    if (n == 2) {
+                        String dnsName = (String) o.get(1);
+                        ls.add(dnsName);
+                    }
                 }
             }
             if (ls.isEmpty()) {
