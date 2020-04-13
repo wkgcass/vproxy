@@ -49,6 +49,8 @@ public class HttpController {
         var loop = Application.get().controlEventLoop;
         server = new Http1ServerImpl(loop);
 
+        // hc
+        server.get("/healthz", ctx -> ctx.response().end("OK"));
         // json
         server.all(apiBase + "/*", Tool.bodyJsonHandler());
         // all
