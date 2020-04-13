@@ -3,6 +3,7 @@ package vproxy.app.cmd.handle.param;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Flag;
 import vproxy.app.cmd.Param;
+import vproxy.component.exception.XException;
 import vproxy.dns.Resolver;
 import vproxy.util.BlockCallback;
 
@@ -41,7 +42,7 @@ public class AddrHandle {
         try {
             get(cmd);
         } catch (Exception e) {
-            throw new Exception("invalid format for " + Param.addr.fullname);
+            throw new XException("invalid format for " + Param.addr.fullname);
         }
     }
 }

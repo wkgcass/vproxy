@@ -1,6 +1,7 @@
 package vproxy.app.cmd.handle.resource;
 
 import vproxy.app.cmd.Resource;
+import vproxy.component.exception.XException;
 
 public class ResolverHandle {
     private ResolverHandle() {
@@ -10,6 +11,6 @@ public class ResolverHandle {
         if (resolver.parentResource != null)
             throw new Exception(resolver.type.fullname + " is on top level");
         if (resolver.alias == null || !resolver.alias.equals("(default)"))
-            throw new Exception("can only access " + resolver.type.fullname + " named `(default)`");
+            throw new XException("can only access " + resolver.type.fullname + " named `(default)`");
     }
 }

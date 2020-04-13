@@ -2,6 +2,7 @@ package vproxy.app.cmd.handle.param;
 
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
+import vproxy.component.exception.XException;
 
 public class TTLHandle {
     private TTLHandle() {
@@ -11,7 +12,7 @@ public class TTLHandle {
         try {
             get(cmd);
         } catch (Exception e) {
-            throw new Exception("invalid " + Param.ttl.fullname);
+            throw new XException("invalid " + Param.ttl.fullname);
         }
     }
 

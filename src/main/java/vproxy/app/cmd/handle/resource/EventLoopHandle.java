@@ -6,6 +6,7 @@ import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopWrapper;
+import vproxy.component.exception.XException;
 
 import java.util.List;
 
@@ -34,14 +35,14 @@ public class EventLoopHandle {
     public static void add(Command cmd) throws Exception {
         EventLoopGroup g = EventLoopGroupHandle.get(cmd.prepositionResource);
         if (Application.isDefaultEventLoopGroupName(g.alias))
-            throw new Exception("cannot modify the default event loop group " + g.alias);
+            throw new XException("cannot modify the default event loop group " + g.alias);
         g.add(cmd.resource.alias);
     }
 
     public static void forceRemove(Command cmd) throws Exception {
         EventLoopGroup g = EventLoopGroupHandle.get(cmd.prepositionResource);
         if (Application.isDefaultEventLoopGroupName(g.alias))
-            throw new Exception("cannot modify the default event loop group " + g.alias);
+            throw new XException("cannot modify the default event loop group " + g.alias);
         g.remove(cmd.resource.alias);
     }
 }

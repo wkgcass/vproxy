@@ -660,14 +660,8 @@ public class Command {
             CmdResult res;
             try {
                 res = runThrow();
-            } catch (AlreadyExistException e) {
-                cb.failed(new XException("the resource already exists", e));
-                return;
-            } catch (NotFoundException e) {
-                cb.failed(new XException("the resource could not be found", e));
-                return;
-            } catch (Throwable t) {
-                cb.failed(t);
+            } catch (Throwable e) {
+                cb.failed(e);
                 return;
             }
             cb.succeeded(res);

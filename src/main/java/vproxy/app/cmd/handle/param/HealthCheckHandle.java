@@ -4,6 +4,7 @@ import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
+import vproxy.component.exception.XException;
 
 public class HealthCheckHandle {
     private HealthCheckHandle() {
@@ -19,14 +20,14 @@ public class HealthCheckHandle {
             try {
                 protocol = CheckProtocol.valueOf(cmd.args.get(Param.protocol));
             } catch (IllegalArgumentException e) {
-                throw new Exception("invalid health check config");
+                throw new XException("invalid health check config");
             }
         } else {
             protocol = CheckProtocol.tcp;
         }
 
         if (timeout < 0 || period < 0 || up < 0 || down < 0)
-            throw new Exception("invalid health check config");
+            throw new XException("invalid health check config");
         return new HealthCheckConfig(timeout, period, up, down, protocol);
     }
 }

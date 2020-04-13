@@ -9,6 +9,7 @@ import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.SecGRDefaultHandle;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.component.secure.SecurityGroup;
 
 import java.util.ArrayList;
@@ -63,7 +64,7 @@ public class SecurityGroupHandle {
     public static void preCheck(Command cmd) throws Exception {
         for (TcpLBHandle.TcpLBRef ref : TcpLBHandle.details()) {
             if (ref.tcpLB.securityGroup.alias.equals(cmd.resource.alias)) {
-                throw new Exception(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.tl.fullname + " " + ref.tcpLB.alias);
+                throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.tl.fullname + " " + ref.tcpLB.alias);
             }
         }
     }

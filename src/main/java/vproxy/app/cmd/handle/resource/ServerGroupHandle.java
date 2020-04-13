@@ -14,6 +14,7 @@ import vproxy.app.cmd.handle.param.WeightHandle;
 import vproxy.component.check.HealthCheckConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
 
@@ -67,13 +68,13 @@ public class ServerGroupHandle {
         try {
             HealthCheckHandle.getHealthCheckConfig(cmd);
         } catch (Exception e) {
-            throw new Exception("invalid health check config");
+            throw new XException("invalid health check config");
         }
         if (cmd.args.containsKey(Param.meth)) {
             try {
                 MethHandle.get(cmd);
             } catch (Exception e) {
-                throw new Exception("invalid method");
+                throw new XException("invalid method");
             }
         } else {
             cmd.args.put(Param.meth, "wrr");
@@ -97,14 +98,14 @@ public class ServerGroupHandle {
                 try {
                     HealthCheckHandle.getHealthCheckConfig(cmd);
                 } catch (Exception e) {
-                    throw new Exception("missing health check argument or is invalid");
+                    throw new XException("missing health check argument or is invalid");
                 }
             }
             if (cmd.args.containsKey(Param.meth)) {
                 try {
                     MethHandle.get(cmd);
                 } catch (Exception e) {
-                    throw new Exception("invalid method");
+                    throw new XException("invalid method");
                 }
             }
             if (cmd.args.containsKey(Param.anno)) {
@@ -189,7 +190,7 @@ public class ServerGroupHandle {
         for (String upstreamName : Application.get().upstreamHolder.names()) {
             Upstream groups = Application.get().upstreamHolder.get(upstreamName);
             if (groups.getServerGroupHandles().stream().anyMatch(h -> h.group.equals(serverGroup))) {
-                throw new Exception(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.ups.fullname + " " + groups.alias);
+                throw new XException(ResourceType.sg.fullname + " " + serverGroup.alias + " is used by " + ResourceType.ups.fullname + " " + groups.alias);
             }
         }
     }

@@ -7,6 +7,7 @@ import vproxy.app.cmd.ResourceType;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.app.TcpLB;
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.exception.XException;
 import vproxy.component.svrgroup.ServerGroup;
 
 import java.util.List;
@@ -42,25 +43,25 @@ public class EventLoopGroupHandle {
 
         // check default
         if (Application.isDefaultEventLoopGroupName(toRemoveName)) {
-            throw new Exception("cannot remove a default event loop " + toRemoveName);
+            throw new XException("cannot remove a default event loop " + toRemoveName);
         }
         // check tcp lb
         for (String name : Application.get().tcpLBHolder.names()) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(name);
             if (tcpLB.acceptorGroup.equals(g) || tcpLB.workerGroup.equals(g))
-                throw new Exception(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
+                throw new XException(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
         }
         // check socks5
         for (String name : Application.get().socks5ServerHolder.names()) {
             Socks5Server socks5 = Application.get().socks5ServerHolder.get(name);
             if (socks5.acceptorGroup.equals(g) || socks5.workerGroup.equals(g))
-                throw new Exception(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.socks5.fullname + " " + socks5.alias);
+                throw new XException(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.socks5.fullname + " " + socks5.alias);
         }
         // check servers group
         for (String name : Application.get().serverGroupHolder.names()) {
             ServerGroup sg = Application.get().serverGroupHolder.get(name);
             if (sg.eventLoopGroup.equals(g))
-                throw new Exception(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.sg.fullname + " " + sg.alias);
+                throw new XException(ResourceType.elg.fullname + " " + toRemoveName + " is used by " + ResourceType.sg.fullname + " " + sg.alias);
         }
     }
 

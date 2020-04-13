@@ -2,6 +2,7 @@ package vproxy.app.cmd.handle.param;
 
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
+import vproxy.component.exception.XException;
 import vproxy.component.svrgroup.Method;
 
 public class MethHandle {
@@ -13,7 +14,7 @@ public class MethHandle {
         try {
             return Method.valueOf(meth);
         } catch (IllegalArgumentException e) {
-            throw new Exception("invalid " + Param.meth.fullname);
+            throw new XException("invalid " + Param.meth.fullname);
         }
     }
 }

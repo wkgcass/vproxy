@@ -414,7 +414,7 @@ public class HttpController {
                     return;
                 }
                 if (tl.getCertKeys() != null && tl.getCertKeys().length > 0) {
-                    cb.failed(new Err(400, "Cannot configure the tcp-lb to use plain TCP when it's originally using TLS"));
+                    cb.failed(new Err(400, "cannot configure the tcp-lb to use plain TCP when it's originally using TLS"));
                     return;
                 }
             }

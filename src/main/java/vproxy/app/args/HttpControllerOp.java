@@ -5,7 +5,6 @@ import vproxy.app.MainCtx;
 import vproxy.app.MainOp;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.SystemCommand;
-import vproxy.component.exception.XException;
 import vproxy.util.BlockCallback;
 
 public class HttpControllerOp implements MainOp {
@@ -44,11 +43,11 @@ public class HttpControllerOp implements MainOp {
             .append("http-controller")
             .append(") address ")
             .append(args[0]);
-        BlockCallback<CmdResult, XException> cb = new BlockCallback<>();
+        BlockCallback<CmdResult, Throwable> cb = new BlockCallback<>();
         SystemCommand.handleSystemCall(call.toString(), cb);
         try {
             cb.block();
-        } catch (XException e) {
+        } catch (Throwable e) {
             System.err.println("start http-controller on " + args[0] + " failed");
             e.printStackTrace();
             return 1;

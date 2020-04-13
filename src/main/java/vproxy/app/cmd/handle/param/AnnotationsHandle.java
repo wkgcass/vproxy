@@ -39,7 +39,7 @@ public class AnnotationsHandle {
         } catch (Exception e) {
             if (e instanceof XException)
                 throw e;
-            throw new Exception("invalid format for " + Param.anno.fullname);
+            throw new XException("invalid format for " + Param.anno.fullname);
         }
     }
 }

@@ -50,7 +50,7 @@ public class SystemCommand {
         return line.startsWith("System call:");
     }
 
-    public static void handleSystemCall(String line, Callback<CmdResult, ? super XException> cb) {
+    public static void handleSystemCall(String line, Callback<CmdResult, ? super Throwable> cb) {
         String from = Thread.currentThread().getStackTrace()[2].getClassName();
         String cmd = line.substring("System call:".length()).trim();
         outswitch:
@@ -76,7 +76,7 @@ public class SystemCommand {
                     }
                     String[] split = cmd.split(" ");
                     if (split.length <= 1) {
-                        cb.failed(new XException("invalid system call for `load`: should specify a file name to load"));
+                        cb.failed(new Exception("invalid system call for `load`: should specify a file name to load"));
                         break;
                     }
                     StringBuilder filename = new StringBuilder();
@@ -95,11 +95,11 @@ public class SystemCommand {
 
                             @Override
                             protected void onFailed(Throwable err) {
-                                cb.failed(new XException(err.toString()));
+                                cb.failed(err);
                             }
                         });
                     } catch (Exception e) {
-                        cb.failed(new XException("got exception when do pre-loading: " + Utils.formatErr(e)));
+                        cb.failed(new Exception("got exception when do pre-loading: " + Utils.formatErr(e)));
                     }
                     break;
                 } else if (cmd.startsWith("save ")) {
@@ -109,7 +109,7 @@ public class SystemCommand {
                     }
                     String[] split = cmd.split(" ");
                     if (split.length <= 1) {
-                        cb.failed(new XException("invalid system call for `save`: should specify a file name to save"));
+                        cb.failed(new Exception("invalid system call for `save`: should specify a file name to save"));
                         break;
                     }
                     StringBuilder filename = new StringBuilder();
@@ -122,14 +122,14 @@ public class SystemCommand {
                     try {
                         Shutdown.save(filename.toString());
                     } catch (Exception e) {
-                        cb.failed(new XException("got exception when saving: " + Utils.formatErr(e)));
+                        cb.failed(new Exception("got exception when saving: " + Utils.formatErr(e)));
                     }
                     cb.succeeded(new CmdResult());
                     break;
                 } else if (cmd.startsWith("add ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        cb.failed(new XException("invalid add command"));
+                        cb.failed(new Exception("invalid add command"));
                         break;
                     }
                     switch (arr[1]) {
@@ -147,7 +147,7 @@ public class SystemCommand {
                 } else if (cmd.startsWith("remove ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        cb.failed(new XException("invalid remove command"));
+                        cb.failed(new Exception("invalid remove command"));
                         break;
                     }
                     switch (arr[1]) {
@@ -165,7 +165,7 @@ public class SystemCommand {
                 } else if (cmd.startsWith("list ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        cb.failed(new XException("invalid list command"));
+                        cb.failed(new Exception("invalid list command"));
                         break;
                     }
                     switch (arr[1]) {
@@ -187,7 +187,7 @@ public class SystemCommand {
                 } else if (cmd.startsWith("list-detail ")) {
                     String[] arr = cmd.split(" ");
                     if (arr.length < 2) {
-                        cb.failed(new XException("invalid list-detail command"));
+                        cb.failed(new Exception("invalid list-detail command"));
                         break;
                     }
                     switch (arr[1]) {
@@ -203,7 +203,7 @@ public class SystemCommand {
                             }
                     }
                 }
-                cb.failed(new XException("unknown or invalid system call `" + cmd + "`"));
+                cb.failed(new Exception("unknown or invalid system call `" + cmd + "`"));
         }
     }
 
@@ -213,29 +213,29 @@ public class SystemCommand {
         cb.succeeded(new CmdResult(config, lines, config));
     }
 
-    private static void handleAddController(String type, String[] arr, Callback<CmdResult, ? super XException> cb) {
+    private static void handleAddController(String type, String[] arr, Callback<CmdResult, ? super Throwable> cb) {
         Command cmd;
         try {
             cmd = Command.statm(Arrays.asList(arr));
         } catch (Exception e) {
-            cb.failed(new XException("invalid system call: " + Utils.formatErr(e)));
+            cb.failed(new Exception("invalid system call: " + Utils.formatErr(e)));
             return;
         }
         if (!cmd.args.containsKey(Param.addr)) {
-            cb.failed(new XException("missing address"));
+            cb.failed(new Exception("missing address"));
             return;
         }
         if (type.equals("resp")) {
             // resp-controller needs password
             if (!cmd.args.containsKey(Param.pass)) {
-                cb.failed(new XException("missing password"));
+                cb.failed(new Exception("missing password"));
                 return;
             }
         }
         try {
             AddrHandle.check(cmd);
         } catch (Exception e) {
-            cb.failed(new XException("invalid system call, address is invalid"));
+            cb.failed(new XException("invalid system call, address is invalid: " + Utils.formatErr(e)));
             return;
         }
 
@@ -244,7 +244,7 @@ public class SystemCommand {
             addr = AddrHandle.get(cmd);
         } catch (Exception e) {
             Logger.shouldNotHappen("it should have already been checked but still failed", e);
-            cb.failed(new XException("invalid system call"));
+            cb.failed(new Exception("invalid system call"));
             return;
         }
         byte[] pass = null;
@@ -264,26 +264,26 @@ public class SystemCommand {
             cb.failed(new XException("the " + type.toUpperCase() + "Controller is already started"));
             return;
         } catch (IOException e) {
-            cb.failed(new XException("got exception when starting " + type.toUpperCase() + "Controller: " + Utils.formatErr(e)));
+            cb.failed(new Exception("got exception when starting " + type.toUpperCase() + "Controller: " + Utils.formatErr(e)));
             return;
         }
         cb.succeeded(new CmdResult());
     }
 
-    private static void handleRemoveRespController(String[] arr, Callback<CmdResult, ? super XException> cb) {
+    private static void handleRemoveRespController(String[] arr, Callback<CmdResult, ? super Exception> cb) {
         try {
             Application.get().respControllerHolder.removeAndStop(arr[2]);
         } catch (NotFoundException e) {
-            cb.failed(new XException("not found"));
+            cb.failed(e);
         }
         cb.succeeded(new CmdResult());
     }
 
-    private static void handleRemoveHttpController(String[] arr, Callback<CmdResult, ? super XException> cb) {
+    private static void handleRemoveHttpController(String[] arr, Callback<CmdResult, ? super Exception> cb) {
         try {
             Application.get().httpControllerHolder.removeAndStop(arr[2]);
         } catch (NotFoundException e) {
-            cb.failed(new XException("not found"));
+            cb.failed(e);
         }
         cb.succeeded(new CmdResult());
     }

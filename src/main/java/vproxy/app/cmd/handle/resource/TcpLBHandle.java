@@ -12,6 +12,7 @@ import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.app.TcpLB;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Upstream;
@@ -144,7 +145,7 @@ public class TcpLBHandle {
         }
         if (cmd.args.containsKey(Param.ck)) {
             if (tcpLB.getCertKeys() == null || tcpLB.getCertKeys().length == 0) {
-                throw new Exception("Cannot configure the tcp-lb to use TLS when it's originally using plain TCP");
+                throw new XException("cannot configure the tcp-lb to use TLS when it's originally using plain TCP");
             }
 
             String[] cks = cmd.args.get(Param.ck).split(",");

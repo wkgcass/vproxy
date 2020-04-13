@@ -2,6 +2,7 @@ package vproxy.app.cmd.handle.param;
 
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
+import vproxy.component.exception.XException;
 import vproxy.util.Tuple;
 
 public class PortRangeHandle {
@@ -13,10 +14,10 @@ public class PortRangeHandle {
         try {
             tuple = get(cmd);
         } catch (Exception e) {
-            throw new Exception("invalid format for " + Param.portrange.fullname);
+            throw new XException("invalid format for " + Param.portrange.fullname);
         }
         if (tuple.left < 0 || tuple.left > tuple.right || tuple.right > 65535) {
-            throw new Exception("invalid format for " + Param.portrange.fullname);
+            throw new XException("invalid format for " + Param.portrange.fullname);
         }
     }
 

@@ -2,6 +2,7 @@ package vproxy.app.cmd.handle.param;
 
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
+import vproxy.component.exception.XException;
 import vproxy.connection.Protocol;
 
 public class ProtocolHandle {
@@ -12,7 +13,7 @@ public class ProtocolHandle {
         try {
             get(cmd);
         } catch (Exception e) {
-            throw new Exception("invalid format for " + Param.protocol.fullname);
+            throw new XException("invalid format for " + Param.protocol.fullname);
         }
     }
 

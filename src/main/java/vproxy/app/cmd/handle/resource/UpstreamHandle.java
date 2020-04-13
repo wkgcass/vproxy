@@ -5,6 +5,7 @@ import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.app.TcpLB;
+import vproxy.component.exception.XException;
 import vproxy.component.svrgroup.Upstream;
 
 import java.util.List;
@@ -37,7 +38,7 @@ public class UpstreamHandle {
         for (String lbName : lbNames) {
             TcpLB tcpLB = Application.get().tcpLBHolder.get(lbName);
             if (tcpLB.backend.equals(groups))
-                throw new Exception(ResourceType.ups.fullname + " " + cmd.resource.alias
+                throw new XException(ResourceType.ups.fullname + " " + cmd.resource.alias
                     + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
         }
     }

@@ -6,6 +6,7 @@ import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.app.TcpLB;
+import vproxy.component.exception.XException;
 import vproxy.component.ssl.CertKey;
 
 import java.util.List;
@@ -46,7 +47,7 @@ public class CertKeyHandle {
             if (tcpLB.getCertKeys() != null) {
                 for (CertKey ck : tcpLB.getCertKeys()) {
                     if (ck.alias.equals(toRemove)) {
-                        throw new Exception(ResourceType.ck.fullname + " " + toRemove + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
+                        throw new XException(ResourceType.ck.fullname + " " + toRemove + " is used by " + ResourceType.tl.fullname + " " + tcpLB.alias);
                     }
                 }
             }

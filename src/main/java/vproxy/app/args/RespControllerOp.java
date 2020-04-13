@@ -5,7 +5,6 @@ import vproxy.app.MainCtx;
 import vproxy.app.MainOp;
 import vproxy.app.cmd.CmdResult;
 import vproxy.app.cmd.SystemCommand;
-import vproxy.component.exception.XException;
 import vproxy.util.BlockCallback;
 
 public class RespControllerOp implements MainOp {
@@ -46,11 +45,11 @@ public class RespControllerOp implements MainOp {
             .append(args[0])
             .append(" password ")
             .append(args[1]);
-        BlockCallback<CmdResult, XException> cb = new BlockCallback<>();
+        BlockCallback<CmdResult, Throwable> cb = new BlockCallback<>();
         SystemCommand.handleSystemCall(call.toString(), cb);
         try {
             cb.block();
-        } catch (XException e) {
+        } catch (Throwable e) {
             System.err.println("start resp-controller failed");
             e.printStackTrace();
             return 1;
