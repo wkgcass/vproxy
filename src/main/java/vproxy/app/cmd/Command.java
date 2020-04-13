@@ -3,9 +3,6 @@ package vproxy.app.cmd;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.*;
-import vproxy.component.exception.AlreadyExistException;
-import vproxy.component.exception.NotFoundException;
-import vproxy.component.exception.XException;
 import vproxy.component.proxy.Session;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
@@ -117,7 +114,7 @@ public class Command {
                         break;
                     }
                 case 3:
-                    lastResource.alias = notKeyWordAndValid(c);
+                    lastResource.alias = validName(c);
                     if (next == null) { // end
                         break loop;
                     }
@@ -159,7 +156,7 @@ public class Command {
                     notEnd(next);
                     break;
                 case 6:
-                    lastResource.alias = notKeyWordAndValid(c);
+                    lastResource.alias = validName(c);
                     if (next == null) { // end
                         break loop;
                     }
@@ -204,7 +201,7 @@ public class Command {
                     notEnd(next);
                     break;
                 case 9:
-                    String v = notKeyWordAndValid(c);
+                    String v = validName(c);
                     cmd.args.put(lastParam, v);
                     if (next == null) {
                         break loop;
@@ -234,7 +231,7 @@ public class Command {
                     notEnd(next);
                     break;
                 case 12:
-                    lastResource.alias = notKeyWordAndValid(c);
+                    lastResource.alias = validName(c);
                     if (next == null) {
                         break loop;
                     }
@@ -271,7 +268,7 @@ public class Command {
                     notEnd(next);
                     break;
                 case 15:
-                    lastResource.alias = notKeyWordAndValid(c);
+                    lastResource.alias = validName(c);
                     if (next == null) { // end
                         break loop;
                     }
@@ -297,14 +294,7 @@ public class Command {
         return cmd;
     }
 
-    private static String notKeyWordAndValid(String c) throws Exception {
-        if (c.equals("in")
-            || isEnumMatch(c, Action.class)
-            || isEnumMatch(c, Flag.class)
-            || isEnumMatch(c, Param.class)
-            || isEnumMatch(c, Preposition.class)
-            || isEnumMatch(c, ResourceType.class))
-            throw new Exception(c + " is a key word");
+    private static String validName(String c) throws Exception {
         if (c.contains(" ") || c.contains("\t"))
             throw new Exception(c + " is invalid");
         return c;

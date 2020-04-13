@@ -37,17 +37,21 @@ class utils {
     }
 
     static String validateName(String name) {
-        // only a-zA-Z0-9_$
+        // only a-zA-Z0-9_$:\-\.\(\)
         // length > 0
         char[] cs = name.toCharArray();
         if (cs.length == 0) {
             return "input name is invalid: the name string is empty";
         }
         for (char c : cs) {
-            if (('a' <= c && c <= 'z') || ('A' <= c && c <= 'Z') || ('0' <= c && c <= '9') || c == '-' || c == '_' || c == '$') {
+            if (('a' <= c && c <= 'z')
+                || ('A' <= c && c <= 'Z')
+                || ('0' <= c && c <= '9')
+                || c == '-' || c == '_' || c == '$' || c == '.'
+                || c == ':' || c == '(' || c == ')') {
                 continue;
             }
-            return "input name is invalid: " + name + ", can only be a-zA-Z0-9_-$";
+            return "input name is invalid: " + name + ", can only be a-zA-Z0-9_$:\\-\\.\\(\\)";
         }
         return null;
     }
