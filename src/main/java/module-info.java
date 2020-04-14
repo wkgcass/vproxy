@@ -15,7 +15,13 @@ module vproxy {
     exports vproxy.util.nio;
     exports vproxy.util.ringbuffer;
     uses vproxy.processor.ProcessorRegistry;
+
+    // vfd
+    exports vfd;
     uses FDs;
+
+    // main app
+    exports vproxy.app;
 
     // export json components
     exports vjson;
