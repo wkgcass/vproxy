@@ -11,7 +11,7 @@ vproxy有许多种使用方式：
 4. [StdIOController](#stdio): 在vproxy中输入命令，并从标准输出中读取信息。
 5. [RESPController](#resp): 使用`redis-cli`或者`telnet`来操作vproxy实例。
 6. [HTTPController](#http): 使用`curl`等http工具操作vproxy实例。
-7. [Service Mesh](#discovery): 让集群中的节点自动互相识别以及处理网络流量。
+7. [Kubernetes](#k8s): 在k8s集群中使用vproxy。
 
 <div id="simple"></div>
 
@@ -42,21 +42,31 @@ java -Deploy=Simple -jar vproxy.jar \
 
 在使用`vpctl`之前需要开启http-controller。vpctl使用http接口来控制vproxy实例。
 
-你可以使用启动参数开启http-controller。
+使用一行命令应用所有配置：
 
 ```
-java -jar vproxy.jar http-controller 127.0.0.1:18776
+vpctl apply -f my.cnf.yaml
 ```
 
-或者也可以参考[HTTPController](#http)一节的文档内容。
+使用`get`命令查看配置:
+
+e.g.
+
+```
+vpctl get TcpLb
+```
+
+```
+vpctl get DnsServer dns0 -o yaml
+```
 
 <div id="config"></div>
 
 ## 3. 配置文件
 
 vproxy配置文件是一个文本文件，每一行都是一条vproxy指令。  
-vproxy实例会解析每一行并一个一个的执行命令。  
-这和你直接一行一行地拷贝到控制台是一个效果。
+vproxy实例会一行一行地解析并执行命令。  
+这和你直接在控制台敲命令是一个效果。
 
 请参考文档[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)，查看更多命令的细节。
 
@@ -67,9 +77,7 @@ vproxy实例会解析每一行并一个一个的执行命令。
 vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。  
 如果使用`sigint`，`sighup`关闭或者手动关闭，配置文件也会自动保存。
 
-如果启动vproxy时候没有带`load`参数，那么最后一次保存的配置文件会自动加载。
-
-总体来说，你只需要配置一次，然后就不用再关心配置文件了。
+vproxy启动时会自动加载最后一次保存的配置文件。
 
 #### 3.2. 启动参数
 
@@ -80,6 +88,8 @@ vproxy实例每个小时都会将当前的配置写入`~/.vproxy.last`中。
 ```
 java vproxy.app.Main load ~/vproxy.conf
 ```
+
+> 可以同时指定多个配置文件，每个配置文件都会被读取
 
 #### 3.3. System call 指令
 
@@ -96,6 +106,9 @@ java vproxy.app.Main
 > System call: load ~/vproxy.conf             --- 从文件中读取配置
 ```
 
+> 你可以使用`noLoadLast`禁止启动时的配置文件读取。  
+> 你可以使用`noSave`禁止配置文件保存（无论是手动保存还是自动保存都会被禁止）。
+
 <div id="stdio"></div>
 
 ## 4. 使用 StdIOController
@@ -106,9 +119,11 @@ java vproxy.app.Main
 java vproxy.app.Main
 ```
 
-这样，StdIOController就启动了。你可以通过stdin输入命令。
+此时，StdIOController就已经默认启动了。你可以直接在控制台输入命令。
 
-如果你经常使用StdIOController，那么推荐在tmux或者screen里启动vproxy实例。
+如果你经常使用StdIOController，那么推荐在`tmux`或者`screen`里启动vproxy实例。
+
+> 你可以使用`noStdIOController`来关闭StdIOController。
 
 <div id="resp"></div>
 
@@ -127,7 +142,8 @@ redis-cli -p 16379 -a m1paSsw0rd
 > 注意: 为安全考虑，并非所有`System call:`命令都可以在RESPController中执行。  
 > 注意: 你可以在启动时指定一个`allowSystemCallInNonStdIOController`标记，以便在 RESPController 中启用 system call 指令。
 
-你可以在启动时开启RESPController，或者在StdIOController中输入命令来启动。
+在启动vproxy时，`resp-controller`就会默认自动启动，监听`16379`，使用密码`123456`。  
+你也可以使用启动参数或者在StdIOController中使用命令控制RESPController。
 
 #### 5.1 启动参数
 
@@ -177,6 +193,7 @@ resp-controller	127.0.0.1:16379              ---- 返回内容
 
 ```
 curl http://127.0.0.1:18776/api/v1/module/tcp-lb
+curl http://127.0.0.1:18776/healthz
 ```
 
 #### 6.1. 启动参数
@@ -215,48 +232,10 @@ http-controller        0.0.0.0:18776              ---- this is response
 
 查看swagger 2.0格式的[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)。
 
-<div id="discovery"></div>
+<div id="k8s"></div>
 
-## 7. 自动节点发现
+## 7. Kubernetes
 
-在启动时指定discovery配置文件：
+使用Service和vproxy CRD来实现网关、Sidecar等功能。
 
-```
-java vproxy.app.Main [discoveryConfig $path_to_config]
-```
-
-如果没有指定discovery配置文件，vproxy将会初始化一组默认配置。  
-如果（除了loopback网卡之外）只有一张网卡，那么默认配置就足以正常工作了。否则你可能需要手动进行配置。  
-
-vproxy提供两种与"自动节点发现"相关的配置模块。
-
-* smart-group-delegate: 监控节点变化，并更新托管的server-group资源
-* smart-node-delegate: 向discovery网络中注册一个服务，并通知其他节点
-
-用户app可以用http客户端来操作vproxy配置
-
-例如：你可以使用http请求注册或者移除一个服务：
-
-```
-POST /api/v1/module/smart-node-delegate
-{
-  "name": "my-test-service",
-  "service": "my-service,
-  "zone": "test",
-  "nic": "eth0",
-  "exposedPort": 8080
-}
-成功时返回204
-
-DELETE /api/v1/module/smart-node-delegate/my-test-service
-成功时返回204
-```
-
-你也可以检查注册在当前vproxy实例上的服务列表：
-
-```
-GET /api/v1/module/smart-node-delegate
-```
-
-关于本节内容，可以参考[service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md)的示例代码。  
-此外，例子中还提供了一个帮助你注册节点的工具类。
+请转到[vpctl](https://github.com/vproxy-tools/vpctl)查看更详细的内容。

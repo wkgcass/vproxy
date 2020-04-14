@@ -96,3 +96,23 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
 如果没有指定，那么应用将使用`~/vpws-agent.conf`作为配置文件。
 
 配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf)。
+
+### Deploy=KcpTun
+
+通过使用KCP加速网络。你需要在远端有一个访问目的地比较快的Server，并在本地起一个Client，在Client和Server之间建立隧道。
+
+查看 [vproxy kcp tunnel](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md) 获取更多信息。
+
+#### 启动参数
+
+* `mode`: 运行模式。enum: client or server
+* `bind`: 监听端口。对于客户端，会监听在TCP 127.0.0.1:$bind上。对于服务端，会监听在UDP 0.0.0.0:$bind上。
+* `target`: 连接目标。对于客户端，填入服务端的ip:port。对于服务端，填入访问目标的ip:port。
+* `fast`: 重传配置。enum: 1 or 2 or 3 or 4
+
+例如：
+
+```
+mode client bind 50010 target 100.1.2.3:20010 fast 3
+mode server bind 20010 target google.com fast 3
+```

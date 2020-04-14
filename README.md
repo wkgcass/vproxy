@@ -12,10 +12,10 @@ Clone it, compile it, then everything is ready for running.
 
 1. TCP Loadbalancer with TLS termination
 2. HTTP/1.x and HTTP/2 Loadbalancer with `Host` header consideration
-3. Other tcp based protocol loadbalancer, such as dubbo
+3. Other tcp based protocol loadbalancer, such as grpc, dubbo
 4. Socks5 server
 5. DNS server and customizable A|AAAA records
-6. Automatic service discovery
+6. Kubernetes integration
 7. Many other standalone extended apps, such as `WebSocksProxyAgent` and `WebSocksProxyServer`
 
 ## Make
@@ -28,7 +28,7 @@ See the [release page](https://github.com/wkgcass/vproxy/releases).
 
 #### For linux
 
-Use the latest `vproxy-linux` in release page.
+Use the latest `vproxy-linux` binary file in release page.
 
 Or
 
@@ -36,7 +36,7 @@ Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/do
 
 #### For macos
 
-Use the latest `vproxy-macos` in release page.
+Use the latest `vproxy-macos` binary file in release page.
 
 #### For windows
 
@@ -120,9 +120,30 @@ For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wk
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
 * TCP Loadbalancer: we now support TCP and TCP based protocols, also allow your own protocols.
-* Service mesh: provide simple service discovery mechanism and sidecar support
+* Kubernetes: integrate vproxy resources into k8s.
 
 ## How to use
+
+<details><summary>use vproxy with kubernetes</summary>
+
+<br>
+
+Add crd, launch vproxy and controller
+
+```
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/crd.yaml
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/k8s-vproxy.yaml
+```
+
+Launch the example app
+
+```
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/cr-example.yaml
+```
+
+Detailed info can be found [here](https://github.com/vproxy-tools/vpctl/blob/master/README.md).
+
+</details>
 
 <details><summary>vpctl</summary>
 
@@ -158,11 +179,7 @@ Use `help` to view the parameters.
 
 Use `help` to view the launching parameters.
 
-You may launch the vproxy instance with a `http-controller` and a `resp-controller`. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
-
-```
-java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
-```
+When launching the vproxy instance, a `http-controller` on port 18776 and a `resp-controller` on port 16379 will be started. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
 
 See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml) for more info.  
 Questions about implementation detail are also welcome (in issues).
@@ -172,16 +189,17 @@ Questions about implementation detail are also welcome (in issues).
 ### Doc
 
 * [how-to-use.md](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md): How to use config file and controllers.
+* [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): api doc for http-controller in swagger format.
 * [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): Detailed command document.
 * [lb-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/lb-example.md): An example about running a loadbalancer.
-* [service-mesh-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/service-mesh-example.md): An example about vproxy service mesh.
 * [docker-example.md](https://github.com/wkgcass/vproxy/blob/master/doc/docker-example.md): An example about building and running vproxy in docker.
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): Something about the architecture.
-* [discovery-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/discovery-protocol.md): The protocol which is used by vproxy auto discovery impl.
 * [extended-app.md](https://github.com/wkgcass/vproxy/blob/master/doc/extended-app.md): The usage of extended applications.
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
+* [vproxy-kcp-tunnel.md](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md): The KCP Tunnel Protocol.
 * [using-application-layer-protocols.md](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md): About how to use (customized) application layer protocols.
 * [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
+* [vpws-direct-relay.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): How to use `direct-relay` in `vpws-agent`.
 
 ## Contribute
 

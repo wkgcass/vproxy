@@ -6,29 +6,39 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 1) clone，2) 编译，3) 运行！
 
+## 特性
+
+1. TCP和TLS负载均衡
+2. HTTP/1.x和HTTP/2负载均衡，支持根据Host分发请求
+3. 支持其他协议的负载均衡，例如grpc, dubbo
+4. Socks5服务
+5. DNS服务，支持A|AAAA记录
+6. 与Kubernetes整合
+7. 封装好的针对特定场景的应用，例如`WebSocksProxyAgent`和`WebSocksProxyServer`
+
 ## 构建
 
 ### 打包
 
-<details><summary>直接使用已构建的版本</summary>
+<details><summary>使用已构建的版本</summary>
 
 <br>
 
 查看 [release page](https://github.com/wkgcass/vproxy/releases).
 
-#### linux
+#### For linux
 
-使用release页面中最新的`vproxy-linux`。
+使用release页面中最新的`vproxy-linux`二进制文件。
 
 或者
 
 使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-linux.tar.gz)下载。
 
-#### macos
+#### For macos
 
-使用release页面中最新的`vproxy-macos`。
+使用release页面中最新的`vproxy-macos`二进制文件。
 
-#### windows
+#### For windows
 
 Java运行时可以从[这里](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot)下载。
 
@@ -37,6 +47,12 @@ Java运行时可以从[这里](https://adoptopenjdk.net/?variant=openjdk11&jvmVa
 使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz)下载。
 
 >注意：该运行时仍然处于beta阶段
+
+</details>
+
+<details><summary>打jar包</summary>
+
+<br>
 
 ```
 ./gradlew clean jar
@@ -97,16 +113,37 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 </details>
 
-## 模板
+## 目标
 
 * 零依赖: 除了java标准库外不加任何依赖，也不使用jni扩展。
 * 简单：代码简单易懂.
 * 运行时可修改：更新配置不需要重启。
 * 高效：性能是首要目标之一。
 * TCP负载均衡：支持TCP以及一些基于TCP的协议，也允许你使用自己的协议。
-* 服务网格: 提供简单的服务发现和Sidecar支持
+* Kubernetes：将vproxy资源整合到k8s中。
 
 ## 如何使用
+
+<details><summary>在K8S中使用vproxy</summary>
+
+<br>
+
+添加crd并启动vproxy和controller
+
+```
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/crd.yaml
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/k8s-vproxy.yaml
+```
+
+启动示例应用
+
+```
+kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/cr-example.yaml
+```
+
+详细信息可见[这里](https://github.com/vproxy-tools/vpctl/blob/master/README.md)
+
+</details>
 
 <details><summary>vpctl</summary>
 
@@ -142,11 +179,7 @@ java -Deploy=Simple -jar vproxy.jar \
 
 使用`help`查看启动参数。
 
-你可以在启动vproxy实例的同时，开启一个`http-controller`和一个`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
-
-```
-java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:16379 paSsw0rd
-```
+在启动vproxy实例时，会默认开启一个监听18776端口的`http-controller`和一个监听16379端口的`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
 
 查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)以获取更多信息。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。
@@ -156,16 +189,17 @@ java -jar vproxy.jar http-controller 127.0.0.1:18776 resp-controller 127.0.0.1:1
 ### 文档
 
 * [how-to-use.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/how-to-use.md): 如何使用配置文件和controller。
+* [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): http-controller的api文档（swagger格式）。
 * [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md): 详细的命令文档。
 * [lb-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/lb-example.md): 关于TCP负载均衡的一个使用例子。
-* [service-mesh-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/service-mesh-example.md): 关于service mesh的一个例子。
 * [docker-example.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/docker-example.md): 关于构建镜像以及在docker中运行vproxy的一个例子。
 * [architecture.md](https://github.com/wkgcass/vproxy/blob/master/doc/architecture.md): 架构相关。
-* [discovery-protocol.md](https://github.com/wkgcass/vproxy/blob/master/doc/discovery-protocol.md): vproxy自动节点发现通信协议。
 * [extended-app.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/extended-app.md): 扩展应用的使用方式。
 * [websocks.md](https://github.com/wkgcass/vproxy/blob/master/doc/websocks.md): The WebSocks Protocol.
+* [vproxy-kcp-tunnel.md](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md): The KCP Tunnel Protocol.
 * [using-application-layer-protocols.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md): 关于如何使用(自定义的)应用层协议。
 * [fstack-how-to.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): 如何在`F-Stack`上运行vproxy。
+* [vpws-direct-relay.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): 如何使用`vpws-agent`的`direct-relay`功能。
 
 ## 贡献
 

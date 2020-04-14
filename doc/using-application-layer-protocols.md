@@ -9,9 +9,9 @@ The layer 4 TCP loadbalancer transfers all data from one frontend connection to 
 
 So `vproxy` defines a set of interfaces which allow users to customize their own application level protocols, and to dispatch frames to different backend in one connection.
 
-Now, `vproxy` already uses the interfaces to construct some built-in protcols for `HTTP/2`, `dubbo` and `thrift (framed)`.  
+Now, `vproxy` already uses the interfaces to construct some built-in protcols for `HTTP/2`, `http/1.x`, `dubbo` and `thrift (framed)`.  
 Actually these interfaces are built for the `HTTP/2`, which uses all functionality provided by these interfaces. See [here](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor/http2). The core impl is here: [Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/http2/Http2SubContext.java).  
-The `dubbo` and `thrift (framed)` processors are much easier comparing to the `HTTP/2` impl.
+The `dubbo` and `thrift (framed)` processors are much easier comparing to the `HTTP/2` impl. And `http/1.x` uses another coding style of these interfaces.
 
 ## How to use
 
@@ -31,9 +31,9 @@ Input your protocol name which corresponds to your `Processor` when using a cust
 
 ### Example
 
-We provides a processor impl example, see [here](https://github.com/wkgcass/vproxy-customized-application-layer-protocols-example). Here we defined a very simple application level protocol: the first 3 bytes represnets the payload length, and followed by the payload. See example code for more info.
+We provide a processor impl example, see [here](https://github.com/wkgcass/vproxy-customized-application-layer-protocols-example). Here we defined a very simple application level protocol: the first 3 bytes represnets the payload length, and followed by the payload. See example code for more info.
 
-For more complex protocols, you may refer to the built-in http2 impl.
+For more complex protocols, you may refer to the built-in http2 impl instead of the example.
 
 To let vproxy load your processors, you may use the modular `provides ... with ...` in `module-info` or traditional definitions in `META-INF/services/vproxy.processor.ProcessorRegistry`.
 
@@ -52,7 +52,7 @@ package [vproxy.processor](https://github.com/wkgcass/vproxy/tree/master/src/mai
 * Backend connection：the connection from loadbalancer to backend.
 * lib：refers to `vproxy`.
 * ctx：context，processing infomation about (one frontend connection + the derived backend connections).
-* subCtx：sub context, processing infomation about one connection.
+* subCtx：sub context, processing information about one connection.
 
 ### Methods of processor interface
 

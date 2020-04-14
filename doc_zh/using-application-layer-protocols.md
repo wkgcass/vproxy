@@ -9,9 +9,9 @@
 
 所以`vproxy`定义了一套接口，允许用户自定义应用层协议，可以自由地将不同的frame分发至不同的后端。
 
-目前，`vproxy`已经使用这套接口，在内部预置了`HTTP/2`,`dubbo`,`thrift (framed)`协议的frame分发。  
+目前，`vproxy`已经使用这套接口，在内部预置了`HTTP/2`,`http/1.x`,`dubbo`,`thrift (framed)`协议的frame分发。  
 实际上，这套接口是为了`HTTP/2`协议而提供的，`HTTP/2`的processor使用了这套接口提供的所有功能。详见[这里](https://github.com/wkgcass/vproxy/tree/master/src/main/java/vproxy/processor/http2)，主要实现放在这里：[Http2SubContext.java](https://github.com/wkgcass/vproxy/blob/master/src/main/java/vproxy/processor/http2/Http2SubContext.java)。  
-相比而言，`dubbo`和`thrift (framed)`处理器实现要简单的多。
+相比而言，`dubbo`和`thrift (framed)`处理器实现要简单的多。而`http/1.x`应用了这套接口的另一种使用姿势。
 
 ## 使用方式
 
@@ -33,7 +33,7 @@
 
 我们提供了一个processor实现的例子，见[这里](https://github.com/wkgcass/vproxy-customized-application-layer-protocols-example)。这里定义了一个非常简单的应用层协议：前3个字节表示payload长度，后面紧跟payload，请参考具体的代码。
 
-对于比较复杂的协议，可以参考内置的http2的实现。
+对于比较复杂的协议，可以参考内置的http2的实现而非例子。
 
 为了让vproxy读取你的处理器，你可以使用模块化`module-info`中的`provides ... with ...`语句，也可以使用传统的`META-INF/services/vproxy.processor.ProcessorRegistry`。
 

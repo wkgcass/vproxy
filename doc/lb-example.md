@@ -1,5 +1,11 @@
 # LB Example
 
+This example will tell you how to use vproxy with commands. With this example, you would be able to learn the vproxy resource types and configuring process.
+
+In real world we would expect you to use k8s resources or the vpctl tool to do the configuration, however those tools would eventually generate commands to make the final configuration. It will be much clear for you to use those tools if you understand the commands.
+
+Documentation of all commands appear in this article can be found [here](https://github.com/wkgcass/vproxy/blob/master/doc/command.md).
+
 ## Network Topology
 
 Assume we have the following network topology graph:
@@ -36,7 +42,7 @@ then every server listens on `0.0.0.0:80`.
 
 #### 1. Start
 
-Start vproxy instance, and create a `RESPController` for management:
+Start vproxy instance, and configure a `RESPController` for management:
 
 ```
 tmux
@@ -60,6 +66,9 @@ The following commands can be executed from the `redis-cli` (telnet also works).
 
 #### 3. Threads
 
+This step can be ignored. The vproxy will automatically start one acceptor thread group and one worker thread group.  
+However I would like to show you how to configure them by yourself.
+
 Create two event loop groups: one for accepting connections, and one for handling net flow.
 
 ```
@@ -69,7 +78,7 @@ add event-loop-group worker
 
 We only create one event loop in the `acceptor` event loop group, however, if you expect that there are a lot of new connections to be handled, you can add more event loops into the `acceptor` event loop group.
 
-And because that the host has 4 cores, we create 3 threads for handling net flow.
+And because that the host has 4 cores, we create 4 threads for handling net flow.
 
 ```
 add event-loop acceptor1 to event-loop-group acceptor
@@ -77,6 +86,7 @@ add event-loop acceptor1 to event-loop-group acceptor
 add event-loop worker1 to event-loop-group worker
 add event-loop worker2 to event-loop-group worker
 add event-loop worker3 to event-loop-group worker
+add event-loop worker4 to event-loop-group worker
 ```
 
 #### 4. Backend
@@ -103,7 +113,10 @@ You can use `list-detail` to check current health check status.
 list-detail server in server-group ngx
 ```
 
-Create a `upstream` resource, and attach group `ngx` to the new resource.
+---
+
+Create a `upstream` resource, and attach group `ngx` to the new resource.  
+The `upstream` is used to manage multiple `server-group`s.
 
 ```
 add upstream backend-groups

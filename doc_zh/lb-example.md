@@ -1,5 +1,11 @@
 # 负载均衡的例子
 
+这个例子使用最基础的一行一行的命令进行讲述。通过这个例子，可以直观地学习到vproxy的资源类型和配置过程。
+
+实际使用中我们更期望使用k8s资源或者vpctl工具来配置vproxy，但是这些工具最终还是会用命令完成配置，了解了命令，再去使用这些工具会上手更快。
+
+本文的命令的详细文档均可在[这里](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)查看。
+
 ## 网络拓扑
 
 假设我们有如下的网络拓扑图：
@@ -30,19 +36,15 @@ apt-get install nginx
 service nginx start
 ```
 
-安装nginx，默认地，所有服务都开始监听`0.0.0.0:80`。
+安装nginx，让所有后端服务开始监听`0.0.0.0:80`。
 
 ## VPROXY
 
 ### 1. 启动
 
-启动vproxy实例的同时，为了方便管理，我们也创建一个`RESPController`。
+启动vproxy实例的同时，为了方便管理，我们也配置一个`RESPController`。
 
 ```
-tmux
-
-## 之后在tmux的终端里启动vproxy
-
 java vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
 ```
 
@@ -59,6 +61,9 @@ redis-cli -h 10.0.3.10 -p 16379 -a m1PasSw0rd
 如下命令可以在`redis-cli`中执行。当然，telnet也是可以的。
 
 ### 3. 线程
+
+该步骤可以葫芦。vproxy会自动创建一个acceptor线程组和一个worker线程组。  
+但是我决定还是把配置展示出来以便自行配置。
 
 创建两个EventLoopGroup（事件循环组）：一个用来接收连接，另一个用来处理流量。
 
@@ -77,6 +82,7 @@ add event-loop acceptor1 to event-loop-group acceptor
 add event-loop worker1 to event-loop-group worker
 add event-loop worker2 to event-loop-group worker
 add event-loop worker3 to event-loop-group worker
+add event-loop worker4 to event-loop-group worker
 ```
 
 ### 4. 后端组
@@ -103,7 +109,10 @@ add server backend3 to server-group ngx address 10.0.2.3:80 weight 10
 list-detail server in server-group ngx
 ```
 
-创建一个`upstream`资源，并且将`ngx`组加入这个新资源里。
+---
+
+创建一个`upstream`资源，并且将`ngx`组加入这个新资源里。  
+`upstream`资源用于管理多个`server-group`资源。
 
 ```
 add upstream backend-groups

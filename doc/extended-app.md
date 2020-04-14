@@ -98,3 +98,23 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 If not specified, the app will use `~/vpws-agent.conf` instead.
 
 The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf).
+
+### Deploy=KcpTun
+
+Network acceleration using KCP. You need to start a remote server which is fast to request your desired target, and a client run locally to create a tunnel between client and server.
+
+See [vproxy kcp tunnel](https://github.com/wkgcass/vproxy/blob/master/doc/vproxy-kcp-tunnel.md) for more info.
+
+#### Start arguments
+
+* `mode`: running mode. enum: client or server
+* `bind`: the listening port. for client, bind TCP on 127.0.0.1:$bind, for server, bind UDP on 0.0.0.0:$bind
+* `target`: the connecting target. for client, set to the server ip:port, for server, set to the target ip:port
+* `fast`: the retransmission configuration. enum: 1 or 2 or 3 or 4
+
+e.g.
+
+```
+mode client bind 50010 target 100.1.2.3:20010 fast 3
+mode server bind 20010 target google.com fast 3
+```
