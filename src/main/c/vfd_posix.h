@@ -30,8 +30,7 @@
     #ifdef SOL_IP
         #define V_SOL_IP   SOL_IP
     #else
-        // disable, let it fail
-        #define V_SOL_IP   -1
+        #define V_SOL_IP   IPPROTO_IP
     #endif
     #define V_SHUT_WR      SHUT_WR
     typedef struct linger v_linger;
