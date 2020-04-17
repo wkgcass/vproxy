@@ -27,7 +27,12 @@
     #define V_SO_REUSEADDR SO_REUSEADDR
     #define V_SO_RCVBUF    SO_RCVBUF
     #define V_IPPROTO_TCP  IPPROTO_TCP
-    #define V_SOL_IP       SOL_IP
+    #ifdef SOL_IP
+        #define V_SOL_IP   SOL_IP
+    #else
+        // disable, let it fail
+        #define V_SOL_IP   -1
+    #endif
     #define V_SHUT_WR      SHUT_WR
     typedef struct linger v_linger;
 
