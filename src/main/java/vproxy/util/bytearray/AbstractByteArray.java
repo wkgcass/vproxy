@@ -1,6 +1,7 @@
 package vproxy.util.bytearray;
 
 import vproxy.util.ByteArray;
+import vproxy.util.Utils;
 
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
@@ -77,6 +78,6 @@ public abstract class AbstractByteArray implements ByteArray {
 
     @Override
     public String toString() {
-        return new String(toJavaArray(), StandardCharsets.UTF_8);
+        return toHexString();
     }
 }

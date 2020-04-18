@@ -529,7 +529,7 @@ class utils {
     static JSON.Object formatSecurityGroupRule(SecurityGroupRule secgr) {
         return new ObjectBuilder()
             .put("name", secgr.alias)
-            .put("clientNetwork", Utils.ipStr(secgr.ip) + "/" + Utils.maskInt(secgr.mask))
+            .put("clientNetwork", secgr.network.toString())
             .put("protocol", secgr.protocol.toString())
             .put("serverPortMin", secgr.minPort)
             .put("serverPortMax", secgr.maxPort)

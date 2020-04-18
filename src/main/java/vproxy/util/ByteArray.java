@@ -154,4 +154,8 @@ public interface ByteArray {
      * </pre>
      */
     void byteBufferGet(ByteBuffer src, int off, int len);
+
+    default String toHexString() {
+        return Utils.bytesToHex(toJavaArray());
+    }
 }

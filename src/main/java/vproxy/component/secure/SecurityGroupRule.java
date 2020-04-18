@@ -1,15 +1,13 @@
 package vproxy.component.secure;
 
 import vproxy.connection.Protocol;
-import vproxy.util.Utils;
+import vproxy.util.Network;
 
 import java.net.InetAddress;
-import java.util.Arrays;
 
 public class SecurityGroupRule {
     public final String alias;
-    public final byte[] ip;
-    public final byte[] mask;
+    public final Network network;
     public final Protocol protocol;
     public final int minPort;
     public final int maxPort;
@@ -20,8 +18,7 @@ public class SecurityGroupRule {
                              Protocol protocol, int minPort, int maxPort,
                              boolean allow) {
         this.alias = alias;
-        this.ip = ip;
-        this.mask = mask;
+        this.network = new Network(ip, mask);
         this.protocol = protocol;
         this.minPort = minPort;
         this.maxPort = maxPort;
@@ -29,16 +26,16 @@ public class SecurityGroupRule {
     }
 
     public boolean match(InetAddress address, int port) {
-        return Utils.maskMatch(address.getAddress(), ip, mask) && minPort <= port && port <= maxPort;
+        return network.contains(address) && minPort <= port && port <= maxPort;
     }
 
     public boolean ipMaskMatch(SecurityGroupRule rule) {
-        return Arrays.equals(ip, rule.ip) && Arrays.equals(mask, rule.mask);
+        return this.network.equals(rule.network);
     }
 
     @Override
     public String toString() {
-        return alias + " -> " + (allow ? "allow" : "deny") + " " + Utils.ipStr(ip) + "/" + Utils.maskInt(mask) +
+        return alias + " -> " + (allow ? "allow" : "deny") + " " + network +
             " protocol " + protocol +
             " port [" + minPort + "," + maxPort + "]";
     }

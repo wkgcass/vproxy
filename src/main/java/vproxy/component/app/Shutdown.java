@@ -441,7 +441,7 @@ public class Shutdown {
             for (SecurityGroup g : securityGroups) {
                 for (SecurityGroupRule r : g.getRules()) {
                     commands.add("add security-group-rule " + r.alias + " to security-group " + g.alias +
-                        " network " + Utils.ipStr(r.ip) + "/" + Utils.maskInt(r.mask) +
+                        " network " + r.network +
                         " protocol " + r.protocol +
                         " port-range " + r.minPort + "," + r.maxPort +
                         " default " + (r.allow ? "allow" : "deny"));

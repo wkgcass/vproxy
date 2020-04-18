@@ -14,6 +14,7 @@ import java.util.*;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
+import java.util.function.Supplier;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
@@ -997,5 +998,21 @@ public class Utils {
             }
         }).start();
         return cb.block();
+    }
+
+    public static <T> T runAvoidNull(Supplier<T> f, T dft) {
+        try {
+            return f.get();
+        } catch (NullPointerException e) {
+            return dft;
+        }
+    }
+
+    public static String toHexString(int x) {
+        return "0x" + Integer.toHexString(x);
+    }
+
+    public static String toBinaryString(int x) {
+        return "0b" + Integer.toBinaryString(x);
     }
 }
