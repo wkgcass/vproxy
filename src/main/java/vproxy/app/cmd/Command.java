@@ -580,6 +580,7 @@ public class Command {
             case tl: // tcp lb
             case socks5: // socks5 server
             case dns:
+            case sw:
             case elg: // event loog group
             case secg: // security group
                 // these four are only exist on top level
@@ -602,6 +603,8 @@ public class Command {
                                 Socks5ServerHandle.checkCreateSocks5Server(cmd);
                             } else if (cmd.resource.type == ResourceType.dns) {
                                 DNSServerHandle.checkCreateDNSServer(cmd);
+                            } else if (cmd.resource.type == ResourceType.sw) {
+                                SwitchHandle.checkCreateSwitch(cmd);
                             } else if (cmd.resource.type == ResourceType.secg) {
                                 SecurityGroupHandle.checkCreateSecurityGroup(cmd);
                             } // the other two does not need check
@@ -613,6 +616,8 @@ public class Command {
                                 Socks5ServerHandle.checkUpdateSocks5Server(cmd);
                             } else if (cmd.resource.type == ResourceType.dns) {
                                 DNSServerHandle.checkUpdateDNSServer(cmd);
+                            } else if (cmd.resource.type == ResourceType.sw) {
+                                SwitchHandle.checkUpdateSwitch(cmd);
                             } else if (cmd.resource.type != ResourceType.secg)
                                 throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                         }
@@ -634,6 +639,26 @@ public class Command {
                         CertKeyHandle.checkCertKey(cmd.resource);
                         if (cmd.action == Action.a) {
                             CertKeyHandle.checkAddCertKey(cmd);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
+            case arp:
+            case vni:
+                switch (cmd.action) {
+                    case a:
+                    case r:
+                    case R:
+                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case L:
+                    case l:
+                        if (cmd.resource.type == ResourceType.arp) {
+                            ArpHandle.checkArp(targetResource);
+                        } else {
+                            assert targetResource.type == ResourceType.vni;
+                            VniHandle.checkVni(targetResource);
                         }
                         break;
                     default:
@@ -880,6 +905,27 @@ public class Command {
                         return new CmdResult();
                 }
                 throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
+            case sw:
+                switch (action) {
+                    case l:
+                        List<String> swNames = SwitchHandle.names();
+                        return new CmdResult(swNames, swNames, utilJoinList(swNames));
+                    case L:
+                        List<SwitchHandle.SwitchRef> swRefList = SwitchHandle.details();
+                        List<String> swRefStrList = swRefList.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(swRefList, swRefStrList, utilJoinList(swRefList));
+                    case a:
+                        SwitchHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        SwitchHandle.forceRemove(this);
+                        return new CmdResult();
+                    case u:
+                        SwitchHandle.update(this);
+                        return new CmdResult();
+                }
+                throw new Exception("cannot run " + action.fullname + " on " + resource.type.fullname);
             case secg:
                 switch (action) {
                     case l:
@@ -934,6 +980,26 @@ public class Command {
                     case R:
                         DnsCacheHandle.remove(this);
                         return new CmdResult();
+                }
+            case vni:
+                switch (action) {
+                    case l:
+                        int cnt = VniHandle.count(targetResource);
+                        return new CmdResult(cnt, cnt, "" + cnt);
+                    case L:
+                        List<VniHandle.VniEntry> vniLs = VniHandle.list(targetResource);
+                        List<Object> ls = vniLs.stream().map(e -> e.vni).collect(Collectors.toList());
+                        return new CmdResult(vniLs, ls, utilJoinList(ls));
+                }
+            case arp:
+                switch (action) {
+                    case l:
+                        int cnt = ArpHandle.count(targetResource);
+                        return new CmdResult(cnt, cnt, "" + cnt);
+                    case L:
+                        List<ArpHandle.ArpEntry> arpLs = ArpHandle.list(targetResource);
+                        List<Object> ls = arpLs.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(arpLs, ls, utilJoinList(ls));
                 }
             case ck:
                 switch (action) {

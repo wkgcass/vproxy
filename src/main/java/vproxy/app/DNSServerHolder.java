@@ -54,12 +54,4 @@ public class DNSServerHolder {
             throw new NotFoundException("dns-server", alias);
         dnsServer.stop();
     }
-
-    void clear() {
-        map.clear();
-    }
-
-    void put(String alias, DNSServer dnsServer) {
-        map.put(alias, dnsServer);
-    }
 }

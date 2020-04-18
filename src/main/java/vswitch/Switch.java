@@ -35,7 +35,7 @@ public class Switch {
     public final String password;
     private final Aes256Key passwordKey;
     public final EventLoopGroup eventLoopGroup;
-    private int forwardingTableTimeout;
+    private int macTableTimeout;
     private int arpTableTimeout;
 
     private boolean started = false;
@@ -45,13 +45,13 @@ public class Switch {
     private final Map<Integer, Table> tables = new HashMap<>();
 
     public Switch(String alias, InetSocketAddress vxlanBindingAddress, String password, EventLoopGroup eventLoopGroup,
-                  int forwardingTableTimeout, int arpTableTimeout) throws IOException, ClosedException {
+                  int macTableTimeout, int arpTableTimeout) throws IOException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.password = password;
         this.passwordKey = new Aes256Key(password);
-        this.forwardingTableTimeout = forwardingTableTimeout;
+        this.macTableTimeout = macTableTimeout;
         this.arpTableTimeout = arpTableTimeout;
 
         sock = FDProvider.get().openDatagramFD();
@@ -126,18 +126,18 @@ public class Switch {
         releaseSock();
     }
 
-    public int getForwardingTableTimeout() {
-        return forwardingTableTimeout;
+    public int getMacTableTimeout() {
+        return macTableTimeout;
     }
 
     public int getArpTableTimeout() {
         return arpTableTimeout;
     }
 
-    public void setForwardingTableTimeout(int forwardingTableTimeout) {
-        this.forwardingTableTimeout = forwardingTableTimeout;
+    public void setMacTableTimeout(int macTableTimeout) {
+        this.macTableTimeout = macTableTimeout;
         for (var tbl : tables.values()) {
-            tbl.setForwardingTableTimeout(forwardingTableTimeout);
+            tbl.setMacTableTimeout(macTableTimeout);
         }
     }
 
@@ -146,6 +146,10 @@ public class Switch {
         for (var tbl : tables.values()) {
             tbl.setArpTableTimeout(arpTableTimeout);
         }
+    }
+
+    public Map<Integer, Table> getTables() {
+        return tables;
     }
 
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {
@@ -231,7 +235,7 @@ public class Switch {
                 int vni = packet.vxlan.vni;
                 Table table = tables.get(vni);
                 if (table == null) {
-                    table = new Table(vni, ctx.getEventLoop(), forwardingTableTimeout, arpTableTimeout);
+                    table = new Table(vni, ctx.getEventLoop(), macTableTimeout, arpTableTimeout);
                     tables.put(vni, table);
                 }
 
@@ -244,7 +248,7 @@ public class Switch {
             MacAddress dst = vxlan.packet.getDst();
 
             // handle layer 2
-            table.forwardingTable.record(src, inputIface);
+            table.macTable.record(src, inputIface);
 
             // handle layer 3
             AbstractPacket packet = vxlan.packet.getPacket();
@@ -276,7 +280,7 @@ public class Switch {
                     sendVXLanTo(iface.udpSockAddress, vxlan);
                 }
             } else {
-                Iface iface = table.forwardingTable.lookup(dst);
+                Iface iface = table.macTable.lookup(dst);
                 if (iface == null) {
                     // not found, drop
                     return;
@@ -340,10 +344,11 @@ public class Switch {
             @Override
             public void cancel() {
                 super.cancel();
+
                 ifaces.remove(iface);
 
                 for (var table : tables.values()) {
-                    table.forwardingTable.disconnect(iface);
+                    table.macTable.disconnect(iface);
                 }
                 Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
             }

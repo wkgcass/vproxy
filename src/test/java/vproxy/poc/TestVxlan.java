@@ -21,8 +21,8 @@ public class TestVxlan {
         elg.add("el0");
         SelectorEventLoop loop = elg.next().getSelectorEventLoop();
 
-        Switch sw = new Switch("sw0", new InetSocketAddress(swListen), pass, elg, timeout, timeout);
-        sw.start();
+        // Switch sw = new Switch("sw0", new InetSocketAddress(swListen), pass, elg, timeout, timeout);
+        // sw.start();
 
         VXLanAdaptorHandlers.launchGeneralAdaptor(loop,
             new InetSocketAddress("127.0.0.1", swListen),

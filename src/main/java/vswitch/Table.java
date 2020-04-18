@@ -4,33 +4,27 @@ import vproxy.selector.SelectorEventLoop;
 
 public class Table {
     public final int vni;
-    public final ForwardingTable forwardingTable;
+    public final MacTable macTable;
     public final ArpTable arpTable;
-    private int forwardingTableTimeout;
-    private int arpTableTimeout;
 
     public Table(int vni, SelectorEventLoop loop,
-                 int forwardingTableTimeout, int arpTableTimeout) {
+                 int macTableTimeout, int arpTableTimeout) {
         this.vni = vni;
-        this.forwardingTableTimeout = forwardingTableTimeout;
-        this.arpTableTimeout = arpTableTimeout;
 
-        forwardingTable = new ForwardingTable(loop, forwardingTableTimeout);
+        macTable = new MacTable(loop, macTableTimeout);
         arpTable = new ArpTable(loop, arpTableTimeout);
     }
 
-    public void setForwardingTableTimeout(int forwardingTableTimeout) {
-        this.forwardingTableTimeout = forwardingTableTimeout;
-        forwardingTable.setTimeout(forwardingTableTimeout);
+    public void setMacTableTimeout(int macTableTimeout) {
+        macTable.setTimeout(macTableTimeout);
     }
 
     public void setArpTableTimeout(int arpTableTimeout) {
-        this.arpTableTimeout = arpTableTimeout;
         arpTable.setTimeout(arpTableTimeout);
     }
 
     public void clear() {
-        forwardingTable.clear();
+        macTable.clear();
         arpTable.clear();
     }
 }

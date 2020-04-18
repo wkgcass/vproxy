@@ -36,12 +36,4 @@ public class EventLoopGroupHolder {
             throw new NotFoundException("event-loop-group", alias);
         g.close();
     }
-
-    void clear() {
-        map.clear();
-    }
-
-    void put(String alias, EventLoopGroup elg) {
-        map.put(alias, elg);
-    }
 }

@@ -56,6 +56,10 @@ public class ArpTable {
         }
     }
 
+    public Set<ArpEntry> listEntries() {
+        return entries;
+    }
+
     public class ArpEntry extends Timer {
         public final MacAddress mac;
         public final InetAddress ip;
@@ -79,6 +83,8 @@ public class ArpTable {
 
         @Override
         public void cancel() {
+            super.cancel();
+
             entries.remove(this);
             ipMap.remove(ip);
         }

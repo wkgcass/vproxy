@@ -21,6 +21,10 @@ public enum ResourceType {
     dnscache("dns-cache"),
     ck("cert-key"),
 
+    sw("switch"),
+    vni("vni"),
+    arp("arp"),
+
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),
     ;

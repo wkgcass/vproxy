@@ -14,6 +14,7 @@ import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 import vproxy.util.*;
+import vswitch.Switch;
 
 import java.io.*;
 import java.util.*;
@@ -268,11 +269,6 @@ public class Shutdown {
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
 
-        {
-            // NOTE
-            // NOTE: smart-node-delegate MUST not be saved
-            // NOTE
-        }
         {
             // create cert-key
             CertKeyHolder ckh = app.certKeyHolder;
@@ -546,7 +542,7 @@ public class Shutdown {
             }
         }
         {
-            // create socks5 server
+            // create dns server
             DNSServerHolder dnsh = app.dnsServerHolder;
             List<String> names = dnsh.names();
             for (String name : names) {
@@ -587,6 +583,28 @@ public class Shutdown {
                         + " weight " + sh.getWeight();
                     commands.add(cmd);
                 }
+            }
+        }
+        {
+            // create switch
+            SwitchHolder swh = app.switchHolder;
+            List<String> names = swh.names();
+            for (String name : names) {
+                Switch sw;
+                try {
+                    sw = swh.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("switch not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                String cmd = "add switch " + sw.alias
+                    + " address " + Utils.l4addrStr(sw.vxlanBindingAddress)
+                    + " password " + sw.password
+                    + " mac-table-timeout " + sw.getMacTableTimeout()
+                    + " arp-table-timeout " + sw.getArpTableTimeout()
+                    + " event-loop-group " + sw.eventLoopGroup.alias;
+                commands.add(cmd);
             }
         }
         StringBuilder sb = new StringBuilder();

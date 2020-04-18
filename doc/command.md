@@ -51,14 +51,15 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 |
 +---+ cert-key (ck)
 |
-+---+ smart-group-delegate
-+---+ smart-node-delegate
++---+ switch (sw)
 
    server-sock (ss) --+
   connection (conn)   +-- /* channel */
      session (sess) --+
 
-          dns-cache ----- /* state */
+          dns-cache --+-- /* state */
+                vni --+
+                arp --+
 
      bytes-in (bin) --+
    bytes-out (bout)   +-- /* statistics */
@@ -912,93 +913,105 @@ list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 2
 ```
 
-## Resource: smart-group-delegate
+## Resource: switch (sw)
 
-A binding for a server-group with info from vproxy discovery network.
+A switch for vproxy wrapped vxlan packets.
 
 #### add
 
-Create a new smart-group-delegate binding.
+Create a switch.
 
-* service: the service watched by the delegate
-* zone: the zone watched by the delegate
-* server-group: the server group to bind
+* address (addr): Binding udp address of the switch for wrapped vxlan packets.
+* password (pass): Password of the wrapped vxlan packets.
+* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: 300000
+* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: 14400000
+* event-loop-group (elg): *optional*. The event loop group used for handling packets. Default: (worker-elg)
 
 ```
-add smart-group-delegate sgd0 service myservice zone z0 server-group sg0
+add switch sw0 address 0.0.0.0:4789 password p@sSw0rD
+"OK"
+```
+
+#### update
+
+Update a switch.
+
+* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: not changed
+* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: not changed
+
+```
+update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000
 "OK"
 ```
 
 #### list
 
-Get names of smart-group-delegate bindings.
+Show names of all switches.
 
 ```
-list smart-group-delegate
-1) "sgd0"
+list switch
+1) "sw0"
 ```
 
 #### list-detail
 
-Get detailed info about smart-group-delegate bindings.
+Show detailed info about all switches.
 
 ```
-list-detail smart-group-delegate
-1) "sgd0 -> service myservice zone z0 server-group sg0"
+list-detail switch
+1) "sw0" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000
 ```
 
 #### remove
 
-Remove the smart-group-delegate binding.
+Remove and stop a switch.
 
 ```
-remove smart-group-delegate sgd0
+remove switch sw0
 "OK"
 ```
 
-## Resource: smart-node-delegate
+## Resource: vni
 
-A delegate for a node registered to the vproxy discovery network.
-
-#### add
-
-Create a new smart-node-delegate.
-
-* service: the service handled by the delegate
-* zone: the zone handled by the delegate
-* nic: which nic the node listens on
-* port: which port the node listens on
-* ip-type: *optional* which ip type the node listens on, enum: v4 or v6, default v4
-
-```
-add smart-node-delegate snd0 service myservice zone z0 nic eth0 port 8080
-"OK"
-```
+Vxlan network id.
 
 #### list
 
-Get names of smart-node-delegate.
+Count existing vnis in a switch.
 
 ```
-list smart-node-delegate
-1) "snd0"
+list vni in switch sw0
+(integer) 1
 ```
 
 #### list-detail
 
-Get detailed info about smart-node-delegate bindings.
+List existing vnis in a switch.
 
 ```
-list-detail smart-node-delegate
-1) "snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080"
+list-detail vni in switch sw0
+1) (integer) 1314
 ```
 
-#### remove
+## arp
 
-Remove the smart-node-delegate binding.
+Arp and mac table entries.
+
+#### list
+
+Count entries in a vni.
 
 ```
-remove smart-node-delegate snd0
-"OK"
+list arp in vni 1314 in switch sw0
+(integer) 2
 ```
 
+#### list-detail
+
+List arp and mac table entries in a vni.
+
+```
+list-detail arp in vni 1314 in switch sw0
+1) "aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299"
+2) "fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299"
+```

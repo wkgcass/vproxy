@@ -50,4 +50,11 @@ public class Timer {
     public int getTimeout() {
         return timeout;
     }
+
+    public long getTTL() {
+        if (lastStart == -1) {
+            return -1;
+        }
+        return timeout - (FDProvider.get().currentTimeMillis() - lastStart);
+    }
 }

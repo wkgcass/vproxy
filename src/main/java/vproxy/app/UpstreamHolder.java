@@ -35,12 +35,4 @@ public class UpstreamHolder {
         if (g == null)
             throw new NotFoundException("upstream", alias);
     }
-
-    void clear() {
-        map.clear();
-    }
-
-    void put(String alias, Upstream ups) {
-        map.put(alias, ups);
-    }
 }

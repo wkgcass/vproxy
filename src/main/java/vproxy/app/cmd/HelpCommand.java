@@ -1,6 +1,7 @@
 package vproxy.app.cmd;
 
 import vproxy.app.Application;
+import vproxy.app.cmd.handle.resource.SwitchHandle;
 import vproxy.util.Tuple;
 
 import java.util.Arrays;
@@ -411,7 +412,11 @@ public class HelpCommand {
         certkey("cert-key", "ck", "cert-key resource"),
         cert("cert", null, "the certificate file path"),
         key("key", null, "the key file path"),
-        ttl("ttl", null, "time to live");
+        ttl("ttl", null, "time to live"),
+        mactabletimeout("mac-table-timeout", null, "timeout of mac table in a switch"),
+        arptabletimeout("arp-table-timeout", null, "timeout of arp table in a switch"),
+        pass("password", "pass", "password"),
+        ;
         public final String param;
         public final String shortVer;
         public final String descr;
@@ -1196,86 +1201,88 @@ public class HelpCommand {
                         )
                     ))
             )),
-        sgd("smart-group-delegate", "sgd", "A binding for a server-group with info from discovery network",
+        sw("switch", "sw", "a switch for vproxy wrapped vxlan packets",
             Arrays.asList(
-                new ResActMan(ActMan.add, "create a new smart-group-delegate binding",
+                new ResActMan(ActMan.add, "create a switch",
                     Arrays.asList(
-                        new ResActParamMan(ParamMan.service, "the service watched by the delegate"),
-                        new ResActParamMan(ParamMan.zone, "the zone watched by the delegate"),
-                        new ResActParamMan(ParamMan.servergroup, "the server group to bind")
+                        new ResActParamMan(ParamMan.address, "binding udp address of the switch for wrapped vxlan packets"),
+                        new ResActParamMan(ParamMan.pass, "password of the wrapped vxlan packets"),
+                        new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "" + SwitchHandle.MAC_TABLE_TIMEOUT),
+                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
+                        new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add smart-group-delegate sgd0 service myservice zone z0 server-group sg0",
+                            "add switch sw0 address 0.0.0.0:4789 password p@sSw0rD",
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.list, "get names of smart-group-delegate bindings",
-                    Collections.emptyList(),
+                new ResActMan(ActMan.update, "update a switch",
+                    Arrays.asList(
+                        new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
+                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed")
+                    ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list smart-group-delegate",
-                            "1) \"sgd0\""
+                            "update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000",
+                            "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.listdetail, "get detailed info about smart-group-delegate bindings",
+                new ResActMan(ActMan.list, "get names of switches",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "list-detail smart-group-delegate",
-                            "1) \"sgd0 -> service myservice zone z0 server-group sg0\""
+                            "list switch",
+                            "1) \"sw0\""
                         )
                     )),
-                new ResActMan(ActMan.remove, "remove the smart-group-delegate binding",
+                new ResActMan(ActMan.listdetail, "get detailed info of switches",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "remove smart-group-delegate sgd0",
+                            "list-detail switch",
+                            "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000"
+                        )
+                    )),
+                new ResActMan(ActMan.remove, "stop and remove a switch",
+                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "remove switch sw0",
                             "\"OK\""
                         )
                     ))
             )),
-        snd("smart-node-delegate", "snd", "A binding for node registered into the vproxy discovery network",
+        vni("vni", null, "vxlan network id",
             Arrays.asList(
-                new ResActMan(ActMan.add, "create a new smart-node-delegate binding",
-                    Arrays.asList(
-                        new ResActParamMan(ParamMan.service, "exposed service name"),
-                        new ResActParamMan(ParamMan.zone, "exposed zone name"),
-                        new ResActParamMan(ParamMan.nic, "nic name"),
-                        new ResActParamMan(ParamMan.iptype, "exposed ip type, v4 or v6", "v4"),
-                        new ResActParamMan(ParamMan.port, "exposed port"),
-                        new ResActParamMan(ParamMan.weight, "weight of the node", "10")
-                    ),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "add smart-node-delegate snd0 service myservice zone z0 nic eth0 port 8080",
-                            "\"OK\""
-                        )
-                    )),
-                new ResActMan(ActMan.list, "get names of smart-node-delegate bindings",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "list smart-node-delegate",
-                            "1) \"snd0\""
-                        )
-                    )),
-                new ResActMan(ActMan.listdetail, "get detailed info about smart-node-delegate bindings",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "list-detail smart-node-delegate",
-                            "1) \"snd0 -> service myservice zone z0 nic eth0 ip-type v4 port 8080 weight 10\""
-                        )
-                    )),
-                new ResActMan(ActMan.remove, "remove the smart-node-delegate binding",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "remove smart-node-delegate snd0",
-                            "\"OK\""
-                        )
-                    ))
+                new ResActMan(ActMan.list, "count existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list vni in switch sw0",
+                        "(integer) 1"
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "list existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail vni in switch sw0",
+                        "1) (integer) 1314"
+                    )
+                ))
+            )),
+        arp("arp", null, "arp and mac table entries",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "count entries in a vni", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list arp in vni 1314 in switch sw0",
+                        "(integer) 2"
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "list arp and mac table entries in a vni", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail arp in vni 1314 in switch sw0",
+                        "1) \"aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299\"\n" +
+                            "2) \"fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299\""
+                    )
+                ))
             )),
         ;
         public final String res;

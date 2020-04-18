@@ -9,9 +9,21 @@ public class TimeoutHandle {
     }
 
     public static int get(Command cmd) throws Exception {
-        int timeout = Integer.parseInt(cmd.args.get(Param.timeout));
+        return get(cmd, Param.timeout);
+    }
+
+    public static int get(Command cmd, Param param) throws XException {
+        int timeout = Integer.parseInt(cmd.args.get(param));
         if (timeout < 0)
-            throw new XException("invalid timeout");
+            throw new XException("invalid " + param.fullname);
         return timeout;
+    }
+
+    public static void check(Command cmd) throws XException {
+        check(cmd, Param.timeout);
+    }
+
+    public static void check(Command cmd, Param param) throws XException {
+        get(cmd, param);
     }
 }

@@ -97,6 +97,10 @@ public class Utils {
         return ipStr(l4addr.getAddress().getAddress()) + ":" + l4addr.getPort();
     }
 
+    public static String ipStr(InetAddress ip) {
+        return ipStr(ip.getAddress());
+    }
+
     public static String ipStr(byte[] ip) {
         { // return 0.0.0.0 if all zero (instead of ipv6 ::)
             boolean allZero = true;

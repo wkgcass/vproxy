@@ -37,6 +37,7 @@ public class Application {
     public final DNSServerHolder dnsServerHolder;
     public final SecurityGroupHolder securityGroupHolder;
     public final CertKeyHolder certKeyHolder;
+    public final SwitchHolder switchHolder;
 
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
@@ -57,6 +58,7 @@ public class Application {
         this.socks5ServerHolder = new Socks5ServerHolder();
         this.httpControllerHolder = new HttpControllerHolder();
         this.dnsServerHolder = new DNSServerHolder();
+        this.switchHolder = new SwitchHolder();
     }
 
     public static boolean isDefaultEventLoopGroupName(String name) {

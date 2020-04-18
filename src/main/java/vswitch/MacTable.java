@@ -1,22 +1,21 @@
 package vswitch;
 
 import vproxy.selector.SelectorEventLoop;
-import vproxy.selector.TimerEvent;
 import vproxy.util.Timer;
 import vswitch.util.Iface;
 import vswitch.util.MacAddress;
 
 import java.util.*;
 
-public class ForwardingTable {
+public class MacTable {
     private final SelectorEventLoop loop;
     private int timeout;
 
-    private final Set<ForwardingEntry> entries = new HashSet<>();
-    private final Map<MacAddress, ForwardingEntry> macMap = new HashMap<>();
-    private final Map<Iface, Set<ForwardingEntry>> ifaceMap = new HashMap<>();
+    private final Set<MacEntry> entries = new HashSet<>();
+    private final Map<MacAddress, MacEntry> macMap = new HashMap<>();
+    private final Map<Iface, Set<MacEntry>> ifaceMap = new HashMap<>();
 
-    public ForwardingTable(SelectorEventLoop loop, int timeout) {
+    public MacTable(SelectorEventLoop loop, int timeout) {
         this.loop = loop;
         this.timeout = timeout;
     }
@@ -28,7 +27,7 @@ public class ForwardingTable {
             return;
         }
         // otherwise need to overwrite the entry
-        entry = new ForwardingEntry(mac, iface);
+        entry = new MacEntry(mac, iface);
         entry.record();
     }
 
@@ -58,7 +57,7 @@ public class ForwardingTable {
         }
     }
 
-    public Set<ForwardingEntry> listEntries() {
+    public Set<MacEntry> listEntries() {
         return entries;
     }
 
@@ -75,12 +74,12 @@ public class ForwardingTable {
         });
     }
 
-    public class ForwardingEntry extends Timer {
+    public class MacEntry extends Timer {
         public final MacAddress mac;
         public final Iface iface;
 
-        ForwardingEntry(MacAddress mac, Iface iface) {
-            super(ForwardingTable.this.loop, timeout);
+        MacEntry(MacAddress mac, Iface iface) {
+            super(MacTable.this.loop, timeout);
             this.mac = mac;
             this.iface = iface;
         }
@@ -89,7 +88,7 @@ public class ForwardingTable {
             if (macMap.containsKey(mac)) {
                 // the mac is already registered on another iface
                 // remove that iface
-                ForwardingEntry entry = macMap.get(mac);
+                MacEntry entry = macMap.get(mac);
                 entry.cancel();
             }
             entries.add(this);
@@ -106,6 +105,8 @@ public class ForwardingTable {
 
         @Override
         public void cancel() {
+            super.cancel();
+
             entries.remove(this);
             macMap.remove(mac);
             var set = ifaceMap.get(iface);

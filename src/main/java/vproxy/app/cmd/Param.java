@@ -34,6 +34,9 @@ public enum Param {
     cert("cert"),
     key("key"),
     ck("cert-key"),
+
+    mactabletimeout("mac-table-timeout"),
+    arptabletimeout("arp-table-timeout"),
     ;
     public final String fullname;
 

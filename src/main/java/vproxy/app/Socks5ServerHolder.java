@@ -57,12 +57,4 @@ public class Socks5ServerHolder {
             throw new NotFoundException("socks5-server", alias);
         socks5Server.destroy();
     }
-
-    void clear() {
-        map.clear();
-    }
-
-    void put(String alias, Socks5Server socks5) {
-        map.put(alias, socks5);
-    }
 }
