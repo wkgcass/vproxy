@@ -206,6 +206,32 @@ public class Utils {
         return true;
     }
 
+    public static InetSocketAddress blockParseL4Addr(String l4addr) throws Exception {
+        if (!l4addr.contains(":")) {
+            throw new Exception("missing port");
+        }
+        String ip = l4addr.substring(0, l4addr.lastIndexOf(":"));
+        String portStr = l4addr.substring(l4addr.lastIndexOf(":") + 1);
+        int port;
+        try {
+            port = Integer.parseInt(portStr);
+        } catch (NumberFormatException e) {
+            throw new Exception("invalid port number");
+        }
+        if (port < 0 || port > 65535) {
+            throw new Exception("invalid port number: out of range");
+        }
+
+        byte[] ipBytes = Utils.parseIpString(ip);
+        if (ipBytes != null) {
+            return new InetSocketAddress(Utils.l3addr(ipBytes), port);
+        }
+        // try hostname
+        var cb = new BlockCallback<InetAddress, IOException>();
+        Resolver.getDefault().resolve(ip, cb);
+        return new InetSocketAddress(cb.block(), port);
+    }
+
     public static byte[] long2bytes(long v) {
         LinkedList<Byte> bytes = new LinkedList<>();
         while (v != 0) {

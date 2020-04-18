@@ -131,6 +131,7 @@ public class VXLanAdaptorHandlers {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
                     continue;
                 }
+                assert Logger.lowLevelDebug("received packet " + p);
                 sendVXLanPacket(p);
             }
         }
