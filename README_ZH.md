@@ -179,7 +179,7 @@ java -Deploy=Simple -jar vproxy.jar \
 
 使用`help`查看启动参数。
 
-在启动vproxy实例时，会默认开启一个监听18776端口的`http-controller`和一个监听16379端口的`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
+在启动vproxy实例时，会默认开启一个监听18776端口的`http-controller`和一个监听16309端口的`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
 
 查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)以获取更多信息。  
 如果有任何关于实现细节的问题也欢迎在issue中提出。

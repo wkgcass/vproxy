@@ -133,8 +133,8 @@ java vproxy.app.Main
 通过该Controller，你就可以使用`redis-cli`来操作vproxy实例了。
 
 ```
-redis-cli -p 16379 -a m1paSsw0rd
-127.0.0.1:16379> man
+redis-cli -p 16309 -a m1paSsw0rd
+127.0.0.1:16309> man
 ```
 
 > 注意: `redis-cli` 不会将`help`命令发送到服务端，而是直接打印自己的帮助信息。  
@@ -142,7 +142,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 > 注意: 为安全考虑，并非所有`System call:`命令都可以在RESPController中执行。  
 > 注意: 你可以在启动时指定一个`allowSystemCallInNonStdIOController`标记，以便在 RESPController 中启用 system call 指令。
 
-在启动vproxy时，`resp-controller`就会默认自动启动，监听`16379`，使用密码`123456`。  
+在启动vproxy时，`resp-controller`就会默认自动启动，监听`16309`，使用密码`123456`。  
 你也可以使用启动参数或者在StdIOController中使用命令控制RESPController。
 
 #### 5.1 启动参数
@@ -152,7 +152,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 例如：
 
 ```
-java vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
+java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
 #### 5.2. System call 命令
@@ -173,7 +173,7 @@ java vproxy.app.Main
 
 ```
 > System call: list-detail resp-controller
-resp-controller	127.0.0.1:16379              ---- 返回内容
+resp-controller	127.0.0.1:16309              ---- 返回内容
 >
 ```
 

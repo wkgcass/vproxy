@@ -49,17 +49,17 @@ tmux
 
 ## then start vproxy in tmux terminal
 
-java vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
+java vproxy.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
 ```
 
-Start the vproxy and start a resp-controller and bind `10.0.3.10:16379` for the `ADMIN` to access.
+Start the vproxy and start a resp-controller and bind `10.0.3.10:16309` for the `ADMIN` to access.
 
 #### 2. Use redis-cli
 
 Start a `redis-cli` on `ADMIN`:
 
 ```
-redis-cli -h 10.0.3.10 -p 16379 -a m1PasSw0rd
+redis-cli -h 10.0.3.10 -p 16309 -a m1PasSw0rd
 ```
 
 The following commands can be executed from the `redis-cli` (telnet also works).

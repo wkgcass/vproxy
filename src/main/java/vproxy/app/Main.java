@@ -268,7 +268,7 @@ public class Main {
         }
         // launch the default resp controller
         if (!ctx.get("hasRespController", false)) {
-            String hostport = "127.0.0.1:16379";
+            String hostport = "127.0.0.1:16309";
             String pass = "123456";
             int ret = new RespControllerOp().execute(ctx, new String[]{hostport, pass});
             if (ret != 0) {

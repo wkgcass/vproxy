@@ -25,14 +25,14 @@ public class RESPApplicationServer {
         NetEventLoop netEventLoop = new NetEventLoop(loop);
         ProtocolServerHandler.apply(
             netEventLoop,
-            ServerSock.create(new InetSocketAddress("127.0.0.1", 16379)),
+            ServerSock.create(new InetSocketAddress("127.0.0.1", 16309)),
             new ProtocolServerConfig().setInBufferSize(8).setOutBufferSize(4),
             new RESPProtocolHandler(new RESPConfig().setMaxParseLen(16384),
                 new RESPApplicationHandler(new RESPApplicationConfig(), new MyRESPApplication())));
 
         new Thread(loop::loop).start();
 
-        RedisIncBlockingClient.runBlock(16379, 60, false);
+        RedisIncBlockingClient.runBlock(16309, 60, false);
         loop.close();
     }
 }

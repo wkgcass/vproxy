@@ -25,13 +25,13 @@ public class RESPPingPongServer {
         RESPConfig rconfig = new RESPConfig();
 
         ProtocolServerHandler.apply(loop,
-            ServerSock.create(new InetSocketAddress("127.0.0.1", 16379)),
+            ServerSock.create(new InetSocketAddress("127.0.0.1", 16309)),
             pconfig,
             new RESPProtocolHandler(rconfig, new MyRESPHandler()));
 
         new Thread(selectorEventLoop::loop).start();
 
-        RedisPingPongBlockingClient.runBlock(16379, 60, false);
+        RedisPingPongBlockingClient.runBlock(16309, 60, false);
         selectorEventLoop.close();
     }
 }

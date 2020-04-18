@@ -130,8 +130,8 @@ It's recommended to start vproxy instance in `tmux` or `screen` if you rely on t
 With the controller, you can use `redis-cli` to operate the vproxy instance.
 
 ```
-redis-cli -p 16379 -a m1paSsw0rd
-127.0.0.1:16379> man
+redis-cli -p 16309 -a m1paSsw0rd
+127.0.0.1:16309> man
 ```
 
 > NOTE: `redis-cli` traps `help` command and prints redis help message.  
@@ -139,7 +139,7 @@ redis-cli -p 16379 -a m1paSsw0rd
 > NOTE: For safety concern, not all `System call:` commands are not allowed in RESPController.
 > NOTE: You can use add start argument flag `allowSystemCallInNonStdIOController` to enable system call commands for RESPController
 
-The `resp-controller` is automatically launched on startup and listens to `16379` with password `123456`.  
+The `resp-controller` is automatically launched on startup and listens to `16309` with password `123456`.  
 You may configure the RESPController on startup or using a command in StdIOController.
 
 #### 5.1 startup argument
@@ -147,8 +147,9 @@ You may configure the RESPController on startup or using a command in StdIOContr
 Use `resp-controller ${address} ${password}` arguments to start the RESPController.
 
 e.g.
+
 ```
-java vproxy.app.Main resp-controller 0.0.0.0:16379 m1paSsw0rd
+java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
 #### 5.2. system call command
@@ -169,7 +170,7 @@ To list existing RESPController, you can type in:
 
 ```
 > System call: list-detail resp-controller
-resp-controller	127.0.0.1:16379              ---- this is response
+resp-controller	127.0.0.1:16309              ---- this is response
 >
 ```
 

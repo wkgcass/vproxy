@@ -155,7 +155,7 @@ public class CI {
             if (strPort == null)
                 strPort = System.getenv("vproxy_port");
             if (strPort == null)
-                strPort = "16379";
+                strPort = "16309";
             int port = Integer.parseInt(strPort);
             vproxyRESPPort = port;
 

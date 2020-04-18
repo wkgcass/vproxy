@@ -45,17 +45,17 @@ service nginx start
 启动vproxy实例的同时，为了方便管理，我们也配置一个`RESPController`。
 
 ```
-java vproxy.app.Main resp-controller 10.0.3.10:16379 m1PasSw0rd
+java vproxy.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
 ```
 
-启动vproxy，并且启动了一个resp-controller，绑定了`10.0.3.10:16379`，这样`ADMIN`就可以访问它了。
+启动vproxy，并且启动了一个resp-controller，绑定了`10.0.3.10:16309`，这样`ADMIN`就可以访问它了。
 
 ### 2. 使用 redis-cli
 
 在`ADMIN`上启动一个`redis-cli`
 
 ```
-redis-cli -h 10.0.3.10 -p 16379 -a m1PasSw0rd
+redis-cli -h 10.0.3.10 -p 16309 -a m1PasSw0rd
 ```
 
 如下命令可以在`redis-cli`中执行。当然，telnet也是可以的。

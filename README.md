@@ -179,7 +179,7 @@ Use `help` to view the parameters.
 
 Use `help` to view the launching parameters.
 
-When launching the vproxy instance, a `http-controller` on port 18776 and a `resp-controller` on port 16379 will be started. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
+When launching the vproxy instance, a `http-controller` on port 18776 and a `resp-controller` on port 16309 will be started. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
 
 See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml) for more info.  
 Questions about implementation detail are also welcome (in issues).
