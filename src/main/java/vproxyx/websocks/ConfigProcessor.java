@@ -812,7 +812,7 @@ public class ConfigProcessor {
                 }
             }
 
-            ABP abp = new ABP(true);
+            ABP abp = new ABP(false);
             abp.addBase64(content);
             return new ABPDomainChecker(abp);
         } else {
