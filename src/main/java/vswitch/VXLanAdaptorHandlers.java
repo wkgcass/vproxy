@@ -9,6 +9,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
 import vswitch.packet.VProxySwitchPacket;
 import vswitch.packet.VXLanPacket;
@@ -94,6 +95,24 @@ public class VXLanAdaptorHandlers {
         private final DatagramFD switchSock;
         private final Aes256Key passwordKey;
 
+        private ConnectedToVxlanTimer connectedToVxlan = null;
+
+        private static final int toVxlanTimeoutSeconds = 30;
+
+        private class ConnectedToVxlanTimer extends Timer {
+            public ConnectedToVxlanTimer(SelectorEventLoop loop) {
+                super(loop, toVxlanTimeoutSeconds * 1000);
+                Logger.alert("getting packets from vxlan endpoint");
+            }
+
+            @Override
+            public void cancel() {
+                super.cancel();
+                connectedToVxlan = null;
+                Logger.warn(LogType.ALERT, toVxlanTimeoutSeconds + " seconds no packets from vxlan endpoint");
+            }
+        }
+
         public VXLanHandler(DatagramFD switchSock, String password) {
             this.switchSock = switchSock;
             this.passwordKey = new Aes256Key(password);
@@ -131,6 +150,12 @@ public class VXLanAdaptorHandlers {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
                     continue;
                 }
+
+                if (connectedToVxlan == null) {
+                    connectedToVxlan = new ConnectedToVxlanTimer(ctx.getEventLoop());
+                }
+                connectedToVxlan.resetTimer();
+
                 assert Logger.lowLevelDebug("received packet " + p);
                 sendVXLanPacket(p);
             }
@@ -175,6 +200,25 @@ public class VXLanAdaptorHandlers {
         private final DatagramFD vxlanSock;
         private final Aes256Key passwordKey;
 
+        private ConnectedToSwitchTimer connectedToSwitch = null;
+
+        private static final int toSwitchTimeoutSeconds = 60;
+
+        private class ConnectedToSwitchTimer extends Timer {
+
+            public ConnectedToSwitchTimer(SelectorEventLoop loop) {
+                super(loop, toSwitchTimeoutSeconds * 1000);
+                Logger.alert("connected to switch");
+            }
+
+            @Override
+            public void cancel() {
+                super.cancel();
+                connectedToSwitch = null;
+                Logger.warn(LogType.ALERT, toSwitchTimeoutSeconds + " seconds no PING response from switch");
+            }
+        }
+
         public VProxyHandler(DatagramFD switchSock, DatagramFD vxlanSock, SelectorEventLoop loop, String password) {
             this.switchSock = switchSock;
             this.vxlanSock = vxlanSock;
@@ -214,6 +258,12 @@ public class VXLanAdaptorHandlers {
                 if (err != null) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
                     continue;
+                }
+                if (p.type == Consts.VPROXY_SWITCH_TYPE_PING) {
+                    if (connectedToSwitch == null) {
+                        connectedToSwitch = new ConnectedToSwitchTimer(ctx.getEventLoop());
+                    }
+                    connectedToSwitch.resetTimer();
                 }
                 if (p.vxlan == null) {
                     // not vxlan packet, ignore
