@@ -111,7 +111,7 @@ public class DomainBinder {
 
         private void resetTimer(int timeout) {
             if (timeout <= 0) {
-                lastTimeout = timeout;
+                timeout = lastTimeout;
             }
             if (e != null) {
                 e.cancel();
