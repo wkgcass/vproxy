@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.util.Base64;
 
 public class VXLanAdaptorHandlers {
     private static final int PING_PERIOD = 20 * 1000;
@@ -26,7 +27,7 @@ public class VXLanAdaptorHandlers {
     private VXLanAdaptorHandlers() {
     }
 
-    public static void launchGeneralAdaptor(SelectorEventLoop loop, InetSocketAddress switchSockAddr, InetSocketAddress vxlanSockAddr, InetSocketAddress listenAddr, String password) throws IOException {
+    public static void launchGeneralAdaptor(SelectorEventLoop loop, InetSocketAddress switchSockAddr, InetSocketAddress vxlanSockAddr, InetSocketAddress listenAddr, String user, String password) throws IOException {
         DatagramFD switchSock = null;
         DatagramFD vxlanSock = null;
         DatagramFD listenSock = null;
@@ -44,7 +45,7 @@ public class VXLanAdaptorHandlers {
             listenSock.configureBlocking(false);
             listenSock.bind(listenAddr);
 
-            launchGeneralAdaptor(loop, switchSock, vxlanSock, listenSock, password);
+            launchGeneralAdaptor(loop, switchSock, vxlanSock, listenSock, user, password);
         } catch (IOException e) {
             if (switchSock != null) {
                 try {
@@ -71,9 +72,15 @@ public class VXLanAdaptorHandlers {
         }
     }
 
-    public static void launchGeneralAdaptor(SelectorEventLoop loop, DatagramFD switchSock, DatagramFD vxlanSock, DatagramFD listenSock, String password) throws IOException {
-        loop.add(listenSock, EventSet.read(), null, new VXLanHandler(switchSock, password));
-        loop.add(switchSock, EventSet.read(), null, new VProxyHandler(switchSock, vxlanSock, loop, password));
+    public static void launchGeneralAdaptor(SelectorEventLoop loop, DatagramFD switchSock, DatagramFD vxlanSock, DatagramFD listenSock, String user, String password) throws IOException {
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+        if (Base64.getDecoder().decode(user).length != 6) {
+            throw new IllegalArgumentException("invalid user: " + user);
+        }
+        loop.add(listenSock, EventSet.read(), null, new VXLanHandler(switchSock, user, password));
+        loop.add(switchSock, EventSet.read(), null, new VProxyHandler(switchSock, vxlanSock, loop, user, password));
     }
 
     private static void sendVProxyPacket(VProxySwitchPacket p, ByteBuffer sndBuf, DatagramFD connectedSock) {
@@ -93,6 +100,7 @@ public class VXLanAdaptorHandlers {
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
         private final DatagramFD switchSock;
+        private final String user;
         private final Aes256Key passwordKey;
 
         private ConnectedToVxlanTimer connectedToVxlan = null;
@@ -113,8 +121,9 @@ public class VXLanAdaptorHandlers {
             }
         }
 
-        public VXLanHandler(DatagramFD switchSock, String password) {
+        public VXLanHandler(DatagramFD switchSock, String user, String password) {
             this.switchSock = switchSock;
+            this.user = user;
             this.passwordKey = new Aes256Key(password);
         }
 
@@ -162,7 +171,8 @@ public class VXLanAdaptorHandlers {
         }
 
         private void sendVXLanPacket(VXLanPacket vxlan) {
-            VProxySwitchPacket p = new VProxySwitchPacket(passwordKey);
+            VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
+            p.user = user;
             p.magic = Consts.VPROXY_SWITCH_MAGIC;
             p.type = Consts.VPROXY_SWITCH_TYPE_VXLAN;
             p.vxlan = vxlan;
@@ -198,6 +208,7 @@ public class VXLanAdaptorHandlers {
 
         private final DatagramFD switchSock;
         private final DatagramFD vxlanSock;
+        private final String user;
         private final Aes256Key passwordKey;
 
         private ConnectedToSwitchTimer connectedToSwitch = null;
@@ -219,9 +230,10 @@ public class VXLanAdaptorHandlers {
             }
         }
 
-        public VProxyHandler(DatagramFD switchSock, DatagramFD vxlanSock, SelectorEventLoop loop, String password) {
+        public VProxyHandler(DatagramFD switchSock, DatagramFD vxlanSock, SelectorEventLoop loop, String user, String password) {
             this.switchSock = switchSock;
             this.vxlanSock = vxlanSock;
+            this.user = user;
             passwordKey = new Aes256Key(password);
             this.sendPingPacket();
             loop.period(PING_PERIOD, this::sendPingPacket);
@@ -252,12 +264,15 @@ public class VXLanAdaptorHandlers {
                 if (rcvBuf.position() == 0) {
                     break; // nothing read, quit loop
                 }
-                VProxySwitchPacket p = new VProxySwitchPacket(passwordKey);
+                VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
                 String err = p.from(arr);
                 if (err != null) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
                     continue;
+                }
+                if (!p.user.equals(user)) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet mismatch, got " + p.user);
                 }
                 if (p.type == Consts.VPROXY_SWITCH_TYPE_PING) {
                     if (connectedToSwitch == null) {
@@ -275,7 +290,8 @@ public class VXLanAdaptorHandlers {
         }
 
         private void sendPingPacket() {
-            VProxySwitchPacket p = new VProxySwitchPacket(passwordKey);
+            VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
+            p.user = user;
             p.magic = Consts.VPROXY_SWITCH_MAGIC;
             p.type = Consts.VPROXY_SWITCH_TYPE_PING;
             sendVProxyPacket(p, sndBuf, switchSock);

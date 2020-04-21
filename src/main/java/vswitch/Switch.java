@@ -7,10 +7,13 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
+import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
+import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
 import vswitch.packet.AbstractPacket;
 import vswitch.packet.ArpPacket;
@@ -24,16 +27,12 @@ import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
 
 public class Switch {
     public final String alias;
     public final InetSocketAddress vxlanBindingAddress;
-    public final String password;
-    private final Aes256Key passwordKey;
     public final EventLoopGroup eventLoopGroup;
     private int macTableTimeout;
     private int arpTableTimeout;
@@ -41,16 +40,15 @@ public class Switch {
     private boolean started = false;
     private boolean wantStart = false;
 
+    private final ConcurrentHashMap<String, Password> passwords = new ConcurrentHashMap<>();
     private final DatagramFD sock;
     private final Map<Integer, Table> tables = new HashMap<>();
 
-    public Switch(String alias, InetSocketAddress vxlanBindingAddress, String password, EventLoopGroup eventLoopGroup,
+    public Switch(String alias, InetSocketAddress vxlanBindingAddress, EventLoopGroup eventLoopGroup,
                   int macTableTimeout, int arpTableTimeout) throws IOException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
-        this.password = password;
-        this.passwordKey = new Aes256Key(password);
         this.macTableTimeout = macTableTimeout;
         this.arpTableTimeout = arpTableTimeout;
 
@@ -152,6 +150,41 @@ public class Switch {
         return tables;
     }
 
+    public void addUser(String user, String password) throws AlreadyExistException, XException {
+        char[] chars = user.toCharArray();
+        if (chars.length < 3 || chars.length > 8) {
+            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
+        }
+        for (char c : chars) {
+            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
+                throw new XException("invalid user, should only contain a-zA-Z0-9");
+            }
+        }
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+
+        Aes256Key key = new Aes256Key(password);
+        Password old = passwords.putIfAbsent(user, new Password(key, password));
+        if (old != null) {
+            throw new AlreadyExistException("the user " + user + " already exists in switch " + alias);
+        }
+    }
+
+    public void delUser(String user) throws NotFoundException {
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+        Password x = passwords.remove(user);
+        if (x == null) {
+            throw new NotFoundException("user in switch " + alias, user);
+        }
+    }
+
+    public Map<String, Password> getUsers() {
+        return new LinkedHashMap<>(passwords);
+    }
+
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {
         @Override
         public String id() {
@@ -172,6 +205,22 @@ public class Switch {
         @Override
         public void onClose() {
             destroy();
+        }
+    }
+
+    private Aes256Key getKey(String name) {
+        var x = passwords.get(name);
+        if (x == null) return null;
+        return x.key;
+    }
+
+    public static class Password {
+        public final Aes256Key key;
+        public final String pass;
+
+        public Password(Aes256Key key, String pass) {
+            this.key = key;
+            this.pass = pass;
         }
     }
 
@@ -207,16 +256,16 @@ public class Switch {
                 if (rcvBuf.position() == 0) {
                     break; // nothing read, quit loop
                 }
-                Iface iface = new Iface(remote);
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                var packet = new VProxySwitchPacket(passwordKey);
+                var packet = new VProxySwitchPacket(Switch.this::getKey);
                 String err = packet.from(data);
                 if (err != null) {
                     assert Logger.lowLevelDebug("invalid packet: " + err + ", drop it");
                     continue;
                 }
+                Iface iface = new Iface(packet.user, remote);
                 assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
 
                 var timer = ifaces.get(iface);
@@ -228,7 +277,7 @@ public class Switch {
 
                 if (packet.vxlan == null) {
                     if (packet.type == Consts.VPROXY_SWITCH_TYPE_PING) {
-                        sendPingTo(remote);
+                        sendPingTo(iface);
                     }
                     continue;
                 }
@@ -277,7 +326,7 @@ public class Switch {
                 Set<Iface> forwardBroadcastIfaces = new HashSet<>(ifaces.keySet());
                 forwardBroadcastIfaces.remove(inputIface);
                 for (var iface : forwardBroadcastIfaces) {
-                    sendVXLanTo(iface.udpSockAddress, vxlan);
+                    sendVXLanTo(iface, vxlan);
                 }
             } else {
                 Iface iface = table.macTable.lookup(dst);
@@ -285,34 +334,41 @@ public class Switch {
                     // not found, drop
                     return;
                 }
-                sendVXLanTo(iface.udpSockAddress, vxlan);
+                sendVXLanTo(iface, vxlan);
             }
         }
 
-        private void sendPingTo(InetSocketAddress inet) {
-            VProxySwitchPacket p = new VProxySwitchPacket(passwordKey);
+        private void sendPingTo(Iface iface) {
+            VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
             p.magic = Consts.VPROXY_SWITCH_MAGIC;
             p.type = Consts.VPROXY_SWITCH_TYPE_PING;
-            sendVProxyPacketTo(inet, p);
+            sendVProxyPacketTo(iface, p);
         }
 
-        private void sendVXLanTo(InetSocketAddress inet, VXLanPacket vxlan) {
-            VProxySwitchPacket p = new VProxySwitchPacket(passwordKey);
+        private void sendVXLanTo(Iface iface, VXLanPacket vxlan) {
+            VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
             p.magic = Consts.VPROXY_SWITCH_MAGIC;
             p.type = Consts.VPROXY_SWITCH_TYPE_VXLAN;
             p.vxlan = vxlan;
-            sendVProxyPacketTo(inet, p);
+            sendVProxyPacketTo(iface, p);
         }
 
-        private void sendVProxyPacketTo(InetSocketAddress inet, VProxySwitchPacket p) {
-            byte[] bytes = p.getRawPacket().toJavaArray();
+        private void sendVProxyPacketTo(Iface iface, VProxySwitchPacket p) {
+            p.user = iface.user;
+            byte[] bytes;
+            try {
+                bytes = p.getRawPacket().toJavaArray();
+            } catch (IllegalArgumentException e) {
+                assert Logger.lowLevelDebug("encode packet failed, maybe because of a deleted user: " + e);
+                return;
+            }
             sndBuf.limit(sndBuf.capacity()).position(0);
             sndBuf.put(bytes);
             sndBuf.flip();
             try {
-                sock.send(sndBuf, inet);
+                sock.send(sndBuf, iface.udpSockAddress);
             } catch (IOException e) {
-                Logger.error(LogType.CONN_ERROR, "sending udp packet to " + inet + " using " + sock + " failed", e);
+                Logger.error(LogType.CONN_ERROR, "sending udp packet to " + iface.udpSockAddress + " using " + sock + " failed", e);
             }
         }
 

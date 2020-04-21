@@ -25,14 +25,13 @@ public class SwitchHolder {
 
     public void add(String alias,
                     InetSocketAddress vxlanBindingAddress,
-                    String password,
                     EventLoopGroup eventLoopGroup,
                     int macTableTimeout,
                     int arpTableTimeout) throws AlreadyExistException, ClosedException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("switch", alias);
 
-        Switch sw = new Switch(alias, vxlanBindingAddress, password, eventLoopGroup, macTableTimeout, arpTableTimeout);
+        Switch sw = new Switch(alias, vxlanBindingAddress, eventLoopGroup, macTableTimeout, arpTableTimeout);
         try {
             sw.start();
         } catch (IOException e) {

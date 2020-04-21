@@ -1206,14 +1206,13 @@ public class HelpCommand {
                 new ResActMan(ActMan.add, "create a switch",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.address, "binding udp address of the switch for wrapped vxlan packets"),
-                        new ResActParamMan(ParamMan.pass, "password of the wrapped vxlan packets"),
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "" + SwitchHandle.MAC_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     ),
                     Collections.singletonList(
                         new Tuple<>(
-                            "add switch sw0 address 0.0.0.0:4789 password p@sSw0rD",
+                            "add switch sw0 address 0.0.0.0:4789",
                             "\"OK\""
                         )
                     )),
@@ -1281,6 +1280,29 @@ public class HelpCommand {
                         "list-detail arp in vni 1314 in switch sw0",
                         "1) \"aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299\"\n" +
                             "2) \"fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299\""
+                    )
+                ))
+            )),
+        user("user", null, "user in a switch",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "list user names in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list user in switch sw0",
+                        "1) \"hello+++\""
+                    )
+                )),
+                new ResActMan(ActMan.add, "add a user to a switch", Collections.singletonList(
+                    new ResActParamMan(ParamMan.pass, "password of the user")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add user hello to switch sw0",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove user hello from switch sw0",
+                        "\"OK\""
                     )
                 ))
             )),

@@ -1,6 +1,7 @@
 package vswitch.util;
 
 public class Consts {
+    public static final String USER_PADDING = "+";
     public static final int VPROXY_SWITCH_MAGIC = 0x8776;
     public static final int VPROXY_SWITCH_TYPE_PING = 2;
     public static final int VPROXY_SWITCH_TYPE_VXLAN = 1;

@@ -600,11 +600,17 @@ public class Shutdown {
                 }
                 String cmd = "add switch " + sw.alias
                     + " address " + Utils.l4addrStr(sw.vxlanBindingAddress)
-                    + " password " + sw.password
                     + " mac-table-timeout " + sw.getMacTableTimeout()
                     + " arp-table-timeout " + sw.getArpTableTimeout()
                     + " event-loop-group " + sw.eventLoopGroup.alias;
                 commands.add(cmd);
+
+                // create users
+                Map<String, Switch.Password> users = sw.getUsers();
+                for (var entry : users.entrySet()) {
+                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass;
+                    commands.add(cmd);
+                }
             }
         }
         StringBuilder sb = new StringBuilder();

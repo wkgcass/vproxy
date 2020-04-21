@@ -18,6 +18,7 @@ public class VniHandle {
             throw new Exception("cannot find " + ResourceType.vni.fullname + " on top level");
         if (parent.type != ResourceType.sw)
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.vni.fullname);
+        SwitchHandle.checkSwitch(parent);
     }
 
     public static void checkVniName(Resource self) throws Exception {

@@ -31,8 +31,6 @@ public class SwitchHandle {
     public static void checkCreateSwitch(Command cmd) throws Exception {
         if (!cmd.args.containsKey(Param.addr))
             throw new Exception("missing argument " + Param.addr.fullname);
-        if (!cmd.args.containsKey(Param.pass))
-            throw new Exception("missing argument " + Param.pass.fullname);
 
         AddrHandle.check(cmd);
 
@@ -71,7 +69,6 @@ public class SwitchHandle {
         String alias = cmd.resource.alias;
         EventLoopGroup eventLoopGroup = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         InetSocketAddress addr = AddrHandle.get(cmd);
-        String pass = cmd.args.get(Param.pass);
         int macTableTimeout;
         if (cmd.args.containsKey(Param.mactabletimeout)) {
             macTableTimeout = TimeoutHandle.get(cmd, Param.mactabletimeout);
@@ -84,7 +81,7 @@ public class SwitchHandle {
         } else {
             arpTableTimeout = ARP_TABLE_TIMEOUT;
         }
-        Application.get().switchHolder.add(alias, addr, pass, eventLoopGroup, macTableTimeout, arpTableTimeout);
+        Application.get().switchHolder.add(alias, addr, eventLoopGroup, macTableTimeout, arpTableTimeout);
     }
 
     public static void checkUpdateSwitch(Command cmd) throws Exception {
@@ -124,7 +121,6 @@ public class SwitchHandle {
         public String toString() {
             return sw.alias + " -> event-loop-group " + sw.eventLoopGroup.alias
                 + " bind " + Utils.l4addrStr(sw.vxlanBindingAddress)
-                + " password " + sw.password
                 + " mac-table-timeout " + sw.getMacTableTimeout()
                 + " arp-table-timeout " + sw.getArpTableTimeout();
         }

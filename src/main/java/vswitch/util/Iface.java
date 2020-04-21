@@ -6,9 +6,11 @@ import java.net.InetSocketAddress;
 import java.util.Objects;
 
 public class Iface {
+    public final String user;
     public final InetSocketAddress udpSockAddress;
 
-    public Iface(InetSocketAddress udpSockAddress) {
+    public Iface(String user, InetSocketAddress udpSockAddress) {
+        this.user = user;
         this.udpSockAddress = udpSockAddress;
     }
 
@@ -17,16 +19,17 @@ public class Iface {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Iface iface = (Iface) o;
-        return Objects.equals(udpSockAddress, iface.udpSockAddress);
+        return Objects.equals(user, iface.user) &&
+            Objects.equals(udpSockAddress, iface.udpSockAddress);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(udpSockAddress);
+        return Objects.hash(user, udpSockAddress);
     }
 
     @Override
     public String toString() {
-        return "Iface(" + Utils.l4addrStr(udpSockAddress) + ')';
+        return "Iface(" + user + ", " + Utils.l4addrStr(udpSockAddress) + ')';
     }
 }

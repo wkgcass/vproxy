@@ -3,17 +3,20 @@ package vproxyx;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Utils;
 import vswitch.VXLanAdaptorHandlers;
+import vswitch.util.Consts;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
+import java.util.Base64;
 
 public class VXLanAdaptor {
     private static final String HELP_STR = "" +
-        "usage: switch={} vxlan={} listen={} password={}\n" +
+        "usage: switch={} vxlan={} listen={} user={} password={}\n" +
         "       switch:   ip:port of the switch\n" +
         "       vxlan:    ip:port to send vxlan packet\n" +
         "       listen:   ip:port of the listening socket for vxlan packets\n" +
-        "       password: the same password that the switch is using" +
+        "       user:     the user of your account\n" +
+        "       password: the password for your account" +
         "";
 
     public static void main0(String[] args) {
@@ -33,6 +36,7 @@ public class VXLanAdaptor {
         String sw = null;
         String vxlan = null;
         String listen = null;
+        String user = null;
         String password = null;
 
         for (String arg : args) {
@@ -42,6 +46,8 @@ public class VXLanAdaptor {
                 vxlan = arg.substring("vxlan=".length()).trim();
             } else if (arg.startsWith("listen=")) {
                 listen = arg.substring("listen=".length()).trim();
+            } else if (arg.startsWith("user=")) {
+                user = arg.substring("user=".length()).trim();
             } else if (arg.startsWith("password=")) {
                 password = arg.substring("password=".length()).trim();
             } else {
@@ -63,6 +69,11 @@ public class VXLanAdaptor {
         }
         if (listen == null) {
             System.out.println("missing argument listen=...");
+            System.exit(1);
+            return;
+        }
+        if (user == null) {
+            System.out.println("missing argument user=...");
             System.exit(1);
             return;
         }
@@ -96,6 +107,27 @@ public class VXLanAdaptor {
             System.exit(1);
             return;
         }
+        if (user.isBlank()) {
+            System.out.println("invalid argument user: should not be empty");
+            System.exit(1);
+            return;
+        }
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+        byte[] userBytes;
+        try {
+            userBytes = Base64.getDecoder().decode(user);
+        } catch (IllegalArgumentException e) {
+            System.out.println("invalid argument user: format invalid");
+            System.exit(1);
+            return;
+        }
+        if (userBytes.length != 6) {
+            System.out.println("invalid argument user: format invalid");
+            System.exit(1);
+            return;
+        }
         if (password.isBlank()) {
             System.out.println("invalid argument password: should not be empty");
             System.exit(1);
@@ -111,7 +143,7 @@ public class VXLanAdaptor {
             return;
         }
         try {
-            VXLanAdaptorHandlers.launchGeneralAdaptor(loop, inetSw, inetVxlan, inetListen, password);
+            VXLanAdaptorHandlers.launchGeneralAdaptor(loop, inetSw, inetVxlan, inetListen, user, password);
         } catch (IOException e) {
             System.out.println(Utils.formatErr(e));
             System.exit(1);

@@ -665,6 +665,20 @@ public class Command {
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
                 }
                 break;
+            case user:
+                switch (cmd.action) {
+                    case a:
+                        UserHandle.checkCreateUser(cmd);
+                    case r:
+                    case R:
+                    case L:
+                    case l:
+                        UserHandle.checkUser(targetResource);
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             default:
                 throw new Exception("unknown resource type " + cmd.resource.type.fullname);
         }
@@ -1000,6 +1014,20 @@ public class Command {
                         List<ArpHandle.ArpEntry> arpLs = ArpHandle.list(targetResource);
                         List<Object> ls = arpLs.stream().map(Object::toString).collect(Collectors.toList());
                         return new CmdResult(arpLs, ls, utilJoinList(ls));
+                }
+            case user:
+                switch (action) {
+                    case l:
+                    case L:
+                        List<String> users = UserHandle.list(targetResource);
+                        return new CmdResult(users, users, utilJoinList(users));
+                    case a:
+                        UserHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        UserHandle.forceRemove(this);
+                        return new CmdResult();
                 }
             case ck:
                 switch (action) {
