@@ -4,6 +4,7 @@ package vproxy.dns;
 public enum DNSType {
     A(1), // a host addressX)
     CNAME(5), // the canonical name for an alias
+    PTR(12),
     TXT(16), // text strings
     AAAA(28), // ipv6
     SRV(33), // Server Selection

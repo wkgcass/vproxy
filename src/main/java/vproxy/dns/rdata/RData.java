@@ -17,6 +17,8 @@ public interface RData {
                 return new TXT();
             case SRV:
                 return new SRV();
+            case PTR:
+                return new PTR();
             default:
                 return null;
         }
