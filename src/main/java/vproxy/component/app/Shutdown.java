@@ -608,7 +608,7 @@ public class Shutdown {
                 // create users
                 Map<String, Switch.Password> users = sw.getUsers();
                 for (var entry : users.entrySet()) {
-                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass;
+                    cmd = "add user " + entry.getKey().replace("+", "") + " to switch " + sw.alias + " password " + entry.getValue().pass;
                     commands.add(cmd);
                 }
             }
