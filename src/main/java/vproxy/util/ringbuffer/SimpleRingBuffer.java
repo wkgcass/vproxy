@@ -133,6 +133,8 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     @Override
     public byte[] getBytes() {
+        ensureBufferAvailable();
+
         int len = used();
         byte[] arr = new byte[len];
         if (len == 0)
@@ -198,9 +200,17 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
     }
 
+    private void ensureBufferAvailable() {
+        if (cleaned) {
+            throw new IllegalStateException("this buffer is already cleaned");
+        }
+    }
+
     // clear the buffer
     @Override
     public void clear() {
+        ensureBufferAvailable();
+
         byte[] b = new byte[capacity()];
         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
 
@@ -237,6 +247,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         if (operatingBuffer) {
             throw new IllegalStateException("this buffer is operating");
         }
+        ensureBufferAvailable();
 
         boolean firstOperator = isFirstOperate();
         operatingBuffer = true;
@@ -330,6 +341,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         if (operatingBuffer) {
             throw new IllegalStateException("this buffer is operating");
         }
+        ensureBufferAvailable();
 
         boolean firstOperator = isFirstOperate();
         operatingBuffer = true;
@@ -418,6 +430,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     public void defragment() {
         if (operating)
             throw new IllegalStateException("cannot perform defragment when it's operating");
+        ensureBufferAvailable();
 
         if (sPos == 0)
             return; // no need to defragment if sPos is already 0
