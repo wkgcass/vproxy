@@ -23,7 +23,7 @@ public class SecurityGroupRuleHandle {
         if (!cmd.args.containsKey(Param.net))
             throw new Exception("missing argument " + Param.net.fullname);
         if (!cmd.args.containsKey(Param.protocol))
-            throw new Exception("missing argument " + Param.net.fullname);
+            throw new Exception("missing argument " + Param.protocol.fullname);
         if (!cmd.args.containsKey(Param.portrange))
             throw new Exception("missing argument " + Param.portrange.fullname);
         if (!cmd.args.containsKey(Param.secgrdefault))

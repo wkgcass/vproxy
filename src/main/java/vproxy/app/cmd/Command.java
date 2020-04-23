@@ -13,6 +13,7 @@ import vproxy.util.Callback;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
+import vswitch.util.Iface;
 
 import java.lang.reflect.Field;
 import java.util.*;
@@ -647,6 +648,7 @@ public class Command {
                 break;
             case arp:
             case vni:
+            case iface:
                 switch (cmd.action) {
                     case a:
                     case r:
@@ -656,6 +658,8 @@ public class Command {
                     case l:
                         if (cmd.resource.type == ResourceType.arp) {
                             ArpHandle.checkArp(targetResource);
+                        } else if (cmd.resource.type == ResourceType.iface) {
+                            IfaceHandle.checkIface(targetResource);
                         } else {
                             assert targetResource.type == ResourceType.vni;
                             VniHandle.checkVni(targetResource);
@@ -1004,6 +1008,16 @@ public class Command {
                         List<VniHandle.VniEntry> vniLs = VniHandle.list(targetResource);
                         List<Object> ls = vniLs.stream().map(e -> e.vni).collect(Collectors.toList());
                         return new CmdResult(vniLs, ls, utilJoinList(ls));
+                }
+            case iface:
+                switch (action) {
+                    case l:
+                        int cnt = IfaceHandle.count(targetResource);
+                        return new CmdResult(cnt, cnt, "" + cnt);
+                    case L:
+                        List<Iface> ifaces = IfaceHandle.list(targetResource);
+                        List<Object> ls = ifaces.stream().map(Iface::toString).collect(Collectors.toList());
+                        return new CmdResult(ifaces, ls, utilJoinList(ls));
                 }
             case arp:
                 switch (action) {

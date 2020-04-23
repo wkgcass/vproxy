@@ -598,11 +598,21 @@ public class Shutdown {
                     assert Logger.printStackTrace(e);
                     continue;
                 }
+
+                // check depended resources
+                if (!securityGroupNames.contains(sw.bareVXLanAccess.alias) && !sw.bareVXLanAccess.alias.equals(SecurityGroup.defaultName)) {
+                    Logger.warn(LogType.IMPROPER_USE, "the secg " + sw.bareVXLanAccess.alias + " already removed");
+                    continue;
+                }
+
                 String cmd = "add switch " + sw.alias
                     + " address " + Utils.l4addrStr(sw.vxlanBindingAddress)
                     + " mac-table-timeout " + sw.getMacTableTimeout()
                     + " arp-table-timeout " + sw.getArpTableTimeout()
                     + " event-loop-group " + sw.eventLoopGroup.alias;
+                if (!sw.bareVXLanAccess.alias.equals(SecurityGroup.defaultName)) {
+                    cmd += " security-group " + sw.bareVXLanAccess.alias;
+                }
                 commands.add(cmd);
 
                 // create users

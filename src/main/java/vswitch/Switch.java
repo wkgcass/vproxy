@@ -9,6 +9,8 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
+import vproxy.component.secure.SecurityGroup;
+import vproxy.connection.Protocol;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
@@ -36,6 +38,7 @@ public class Switch {
     public final EventLoopGroup eventLoopGroup;
     private int macTableTimeout;
     private int arpTableTimeout;
+    public SecurityGroup bareVXLanAccess;
 
     private boolean started = false;
     private boolean wantStart = false;
@@ -43,14 +46,16 @@ public class Switch {
     private final ConcurrentHashMap<String, Password> passwords = new ConcurrentHashMap<>();
     private final DatagramFD sock;
     private final Map<Integer, Table> tables = new HashMap<>();
+    private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
     public Switch(String alias, InetSocketAddress vxlanBindingAddress, EventLoopGroup eventLoopGroup,
-                  int macTableTimeout, int arpTableTimeout) throws IOException, ClosedException {
+                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws IOException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.macTableTimeout = macTableTimeout;
         this.arpTableTimeout = arpTableTimeout;
+        this.bareVXLanAccess = bareVXLanAccess;
 
         sock = FDProvider.get().openDatagramFD();
         try {
@@ -97,8 +102,12 @@ public class Switch {
         started = true;
     }
 
-    private void restart() {
+    private void checkAndRestart() { // this method is only called when selected event loop closes, so no need to remove handler
         started = false;
+        cancelAllIface();
+        if (!wantStart) {
+            return;
+        }
         try {
             start();
         } catch (IOException e) {
@@ -106,12 +115,17 @@ public class Switch {
         }
     }
 
+    private void cancelAllIface() {
+        var set = Set.copyOf(ifaces.values());
+        set.forEach(IfaceTimer::cancel);
+    }
+
     public synchronized void stop() {
         wantStart = false;
         if (!started) {
             return;
         }
-        releaseSock();
+        cancelAllIface();
         for (var tbl : tables.values()) {
             tbl.clear();
         }
@@ -120,8 +134,9 @@ public class Switch {
     }
 
     public synchronized void destroy() {
-        stop();
+        wantStart = false;
         releaseSock();
+        stop();
     }
 
     public int getMacTableTimeout() {
@@ -148,6 +163,10 @@ public class Switch {
 
     public Map<Integer, Table> getTables() {
         return tables;
+    }
+
+    public List<Iface> getIfaces() {
+        return new ArrayList<>(ifaces.keySet());
     }
 
     public void addUser(String user, String password) throws AlreadyExistException, XException {
@@ -229,8 +248,6 @@ public class Switch {
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
-        private Map<Iface, IfaceTimer> ifaces = new HashMap<>();
-
         @Override
         public void accept(HandlerContext<DatagramFD> ctx) {
             // will not fire
@@ -239,6 +256,51 @@ public class Switch {
         @Override
         public void connected(HandlerContext<DatagramFD> ctx) {
             // will not fire
+        }
+
+        private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(SelectorEventLoop loop, InetSocketAddress remote, ByteArray data) {
+            VProxySwitchPacket packet = new VProxySwitchPacket(Switch.this::getKey);
+            VXLanPacket vxLanPacket;
+            Iface iface;
+
+            String err = packet.from(data);
+            if (err == null) {
+                iface = new Iface(packet.user, remote);
+
+                assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
+
+                vxLanPacket = packet.vxlan;
+
+                if (packet.type == Consts.VPROXY_SWITCH_TYPE_PING) {
+                    sendPingTo(iface);
+                }
+                // fall through
+            } else {
+                if (bareVXLanAccess.allow(Protocol.UDP, remote.getAddress(), remote.getPort())) {
+                    // try to parse into vxlan directly
+                    vxLanPacket = new VXLanPacket();
+                    err = vxLanPacket.from(data);
+                    if (err != null) {
+                        assert Logger.lowLevelDebug("invalid packet for vxlan: " + err + ", drop it");
+                        return null;
+                    }
+                    iface = new Iface(remote);
+                    assert Logger.lowLevelDebug("got vxlan packet " + vxLanPacket + " from " + iface);
+                    // fall through
+                } else {
+                    assert Logger.lowLevelDebug("invalid packet: " + err + ", drop it");
+                    return null;
+                }
+            }
+
+            var timer = ifaces.get(iface);
+            if (timer == null) {
+                timer = new IfaceTimer(loop, IFACE_TIMEOUT, iface);
+                timer.record();
+            }
+            timer.resetTimer();
+
+            return new Tuple<>(vxLanPacket, iface);
         }
 
         @Override
@@ -259,36 +321,24 @@ public class Switch {
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                var packet = new VProxySwitchPacket(Switch.this::getKey);
-                String err = packet.from(data);
-                if (err != null) {
-                    assert Logger.lowLevelDebug("invalid packet: " + err + ", drop it");
+                var tuple = handleNetworkAndGetVXLanPacket(ctx.getEventLoop(), remote, data);
+                if (tuple == null) {
                     continue;
                 }
-                Iface iface = new Iface(packet.user, remote);
-                assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
-
-                var timer = ifaces.get(iface);
-                if (timer == null) {
-                    timer = new IfaceTimer(ctx.getEventLoop(), IFACE_TIMEOUT, iface);
-                    timer.record();
-                }
-                timer.resetTimer();
-
-                if (packet.vxlan == null) {
-                    if (packet.type == Consts.VPROXY_SWITCH_TYPE_PING) {
-                        sendPingTo(iface);
-                    }
+                var vxlan = tuple.left;
+                var iface = tuple.right;
+                if (vxlan == null) {
                     continue;
                 }
-                int vni = packet.vxlan.vni;
+
+                int vni = vxlan.vni;
                 Table table = tables.get(vni);
                 if (table == null) {
                     table = new Table(vni, ctx.getEventLoop(), macTableTimeout, arpTableTimeout);
                     tables.put(vni, table);
                 }
 
-                handleVxlan(packet.vxlan, table, iface);
+                handleVxlan(vxlan, table, iface);
             }
         }
 
@@ -354,10 +404,24 @@ public class Switch {
         }
 
         private void sendVProxyPacketTo(Iface iface, VProxySwitchPacket p) {
-            p.user = iface.user;
+            AbstractPacket packetToSend;
+
+            if (iface.user == null) {
+                if (p.vxlan == null) {
+                    Logger.error(LogType.IMPROPER_USE, "want to send packet to " + iface + " with " + p + ", but both user and vxlan packet are null");
+                    return;
+                }
+                // user == null means it's bare vxlan
+                // directly send
+                packetToSend = p.vxlan;
+            } else {
+                p.user = iface.user;
+                packetToSend = p;
+            }
+
             byte[] bytes;
             try {
-                bytes = p.getRawPacket().toJavaArray();
+                bytes = packetToSend.getRawPacket().toJavaArray();
             } catch (IllegalArgumentException e) {
                 assert Logger.lowLevelDebug("encode packet failed, maybe because of a deleted user: " + e);
                 return;
@@ -380,34 +444,34 @@ public class Switch {
         @Override
         public void removed(HandlerContext<DatagramFD> ctx) {
             assert Logger.lowLevelDebug("udp sock " + ctx.getChannel() + " removed from loop");
-            restart();
+            checkAndRestart();
+        }
+    }
+
+    private class IfaceTimer extends Timer {
+        final Iface iface;
+
+        public IfaceTimer(SelectorEventLoop loop, int timeout, Iface iface) {
+            super(loop, timeout);
+            this.iface = iface;
         }
 
-        private class IfaceTimer extends Timer {
-            final Iface iface;
+        void record() {
+            ifaces.put(iface, this);
+            Logger.alert(iface + " connected to Switch:" + alias);
+            resetTimer();
+        }
 
-            public IfaceTimer(SelectorEventLoop loop, int timeout, Iface iface) {
-                super(loop, timeout);
-                this.iface = iface;
+        @Override
+        public void cancel() {
+            super.cancel();
+
+            ifaces.remove(iface);
+
+            for (var table : tables.values()) {
+                table.macTable.disconnect(iface);
             }
-
-            void record() {
-                ifaces.put(iface, this);
-                Logger.alert(iface + " connected to Switch:" + alias);
-                resetTimer();
-            }
-
-            @Override
-            public void cancel() {
-                super.cancel();
-
-                ifaces.remove(iface);
-
-                for (var table : tables.values()) {
-                    table.macTable.disconnect(iface);
-                }
-                Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
-            }
+            Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
         }
     }
 }

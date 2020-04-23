@@ -2,6 +2,7 @@ package vproxy.app.cmd;
 
 import vproxy.app.Application;
 import vproxy.app.cmd.handle.resource.SwitchHandle;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.util.Tuple;
 
 import java.util.Arrays;
@@ -1208,7 +1209,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.address, "binding udp address of the switch for wrapped vxlan packets"),
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "" + SwitchHandle.MAC_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
-                        new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
+                        new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
+                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", SecurityGroup.defaultName)
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1219,7 +1221,8 @@ public class HelpCommand {
                 new ResActMan(ActMan.update, "update a switch",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
-                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed")
+                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
+                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1240,7 +1243,7 @@ public class HelpCommand {
                     Collections.singletonList(
                         new Tuple<>(
                             "list-detail switch",
-                            "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000"
+                            "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all)"
                         )
                     )),
                 new ResActMan(ActMan.remove, "stop and remove a switch",
@@ -1264,6 +1267,22 @@ public class HelpCommand {
                     new Tuple<>(
                         "list-detail vni in switch sw0",
                         "1) (integer) 1314"
+                    )
+                ))
+            )),
+        iface("iface", null, "connected interfaces",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "count currently connected interfaces in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list iface in switch sw0",
+                        "(integer) 2"
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "list current connected interfaces in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail iface in switch sw0",
+                        "1) \"Iface(192.168.56.2:8472)\"\n" +
+                            "2) \"Iface(100.64.0.4:8472)\""
                     )
                 ))
             )),

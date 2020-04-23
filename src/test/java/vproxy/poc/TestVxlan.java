@@ -1,6 +1,7 @@
 package vproxy.poc;
 
 import vproxy.component.elgroup.EventLoopGroup;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.selector.SelectorEventLoop;
 import vswitch.Switch;
 import vswitch.VXLanAdaptorHandlers;
@@ -22,7 +23,7 @@ public class TestVxlan {
         elg.add("el0");
         SelectorEventLoop loop = elg.next().getSelectorEventLoop();
 
-        Switch sw = new Switch("sw0", new InetSocketAddress(swListen), elg, timeout, timeout);
+        Switch sw = new Switch("sw0", new InetSocketAddress(swListen), elg, timeout, timeout, SecurityGroup.allowAll());
         sw.addUser(user, pass);
         sw.start();
 

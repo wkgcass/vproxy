@@ -9,6 +9,11 @@ public class Iface {
     public final String user;
     public final InetSocketAddress udpSockAddress;
 
+    public Iface(InetSocketAddress udpSockAddress) {
+        this.user = null;
+        this.udpSockAddress = udpSockAddress;
+    }
+
     public Iface(String user, InetSocketAddress udpSockAddress) {
         this.user = user;
         this.udpSockAddress = udpSockAddress;
@@ -30,6 +35,10 @@ public class Iface {
 
     @Override
     public String toString() {
-        return "Iface(" + user + ", " + Utils.l4addrStr(udpSockAddress) + ')';
+        if (user == null) {
+            return "Iface(" + Utils.l4addrStr(udpSockAddress) + ')';
+        } else {
+            return "Iface(" + user + ", " + Utils.l4addrStr(udpSockAddress) + ')';
+        }
     }
 }

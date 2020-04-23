@@ -8,6 +8,7 @@ import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.secure.SecurityGroup;
 import vproxy.util.Utils;
 import vswitch.Switch;
 
@@ -81,7 +82,13 @@ public class SwitchHandle {
         } else {
             arpTableTimeout = ARP_TABLE_TIMEOUT;
         }
-        Application.get().switchHolder.add(alias, addr, eventLoopGroup, macTableTimeout, arpTableTimeout);
+        SecurityGroup bareVXLanAccess;
+        if (cmd.args.containsKey(Param.secg)) {
+            bareVXLanAccess = SecurityGroupHandle.get(cmd.args.get(Param.secg));
+        } else {
+            bareVXLanAccess = SecurityGroup.allowAll();
+        }
+        Application.get().switchHolder.add(alias, addr, eventLoopGroup, macTableTimeout, arpTableTimeout, bareVXLanAccess);
     }
 
     public static void checkUpdateSwitch(Command cmd) throws Exception {
@@ -104,6 +111,9 @@ public class SwitchHandle {
             int arpTableTimeout = TimeoutHandle.get(cmd, Param.arptabletimeout);
             sw.setArpTableTimeout(arpTableTimeout);
         }
+        if (cmd.args.containsKey(Param.secg)) {
+            sw.bareVXLanAccess = SecurityGroupHandle.get(cmd.args.get(Param.secg));
+        }
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -122,7 +132,8 @@ public class SwitchHandle {
             return sw.alias + " -> event-loop-group " + sw.eventLoopGroup.alias
                 + " bind " + Utils.l4addrStr(sw.vxlanBindingAddress)
                 + " mac-table-timeout " + sw.getMacTableTimeout()
-                + " arp-table-timeout " + sw.getArpTableTimeout();
+                + " arp-table-timeout " + sw.getArpTableTimeout()
+                + " bare-vxlan-access " + sw.bareVXLanAccess.alias;
         }
     }
 }

@@ -24,6 +24,7 @@ public enum ResourceType {
     sw("switch"),
     vni("vni"),
     arp("arp"),
+    iface("iface"),
     user("user"),
 
     respcontroller("resp-controller"),
