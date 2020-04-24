@@ -172,10 +172,10 @@ public class VXLanAdaptorHandlers {
 
         private void sendVXLanPacket(VXLanPacket vxlan) {
             VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
-            p.user = user;
-            p.magic = Consts.VPROXY_SWITCH_MAGIC;
-            p.type = Consts.VPROXY_SWITCH_TYPE_VXLAN;
-            p.vxlan = vxlan;
+            p.setUser(user);
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
+            p.setVxlan(vxlan);
             sendVProxyPacket(p);
         }
 
@@ -271,29 +271,29 @@ public class VXLanAdaptorHandlers {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
                     continue;
                 }
-                if (!p.user.equals(user)) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet mismatch, got " + p.user);
+                if (!p.getUser().equals(user)) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet mismatch, got " + p.getUser());
                 }
-                if (p.type == Consts.VPROXY_SWITCH_TYPE_PING) {
+                if (p.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
                     if (connectedToSwitch == null) {
                         connectedToSwitch = new ConnectedToSwitchTimer(ctx.getEventLoop());
                     }
                     connectedToSwitch.resetTimer();
                 }
-                if (p.vxlan == null) {
+                if (p.getVxlan() == null) {
                     // not vxlan packet, ignore
                     continue;
                 }
-                ByteArray vxlan = p.vxlan.getRawPacket();
+                ByteArray vxlan = p.getVxlan().getRawPacket();
                 sendToVxlan(vxlan);
             }
         }
 
         private void sendPingPacket() {
             VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
-            p.user = user;
-            p.magic = Consts.VPROXY_SWITCH_MAGIC;
-            p.type = Consts.VPROXY_SWITCH_TYPE_PING;
+            p.setUser(user);
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
             sendVProxyPacket(p, sndBuf, switchSock);
         }
 

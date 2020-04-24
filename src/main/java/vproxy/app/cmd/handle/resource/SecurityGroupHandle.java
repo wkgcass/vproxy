@@ -67,6 +67,21 @@ public class SecurityGroupHandle {
                 throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.tl.fullname + " " + ref.tcpLB.alias);
             }
         }
+        for (var ref : Socks5ServerHandle.details()) {
+            if (ref.socks5.securityGroup.alias.equals(cmd.resource.alias)) {
+                throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.socks5.fullname + " " + ref.socks5.alias);
+            }
+        }
+        for (var ref : DNSServerHandle.details()) {
+            if (ref.dnsServer.securityGroup.alias.equals(cmd.resource.alias)) {
+                throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.dns.fullname + " " + ref.dnsServer.alias);
+            }
+        }
+        for (var ref : SwitchHandle.details()) {
+            if (ref.sw.bareVXLanAccess.alias.equals(cmd.resource.alias)) {
+                throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.sw.fullname + " " + ref.sw.alias);
+            }
+        }
     }
 
     public static void forceRemove(Command cmd) throws NotFoundException {

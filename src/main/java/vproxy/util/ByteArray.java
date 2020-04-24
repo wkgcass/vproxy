@@ -1,9 +1,6 @@
 package vproxy.util;
 
-import vproxy.util.bytearray.CompositeByteArray;
-import vproxy.util.bytearray.OneByteArray;
-import vproxy.util.bytearray.SimpleByteArray;
-import vproxy.util.bytearray.SubByteArray;
+import vproxy.util.bytearray.*;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.nio.ByteBuffer;
@@ -12,7 +9,7 @@ import java.nio.ByteBuffer;
 public interface ByteArray {
     static ByteArray allocate(int len) {
         if (len == 0) {
-            throw new IllegalArgumentException();
+            return AbstractByteArray.EMPTY;
         } else if (len == 1) {
             return new OneByteArray();
         } else {

@@ -7,7 +7,16 @@ public abstract class AbstractPacket {
 
     public abstract String from(ByteArray bytes);
 
-    public ByteArray getRawPacket() {
+    public final ByteArray getRawPacket() {
+        if (raw == null) {
+            raw = buildPacket();
+        }
         return raw;
     }
+
+    public final void clearRawPacket() {
+        raw = null;
+    }
+
+    protected abstract ByteArray buildPacket();
 }

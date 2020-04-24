@@ -37,6 +37,7 @@ public enum Param {
 
     mactabletimeout("mac-table-timeout"),
     arptabletimeout("arp-table-timeout"),
+    mac("mac"),
     ;
     public final String fullname;
 

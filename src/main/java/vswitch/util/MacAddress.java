@@ -13,6 +13,31 @@ public class MacAddress {
         this.hashCode = Objects.hashCode(bytes);
     }
 
+    public MacAddress(String mac) { // example: 0a:00:27:00:00:00
+        if (mac.length() != 17) {
+            throw new IllegalArgumentException();
+        }
+        String[] split = mac.split(":");
+        if (split.length != 6) {
+            throw new IllegalArgumentException();
+        }
+        byte[] bytes = new byte[6];
+        for (int i = 0; i < 6; i++) {
+            String s = split[i];
+            if (s.length() != 2) {
+                throw new IllegalArgumentException();
+            }
+            try {
+                bytes[i] = (byte) Integer.parseInt(s, 16);
+            } catch (NumberFormatException e) {
+                throw new IllegalArgumentException(e);
+            }
+        }
+
+        this.bytes = ByteArray.from(bytes);
+        this.hashCode = Objects.hashCode(this.bytes);
+    }
+
     public boolean isBroadcast() {
         for (int i = 0; i < this.bytes.length(); ++i) {
             byte b = this.bytes.get(i);
@@ -24,6 +49,10 @@ public class MacAddress {
     }
 
     public boolean isMulticast() {
+        return isIpv4Multicast() || isIpv6Multicast();
+    }
+
+    private boolean isIpv4Multicast() {
         if (bytes.length() < 4) { // we need to check the first 25 bits
             // not a valid mac address, normally should be 6, so not multicast
             return false;
@@ -43,6 +72,14 @@ public class MacAddress {
             return false;
         }
         return true;
+    }
+
+    private boolean isIpv6Multicast() {
+        if (bytes.length() < 2) { // we need to check the first 2 bytes
+            // not a valid mac address, normally should be 6, so not multicast
+            return false;
+        }
+        return bytes.get(0) == 0x33 && bytes.get(1) == 0x33;
     }
 
     @Override

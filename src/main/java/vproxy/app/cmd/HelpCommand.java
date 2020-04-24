@@ -417,6 +417,7 @@ public class HelpCommand {
         mactabletimeout("mac-table-timeout", null, "timeout of mac table in a switch"),
         arptabletimeout("arp-table-timeout", null, "timeout of arp table in a switch"),
         pass("password", "pass", "password"),
+        mac("mac", null, "mac address"),
         ;
         public final String param;
         public final String shortVer;
@@ -1257,16 +1258,22 @@ public class HelpCommand {
             )),
         vni("vni", null, "vxlan network id",
             Arrays.asList(
-                new ResActMan(ActMan.list, "count existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "list existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list vni in switch sw0",
-                        "(integer) 1"
+                        "1) (integer) 1314"
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "list existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.add, "create a vxlan vni in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail vni in switch sw0",
-                        "1) (integer) 1314"
+                        "add vni 1314 in switch sw0",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a vxlan vni from a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remote vni 1314 from switch sw0",
+                        "\"OK\""
                     )
                 ))
             )),
@@ -1307,7 +1314,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.list, "list user names in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list user in switch sw0",
-                        "1) \"hello+++\""
+                        "1) \"hello\""
                     )
                 )),
                 new ResActMan(ActMan.add, "add a user to a switch", Collections.singletonList(
@@ -1321,6 +1328,37 @@ public class HelpCommand {
                 new ResActMan(ActMan.remove, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove user hello from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        ip("ip", null, "synthetic ip in a switch",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "show synthetic ips in a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list ip in vni 1314 in switch sw0",
+                        "1) \"172.16.0.21\"\n" +
+                            "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002]\""
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "show detailed info about synthetic ips in a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail ip in vni 1314 in switch sw0",
+                        "1) \"172.16.0.21 -> mac e2:8b:11:00:00:22\"\n" +
+                            "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
+                    )
+                )),
+                new ResActMan(ActMan.add, "add a synthetic ip to a vni of a switch", Collections.singletonList(
+                    new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add ip 172.16.0.21 to vni 1314 in switch sw0 mac e2:8b:11:00:00:22",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a synthetic ip from a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove ip 172.16.0.21 from vni 1314 in switch sw0",
                         "\"OK\""
                     )
                 ))

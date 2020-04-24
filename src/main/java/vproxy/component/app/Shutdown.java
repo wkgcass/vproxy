@@ -618,8 +618,21 @@ public class Shutdown {
                 // create users
                 Map<String, Switch.Password> users = sw.getUsers();
                 for (var entry : users.entrySet()) {
-                    cmd = "add user " + entry.getKey().replace("+", "") + " to switch " + sw.alias + " password " + entry.getValue().pass;
+                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass;
                     commands.add(cmd);
+                }
+                // create vni
+                for (var entry : sw.getTables().entrySet()) {
+                    int vni = entry.getKey();
+                    cmd = "add vni " + vni + " to switch " + sw.alias;
+                    commands.add(cmd);
+
+                    var table = entry.getValue();
+                    // create ips
+                    for (var ip : table.ips.entries()) {
+                        cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vni " + vni + " in switch " + sw.alias + " mac " + ip.getValue();
+                        commands.add(cmd);
+                    }
                 }
             }
         }

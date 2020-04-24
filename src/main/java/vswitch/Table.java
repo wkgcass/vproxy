@@ -6,6 +6,7 @@ public class Table {
     public final int vni;
     public final MacTable macTable;
     public final ArpTable arpTable;
+    public final SyntheticIpHolder ips;
 
     public Table(int vni, SelectorEventLoop loop,
                  int macTableTimeout, int arpTableTimeout) {
@@ -13,6 +14,7 @@ public class Table {
 
         macTable = new MacTable(loop, macTableTimeout);
         arpTable = new ArpTable(loop, arpTableTimeout);
+        ips = new SyntheticIpHolder();
     }
 
     public void setMacTableTimeout(int macTableTimeout) {
@@ -23,8 +25,13 @@ public class Table {
         arpTable.setTimeout(arpTableTimeout);
     }
 
-    public void clear() {
-        macTable.clear();
-        arpTable.clear();
+    public void clearCache() {
+        macTable.clearCache();
+        arpTable.clearCache();
+    }
+
+    public void setLoop(SelectorEventLoop loop) {
+        macTable.setLoop(loop);
+        arpTable.setLoop(loop);
     }
 }

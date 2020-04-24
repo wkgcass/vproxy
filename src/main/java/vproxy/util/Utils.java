@@ -124,11 +124,20 @@ public class Utils {
         }
     }
 
-    public static String formatErr(Throwable err) {
-        if (err.getMessage() != null && !err.getMessage().trim().isEmpty()) {
+    private static String formatErrBase(Throwable err) {
+        if (err.getMessage() != null && !err.getMessage().isBlank()) {
             return err.getMessage().trim();
         } else {
             return err.toString();
+        }
+    }
+
+    public static String formatErr(Throwable err) {
+        String base = formatErrBase(err);
+        if (err instanceof NullPointerException) {
+            return base + Arrays.asList(err.getStackTrace()).toString();
+        } else {
+            return base;
         }
     }
 

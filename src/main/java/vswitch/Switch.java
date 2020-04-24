@@ -10,6 +10,7 @@ import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.component.secure.SecurityGroup;
+import vproxy.connection.NetEventLoop;
 import vproxy.connection.Protocol;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
@@ -17,15 +18,14 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
-import vswitch.packet.AbstractPacket;
-import vswitch.packet.ArpPacket;
-import vswitch.packet.VProxySwitchPacket;
-import vswitch.packet.VXLanPacket;
+import vswitch.packet.*;
 import vswitch.util.Consts;
 import vswitch.util.Iface;
 import vswitch.util.MacAddress;
 
 import java.io.IOException;
+import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
@@ -36,6 +36,7 @@ public class Switch {
     public final String alias;
     public final InetSocketAddress vxlanBindingAddress;
     public final EventLoopGroup eventLoopGroup;
+    private NetEventLoop currentEventLoop;
     private int macTableTimeout;
     private int arpTableTimeout;
     public SecurityGroup bareVXLanAccess;
@@ -45,7 +46,7 @@ public class Switch {
 
     private final ConcurrentHashMap<String, Password> passwords = new ConcurrentHashMap<>();
     private final DatagramFD sock;
-    private final Map<Integer, Table> tables = new HashMap<>();
+    private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
     public Switch(String alias, InetSocketAddress vxlanBindingAddress, EventLoopGroup eventLoopGroup,
@@ -99,11 +100,14 @@ public class Switch {
         }
         var loop = netLoop.getSelectorEventLoop();
         loop.add(sock, EventSet.read(), null, new PacketHandler());
+        currentEventLoop = netLoop;
+        tables.values().forEach(t -> t.setLoop(loop));
         started = true;
     }
 
     private void checkAndRestart() { // this method is only called when selected event loop closes, so no need to remove handler
         started = false;
+        currentEventLoop = null;
         cancelAllIface();
         if (!wantStart) {
             return;
@@ -125,11 +129,11 @@ public class Switch {
         if (!started) {
             return;
         }
+        currentEventLoop = null;
         cancelAllIface();
         for (var tbl : tables.values()) {
-            tbl.clear();
+            tbl.clearCache();
         }
-        tables.clear();
         started = false;
     }
 
@@ -163,6 +167,32 @@ public class Switch {
 
     public Map<Integer, Table> getTables() {
         return tables;
+    }
+
+    public Table getTable(int vni) throws NotFoundException {
+        Table t = tables.get(vni);
+        if (t == null) {
+            throw new NotFoundException("vni", "" + vni);
+        }
+        return t;
+    }
+
+    public void addTable(int vni) throws AlreadyExistException, XException {
+        if (tables.containsKey(vni)) {
+            throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
+        }
+        if (currentEventLoop == null) {
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
+        }
+        tables.computeIfAbsent(vni, n -> new Table(n, currentEventLoop.getSelectorEventLoop(), macTableTimeout, arpTableTimeout));
+    }
+
+    public void delTable(int vni) throws NotFoundException {
+        Table t = tables.remove(vni);
+        if (t == null) {
+            throw new NotFoundException("vni", "" + vni);
+        }
+        t.clearCache();
     }
 
     public List<Iface> getIfaces() {
@@ -201,7 +231,11 @@ public class Switch {
     }
 
     public Map<String, Password> getUsers() {
-        return new LinkedHashMap<>(passwords);
+        var ret = new LinkedHashMap<String, Password>();
+        for (var entry : passwords.entrySet()) {
+            ret.put(entry.getKey().replace(Consts.USER_PADDING, ""), entry.getValue());
+        }
+        return ret;
     }
 
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {
@@ -265,13 +299,13 @@ public class Switch {
 
             String err = packet.from(data);
             if (err == null) {
-                iface = new Iface(packet.user, remote);
+                iface = new Iface(packet.getUser(), remote);
 
                 assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
 
-                vxLanPacket = packet.vxlan;
+                vxLanPacket = packet.getVxlan();
 
-                if (packet.type == Consts.VPROXY_SWITCH_TYPE_PING) {
+                if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
                     sendPingTo(iface);
                 }
                 // fall through
@@ -331,11 +365,11 @@ public class Switch {
                     continue;
                 }
 
-                int vni = vxlan.vni;
+                int vni = vxlan.getVni();
                 Table table = tables.get(vni);
                 if (table == null) {
-                    table = new Table(vni, ctx.getEventLoop(), macTableTimeout, arpTableTimeout);
-                    tables.put(vni, table);
+                    assert Logger.lowLevelDebug("vni not defined: " + vni);
+                    continue;
                 }
 
                 handleVxlan(vxlan, table, iface);
@@ -343,26 +377,26 @@ public class Switch {
         }
 
         private void handleVxlan(VXLanPacket vxlan, Table table, Iface inputIface) {
-            MacAddress src = vxlan.packet.getSrc();
-            MacAddress dst = vxlan.packet.getDst();
+            MacAddress src = vxlan.getPacket().getSrc();
+            MacAddress dst = vxlan.getPacket().getDst();
 
             // handle layer 2
             table.macTable.record(src, inputIface);
 
             // handle layer 3
-            AbstractPacket packet = vxlan.packet.getPacket();
+            AbstractPacket packet = vxlan.getPacket().getPacket();
             if (packet instanceof ArpPacket) {
                 ArpPacket arp = (ArpPacket) packet;
-                if (arp.protocolType == Consts.ARP_PROTOCOL_TYPE_IP) {
-                    if (arp.opcode == Consts.ARP_PROTOCOL_OPCODE_REQ) {
-                        ByteArray senderIp = arp.senderIp;
+                if (arp.getProtocolType() == Consts.ARP_PROTOCOL_TYPE_IP) {
+                    if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_REQ) {
+                        ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
                             // only handle ipv4 for now
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
                             table.arpTable.record(src, ip);
                         }
-                    } else if (arp.opcode == Consts.ARP_PROTOCOL_OPCODE_RESP) {
-                        ByteArray senderIp = arp.senderIp;
+                    } else if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_RESP) {
+                        ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
                             // only handle ipv4 for now
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
@@ -372,7 +406,10 @@ public class Switch {
                 }
             }
 
+            // handle
             if (dst.isBroadcast() || dst.isMulticast() /*handle multicast in the same way as broadcast*/) {
+                handleSyntheticIps(table, table.ips.allIps(), vxlan, inputIface, true);
+
                 Set<Iface> forwardBroadcastIfaces = new HashSet<>(ifaces.keySet());
                 forwardBroadcastIfaces.remove(inputIface);
                 for (var iface : forwardBroadcastIfaces) {
@@ -381,25 +418,216 @@ public class Switch {
             } else {
                 Iface iface = table.macTable.lookup(dst);
                 if (iface == null) {
-                    // not found, drop
+                    // not found, try synthetic or otherwise drop
+                    var ips = table.ips.lookupByMac(dst);
+                    if (ips != null) {
+                        handleSyntheticIps(table, ips, vxlan, inputIface, false);
+                    }
                     return;
                 }
                 sendVXLanTo(iface, vxlan);
             }
         }
 
+        private void handleSyntheticIps(Table table, Collection<InetAddress> ips, VXLanPacket vxlan, Iface inputIface, boolean allReceives) {
+            // analyse the packet
+            AbstractPacket l3Packet = vxlan.getPacket().getPacket();
+            ArpPacket arp = null;
+            InetAddress arpReq = null;
+            AbstractIpPacket ipPkt = null;
+            IcmpPacket icmp = null;
+            Inet6Address ndpNeighborSolicitation = null;
+            if (l3Packet instanceof ArpPacket) {
+                arp = (ArpPacket) l3Packet;
+                if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_REQ) {
+                    byte[] targetIpBytes = arp.getTargetIp().toJavaArray();
+                    if (targetIpBytes.length == 4 || targetIpBytes.length == 16) {
+                        arpReq = Utils.l3addr(targetIpBytes);
+                    }
+                }
+            } else if (l3Packet instanceof AbstractIpPacket) {
+                ipPkt = (AbstractIpPacket) l3Packet;
+                var pkt = ipPkt.getPacket();
+                if (pkt instanceof IcmpPacket) {
+                    icmp = (IcmpPacket) pkt;
+                    if (icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
+                        ByteArray other = icmp.getOther();
+                        if (other.length() < 20) { // 4 reserved and 16 target address
+                            assert Logger.lowLevelDebug("invalid packet for neighbor solicitation: too short");
+                        } else {
+                            byte[] targetAddr = other.sub(4, 16).toJavaArray();
+                            ndpNeighborSolicitation = (Inet6Address) Utils.l3addr(targetAddr);
+                        }
+                    }
+                }
+            }
+
+            // handle
+            for (InetAddress ip : ips) {
+                MacAddress mac = table.ips.lookup(ip);
+                // check l2
+                if (!allReceives && !mac.equals(vxlan.getPacket().getDst())) {
+                    continue;
+                }
+                // check l3
+                if (arpReq != null) {
+                    if (ip.equals(arpReq)) {
+                        // should respond arp
+                        handleArp(vxlan, arp, ip, mac, inputIface);
+                    }
+                } else if (ipPkt != null) {
+                    var dstIp = ipPkt.getDst();
+                    if (allReceives || dstIp.equals(ip)) {
+                        if (icmp != null) {
+                            if (ndpNeighborSolicitation != null && ndpNeighborSolicitation.equals(ip)) {
+                                handleIcmpNDP(vxlan, ipPkt, icmp, ip, mac, inputIface);
+                            } else {
+                                boolean shouldHandlePing;
+                                if (icmp.isIpv6()) {
+                                    shouldHandlePing = icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ;
+                                } else {
+                                    shouldHandlePing = icmp.getType() == Consts.ICMP_PROTOCOL_TYPE_ECHO_REQ;
+                                }
+                                if (shouldHandlePing) {
+                                    handleIcmpPing(vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                }
+                            }
+                        }
+                    }
+                }
+                // otherwise ignore
+            }
+        }
+
+        private void handleArp(VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            ArpPacket resp = new ArpPacket();
+            resp.setHardwareType(inArp.getHardwareType());
+            resp.setProtocolType(inArp.getProtocolType());
+            resp.setHardwareSize(inArp.getHardwareSize());
+            resp.setProtocolSize(inArp.getProtocolSize());
+            resp.setOpcode(Consts.ARP_PROTOCOL_OPCODE_RESP);
+            resp.setSenderMac(mac.bytes);
+            resp.setSenderIp(ByteArray.from(ip.getAddress()));
+            resp.setTargetMac(inArp.getSenderMac());
+            resp.setTargetIp(inArp.getTargetIp());
+
+            EthernetPacket ether = new EthernetPacket();
+            ether.setDst(inVxlan.getPacket().getSrc());
+            ether.setSrc(mac);
+            ether.setType(Consts.ETHER_TYPE_ARP);
+            ether.setPacket(resp);
+
+            VXLanPacket vxlan = new VXLanPacket();
+            vxlan.setFlags(inVxlan.getFlags());
+            vxlan.setVni(inVxlan.getVni());
+            vxlan.setPacket(ether);
+
+            sendVXLanTo(inputIface, vxlan);
+        }
+
+        private void handleIcmpPing(VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            IcmpPacket icmp = new IcmpPacket(ip instanceof Inet6Address);
+            icmp.setType(inIcmp.isIpv6() ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP : Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP);
+            icmp.setCode(0);
+            icmp.setOther(inIcmp.getOther());
+
+            AbstractIpPacket ipPkt;
+            if (ip instanceof Inet4Address) {
+                var ipv4 = new Ipv4Packet();
+                ipv4.setVersion(4);
+                ipv4.setIhl(5);
+                ipv4.setTotalLength(20 + icmp.getRawPacket().length());
+                ipv4.setTtl(64);
+                ipv4.setProtocol(Consts.IP_PROTOCOL_ICMP);
+                ipv4.setSrc((Inet4Address) ip);
+                ipv4.setDst((Inet4Address) inIpPkt.getSrc());
+                ipv4.setOptions(ByteArray.allocate(0));
+                ipv4.setPacket(icmp);
+                ipPkt = ipv4;
+            } else {
+                assert ip instanceof Inet6Address;
+                var ipv6 = new Ipv6Packet();
+                ipv6.setVersion(6);
+                ipv6.setNextHeader(icmp.isIpv6() ? Consts.IP_PROTOCOL_ICMPv6 : Consts.IP_PROTOCOL_ICMP);
+                ipv6.setHopLimit(64);
+                ipv6.setSrc((Inet6Address) ip);
+                ipv6.setDst((Inet6Address) inIpPkt.getSrc());
+                ipv6.setExtHeaders(Collections.emptyList());
+                ipv6.setPacket(icmp);
+                ipv6.setPayloadLength(
+                    (
+                        icmp.isIpv6() ? icmp.getRawICMPv6Packet(ipv6) : icmp.getRawPacket()
+                    ).length()
+                );
+                ipPkt = ipv6;
+            }
+
+            EthernetPacket ether = new EthernetPacket();
+            ether.setDst(inVxlan.getPacket().getSrc());
+            ether.setSrc(mac);
+            ether.setType(ip instanceof Inet4Address ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
+            ether.setPacket(ipPkt);
+
+            VXLanPacket vxlan = new VXLanPacket();
+            vxlan.setFlags(inVxlan.getFlags());
+            vxlan.setVni(inVxlan.getVni());
+            vxlan.setPacket(ether);
+
+            sendVXLanTo(inputIface, vxlan);
+        }
+
+        private void handleIcmpNDP(VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert inIcmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation;
+            // we only handle neighbor solicitation for now
+
+            IcmpPacket icmp = new IcmpPacket(true);
+            icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
+            icmp.setCode(0);
+            icmp.setOther(
+                (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(ByteArray.from(ip.getAddress()))
+                    .concat(( // the target link-layer address
+                        ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address)
+                            .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
+                            .concat(mac.bytes)
+                    ))
+            );
+
+            Ipv6Packet ipv6 = new Ipv6Packet();
+            ipv6.setVersion(6);
+            ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
+            ipv6.setHopLimit(255);
+            ipv6.setSrc((Inet6Address) ip);
+            ipv6.setDst((Inet6Address) inIpPkt.getSrc());
+            ipv6.setExtHeaders(Collections.emptyList());
+            ipv6.setPacket(icmp);
+            ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+
+            EthernetPacket ether = new EthernetPacket();
+            ether.setDst(inVxlan.getPacket().getSrc());
+            ether.setSrc(mac);
+            ether.setType(Consts.ETHER_TYPE_IPv6);
+            ether.setPacket(ipv6);
+
+            VXLanPacket vxlan = new VXLanPacket();
+            vxlan.setFlags(inVxlan.getFlags());
+            vxlan.setVni(inVxlan.getVni());
+            vxlan.setPacket(ether);
+
+            sendVXLanTo(inputIface, vxlan);
+        }
+
         private void sendPingTo(Iface iface) {
             VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
-            p.magic = Consts.VPROXY_SWITCH_MAGIC;
-            p.type = Consts.VPROXY_SWITCH_TYPE_PING;
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
             sendVProxyPacketTo(iface, p);
         }
 
         private void sendVXLanTo(Iface iface, VXLanPacket vxlan) {
             VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
-            p.magic = Consts.VPROXY_SWITCH_MAGIC;
-            p.type = Consts.VPROXY_SWITCH_TYPE_VXLAN;
-            p.vxlan = vxlan;
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
+            p.setVxlan(vxlan);
             sendVProxyPacketTo(iface, p);
         }
 
@@ -407,15 +635,15 @@ public class Switch {
             AbstractPacket packetToSend;
 
             if (iface.user == null) {
-                if (p.vxlan == null) {
+                if (p.getVxlan() == null) {
                     Logger.error(LogType.IMPROPER_USE, "want to send packet to " + iface + " with " + p + ", but both user and vxlan packet are null");
                     return;
                 }
                 // user == null means it's bare vxlan
                 // directly send
-                packetToSend = p.vxlan;
+                packetToSend = p.getVxlan();
             } else {
-                p.user = iface.user;
+                p.setUser(iface.user);
                 packetToSend = p;
             }
 

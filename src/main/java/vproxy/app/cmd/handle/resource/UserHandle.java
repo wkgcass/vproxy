@@ -31,7 +31,7 @@ public class UserHandle {
     public static void checkCreateUser(Command cmd) throws Exception {
         String pass = cmd.args.get(Param.pass);
         if (pass == null) {
-            throw new Exception("missing " + Param.pass);
+            throw new Exception("missing " + Param.pass.fullname);
         }
     }
 

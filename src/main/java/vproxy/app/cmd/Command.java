@@ -9,13 +9,12 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
 import vproxy.dns.Cache;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Utils;
+import vproxy.util.*;
 import vswitch.util.Iface;
+import vswitch.util.MacAddress;
 
 import java.lang.reflect.Field;
+import java.net.InetAddress;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -647,7 +646,6 @@ public class Command {
                 }
                 break;
             case arp:
-            case vni:
             case iface:
                 switch (cmd.action) {
                     case a:
@@ -658,11 +656,10 @@ public class Command {
                     case l:
                         if (cmd.resource.type == ResourceType.arp) {
                             ArpHandle.checkArp(targetResource);
-                        } else if (cmd.resource.type == ResourceType.iface) {
-                            IfaceHandle.checkIface(targetResource);
                         } else {
-                            assert targetResource.type == ResourceType.vni;
-                            VniHandle.checkVni(targetResource);
+                            //noinspection ConstantConditions
+                            assert cmd.resource.type == ResourceType.iface;
+                            IfaceHandle.checkIface(targetResource);
                         }
                         break;
                     default:
@@ -670,14 +667,28 @@ public class Command {
                 }
                 break;
             case user:
+            case vni:
+            case ip:
                 switch (cmd.action) {
                     case a:
-                        UserHandle.checkCreateUser(cmd);
+                        if (cmd.resource.type == ResourceType.user) {
+                            UserHandle.checkCreateUser(cmd);
+                        } else if (cmd.resource.type == ResourceType.vni) {
+                            VniHandle.checkCreateVni(cmd);
+                        } else {
+                            IpHandle.checkCreateIp(cmd);
+                        }
                     case r:
                     case R:
                     case L:
                     case l:
-                        UserHandle.checkUser(targetResource);
+                        if (cmd.resource.type == ResourceType.user) {
+                            UserHandle.checkUser(targetResource);
+                        } else if (cmd.resource.type == ResourceType.vni) {
+                            VniHandle.checkVni(targetResource);
+                        } else {
+                            IpHandle.checkIp(targetResource);
+                        }
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -1002,12 +1013,17 @@ public class Command {
             case vni:
                 switch (action) {
                     case l:
-                        int cnt = VniHandle.count(targetResource);
-                        return new CmdResult(cnt, cnt, "" + cnt);
                     case L:
                         List<VniHandle.VniEntry> vniLs = VniHandle.list(targetResource);
                         List<Object> ls = vniLs.stream().map(e -> e.vni).collect(Collectors.toList());
                         return new CmdResult(vniLs, ls, utilJoinList(ls));
+                    case a:
+                        VniHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        VniHandle.forceRemove(this);
+                        return new CmdResult();
                 }
             case iface:
                 switch (action) {
@@ -1041,6 +1057,24 @@ public class Command {
                     case r:
                     case R:
                         UserHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case ip:
+                switch (action) {
+                    case l:
+                        var names = IpHandle.names(targetResource);
+                        List<String> strNames = names.stream().map(Utils::ipStr).collect(Collectors.toList());
+                        return new CmdResult(names, strNames, utilJoinList(strNames));
+                    case L:
+                        Collection<Map.Entry<InetAddress, MacAddress>> tuples = IpHandle.list(targetResource);
+                        List<Object> strTuples = tuples.stream().map(o -> Utils.ipStr(o.getKey().getAddress()) + " -> mac " + o.getValue()).collect(Collectors.toList());
+                        return new CmdResult(tuples, strTuples, utilJoinList(strTuples));
+                    case a:
+                        IpHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        IpHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ck:

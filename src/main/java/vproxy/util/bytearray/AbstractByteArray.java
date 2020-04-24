@@ -7,6 +7,8 @@ import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 
 public abstract class AbstractByteArray implements ByteArray {
+    public static final ByteArray EMPTY = new SimpleByteArray(new byte[0]);
+
     protected void checkBoundForOffset(int off) {
         if (off < 0) {
             throw new IllegalArgumentException("off=" + off + " < 0");

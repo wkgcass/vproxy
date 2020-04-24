@@ -9,7 +9,7 @@ import java.net.InetAddress;
 import java.util.*;
 
 public class ArpTable {
-    private final SelectorEventLoop loop;
+    private SelectorEventLoop loop;
     private int timeout;
 
     private final Set<ArpEntry> entries = new HashSet<>();
@@ -49,7 +49,11 @@ public class ArpTable {
         }
     }
 
-    public void clear() {
+    public void setLoop(SelectorEventLoop loop) {
+        this.loop = loop;
+    }
+
+    public void clearCache() {
         var entries = new HashSet<>(this.entries);
         for (var entry : entries) {
             entry.cancel();

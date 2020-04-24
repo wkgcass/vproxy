@@ -19,10 +19,10 @@ import java.util.function.Function;
  * the user string must be 8 chars, a-zA-Z0-9, however a default padding may be added
  */
 public class VProxySwitchPacket extends AbstractPacket {
-    public String user;
-    public int magic;
-    public int type;
-    public VXLanPacket vxlan;
+    private String user;
+    private int magic;
+    private int type;
+    private VXLanPacket vxlan;
 
     private final Function<String, Aes256Key> keyProvider;
 
@@ -74,7 +74,7 @@ public class VProxySwitchPacket extends AbstractPacket {
     }
 
     @Override
-    public ByteArray getRawPacket() {
+    protected ByteArray buildPacket() {
         byte[] x = Base64.getDecoder().decode(user);
         if (x.length != 6) {
             throw new IllegalArgumentException("the user decoded binary length is not 6");
@@ -111,5 +111,41 @@ public class VProxySwitchPacket extends AbstractPacket {
             ", vxlan=" + vxlan +
             // ", key=" + key +
             '}';
+    }
+
+    public String getUser() {
+        return user;
+    }
+
+    public void setUser(String user) {
+        clearRawPacket();
+        this.user = user;
+    }
+
+    public int getMagic() {
+        return magic;
+    }
+
+    public void setMagic(int magic) {
+        clearRawPacket();
+        this.magic = magic;
+    }
+
+    public int getType() {
+        return type;
+    }
+
+    public void setType(int type) {
+        clearRawPacket();
+        this.type = type;
+    }
+
+    public VXLanPacket getVxlan() {
+        return vxlan;
+    }
+
+    public void setVxlan(VXLanPacket vxlan) {
+        clearRawPacket();
+        this.vxlan = vxlan;
     }
 }

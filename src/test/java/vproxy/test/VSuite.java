@@ -18,6 +18,7 @@ import vproxy.test.cases.*;
     TestProtocols.class,
     TestHttp1Parser.class,
     TestHealthCheck.class,
+    TestPacket.class,
 
     AfterAll.class
 })

@@ -1,9 +1,11 @@
 package vproxy.app.cmd.handle.resource;
 
 import vproxy.app.Application;
+import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vswitch.Switch;
+import vswitch.Table;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -30,8 +32,25 @@ public class VniHandle {
         }
     }
 
-    public static int count(Resource parent) throws Exception {
-        return list(parent).size();
+    public static Table get(Resource self) throws Exception {
+        int vni = Integer.parseInt(self.alias);
+        Switch sw = SwitchHandle.get(self.parentResource);
+        return sw.getTable(vni);
+    }
+
+    public static void checkCreateVni(Command cmd) throws Exception {
+        checkVni(cmd.prepositionResource);
+        checkVniName(cmd.resource);
+    }
+
+    public static void add(Command cmd) throws Exception {
+        Switch sw = SwitchHandle.get(cmd.prepositionResource);
+        sw.addTable(Integer.parseInt(cmd.resource.alias));
+    }
+
+    public static void forceRemove(Command cmd) throws Exception {
+        Switch sw = SwitchHandle.get(cmd.prepositionResource);
+        sw.delTable(Integer.parseInt(cmd.resource.alias));
     }
 
     public static List<VniEntry> list(Resource parent) throws Exception {
