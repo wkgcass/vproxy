@@ -2,6 +2,7 @@ package vproxy.protocol;
 
 import vproxy.connection.Connection;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
@@ -76,7 +77,8 @@ public class ProtocolHandlerContext<T> {
 
     public void write(byte[] bytes) {
         if (connection.isClosed()) {
-            throw new IllegalStateException("connection closed");
+            Logger.error(LogType.IMPROPER_USE, "connection " + connection + " is already closed but still trying to write data");
+            return;
         }
         if (bytes.length == 0)
             return; // do not write if the input array is empty
