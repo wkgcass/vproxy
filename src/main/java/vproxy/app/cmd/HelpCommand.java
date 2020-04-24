@@ -418,6 +418,7 @@ public class HelpCommand {
         arptabletimeout("arp-table-timeout", null, "timeout of arp table in a switch"),
         pass("password", "pass", "password"),
         mac("mac", null, "mac address"),
+        vni("vni", null, "vni number"),
         ;
         public final String param;
         public final String shortVer;
@@ -1317,11 +1318,18 @@ public class HelpCommand {
                         "1) \"hello\""
                     )
                 )),
-                new ResActMan(ActMan.add, "add a user to a switch", Collections.singletonList(
-                    new ResActParamMan(ParamMan.pass, "password of the user")
+                new ResActMan(ActMan.listdetail, "list all user info in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail user in switch sw0",
+                        "1) \"hello\" -> vni 1314"
+                    )
+                )),
+                new ResActMan(ActMan.add, "add a user to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.pass, "password of the user"),
+                    new ResActParamMan(ParamMan.vni, "vni assigned for the user")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add user hello to switch sw0",
+                        "add user hello to switch sw0 vni 1314",
                         "\"OK\""
                     )
                 )),

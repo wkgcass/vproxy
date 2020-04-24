@@ -8,6 +8,7 @@ import java.util.Objects;
 public class Iface {
     public final String user;
     public final InetSocketAddress udpSockAddress;
+    public int vni; // should not be put into equals/hashCode
 
     public Iface(InetSocketAddress udpSockAddress) {
         this.user = null;
@@ -26,19 +27,29 @@ public class Iface {
         Iface iface = (Iface) o;
         return Objects.equals(user, iface.user) &&
             Objects.equals(udpSockAddress, iface.udpSockAddress);
+        // should not consider vni
     }
 
     @Override
     public int hashCode() {
         return Objects.hash(user, udpSockAddress);
+        // should not consider vni
     }
 
     @Override
     public String toString() {
-        if (user == null) {
-            return "Iface(" + Utils.l4addrStr(udpSockAddress) + ')';
+        String vniStr;
+        if (vni == 0) {
+            vniStr = "";
         } else {
-            return "Iface(" + Utils.l4addrStr(udpSockAddress) + "," + user.replace(Consts.USER_PADDING, "") + ')';
+            vniStr = Utils.toHexStringWithPadding(vni, 24) + ",";
         }
+        String userStr;
+        if (user == null) {
+            userStr = "";
+        } else {
+            userStr = "," + user.replace(Consts.USER_PADDING, "");
+        }
+        return "Iface(" + vniStr + Utils.l4addrStr(udpSockAddress) + userStr + ')';
     }
 }

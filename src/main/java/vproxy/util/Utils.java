@@ -1051,7 +1051,26 @@ public class Utils {
         return "0x" + Integer.toHexString(x);
     }
 
+    public static String toHexStringWithPadding(int x, int bits) {
+        assert bits % 8 == 0;
+        int len = bits / 4;
+        String s = Integer.toHexString(x);
+        if (s.length() < len) {
+            s = "0".repeat(len - s.length()) + s;
+        }
+        return "0x" + s;
+    }
+
     public static String toBinaryString(int x) {
         return "0b" + Integer.toBinaryString(x);
+    }
+
+    public static boolean isInteger(String s) {
+        try {
+            Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return true;
     }
 }

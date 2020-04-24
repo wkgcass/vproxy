@@ -1048,9 +1048,12 @@ public class Command {
             case user:
                 switch (action) {
                     case l:
-                    case L:
-                        List<String> users = UserHandle.list(targetResource);
+                        List<String> users = UserHandle.names(targetResource);
                         return new CmdResult(users, users, utilJoinList(users));
+                    case L:
+                        List<UserHandle.UserInfo> userInfoList = UserHandle.list(targetResource);
+                        List<String> strList = userInfoList.stream().map(UserHandle.UserInfo::toString).collect(Collectors.toList());
+                        return new CmdResult(userInfoList, strList, utilJoinList(strList));
                     case a:
                         UserHandle.add(this);
                         return new CmdResult();

@@ -150,13 +150,14 @@ public class ArpHandle {
                     sb.append(" ".repeat(fix));
                 }
             }
+            sb.append(split);
             if (iface == null) {
-                sb.append(" ".repeat(37));
+                sb.append(" ".repeat(46));
             } else {
                 String ifaceStr = iface.toString();
-                sb.append(split).append(ifaceStr);
-                if (ifaceStr.length() < 37) {
-                    int fix = 37 - ifaceStr.length();
+                sb.append(ifaceStr);
+                if (ifaceStr.length() < 46) {
+                    int fix = 46 - ifaceStr.length();
                     sb.append(" ".repeat(fix));
                 }
             }

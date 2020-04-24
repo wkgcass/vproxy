@@ -44,7 +44,7 @@ public class Switch {
     private boolean started = false;
     private boolean wantStart = false;
 
-    private final ConcurrentHashMap<String, Password> passwords = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, UserInfo> users = new ConcurrentHashMap<>();
     private final DatagramFD sock;
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
@@ -199,7 +199,7 @@ public class Switch {
         return new ArrayList<>(ifaces.keySet());
     }
 
-    public void addUser(String user, String password) throws AlreadyExistException, XException {
+    public void addUser(String user, String password, int vni) throws AlreadyExistException, XException {
         char[] chars = user.toCharArray();
         if (chars.length < 3 || chars.length > 8) {
             throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
@@ -214,7 +214,7 @@ public class Switch {
         }
 
         Aes256Key key = new Aes256Key(password);
-        Password old = passwords.putIfAbsent(user, new Password(key, password));
+        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni));
         if (old != null) {
             throw new AlreadyExistException("the user " + user + " already exists in switch " + alias);
         }
@@ -224,15 +224,15 @@ public class Switch {
         if (user.length() < 8) {
             user += Consts.USER_PADDING.repeat(8 - user.length());
         }
-        Password x = passwords.remove(user);
+        UserInfo x = users.remove(user);
         if (x == null) {
             throw new NotFoundException("user in switch " + alias, user);
         }
     }
 
-    public Map<String, Password> getUsers() {
-        var ret = new LinkedHashMap<String, Password>();
-        for (var entry : passwords.entrySet()) {
+    public Map<String, UserInfo> getUsers() {
+        var ret = new LinkedHashMap<String, UserInfo>();
+        for (var entry : users.entrySet()) {
             ret.put(entry.getKey().replace(Consts.USER_PADDING, ""), entry.getValue());
         }
         return ret;
@@ -262,18 +262,22 @@ public class Switch {
     }
 
     private Aes256Key getKey(String name) {
-        var x = passwords.get(name);
+        var x = users.get(name);
         if (x == null) return null;
         return x.key;
     }
 
-    public static class Password {
+    public static class UserInfo {
+        public final String user;
         public final Aes256Key key;
         public final String pass;
+        public final int vni;
 
-        public Password(Aes256Key key, String pass) {
+        public UserInfo(String user, Aes256Key key, String pass, int vni) {
+            this.user = user;
             this.key = key;
             this.pass = pass;
+            this.vni = vni;
         }
     }
 
@@ -299,18 +303,32 @@ public class Switch {
 
             String err = packet.from(data);
             if (err == null) {
-                iface = new Iface(remote, packet.getUser());
+                String user = packet.getUser();
+                iface = new Iface(remote, user);
+                UserInfo info = users.get(user);
+                if (info == null) {
+                    Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
+                    return null;
+                }
 
                 assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
 
                 vxLanPacket = packet.getVxlan();
+                if (vxLanPacket != null) {
+                    int packetVni = vxLanPacket.getVni();
+                    iface.vni = packetVni; // set vni to the iface
+                    assert Logger.lowLevelDebug("setting vni for " + user + " to " + info.vni);
+                    if (packetVni != info.vni) {
+                        vxLanPacket.setVni(info.vni);
+                    }
+                }
 
                 if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
                     sendPingTo(iface);
                 }
                 // fall through
             } else {
-                if (bareVXLanAccess.allow(Protocol.UDP, remote.getAddress(), remote.getPort())) {
+                if (bareVXLanAccess.allow(Protocol.UDP, remote.getAddress(), vxlanBindingAddress.getPort())) {
                     // try to parse into vxlan directly
                     vxLanPacket = new VXLanPacket();
                     err = vxLanPacket.from(data);
@@ -330,7 +348,7 @@ public class Switch {
             var timer = ifaces.get(iface);
             if (timer == null) {
                 timer = new IfaceTimer(loop, IFACE_TIMEOUT, iface);
-                timer.record();
+                timer.record(iface);
             }
             timer.resetTimer();
 
@@ -525,6 +543,9 @@ public class Switch {
                     }
                 }
                 // otherwise ignore
+                if (!allReceives) {
+                    break; // only one ip should handle the packet
+                }
             }
         }
 
@@ -653,6 +674,11 @@ public class Switch {
         }
 
         private void sendVXLanTo(Iface iface, VXLanPacket vxlan) {
+            // fix vni
+            if (iface.vni != 0) {
+                vxlan.setVni(iface.vni);
+            }
+
             VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
@@ -713,7 +739,10 @@ public class Switch {
             this.iface = iface;
         }
 
-        void record() {
+        void record(Iface newIface) {
+            if (newIface.vni != 0) {
+                iface.vni = newIface.vni;
+            }
             ifaces.put(iface, this);
             Logger.alert(iface + " connected to Switch:" + alias);
             resetTimer();

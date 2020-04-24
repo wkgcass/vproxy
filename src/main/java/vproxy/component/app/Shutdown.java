@@ -616,9 +616,9 @@ public class Shutdown {
                 commands.add(cmd);
 
                 // create users
-                Map<String, Switch.Password> users = sw.getUsers();
+                Map<String, Switch.UserInfo> users = sw.getUsers();
                 for (var entry : users.entrySet()) {
-                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass;
+                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
                     commands.add(cmd);
                 }
                 // create vni

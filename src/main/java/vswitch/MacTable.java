@@ -24,6 +24,7 @@ public class MacTable {
         var entry = macMap.get(mac);
         if (entry != null && entry.iface.equals(iface)) {
             entry.resetTimer();
+            entry.iface.vni = iface.vni;
             return;
         }
         // otherwise need to overwrite the entry
