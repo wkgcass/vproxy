@@ -14,7 +14,7 @@ public class Iface {
         this.udpSockAddress = udpSockAddress;
     }
 
-    public Iface(String user, InetSocketAddress udpSockAddress) {
+    public Iface(InetSocketAddress udpSockAddress, String user) {
         this.user = user;
         this.udpSockAddress = udpSockAddress;
     }
@@ -38,7 +38,7 @@ public class Iface {
         if (user == null) {
             return "Iface(" + Utils.l4addrStr(udpSockAddress) + ')';
         } else {
-            return "Iface(" + user + ", " + Utils.l4addrStr(udpSockAddress) + ')';
+            return "Iface(" + Utils.l4addrStr(udpSockAddress) + "," + user.replace(Consts.USER_PADDING, "") + ')';
         }
     }
 }

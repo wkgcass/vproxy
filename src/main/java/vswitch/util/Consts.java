@@ -23,5 +23,6 @@ public class Consts {
     public static final int ICMPv6_PROTOCOL_TYPE_ECHO_RESP = 129;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation = 135;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement = 136;
+    public static final int ICMPv6_OPTION_TYPE_Source_Link_Layer_Address = 1;
     public static final int ICMPv6_OPTION_TYPE_Target_Link_Layer_Address = 2;
 }

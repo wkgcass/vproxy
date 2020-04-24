@@ -299,7 +299,7 @@ public class Switch {
 
             String err = packet.from(data);
             if (err == null) {
-                iface = new Iface(packet.getUser(), remote);
+                iface = new Iface(remote, packet.getUser());
 
                 assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
 
@@ -404,15 +404,44 @@ public class Switch {
                         }
                     }
                 }
+            } else if (packet instanceof AbstractIpPacket) {
+                var ipPkt = (AbstractIpPacket) packet;
+                if (ipPkt.getPacket() instanceof IcmpPacket) {
+                    var icmp = (IcmpPacket) ipPkt.getPacket();
+                    if (icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation
+                        ||
+                        icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement) {
+                        var other = icmp.getOther();
+                        if (other.length() >= 28) { // 4 reserved and 16 target address and 8 option
+                            var targetIp = other.sub(4, 16);
+                            var optType = other.uint8(20);
+                            var optLen = other.uint8(21);
+                            if (optLen == 1) {
+                                var mac = new MacAddress(other.sub(22, 6));
+                                if (optType == Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address) {
+                                    // mac is the sender's mac, record with src ip in ip packet
+                                    InetAddress ip = ipPkt.getSrc();
+                                    table.arpTable.record(mac, ip);
+                                } else {
+                                    // mac is the target's mac, record with target ip in icmp packet
+                                    InetAddress ip = Utils.l3addr(targetIp.toJavaArray());
+                                    table.arpTable.record(mac, ip);
+                                }
+                            }
+                        }
+                    }
+                }
             }
 
             // handle
             if (dst.isBroadcast() || dst.isMulticast() /*handle multicast in the same way as broadcast*/) {
                 handleSyntheticIps(table, table.ips.allIps(), vxlan, inputIface, true);
 
-                Set<Iface> forwardBroadcastIfaces = new HashSet<>(ifaces.keySet());
-                forwardBroadcastIfaces.remove(inputIface);
-                for (var iface : forwardBroadcastIfaces) {
+                for (var entry : table.macTable.listEntries()) {
+                    var iface = entry.iface;
+                    if (iface.equals(inputIface)) {
+                        continue;
+                    }
                     sendVXLanTo(iface, vxlan);
                 }
             } else {

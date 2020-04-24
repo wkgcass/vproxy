@@ -136,21 +136,30 @@ public class ArpHandle {
 
         @Override
         public String toString() {
-            final String split = "        ";
+            final String split = "    ";
             StringBuilder sb = new StringBuilder();
             sb.append(mac);
             sb.append(split);
             if (ip == null) {
-                sb.append("               ");
+                sb.append(" ".repeat(41));
             } else {
                 String ipStr = Utils.ipStr(ip);
                 sb.append(ipStr);
-                if (ipStr.length() < 15) {
-                    int fix = 15 - ipStr.length();
+                if (ipStr.length() < 41) {
+                    int fix = 41 - ipStr.length();
                     sb.append(" ".repeat(fix));
                 }
             }
-            sb.append(split).append(iface);
+            if (iface == null) {
+                sb.append(" ".repeat(37));
+            } else {
+                String ifaceStr = iface.toString();
+                sb.append(split).append(ifaceStr);
+                if (ifaceStr.length() < 37) {
+                    int fix = 37 - ifaceStr.length();
+                    sb.append(" ".repeat(fix));
+                }
+            }
             sb.append(split).append("ARP-TTL:").append(arpTTL / 1000);
             sb.append(split).append("MAC-TTL:").append(macTTL / 1000);
             return sb.toString();
