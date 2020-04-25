@@ -351,6 +351,14 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
 JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_currentTimeMillis
   (JNIEnv *, jobject);
 
+/*
+ * Class:     vfd_posix_GeneralPosix
+ * Method:    createTunTapFD
+ * Signature: (Ljava/lang/String;I)Lvfd/posix/TunTapInfo;
+ */
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTunTapFD
+  (JNIEnv *, jobject, jstring, jint);
+
 #ifdef __cplusplus
 }
 #endif

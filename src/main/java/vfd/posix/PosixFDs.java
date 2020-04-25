@@ -80,4 +80,9 @@ public class PosixFDs implements FDs {
     public long currentTimeMillis() {
         return posix.currentTimeMillis();
     }
+
+    public TunTapDatagramFD openTunTap(String devPattern, int flags) throws IOException {
+        TunTapInfo info = posix.createTunTapFD(devPattern, flags);
+        return new TunTapDatagramFD(posix, info);
+    }
 }

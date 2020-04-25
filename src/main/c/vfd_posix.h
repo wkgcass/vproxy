@@ -149,6 +149,16 @@
     #include <strings.h>
     #define v_bzero bzero
 
+    // for TunTap support
+    #define V_IFF_TUN   1
+    #define V_IFF_TAP   2
+    #define V_IFF_NO_PI 4
+    #ifdef __linux__
+      #include <fcntl.h>
+      #include <string.h>
+      #include <linux/if.h>
+      #include <linux/if_tun.h>
+    #endif
 
 
 #endif

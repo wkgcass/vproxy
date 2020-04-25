@@ -89,4 +89,6 @@ public interface Posix {
     UDPRecvResult recvfromIPv6(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 
     long currentTimeMillis();
+
+    TunTapInfo createTunTapFD(String dev, int flags) throws IOException;
 }

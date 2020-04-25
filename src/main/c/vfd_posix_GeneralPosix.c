@@ -625,3 +625,49 @@ JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_currentTimeMillis
     v_gettimeofday(&tv, NULL);
     return ((long)tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
+
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTunTapFD
+  (JNIEnv* env, jobject self, jstring dev, jint flags) {
+    #ifdef __linux__
+      const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
+      struct ifreq ifr;
+      int fd = 0;
+
+      if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
+          goto fail;
+      }
+      memset(&ifr, 0, sizeof(ifr));
+      int realFlags = 0;
+      if ((flags & V_IFF_TUN) == V_IFF_TUN) realFlags |= IFF_TUN;
+      if ((flags & V_IFF_TAP) == V_IFF_TAP) realFlags |= IFF_TAP;
+      if ((flags & V_IFF_NO_PI) == V_IFF_NO_PI) realFlags |= IFF_NO_PI;
+
+      ifr.ifr_flags = realFlags;
+      strncpy(ifr.ifr_name, devChars, IFNAMSIZ);
+
+      if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
+          goto fail;
+      }
+
+      char devName[IFNAMSIZ + 1];
+      strcpy(devName, ifr.ifr_name);
+      jstring genDevName = (*env)->NewStringUTF(env, devName);
+
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/TunTapInfo");
+      jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
+      jobject ret = (*env)->NewObject(env, sCls, constructor, genDevName, fd);
+
+      (*env)->ReleaseStringUTFChars(env, genDevName, devChars);
+      return ret;
+fail:
+      if (fd > 0) {
+          v_close(fd);
+      }
+      (*env)->ReleaseStringUTFChars(env, dev, devChars);
+      throwIOExceptionBasedOnErrno(env);
+      return NULL;
+    #else
+      throwIOException(env, "unsupported on current platform");
+      return NULL;
+    #endif
+}

@@ -132,4 +132,7 @@ public class GeneralPosix implements Posix {
 
     @Override
     native public long currentTimeMillis();
+
+    @Override
+    native public TunTapInfo createTunTapFD(String dev, int flags) throws IOException;
 }
