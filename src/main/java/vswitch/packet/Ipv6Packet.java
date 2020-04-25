@@ -181,10 +181,12 @@ public class Ipv6Packet extends AbstractIpPacket {
         this.nextHeader = nextHeader;
     }
 
+    @Override
     public int getHopLimit() {
         return hopLimit;
     }
 
+    @Override
     public void setHopLimit(int hopLimit) {
         clearRawPacket();
         this.hopLimit = hopLimit;

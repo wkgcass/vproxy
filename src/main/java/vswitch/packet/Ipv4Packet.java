@@ -303,6 +303,16 @@ public class Ipv4Packet extends AbstractIpPacket {
         return this.packet;
     }
 
+    @Override
+    public int getHopLimit() {
+        return getTtl();
+    }
+
+    @Override
+    public void setHopLimit(int n) {
+        setTtl(n);
+    }
+
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;

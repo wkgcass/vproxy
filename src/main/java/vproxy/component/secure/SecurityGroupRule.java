@@ -14,11 +14,11 @@ public class SecurityGroupRule {
     public final boolean allow;
 
     public SecurityGroupRule(String alias,
-                             byte[] ip, byte[] mask,
+                             Network network,
                              Protocol protocol, int minPort, int maxPort,
                              boolean allow) {
         this.alias = alias;
-        this.network = new Network(ip, mask);
+        this.network = network;
         this.protocol = protocol;
         this.minPort = minPort;
         this.maxPort = maxPort;

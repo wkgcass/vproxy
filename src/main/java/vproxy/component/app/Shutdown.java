@@ -636,6 +636,11 @@ public class Shutdown {
                         cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ip.getValue();
                         commands.add(cmd);
                     }
+                    // create routes
+                    for (var r : table.routeTable.getRules()) {
+                        cmd = "add route " + r.alias + " to vpc " + vpc + " in switch " + sw.alias + " network " + r.rule + " vni " + r.toVni;
+                        commands.add(cmd);
+                    }
                 }
             }
         }

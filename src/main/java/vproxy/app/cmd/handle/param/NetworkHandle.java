@@ -3,6 +3,7 @@ package vproxy.app.cmd.handle.param;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.component.exception.XException;
+import vproxy.util.Network;
 import vproxy.util.Tuple;
 import vproxy.util.Utils;
 
@@ -18,7 +19,7 @@ public class NetworkHandle {
         }
     }
 
-    public static Tuple<byte[], byte[]> get(String net) {
+    public static Network get(String net) {
         String[] arr = net.split("/");
         if (arr.length > 2)
             throw new IllegalArgumentException();
@@ -26,10 +27,10 @@ public class NetworkHandle {
         byte[] mask = Utils.parseMask(Integer.parseInt(arr[1]));
         if (!Utils.validNetwork(addr, mask))
             throw new IllegalArgumentException();
-        return new Tuple<>(addr, mask);
+        return new Network(addr, mask);
     }
 
-    public static Tuple<byte[], byte[]> get(Command cmd) {
+    public static Network get(Command cmd) {
         String net = cmd.args.get(Param.net);
         return get(net);
     }

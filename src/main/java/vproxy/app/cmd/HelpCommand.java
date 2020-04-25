@@ -1351,7 +1351,7 @@ public class HelpCommand {
                     )
                 ))
             )),
-        ip("ip", null, "synthetic ip in a switch",
+        ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
                 new ResActMan(ActMan.list, "show synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
@@ -1378,6 +1378,38 @@ public class HelpCommand {
                 new ResActMan(ActMan.remove, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove ip 172.16.0.21 from vpc 1314 in switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        route("route", null, "route rules in a vpc of a switch",
+            Arrays.asList(
+                new ResActMan(ActMan.list, "show route rule names in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list route in vpc 1314 in switch sw0",
+                        "1) \"to172.17\"\n" +
+                            "2) \"to2001:0db8:0000:f102\""
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "show detailed info about route rules in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail route in vpc 1314 in switch sw0",
+                        "1) \"to172.17 -> network 172.17.0.0/24 vni 1315\"\n" +
+                            "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315\""
+                    )
+                )),
+                new ResActMan(ActMan.add, "add a route to a vpc of a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.network, "network to be matched"),
+                    new ResActParamMan(ParamMan.vni, "the vni to send packet to")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove route to172.17 from vpc 1314 in switch sw0",
                         "\"OK\""
                     )
                 ))

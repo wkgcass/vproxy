@@ -10,6 +10,7 @@ import vproxy.app.cmd.handle.param.SecGRDefaultHandle;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
 import vproxy.connection.Protocol;
+import vproxy.util.Network;
 import vproxy.util.Tuple;
 
 import java.util.List;
@@ -53,13 +54,13 @@ public class SecurityGroupRuleHandle {
     public static void add(Command cmd) throws Exception {
         SecurityGroup grp = SecurityGroupHandle.get(cmd.prepositionResource);
 
-        Tuple<byte[], byte[]> net = NetworkHandle.get(cmd);
+        Network net = NetworkHandle.get(cmd);
         Protocol protocol = ProtocolHandle.get(cmd);
         Tuple<Integer, Integer> range = PortRangeHandle.get(cmd);
         boolean allow = SecGRDefaultHandle.get(cmd);
 
         SecurityGroupRule rule = new SecurityGroupRule(
-            cmd.resource.alias, net.left, net.right,
+            cmd.resource.alias, net,
             protocol, range.left, range.right,
             allow
         );

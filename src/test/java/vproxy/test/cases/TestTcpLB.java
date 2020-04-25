@@ -20,6 +20,7 @@ import vproxy.test.tool.CaseUtils;
 import vproxy.test.tool.Client;
 import vproxy.test.tool.EchoServer;
 import vproxy.test.tool.IdServer;
+import vproxy.util.Network;
 import vproxy.util.Utils;
 
 import java.io.IOException;
@@ -647,7 +648,7 @@ public class TestTcpLB {
 
         // deny lbPort
         SecurityGroupRule secgr0 = new SecurityGroupRule(
-            "secgr0", Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32), Protocol.TCP, lbPort, lbPort, false
+            "secgr0", new Network(Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32)), Protocol.TCP, lbPort, lbPort, false
         );
         secg0.addRule(secgr0);
 

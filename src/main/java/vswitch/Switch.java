@@ -296,12 +296,13 @@ public class Switch {
             // will not fire
         }
 
-        private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(SelectorEventLoop loop, InetSocketAddress remote, ByteArray data) {
+        private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(String logId, SelectorEventLoop loop, InetSocketAddress remote, ByteArray data) {
             VProxySwitchPacket packet = new VProxySwitchPacket(Switch.this::getKey);
             VXLanPacket vxLanPacket;
             Iface iface;
 
             String err = packet.from(data);
+            assert Logger.lowLevelDebug(logId + "packet.from(data) = " + err);
             if (err == null) {
                 String user = packet.getUser();
                 iface = new Iface(remote, user);
@@ -311,36 +312,39 @@ public class Switch {
                     return null;
                 }
 
-                assert Logger.lowLevelDebug("got packet " + packet + " from " + iface);
+                assert Logger.lowLevelDebug(logId + "got packet " + packet + " from " + iface);
 
                 vxLanPacket = packet.getVxlan();
                 if (vxLanPacket != null) {
                     int packetVni = vxLanPacket.getVni();
                     iface.vni = packetVni; // set vni to the iface
-                    assert Logger.lowLevelDebug("setting vni for " + user + " to " + info.vni);
+                    assert Logger.lowLevelDebug(logId + "setting vni for " + user + " to " + info.vni);
                     if (packetVni != info.vni) {
                         vxLanPacket.setVni(info.vni);
                     }
                 }
 
                 if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
-                    sendPingTo(iface);
+                    assert Logger.lowLevelDebug(logId + "is vproxy ping message, do reply");
+                    sendPingTo(logId, iface);
                 }
                 // fall through
             } else {
                 if (bareVXLanAccess.allow(Protocol.UDP, remote.getAddress(), vxlanBindingAddress.getPort())) {
+                    assert Logger.lowLevelDebug(logId + "is bare vxlan");
                     // try to parse into vxlan directly
                     vxLanPacket = new VXLanPacket();
                     err = vxLanPacket.from(data);
                     if (err != null) {
-                        assert Logger.lowLevelDebug("invalid packet for vxlan: " + err + ", drop it");
+                        assert Logger.lowLevelDebug(logId + "invalid packet for vxlan: " + err + ", drop it");
                         return null;
                     }
                     iface = new Iface(remote);
-                    assert Logger.lowLevelDebug("got vxlan packet " + vxLanPacket + " from " + iface);
+                    iface.vni = vxLanPacket.getVni();
+                    assert Logger.lowLevelDebug(logId + "got vxlan packet " + vxLanPacket + " from " + iface);
                     // fall through
                 } else {
-                    assert Logger.lowLevelDebug("invalid packet: " + err + ", drop it");
+                    assert Logger.lowLevelDebug(logId + "invalid packet: " + err + ", drop it");
                     return null;
                 }
             }
@@ -373,30 +377,34 @@ public class Switch {
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                var tuple = handleNetworkAndGetVXLanPacket(ctx.getEventLoop(), remote, data);
+                String logId = UUID.randomUUID().toString() + " ::: ";
+
+                var tuple = handleNetworkAndGetVXLanPacket(logId, ctx.getEventLoop(), remote, data);
                 if (tuple == null) {
                     continue;
                 }
                 var vxlan = tuple.left;
                 var iface = tuple.right;
                 if (vxlan == null) {
+                    assert Logger.lowLevelDebug(logId + "no vxlan packet found, ignore");
                     continue;
                 }
 
                 int vni = vxlan.getVni();
                 Table table = tables.get(vni);
                 if (table == null) {
-                    assert Logger.lowLevelDebug("vni not defined: " + vni);
+                    assert Logger.lowLevelDebug(logId + "vni not defined: " + vni);
                     continue;
                 }
 
-                handleVxlan(vxlan, table, iface);
+                recordAndHandleVxlan(logId, vxlan, table, iface);
             }
         }
 
-        private void handleVxlan(VXLanPacket vxlan, Table table, Iface inputIface) {
+        private void recordAndHandleVxlan(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into recordAndHandleVxlan(" + vxlan + "," + table + "," + inputIface + ")");
+
             MacAddress src = vxlan.getPacket().getSrc();
-            MacAddress dst = vxlan.getPacket().getDst();
 
             // handle layer 2
             table.macTable.record(src, inputIface);
@@ -404,26 +412,31 @@ public class Switch {
             // handle layer 3
             AbstractPacket packet = vxlan.getPacket().getPacket();
             if (packet instanceof ArpPacket) {
+                assert Logger.lowLevelDebug(logId + "is arp packet");
                 ArpPacket arp = (ArpPacket) packet;
                 if (arp.getProtocolType() == Consts.ARP_PROTOCOL_TYPE_IP) {
+                    assert Logger.lowLevelDebug(logId + "arp protocol is ip");
                     if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_REQ) {
+                        assert Logger.lowLevelDebug(logId + "arp is req");
                         ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
+                            assert Logger.lowLevelDebug(logId + "arp sender is ipv4");
                             // only handle ipv4 in arp, v6 should be handled with ndp
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
                             if (!table.v4network.contains(ip)) {
-                                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
+                                assert Logger.lowLevelDebug(logId + "got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
                                 return;
                             }
                             table.arpTable.record(src, ip);
                         }
                     } else if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_RESP) {
+                        assert Logger.lowLevelDebug(logId + "arp is resp");
                         ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
                             // only handle ipv4 for now
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
                             if (!table.v4network.contains(ip)) {
-                                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
+                                assert Logger.lowLevelDebug(logId + "got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
                                 return;
                             }
                             table.arpTable.record(src, ip);
@@ -431,32 +444,39 @@ public class Switch {
                     }
                 }
             } else if (packet instanceof AbstractIpPacket) {
+                assert Logger.lowLevelDebug(logId + "is ip packet");
                 var ipPkt = (AbstractIpPacket) packet;
                 if (ipPkt.getPacket() instanceof IcmpPacket) {
+                    assert Logger.lowLevelDebug(logId + "is icmp packet");
                     var icmp = (IcmpPacket) ipPkt.getPacket();
                     if (icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation
                         ||
                         icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement) {
+                        assert Logger.lowLevelDebug(logId + "is ndp");
                         var other = icmp.getOther();
                         if (other.length() >= 28) { // 4 reserved and 16 target address and 8 option
+                            assert Logger.lowLevelDebug(logId + "ndp length is ok");
                             var targetIp = other.sub(4, 16);
                             var optType = other.uint8(20);
                             var optLen = other.uint8(21);
                             if (optLen == 1) {
+                                assert Logger.lowLevelDebug(logId + "ndp optLen == 1");
                                 var mac = new MacAddress(other.sub(22, 6));
                                 if (optType == Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address) {
+                                    assert Logger.lowLevelDebug(logId + "ndp has opt source link layer address");
                                     // mac is the sender's mac, record with src ip in ip packet
                                     InetAddress ip = ipPkt.getSrc();
                                     if (!table.v6network.contains(ip)) {
-                                        assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
+                                        assert Logger.lowLevelDebug(logId + "got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
                                         return;
                                     }
                                     table.arpTable.record(mac, ip);
                                 } else {
+                                    assert Logger.lowLevelDebug(logId + "ndp has opt target link layer address");
                                     // mac is the target's mac, record with target ip in icmp packet
                                     InetAddress ip = Utils.l3addr(targetIp.toJavaArray());
                                     if (!table.v6network.contains(ip)) {
-                                        assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
+                                        assert Logger.lowLevelDebug(logId + "got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
                                         return;
                                     }
                                     table.arpTable.record(mac, ip);
@@ -467,32 +487,45 @@ public class Switch {
                 }
             }
 
-            // handle
+            handleVxlan(logId, vxlan, table, inputIface);
+        }
+
+        private void handleVxlan(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into handleVxlan(" + vxlan + "," + table + "," + inputIface + ")");
+
+            MacAddress dst = vxlan.getPacket().getDst();
+
             if (dst.isBroadcast() || dst.isMulticast() /*handle multicast in the same way as broadcast*/) {
-                handleSyntheticIps(table, table.ips.allIps(), vxlan, inputIface, true);
+                assert Logger.lowLevelDebug(logId + "broadcast or multicast");
+                handleVirtual(logId, table, table.ips.allIps(), vxlan, inputIface, true);
 
                 for (var entry : table.macTable.listEntries()) {
                     var iface = entry.iface;
                     if (iface.equals(inputIface)) {
                         continue;
                     }
-                    sendVXLanTo(iface, vxlan);
+                    sendVXLanTo(logId, iface, vxlan);
                 }
             } else {
+                assert Logger.lowLevelDebug(logId + "unicast");
                 Iface iface = table.macTable.lookup(dst);
                 if (iface == null) {
+                    assert Logger.lowLevelDebug(logId + "connected iface for this packet is not found");
                     // not found, try synthetic or otherwise drop
                     var ips = table.ips.lookupByMac(dst);
                     if (ips != null) {
-                        handleSyntheticIps(table, ips, vxlan, inputIface, false);
+                        assert Logger.lowLevelDebug(logId + "synthetic ip found for this packet");
+                        handleVirtual(logId, table, ips, vxlan, inputIface, false);
                     }
                     return;
                 }
-                sendVXLanTo(iface, vxlan);
+                sendVXLanTo(logId, iface, vxlan);
             }
         }
 
-        private void handleSyntheticIps(Table table, Collection<InetAddress> ips, VXLanPacket vxlan, Iface inputIface, boolean allReceives) {
+        private void handleVirtual(String logId, Table table, Collection<InetAddress> ips, VXLanPacket vxlan, Iface inputIface, boolean allReceives) {
+            assert Logger.lowLevelDebug(logId + "into handleVirtual(" + table + "," + ips + "," + vxlan + "," + inputIface + ")");
+
             // analyse the packet
             AbstractPacket l3Packet = vxlan.getPacket().getPacket();
             ArpPacket arp = null;
@@ -501,23 +534,30 @@ public class Switch {
             IcmpPacket icmp = null;
             Inet6Address ndpNeighborSolicitation = null;
             if (l3Packet instanceof ArpPacket) {
+                assert Logger.lowLevelDebug(logId + "is arp packet");
                 arp = (ArpPacket) l3Packet;
                 if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_REQ) {
+                    assert Logger.lowLevelDebug(logId + "is arp req");
                     byte[] targetIpBytes = arp.getTargetIp().toJavaArray();
                     if (targetIpBytes.length == 4 || targetIpBytes.length == 16) {
+                        assert Logger.lowLevelDebug(logId + "target protocol address might be an ip address");
                         arpReq = Utils.l3addr(targetIpBytes);
                     }
                 }
             } else if (l3Packet instanceof AbstractIpPacket) {
+                assert Logger.lowLevelDebug(logId + "is ip packet");
                 ipPkt = (AbstractIpPacket) l3Packet;
                 var pkt = ipPkt.getPacket();
                 if (pkt instanceof IcmpPacket) {
+                    assert Logger.lowLevelDebug(logId + "is icmp");
                     icmp = (IcmpPacket) pkt;
                     if (icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
+                        assert Logger.lowLevelDebug(logId + "is icmpv6 neighbor solicitation");
                         ByteArray other = icmp.getOther();
                         if (other.length() < 20) { // 4 reserved and 16 target address
-                            assert Logger.lowLevelDebug("invalid packet for neighbor solicitation: too short");
+                            assert Logger.lowLevelDebug(logId + "invalid packet for neighbor solicitation: too short");
                         } else {
+                            assert Logger.lowLevelDebug(logId + "is a valid neighbor solicitation");
                             byte[] targetAddr = other.sub(4, 16).toJavaArray();
                             ndpNeighborSolicitation = (Inet6Address) Utils.l3addr(targetAddr);
                         }
@@ -526,46 +566,136 @@ public class Switch {
             }
 
             // handle
+            boolean handled = false;
             for (InetAddress ip : ips) {
+                assert Logger.lowLevelDebug(logId + "handle synthetic ip " + ip);
+
                 MacAddress mac = table.ips.lookup(ip);
                 // check l2
                 if (!allReceives && !mac.equals(vxlan.getPacket().getDst())) {
+                    assert Logger.lowLevelDebug(logId + "is unicast and mac address not match");
                     continue;
                 }
                 // check l3
                 if (arpReq != null) {
+                    assert Logger.lowLevelDebug(logId + "check arp");
                     if (ip.equals(arpReq)) {
+                        assert Logger.lowLevelDebug(logId + "arp target address matches");
                         // should respond arp
-                        handleArp(vxlan, arp, ip, mac, inputIface);
+                        handleArp(logId, vxlan, arp, ip, mac, inputIface);
+                        handled = true;
+                        if (!allReceives) break;
                     }
                 } else if (ipPkt != null) {
+                    assert Logger.lowLevelDebug(logId + "check ip");
                     var dstIp = ipPkt.getDst();
                     if (allReceives || dstIp.equals(ip)) {
+                        assert Logger.lowLevelDebug(logId + "is broadcast or multicast or unicast and ip matches");
                         if (icmp != null) {
+                            assert Logger.lowLevelDebug(logId + "check icmp");
                             if (ndpNeighborSolicitation != null && ndpNeighborSolicitation.equals(ip)) {
-                                handleIcmpNDP(vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                assert Logger.lowLevelDebug(logId + "ndp neighbor solicitation ip matches");
+                                handleIcmpNDP(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                handled = true;
+                                if (!allReceives) break;
                             } else {
+                                assert Logger.lowLevelDebug(logId + "not ndp neighbor solicitation");
                                 boolean shouldHandlePing;
                                 if (icmp.isIpv6()) {
+                                    assert Logger.lowLevelDebug(logId + "is icmpv6");
                                     shouldHandlePing = icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ;
                                 } else {
+                                    assert Logger.lowLevelDebug(logId + "is icmp");
                                     shouldHandlePing = icmp.getType() == Consts.ICMP_PROTOCOL_TYPE_ECHO_REQ;
                                 }
                                 if (shouldHandlePing) {
-                                    handleIcmpPing(vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                    assert Logger.lowLevelDebug(logId + "handle ping");
+                                    handleIcmpPing(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                    handled = true;
+                                    if (!allReceives) break;
                                 }
                             }
                         }
                     }
                 }
                 // otherwise ignore
-                if (!allReceives) {
-                    break; // only one ip should handle the packet
+            }
+            // handle routes when the packet not handled by others
+            if (!handled) {
+                assert Logger.lowLevelDebug(logId + "not yet handled");
+                if (!allReceives) { // only handle unicast
+                    assert Logger.lowLevelDebug(logId + "is unicast");
+                    if (ipPkt != null) { // only check ip packets here
+                        assert Logger.lowLevelDebug(logId + "is ip packet");
+                        int hop = ipPkt.getHopLimit();
+                        if (hop != 0) { // do not route packets when hop reaches 0
+                            assert Logger.lowLevelDebug(logId + "ip hop is ok");
+                            ipPkt.setHopLimit(hop - 1);
+                            // clear upper level cached packet
+                            vxlan.getPacket().clearRawPacket();
+                            vxlan.clearRawPacket();
+
+                            var dstIp = ipPkt.getDst();
+                            RouteTable.RouteRule r = table.routeTable.lookup(dstIp);
+                            if (r != null) {
+                                assert Logger.lowLevelDebug(logId + "route rule found");
+                                int vni = r.toVni;
+                                if (vni != 0) { // check the vni number, for further extension
+                                    assert Logger.lowLevelDebug(logId + "vni in rule is ok");
+                                    Table t = tables.get(vni);
+                                    if (t != null) { // cannot handle if the table does no exist
+                                        assert Logger.lowLevelDebug(logId + "target table is found");
+                                        routeTo(logId, t, dstIp, vxlan, inputIface);
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
         }
 
-        private void handleArp(VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
+        private void routeTo(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into routeTo(" + table + "," + dstIp + "," + vxlan + "," + inputIface + ")");
+
+            // find the mac of the target address
+            MacAddress dstMac = table.arpTable.lookup(dstIp);
+            if (dstMac == null) {
+                assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
+                // TODO run arp or ndp
+                return;
+            }
+            // find an ip in that table to be used for the mac address
+            var ipsInTable = table.ips.entries();
+            boolean useIpv6 = dstIp instanceof Inet6Address;
+            MacAddress srcMac = null;
+            for (var x : ipsInTable) {
+                if (useIpv6 && x.getKey() instanceof Inet6Address) {
+                    srcMac = x.getValue();
+                    break;
+                }
+                if (!useIpv6 && x.getKey() instanceof Inet4Address) {
+                    srcMac = x.getValue();
+                    break;
+                }
+            }
+            // handle if the address exists
+            if (srcMac == null) {
+                assert Logger.lowLevelDebug(logId + "the source mac to send the packet is not found");
+                return;
+            }
+            vxlan.getPacket().setSrc(srcMac);
+            vxlan.getPacket().setDst(dstMac);
+
+            // clear upper level cached packet
+            vxlan.clearRawPacket();
+
+            handleVxlan(logId, vxlan, table, inputIface);
+        }
+
+        private void handleArp(String logId, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "handleArp(" + inVxlan + "," + inArp + "," + ip + "," + mac + "," + inputIface + ")");
+
             ArpPacket resp = new ArpPacket();
             resp.setHardwareType(inArp.getHardwareType());
             resp.setProtocolType(inArp.getProtocolType());
@@ -588,10 +718,12 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(inputIface, vxlan);
+            sendVXLanTo(logId, inputIface, vxlan);
         }
 
-        private void handleIcmpPing(VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+        private void handleIcmpPing(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "handleIcmpPing(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
+
             IcmpPacket icmp = new IcmpPacket(ip instanceof Inet6Address);
             icmp.setType(inIcmp.isIpv6() ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP : Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP);
             icmp.setCode(0);
@@ -639,10 +771,12 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(inputIface, vxlan);
+            sendVXLanTo(logId, inputIface, vxlan);
         }
 
-        private void handleIcmpNDP(VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+        private void handleIcmpNDP(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "handleIcmpNDP(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
+
             assert inIcmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation;
             // we only handle neighbor solicitation for now
 
@@ -679,17 +813,19 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(inputIface, vxlan);
+            sendVXLanTo(logId, inputIface, vxlan);
         }
 
-        private void sendPingTo(Iface iface) {
+        private void sendPingTo(String logId, Iface iface) {
+            assert Logger.lowLevelDebug(logId + "sendPingTo(" + iface + ")");
             VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
             sendVProxyPacketTo(iface, p);
         }
 
-        private void sendVXLanTo(Iface iface, VXLanPacket vxlan) {
+        private void sendVXLanTo(String logId, Iface iface, VXLanPacket vxlan) {
+            assert Logger.lowLevelDebug(logId + "sendVXLanTo(" + iface + "," + vxlan + ")");
             // fix vni
             if (iface.vni != 0) {
                 vxlan.setVni(iface.vni);

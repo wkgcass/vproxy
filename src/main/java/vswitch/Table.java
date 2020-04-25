@@ -17,6 +17,7 @@ public class Table {
     public final MacTable macTable;
     public final ArpTable arpTable;
     public final SyntheticIpHolder ips;
+    public final RouteTable routeTable;
 
     public Table(int vni, SelectorEventLoop loop,
                  Network v4network, Network v6network,
@@ -28,6 +29,7 @@ public class Table {
         macTable = new MacTable(loop, macTableTimeout);
         arpTable = new ArpTable(loop, arpTableTimeout);
         ips = new SyntheticIpHolder();
+        routeTable = new RouteTable();
     }
 
     public void setMacTableTimeout(int macTableTimeout) {
@@ -62,5 +64,18 @@ public class Table {
     public void setLoop(SelectorEventLoop loop) {
         macTable.setLoop(loop);
         arpTable.setLoop(loop);
+    }
+
+    @Override
+    public String toString() {
+        return "Table{" +
+            "vni=" + vni +
+            ", v4network=" + v4network +
+            ", v6network=" + v6network +
+            ", macTable=" + macTable +
+            ", arpTable=" + arpTable +
+            ", ips=" + ips +
+            ", routeTable=" + routeTable +
+            '}';
     }
 }

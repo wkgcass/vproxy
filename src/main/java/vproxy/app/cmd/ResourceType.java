@@ -27,6 +27,7 @@ public enum ResourceType {
     iface("iface"),
     user("user"),
     ip("ip"),
+    route("route"),
 
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),

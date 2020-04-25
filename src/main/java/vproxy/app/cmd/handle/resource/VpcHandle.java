@@ -71,12 +71,10 @@ public class VpcHandle {
 
     public static void add(Command cmd) throws Exception {
         Switch sw = SwitchHandle.get(cmd.prepositionResource);
-        Tuple<byte[], byte[]> v4 = NetworkHandle.get(cmd.args.get(Param.v4net));
-        Network v4net = new Network(v4.left, v4.right);
+        Network v4net = NetworkHandle.get(cmd.args.get(Param.v4net));
         Network v6net = null;
         if (cmd.args.containsKey(Param.v6net)) {
-            Tuple<byte[], byte[]> v6 = NetworkHandle.get(cmd.args.get(Param.v6net));
-            v6net = new Network(v6.left, v6.right);
+            v6net = NetworkHandle.get(cmd.args.get(Param.v6net));
         }
         sw.addTable(Integer.parseInt(cmd.resource.alias), v4net, v6net);
     }

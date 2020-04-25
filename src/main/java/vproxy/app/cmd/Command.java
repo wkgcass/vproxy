@@ -668,6 +668,7 @@ public class Command {
                 break;
             case user:
             case vpc:
+            case route:
             case ip:
                 switch (cmd.action) {
                     case a:
@@ -675,6 +676,8 @@ public class Command {
                             UserHandle.checkCreateUser(cmd);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkCreateVpc(cmd);
+                        } else if (cmd.resource.type == ResourceType.route) {
+                            RouteHandle.checkCreateRoute(cmd);
                         } else {
                             IpHandle.checkCreateIp(cmd);
                         }
@@ -686,6 +689,8 @@ public class Command {
                             UserHandle.checkUser(targetResource);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkVpc(targetResource);
+                        } else if (cmd.resource.type == ResourceType.route) {
+                            RouteHandle.checkRoute(targetResource);
                         } else {
                             IpHandle.checkIp(targetResource);
                         }
@@ -1081,6 +1086,23 @@ public class Command {
                     case r:
                     case R:
                         IpHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case route:
+                switch (action) {
+                    case l:
+                        var names = RouteHandle.names(targetResource);
+                        return new CmdResult(names, names, utilJoinList(names));
+                    case L:
+                        var routes = RouteHandle.list(targetResource);
+                        List<Object> strTuples = routes.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(routes, strTuples, utilJoinList(strTuples));
+                    case a:
+                        RouteHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        RouteHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ck:
