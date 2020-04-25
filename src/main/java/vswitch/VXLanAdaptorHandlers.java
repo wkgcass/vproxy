@@ -3,6 +3,7 @@ package vswitch;
 import vfd.DatagramFD;
 import vfd.EventSet;
 import vfd.FDProvider;
+import vfd.posix.TunTapDatagramFD;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
@@ -11,6 +12,7 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
+import vswitch.packet.EthernetPacket;
 import vswitch.packet.VProxySwitchPacket;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
@@ -45,7 +47,7 @@ public class VXLanAdaptorHandlers {
             listenSock.configureBlocking(false);
             listenSock.bind(listenAddr);
 
-            launchGeneralAdaptor(loop, switchSock, vxlanSock, listenSock, user, password);
+            launchGeneralAdaptor(loop, 0, switchSock, vxlanSock, listenSock, user, password);
         } catch (IOException e) {
             if (switchSock != null) {
                 try {
@@ -72,15 +74,15 @@ public class VXLanAdaptorHandlers {
         }
     }
 
-    public static void launchGeneralAdaptor(SelectorEventLoop loop, DatagramFD switchSock, DatagramFD vxlanSock, DatagramFD listenSock, String user, String password) throws IOException {
+    public static void launchGeneralAdaptor(SelectorEventLoop loop, int flags, DatagramFD switchSock, DatagramFD toDeviceSock, DatagramFD listenSock, String user, String password) throws IOException {
         if (user.length() < 8) {
             user += Consts.USER_PADDING.repeat(8 - user.length());
         }
         if (Base64.getDecoder().decode(user).length != 6) {
             throw new IllegalArgumentException("invalid user: " + user);
         }
-        loop.add(listenSock, EventSet.read(), null, new VXLanHandler(switchSock, user, password));
-        loop.add(switchSock, EventSet.read(), null, new VProxyHandler(switchSock, vxlanSock, loop, user, password));
+        loop.add(listenSock, EventSet.read(), null, new DevicePacketHandler(flags, switchSock, user, password));
+        loop.add(switchSock, EventSet.read(), null, new VProxyHandler(flags, switchSock, toDeviceSock, loop, user, password));
     }
 
     private static void sendVProxyPacket(VProxySwitchPacket p, ByteBuffer sndBuf, DatagramFD connectedSock) {
@@ -95,10 +97,11 @@ public class VXLanAdaptorHandlers {
         }
     }
 
-    public static class VXLanHandler implements Handler<DatagramFD> {
+    public static class DevicePacketHandler implements Handler<DatagramFD> {
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
+        private final int flags;
         private final DatagramFD switchSock;
         private final String user;
         private final Aes256Key passwordKey;
@@ -121,7 +124,8 @@ public class VXLanAdaptorHandlers {
             }
         }
 
-        public VXLanHandler(DatagramFD switchSock, String user, String password) {
+        public DevicePacketHandler(int flags, DatagramFD switchSock, String user, String password) {
+            this.flags = flags;
             this.switchSock = switchSock;
             this.user = user;
             this.passwordKey = new Aes256Key(password);
@@ -142,22 +146,52 @@ public class VXLanAdaptorHandlers {
             DatagramFD sock = ctx.getChannel();
             while (true) {
                 rcvBuf.limit(rcvBuf.capacity()).position(0);
-                SocketAddress socketAddress;
-                try {
-                    socketAddress = sock.receive(rcvBuf);
-                } catch (IOException e) {
-                    Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
-                    return;
-                }
-                if (rcvBuf.position() == 0) {
-                    break; // nothing read, quit loop
-                }
-                VXLanPacket p = new VXLanPacket();
-                ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
-                String err = p.from(arr);
-                if (err != null) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
-                    continue;
+
+                VXLanPacket p;
+                if (flags == 0) {
+                    SocketAddress socketAddress;
+                    try {
+                        socketAddress = sock.receive(rcvBuf);
+                    } catch (IOException e) {
+                        Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
+                        return;
+                    }
+                    if (rcvBuf.position() == 0) {
+                        break; // nothing read, quit loop
+                    }
+                    p = new VXLanPacket();
+                    ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
+                    String err = p.from(arr);
+                    if (err != null) {
+                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress + ":  " + err);
+                        continue;
+                    }
+                } else {
+                    try {
+                        sock.read(rcvBuf);
+                    } catch (IOException e) {
+                        Logger.error(LogType.CONN_ERROR, "reading from " + ctx.getChannel() + " got error", e);
+                        return;
+                    }
+                    if (rcvBuf.position() == 0) {
+                        break; // nothing read, quit loop
+                    }
+                    ByteArray arr;
+                    if ((flags & TunTapDatagramFD.IFF_NO_PI) == TunTapDatagramFD.IFF_NO_PI) {
+                        arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
+                    } else {
+                        arr = ByteArray.from(rcvBuf.array()).sub(4, rcvBuf.position() - 4);
+                    }
+                    EthernetPacket ether = new EthernetPacket();
+                    String err = ether.from(arr);
+                    if (err != null) {
+                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + sock + ": " + err);
+                        continue;
+                    }
+                    p = new VXLanPacket();
+                    p.setFlags(0b00001000);
+                    p.setVni(1); // not important, will be overwritten on the switch side
+                    p.setPacket(ether);
                 }
 
                 if (connectedToVxlan == null) {
@@ -165,7 +199,7 @@ public class VXLanAdaptorHandlers {
                 }
                 connectedToVxlan.resetTimer();
 
-                assert Logger.lowLevelDebug("received packet " + p);
+                assert Logger.lowLevelDebug("the packet to send to switch" + p);
                 sendVXLanPacket(p);
             }
         }
@@ -206,6 +240,7 @@ public class VXLanAdaptorHandlers {
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
+        private final int flags;
         private final DatagramFD switchSock;
         private final DatagramFD vxlanSock;
         private final String user;
@@ -230,7 +265,8 @@ public class VXLanAdaptorHandlers {
             }
         }
 
-        public VProxyHandler(DatagramFD switchSock, DatagramFD vxlanSock, SelectorEventLoop loop, String user, String password) {
+        public VProxyHandler(int flags, DatagramFD switchSock, DatagramFD vxlanSock, SelectorEventLoop loop, String user, String password) {
+            this.flags = flags;
             this.switchSock = switchSock;
             this.vxlanSock = vxlanSock;
             this.user = user;
@@ -254,9 +290,8 @@ public class VXLanAdaptorHandlers {
             DatagramFD sock = ctx.getChannel();
             while (true) {
                 rcvBuf.limit(rcvBuf.capacity()).position(0);
-                SocketAddress socketAddress;
                 try {
-                    socketAddress = sock.receive(rcvBuf);
+                    sock.read(rcvBuf);
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
                     return;
@@ -268,7 +303,7 @@ public class VXLanAdaptorHandlers {
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
                 String err = p.from(arr);
                 if (err != null) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + socketAddress);
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + sock);
                     continue;
                 }
                 if (!p.getUser().equals(user)) {
@@ -284,8 +319,13 @@ public class VXLanAdaptorHandlers {
                     // not vxlan packet, ignore
                     continue;
                 }
-                ByteArray vxlan = p.getVxlan().getRawPacket();
-                sendToVxlan(vxlan);
+                ByteArray packetBytes;
+                if (flags == 0) {
+                    packetBytes = p.getVxlan().getRawPacket();
+                } else {
+                    packetBytes = p.getVxlan().getPacket().getRawPacket();
+                }
+                sendPacketToDevice(packetBytes);
             }
         }
 
@@ -297,7 +337,7 @@ public class VXLanAdaptorHandlers {
             sendVProxyPacket(p, sndBuf, switchSock);
         }
 
-        private void sendToVxlan(ByteArray vxlan) {
+        private void sendPacketToDevice(ByteArray vxlan) {
             sndBuf.limit(sndBuf.capacity()).position(0);
             sndBuf.put(vxlan.toJavaArray());
             sndBuf.flip();
