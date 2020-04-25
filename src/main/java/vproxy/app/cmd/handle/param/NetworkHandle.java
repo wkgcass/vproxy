@@ -18,8 +18,7 @@ public class NetworkHandle {
         }
     }
 
-    public static Tuple<byte[], byte[]> get(Command cmd) {
-        String net = cmd.args.get(Param.net);
+    public static Tuple<byte[], byte[]> get(String net) {
         String[] arr = net.split("/");
         if (arr.length > 2)
             throw new IllegalArgumentException();
@@ -28,5 +27,10 @@ public class NetworkHandle {
         if (!Utils.validNetwork(addr, mask))
             throw new IllegalArgumentException();
         return new Tuple<>(addr, mask);
+    }
+
+    public static Tuple<byte[], byte[]> get(Command cmd) {
+        String net = cmd.args.get(Param.net);
+        return get(net);
     }
 }

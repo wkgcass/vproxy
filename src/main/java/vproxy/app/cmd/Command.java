@@ -667,14 +667,14 @@ public class Command {
                 }
                 break;
             case user:
-            case vni:
+            case vpc:
             case ip:
                 switch (cmd.action) {
                     case a:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkCreateUser(cmd);
-                        } else if (cmd.resource.type == ResourceType.vni) {
-                            VniHandle.checkCreateVni(cmd);
+                        } else if (cmd.resource.type == ResourceType.vpc) {
+                            VpcHandle.checkCreateVpc(cmd);
                         } else {
                             IpHandle.checkCreateIp(cmd);
                         }
@@ -684,8 +684,8 @@ public class Command {
                     case l:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkUser(targetResource);
-                        } else if (cmd.resource.type == ResourceType.vni) {
-                            VniHandle.checkVni(targetResource);
+                        } else if (cmd.resource.type == ResourceType.vpc) {
+                            VpcHandle.checkVpc(targetResource);
                         } else {
                             IpHandle.checkIp(targetResource);
                         }
@@ -1010,19 +1010,22 @@ public class Command {
                         DnsCacheHandle.remove(this);
                         return new CmdResult();
                 }
-            case vni:
+            case vpc:
                 switch (action) {
                     case l:
+                        List<VpcHandle.VpcEntry> vpcLs = VpcHandle.list(targetResource);
+                        List<Object> ls = vpcLs.stream().map(e -> e.vpc).collect(Collectors.toList());
+                        return new CmdResult(vpcLs, ls, utilJoinList(ls));
                     case L:
-                        List<VniHandle.VniEntry> vniLs = VniHandle.list(targetResource);
-                        List<Object> ls = vniLs.stream().map(e -> e.vni).collect(Collectors.toList());
-                        return new CmdResult(vniLs, ls, utilJoinList(ls));
+                        vpcLs = VpcHandle.list(targetResource);
+                        ls = vpcLs.stream().map(VpcHandle.VpcEntry::toString).collect(Collectors.toList());
+                        return new CmdResult(vpcLs, ls, utilJoinList(ls));
                     case a:
-                        VniHandle.add(this);
+                        VpcHandle.add(this);
                         return new CmdResult();
                     case r:
                     case R:
-                        VniHandle.forceRemove(this);
+                        VpcHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case iface:

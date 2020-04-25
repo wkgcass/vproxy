@@ -177,14 +177,14 @@ public class Switch {
         return t;
     }
 
-    public void addTable(int vni) throws AlreadyExistException, XException {
+    public void addTable(int vni, Network v4network, Network v6network) throws AlreadyExistException, XException {
         if (tables.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
         if (currentEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        tables.computeIfAbsent(vni, n -> new Table(n, currentEventLoop.getSelectorEventLoop(), macTableTimeout, arpTableTimeout));
+        tables.computeIfAbsent(vni, n -> new Table(n, currentEventLoop.getSelectorEventLoop(), v4network, v6network, macTableTimeout, arpTableTimeout));
     }
 
     public void delTable(int vni) throws NotFoundException {
@@ -409,8 +409,12 @@ public class Switch {
                     if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_REQ) {
                         ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
-                            // only handle ipv4 for now
+                            // only handle ipv4 in arp, v6 should be handled with ndp
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
+                            if (!table.v4network.contains(ip)) {
+                                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
+                                return;
+                            }
                             table.arpTable.record(src, ip);
                         }
                     } else if (arp.getOpcode() == Consts.ARP_PROTOCOL_OPCODE_RESP) {
@@ -418,6 +422,10 @@ public class Switch {
                         if (senderIp.length() == 4) {
                             // only handle ipv4 for now
                             InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
+                            if (!table.v4network.contains(ip)) {
+                                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
+                                return;
+                            }
                             table.arpTable.record(src, ip);
                         }
                     }
@@ -439,10 +447,18 @@ public class Switch {
                                 if (optType == Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address) {
                                     // mac is the sender's mac, record with src ip in ip packet
                                     InetAddress ip = ipPkt.getSrc();
+                                    if (!table.v6network.contains(ip)) {
+                                        assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
+                                        return;
+                                    }
                                     table.arpTable.record(mac, ip);
                                 } else {
                                     // mac is the target's mac, record with target ip in icmp packet
                                     InetAddress ip = Utils.l3addr(targetIp.toJavaArray());
+                                    if (!table.v6network.contains(ip)) {
+                                        assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
+                                        return;
+                                    }
                                     table.arpTable.record(mac, ip);
                                 }
                             }

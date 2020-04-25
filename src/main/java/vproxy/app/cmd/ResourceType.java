@@ -22,7 +22,7 @@ public enum ResourceType {
     ck("cert-key"),
 
     sw("switch"),
-    vni("vni"),
+    vpc("vpc"),
     arp("arp"),
     iface("iface"),
     user("user"),

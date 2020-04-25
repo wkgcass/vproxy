@@ -621,16 +621,19 @@ public class Shutdown {
                     cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
                     commands.add(cmd);
                 }
-                // create vni
+                // create vpc
                 for (var entry : sw.getTables().entrySet()) {
-                    int vni = entry.getKey();
-                    cmd = "add vni " + vni + " to switch " + sw.alias;
+                    int vpc = entry.getKey();
+                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + entry.getValue().v4network;
+                    if (entry.getValue().v6network != null) {
+                        cmd += " v6network " + entry.getValue().v6network;
+                    }
                     commands.add(cmd);
 
                     var table = entry.getValue();
                     // create ips
                     for (var ip : table.ips.entries()) {
-                        cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vni " + vni + " in switch " + sw.alias + " mac " + ip.getValue();
+                        cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ip.getValue();
                         commands.add(cmd);
                     }
                 }

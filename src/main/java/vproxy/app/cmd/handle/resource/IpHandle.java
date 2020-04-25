@@ -20,24 +20,24 @@ public class IpHandle {
     public static void checkIp(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.ip.fullname + " on top level");
-        if (parent.type != ResourceType.vni) {
+        if (parent.type != ResourceType.vpc) {
             if (parent.type == ResourceType.sw) {
-                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.ip.fullname + ", you have to specify vni first");
+                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.ip.fullname + ", you have to specify vpc first");
             }
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ip.fullname);
         }
 
-        VniHandle.checkVni(parent.parentResource);
-        VniHandle.checkVniName(parent);
+        VpcHandle.checkVpc(parent.parentResource);
+        VpcHandle.checkVpcName(parent);
     }
 
     public static Collection<InetAddress> names(Resource parent) throws Exception {
-        Table tbl = VniHandle.get(parent);
+        Table tbl = VpcHandle.get(parent);
         return tbl.ips.allIps();
     }
 
     public static Collection<Map.Entry<InetAddress, MacAddress>> list(Resource parent) throws Exception {
-        Table tbl = VniHandle.get(parent);
+        Table tbl = VpcHandle.get(parent);
         return tbl.ips.entries();
     }
 
@@ -64,7 +64,7 @@ public class IpHandle {
             throw new XException("invalid mac address: " + mac);
         }
 
-        VniHandle.get(cmd.prepositionResource).ips.add(inet, macO);
+        VpcHandle.get(cmd.prepositionResource).addIp(inet, macO);
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -76,6 +76,6 @@ public class IpHandle {
         }
         InetAddress inet = Utils.l3addr(ipBytes);
 
-        VniHandle.get(cmd.prepositionResource).ips.del(inet);
+        VpcHandle.get(cmd.prepositionResource).ips.del(inet);
     }
 }

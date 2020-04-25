@@ -21,15 +21,15 @@ public class ArpHandle {
     public static void checkArp(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.arp.fullname + " on top level");
-        if (parent.type != ResourceType.vni) {
+        if (parent.type != ResourceType.vpc) {
             if (parent.type == ResourceType.sw) {
-                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.arp.fullname + ", you have to specify vni first");
+                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.arp.fullname + ", you have to specify vpc first");
             }
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.arp.fullname);
         }
 
-        VniHandle.checkVni(parent.parentResource);
-        VniHandle.checkVniName(parent);
+        VpcHandle.checkVpc(parent.parentResource);
+        VpcHandle.checkVpcName(parent);
     }
 
     public static int count(Resource parent) throws Exception {
@@ -37,20 +37,20 @@ public class ArpHandle {
     }
 
     public static List<ArpEntry> list(Resource parent) throws Exception {
-        String vniStr = parent.alias;
-        int vni = Integer.parseInt(vniStr);
+        String vpcStr = parent.alias;
+        int vpc = Integer.parseInt(vpcStr);
         Switch sw = Application.get().switchHolder.get(parent.parentResource.alias);
         var tables = sw.getTables().values();
 
         Table table = null;
         for (var tbl : tables) {
-            if (tbl.vni == vni) {
+            if (tbl.vni == vpc) {
                 table = tbl;
                 break;
             }
         }
         if (table == null) {
-            throw new NotFoundException("vni", vniStr);
+            throw new NotFoundException("vpc", vpcStr);
         }
 
         var macInArpEntries = new HashSet<MacAddress>();

@@ -16,6 +16,8 @@ public enum Param {
     secg("security-group"),
     secgrdefault("default"),
     net("network"),
+    v4net("v4network"),
+    v6net("v6network"),
     protocol("protocol"),
     portrange("port-range"),
     tl("tcp-lb"),

@@ -397,6 +397,8 @@ public class HelpCommand {
         weight("weight", "w", "weight"),
         dft("default", null, "enum: allow or deny"),
         network("network", "net", "network: $network/$mask"),
+        v4network("v4network", "v4net", "ipv4 network: $v4network/$mask"),
+        v6network("v6network", "v6net", "ipv6 network: $v6network/$mask"),
         protocol("protocol", null, "" +
             "for tcp-lb: the application layer protocol, " +
             "for security-group: the transport layer protocol: tcp or udp"),
@@ -1257,23 +1259,32 @@ public class HelpCommand {
                         )
                     ))
             )),
-        vni("vni", null, "vxlan network id",
+        vpc("vpc", null, "a private network",
             Arrays.asList(
-                new ResActMan(ActMan.list, "list existing vnis in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "list existing vpcs in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list vni in switch sw0",
+                        "list vpc in switch sw0",
                         "1) (integer) 1314"
                     )
                 )),
-                new ResActMan(ActMan.add, "create a vxlan vni in a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "list detailed info about vpcs in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "add vni 1314 in switch sw0",
+                        "list-detail vpc in switch sw0",
+                        "1) \"1314 -> v4network 172.16.0.0/16\""
+                    )
+                )),
+                new ResActMan(ActMan.add, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
+                    new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vpc"),
+                    new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vpc", "not allowed")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add vpc 1314 in switch sw0 v4network 172.16.0.0/16",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a vxlan vni from a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.remove, "remove a vpc from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remote vni 1314 from switch sw0",
+                        "remote vpc 1314 from switch sw0",
                         "\"OK\""
                     )
                 ))
@@ -1296,15 +1307,15 @@ public class HelpCommand {
             )),
         arp("arp", null, "arp and mac table entries",
             Arrays.asList(
-                new ResActMan(ActMan.list, "count entries in a vni", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "count entries in a vpc", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list arp in vni 1314 in switch sw0",
+                        "list arp in vpc 1314 in switch sw0",
                         "(integer) 2"
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "list arp and mac table entries in a vni", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "list arp and mac table entries in a vpc", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail arp in vni 1314 in switch sw0",
+                        "list-detail arp in vpc 1314 in switch sw0",
                         "1) \"aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299\"\n" +
                             "2) \"fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299\""
                     )
@@ -1342,31 +1353,31 @@ public class HelpCommand {
             )),
         ip("ip", null, "synthetic ip in a switch",
             Arrays.asList(
-                new ResActMan(ActMan.list, "show synthetic ips in a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.list, "show synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list ip in vni 1314 in switch sw0",
+                        "list ip in vpc 1314 in switch sw0",
                         "1) \"172.16.0.21\"\n" +
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002]\""
                     )
                 )),
-                new ResActMan(ActMan.listdetail, "show detailed info about synthetic ips in a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.listdetail, "show detailed info about synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "list-detail ip in vni 1314 in switch sw0",
+                        "list-detail ip in vpc 1314 in switch sw0",
                         "1) \"172.16.0.21 -> mac e2:8b:11:00:00:22\"\n" +
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
                     )
                 )),
-                new ResActMan(ActMan.add, "add a synthetic ip to a vni of a switch", Collections.singletonList(
+                new ResActMan(ActMan.add, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
                     new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add ip 172.16.0.21 to vni 1314 in switch sw0 mac e2:8b:11:00:00:22",
+                        "add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a synthetic ip from a vni of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.remove, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
-                        "remove ip 172.16.0.21 from vni 1314 in switch sw0",
+                        "remove ip 172.16.0.21 from vpc 1314 in switch sw0",
                         "\"OK\""
                     )
                 ))
