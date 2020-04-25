@@ -7,21 +7,21 @@ import vfd.posix.PosixFDs;
 import vfd.posix.TunTapDatagramFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Utils;
-import vswitch.VXLanAdaptorHandlers;
+import vswitch.NetworkDeviceToSwitchAdaptorHandlers;
 import vswitch.util.Consts;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.util.Base64;
 
-public class VXLanAdaptor {
+public class SwitchAdaptor {
     private static final String HELP_STR = "" +
         "usage: switch={} user={} password={} from={vxlan|tap}\n" +
         "    if from = vxlan:\n" +
         "       vxlan={} listen={}\n" +
         "    if from = tap\n" +
         "       dev={} [no-pi]\n" +
-        "arguments:" +
+        "arguments:\n" +
         "       switch:   ip:port of the switch\n" +
         "       user:     the user of your account\n" +
         "       password: the password for your account\n" +
@@ -177,7 +177,7 @@ public class VXLanAdaptor {
                 return;
             }
             try {
-                VXLanAdaptorHandlers.launchGeneralAdaptor(loop, inetSw, inetVxlan, inetListen, user, password);
+                NetworkDeviceToSwitchAdaptorHandlers.launchGeneralAdaptor(loop, inetSw, inetVxlan, inetListen, user, password);
             } catch (IOException e) {
                 System.out.println(Utils.formatErr(e));
                 System.exit(1);
@@ -225,7 +225,7 @@ public class VXLanAdaptor {
                 return;
             }
             try {
-                VXLanAdaptorHandlers.launchGeneralAdaptor(loop, flags, switchSock, fd, fd, user, password);
+                NetworkDeviceToSwitchAdaptorHandlers.launchGeneralAdaptor(loop, flags, switchSock, fd, fd, user, password);
             } catch (IOException e) {
                 System.out.println(Utils.formatErr(e));
                 System.exit(1);

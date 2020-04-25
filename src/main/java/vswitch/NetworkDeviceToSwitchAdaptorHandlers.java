@@ -23,10 +23,10 @@ import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Base64;
 
-public class VXLanAdaptorHandlers {
+public class NetworkDeviceToSwitchAdaptorHandlers {
     private static final int PING_PERIOD = 20 * 1000;
 
-    private VXLanAdaptorHandlers() {
+    private NetworkDeviceToSwitchAdaptorHandlers() {
     }
 
     public static void launchGeneralAdaptor(SelectorEventLoop loop, InetSocketAddress switchSockAddr, InetSocketAddress vxlanSockAddr, InetSocketAddress listenAddr, String user, String password) throws IOException {

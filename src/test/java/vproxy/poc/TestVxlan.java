@@ -4,7 +4,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.selector.SelectorEventLoop;
 import vswitch.Switch;
-import vswitch.VXLanAdaptorHandlers;
+import vswitch.NetworkDeviceToSwitchAdaptorHandlers;
 
 import java.net.InetSocketAddress;
 
@@ -27,12 +27,12 @@ public class TestVxlan {
         sw.addUser(user, pass);
         sw.start();
 
-        VXLanAdaptorHandlers.launchGeneralAdaptor(loop,
+        NetworkDeviceToSwitchAdaptorHandlers.launchGeneralAdaptor(loop,
             new InetSocketAddress("127.0.0.1", swListen),
             new InetSocketAddress(vxlanAddr1, vxlanPort1),
             new InetSocketAddress(vxlanPort1),
             user, pass);
-        VXLanAdaptorHandlers.launchGeneralAdaptor(loop,
+        NetworkDeviceToSwitchAdaptorHandlers.launchGeneralAdaptor(loop,
             new InetSocketAddress("127.0.0.1", swListen),
             new InetSocketAddress(vxlanAddr2, vxlanPort2),
             new InetSocketAddress(vxlanPort2),

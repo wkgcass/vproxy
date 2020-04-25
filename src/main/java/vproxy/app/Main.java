@@ -95,9 +95,9 @@ public class Main {
                 case "helloworld":
                     HelloWorld.main0(args);
                     break;
-                case "VXLanAdaptor":
-                case "vxlan-adaptor":
-                    VXLanAdaptor.main0(args);
+                case "SwitchAdaptor":
+                case "switch-adaptor":
+                    SwitchAdaptor.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
