@@ -311,13 +311,14 @@ public class Switch {
                     Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
                     return null;
                 }
+                iface.serverSideVni = info.vni;
 
                 assert Logger.lowLevelDebug(logId + "got packet " + packet + " from " + iface);
 
                 vxLanPacket = packet.getVxlan();
                 if (vxLanPacket != null) {
                     int packetVni = vxLanPacket.getVni();
-                    iface.vni = packetVni; // set vni to the iface
+                    iface.clientSideVni = packetVni; // set vni to the iface
                     assert Logger.lowLevelDebug(logId + "setting vni for " + user + " to " + info.vni);
                     if (packetVni != info.vni) {
                         vxLanPacket.setVni(info.vni);
@@ -340,7 +341,8 @@ public class Switch {
                         return null;
                     }
                     iface = new Iface(remote);
-                    iface.vni = vxLanPacket.getVni();
+                    iface.clientSideVni = vxLanPacket.getVni();
+                    iface.serverSideVni = iface.clientSideVni;
                     assert Logger.lowLevelDebug(logId + "got vxlan packet " + vxLanPacket + " from " + iface);
                     // fall through
                 } else {
@@ -662,7 +664,11 @@ public class Switch {
             MacAddress dstMac = table.arpTable.lookup(dstIp);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
-                // TODO run arp or ndp
+                if (dstIp instanceof Inet4Address) {
+                    broadcastArp(logId, table, dstIp);
+                } else {
+                    broadcastNdp(logId, table, dstIp);
+                }
                 return;
             }
             // find an ip in that table to be used for the mac address
@@ -691,6 +697,94 @@ public class Switch {
             vxlan.clearRawPacket();
 
             handleVxlan(logId, vxlan, table, inputIface);
+        }
+
+        private void broadcastArp(String logId, Table table, InetAddress ip) {
+            assert Logger.lowLevelDebug(logId + "broadcastArp(" + logId + "," + table + "," + ip + ")");
+
+            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet4Address).findAny();
+            if (optIp.isEmpty()) {
+                assert Logger.lowLevelDebug(logId + "cannot find synthetic ipv4 in the table");
+                return;
+            }
+            InetAddress reqIp = optIp.get().getKey();
+            MacAddress reqMac = optIp.get().getValue();
+
+            ArpPacket req = new ArpPacket();
+            req.setHardwareType(Consts.ARP_HARDWARE_TYPE_ETHER);
+            req.setProtocolType(Consts.ARP_PROTOCOL_TYPE_IP);
+            req.setHardwareSize(Consts.ARP_HARDWARE_TYPE_ETHER);
+            req.setProtocolSize(Consts.ARP_PROTOCOL_TYPE_IP);
+            req.setOpcode(Consts.ARP_PROTOCOL_OPCODE_REQ);
+            req.setSenderMac(reqMac.bytes);
+            req.setSenderIp(ByteArray.from(reqIp.getAddress()));
+            req.setTargetMac(ByteArray.allocate(6));
+            req.setTargetIp(ByteArray.from(ip.getAddress()));
+
+            EthernetPacket ether = new EthernetPacket();
+            ether.setDst(new MacAddress("ff:ff:ff:ff:ff:ff"));
+            ether.setSrc(reqMac);
+            ether.setType(Consts.ETHER_TYPE_ARP);
+            ether.setPacket(req);
+
+            VXLanPacket vxlan = new VXLanPacket();
+            vxlan.setFlags(0b00001000);
+            vxlan.setVni(table.vni);
+            vxlan.setPacket(ether);
+
+            broadcastVXLan(logId, table, vxlan);
+        }
+
+        private void broadcastNdp(String logId, Table table, InetAddress ip) {
+            assert Logger.lowLevelDebug(logId + "broadcastNdp(" + logId + "," + table + "," + ip + ")");
+
+            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet6Address).findAny();
+            if (optIp.isEmpty()) {
+                assert Logger.lowLevelDebug(logId + "cannot find synthetic ipv4 in the table");
+                return;
+            }
+            InetAddress reqIp = optIp.get().getKey();
+            MacAddress reqMac = optIp.get().getValue();
+
+            IcmpPacket icmp = new IcmpPacket(true);
+            icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
+            icmp.setCode(0);
+            icmp.setOther(
+                (ByteArray.allocate(4).set(0, (byte) 0)).concat(ByteArray.from(ip.getAddress()))
+                    .concat(( // the source link-layer address
+                        ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address)
+                            .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
+                            .concat(reqMac.bytes)
+                    ))
+            );
+
+            Ipv6Packet ipv6 = new Ipv6Packet();
+            ipv6.setVersion(6);
+            ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
+            ipv6.setHopLimit(255);
+            ipv6.setSrc((Inet6Address) reqIp);
+            byte[] foo = Consts.IPv6_Solicitation_Node_Multicast_Address.toNewJavaArray();
+            byte[] bar = ip.getAddress();
+            foo[13] = bar[13];
+            foo[14] = bar[14];
+            foo[15] = bar[15];
+            ipv6.setDst((Inet6Address) Utils.l3addr(foo));
+            ipv6.setExtHeaders(Collections.emptyList());
+            ipv6.setPacket(icmp);
+            ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+
+            EthernetPacket ether = new EthernetPacket();
+            ether.setDst(new MacAddress("ff:ff:ff:ff:ff:ff"));
+            ether.setSrc(reqMac);
+            ether.setType(Consts.ETHER_TYPE_IPv6);
+            ether.setPacket(ipv6);
+
+            VXLanPacket vxlan = new VXLanPacket();
+            vxlan.setFlags(0b00001000);
+            vxlan.setVni(table.vni);
+            vxlan.setPacket(ether);
+
+            broadcastVXLan(logId, table, vxlan);
         }
 
         private void handleArp(String logId, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
@@ -824,11 +918,28 @@ public class Switch {
             sendVProxyPacketTo(iface, p);
         }
 
+        private void broadcastVXLan(String logId, Table table, VXLanPacket vxlan) {
+            assert Logger.lowLevelDebug(logId + "broadcastVXLan(" + table + "," + vxlan + ")");
+
+            Set<Iface> toSend = new HashSet<>();
+            for (var entry : table.macTable.listEntries()) {
+                toSend.add(entry.iface);
+                sendVXLanTo(logId, entry.iface, vxlan);
+            }
+            for (Iface f : ifaces.keySet()) {
+                if (f.serverSideVni == table.vni) {
+                    if (toSend.add(f)) {
+                        sendVXLanTo(logId, f, vxlan);
+                    }
+                }
+            }
+        }
+
         private void sendVXLanTo(String logId, Iface iface, VXLanPacket vxlan) {
             assert Logger.lowLevelDebug(logId + "sendVXLanTo(" + iface + "," + vxlan + ")");
             // fix vni
-            if (iface.vni != 0) {
-                vxlan.setVni(iface.vni);
+            if (iface.clientSideVni != 0) {
+                vxlan.setVni(iface.clientSideVni);
             }
 
             VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
@@ -892,8 +1003,11 @@ public class Switch {
         }
 
         void record(Iface newIface) {
-            if (newIface.vni != 0) {
-                iface.vni = newIface.vni;
+            if (newIface.clientSideVni != 0) {
+                iface.clientSideVni = newIface.clientSideVni;
+            }
+            if (newIface.serverSideVni != 0) {
+                iface.serverSideVni = newIface.serverSideVni;
             }
             ifaces.put(iface, this);
             Logger.alert(iface + " connected to Switch:" + alias);

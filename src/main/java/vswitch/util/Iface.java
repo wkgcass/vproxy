@@ -8,7 +8,10 @@ import java.util.Objects;
 public class Iface {
     public final String user;
     public final InetSocketAddress udpSockAddress;
-    public int vni; // should not be put into equals/hashCode
+
+    // the following should not be put into equals/hashCode
+    public int clientSideVni;
+    public int serverSideVni;
 
     public Iface(InetSocketAddress udpSockAddress) {
         this.user = null;
@@ -39,10 +42,10 @@ public class Iface {
     @Override
     public String toString() {
         String vniStr;
-        if (vni == 0) {
+        if (clientSideVni == 0) {
             vniStr = "";
         } else {
-            vniStr = Utils.toHexStringWithPadding(vni, 24) + ",";
+            vniStr = Utils.toHexStringWithPadding(clientSideVni, 24) + ",";
         }
         String userStr;
         if (user == null) {
