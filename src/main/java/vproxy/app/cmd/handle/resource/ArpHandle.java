@@ -152,12 +152,12 @@ public class ArpHandle {
             }
             sb.append(split);
             if (iface == null) {
-                sb.append(" ".repeat(46));
+                sb.append(" ".repeat(37));
             } else {
                 String ifaceStr = iface.toString();
                 sb.append(ifaceStr);
-                if (ifaceStr.length() < 46) {
-                    int fix = 46 - ifaceStr.length();
+                if (ifaceStr.length() < 37) {
+                    int fix = 37 - ifaceStr.length();
                     sb.append(" ".repeat(fix));
                 }
             }

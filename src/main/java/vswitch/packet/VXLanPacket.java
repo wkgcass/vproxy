@@ -8,7 +8,7 @@ import java.util.Objects;
 import static vproxy.util.Utils.runAvoidNull;
 
 public class VXLanPacket extends AbstractPacket {
-    private int flags;
+    private int flags = 0b00001000; // this flag almost never changes
     private int vni;
     private AbstractEthernetPacket packet;
 

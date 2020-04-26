@@ -1351,6 +1351,24 @@ public class HelpCommand {
                     )
                 ))
             )),
+        tap("tap", null, "add/remove a tap device and bind it to/from a switch. The input alias may also be a pattern, see linux tuntap manual.\n" +
+            "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix",
+            Arrays.asList(
+                new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Collections.singletonList(
+                    new ResActParamMan(ParamMan.vni, "vni assigned for the user")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add tap tap%d to switch sw0 vni 1314",
+                        "\"tap0\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove tap tap0 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
         ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
                 new ResActMan(ActMan.list, "show synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(

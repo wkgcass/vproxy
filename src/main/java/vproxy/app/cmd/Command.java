@@ -667,6 +667,7 @@ public class Command {
                 }
                 break;
             case user:
+            case tap:
             case vpc:
             case route:
             case ip:
@@ -674,6 +675,8 @@ public class Command {
                     case a:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkCreateUser(cmd);
+                        } else if (cmd.resource.type == ResourceType.tap) {
+                            TapHandle.checkCreateTap(cmd);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkCreateVpc(cmd);
                         } else if (cmd.resource.type == ResourceType.route) {
@@ -687,6 +690,8 @@ public class Command {
                     case l:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkUser(targetResource);
+                        } else if (cmd.resource.type == ResourceType.tap) {
+                            TapHandle.checkTap(targetResource);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkVpc(targetResource);
                         } else if (cmd.resource.type == ResourceType.route) {
@@ -1068,6 +1073,23 @@ public class Command {
                     case r:
                     case R:
                         UserHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case tap:
+                switch (action) {
+                    case l:
+                        List<String> taps = TapHandle.names(targetResource);
+                        return new CmdResult(taps, taps, utilJoinList(taps));
+                    case L:
+                        List<TapHandle.TapInfo> tapInfoList = TapHandle.list(targetResource);
+                        List<String> strList = tapInfoList.stream().map(TapHandle.TapInfo::toString).collect(Collectors.toList());
+                        return new CmdResult(tapInfoList, strList, utilJoinList(strList));
+                    case a:
+                        String dev = TapHandle.add(this);
+                        return new CmdResult(dev, dev, dev);
+                    case r:
+                    case R:
+                        TapHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ip:

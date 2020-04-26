@@ -26,6 +26,7 @@ public enum ResourceType {
     arp("arp"),
     iface("iface"),
     user("user"),
+    tap("tap"),
     ip("ip"),
     route("route"),
 
