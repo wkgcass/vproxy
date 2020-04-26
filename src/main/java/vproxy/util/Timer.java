@@ -39,12 +39,21 @@ public class Timer {
         long current = FDProvider.get().currentTimeMillis();
         if (current - lastStart > timeout) {
             // should timeout immediately
-            cancel();
+            // run in next tick to prevent some concurrent modification on sets
+            SelectorEventLoop currentLoop = SelectorEventLoop.current();
+            if (currentLoop != null) {
+                currentLoop.nextTick(this::cancel);
+            } else {
+                loop.nextTick(this::cancel);
+            }
             return;
         }
-        long nextDelay = current - (lastStart + timeout);
+        if (timer != null) {
+            timer.cancel();
+        }
+        long nextDelay = lastStart + timeout - current;
         lastStart = current;
-        timer = loop.delay(timeout, this::cancel);
+        timer = loop.delay((int) nextDelay, this::cancel);
     }
 
     public int getTimeout() {

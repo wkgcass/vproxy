@@ -134,7 +134,7 @@ public class Utils {
 
     public static String formatErr(Throwable err) {
         String base = formatErrBase(err);
-        if (err instanceof NullPointerException) {
+        if (err instanceof RuntimeException) {
             return base + Arrays.asList(err.getStackTrace()).toString();
         } else {
             return base;

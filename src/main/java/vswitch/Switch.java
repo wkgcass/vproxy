@@ -17,6 +17,7 @@ import vproxy.connection.NetEventLoop;
 import vproxy.connection.Protocol;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
+import vproxy.selector.PeriodicEvent;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 import vproxy.util.Timer;
@@ -40,6 +41,7 @@ public class Switch {
     public final InetSocketAddress vxlanBindingAddress;
     public final EventLoopGroup eventLoopGroup;
     private NetEventLoop currentEventLoop;
+    private PeriodicEvent refreshCacheEvent;
     private int macTableTimeout;
     private int arpTableTimeout;
     public SecurityGroup bareVXLanAccess;
@@ -104,13 +106,14 @@ public class Switch {
         var loop = netLoop.getSelectorEventLoop();
         loop.add(sock, EventSet.read(), null, new PacketHandler());
         currentEventLoop = netLoop;
+        refreshCacheEvent = currentEventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
         tables.values().forEach(t -> t.setLoop(loop));
         started = true;
     }
 
     private void checkAndRestart() { // this method is only called when selected event loop closes, so no need to remove handler
         started = false;
-        currentEventLoop = null;
+        cancelEventLoop();
         cancelAllIface();
         if (!wantStart) {
             return;
@@ -127,12 +130,20 @@ public class Switch {
         set.forEach(IfaceTimer::cancel);
     }
 
+    private void cancelEventLoop() {
+        currentEventLoop = null;
+        if (refreshCacheEvent != null) {
+            refreshCacheEvent.cancel();
+            refreshCacheEvent = null;
+        }
+    }
+
     public synchronized void stop() {
         wantStart = false;
         if (!started) {
             return;
         }
-        currentEventLoop = null;
+        cancelEventLoop();
         cancelAllIface();
         for (var tbl : tables.values()) {
             tbl.clearCache();
@@ -144,6 +155,33 @@ public class Switch {
         wantStart = false;
         releaseSock();
         stop();
+    }
+
+    private void refreshCache() {
+        for (Table t : tables.values()) {
+            for (ArpTable.ArpEntry arp : t.arpTable.listEntries()) {
+                if (arp.getTTL() < ArpTable.ARP_REFRESH_CACHE_BEFORE_TTL_TIME) {
+                    refreshArpCache(t, arp.ip, arp.mac);
+                }
+            }
+            for (MacTable.MacEntry macEntry : t.macTable.listEntries()) {
+                if (macEntry.getTTL() < MacTable.MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME) {
+                    var set = t.arpTable.lookupByMac(macEntry.mac);
+                    if (set != null) {
+                        set.stream().findAny().ifPresent(arp -> refreshArpCache(t, arp.ip, arp.mac));
+                    }
+                }
+            }
+        }
+    }
+
+    private void refreshArpCache(Table t, InetAddress ip, MacAddress mac) {
+        Logger.alert("trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
+        String logId = UUID.randomUUID().toString() + " ::: ";
+
+        var networkStack = (new NetworkStack() {
+        });
+        networkStack.refreshArpOrNdp(logId, t, ip, mac);
     }
 
     public int getMacTableTimeout() {
@@ -645,13 +683,34 @@ public class Switch {
             handleVxlan(logId, vxlan, table, inputIface);
         }
 
-        private void broadcastArp(String logId, Table table, InetAddress ip) {
-            assert Logger.lowLevelDebug(logId + "broadcastArp(" + logId + "," + table + "," + ip + ")");
+        protected void refreshArpOrNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
+            assert Logger.lowLevelDebug(logId + "refreshArpOrNdp(" + table + "," + ip + "," + mac + ")");
+            if (ip instanceof Inet4Address) {
+                refreshArp(logId, table, ip, mac);
+            } else {
+                refreshNdp(logId, table, ip, mac);
+            }
+        }
+
+        private void refreshArp(String logId, Table table, InetAddress ip, MacAddress mac) {
+            assert Logger.lowLevelDebug(logId + "refreshArp(" + table + "," + ip + "," + mac + ")");
+            var iface = table.macTable.lookup(mac);
+            if (iface == null) {
+                assert Logger.lowLevelDebug(logId + "cannot find iface of the mac, try broadcast");
+                broadcastArp(logId, table, ip);
+            } else {
+                assert Logger.lowLevelDebug(logId + "run unicast");
+                unicastArp(logId, table, ip, mac, iface);
+            }
+        }
+
+        private VXLanPacket buildArpReq(String logId, Table table, InetAddress ip, MacAddress mac) {
+            assert Logger.lowLevelDebug(logId + "buildArpPacket(" + table + "," + ip + "," + mac + ")");
 
             var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet4Address).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(logId + "cannot find synthetic ipv4 in the table");
-                return;
+                return null;
             }
             InetAddress reqIp = optIp.get().getKey();
             MacAddress reqMac = optIp.get().getValue();
@@ -668,7 +727,7 @@ public class Switch {
             req.setTargetIp(ByteArray.from(ip.getAddress()));
 
             EthernetPacket ether = new EthernetPacket();
-            ether.setDst(new MacAddress("ff:ff:ff:ff:ff:ff"));
+            ether.setDst(mac);
             ether.setSrc(reqMac);
             ether.setType(Consts.ETHER_TYPE_ARP);
             ether.setPacket(req);
@@ -678,16 +737,50 @@ public class Switch {
             vxlan.setVni(table.vni);
             vxlan.setPacket(ether);
 
+            return vxlan;
+        }
+
+        private void unicastArp(String logId, Table table, InetAddress ip, MacAddress mac, Iface iface) {
+            assert Logger.lowLevelDebug(logId + "unicastArp(" + table + "," + ip + "," + mac + "," + iface + ")");
+
+            VXLanPacket vxlan = buildArpReq(logId, table, ip, mac);
+            if (vxlan == null) {
+                assert Logger.lowLevelDebug(logId + "failed to build arp packet");
+                return;
+            }
+            sendVXLanTo(logId, iface, vxlan);
+        }
+
+        private void broadcastArp(String logId, Table table, InetAddress ip) {
+            assert Logger.lowLevelDebug(logId + "broadcastArp(" + table + "," + ip + ")");
+
+            VXLanPacket vxlan = buildArpReq(logId, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
+            if (vxlan == null) {
+                assert Logger.lowLevelDebug(logId + "failed to build arp packet");
+                return;
+            }
             broadcastVXLan(logId, table, vxlan);
         }
 
-        private void broadcastNdp(String logId, Table table, InetAddress ip) {
-            assert Logger.lowLevelDebug(logId + "broadcastNdp(" + logId + "," + table + "," + ip + ")");
+        private void refreshNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
+            assert Logger.lowLevelDebug(logId + "refreshNdp(" + table + "," + ip + "," + mac + ")");
+            var iface = table.macTable.lookup(mac);
+            if (iface == null) {
+                assert Logger.lowLevelDebug(logId + "cannot find iface of the mac, try broadcast");
+                broadcastNdp(logId, table, ip);
+            } else {
+                assert Logger.lowLevelDebug(logId + "run unicast");
+                unicastNdp(logId, table, ip, mac, iface);
+            }
+        }
+
+        private VXLanPacket buildNdpNeighborSolicitation(String logId, Table table, InetAddress ip, MacAddress mac) {
+            assert Logger.lowLevelDebug(logId + "buildNdpNeighborSolicitation(" + table + "," + ip + "," + mac + ")");
 
             var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet6Address).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(logId + "cannot find synthetic ipv4 in the table");
-                return;
+                return null;
             }
             InetAddress reqIp = optIp.get().getKey();
             MacAddress reqMac = optIp.get().getValue();
@@ -720,7 +813,7 @@ public class Switch {
             ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
 
             EthernetPacket ether = new EthernetPacket();
-            ether.setDst(new MacAddress("ff:ff:ff:ff:ff:ff"));
+            ether.setDst(mac);
             ether.setSrc(reqMac);
             ether.setType(Consts.ETHER_TYPE_IPv6);
             ether.setPacket(ipv6);
@@ -729,6 +822,30 @@ public class Switch {
             vxlan.setFlags(0b00001000);
             vxlan.setVni(table.vni);
             vxlan.setPacket(ether);
+
+            return vxlan;
+        }
+
+        private void unicastNdp(String logId, Table table, InetAddress ip, MacAddress mac, Iface iface) {
+            assert Logger.lowLevelDebug(logId + "unicastNdp(" + table + "," + ip + "," + mac + "," + iface + ")");
+
+            VXLanPacket vxlan = buildNdpNeighborSolicitation(logId, table, ip, mac);
+            if (vxlan == null) {
+                assert Logger.lowLevelDebug(logId + "failed to build ndp neighbor solicitation packet");
+                return;
+            }
+
+            sendVXLanTo(logId, iface, vxlan);
+        }
+
+        private void broadcastNdp(String logId, Table table, InetAddress ip) {
+            assert Logger.lowLevelDebug(logId + "broadcastNdp(" + table + "," + ip + ")");
+
+            VXLanPacket vxlan = buildNdpNeighborSolicitation(logId, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
+            if (vxlan == null) {
+                assert Logger.lowLevelDebug(logId + "failed to build ndp neighbor solicitation packet");
+                return;
+            }
 
             broadcastVXLan(logId, table, vxlan);
         }

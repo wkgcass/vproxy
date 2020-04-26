@@ -8,6 +8,8 @@ import vswitch.util.MacAddress;
 import java.util.*;
 
 public class MacTable {
+    public static final int MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME = 60 * 1000;
+
     private SelectorEventLoop loop;
     private int timeout;
 
@@ -75,7 +77,7 @@ public class MacTable {
         this.timeout = timeout;
         loop.runOnLoop(() -> {
             for (var entry : entries) {
-                entry.resetTimer();
+                entry.setTimeout(timeout);
             }
         });
     }
@@ -116,9 +118,11 @@ public class MacTable {
             entries.remove(this);
             macMap.remove(mac);
             var set = ifaceMap.get(iface);
-            set.remove(this);
-            if (set.isEmpty()) {
-                ifaceMap.remove(iface);
+            if (set != null) {
+                set.remove(this);
+                if (set.isEmpty()) {
+                    ifaceMap.remove(iface);
+                }
             }
         }
     }
