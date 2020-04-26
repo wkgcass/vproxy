@@ -134,35 +134,80 @@ public class ArpHandle {
             this.macTTL = macTTL;
         }
 
-        @Override
-        public String toString() {
+        private String strForIp(ArpEntry e) {
+            if (e.ip == null) return "";
+            return Utils.ipStr(e.ip);
+        }
+
+        private String strForIface(ArpEntry e) {
+            if (e.iface == null) return "";
+            return e.iface.toString();
+        }
+
+        private String strForArpTTL(ArpEntry e) {
+            return "" + (e.arpTTL / 1000);
+        }
+
+        private String strForMacTTL(ArpEntry e) {
+            return "" + (e.macTTL / 1000);
+        }
+
+        public String toString(List<ArpEntry> all) {
+            int ipMaxWidth = 0;
+            int ifaceMaxWidth = 0;
+            int arpTTLMaxWidth = 0;
+            int macTTLMaxWidth = 0;
+            for (var e : all) {
+                int l = strForIp(e).length();
+                if (ipMaxWidth < l) {
+                    ipMaxWidth = l;
+                }
+                l = strForIface(e).length();
+                if (ifaceMaxWidth < l) {
+                    ifaceMaxWidth = l;
+                }
+                l = strForArpTTL(e).length();
+                if (arpTTLMaxWidth < l) {
+                    arpTTLMaxWidth = l;
+                }
+                l = strForMacTTL(e).length();
+                if (macTTLMaxWidth < l) {
+                    macTTLMaxWidth = l;
+                }
+            }
+
             final String split = "    ";
             StringBuilder sb = new StringBuilder();
             sb.append(mac);
             sb.append(split);
             if (ip == null) {
-                sb.append(" ".repeat(41));
+                sb.append(" ".repeat(ipMaxWidth));
             } else {
-                String ipStr = Utils.ipStr(ip);
+                String ipStr = strForIp(this);
                 sb.append(ipStr);
-                if (ipStr.length() < 41) {
-                    int fix = 41 - ipStr.length();
+                if (ipStr.length() < ipMaxWidth) {
+                    int fix = ipMaxWidth - ipStr.length();
                     sb.append(" ".repeat(fix));
                 }
             }
             sb.append(split);
             if (iface == null) {
-                sb.append(" ".repeat(37));
+                sb.append(" ".repeat(ifaceMaxWidth));
             } else {
-                String ifaceStr = iface.toString();
+                String ifaceStr = strForIface(this);
                 sb.append(ifaceStr);
-                if (ifaceStr.length() < 37) {
-                    int fix = 37 - ifaceStr.length();
+                if (ifaceStr.length() < ifaceMaxWidth) {
+                    int fix = ifaceMaxWidth - ifaceStr.length();
                     sb.append(" ".repeat(fix));
                 }
             }
-            sb.append(split).append("ARP-TTL:").append(arpTTL / 1000);
-            sb.append(split).append("MAC-TTL:").append(macTTL / 1000);
+            String strArpTTL = strForArpTTL(this);
+            sb.append(split).append("ARP-TTL:").append(strArpTTL);
+            if (strArpTTL.length() < arpTTLMaxWidth) {
+                sb.append(" ".repeat(arpTTLMaxWidth - strArpTTL.length()));
+            }
+            String strMacTTL = strForMacTTL(this);
+            sb.append(split).append("MAC-TTL:").append(strMacTTL);
             return sb.toString();
         }
     }

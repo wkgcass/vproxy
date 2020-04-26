@@ -49,7 +49,8 @@ def add(swaddr, password, sw, ns, vni, addr, gate):
     ret, out, err = runCommand(['ip', 'netns', 'show'])
     if ret != 0:
         raise Exception('getting netns list failed: ' + out + ', ' + err)
-    exists = (ns + ' (') in out
+    out = out + '\n'
+    exists = (ns + ' (') in out or (ns + '\n') in out
     if not exists:
         print 'creating netns ' + ns + ' ...'
         # create the namespace

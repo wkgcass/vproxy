@@ -410,8 +410,6 @@ public class HelpCommand {
         nic("nic", null, "nic name"),
         iptype("ip-type", null, "ip type: v4 or v6"),
         port("port", null, "a port number"),
-        tcplb("tcp-lb", "tl", "tcp loadbalancer"),
-        servergroup("server-group", "sg", "a group of servers"),
         certkey("cert-key", "ck", "cert-key resource"),
         cert("cert", null, "the certificate file path"),
         key("key", null, "the key file path"),
@@ -1257,7 +1255,22 @@ public class HelpCommand {
                             "remove switch sw0",
                             "\"OK\""
                         )
-                    ))
+                    )),
+                new ResActMan(ActMan.addto, "add a remote switch ref to a local switch. note: use list iface to see these remote switches",
+                    Collections.singletonList(
+                        new ResActParamMan(ParamMan.address, "the remote switch address")
+                    ), Collections.singletonList(
+                    new Tuple<>(
+                        "add switch sw1 to switch sw0 address 100.64.0.1:18472",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "remove a remote switch ref from a local switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove switch sw1 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
             )),
         vpc("vpc", null, "a private network",
             Arrays.asList(

@@ -592,8 +592,13 @@ public class Command {
                     case L:
                     case l:
                     case u:
-                        if (targetResource != null)
-                            throw new Exception(cmd.resource.type.fullname + " is on top level");
+                        if (cmd.resource.type == ResourceType.sw) {
+                            if (targetResource != null && targetResource.type != ResourceType.sw)
+                                throw new Exception(cmd.resource.type.fullname + " is on top level or as a remote switch in " + ResourceType.sw.fullname);
+                        } else {
+                            if (targetResource != null)
+                                throw new Exception(cmd.resource.type.fullname + " is on top level");
+                        }
                         // only check creation for tcp lb and secg
                         // the other two does not have creation param
                         if (cmd.action == Action.a) {
@@ -1055,7 +1060,7 @@ public class Command {
                         return new CmdResult(cnt, cnt, "" + cnt);
                     case L:
                         List<ArpHandle.ArpEntry> arpLs = ArpHandle.list(targetResource);
-                        List<Object> ls = arpLs.stream().map(Object::toString).collect(Collectors.toList());
+                        List<Object> ls = arpLs.stream().map(x -> x.toString(arpLs)).collect(Collectors.toList());
                         return new CmdResult(arpLs, ls, utilJoinList(ls));
                 }
             case user:

@@ -326,6 +326,39 @@ public class Switch {
         }
     }
 
+    public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr) throws XException, AlreadyExistException {
+        NetEventLoop netEventLoop = currentEventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
+        }
+        SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
+
+        for (Iface i : ifaces.keySet()) {
+            if (alias.equals(i.remoteSwitchAlias)) {
+                throw new AlreadyExistException("switch", alias);
+            }
+            if (vxlanSockAddr.equals(i.udpSockAddress)) {
+                throw new AlreadyExistException("switch", Utils.l4addrStr(vxlanSockAddr));
+            }
+        }
+        Iface iface = new Iface(alias, vxlanSockAddr);
+        loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
+    }
+
+    public void delRemoteSwitch(String alias) throws NotFoundException {
+        Iface iface = null;
+        for (Iface i : ifaces.keySet()) {
+            if (alias.equals(i.remoteSwitchAlias)) {
+                iface = i;
+                break;
+            }
+        }
+        if (iface == null) {
+            throw new NotFoundException("switch", alias);
+        }
+        utilRemoveIface(iface);
+    }
+
     public Map<String, UserInfo> getUsers() {
         var ret = new LinkedHashMap<String, UserInfo>();
         for (var entry : users.entrySet()) {
@@ -491,7 +524,7 @@ public class Switch {
             if (dst.isBroadcast() || dst.isMulticast() /*handle multicast in the same way as broadcast*/) {
                 assert Logger.lowLevelDebug(logId + "broadcast or multicast");
                 handleVirtual(logId, table, table.ips.allIps(), vxlan, inputIface, true);
-                broadcastVXLan(logId, table, vxlan);
+                broadcastVXLan(logId, table, vxlan, inputIface);
             } else {
                 assert Logger.lowLevelDebug(logId + "unicast");
                 Iface iface = table.macTable.lookup(dst);
@@ -759,7 +792,7 @@ public class Switch {
                 assert Logger.lowLevelDebug(logId + "failed to build arp packet");
                 return;
             }
-            broadcastVXLan(logId, table, vxlan);
+            broadcastVXLan(logId, table, vxlan, null);
         }
 
         private void refreshNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
@@ -847,7 +880,7 @@ public class Switch {
                 return;
             }
 
-            broadcastVXLan(logId, table, vxlan);
+            broadcastVXLan(logId, table, vxlan, null);
         }
 
         private void handleArp(String logId, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
@@ -973,16 +1006,20 @@ public class Switch {
             sendVXLanTo(logId, inputIface, vxlan);
         }
 
-        private void broadcastVXLan(String logId, Table table, VXLanPacket vxlan) {
-            assert Logger.lowLevelDebug(logId + "broadcastVXLan(" + table + "," + vxlan + ")");
+        private void broadcastVXLan(String logId, Table table, VXLanPacket vxlan, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "broadcastVXLan(" + table + "," + vxlan + "," + inputIface + ")");
 
             Set<Iface> toSend = new HashSet<>();
+            if (inputIface != null) {
+                toSend.add(inputIface);
+            }
             for (var entry : table.macTable.listEntries()) {
-                toSend.add(entry.iface);
-                sendVXLanTo(logId, entry.iface, vxlan);
+                if (toSend.add(entry.iface)) {
+                    sendVXLanTo(logId, entry.iface, vxlan);
+                }
             }
             for (Iface f : ifaces.keySet()) {
-                if (f.serverSideVni == table.vni) {
+                if (f.serverSideVni == table.vni || f.remoteSwitchAlias != null) { // send if vni matches or is a remote switch
                     if (toSend.add(f)) {
                         sendVXLanTo(logId, f, vxlan);
                     }
@@ -1110,9 +1147,25 @@ public class Switch {
                         assert Logger.lowLevelDebug(logId + "invalid packet for vxlan: " + err + ", drop it");
                         return null;
                     }
-                    iface = new Iface(remote);
-                    iface.clientSideVni = vxLanPacket.getVni();
-                    iface.serverSideVni = iface.clientSideVni;
+                    // check whether it's coming from remote switch
+                    Iface remoteSwitch = null;
+                    for (Iface i : ifaces.keySet()) {
+                        if (i.remoteSwitchAlias == null) {
+                            continue;
+                        }
+                        if (remote.equals(i.udpSockAddress)) {
+                            remoteSwitch = i;
+                            break;
+                        }
+                    }
+                    if (remoteSwitch == null) { // is from a vxlan endpoint
+                        iface = new Iface(remote);
+                        iface.clientSideVni = vxLanPacket.getVni();
+                        iface.serverSideVni = iface.clientSideVni;
+                    } else { // is from a remote switch
+                        iface = remoteSwitch;
+                        iface.clientSideVni = 0; // explicitly set this to 0 (through not necessary because other places won't modify this field)
+                    }
                     assert Logger.lowLevelDebug(logId + "got vxlan packet " + vxLanPacket + " from " + iface);
                     // fall through
                 } else {

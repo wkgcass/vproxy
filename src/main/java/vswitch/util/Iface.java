@@ -11,6 +11,7 @@ public class Iface {
 
     public final InetSocketAddress udpSockAddress; // for vxlan or vproxy wrapped vxlan
     public final TunTapDatagramFD tap; // for a tap device
+    public final String remoteSwitchAlias; // for a remote switch
 
     // the following should not be put into equals/hashCode
     public int clientSideVni;
@@ -20,18 +21,28 @@ public class Iface {
         this.user = null;
         this.udpSockAddress = udpSockAddress;
         this.tap = null;
+        this.remoteSwitchAlias = null;
     }
 
     public Iface(InetSocketAddress udpSockAddress, String user) {
         this.user = user;
         this.udpSockAddress = udpSockAddress;
         this.tap = null;
+        this.remoteSwitchAlias = null;
     }
 
     public Iface(TunTapDatagramFD tap) {
         this.user = null;
         this.udpSockAddress = null;
         this.tap = tap;
+        this.remoteSwitchAlias = null;
+    }
+
+    public Iface(String remoteSwitchAlias, InetSocketAddress udpSockAddress) {
+        this.user = null;
+        this.udpSockAddress = udpSockAddress;
+        this.tap = null;
+        this.remoteSwitchAlias = remoteSwitchAlias;
     }
 
     @Override
@@ -41,13 +52,14 @@ public class Iface {
         Iface iface = (Iface) o;
         return Objects.equals(user, iface.user) &&
             Objects.equals(udpSockAddress, iface.udpSockAddress) &&
-            Objects.equals(tap, iface.tap);
+            Objects.equals(tap, iface.tap) &&
+            Objects.equals(remoteSwitchAlias, iface.remoteSwitchAlias);
         // should not consider vni
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(user, udpSockAddress, tap);
+        return Objects.hash(user, udpSockAddress, tap, remoteSwitchAlias);
         // should not consider vni
     }
 
@@ -60,7 +72,11 @@ public class Iface {
             userStr = "," + user.replace(Consts.USER_PADDING, "");
         }
         if (udpSockAddress != null) {
-            return "Iface(" + Utils.l4addrStr(udpSockAddress) + userStr + ')';
+            if (remoteSwitchAlias != null) {
+                return "Iface(remote:" + remoteSwitchAlias + "," + Utils.l4addrStr(udpSockAddress) + ")";
+            } else {
+                return "Iface(" + Utils.l4addrStr(udpSockAddress) + userStr + ')';
+            }
         } else {
             assert tap != null;
             return "Iface(" + tap.tuntap.dev + "," + serverSideVni + ")";

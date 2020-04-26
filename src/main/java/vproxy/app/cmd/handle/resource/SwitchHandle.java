@@ -4,6 +4,7 @@ import vproxy.app.Application;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
+import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -24,6 +25,7 @@ public class SwitchHandle {
     }
 
     public static void checkSwitch(Resource sw) throws Exception {
+        // only top level switches would be called for this method
         if (sw.parentResource != null)
             throw new Exception(sw.type.fullname + " is on top level");
     }
@@ -35,11 +37,13 @@ public class SwitchHandle {
 
         AddrHandle.check(cmd);
 
-        if (cmd.args.containsKey(Param.mactabletimeout)) {
-            TimeoutHandle.check(cmd, Param.mactabletimeout);
-        }
-        if (cmd.args.containsKey(Param.arptabletimeout)) {
-            TimeoutHandle.check(cmd, Param.arptabletimeout);
+        if (cmd.prepositionResource == null) { // the switch on top level require these arguments
+            if (cmd.args.containsKey(Param.mactabletimeout)) {
+                TimeoutHandle.check(cmd, Param.mactabletimeout);
+            }
+            if (cmd.args.containsKey(Param.arptabletimeout)) {
+                TimeoutHandle.check(cmd, Param.arptabletimeout);
+            }
         }
     }
 
@@ -62,7 +66,7 @@ public class SwitchHandle {
     }
 
     @SuppressWarnings("Duplicates")
-    public static void add(Command cmd) throws Exception {
+    private static void addTopLevel(Command cmd) throws Exception {
         if (!cmd.args.containsKey(Param.elg)) {
             cmd.args.put(Param.elg, Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
         }
@@ -91,7 +95,26 @@ public class SwitchHandle {
         Application.get().switchHolder.add(alias, addr, eventLoopGroup, macTableTimeout, arpTableTimeout, bareVXLanAccess);
     }
 
+    public static void addSubLevel(Command cmd) throws Exception {
+        String alias = cmd.resource.alias;
+        InetSocketAddress addr = AddrHandle.get(cmd);
+
+        Switch sw = get(cmd.prepositionResource);
+        sw.addRemoteSwitch(alias, addr);
+    }
+
+    public static void add(Command cmd) throws Exception {
+        if (cmd.prepositionResource == null) {
+            addTopLevel(cmd);
+        } else {
+            addSubLevel(cmd);
+        }
+    }
+
     public static void checkUpdateSwitch(Command cmd) throws Exception {
+        if (cmd.prepositionResource != null) {
+            throw new Exception("you can only update the switch on top level");
+        }
         if (cmd.args.containsKey(Param.mactabletimeout)) {
             TimeoutHandle.check(cmd, Param.mactabletimeout);
         }
@@ -117,7 +140,11 @@ public class SwitchHandle {
     }
 
     public static void forceRemove(Command cmd) throws Exception {
-        Application.get().switchHolder.removeAndStop(cmd.resource.alias);
+        if (cmd.prepositionResource == null) { // remove the top level switch
+            Application.get().switchHolder.removeAndStop(cmd.resource.alias);
+        } else { // remove the remote switch ref inside the switch
+            Application.get().switchHolder.get(cmd.prepositionResource.alias).delRemoteSwitch(cmd.resource.alias);
+        }
     }
 
     public static class SwitchRef {

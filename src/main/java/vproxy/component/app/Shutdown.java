@@ -621,6 +621,14 @@ public class Shutdown {
                     cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
                     commands.add(cmd);
                 }
+                // create remote sw
+                for (var entry : sw.getIfaces()) {
+                    if (entry.remoteSwitchAlias == null) {
+                        continue;
+                    }
+                    cmd = "add switch " + entry.remoteSwitchAlias + " to switch " + sw.alias + " address " + Utils.l4addrStr(entry.udpSockAddress);
+                    commands.add(cmd);
+                }
                 // create vpc
                 for (var entry : sw.getTables().entrySet()) {
                     int vpc = entry.getKey();
