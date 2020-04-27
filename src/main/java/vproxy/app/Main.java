@@ -95,10 +95,6 @@ public class Main {
                 case "helloworld":
                     HelloWorld.main0(args);
                     break;
-                case "SwitchAdaptor":
-                case "switch-adaptor":
-                    SwitchAdaptor.main0(args);
-                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     System.exit(1);
