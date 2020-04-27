@@ -78,6 +78,15 @@ public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
 
     @Override
     public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
+        if (bondLoop == null) {
+            assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
+            return;
+        }
+        if (!connected) {
+            assert Logger.lowLevelDebug("not connected yet, do not send data via this iface for now");
+            return;
+        }
+
         vxlan.setVni(user.vni);
         VProxyEncryptedPacket p = new VProxyEncryptedPacket(u -> user.key);
         p.setMagic(Consts.VPROXY_SWITCH_MAGIC);

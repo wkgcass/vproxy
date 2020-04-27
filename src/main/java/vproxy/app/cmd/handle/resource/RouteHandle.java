@@ -10,6 +10,7 @@ import vproxy.util.Utils;
 import vswitch.RouteTable;
 import vswitch.Table;
 
+import java.net.InetAddress;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -48,21 +49,36 @@ public class RouteHandle {
         }
         NetworkHandle.check(cmd);
         String vni = cmd.args.get(Param.vni);
-        if (vni == null) {
-            throw new Exception("missing " + Param.vni.fullname);
+        String ip = cmd.args.get(Param.addr);
+        if (vni == null && ip == null) {
+            throw new Exception("missing " + Param.vni.fullname + " or " + Param.addr.fullname);
         }
-        if (!Utils.isInteger(vni)) {
+        if (vni != null && ip != null) {
+            throw new Exception("cannot specify " + Param.vni.fullname + " and " + Param.addr.fullname + " at the same time");
+        }
+        if (vni != null && !Utils.isInteger(vni)) {
             throw new Exception("invalid argument for " + Param.vni + ": should be an integer");
+        }
+        if (ip != null && Utils.parseIpString(ip) == null) {
+            throw new Exception("invalid argument for " + Param.addr.fullname);
         }
     }
 
     public static void add(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
         Network net = NetworkHandle.get(cmd);
-        int vni = Integer.parseInt(cmd.args.get(Param.vni));
+
+        RouteTable.RouteRule rule;
+        if (cmd.args.containsKey(Param.vni)) {
+            int vni = Integer.parseInt(cmd.args.get(Param.vni));
+            rule = new RouteTable.RouteRule(alias, net, vni);
+        } else {
+            InetAddress ip = Utils.l3addr(cmd.args.get(Param.addr));
+            rule = new RouteTable.RouteRule(alias, net, ip);
+        }
 
         Table tbl = VpcHandle.get(cmd.prepositionResource);
-        tbl.routeTable.addRule(new RouteTable.RouteRule(alias, net, vni));
+        tbl.routeTable.addRule(rule);
     }
 
     public static void forceRemove(Command cmd) throws Exception {

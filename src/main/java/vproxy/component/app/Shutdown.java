@@ -661,7 +661,12 @@ public class Shutdown {
                     }
                     // create routes
                     for (var r : table.routeTable.getRules()) {
-                        cmd = "add route " + r.alias + " to vpc " + vpc + " in switch " + sw.alias + " network " + r.rule + " vni " + r.toVni;
+                        cmd = "add route " + r.alias + " to vpc " + vpc + " in switch " + sw.alias + " network " + r.rule;
+                        if (r.ip == null) {
+                            cmd += " vni " + r.toVni;
+                        } else {
+                            cmd += " address " + Utils.ipStr(r.ip);
+                        }
                         commands.add(cmd);
                     }
                 }

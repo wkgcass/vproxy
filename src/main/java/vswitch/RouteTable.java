@@ -3,6 +3,7 @@ package vswitch;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.util.Network;
+import vproxy.util.Utils;
 
 import java.net.InetAddress;
 import java.util.ArrayList;
@@ -84,7 +85,7 @@ public class RouteTable {
             var ri = rules.get(i);
             if (ri.alias.equals(alias)) {
                 rules.remove(i);
-                break;
+                return;
             }
         }
         throw new NotFoundException("route", alias);
@@ -94,16 +95,27 @@ public class RouteTable {
         public final String alias;
         public final Network rule;
         public final int toVni;
+        public final InetAddress ip;
 
         public RouteRule(String alias, Network rule, int toVni) {
             this.alias = alias;
             this.rule = rule;
             this.toVni = toVni;
+            this.ip = null;
+        }
+
+        public RouteRule(String alias, Network rule, InetAddress ip) {
+            this.alias = alias;
+            this.rule = rule;
+            this.toVni = 0;
+            this.ip = ip;
         }
 
         @Override
         public String toString() {
-            return alias + " -> network " + rule + " vni " + toVni;
+            return alias + " -> network " + rule + (
+                ip == null ? (" vni " + toVni) : (" address " + Utils.ipStr(ip))
+            );
         }
     }
 }

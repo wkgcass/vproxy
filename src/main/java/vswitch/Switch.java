@@ -762,12 +762,27 @@ public class Switch {
                             if (r != null) {
                                 assert Logger.lowLevelDebug(logId + "route rule found");
                                 int vni = r.toVni;
-                                if (vni != 0) { // check the vni number, for further extension
+                                var targetIp = r.ip;
+                                if (vni != 0) {
                                     assert Logger.lowLevelDebug(logId + "vni in rule is ok");
                                     Table t = tables.get(vni);
                                     if (t != null) { // cannot handle if the table does no exist
                                         assert Logger.lowLevelDebug(logId + "target table is found");
                                         routeTo(logId, t, dstIp, vxlan, inputIface);
+                                    }
+                                } else if (targetIp != null) {
+                                    assert Logger.lowLevelDebug(logId + "ip in rule is ok");
+                                    MacAddress mac = table.arpTable.lookup(targetIp);
+                                    if (mac == null) {
+                                        assert Logger.lowLevelDebug(logId + "mac not found in arp table, run a broadcast");
+                                        broadcastArpOrNdp(logId, table, targetIp);
+                                    } else {
+                                        assert Logger.lowLevelDebug(logId + "mac found in arp table");
+                                        Iface targetIface = table.macTable.lookup(mac);
+                                        if (targetIface != null) {
+                                            assert Logger.lowLevelDebug(logId + "iface found in mac table");
+                                            sendVXLanTo(logId, targetIface, vxlan);
+                                        }
                                     }
                                 }
                             }
@@ -784,11 +799,7 @@ public class Switch {
             MacAddress dstMac = table.arpTable.lookup(dstIp);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
-                if (dstIp instanceof Inet4Address) {
-                    broadcastArp(logId, table, dstIp);
-                } else {
-                    broadcastNdp(logId, table, dstIp);
-                }
+                broadcastArpOrNdp(logId, table, dstIp);
                 return;
             }
             // find an ip in that table to be used for the mac address
@@ -837,6 +848,15 @@ public class Switch {
             } else {
                 assert Logger.lowLevelDebug(logId + "run unicast");
                 unicastArp(logId, table, ip, mac, iface);
+            }
+        }
+
+        private void broadcastArpOrNdp(String logId, Table table, InetAddress ip) {
+            assert Logger.lowLevelDebug(logId + "broadcastArpOrNdp(" + table + "," + ip + ")");
+            if (ip instanceof Inet4Address) {
+                broadcastArp(logId, table, ip);
+            } else {
+                broadcastNdp(logId, table, ip);
             }
         }
 
