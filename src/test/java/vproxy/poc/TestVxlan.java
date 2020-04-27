@@ -17,6 +17,7 @@ public class TestVxlan {
     private static final int vxlanPort1 = 8472;
     private static final String vxlanAddr2 = "100.64.0.4";
     private static final int vxlanPort2 = 4789;
+    private static final int vni = 1314;
 
     public static void main(String[] args) throws Exception {
         EventLoopGroup elg = new EventLoopGroup("elg0");
@@ -24,7 +25,7 @@ public class TestVxlan {
         SelectorEventLoop loop = elg.next().getSelectorEventLoop();
 
         Switch sw = new Switch("sw0", new InetSocketAddress(swListen), elg, timeout, timeout, SecurityGroup.allowAll());
-        sw.addUser(user, pass);
+        sw.addUser(user, pass, vni);
         sw.start();
 
         NetworkDeviceToSwitchAdaptorHandlers.launchGeneralAdaptor(loop,

@@ -13,7 +13,7 @@ import vproxy.util.Logger;
 import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
 import vswitch.packet.EthernetPacket;
-import vswitch.packet.VProxySwitchPacket;
+import vswitch.packet.VProxyEncryptedPacket;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
 
@@ -85,7 +85,7 @@ public class NetworkDeviceToSwitchAdaptorHandlers {
         loop.add(switchSock, EventSet.read(), null, new VProxyHandler(flags, switchSock, toDeviceSock, loop, user, password));
     }
 
-    private static void sendVProxyPacket(VProxySwitchPacket p, ByteBuffer sndBuf, DatagramFD connectedSock) {
+    private static void sendVProxyPacket(VProxyEncryptedPacket p, ByteBuffer sndBuf, DatagramFD connectedSock) {
         byte[] bytes = p.getRawPacket().toJavaArray();
         sndBuf.limit(sndBuf.capacity()).position(0);
         sndBuf.put(bytes);
@@ -205,7 +205,7 @@ public class NetworkDeviceToSwitchAdaptorHandlers {
         }
 
         private void sendVXLanPacket(VXLanPacket vxlan) {
-            VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> passwordKey);
             p.setUser(user);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
@@ -213,7 +213,7 @@ public class NetworkDeviceToSwitchAdaptorHandlers {
             sendVProxyPacket(p);
         }
 
-        private void sendVProxyPacket(VProxySwitchPacket p) {
+        private void sendVProxyPacket(VProxyEncryptedPacket p) {
             byte[] bytes = p.getRawPacket().toJavaArray();
             sndBuf.limit(sndBuf.capacity()).position(0);
             sndBuf.put(bytes);
@@ -299,7 +299,7 @@ public class NetworkDeviceToSwitchAdaptorHandlers {
                 if (rcvBuf.position() == 0) {
                     break; // nothing read, quit loop
                 }
-                VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
+                VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> passwordKey);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
                 String err = p.from(arr);
                 if (err != null) {
@@ -330,7 +330,7 @@ public class NetworkDeviceToSwitchAdaptorHandlers {
         }
 
         private void sendPingPacket() {
-            VProxySwitchPacket p = new VProxySwitchPacket(x -> passwordKey);
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> passwordKey);
             p.setUser(user);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);

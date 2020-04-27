@@ -15,6 +15,7 @@ import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 import vproxy.util.*;
 import vswitch.Switch;
+import vswitch.iface.RemoteSwitchIface;
 
 import java.io.*;
 import java.util.*;
@@ -622,11 +623,12 @@ public class Shutdown {
                     commands.add(cmd);
                 }
                 // create remote sw
-                for (var entry : sw.getIfaces()) {
-                    if (entry.remoteSwitchAlias == null) {
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof RemoteSwitchIface)) {
                         continue;
                     }
-                    cmd = "add switch " + entry.remoteSwitchAlias + " to switch " + sw.alias + " address " + Utils.l4addrStr(entry.udpSockAddress);
+                    var rsi = (RemoteSwitchIface) iface;
+                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + Utils.l4addrStr(rsi.udpSockAddress);
                     commands.add(cmd);
                 }
                 // create vpc

@@ -4,10 +4,8 @@ import vproxy.app.Application;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vswitch.Switch;
-import vswitch.util.Iface;
+import vswitch.iface.Iface;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 
 public class IfaceHandle {

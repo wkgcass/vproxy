@@ -8,7 +8,7 @@ import vproxy.app.cmd.ResourceType;
 import vproxy.component.exception.XException;
 import vproxy.util.Utils;
 import vswitch.Switch;
-import vswitch.util.Iface;
+import vswitch.iface.TapIface;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -27,12 +27,12 @@ public class TapHandle {
 
     public static List<String> names(Resource parent) throws Exception {
         Switch sw = Application.get().switchHolder.get(parent.alias);
-        return sw.getIfaces().stream().filter(i -> i.tap != null).map(i -> i.tap.tuntap.dev).collect(Collectors.toList());
+        return sw.getIfaces().stream().filter(i -> i instanceof TapIface).map(i -> (TapIface) i).map(i -> i.tap.tuntap.dev).collect(Collectors.toList());
     }
 
     public static List<TapInfo> list(Resource parent) throws Exception {
         Switch sw = Application.get().switchHolder.get(parent.alias);
-        return sw.getIfaces().stream().filter(i -> i.tap != null).map(TapInfo::new).collect(Collectors.toList());
+        return sw.getIfaces().stream().filter(i -> i instanceof TapIface).map(i -> (TapIface) i).map(TapInfo::new).collect(Collectors.toList());
     }
 
     public static void checkCreateTap(Command cmd) throws Exception {
@@ -63,9 +63,9 @@ public class TapHandle {
     }
 
     public static class TapInfo {
-        public final Iface iface;
+        public final TapIface iface;
 
-        public TapInfo(Iface iface) {
+        public TapInfo(TapIface iface) {
             this.iface = iface;
         }
 

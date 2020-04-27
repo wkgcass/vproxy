@@ -10,7 +10,7 @@ import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
 import vproxy.dns.Cache;
 import vproxy.util.*;
-import vswitch.util.Iface;
+import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
 
 import java.lang.reflect.Field;

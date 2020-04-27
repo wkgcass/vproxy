@@ -18,7 +18,7 @@ import java.util.function.Function;
  * decode the user name string with base64 to get the binary form user name
  * the user string must be 8 chars, a-zA-Z0-9, however a default padding may be added
  */
-public class VProxySwitchPacket extends AbstractPacket {
+public class VProxyEncryptedPacket extends AbstractPacket {
     private String user;
     private int magic;
     private int type;
@@ -26,7 +26,7 @@ public class VProxySwitchPacket extends AbstractPacket {
 
     private final Function<String, Aes256Key> keyProvider;
 
-    public VProxySwitchPacket(Function<String, Aes256Key> keyProvider) {
+    public VProxyEncryptedPacket(Function<String, Aes256Key> keyProvider) {
         this.keyProvider = keyProvider;
     }
 
@@ -104,7 +104,7 @@ public class VProxySwitchPacket extends AbstractPacket {
 
     @Override
     public String toString() {
-        return "VProxySwitchPacket{" +
+        return "VProxyEncryptedPacket{" +
             "user=" + user +
             ", magic=" + Utils.toHexString(magic) +
             ", type=" + type +

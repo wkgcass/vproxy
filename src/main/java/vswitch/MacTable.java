@@ -2,8 +2,9 @@ package vswitch;
 
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Timer;
-import vswitch.util.Iface;
+import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
+import vswitch.util.SwitchUtils;
 
 import java.util.*;
 
@@ -26,8 +27,7 @@ public class MacTable {
         var entry = macMap.get(mac);
         if (entry != null && entry.iface.equals(iface)) {
             entry.resetTimer();
-            entry.iface.clientSideVni = iface.clientSideVni;
-            entry.iface.serverSideVni = iface.serverSideVni;
+            SwitchUtils.updateBothSideVni(entry.iface, iface);
             return;
         }
         // otherwise need to overwrite the entry

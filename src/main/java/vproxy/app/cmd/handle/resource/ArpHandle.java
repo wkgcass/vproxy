@@ -8,7 +8,7 @@ import vproxy.util.Utils;
 import vswitch.MacTable;
 import vswitch.Switch;
 import vswitch.Table;
-import vswitch.util.Iface;
+import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
 
 import java.net.InetAddress;

@@ -22,10 +22,11 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
+import vswitch.iface.*;
 import vswitch.packet.*;
 import vswitch.util.Consts;
-import vswitch.util.Iface;
 import vswitch.util.MacAddress;
+import vswitch.util.SwitchUtils;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -285,8 +286,7 @@ public class Switch {
         }
         PosixFDs posixFDs = (PosixFDs) fds;
         TunTapDatagramFD fd = posixFDs.openTunTap(devPattern, TunTapDatagramFD.IFF_TAP | TunTapDatagramFD.IFF_NO_PI);
-        Iface iface = new Iface(fd);
-        iface.serverSideVni = vni; // assign the vni
+        TapIface iface = new TapIface(fd, vni, loop);
         try {
             fd.configureBlocking(false);
             loop.add(fd, EventSet.read(), null, new TapHandler(iface));
@@ -306,7 +306,11 @@ public class Switch {
     public void delTap(String devName) throws NotFoundException {
         Iface iface = null;
         for (Iface i : ifaces.keySet()) {
-            if (i.tap != null && i.tap.tuntap.dev.equals(devName)) {
+            if (!(i instanceof TapIface)) {
+                continue;
+            }
+            TapIface tapIface = (TapIface) i;
+            if (tapIface.tap.tuntap.dev.equals(devName)) {
                 iface = i;
                 break;
             }
@@ -315,15 +319,6 @@ public class Switch {
             throw new NotFoundException("tap", devName);
         }
         utilRemoveIface(iface);
-        NetEventLoop netEventLoop = currentEventLoop;
-        if (netEventLoop != null) {
-            netEventLoop.getSelectorEventLoop().remove(iface.tap);
-        }
-        try {
-            iface.tap.close();
-        } catch (IOException e) {
-            Logger.shouldNotHappen("closing tap device failed", e);
-        }
     }
 
     public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr) throws XException, AlreadyExistException {
@@ -334,21 +329,29 @@ public class Switch {
         SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
 
         for (Iface i : ifaces.keySet()) {
-            if (alias.equals(i.remoteSwitchAlias)) {
+            if (!(i instanceof RemoteSwitchIface)) {
+                continue;
+            }
+            RemoteSwitchIface rsi = (RemoteSwitchIface) i;
+            if (alias.equals(rsi.alias)) {
                 throw new AlreadyExistException("switch", alias);
             }
-            if (vxlanSockAddr.equals(i.udpSockAddress)) {
+            if (vxlanSockAddr.equals(rsi.udpSockAddress)) {
                 throw new AlreadyExistException("switch", Utils.l4addrStr(vxlanSockAddr));
             }
         }
-        Iface iface = new Iface(alias, vxlanSockAddr);
+        Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr);
         loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
     }
 
     public void delRemoteSwitch(String alias) throws NotFoundException {
         Iface iface = null;
         for (Iface i : ifaces.keySet()) {
-            if (alias.equals(i.remoteSwitchAlias)) {
+            if (!(i instanceof RemoteSwitchIface)) {
+                continue;
+            }
+            RemoteSwitchIface rsi = (RemoteSwitchIface) i;
+            if (alias.equals(rsi.alias)) {
                 iface = i;
                 break;
             }
@@ -1019,7 +1022,7 @@ public class Switch {
                 }
             }
             for (Iface f : ifaces.keySet()) {
-                if (f.serverSideVni == table.vni || f.remoteSwitchAlias != null) { // send if vni matches or is a remote switch
+                if (f.getServerSideVni(table.vni) == table.vni) { // send if vni matches or is a remote switch
                     if (toSend.add(f)) {
                         sendVXLanTo(logId, f, vxlan);
                     }
@@ -1029,62 +1032,20 @@ public class Switch {
 
         private void sendVXLanTo(String logId, Iface iface, VXLanPacket vxlan) {
             assert Logger.lowLevelDebug(logId + "sendVXLanTo(" + iface + "," + vxlan + ")");
-            // fix vni
-            if (iface.clientSideVni != 0) {
-                vxlan.setVni(iface.clientSideVni);
-            }
 
-            VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
-            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
-            p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
-            p.setVxlan(vxlan);
-            sendVProxyPacketTo(iface, p);
+            sndBuf.limit(sndBuf.capacity()).position(0);
+            try {
+                iface.sendPacket(sock, vxlan, sndBuf);
+            } catch (IOException e) {
+                Logger.error(LogType.CONN_ERROR, "sending packet to " + iface + " failed", e);
+            }
         }
 
-        protected final void sendVProxyPacketTo(Iface iface, VProxySwitchPacket p) {
-            AbstractPacket packetToSend;
-
-            if (iface.user == null) {
-                if (p.getVxlan() == null) {
-                    Logger.error(LogType.IMPROPER_USE, "want to send packet to " + iface + " with " + p + ", but both user and vxlan packet are null");
-                    return;
-                }
-                // user == null means it's bare vxlan or tap
-                // directly send
-                if (iface.udpSockAddress != null) {
-                    packetToSend = p.getVxlan();
-                } else {
-                    assert iface.tap != null;
-                    packetToSend = p.getVxlan().getPacket();
-                }
-            } else {
-                p.setUser(iface.user);
-                packetToSend = p;
-            }
-
-            byte[] bytes;
+        protected final void sendVProxyPacketTo(UserIface iface, VProxyEncryptedPacket p) {
             try {
-                bytes = packetToSend.getRawPacket().toJavaArray();
-            } catch (IllegalArgumentException e) {
-                assert Logger.lowLevelDebug("encode packet failed, maybe because of a deleted user: " + e);
-                return;
-            }
-            sndBuf.limit(sndBuf.capacity()).position(0);
-            sndBuf.put(bytes);
-            sndBuf.flip();
-            if (iface.udpSockAddress != null) {
-                try {
-                    sock.send(sndBuf, iface.udpSockAddress);
-                } catch (IOException e) {
-                    Logger.error(LogType.CONN_ERROR, "sending udp packet to " + iface.udpSockAddress + " using " + sock + " failed", e);
-                }
-            } else {
-                assert iface.tap != null;
-                try {
-                    iface.tap.write(sndBuf);
-                } catch (IOException e) {
-                    Logger.error(LogType.CONN_ERROR, "sending packet to " + iface.tap + " failed", e);
-                }
+                iface.sendVProxyPacket(sock, p, sndBuf);
+            } catch (IOException e) {
+                Logger.error(LogType.CONN_ERROR, "sending packet to " + iface + " failed", e);
             }
         }
     }
@@ -1104,7 +1065,7 @@ public class Switch {
         }
 
         private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(String logId, SelectorEventLoop loop, InetSocketAddress remote, ByteArray data) {
-            VProxySwitchPacket packet = new VProxySwitchPacket(Switch.this::getKey);
+            VProxyEncryptedPacket packet = new VProxyEncryptedPacket(Switch.this::getKey);
             VXLanPacket vxLanPacket;
             Iface iface;
 
@@ -1112,20 +1073,21 @@ public class Switch {
             assert Logger.lowLevelDebug(logId + "packet.from(data) = " + err);
             if (err == null) {
                 String user = packet.getUser();
-                iface = new Iface(remote, user);
+                UserIface uiface = new UserIface(remote, user, users);
+                iface = uiface;
                 UserInfo info = users.get(user);
                 if (info == null) {
                     Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
                     return null;
                 }
-                iface.serverSideVni = info.vni;
+                uiface.setServerSideVni(info.vni);
 
                 assert Logger.lowLevelDebug(logId + "got packet " + packet + " from " + iface);
 
                 vxLanPacket = packet.getVxlan();
                 if (vxLanPacket != null) {
                     int packetVni = vxLanPacket.getVni();
-                    iface.clientSideVni = packetVni; // set vni to the iface
+                    uiface.setClientSideVni(packetVni); // set vni to the iface
                     assert Logger.lowLevelDebug(logId + "setting vni for " + user + " to " + info.vni);
                     if (packetVni != info.vni) {
                         vxLanPacket.setVni(info.vni);
@@ -1134,7 +1096,7 @@ public class Switch {
 
                 if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
                     assert Logger.lowLevelDebug(logId + "is vproxy ping message, do reply");
-                    sendPingTo(logId, iface);
+                    sendPingTo(logId, uiface);
                 }
                 // fall through
             } else {
@@ -1150,21 +1112,21 @@ public class Switch {
                     // check whether it's coming from remote switch
                     Iface remoteSwitch = null;
                     for (Iface i : ifaces.keySet()) {
-                        if (i.remoteSwitchAlias == null) {
+                        if (!(i instanceof RemoteSwitchIface)) {
                             continue;
                         }
-                        if (remote.equals(i.udpSockAddress)) {
+                        RemoteSwitchIface rsi = (RemoteSwitchIface) i;
+                        if (remote.equals(rsi.udpSockAddress)) {
                             remoteSwitch = i;
                             break;
                         }
                     }
                     if (remoteSwitch == null) { // is from a vxlan endpoint
-                        iface = new Iface(remote);
-                        iface.clientSideVni = vxLanPacket.getVni();
-                        iface.serverSideVni = iface.clientSideVni;
+                        BareVXLanIface biface = new BareVXLanIface(remote);
+                        iface = biface;
+                        biface.setServerSideVni(vxLanPacket.getVni());
                     } else { // is from a remote switch
                         iface = remoteSwitch;
-                        iface.clientSideVni = 0; // explicitly set this to 0 (through not necessary because other places won't modify this field)
                     }
                     assert Logger.lowLevelDebug(logId + "got vxlan packet " + vxLanPacket + " from " + iface);
                     // fall through
@@ -1219,9 +1181,9 @@ public class Switch {
             }
         }
 
-        private void sendPingTo(String logId, Iface iface) {
+        private void sendPingTo(String logId, UserIface iface) {
             assert Logger.lowLevelDebug(logId + "sendPingTo(" + iface + ")");
-            VProxySwitchPacket p = new VProxySwitchPacket(Switch.this::getKey);
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(Switch.this::getKey);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
             sendVProxyPacketTo(iface, p);
@@ -1246,6 +1208,8 @@ public class Switch {
             table.macTable.disconnect(iface);
         }
         Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
+
+        iface.destroy();
     }
 
     private class IfaceTimer extends Timer {
@@ -1265,12 +1229,7 @@ public class Switch {
         }
 
         void record(Iface newIface) {
-            if (newIface.clientSideVni != 0) {
-                iface.clientSideVni = newIface.clientSideVni;
-            }
-            if (newIface.serverSideVni != 0) {
-                iface.serverSideVni = newIface.serverSideVni;
-            }
+            SwitchUtils.updateBothSideVni(iface, newIface);
             ifaces.put(iface, this);
             Logger.alert(iface + " connected to Switch:" + alias);
             resetTimer();
@@ -1284,11 +1243,11 @@ public class Switch {
     }
 
     private class TapHandler extends NetworkStack implements Handler<TunTapDatagramFD> {
-        private final Iface iface;
+        private final TapIface iface;
 
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
 
-        private TapHandler(Iface iface) {
+        private TapHandler(TapIface iface) {
             this.iface = iface;
         }
 
