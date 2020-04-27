@@ -44,7 +44,7 @@ public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVni
 
     @Override
     public String toString() {
-        return "Iface(" + Utils.l4addrStr(udpSockAddress) + ",user:" + user.replace(Consts.USER_PADDING, "") + ')';
+        return "Iface(user:" + user.replace(Consts.USER_PADDING, "") + "," + Utils.l4addrStr(udpSockAddress) + ",lvni:" + localSideVni + ",rvni:" + remoteSideVni + ')';
     }
 
     @Override

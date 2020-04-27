@@ -59,8 +59,7 @@ public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
     @Override
     public String toString() {
         return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + Utils.l4addrStr(remoteAddress) + ",vni:" + user.vni
-            + (connected ? "[up]" : "[down]")
-            + ")";
+            + ")" + (connected ? "[UP]" : "[DOWN]");
     }
 
     @Override
