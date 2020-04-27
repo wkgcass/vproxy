@@ -9,7 +9,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class BareVXLanIface implements Iface, ServerSideVniGetterSetter {
+public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
     public final InetSocketAddress udpSockAddress; // for vxlan or vproxy wrapped vxlan
     private int serverSideVni;
 
@@ -49,12 +49,12 @@ public class BareVXLanIface implements Iface, ServerSideVniGetterSetter {
     }
 
     @Override
-    public int getServerSideVni(int hint) {
+    public int getLocalSideVni(int hint) {
         return serverSideVni;
     }
 
     @Override
-    public void setServerSideVni(int vni) {
+    public void setLocalSideVni(int vni) {
         this.serverSideVni = vni;
     }
 }

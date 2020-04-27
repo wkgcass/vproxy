@@ -1,9 +1,9 @@
 package vswitch.util;
 
 import vproxy.util.ByteArray;
-import vswitch.iface.ClientSideVniGetterSetter;
+import vswitch.iface.RemoteSideVniGetterSetter;
 import vswitch.iface.Iface;
-import vswitch.iface.ServerSideVniGetterSetter;
+import vswitch.iface.LocalSideVniGetterSetter;
 
 public class SwitchUtils {
     private SwitchUtils() {
@@ -28,18 +28,18 @@ public class SwitchUtils {
 
     public static void updateBothSideVni(Iface iface, Iface newIface) {
         assert iface.equals(newIface);
-        if (iface instanceof ClientSideVniGetterSetter) {
-            var that = (ClientSideVniGetterSetter) newIface;
-            if (that.getClientSideVni() != 0) {
-                ((ClientSideVniGetterSetter) iface).setClientSideVni(that.getClientSideVni());
+        if (iface instanceof RemoteSideVniGetterSetter) {
+            var that = (RemoteSideVniGetterSetter) newIface;
+            if (that.getRemoteSideVni() != 0) {
+                ((RemoteSideVniGetterSetter) iface).setRemoteSideVni(that.getRemoteSideVni());
             }
         }
-        if (iface instanceof ServerSideVniGetterSetter) {
-            var that = (ServerSideVniGetterSetter) newIface;
-            var self = (ServerSideVniGetterSetter) iface;
-            var newVal = that.getServerSideVni(0);
+        if (iface instanceof LocalSideVniGetterSetter) {
+            var that = (LocalSideVniGetterSetter) newIface;
+            var self = (LocalSideVniGetterSetter) iface;
+            var newVal = that.getLocalSideVni(0);
             if (newVal != 0) {
-                self.setServerSideVni(newVal);
+                self.setLocalSideVni(newVal);
             }
         }
     }

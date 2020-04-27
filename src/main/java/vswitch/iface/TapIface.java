@@ -37,7 +37,7 @@ public class TapIface implements Iface {
 
     @Override
     public String toString() {
-        return "Iface(" + tap.tuntap.dev + ",vni:" + serverSideVni + ")";
+        return "Iface(tap:" + tap.tuntap.dev + ",vni:" + serverSideVni + ")";
     }
 
     @Override
@@ -62,7 +62,7 @@ public class TapIface implements Iface {
     }
 
     @Override
-    public int getServerSideVni(int hint) {
+    public int getLocalSideVni(int hint) {
         return serverSideVni;
     }
 }

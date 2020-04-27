@@ -2,7 +2,7 @@ package vswitch.iface;
 
 import vfd.DatagramFD;
 import vproxy.util.Utils;
-import vswitch.Switch;
+import vswitch.util.UserInfo;
 import vswitch.packet.VProxyEncryptedPacket;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
@@ -13,16 +13,16 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 
-public class UserIface implements Iface, ClientSideVniGetterSetter, ServerSideVniGetterSetter {
+public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVniGetterSetter, IfaceCanSendVProxyPacket {
     public final InetSocketAddress udpSockAddress;
     public final String user;
 
-    private int clientSideVni;
-    private int serverSideVni;
+    private int remoteSideVni;
+    private int localSideVni;
 
-    private final Map<String, Switch.UserInfo> userMapRef;
+    private final Map<String, UserInfo> userMapRef;
 
-    public UserIface(InetSocketAddress udpSockAddress, String user, Map<String, Switch.UserInfo> userMapRef) {
+    public UserIface(InetSocketAddress udpSockAddress, String user, Map<String, UserInfo> userMapRef) {
         this.udpSockAddress = udpSockAddress;
         this.user = user;
         this.userMapRef = userMapRef;
@@ -49,8 +49,8 @@ public class UserIface implements Iface, ClientSideVniGetterSetter, ServerSideVn
 
     @Override
     public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
-        if (vxlan.getVni() != clientSideVni && clientSideVni != 0) {
-            vxlan.setVni(clientSideVni);
+        if (vxlan.getVni() != remoteSideVni && remoteSideVni != 0) {
+            vxlan.setVni(remoteSideVni);
         }
         VProxyEncryptedPacket p = new VProxyEncryptedPacket(u -> {
             var info = userMapRef.get(user);
@@ -64,6 +64,7 @@ public class UserIface implements Iface, ClientSideVniGetterSetter, ServerSideVn
         sendVProxyPacket(serverUDPSock, p, writeBuf);
     }
 
+    @Override
     public void sendVProxyPacket(DatagramFD serverUDPSock, VProxyEncryptedPacket p, ByteBuffer writeBuf) throws IOException {
         p.setUser(user);
 
@@ -78,22 +79,22 @@ public class UserIface implements Iface, ClientSideVniGetterSetter, ServerSideVn
     }
 
     @Override
-    public int getServerSideVni(int hint) {
-        return serverSideVni;
+    public int getLocalSideVni(int hint) {
+        return localSideVni;
     }
 
     @Override
-    public void setServerSideVni(int serverSideVni) {
-        this.serverSideVni = serverSideVni;
+    public void setLocalSideVni(int serverSideVni) {
+        this.localSideVni = serverSideVni;
     }
 
     @Override
-    public int getClientSideVni() {
-        return clientSideVni;
+    public int getRemoteSideVni() {
+        return remoteSideVni;
     }
 
     @Override
-    public void setClientSideVni(int clientSideVni) {
-        this.clientSideVni = clientSideVni;
+    public void setRemoteSideVni(int remoteSideVni) {
+        this.remoteSideVni = remoteSideVni;
     }
 }

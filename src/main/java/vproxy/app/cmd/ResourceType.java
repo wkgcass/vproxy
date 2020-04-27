@@ -29,6 +29,7 @@ public enum ResourceType {
     tap("tap"),
     ip("ip"),
     route("route"),
+    ucli("user-client"),
 
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),

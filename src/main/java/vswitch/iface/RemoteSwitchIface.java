@@ -51,7 +51,7 @@ public class RemoteSwitchIface implements Iface {
     }
 
     @Override
-    public int getServerSideVni(int hint) {
+    public int getLocalSideVni(int hint) {
         return hint;
     }
 }

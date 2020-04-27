@@ -672,6 +672,7 @@ public class Command {
                 }
                 break;
             case user:
+            case ucli:
             case tap:
             case vpc:
             case route:
@@ -680,6 +681,8 @@ public class Command {
                     case a:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkCreateUser(cmd);
+                        } else if (cmd.resource.type == ResourceType.ucli) {
+                            UserClientHandle.checkCreateUserClient(cmd);
                         } else if (cmd.resource.type == ResourceType.tap) {
                             TapHandle.checkCreateTap(cmd);
                         } else if (cmd.resource.type == ResourceType.vpc) {
@@ -691,10 +694,17 @@ public class Command {
                         }
                     case r:
                     case R:
+                        if (cmd.action == Action.r || cmd.action == Action.R) {
+                            if (cmd.resource.type == ResourceType.ucli) {
+                                UserClientHandle.checkRemoveUserClient(cmd);
+                            }
+                        }
                     case L:
                     case l:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkUser(targetResource);
+                        } else if (cmd.resource.type == ResourceType.ucli) {
+                            UserClientHandle.checkUserClient(targetResource);
                         } else if (cmd.resource.type == ResourceType.tap) {
                             TapHandle.checkTap(targetResource);
                         } else if (cmd.resource.type == ResourceType.vpc) {
@@ -1082,19 +1092,22 @@ public class Command {
                 }
             case tap:
                 switch (action) {
-                    case l:
-                        List<String> taps = TapHandle.names(targetResource);
-                        return new CmdResult(taps, taps, utilJoinList(taps));
-                    case L:
-                        List<TapHandle.TapInfo> tapInfoList = TapHandle.list(targetResource);
-                        List<String> strList = tapInfoList.stream().map(TapHandle.TapInfo::toString).collect(Collectors.toList());
-                        return new CmdResult(tapInfoList, strList, utilJoinList(strList));
                     case a:
                         String dev = TapHandle.add(this);
                         return new CmdResult(dev, dev, dev);
                     case r:
                     case R:
                         TapHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case ucli:
+                switch (action) {
+                    case a:
+                        UserClientHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        UserClientHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ip:

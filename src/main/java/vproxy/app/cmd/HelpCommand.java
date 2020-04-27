@@ -1375,9 +1375,30 @@ public class HelpCommand {
                         "\"tap0\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.remove, "remove and close a tap from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove tap tap0 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        usercli("user-client", "ucli", "user client of an encrypted tunnel to remote switch. Note: use list iface to see these clients",
+            Arrays.asList(
+                new ResActMan(ActMan.add, "add a user client to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.pass, "password of the user"),
+                    new ResActParamMan(ParamMan.vni, "vni which the user is assigned to"),
+                    new ResActParamMan(ParamMan.address, "remote switch address to connect to")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.remove, "remove a user client from a switch", Collections.singletonList(
+                    new ResActParamMan(ParamMan.address, "remote switch address the client connected to")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "remove user-client hello from switch sw0 address 192.168.77.1:18472",
                         "\"OK\""
                     )
                 ))

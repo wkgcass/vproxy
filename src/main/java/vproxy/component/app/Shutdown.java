@@ -15,6 +15,9 @@ import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 import vproxy.util.*;
 import vswitch.Switch;
+import vswitch.iface.UserClientIface;
+import vswitch.util.Consts;
+import vswitch.util.UserInfo;
 import vswitch.iface.RemoteSwitchIface;
 
 import java.io.*;
@@ -617,7 +620,7 @@ public class Shutdown {
                 commands.add(cmd);
 
                 // create users
-                Map<String, Switch.UserInfo> users = sw.getUsers();
+                Map<String, UserInfo> users = sw.getUsers();
                 for (var entry : users.entrySet()) {
                     cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
                     commands.add(cmd);
@@ -629,6 +632,16 @@ public class Shutdown {
                     }
                     var rsi = (RemoteSwitchIface) iface;
                     cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + Utils.l4addrStr(rsi.udpSockAddress);
+                    commands.add(cmd);
+                }
+                // create user-cli
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof UserClientIface)) {
+                        continue;
+                    }
+                    var ucliIface = (UserClientIface) iface;
+                    cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
+                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + Utils.l4addrStr(ucliIface.remoteAddress);
                     commands.add(cmd);
                 }
                 // create vpc

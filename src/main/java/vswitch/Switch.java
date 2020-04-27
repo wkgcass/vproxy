@@ -27,6 +27,7 @@ import vswitch.packet.*;
 import vswitch.util.Consts;
 import vswitch.util.MacAddress;
 import vswitch.util.SwitchUtils;
+import vswitch.util.UserInfo;
 
 import java.io.IOException;
 import java.net.Inet4Address;
@@ -50,7 +51,7 @@ public class Switch {
     private boolean started = false;
     private boolean wantStart = false;
 
-    private final ConcurrentHashMap<String, UserInfo> users = new ConcurrentHashMap<>();
+    private final Map<String, UserInfo> users = new HashMap<>();
     private final DatagramFD sock;
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
@@ -110,6 +111,27 @@ public class Switch {
         refreshCacheEvent = currentEventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
         tables.values().forEach(t -> t.setLoop(loop));
         started = true;
+
+        // handle additional operations
+        // if they fail, the started state won't rollback
+        {
+            List<UserClientIface> failedToInit = new ArrayList<>();
+            for (Iface iface : ifaces.keySet()) {
+                if (!(iface instanceof UserClientIface)) {
+                    continue;
+                }
+                var ucliIface = (UserClientIface) iface;
+                try {
+                    initUserClient(loop, ucliIface);
+                } catch (IOException e) {
+                    Logger.error(LogType.SYS_ERROR, "initiate user client " + iface + " failed", e);
+                    failedToInit.add(ucliIface);
+                }
+            }
+            if (!failedToInit.isEmpty()) {
+                throw new IOException("Some of the user-client ifaces failed to initiated. You have to delete the failed user-client add re-add them: " + failedToInit);
+            }
+        }
     }
 
     private void checkAndRestart() { // this method is only called when selected event loop closes, so no need to remove handler
@@ -321,6 +343,98 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
+    private void initUserClient(SelectorEventLoop loop, UserClientIface iface) throws IOException {
+        DatagramFD cliSock = iface.sock;
+        iface.attachedToLoopAlert(loop);
+        try {
+            loop.add(cliSock, EventSet.read(), null, new UserClientHandler(loop, iface));
+        } catch (IOException e) {
+            iface.detachedFromLoopAlert();
+            throw e;
+        }
+    }
+
+    public void addUserClient(String user, String password, int vni, InetSocketAddress remoteAddr) throws AlreadyExistException, IOException, XException {
+        char[] chars = user.toCharArray();
+        if (chars.length < 3 || chars.length > 8) {
+            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
+        }
+        for (char c : chars) {
+            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
+                throw new XException("invalid user, should only contain a-zA-Z0-9");
+            }
+        }
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof UserClientIface)) {
+                continue;
+            }
+            UserClientIface ucliIface = (UserClientIface) i;
+            if (ucliIface.user.user.equals(user) && ucliIface.remoteAddress.equals(remoteAddr)) {
+                throw new AlreadyExistException("user-client", user);
+            }
+        }
+
+        SelectorEventLoop loop = null;
+        if (currentEventLoop != null) {
+            loop = currentEventLoop.getSelectorEventLoop();
+        }
+
+        Aes256Key key = new Aes256Key(password);
+        UserInfo info = new UserInfo(user, key, password, vni);
+
+        DatagramFD cliSock = FDProvider.get().openDatagramFD();
+        UserClientIface iface = new UserClientIface(info, cliSock, remoteAddr);
+
+        try {
+            cliSock.connect(remoteAddr);
+            cliSock.configureBlocking(false);
+        } catch (IOException e) {
+            try {
+                cliSock.close();
+            } catch (IOException t) {
+                Logger.shouldNotHappen("close datagram sock when rolling back failed", t);
+            }
+            throw e;
+        }
+
+        if (loop != null) {
+            try {
+                initUserClient(loop, iface);
+            } catch (IOException e) {
+                try {
+                    cliSock.close();
+                } catch (IOException t) {
+                    Logger.shouldNotHappen("close datagram sock when rolling back failed", t);
+                }
+                throw e;
+            }
+        }
+        ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+    }
+
+    public void delUserClient(String user, InetSocketAddress remoteAddr) throws NotFoundException {
+        UserClientIface iface = null;
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof UserClientIface)) {
+                continue;
+            }
+            UserClientIface ucliIface = (UserClientIface) i;
+            if (ucliIface.user.user.equals(user) && ucliIface.remoteAddress.equals(remoteAddr)) {
+                iface = ucliIface;
+                break;
+            }
+        }
+
+        if (iface == null) {
+            throw new NotFoundException("user-client", user);
+        }
+        utilRemoveIface(iface);
+    }
+
     public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = currentEventLoop;
         if (netEventLoop == null) {
@@ -397,20 +511,6 @@ public class Switch {
         var x = users.get(name);
         if (x == null) return null;
         return x.key;
-    }
-
-    public static class UserInfo {
-        public final String user;
-        public final Aes256Key key;
-        public final String pass;
-        public final int vni;
-
-        public UserInfo(String user, Aes256Key key, String pass, int vni) {
-            this.user = user;
-            this.key = key;
-            this.pass = pass;
-            this.vni = vni;
-        }
     }
 
     private abstract class NetworkStack {
@@ -1022,7 +1122,7 @@ public class Switch {
                 }
             }
             for (Iface f : ifaces.keySet()) {
-                if (f.getServerSideVni(table.vni) == table.vni) { // send if vni matches or is a remote switch
+                if (f.getLocalSideVni(table.vni) == table.vni) { // send if vni matches or is a remote switch
                     if (toSend.add(f)) {
                         sendVXLanTo(logId, f, vxlan);
                     }
@@ -1041,7 +1141,8 @@ public class Switch {
             }
         }
 
-        protected final void sendVProxyPacketTo(UserIface iface, VProxyEncryptedPacket p) {
+        protected final void sendVProxyPacketTo(IfaceCanSendVProxyPacket iface, VProxyEncryptedPacket p) {
+            sndBuf.limit(sndBuf.capacity()).position(0);
             try {
                 iface.sendVProxyPacket(sock, p, sndBuf);
             } catch (IOException e) {
@@ -1080,14 +1181,14 @@ public class Switch {
                     Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
                     return null;
                 }
-                uiface.setServerSideVni(info.vni);
+                uiface.setLocalSideVni(info.vni);
 
                 assert Logger.lowLevelDebug(logId + "got packet " + packet + " from " + iface);
 
                 vxLanPacket = packet.getVxlan();
                 if (vxLanPacket != null) {
                     int packetVni = vxLanPacket.getVni();
-                    uiface.setClientSideVni(packetVni); // set vni to the iface
+                    uiface.setRemoteSideVni(packetVni); // set vni to the iface
                     assert Logger.lowLevelDebug(logId + "setting vni for " + user + " to " + info.vni);
                     if (packetVni != info.vni) {
                         vxLanPacket.setVni(info.vni);
@@ -1124,7 +1225,7 @@ public class Switch {
                     if (remoteSwitch == null) { // is from a vxlan endpoint
                         BareVXLanIface biface = new BareVXLanIface(remote);
                         iface = biface;
-                        biface.setServerSideVni(vxLanPacket.getVni());
+                        biface.setLocalSideVni(vxLanPacket.getVni());
                     } else { // is from a remote switch
                         iface = remoteSwitch;
                     }
@@ -1305,6 +1406,113 @@ public class Switch {
             try {
                 delTap(ctx.getChannel().tuntap.dev);
             } catch (NotFoundException ignore) {
+            }
+        }
+    }
+
+    private class UserClientHandler extends NetworkStack implements Handler<DatagramFD> {
+        private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
+        private final UserClientIface iface;
+
+        private ConnectedToSwitchTimer connectedToSwitchTimer = null;
+        private static final int toSwitchTimeoutSeconds = 60;
+
+        private PeriodicEvent pingPeriodicEvent;
+        private static final int pingPeriod = 20 * 1000;
+
+        private class ConnectedToSwitchTimer extends Timer {
+
+            public ConnectedToSwitchTimer(SelectorEventLoop loop) {
+                super(loop, toSwitchTimeoutSeconds * 1000);
+                iface.setConnected(true);
+            }
+
+            @Override
+            public void cancel() {
+                super.cancel();
+                connectedToSwitchTimer = null;
+                iface.setConnected(false);
+            }
+        }
+
+        public UserClientHandler(SelectorEventLoop loop, UserClientIface iface) {
+            this.iface = iface;
+            pingPeriodicEvent = loop.period(pingPeriod, this::sendPingPacket);
+            sendPingPacket();
+        }
+
+        private void sendPingPacket() {
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> iface.user.key);
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
+            sendVProxyPacketTo(iface, p);
+        }
+
+        @Override
+        public void accept(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void connected(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void readable(HandlerContext<DatagramFD> ctx) {
+            DatagramFD sock = ctx.getChannel();
+            while (true) {
+                rcvBuf.limit(rcvBuf.capacity()).position(0);
+                try {
+                    sock.read(rcvBuf);
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
+                    return;
+                }
+                if (rcvBuf.position() == 0) {
+                    break; // nothing read, quit loop
+                }
+
+                String logId = UUID.randomUUID().toString() + " ::: ";
+
+                VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> iface.user.key);
+                ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
+                String err = p.from(arr);
+                if (err != null) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, logId + "received invalid packet from " + iface + ": " + arr);
+                    continue;
+                }
+                if (!p.getUser().equals(iface.user.user)) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, logId + "user in received packet from " + iface + " mismatches, got " + p.getUser());
+                    continue;
+                }
+                if (connectedToSwitchTimer == null) {
+                    connectedToSwitchTimer = new ConnectedToSwitchTimer(ctx.getEventLoop());
+                }
+                connectedToSwitchTimer.resetTimer();
+                if (p.getVxlan() == null) {
+                    // not vxlan packet, ignore
+                    continue;
+                }
+                sendIntoNetworkStack(logId, p.getVxlan(), iface);
+            }
+        }
+
+        @Override
+        public void writable(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void removed(HandlerContext<DatagramFD> ctx) {
+            iface.detachedFromLoopAlert();
+            if (connectedToSwitchTimer != null) {
+                connectedToSwitchTimer.cancel();
+                connectedToSwitchTimer = null;
+            }
+            if (pingPeriodicEvent != null) {
+                pingPeriodicEvent.cancel();
+                pingPeriodicEvent = null;
             }
         }
     }

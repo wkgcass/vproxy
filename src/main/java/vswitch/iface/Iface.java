@@ -11,5 +11,5 @@ public interface Iface {
 
     void destroy();
 
-    int getServerSideVni(int hint);
+    int getLocalSideVni(int hint);
 }
