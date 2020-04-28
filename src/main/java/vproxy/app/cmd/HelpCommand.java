@@ -1353,7 +1353,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.vni, "vni assigned for the user")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add user hello to switch sw0 vni 1314",
+                        "add user hello to switch sw0 vni 1314 password p@sSw0rD",
                         "\"OK\""
                     )
                 )),
@@ -1364,7 +1364,7 @@ public class HelpCommand {
                     )
                 ))
             )),
-        tap("tap", null, "add/remove a tap device and bind it to/from a switch. The input alias may also be a pattern, see linux tuntap manual.\n" +
+        tap("tap", null, "add/remove a tap device and bind it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
             "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix",
             Arrays.asList(
                 new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Collections.singletonList(
@@ -1452,10 +1452,15 @@ public class HelpCommand {
                 )),
                 new ResActMan(ActMan.add, "add a route to a vpc of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.network, "network to be matched"),
-                    new ResActParamMan(ParamMan.vni, "the vni to send packet to")
-                ), Collections.singletonList(
+                    new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|address can be used"),
+                    new ResActParamMan(ParamMan.address, "the address to forward the packet to. only one of address|vni can be used")
+                ), Arrays.asList(
                     new Tuple<>(
                         "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 address 172.16.0.1",
                         "\"OK\""
                     )
                 )),

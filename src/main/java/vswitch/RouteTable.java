@@ -2,31 +2,77 @@ package vswitch;
 
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
+import vproxy.component.exception.XException;
 import vproxy.util.Network;
 import vproxy.util.Utils;
 
+import java.net.Inet4Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 
 public class RouteTable {
-    private final List<RouteRule> rules = new ArrayList<>();
+    public static final String defaultRule = "default";
+    public static final String defaultRuleV6 = "default-v6";
+
+    private final RouteRule defaultV4Rule;
+    private final RouteRule defaultV6Rule;
+
+    private final List<RouteRule> rulesV4 = new ArrayList<>();
+    private final List<RouteRule> rulesV6 = new ArrayList<>();
+
+    public RouteTable() {
+        this.defaultV4Rule = null;
+        this.defaultV6Rule = null;
+    }
+
+    public RouteTable(RouteRule defaultV4Rule, RouteRule defaultV6Rule) {
+        this.defaultV4Rule = defaultV4Rule;
+        this.defaultV6Rule = defaultV6Rule;
+
+        if (defaultV4Rule != null) {
+            rulesV4.add(defaultV4Rule);
+        }
+        if (defaultV6Rule != null) {
+            rulesV6.add(defaultV6Rule);
+        }
+    }
 
     public RouteRule lookup(InetAddress ip) {
-        for (RouteRule r : rules) {
-            if (r.rule.contains(ip)) {
-                return r;
+        if (ip instanceof Inet4Address) {
+            for (RouteRule r : rulesV4) {
+                if (r.rule.contains(ip)) {
+                    return r;
+                }
+            }
+        } else {
+            for (RouteRule r : rulesV6) {
+                if (r.rule.contains(ip)) {
+                    return r;
+                }
             }
         }
         return null;
     }
 
     public List<RouteRule> getRules() {
-        return rules;
+        List<RouteRule> ret = new ArrayList<>(rulesV4.size() + rulesV6.size());
+        ret.addAll(rulesV4);
+        ret.addAll(rulesV6);
+        return ret;
     }
 
-    public void addRule(RouteRule r) throws AlreadyExistException {
-        for (RouteRule rr : rules) {
+    public void addRule(RouteRule r) throws AlreadyExistException, XException {
+        for (RouteRule rr : rulesV4) {
+            if (rr.alias.equals(r.alias)) {
+                throw new AlreadyExistException("route", r.alias);
+            }
+            if (rr.rule.equals(r.rule)) {
+                throw new AlreadyExistException("route " + rr.alias + " has the same network rule as the adding one: " + r.rule);
+            }
+        }
+        for (RouteRule rr : rulesV6) {
             if (rr.alias.equals(r.alias)) {
                 throw new AlreadyExistException("route", r.alias);
             }
@@ -35,6 +81,23 @@ public class RouteTable {
             }
         }
 
+        if (r.alias.equals(defaultRule)) {
+            if (!r.equals(defaultV4Rule))
+                throw new XException("validation failed for the rule with name " + r.alias);
+        }
+        if (r.alias.equals(defaultRuleV6)) {
+            if (!r.equals(defaultV6Rule))
+                throw new XException("validation failed for the rule with name " + r.alias);
+        }
+
+        if (r.rule.getRawIpBytes().length == 4) {
+            addRule(r, rulesV4);
+        } else {
+            addRule(r, rulesV6);
+        }
+    }
+
+    private void addRule(RouteRule r, List<RouteRule> rules) {
         // try to find rules that contain each other
         int similarRule = -1;
         for (int i = 0; i < rules.size(); ++i) {
@@ -81,14 +144,29 @@ public class RouteTable {
     }
 
     public void delRule(String alias) throws NotFoundException {
-        for (int i = 0; i < rules.size(); ++i) {
-            var ri = rules.get(i);
+        for (int i = 0; i < rulesV4.size(); ++i) {
+            var ri = rulesV4.get(i);
             if (ri.alias.equals(alias)) {
-                rules.remove(i);
+                rulesV4.remove(i);
+                return;
+            }
+        }
+        for (int i = 0; i < rulesV6.size(); ++i) {
+            var ri = rulesV6.get(i);
+            if (ri.alias.equals(alias)) {
+                rulesV6.remove(i);
                 return;
             }
         }
         throw new NotFoundException("route", alias);
+    }
+
+    @Override
+    public String toString() {
+        return "RouteTable{" +
+            "rulesV4=" + rulesV4 +
+            ", rulesV6=" + rulesV6 +
+            '}';
     }
 
     public static class RouteRule {
@@ -116,6 +194,22 @@ public class RouteTable {
             return alias + " -> network " + rule + (
                 ip == null ? (" vni " + toVni) : (" address " + Utils.ipStr(ip))
             );
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            RouteRule routeRule = (RouteRule) o;
+            return toVni == routeRule.toVni &&
+                Objects.equals(alias, routeRule.alias) &&
+                Objects.equals(rule, routeRule.rule) &&
+                Objects.equals(ip, routeRule.ip);
+        }
+
+        @Override
+        public int hashCode() {
+            return Objects.hash(alias, rule, toVni, ip);
         }
     }
 }

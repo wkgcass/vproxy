@@ -14,6 +14,7 @@ import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
 import vproxy.util.*;
+import vswitch.RouteTable;
 import vswitch.Switch;
 import vswitch.iface.UserClientIface;
 import vswitch.util.Consts;
@@ -659,8 +660,29 @@ public class Shutdown {
                         cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ip.getValue();
                         commands.add(cmd);
                     }
-                    // create routes
+                    // create|remove routes
+                    boolean hasDefaultV4 = false;
+                    boolean hasDefaultV6 = false;
                     for (var r : table.routeTable.getRules()) {
+                        if (r.alias.equals(RouteTable.defaultRule)) {
+                            hasDefaultV4 = true;
+                        }
+                        if (r.alias.equals(RouteTable.defaultRuleV6)) {
+                            hasDefaultV6 = true;
+                        }
+                    }
+                    if (!hasDefaultV4) {
+                        cmd = "remove route " + RouteTable.defaultRule + " from vpc " + vpc + " in switch " + sw.alias;
+                        commands.add(cmd);
+                    }
+                    if (!hasDefaultV6 && table.v6network != null) {
+                        cmd = "remove route " + RouteTable.defaultRuleV6 + " from vpc " + vpc + " in switch " + sw.alias;
+                        commands.add(cmd);
+                    }
+                    for (var r : table.routeTable.getRules()) {
+                        if (r.alias.equals(RouteTable.defaultRule) || r.alias.equals(RouteTable.defaultRuleV6)) {
+                            continue;
+                        }
                         cmd = "add route " + r.alias + " to vpc " + vpc + " in switch " + sw.alias + " network " + r.rule;
                         if (r.ip == null) {
                             cmd += " vni " + r.toVni;

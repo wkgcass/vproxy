@@ -199,8 +199,8 @@ public class Switch {
     }
 
     private void refreshArpCache(Table t, InetAddress ip, MacAddress mac) {
-        Logger.alert("trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
         String logId = UUID.randomUUID().toString() + " ::: ";
+        assert Logger.lowLevelDebug(logId + "trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
 
         var networkStack = (new NetworkStack() {
         });
@@ -687,8 +687,9 @@ public class Switch {
                 }
             }
 
-            // handle
+            // handle the ip self (arp/ndp/icmp)
             boolean handled = false;
+            boolean syntheticIpMacMatches = false;
             for (InetAddress ip : ips) {
                 assert Logger.lowLevelDebug(logId + "handle synthetic ip " + ip);
 
@@ -698,6 +699,7 @@ public class Switch {
                     assert Logger.lowLevelDebug(logId + "is unicast and mac address not match");
                     continue;
                 }
+                syntheticIpMacMatches = true;
                 // check l3
                 if (arpReq != null) {
                     assert Logger.lowLevelDebug(logId + "check arp");
@@ -742,68 +744,101 @@ public class Switch {
                 }
                 // otherwise ignore
             }
-            // handle routes when the packet not handled by others
-            if (!handled) {
-                assert Logger.lowLevelDebug(logId + "not yet handled");
+            // handle routes
+            if (!handled && syntheticIpMacMatches) {
+                assert Logger.lowLevelDebug(logId + "not yet handled and packet is sent to a synthetic ip");
                 if (!allReceives) { // only handle unicast
                     assert Logger.lowLevelDebug(logId + "is unicast");
                     if (ipPkt != null) { // only check ip packets here
                         assert Logger.lowLevelDebug(logId + "is ip packet");
-                        int hop = ipPkt.getHopLimit();
-                        if (hop != 0) { // do not route packets when hop reaches 0
-                            assert Logger.lowLevelDebug(logId + "ip hop is ok");
-                            ipPkt.setHopLimit(hop - 1);
-                            // clear upper level cached packet
-                            vxlan.getPacket().clearRawPacket();
-                            vxlan.clearRawPacket();
+                        handleRoute(logId, table, vxlan, ipPkt, inputIface);
+                    }
+                }
+            }
+        }
 
-                            var dstIp = ipPkt.getDst();
-                            RouteTable.RouteRule r = table.routeTable.lookup(dstIp);
-                            if (r != null) {
-                                assert Logger.lowLevelDebug(logId + "route rule found");
-                                int vni = r.toVni;
-                                var targetIp = r.ip;
-                                if (vni != 0) {
-                                    assert Logger.lowLevelDebug(logId + "vni in rule is ok");
-                                    Table t = tables.get(vni);
-                                    if (t != null) { // cannot handle if the table does no exist
-                                        assert Logger.lowLevelDebug(logId + "target table is found");
-                                        routeTo(logId, t, dstIp, vxlan, inputIface);
-                                    }
-                                } else if (targetIp != null) {
-                                    assert Logger.lowLevelDebug(logId + "ip in rule is ok");
-                                    MacAddress mac = table.arpTable.lookup(targetIp);
-                                    if (mac == null) {
-                                        assert Logger.lowLevelDebug(logId + "mac not found in arp table, run a broadcast");
-                                        broadcastArpOrNdp(logId, table, targetIp);
-                                    } else {
-                                        assert Logger.lowLevelDebug(logId + "mac found in arp table");
-                                        Iface targetIface = table.macTable.lookup(mac);
-                                        if (targetIface != null) {
-                                            assert Logger.lowLevelDebug(logId + "iface found in mac table");
-                                            sendVXLanTo(logId, targetIface, vxlan);
-                                        }
-                                    }
-                                }
-                            }
+        private void handleRoute(String logId, Table table, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into handleRoute(" + table + "," + vxlan + "," + ipPkt + "," + inputIface + ")");
+
+            int hop = ipPkt.getHopLimit();
+            if (hop == 0) { // do not route packets when hop reaches 0
+                assert Logger.lowLevelDebug(logId + "hop is 0");
+                return;
+            }
+            assert Logger.lowLevelDebug(logId + "ip hop is ok");
+            ipPkt.setHopLimit(hop - 1);
+            // clear upper level cached packet
+            vxlan.getPacket().clearRawPacket();
+            vxlan.clearRawPacket();
+
+            var dstIp = ipPkt.getDst();
+            RouteTable.RouteRule r = table.routeTable.lookup(dstIp);
+            if (r == null) {
+                assert Logger.lowLevelDebug(logId + "route rule not found");
+                return;
+            }
+            assert Logger.lowLevelDebug(logId + "route rule found");
+            int vni = r.toVni;
+            var targetIp = r.ip;
+            if (vni == table.vni) {
+                assert Logger.lowLevelDebug(logId + "vni == table.vni");
+                // try to find the correct ip
+                // first check whether it's synthetic ip, if so, ignore it
+                if (table.ips.lookup(dstIp) != null) {
+                    assert Logger.lowLevelDebug(logId + "the dst ip is synthetic ip");
+                    return;
+                }
+                MacAddress correctDstMac = table.arpTable.lookup(dstIp);
+                if (correctDstMac == null) {
+                    assert Logger.lowLevelDebug(logId + "cannot find correct mac");
+                    broadcastArpOrNdp(logId, table, dstIp);
+                    return;
+                }
+                assert Logger.lowLevelDebug(logId + "found the correct mac");
+                MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
+                if (srcMac != null) {
+                    assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
+                    vxlan.clearRawPacket();
+                    vxlan.getPacket().setDst(correctDstMac);
+                    vxlan.getPacket().setSrc(srcMac);
+                    handleVxlan(logId, vxlan, table, inputIface);
+                }
+            } else if (vni != 0) {
+                assert Logger.lowLevelDebug(logId + "vni in rule is ok");
+                Table t = tables.get(vni);
+                if (t != null) { // cannot handle if the table does no exist
+                    assert Logger.lowLevelDebug(logId + "target table is found");
+                    routeTo(logId, t, dstIp, vxlan, ipPkt, inputIface);
+                }
+            } else if (targetIp != null) {
+                assert Logger.lowLevelDebug(logId + "ip in rule is ok");
+                MacAddress mac = table.arpTable.lookup(targetIp);
+                if (mac == null) {
+                    assert Logger.lowLevelDebug(logId + "mac not found in arp table, run a broadcast");
+                    broadcastArpOrNdp(logId, table, targetIp);
+                } else {
+                    assert Logger.lowLevelDebug(logId + "mac found in arp table");
+                    Iface targetIface = table.macTable.lookup(mac);
+                    if (targetIface != null) {
+                        assert Logger.lowLevelDebug(logId + "iface found in mac table");
+                        MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
+                        if (srcMac != null) {
+                            assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
+                            vxlan.clearRawPacket();
+                            vxlan.getPacket().setSrc(srcMac);
+                            vxlan.getPacket().setDst(mac);
+                            sendVXLanTo(logId, targetIface, vxlan);
                         }
                     }
                 }
             }
         }
 
-        private void routeTo(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into routeTo(" + table + "," + dstIp + "," + vxlan + "," + inputIface + ")");
+        private MacAddress getSrcMacAddressForRoutingPacket(String logId, Table targetTable, InetAddress dstIp) {
+            assert Logger.lowLevelDebug(logId + "into getMacAddressForRoutingPacket(" + targetTable + "," + dstIp + ")");
 
-            // find the mac of the target address
-            MacAddress dstMac = table.arpTable.lookup(dstIp);
-            if (dstMac == null) {
-                assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
-                broadcastArpOrNdp(logId, table, dstIp);
-                return;
-            }
-            // find an ip in that table to be used for the mac address
-            var ipsInTable = table.ips.entries();
+            // find an ip in that table to be used for the src mac address
+            var ipsInTable = targetTable.ips.entries();
             boolean useIpv6 = dstIp instanceof Inet6Address;
             MacAddress srcMac = null;
             for (var x : ipsInTable) {
@@ -816,16 +851,47 @@ public class Switch {
                     break;
                 }
             }
+            return srcMac;
+        }
+
+        private void routeTo(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into routeTo(" + table + "," + dstIp + "," + vxlan + "," + inputIface + ")");
+
+            // set vni to the target one
+            vxlan.setVni(table.vni);
+
+            // check whether there are some routing rules match in this table
+            {
+                var foo = table.routeTable.lookup(dstIp);
+                if (foo != null && (foo.toVni == 0 || foo.toVni != table.vni)) {
+                    assert Logger.lowLevelDebug(logId + "found routing rule matched");
+                    handleRoute(logId, table, vxlan, ipPkt, inputIface);
+                    return;
+                }
+            }
+
+            // find the mac of the target address
+            MacAddress dstMac = table.arpTable.lookup(dstIp);
+            if (dstMac == null) {
+                assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
+                broadcastArpOrNdp(logId, table, dstIp);
+                return;
+            }
+            MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
             // handle if the address exists
             if (srcMac == null) {
                 assert Logger.lowLevelDebug(logId + "the source mac to send the packet is not found");
                 return;
             }
+            // find iface of the dstMac and broadcast arp/ndp if not found
+            Iface iface = table.macTable.lookup(dstMac);
+            if (iface == null) {
+                assert Logger.lowLevelDebug(logId + "iface is not found by the dstMac of packet");
+                broadcastArpOrNdp(logId, table, dstIp);
+                return;
+            }
             vxlan.getPacket().setSrc(srcMac);
             vxlan.getPacket().setDst(dstMac);
-
-            // clear upper level cached packet
-            vxlan.clearRawPacket();
 
             handleVxlan(logId, vxlan, table, inputIface);
         }
@@ -1260,9 +1326,8 @@ public class Switch {
             var timer = ifaces.get(iface);
             if (timer == null) {
                 timer = new IfaceTimer(loop, IFACE_TIMEOUT, iface);
-                timer.record(iface);
             }
-            timer.resetTimer();
+            timer.record(iface);
 
             return new Tuple<>(vxLanPacket, iface);
         }
@@ -1351,8 +1416,9 @@ public class Switch {
 
         void record(Iface newIface) {
             SwitchUtils.updateBothSideVni(iface, newIface);
-            ifaces.put(iface, this);
-            Logger.alert(iface + " connected to Switch:" + alias);
+            if (ifaces.putIfAbsent(iface, this) == null) {
+                Logger.alert(iface + " connected to Switch:" + alias);
+            }
             resetTimer();
         }
 
@@ -1513,6 +1579,9 @@ public class Switch {
                 if (p.getVxlan() == null) {
                     // not vxlan packet, ignore
                     continue;
+                }
+                if (p.getVxlan().getVni() != iface.user.vni) {
+                    p.getVxlan().setVni(iface.user.vni);
                 }
                 sendIntoNetworkStack(logId, p.getVxlan(), iface);
             }

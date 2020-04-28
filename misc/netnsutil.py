@@ -44,7 +44,7 @@ def runVProxyCommand(swaddr, password, commandStr):
 def buildTapName(ns):
     return 'tap' + ns + '0'
 
-def add(swaddr, password, sw, ns, vni, addr, gate):
+def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
     # check for netns
     ret, out, err = runCommand(['ip', 'netns', 'show'])
     if ret != 0:
@@ -115,6 +115,20 @@ def add(swaddr, password, sw, ns, vni, addr, gate):
     else:
         print 'ip is already assigned'
 
+    if v6addr is not None:
+        # check for ipv6
+        ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'addr', 'show'])
+        if ret != 0:
+            raise Exception('checking ipv6 in the ns failed: ' + out + ', ' + err)
+        exists = v6addr in out
+        if not exists:
+            print 'assinging ipv6 address ...'
+            ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'addr', 'add', v6addr, 'dev', 'eth0'])
+            if ret != 0:
+                raise Exception('assigning ipv6 failed: ' + out + ', ' + err)
+        else:
+            print 'ipv6 is already assigned'
+
     # up the nic
     print 'setting eth0 to up ...'
     ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'link', 'set', 'eth0', 'up'])
@@ -133,6 +147,20 @@ def add(swaddr, password, sw, ns, vni, addr, gate):
             raise Exception('adding default route in the ns failed: ' + out + ', ' + err)
     else:
         print 'default route is already added'
+
+    if v6gate is not None:
+        # check for default v6 route
+        ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'route', 'show'])
+        if ret != 0:
+            raise Exception('checking v6 route in the ns failed: ' + out + ', ' + err)
+        exists = 'default via ' in out
+        if not exists:
+            print 'adding default v6 route ...'
+            ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'route', 'add', 'default', 'via', v6gate, 'dev', 'eth0'])
+            if ret != 0:
+                raise Exception('adding default v6 route in the ns failed: ' + out + ', ' + err)
+        else:
+            print 'default v6 route is already added'
 
 def delete(swaddr, password, sw, ns):
     # delete the corresponding tap
@@ -159,9 +187,11 @@ def main(args):
     vni = None
     addr = None
     gate = None
+    v6addr = None
+    v6gate = None
 
     HELP_STR="""
-usage: add ns={} sw={} vni={} addr={} gate={}
+usage: add ns={} sw={} vni={} addr={} gate={} [v6addr={} v6gate={}]
        del ns={} sw={}
 default:
        swaddr = 127.0.0.1:16309
@@ -174,6 +204,8 @@ arguments:
        vni    vni for the net interface to connect to
        addr   ip address and mask of the net dev in x.x.x.x/x format
        gate   the gateway address
+       v6addr ipv6 address and mask of the net dev [optional]
+       v6gate ipv6 gateway address                 [optional]
 """
 
     # read args
@@ -202,6 +234,10 @@ arguments:
                 addr = arg[len('addr='):]
             elif arg.startswith('gate='):
                 gate = arg[len('gate='):]
+            elif arg.startswith('v6addr='):
+                v6addr = arg[len('v6addr='):]
+            elif arg.startswith('v6gate='):
+                v6gate = arg[len('v6gate='):]
             else:
                 raise Exception('unknown argument: ' + arg)
     elif op == 'del':
@@ -233,6 +269,10 @@ arguments:
             raise Exception('missing argument gate={...}')
         if len(ns) > 6:
             raise Exception('ns length should be <= 6')
+        if v6addr is not None and v6gate is None:
+            raise Exception('v6addr is set but v6gate is missing')
+        if v6addr is None and v6gate is not None:
+            raise Exception('v6gate is set but v6addr is missing')
         print 'swaddr   = ' + swaddr
         print 'password = ' + password
         print 'sw   = ' + sw
@@ -240,8 +280,10 @@ arguments:
         print 'vni  = ' + vni
         print 'addr = ' + addr
         print 'gate = ' + gate
+        print 'v6addr =', v6addr
+        print 'v6gate =', v6gate
         print '=========================='
-        add(swaddr, password, sw, ns, vni, addr, gate)
+        add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate)
     else:
         if sw == None:
             raise Exception('missing argument sw={...}')
@@ -253,6 +295,7 @@ arguments:
         print 'ns = ' + ns
         print '=========================='
         delete(swaddr, password, sw, ns)
+    print 'ok'
 
 try:
     main(sys.argv[1:])

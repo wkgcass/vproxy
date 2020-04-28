@@ -672,8 +672,6 @@ public class Command {
                 }
                 break;
             case user:
-            case ucli:
-            case tap:
             case vpc:
             case route:
             case ip:
@@ -681,10 +679,6 @@ public class Command {
                     case a:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkCreateUser(cmd);
-                        } else if (cmd.resource.type == ResourceType.ucli) {
-                            UserClientHandle.checkCreateUserClient(cmd);
-                        } else if (cmd.resource.type == ResourceType.tap) {
-                            TapHandle.checkCreateTap(cmd);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkCreateVpc(cmd);
                         } else if (cmd.resource.type == ResourceType.route) {
@@ -703,16 +697,38 @@ public class Command {
                     case l:
                         if (cmd.resource.type == ResourceType.user) {
                             UserHandle.checkUser(targetResource);
-                        } else if (cmd.resource.type == ResourceType.ucli) {
-                            UserClientHandle.checkUserClient(targetResource);
-                        } else if (cmd.resource.type == ResourceType.tap) {
-                            TapHandle.checkTap(targetResource);
                         } else if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkVpc(targetResource);
                         } else if (cmd.resource.type == ResourceType.route) {
                             RouteHandle.checkRoute(targetResource);
                         } else {
                             IpHandle.checkIp(targetResource);
+                        }
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
+            case ucli:
+            case tap:
+                switch (cmd.action) {
+                    case a:
+                        if (cmd.resource.type == ResourceType.ucli) {
+                            UserClientHandle.checkCreateUserClient(cmd);
+                        } else {
+                            TapHandle.checkCreateTap(cmd);
+                        }
+                    case r:
+                    case R:
+                        if (cmd.action == Action.r || cmd.action == Action.R) {
+                            if (cmd.resource.type == ResourceType.ucli) {
+                                UserClientHandle.checkRemoveUserClient(cmd);
+                            }
+                        }
+                        if (cmd.resource.type == ResourceType.ucli) {
+                            UserClientHandle.checkUserClient(targetResource);
+                        } else {
+                            TapHandle.checkTap(targetResource);
                         }
                         break;
                     default:

@@ -29,7 +29,11 @@ public class Table {
         macTable = new MacTable(loop, macTableTimeout);
         arpTable = new ArpTable(loop, arpTableTimeout);
         ips = new SyntheticIpHolder();
-        routeTable = new RouteTable();
+        routeTable = new RouteTable(
+            new RouteTable.RouteRule(RouteTable.defaultRule, v4network, vni),
+            v6network == null ? null :
+                new RouteTable.RouteRule(RouteTable.defaultRuleV6, v6network, vni)
+        );
     }
 
     public void setMacTableTimeout(int macTableTimeout) {

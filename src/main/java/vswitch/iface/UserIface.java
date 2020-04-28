@@ -1,6 +1,7 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
+import vproxy.util.Logger;
 import vproxy.util.Utils;
 import vswitch.util.UserInfo;
 import vswitch.packet.VProxyEncryptedPacket;
@@ -49,7 +50,12 @@ public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVni
 
     @Override
     public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
-        if (vxlan.getVni() != remoteSideVni && remoteSideVni != 0) {
+        // should set the remote side vni to reduce the chance of info leak on server side
+        if (remoteSideVni == 0) {
+            assert Logger.lowLevelDebug("remote side vni not learnt yet, drop the packet for now");
+            return;
+        }
+        if (vxlan.getVni() != remoteSideVni) {
             vxlan.setVni(remoteSideVni);
         }
         VProxyEncryptedPacket p = new VProxyEncryptedPacket(u -> {

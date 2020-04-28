@@ -19,6 +19,7 @@ import vproxy.test.cases.*;
     TestHttp1Parser.class,
     TestHealthCheck.class,
     TestPacket.class,
+    TestRouteTable.class,
 
     AfterAll.class
 })
