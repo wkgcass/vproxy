@@ -106,7 +106,8 @@ def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
     ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'addr', 'show'])
     if ret != 0:
         raise Exception('checking ip in the ns failed: ' + out + ', ' + err)
-    exists = addr in out
+    showIpRes = out
+    exists = addr in showIpRes
     if not exists:
         print 'assigning ip address ...'
         ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'addr', 'add', addr, 'dev', 'eth0'])
@@ -114,13 +115,22 @@ def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
             raise Exception('assigning ip failed: ' + out + ', ' + err)
     else:
         print 'ip is already assigned'
+    exists = '127.0.0.1' in showIpRes
+    if not exists:
+        print 'assigning lo ip address ...'
+        ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'addr', 'add', '127.0.0.1/8', 'dev', 'lo'])
+        if ret != 0:
+            raise Exception('assigning lo ip failed: ' + out + ', ' + err)
+    else:
+        print 'lo ip is already assigned'
 
     if v6addr is not None:
         # check for ipv6
         ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'addr', 'show'])
         if ret != 0:
             raise Exception('checking ipv6 in the ns failed: ' + out + ', ' + err)
-        exists = v6addr in out
+        showIpRes = out
+        exists = v6addr in showIpRes
         if not exists:
             print 'assinging ipv6 address ...'
             ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'addr', 'add', v6addr, 'dev', 'eth0'])
@@ -128,12 +138,24 @@ def add(swaddr, password, sw, ns, vni, addr, gate, v6addr, v6gate):
                 raise Exception('assigning ipv6 failed: ' + out + ', ' + err)
         else:
             print 'ipv6 is already assigned'
+        exists = '::1/128' in showIpRes
+        if not exists:
+            print 'assigning lo ipv6 address ...'
+            ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', '-6', 'addr', 'add', '::1/128', 'dev', 'lo'])
+            if ret != 0:
+                raise Exception('assigning lo ipv6 failed: ' + out + ', ' + err)
+        else:
+            print 'lo ipv6 is already assigned'
 
     # up the nic
     print 'setting eth0 to up ...'
     ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'link', 'set', 'eth0', 'up'])
     if ret != 0:
         raise Exception('setting eth0 to up failed: ' + out + ', ' + err)
+    print 'setting lo to up ...'
+    ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'link', 'set', 'lo', 'up'])
+    if ret != 0:
+        raise Exception('setting lo to up failed: ' + out + ', ' + err)
 
     # check for default route
     ret, out, err = runCommand(['ip', 'netns', 'exec', ns, 'ip', 'route', 'show'])
