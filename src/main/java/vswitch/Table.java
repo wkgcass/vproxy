@@ -52,6 +52,18 @@ public class Table {
         arpTable.setLoop(loop);
     }
 
+    public MacAddress lookup(InetAddress ip) {
+        var mac = arpTable.lookup(ip);
+        if (mac == null) {
+            mac = ips.lookup(ip);
+        }
+        return mac;
+    }
+
+    public boolean macReachable(MacAddress mac) {
+        return macTable.lookup(mac) != null || ips.lookupByMac(mac) != null;
+    }
+
     @Override
     public String toString() {
         return "Table{" +

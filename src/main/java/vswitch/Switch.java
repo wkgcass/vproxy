@@ -664,7 +664,7 @@ public class Switch {
         }
 
         private void l2Stack(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into prerouting(" + vxlan + "," + table + "," + inputIface + ")");
+            assert Logger.lowLevelDebug(logId + "into l2Stack(" + vxlan + "," + table + "," + inputIface + ")");
 
             MacAddress dst = vxlan.getPacket().getDst();
 
@@ -690,7 +690,7 @@ public class Switch {
         }
 
         private void l3Stack(String logId, Table table, Collection<InetAddress> ips, VXLanPacket vxlan, boolean allReceives) {
-            assert Logger.lowLevelDebug(logId + "into localStack(" + table + "," + ips + "," + vxlan + ")");
+            assert Logger.lowLevelDebug(logId + "into l3Stack(" + table + "," + ips + "," + vxlan + ")");
 
             // analyse the packet
             AbstractPacket l3Packet = vxlan.getPacket().getPacket();
@@ -855,7 +855,7 @@ public class Switch {
                     assert Logger.lowLevelDebug(logId + "the dst ip is synthetic ip");
                     return;
                 }
-                MacAddress correctDstMac = table.arpTable.lookup(dstIp);
+                MacAddress correctDstMac = table.lookup(dstIp);
                 if (correctDstMac == null) {
                     assert Logger.lowLevelDebug(logId + "cannot find correct mac");
                     broadcastArpOrNdp(logId, table, dstIp);
@@ -881,36 +881,14 @@ public class Switch {
             } else if (targetIp != null) {
                 // route based on ip
                 assert Logger.lowLevelDebug(logId + "ip in rule is ok");
-                MacAddress mac = table.arpTable.lookup(targetIp);
-                if (mac == null) {
-                    assert Logger.lowLevelDebug(logId + "mac not found in arp table, run a broadcast");
-                    broadcastArpOrNdp(logId, table, targetIp);
-                } else {
-                    assert Logger.lowLevelDebug(logId + "mac found in arp table");
-                    Iface targetIface = table.macTable.lookup(mac);
-                    if (targetIface == null) {
-                        assert Logger.lowLevelDebug(logId + "iface not found in mac table");
-                        broadcastArpOrNdp(logId, table, targetIp);
-                    } else {
-                        assert Logger.lowLevelDebug(logId + "iface found in mac table");
-                        MacAddress srcMac = getRoutedSrcMac(logId, table, dstIp);
-                        if (srcMac != null) {
-                            assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
-                            vxlan.clearRawPacket();
-                            vxlan.getPacket().setSrc(srcMac);
-                            vxlan.getPacket().setDst(mac);
-                            unicast(logId, targetIface, vxlan);
-                        }
-                    }
-                }
+                routeToTarget(logId, table, dstIp, vxlan, targetIp);
             }
         }
 
         private void ensureIfaceExistBeforeL2Stack(String logId, Table table, VXLanPacket vxlan, AbstractIpPacket ipPkt) {
             assert Logger.lowLevelDebug(logId + "into ensureIfaceExistBeforeL2Stack(" + table + "," + vxlan + "," + ipPkt + ")");
 
-            Iface iface = table.macTable.lookup(vxlan.getPacket().getDst());
-            if (iface == null) {
+            if (!table.macReachable(vxlan.getPacket().getDst())) {
                 assert Logger.lowLevelDebug("cannot find iface");
                 broadcastArpOrNdp(logId, table, ipPkt.getDst());
                 return;
@@ -964,7 +942,7 @@ public class Switch {
             }
 
             // find the mac of the target address
-            MacAddress dstMac = table.arpTable.lookup(dstIp);
+            MacAddress dstMac = table.lookup(dstIp);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug(logId + "dst mac is not found by the ip");
                 broadcastArpOrNdp(logId, table, dstIp);
@@ -981,6 +959,44 @@ public class Switch {
             vxlan.getPacket().setDst(dstMac);
 
             ensureIfaceExistBeforeL2Stack(logId, table, vxlan, ipPkt);
+        }
+
+        private void routeToTarget(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, InetAddress targetIp) {
+            assert Logger.lowLevelDebug(logId + "into routeToTarget(" + table + "," + dstIp + "," + vxlan + "," + targetIp + ")");
+
+            MacAddress mac = table.lookup(targetIp);
+            if (mac == null) {
+                assert Logger.lowLevelDebug(logId + "mac not found in arp table, run a broadcast");
+                broadcastArpOrNdp(logId, table, targetIp);
+                return;
+            }
+            assert Logger.lowLevelDebug(logId + "mac found in arp table");
+            Iface targetIface = table.macTable.lookup(mac);
+            if (targetIface == null) {
+                assert Logger.lowLevelDebug(logId + "iface not found in mac table");
+                // try synthetic ips
+                if (table.ips.lookupByMac(mac) == null) {
+                    assert Logger.lowLevelDebug(logId + "not found in synthetic ips");
+                    broadcastArpOrNdp(logId, table, targetIp);
+                    return;
+                }
+                assert Logger.lowLevelDebug(logId + "found in synthetic ips");
+                vxlan.clearRawPacket();
+                vxlan.getPacket().setDst(mac);
+                l2Stack(logId, vxlan, table, null);
+                return;
+            }
+            assert Logger.lowLevelDebug(logId + "iface found in mac table");
+            MacAddress srcMac = getRoutedSrcMac(logId, table, dstIp);
+            if (srcMac == null) {
+                assert Logger.lowLevelDebug(logId + "srcMac not found for routing the packet");
+                return;
+            }
+            assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
+            vxlan.clearRawPacket();
+            vxlan.getPacket().setSrc(srcMac);
+            vxlan.getPacket().setDst(mac);
+            unicast(logId, targetIface, vxlan);
         }
 
         protected void refreshArpOrNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
