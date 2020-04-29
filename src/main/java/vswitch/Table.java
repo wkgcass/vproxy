@@ -4,10 +4,8 @@ import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.XException;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 import vswitch.util.MacAddress;
 
-import java.net.Inet4Address;
 import java.net.InetAddress;
 
 public class Table {
@@ -28,12 +26,8 @@ public class Table {
 
         macTable = new MacTable(loop, macTableTimeout);
         arpTable = new ArpTable(loop, arpTableTimeout);
-        ips = new SyntheticIpHolder();
-        routeTable = new RouteTable(
-            new RouteTable.RouteRule(RouteTable.defaultRule, v4network, vni),
-            v6network == null ? null :
-                new RouteTable.RouteRule(RouteTable.defaultRuleV6, v6network, vni)
-        );
+        ips = new SyntheticIpHolder(this);
+        routeTable = new RouteTable(this);
     }
 
     public void setMacTableTimeout(int macTableTimeout) {
@@ -45,18 +39,6 @@ public class Table {
     }
 
     public void addIp(InetAddress ip, MacAddress mac) throws AlreadyExistException, XException {
-        if (ip instanceof Inet4Address) {
-            if (!v4network.contains(ip)) {
-                throw new XException("the ip to add (" + Utils.ipStr(ip) + ") is not in the allowed range " + v4network);
-            }
-        } else {
-            if (v6network == null) {
-                throw new XException("ipv6 not allowed");
-            }
-            if (!v6network.contains(ip)) {
-                throw new XException("the ip to add (" + Utils.ipStr(ip) + ") is not in the allowed range " + v6network);
-            }
-        }
         ips.add(ip, mac);
     }
 

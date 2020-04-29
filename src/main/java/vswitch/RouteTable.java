@@ -7,14 +7,15 @@ import vproxy.util.Network;
 import vproxy.util.Utils;
 
 import java.net.Inet4Address;
+import java.net.Inet6Address;
 import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
 public class RouteTable {
-    public static final String defaultRule = "default";
-    public static final String defaultRuleV6 = "default-v6";
+    public static final String defaultRuleName = "default";
+    public static final String defaultRuleV6Name = "default-v6";
 
     private final RouteRule defaultV4Rule;
     private final RouteRule defaultV6Rule;
@@ -27,13 +28,15 @@ public class RouteTable {
         this.defaultV6Rule = null;
     }
 
-    public RouteTable(RouteRule defaultV4Rule, RouteRule defaultV6Rule) {
-        this.defaultV4Rule = defaultV4Rule;
+    public RouteTable(Table t) {
+        this.defaultV4Rule = new RouteRule(defaultRuleName, t.v4network, t.vni);
+        RouteRule defaultV6Rule = null;
+        if (t.v6network != null) {
+            defaultV6Rule = new RouteRule(defaultRuleV6Name, t.v6network, t.vni);
+        }
         this.defaultV6Rule = defaultV6Rule;
 
-        if (defaultV4Rule != null) {
-            rulesV4.add(defaultV4Rule);
-        }
+        rulesV4.add(defaultV4Rule);
         if (defaultV6Rule != null) {
             rulesV6.add(defaultV6Rule);
         }
@@ -81,13 +84,21 @@ public class RouteTable {
             }
         }
 
-        if (r.alias.equals(defaultRule)) {
+        if (r.alias.equals(defaultRuleName)) {
             if (!r.equals(defaultV4Rule))
                 throw new XException("validation failed for the rule with name " + r.alias);
         }
-        if (r.alias.equals(defaultRuleV6)) {
+        if (r.alias.equals(defaultRuleV6Name)) {
             if (!r.equals(defaultV6Rule))
                 throw new XException("validation failed for the rule with name " + r.alias);
+        }
+        if (r.ip != null) {
+            if (defaultV6Rule == null && r.ip instanceof Inet6Address) {
+                throw new XException("this network does not support ipv6");
+            }
+            if (!defaultV4Rule.rule.contains(r.ip) || (defaultV6Rule != null && !defaultV6Rule.rule.contains(r.ip))) {
+                throw new XException("cannot specify an ip out of the network to redirect packets to");
+            }
         }
 
         if (r.rule.getRawIpBytes().length == 4) {
@@ -192,7 +203,7 @@ public class RouteTable {
         @Override
         public String toString() {
             return alias + " -> network " + rule + (
-                ip == null ? (" vni " + toVni) : (" address " + Utils.ipStr(ip))
+                ip == null ? (" vni " + toVni) : (" via " + Utils.ipStr(ip))
             );
         }
 

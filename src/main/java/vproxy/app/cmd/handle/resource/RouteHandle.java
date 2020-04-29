@@ -49,18 +49,18 @@ public class RouteHandle {
         }
         NetworkHandle.check(cmd);
         String vni = cmd.args.get(Param.vni);
-        String ip = cmd.args.get(Param.addr);
+        String ip = cmd.args.get(Param.via);
         if (vni == null && ip == null) {
-            throw new Exception("missing " + Param.vni.fullname + " or " + Param.addr.fullname);
+            throw new Exception("missing " + Param.vni.fullname + " or " + Param.via.fullname);
         }
         if (vni != null && ip != null) {
-            throw new Exception("cannot specify " + Param.vni.fullname + " and " + Param.addr.fullname + " at the same time");
+            throw new Exception("cannot specify " + Param.vni.fullname + " and " + Param.via.fullname + " at the same time");
         }
         if (vni != null && !Utils.isInteger(vni)) {
             throw new Exception("invalid argument for " + Param.vni + ": should be an integer");
         }
         if (ip != null && Utils.parseIpString(ip) == null) {
-            throw new Exception("invalid argument for " + Param.addr.fullname);
+            throw new Exception("invalid argument for " + Param.via.fullname);
         }
     }
 
@@ -73,7 +73,7 @@ public class RouteHandle {
             int vni = Integer.parseInt(cmd.args.get(Param.vni));
             rule = new RouteTable.RouteRule(alias, net, vni);
         } else {
-            InetAddress ip = Utils.l3addr(cmd.args.get(Param.addr));
+            InetAddress ip = Utils.l3addr(cmd.args.get(Param.via));
             rule = new RouteTable.RouteRule(alias, net, ip);
         }
 

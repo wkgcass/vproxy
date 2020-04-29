@@ -199,11 +199,11 @@ public class Switch {
     }
 
     private void refreshArpCache(Table t, InetAddress ip, MacAddress mac) {
-        String logId = UUID.randomUUID().toString() + " ::: ";
-        assert Logger.lowLevelDebug(logId + "trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
-
         var networkStack = (new NetworkStack() {
         });
+        String logId = networkStack.newLogId();
+        assert Logger.lowLevelDebug(logId + "trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
+
         networkStack.refreshArpOrNdp(logId, t, ip, mac);
     }
 
@@ -519,6 +519,10 @@ public class Switch {
         protected NetworkStack() {
         }
 
+        protected String newLogId() {
+            return UUID.randomUUID().toString() + " ::: ";
+        }
+
         protected void sendIntoNetworkStack(String logId, VXLanPacket vxlan, Iface iface) {
             int vni = vxlan.getVni();
             Table table = tables.get(vni);
@@ -527,11 +531,11 @@ public class Switch {
                 return;
             }
 
-            recordAndHandleVxlan(logId, vxlan, table, iface);
+            entrance(logId, vxlan, table, iface);
         }
 
-        private void recordAndHandleVxlan(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into recordAndHandleVxlan(" + vxlan + "," + table + "," + inputIface + ")");
+        private void entrance(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into entrance(" + vxlan + "," + table + "," + inputIface + ")");
 
             MacAddress src = vxlan.getPacket().getSrc();
 
@@ -616,18 +620,18 @@ public class Switch {
                 }
             }
 
-            handleVxlan(logId, vxlan, table, inputIface);
+            l2Stack(logId, vxlan, table, inputIface);
         }
 
-        private void handleVxlan(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into handleVxlan(" + vxlan + "," + table + "," + inputIface + ")");
+        private void l2Stack(String logId, VXLanPacket vxlan, Table table, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into prerouting(" + vxlan + "," + table + "," + inputIface + ")");
 
             MacAddress dst = vxlan.getPacket().getDst();
 
             if (dst.isBroadcast() || dst.isMulticast() /*handle multicast in the same way as broadcast*/) {
                 assert Logger.lowLevelDebug(logId + "broadcast or multicast");
-                handleVirtual(logId, table, table.ips.allIps(), vxlan, inputIface, true);
-                broadcastVXLan(logId, table, vxlan, inputIface);
+                l3Stack(logId, table, table.ips.allIps(), vxlan, inputIface, true);
+                broadcast(logId, table, vxlan, inputIface);
             } else {
                 assert Logger.lowLevelDebug(logId + "unicast");
                 Iface iface = table.macTable.lookup(dst);
@@ -637,16 +641,16 @@ public class Switch {
                     var ips = table.ips.lookupByMac(dst);
                     if (ips != null) {
                         assert Logger.lowLevelDebug(logId + "synthetic ip found for this packet");
-                        handleVirtual(logId, table, ips, vxlan, inputIface, false);
+                        l3Stack(logId, table, ips, vxlan, inputIface, false);
                     }
-                    return;
+                } else {
+                    unicast(logId, iface, vxlan);
                 }
-                sendVXLanTo(logId, iface, vxlan);
             }
         }
 
-        private void handleVirtual(String logId, Table table, Collection<InetAddress> ips, VXLanPacket vxlan, Iface inputIface, boolean allReceives) {
-            assert Logger.lowLevelDebug(logId + "into handleVirtual(" + table + "," + ips + "," + vxlan + "," + inputIface + ")");
+        private void l3Stack(String logId, Table table, Collection<InetAddress> ips, VXLanPacket vxlan, Iface inputIface, boolean allReceives) {
+            assert Logger.lowLevelDebug(logId + "into localStack(" + table + "," + ips + "," + vxlan + "," + inputIface + ")");
 
             // analyse the packet
             AbstractPacket l3Packet = vxlan.getPacket().getPacket();
@@ -688,7 +692,7 @@ public class Switch {
             }
 
             // handle the ip self (arp/ndp/icmp)
-            boolean handled = false;
+            boolean doNotRouteThePacket = false;
             boolean syntheticIpMacMatches = false;
             for (InetAddress ip : ips) {
                 assert Logger.lowLevelDebug(logId + "handle synthetic ip " + ip);
@@ -706,8 +710,8 @@ public class Switch {
                     if (ip.equals(arpReq)) {
                         assert Logger.lowLevelDebug(logId + "arp target address matches");
                         // should respond arp
-                        handleArp(logId, vxlan, arp, ip, mac, inputIface);
-                        handled = true;
+                        respondArp(logId, vxlan, arp, ip, mac, inputIface);
+                        doNotRouteThePacket = true;
                         if (!allReceives) break;
                     }
                 } else if (ipPkt != null) {
@@ -717,11 +721,13 @@ public class Switch {
                         assert Logger.lowLevelDebug(logId + "is broadcast or multicast or unicast and ip matches");
                         if (icmp != null) {
                             assert Logger.lowLevelDebug(logId + "check icmp");
-                            if (ndpNeighborSolicitation != null && ndpNeighborSolicitation.equals(ip)) {
-                                assert Logger.lowLevelDebug(logId + "ndp neighbor solicitation ip matches");
-                                handleIcmpNDP(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
-                                handled = true;
-                                if (!allReceives) break;
+                            if (ndpNeighborSolicitation != null) {
+                                doNotRouteThePacket = true; // never route neighbor solicitation to other networks
+                                if (ndpNeighborSolicitation.equals(ip)) {
+                                    assert Logger.lowLevelDebug(logId + "ndp neighbor solicitation ip matches");
+                                    respondIcmpNDP(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                    if (!allReceives) break;
+                                }
                             } else {
                                 assert Logger.lowLevelDebug(logId + "not ndp neighbor solicitation");
                                 boolean shouldHandlePing;
@@ -734,8 +740,8 @@ public class Switch {
                                 }
                                 if (shouldHandlePing) {
                                     assert Logger.lowLevelDebug(logId + "handle ping");
-                                    handleIcmpPing(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
-                                    handled = true;
+                                    respondIcmpPing(logId, vxlan, ipPkt, icmp, ip, mac, inputIface);
+                                    doNotRouteThePacket = true;
                                     if (!allReceives) break;
                                 }
                             }
@@ -744,21 +750,24 @@ public class Switch {
                 }
                 // otherwise ignore
             }
+            if (!syntheticIpMacMatches) { // if the packet is not sending to synthetic ip, do not route
+                doNotRouteThePacket = true;
+            }
             // handle routes
-            if (!handled && syntheticIpMacMatches) {
-                assert Logger.lowLevelDebug(logId + "not yet handled and packet is sent to a synthetic ip");
+            if (!doNotRouteThePacket) {
+                assert Logger.lowLevelDebug(logId + "run route");
                 if (!allReceives) { // only handle unicast
                     assert Logger.lowLevelDebug(logId + "is unicast");
                     if (ipPkt != null) { // only check ip packets here
                         assert Logger.lowLevelDebug(logId + "is ip packet");
-                        handleRoute(logId, table, vxlan, ipPkt, inputIface);
+                        routing(logId, table, vxlan, ipPkt, inputIface);
                     }
                 }
             }
         }
 
-        private void handleRoute(String logId, Table table, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into handleRoute(" + table + "," + vxlan + "," + ipPkt + "," + inputIface + ")");
+        private void routing(String logId, Table table, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into routing(" + table + "," + vxlan + "," + ipPkt + "," + inputIface + ")");
 
             int hop = ipPkt.getHopLimit();
             if (hop == 0) { // do not route packets when hop reaches 0
@@ -781,6 +790,7 @@ public class Switch {
             int vni = r.toVni;
             var targetIp = r.ip;
             if (vni == table.vni) {
+                // direct route
                 assert Logger.lowLevelDebug(logId + "vni == table.vni");
                 // try to find the correct ip
                 // first check whether it's synthetic ip, if so, ignore it
@@ -795,22 +805,24 @@ public class Switch {
                     return;
                 }
                 assert Logger.lowLevelDebug(logId + "found the correct mac");
-                MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
+                MacAddress srcMac = getRoutedSrcMac(logId, table, dstIp);
                 if (srcMac != null) {
                     assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
                     vxlan.clearRawPacket();
                     vxlan.getPacket().setDst(correctDstMac);
                     vxlan.getPacket().setSrc(srcMac);
-                    handleVxlan(logId, vxlan, table, inputIface);
+                    l2Stack(logId, vxlan, table, inputIface);
                 }
             } else if (vni != 0) {
+                // route to another network
                 assert Logger.lowLevelDebug(logId + "vni in rule is ok");
                 Table t = tables.get(vni);
                 if (t != null) { // cannot handle if the table does no exist
                     assert Logger.lowLevelDebug(logId + "target table is found");
-                    routeTo(logId, t, dstIp, vxlan, ipPkt, inputIface);
+                    routeToNetwork(logId, t, dstIp, vxlan, ipPkt, inputIface);
                 }
             } else if (targetIp != null) {
+                // route based on ip
                 assert Logger.lowLevelDebug(logId + "ip in rule is ok");
                 MacAddress mac = table.arpTable.lookup(targetIp);
                 if (mac == null) {
@@ -821,21 +833,21 @@ public class Switch {
                     Iface targetIface = table.macTable.lookup(mac);
                     if (targetIface != null) {
                         assert Logger.lowLevelDebug(logId + "iface found in mac table");
-                        MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
+                        MacAddress srcMac = getRoutedSrcMac(logId, table, dstIp);
                         if (srcMac != null) {
                             assert Logger.lowLevelDebug(logId + "srcMac found for routing the packet");
                             vxlan.clearRawPacket();
                             vxlan.getPacket().setSrc(srcMac);
                             vxlan.getPacket().setDst(mac);
-                            sendVXLanTo(logId, targetIface, vxlan);
+                            unicast(logId, targetIface, vxlan);
                         }
                     }
                 }
             }
         }
 
-        private MacAddress getSrcMacAddressForRoutingPacket(String logId, Table targetTable, InetAddress dstIp) {
-            assert Logger.lowLevelDebug(logId + "into getMacAddressForRoutingPacket(" + targetTable + "," + dstIp + ")");
+        private MacAddress getRoutedSrcMac(String logId, Table targetTable, InetAddress dstIp) {
+            assert Logger.lowLevelDebug(logId + "into getRoutedSrcMac(" + targetTable + "," + dstIp + ")");
 
             // find an ip in that table to be used for the src mac address
             var ipsInTable = targetTable.ips.entries();
@@ -854,8 +866,8 @@ public class Switch {
             return srcMac;
         }
 
-        private void routeTo(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "into routeTo(" + table + "," + dstIp + "," + vxlan + "," + inputIface + ")");
+        private void routeToNetwork(String logId, Table table, InetAddress dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into routeToNetwork(" + table + "," + dstIp + "," + vxlan + "," + inputIface + ")");
 
             // set vni to the target one
             vxlan.setVni(table.vni);
@@ -863,9 +875,9 @@ public class Switch {
             // check whether there are some routing rules match in this table
             {
                 var foo = table.routeTable.lookup(dstIp);
-                if (foo != null && (foo.toVni == 0 || foo.toVni != table.vni)) {
+                if (foo != null && (foo.toVni == 0 || foo.toVni != table.vni)) { // ignore the rule to route to current network
                     assert Logger.lowLevelDebug(logId + "found routing rule matched");
-                    handleRoute(logId, table, vxlan, ipPkt, inputIface);
+                    routing(logId, table, vxlan, ipPkt, inputIface);
                     return;
                 }
             }
@@ -877,7 +889,7 @@ public class Switch {
                 broadcastArpOrNdp(logId, table, dstIp);
                 return;
             }
-            MacAddress srcMac = getSrcMacAddressForRoutingPacket(logId, table, dstIp);
+            MacAddress srcMac = getRoutedSrcMac(logId, table, dstIp);
             // handle if the address exists
             if (srcMac == null) {
                 assert Logger.lowLevelDebug(logId + "the source mac to send the packet is not found");
@@ -893,11 +905,11 @@ public class Switch {
             vxlan.getPacket().setSrc(srcMac);
             vxlan.getPacket().setDst(dstMac);
 
-            handleVxlan(logId, vxlan, table, inputIface);
+            l2Stack(logId, vxlan, table, inputIface);
         }
 
         protected void refreshArpOrNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
-            assert Logger.lowLevelDebug(logId + "refreshArpOrNdp(" + table + "," + ip + "," + mac + ")");
+            assert Logger.lowLevelDebug(logId + "into refreshArpOrNdp(" + table + "," + ip + "," + mac + ")");
             if (ip instanceof Inet4Address) {
                 refreshArp(logId, table, ip, mac);
             } else {
@@ -906,7 +918,7 @@ public class Switch {
         }
 
         private void refreshArp(String logId, Table table, InetAddress ip, MacAddress mac) {
-            assert Logger.lowLevelDebug(logId + "refreshArp(" + table + "," + ip + "," + mac + ")");
+            assert Logger.lowLevelDebug(logId + "into refreshArp(" + table + "," + ip + "," + mac + ")");
             var iface = table.macTable.lookup(mac);
             if (iface == null) {
                 assert Logger.lowLevelDebug(logId + "cannot find iface of the mac, try broadcast");
@@ -918,7 +930,7 @@ public class Switch {
         }
 
         private void broadcastArpOrNdp(String logId, Table table, InetAddress ip) {
-            assert Logger.lowLevelDebug(logId + "broadcastArpOrNdp(" + table + "," + ip + ")");
+            assert Logger.lowLevelDebug(logId + "into broadcastArpOrNdp(" + table + "," + ip + ")");
             if (ip instanceof Inet4Address) {
                 broadcastArp(logId, table, ip);
             } else {
@@ -927,7 +939,7 @@ public class Switch {
         }
 
         private VXLanPacket buildArpReq(String logId, Table table, InetAddress ip, MacAddress mac) {
-            assert Logger.lowLevelDebug(logId + "buildArpPacket(" + table + "," + ip + "," + mac + ")");
+            assert Logger.lowLevelDebug(logId + "into buildArpPacket(" + table + "," + ip + "," + mac + ")");
 
             var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet4Address).findAny();
             if (optIp.isEmpty()) {
@@ -963,29 +975,29 @@ public class Switch {
         }
 
         private void unicastArp(String logId, Table table, InetAddress ip, MacAddress mac, Iface iface) {
-            assert Logger.lowLevelDebug(logId + "unicastArp(" + table + "," + ip + "," + mac + "," + iface + ")");
+            assert Logger.lowLevelDebug(logId + "into unicastArp(" + table + "," + ip + "," + mac + "," + iface + ")");
 
             VXLanPacket vxlan = buildArpReq(logId, table, ip, mac);
             if (vxlan == null) {
                 assert Logger.lowLevelDebug(logId + "failed to build arp packet");
                 return;
             }
-            sendVXLanTo(logId, iface, vxlan);
+            unicast(logId, iface, vxlan);
         }
 
         private void broadcastArp(String logId, Table table, InetAddress ip) {
-            assert Logger.lowLevelDebug(logId + "broadcastArp(" + table + "," + ip + ")");
+            assert Logger.lowLevelDebug(logId + "into broadcastArp(" + table + "," + ip + ")");
 
             VXLanPacket vxlan = buildArpReq(logId, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
             if (vxlan == null) {
                 assert Logger.lowLevelDebug(logId + "failed to build arp packet");
                 return;
             }
-            broadcastVXLan(logId, table, vxlan, null);
+            broadcast(logId, table, vxlan, null);
         }
 
         private void refreshNdp(String logId, Table table, InetAddress ip, MacAddress mac) {
-            assert Logger.lowLevelDebug(logId + "refreshNdp(" + table + "," + ip + "," + mac + ")");
+            assert Logger.lowLevelDebug(logId + "into refreshNdp(" + table + "," + ip + "," + mac + ")");
             var iface = table.macTable.lookup(mac);
             if (iface == null) {
                 assert Logger.lowLevelDebug(logId + "cannot find iface of the mac, try broadcast");
@@ -997,7 +1009,7 @@ public class Switch {
         }
 
         private VXLanPacket buildNdpNeighborSolicitation(String logId, Table table, InetAddress ip, MacAddress mac) {
-            assert Logger.lowLevelDebug(logId + "buildNdpNeighborSolicitation(" + table + "," + ip + "," + mac + ")");
+            assert Logger.lowLevelDebug(logId + "into buildNdpNeighborSolicitation(" + table + "," + ip + "," + mac + ")");
 
             var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet6Address).findAny();
             if (optIp.isEmpty()) {
@@ -1049,7 +1061,7 @@ public class Switch {
         }
 
         private void unicastNdp(String logId, Table table, InetAddress ip, MacAddress mac, Iface iface) {
-            assert Logger.lowLevelDebug(logId + "unicastNdp(" + table + "," + ip + "," + mac + "," + iface + ")");
+            assert Logger.lowLevelDebug(logId + "into unicastNdp(" + table + "," + ip + "," + mac + "," + iface + ")");
 
             VXLanPacket vxlan = buildNdpNeighborSolicitation(logId, table, ip, mac);
             if (vxlan == null) {
@@ -1057,11 +1069,11 @@ public class Switch {
                 return;
             }
 
-            sendVXLanTo(logId, iface, vxlan);
+            unicast(logId, iface, vxlan);
         }
 
         private void broadcastNdp(String logId, Table table, InetAddress ip) {
-            assert Logger.lowLevelDebug(logId + "broadcastNdp(" + table + "," + ip + ")");
+            assert Logger.lowLevelDebug(logId + "into broadcastNdp(" + table + "," + ip + ")");
 
             VXLanPacket vxlan = buildNdpNeighborSolicitation(logId, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
             if (vxlan == null) {
@@ -1069,11 +1081,11 @@ public class Switch {
                 return;
             }
 
-            broadcastVXLan(logId, table, vxlan, null);
+            broadcast(logId, table, vxlan, null);
         }
 
-        private void handleArp(String logId, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "handleArp(" + inVxlan + "," + inArp + "," + ip + "," + mac + "," + inputIface + ")");
+        private void respondArp(String logId, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into respondArp(" + inVxlan + "," + inArp + "," + ip + "," + mac + "," + inputIface + ")");
 
             ArpPacket resp = new ArpPacket();
             resp.setHardwareType(inArp.getHardwareType());
@@ -1097,11 +1109,11 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(logId, inputIface, vxlan);
+            unicast(logId, inputIface, vxlan);
         }
 
-        private void handleIcmpPing(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "handleIcmpPing(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
+        private void respondIcmpPing(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into respondIcmpPing(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
 
             IcmpPacket icmp = new IcmpPacket(ip instanceof Inet6Address);
             icmp.setType(inIcmp.isIpv6() ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP : Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP);
@@ -1150,11 +1162,11 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(logId, inputIface, vxlan);
+            unicast(logId, inputIface, vxlan);
         }
 
-        private void handleIcmpNDP(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "handleIcmpNDP(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
+        private void respondIcmpNDP(String logId, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into respondIcmpNDP(" + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + "," + inputIface + ")");
 
             assert inIcmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation;
             // we only handle neighbor solicitation for now
@@ -1192,11 +1204,11 @@ public class Switch {
             vxlan.setVni(inVxlan.getVni());
             vxlan.setPacket(ether);
 
-            sendVXLanTo(logId, inputIface, vxlan);
+            unicast(logId, inputIface, vxlan);
         }
 
-        private void broadcastVXLan(String logId, Table table, VXLanPacket vxlan, Iface inputIface) {
-            assert Logger.lowLevelDebug(logId + "broadcastVXLan(" + table + "," + vxlan + "," + inputIface + ")");
+        private void broadcast(String logId, Table table, VXLanPacket vxlan, Iface inputIface) {
+            assert Logger.lowLevelDebug(logId + "into broadcast(" + table + "," + vxlan + "," + inputIface + ")");
 
             Set<Iface> toSend = new HashSet<>();
             if (inputIface != null) {
@@ -1204,20 +1216,20 @@ public class Switch {
             }
             for (var entry : table.macTable.listEntries()) {
                 if (toSend.add(entry.iface)) {
-                    sendVXLanTo(logId, entry.iface, vxlan);
+                    unicast(logId, entry.iface, vxlan);
                 }
             }
             for (Iface f : ifaces.keySet()) {
                 if (f.getLocalSideVni(table.vni) == table.vni) { // send if vni matches or is a remote switch
                     if (toSend.add(f)) {
-                        sendVXLanTo(logId, f, vxlan);
+                        unicast(logId, f, vxlan);
                     }
                 }
             }
         }
 
-        private void sendVXLanTo(String logId, Iface iface, VXLanPacket vxlan) {
-            assert Logger.lowLevelDebug(logId + "sendVXLanTo(" + iface + "," + vxlan + ")");
+        private void unicast(String logId, Iface iface, VXLanPacket vxlan) {
+            assert Logger.lowLevelDebug(logId + "into unicast(" + iface + "," + vxlan + ")");
 
             sndBuf.limit(sndBuf.capacity()).position(0);
             try {
@@ -1227,7 +1239,9 @@ public class Switch {
             }
         }
 
-        protected final void sendVProxyPacketTo(IfaceCanSendVProxyPacket iface, VProxyEncryptedPacket p) {
+        protected final void sendVProxyPacketTo(String logId, IfaceCanSendVProxyPacket iface, VProxyEncryptedPacket p) {
+            assert Logger.lowLevelDebug(logId + "into unicast(" + iface + "," + p + ")");
+
             sndBuf.limit(sndBuf.capacity()).position(0);
             try {
                 iface.sendVProxyPacket(sock, p, sndBuf);
@@ -1350,7 +1364,7 @@ public class Switch {
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                String logId = UUID.randomUUID().toString() + " ::: ";
+                String logId = newLogId();
 
                 var tuple = handleNetworkAndGetVXLanPacket(logId, ctx.getEventLoop(), remote, data);
                 if (tuple == null) {
@@ -1372,7 +1386,7 @@ public class Switch {
             VProxyEncryptedPacket p = new VProxyEncryptedPacket(Switch.this::getKey);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
-            sendVProxyPacketTo(iface, p);
+            sendVProxyPacketTo(logId, iface, p);
         }
 
         @Override
@@ -1464,7 +1478,7 @@ public class Switch {
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                String logId = UUID.randomUUID().toString() + " ::: ";
+                String logId = newLogId();
 
                 EthernetPacket ether = new EthernetPacket();
                 String err = ether.from(data);
@@ -1531,7 +1545,7 @@ public class Switch {
             VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> iface.user.key);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
-            sendVProxyPacketTo(iface, p);
+            sendVProxyPacketTo(newLogId(), iface, p);
         }
 
         @Override
@@ -1559,7 +1573,7 @@ public class Switch {
                     break; // nothing read, quit loop
                 }
 
-                String logId = UUID.randomUUID().toString() + " ::: ";
+                String logId = newLogId();
 
                 VProxyEncryptedPacket p = new VProxyEncryptedPacket(x -> iface.user.key);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());

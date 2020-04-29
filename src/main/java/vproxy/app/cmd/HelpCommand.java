@@ -385,6 +385,7 @@ public class HelpCommand {
         acceptorelg("acceptor-elg", "aelg", "acceptor event loop group"),
         eventloopgroup("event-loop-group", "elg", "event loop group"),
         address("address", "addr", "ip address -> ip:port"),
+        via("via", null, "the gateway ip for routing"),
         upstream("upstream", "ups", "upstream"),
         inbuffersize("in-buffer-size", null, "in buffer size"),
         outbuffersize("out-buffer-size", null, "out buffer size"),
@@ -1452,15 +1453,15 @@ public class HelpCommand {
                 )),
                 new ResActMan(ActMan.add, "add a route to a vpc of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.network, "network to be matched"),
-                    new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|address can be used"),
-                    new ResActParamMan(ParamMan.address, "the address to forward the packet to. only one of address|vni can be used")
+                    new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|via can be used"),
+                    new ResActParamMan(ParamMan.via, "the address to forward the packet to. only one of via|vni can be used")
                 ), Arrays.asList(
                     new Tuple<>(
                         "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 address 172.16.0.1",
+                        "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1",
                         "\"OK\""
                     )
                 )),
