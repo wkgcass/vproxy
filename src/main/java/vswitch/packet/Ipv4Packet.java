@@ -251,6 +251,7 @@ public class Ipv4Packet extends AbstractIpPacket {
         this.ttl = ttl;
     }
 
+    @Override
     public int getProtocol() {
         return protocol;
     }
@@ -313,6 +314,7 @@ public class Ipv4Packet extends AbstractIpPacket {
         setTtl(n);
     }
 
+    @Override
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;

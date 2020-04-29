@@ -687,7 +687,7 @@ public class Shutdown {
                         if (r.ip == null) {
                             cmd += " vni " + r.toVni;
                         } else {
-                            cmd += " address " + Utils.ipStr(r.ip);
+                            cmd += " via " + Utils.ipStr(r.ip);
                         }
                         commands.add(cmd);
                     }

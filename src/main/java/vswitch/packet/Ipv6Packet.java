@@ -193,6 +193,12 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     @Override
+    public int getProtocol() {
+        if (extHeaders.isEmpty()) return nextHeader;
+        return extHeaders.get(extHeaders.size() - 1).nextHeader;
+    }
+
+    @Override
     public Inet6Address getSrc() {
         return src;
     }
@@ -226,6 +232,7 @@ public class Ipv6Packet extends AbstractIpPacket {
         return packet;
     }
 
+    @Override
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;

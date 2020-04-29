@@ -12,4 +12,8 @@ public abstract class AbstractIpPacket extends AbstractPacket {
     public abstract int getHopLimit();
 
     public abstract void setHopLimit(int n);
+
+    public abstract int getProtocol();
+
+    public abstract void setPacket(AbstractPacket packet);
 }

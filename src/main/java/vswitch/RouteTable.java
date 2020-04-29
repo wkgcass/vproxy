@@ -96,7 +96,7 @@ public class RouteTable {
             if (defaultV6Rule == null && r.ip instanceof Inet6Address) {
                 throw new XException("this network does not support ipv6");
             }
-            if (!defaultV4Rule.rule.contains(r.ip) || (defaultV6Rule != null && !defaultV6Rule.rule.contains(r.ip))) {
+            if (!defaultV4Rule.rule.contains(r.ip) && (defaultV6Rule == null || !defaultV6Rule.rule.contains(r.ip))) {
                 throw new XException("cannot specify an ip out of the network to redirect packets to");
             }
         }

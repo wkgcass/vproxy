@@ -20,16 +20,25 @@ public class Consts {
     public static final int ARP_PROTOCOL_OPCODE_RESP = 2;
     public static final int IP_PROTOCOL_ICMP = 1;
     public static final int IP_PROTOCOL_ICMPv6 = 58;
+    public static final int IP_PROTOCOL_TCP = 6;
+    public static final int IP_PROTOCOL_UDP = 17;
+    public static final int IP_PROTOCOL_SCTP = 132;
     public static final int IPv6_NEXT_HEADER_NO_NEXT_HEADER = 59;
     public static final Set<Integer> IPv6_needs_next_header = Set.of(0, 60, 43, 44, 51, 50, 135, 139, 140, 253, 254);
     public static final int ICMP_PROTOCOL_TYPE_ECHO_REQ = 8;
     public static final int ICMPv6_PROTOCOL_TYPE_ECHO_REQ = 128;
     public static final int ICMP_PROTOCOL_TYPE_ECHO_RESP = 0;
     public static final int ICMPv6_PROTOCOL_TYPE_ECHO_RESP = 129;
+    public static final int ICMP_PROTOCOL_TYPE_TIME_EXCEEDED = 11;
+    public static final int ICMPv6_PROTOCOL_TYPE_TIME_EXCEEDED = 3;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation = 135;
     public static final int ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement = 136;
     public static final int ICMPv6_OPTION_TYPE_Source_Link_Layer_Address = 1;
     public static final int ICMPv6_OPTION_TYPE_Target_Link_Layer_Address = 2;
+    public static final int ICMP_PROTOCOL_TYPE_DEST_UNREACHABLE = 3;
+    public static final int ICMP_PROTOCOL_CODE_PORT_UNREACHABLE = 3;
+    public static final int ICMPv6_PROTOCOL_TYPE_DEST_UNREACHABLE = 1;
+    public static final int ICMPv6_PROTOCOL_CODE_PORT_UNREACHABLE = 4;
 
     public static final ByteArray IPv6_Solicitation_Node_Multicast_Address = ByteArray.from(Utils.parseIpString("ff02::1:ff00:0"));
 }
