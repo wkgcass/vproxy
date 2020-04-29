@@ -38,8 +38,9 @@ public class TapHandle {
     public static String add(Command cmd) throws Exception {
         String devPattern = cmd.resource.alias;
         int vni = Integer.parseInt(cmd.args.get(Param.vni));
+        String postScript = cmd.args.get(Param.postscript);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        return sw.addTap(devPattern, vni);
+        return sw.addTap(devPattern, vni, postScript);
     }
 
     public static void forceRemove(Command cmd) throws Exception {

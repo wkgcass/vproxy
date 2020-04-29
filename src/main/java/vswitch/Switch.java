@@ -37,6 +37,7 @@ import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
 
 public class Switch {
     public final String alias;
@@ -295,7 +296,7 @@ public class Switch {
     }
 
     // return created dev name
-    public String addTap(String devPattern, int vni) throws XException, IOException {
+    public String addTap(String devPattern, int vni, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = currentEventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -308,7 +309,7 @@ public class Switch {
         }
         PosixFDs posixFDs = (PosixFDs) fds;
         TunTapDatagramFD fd = posixFDs.openTunTap(devPattern, TunTapDatagramFD.IFF_TAP | TunTapDatagramFD.IFF_NO_PI);
-        TapIface iface = new TapIface(fd, vni, loop);
+        TapIface iface = new TapIface(fd, vni, postScript, loop);
         try {
             fd.configureBlocking(false);
             loop.add(fd, EventSet.read(), null, new TapHandler(iface));
@@ -320,9 +321,48 @@ public class Switch {
             }
             throw e;
         }
+        try {
+            executePostScript(fd.tuntap.dev, vni, postScript);
+        } catch (Exception e) {
+            // executing script failed
+            // close the fd
+            try {
+                loop.remove(fd);
+            } catch (Throwable ignore) {
+            }
+            try {
+                fd.close();
+            } catch (IOException t) {
+                Logger.shouldNotHappen("closing the tap fd failed, " + fd, t);
+            }
+            throw new XException(Utils.formatErr(e));
+        }
         loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
         Logger.alert("tap device added: " + fd.tuntap.dev);
         return fd.tuntap.dev;
+    }
+
+    private void executePostScript(String dev, int vni, String postScript) throws Exception {
+        if (postScript == null || postScript.isBlank()) {
+            return;
+        }
+        ProcessBuilder pb = new ProcessBuilder().command(postScript);
+        var env = pb.environment();
+        env.put("DEV", dev);
+        env.put("VNI", "" + vni);
+        env.put("SWITCH", alias);
+        Process p = pb.start();
+        Utils.pipeOutputOfSubProcess(p);
+        p.waitFor(10, TimeUnit.SECONDS);
+        if (p.isAlive()) {
+            p.destroyForcibly();
+            throw new Exception("the process took too long to execute");
+        }
+        int exit = p.exitValue();
+        if (exit == 0) {
+            return;
+        }
+        throw new Exception("exit code is " + exit);
     }
 
     public void delTap(String devName) throws NotFoundException {
@@ -1614,7 +1654,7 @@ public class Switch {
                 }
                 VXLanPacket vxlan = new VXLanPacket();
                 vxlan.setFlags(0b00001000);
-                vxlan.setVni(iface.serverSideVni);
+                vxlan.setVni(iface.localSideVni);
                 vxlan.setPacket(ether);
 
                 sendIntoNetworkStack(logId, vxlan, iface);

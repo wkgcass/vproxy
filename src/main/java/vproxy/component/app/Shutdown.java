@@ -16,6 +16,7 @@ import vproxy.dns.DNSServer;
 import vproxy.util.*;
 import vswitch.RouteTable;
 import vswitch.Switch;
+import vswitch.iface.TapIface;
 import vswitch.iface.UserClientIface;
 import vswitch.util.Consts;
 import vswitch.util.UserInfo;
@@ -643,6 +644,18 @@ public class Shutdown {
                     var ucliIface = (UserClientIface) iface;
                     cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
                         + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + Utils.l4addrStr(ucliIface.remoteAddress);
+                    commands.add(cmd);
+                }
+                // create tap
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof TapIface)) {
+                        continue;
+                    }
+                    var tap = (TapIface) iface;
+                    cmd = "add tap " + tap.tap.tuntap.dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
+                    if (tap.postScript != null && !tap.postScript.isBlank()) {
+                        cmd += " post-script " + tap.postScript;
+                    }
                     commands.add(cmd);
                 }
                 // create vpc

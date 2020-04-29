@@ -1060,4 +1060,37 @@ public class Utils {
         }
         return true;
     }
+
+    public static void pipeOutputOfSubProcess(Process p) {
+        var stdout = p.getInputStream();
+        var stderr = p.getErrorStream();
+        new Thread(() -> {
+            var br = new BufferedReader(new InputStreamReader(stdout));
+            String x;
+            try {
+                while ((x = br.readLine()) != null) {
+                    System.out.println(x);
+                }
+            } catch (Throwable ignore) {
+            }
+            try {
+                stdout.close();
+            } catch (Throwable ignore) {
+            }
+        }).start();
+        new Thread(() -> {
+            var br = new BufferedReader(new InputStreamReader(stderr));
+            String x;
+            try {
+                while ((x = br.readLine()) != null) {
+                    System.out.println(x);
+                }
+            } catch (Throwable ignore) {
+            }
+            try {
+                stderr.close();
+            } catch (Throwable ignore) {
+            }
+        }).start();
+    }
 }

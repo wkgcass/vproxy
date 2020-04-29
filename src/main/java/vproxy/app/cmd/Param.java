@@ -42,6 +42,7 @@ public enum Param {
     arptabletimeout("arp-table-timeout"),
     mac("mac"),
     vni("vni"),
+    postscript("post-script"),
     ;
     public final String fullname;
 

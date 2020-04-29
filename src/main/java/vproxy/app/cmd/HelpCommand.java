@@ -420,6 +420,7 @@ public class HelpCommand {
         pass("password", "pass", "password"),
         mac("mac", null, "mac address"),
         vni("vni", null, "vni number"),
+        postscript("post-script", null, "the script to run after added"),
         ;
         public final String param;
         public final String shortVer;
@@ -1368,8 +1369,9 @@ public class HelpCommand {
         tap("tap", null, "add/remove a tap device and bind it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
             "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix",
             Arrays.asList(
-                new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Collections.singletonList(
-                    new ResActParamMan(ParamMan.vni, "vni assigned for the user")
+                new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
+                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add tap tap%d to switch sw0 vni 1314",

@@ -12,13 +12,15 @@ import java.util.Objects;
 
 public class TapIface implements Iface {
     public final TunTapDatagramFD tap;
-    public final int serverSideVni;
+    public final int localSideVni;
+    public final String postScript;
 
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TunTapDatagramFD tap, int serverSideVni, SelectorEventLoop bondLoop) {
+    public TapIface(TunTapDatagramFD tap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
         this.tap = tap;
-        this.serverSideVni = serverSideVni;
+        this.localSideVni = localSideVni;
+        this.postScript = postScript;
         this.bondLoop = bondLoop;
     }
 
@@ -37,7 +39,7 @@ public class TapIface implements Iface {
 
     @Override
     public String toString() {
-        return "Iface(tap:" + tap.tuntap.dev + ",vni:" + serverSideVni + ")";
+        return "Iface(tap:" + tap.tuntap.dev + ",vni:" + localSideVni + ")";
     }
 
     @Override
@@ -63,6 +65,6 @@ public class TapIface implements Iface {
 
     @Override
     public int getLocalSideVni(int hint) {
-        return serverSideVni;
+        return localSideVni;
     }
 }
