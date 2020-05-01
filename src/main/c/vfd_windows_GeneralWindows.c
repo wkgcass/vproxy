@@ -9,7 +9,7 @@ JNIEXPORT jboolean JNICALL Java_vfd_windows_GeneralWindows_tapNonBlockingSupport
 
 #define GUID_MAX_LEN 256
 
-BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, char* dev, char* guid) {
+BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, const char* dev, char* guid) {
     LONG res;
     HKEY network_connections_key;
     res = RegOpenKeyEx(HKEY_LOCAL_MACHINE,
@@ -58,7 +58,7 @@ BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, char* dev, char* guid) {
         int n = WideCharToMultiByte(CP_UTF8, 0, name_data, -1, NULL, 0, NULL, NULL);
         char* name = malloc(n);
         WideCharToMultiByte(CP_UTF8, 0, name_data, -1, name, n, NULL, NULL);
-        if (strcmp(dev_name, name) == 0) {
+        if (strcmp(dev, name) == 0) {
             // found
             memcpy(guid, enum_name, sizeof(enum_name));
             return TRUE;
