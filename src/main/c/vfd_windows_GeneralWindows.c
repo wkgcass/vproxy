@@ -43,8 +43,8 @@ BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, char* dev, char* guid) {
                  enum_name);
         res = RegOpenKeyEx(HKEY_LOCAL_MACHINE, connection_string, 0, KEY_READ, &connection_key);
         if (res != ERROR_SUCCESS) {
-            throwIOExceptionBasedOnLastError(env, "failed to open connection key");
-            return FALSE;
+            // do not throw error here, simply skip the key
+            continue;
         }
         len = sizeof(name_data);
         res = RegQueryValueExW(connection_key, name_string, NULL, &name_type, (LPBYTE) name_data, &len);
@@ -89,28 +89,6 @@ BOOL openTapDevice(JNIEnv* env, char* guid, HANDLE* outHandle) {
     return TRUE;
 }
 
-BOOL setTapNonAdminAccess(JNIEnv* env, HANDLE handle) {
-    SECURITY_ATTRIBUTES sa;
-    SECURITY_DESCRIPTOR sd;
-    memset(&sa, 0, sizeof(sa));
-    sa.nLength = sizeof(sa);
-    sa.lpSecurityDescriptor = &sd;
-    sa.bInheritHandle = TRUE;
-    if (!InitializeSecurityDescriptor(&sd, SECURITY_DESCRIPTOR_REVISION)) {
-        throwIOExceptionBasedOnLastError(env, "initialize security descriptor failed");
-        return FALSE;
-    }
-    if (!SetSecurityDescriptorDacl(&sd, TRUE, NULL, FALSE)) {
-        throwIOExceptionBasedOnLastError(env, "Set security descriptor dacl failed");
-        return FALSE;
-    }
-    if (!SetKernelObjectSecurity(handle, DACL_SECURITY_INFORMATION, &sd)) {
-        throwIOExceptionBasedOnLastError(env, "Set kernel object security failed");
-        return FALSE;
-    }
-    return TRUE;
-}
-
 BOOL plugCableToTabDevice(JNIEnv* env, HANDLE handle) {
     ULONG x = TRUE;
     DWORD len;
@@ -137,12 +115,6 @@ JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_createTapFD
     status = openTapDevice(env, guid, &handle);
     if (!status) {
         (*env)->ReleaseStringUTFChars(env, dev, devChars);
-        return 0;
-    }
-    status = setTapNonAdminAccess(env, handle);
-    if (!status) {
-        (*env)->ReleaseStringUTFChars(env, dev, devChars);
-        CloseHandle(handle);
         return 0;
     }
     status = plugCableToTabDevice(env, handle);
@@ -172,7 +144,7 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
     byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
-    BOOL status = ReadFile(handle, buf + off, sizeof(buf), &n, NULL);
+    BOOL status = ReadFile(handle, buf + off, len, &n, NULL);
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "read failed");
         return 0;
@@ -188,7 +160,7 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
     byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
-    BOOL status = WriteFile(handle, buf + off, sizeof(buf), &n, NULL);
+    BOOL status = WriteFile(handle, buf + off, len, &n, NULL);
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "write failed");
         return 0;

@@ -15,12 +15,14 @@ public class TapIface implements Iface {
     public final int localSideVni;
     public final String postScript;
 
+    private final DatagramFD operateTap;
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TapDatagramFD tap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
+    public TapIface(TapDatagramFD tap, DatagramFD operateTap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
         this.tap = tap;
         this.localSideVni = localSideVni;
         this.postScript = postScript;
+        this.operateTap = operateTap;
         this.bondLoop = bondLoop;
     }
 
@@ -47,17 +49,17 @@ public class TapIface implements Iface {
         var bytes = vxlan.getPacket().getRawPacket().toJavaArray();
         writeBuf.put(bytes);
         writeBuf.flip();
-        tap.write(writeBuf);
+        operateTap.write(writeBuf);
     }
 
     @Override
     public void destroy() {
         try {
-            bondLoop.remove(tap);
+            bondLoop.remove(operateTap);
         } catch (Throwable ignore) {
         }
         try {
-            tap.close();
+            operateTap.close();
         } catch (IOException e) {
             Logger.shouldNotHappen("closing tap device failed", e);
         }

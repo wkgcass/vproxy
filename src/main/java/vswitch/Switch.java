@@ -305,7 +305,7 @@ public class Switch {
         }
         FDsWithTap tapFDs = (FDsWithTap) fds;
         TapDatagramFD fd = tapFDs.openTap(devPattern);
-        TapIface iface = new TapIface(fd, vni, postScript, loop);
+        TapIface iface;
         try {
             DatagramFD fdToPutIntoLoop;
             if (tapFDs.tapNonBlockingSupported()) {
@@ -314,6 +314,7 @@ public class Switch {
             } else {
                 fdToPutIntoLoop = new BlockingDatagramFD(fd, loop, 2048, 65536, 32);
             }
+            iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, loop);
             loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
         } catch (IOException e) {
             try {

@@ -18,6 +18,9 @@ jar:
 vfdposix:
 	cd ./src/main/c && ./make-general.sh
 
+vfdwindows:
+	cd ./src/main/c && ./make-windows.sh
+
 fstack:
 	cd ./src/main/c && ./make-fstack.sh
 

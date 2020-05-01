@@ -14,6 +14,6 @@ rm -f "$target"
 gcc -std=gnu99 \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/$include_platform_dir" \
-    -shared -Werror -lc -fPIC \
+    -shared -Werror -fPIC \
     vfd_windows_GeneralWindows.c \
     -o "$target"
