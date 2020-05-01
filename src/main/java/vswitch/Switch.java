@@ -5,7 +5,7 @@ import vfd.EventSet;
 import vfd.FDProvider;
 import vfd.FDs;
 import vfd.posix.PosixFDs;
-import vfd.posix.TunTapDatagramFD;
+import vfd.posix.TapDatagramFD;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
@@ -19,6 +19,7 @@ import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.PeriodicEvent;
 import vproxy.selector.SelectorEventLoop;
+import vproxy.selector.wrap.blocking.BlockingDatagramFD;
 import vproxy.util.*;
 import vproxy.util.Timer;
 import vproxy.util.crypto.Aes256Key;
@@ -308,11 +309,17 @@ public class Switch {
             throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix");
         }
         PosixFDs posixFDs = (PosixFDs) fds;
-        TunTapDatagramFD fd = posixFDs.openTunTap(devPattern, TunTapDatagramFD.IFF_TAP | TunTapDatagramFD.IFF_NO_PI);
+        TapDatagramFD fd = posixFDs.openTap(devPattern);
         TapIface iface = new TapIface(fd, vni, postScript, loop);
         try {
-            fd.configureBlocking(false);
-            loop.add(fd, EventSet.read(), null, new TapHandler(iface));
+            DatagramFD fdToPutIntoLoop;
+            if (posixFDs.posix.tapNonBlockingSupported()) {
+                fdToPutIntoLoop = fd;
+                fd.configureBlocking(false);
+            } else {
+                fdToPutIntoLoop = new BlockingDatagramFD(fd, loop, 2048, 65536, 32);
+            }
+            loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
         } catch (IOException e) {
             try {
                 fd.close();
@@ -322,7 +329,7 @@ public class Switch {
             throw e;
         }
         try {
-            executePostScript(fd.tuntap.dev, vni, postScript);
+            executePostScript(fd.tap.dev, vni, postScript);
         } catch (Exception e) {
             // executing script failed
             // close the fd
@@ -338,8 +345,8 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
-        Logger.alert("tap device added: " + fd.tuntap.dev);
-        return fd.tuntap.dev;
+        Logger.alert("tap device added: " + fd.tap.dev);
+        return fd.tap.dev;
     }
 
     private void executePostScript(String dev, int vni, String postScript) throws Exception {
@@ -372,7 +379,7 @@ public class Switch {
                 continue;
             }
             TapIface tapIface = (TapIface) i;
-            if (tapIface.tap.tuntap.dev.equals(devName)) {
+            if (tapIface.tap.tap.dev.equals(devName)) {
                 iface = i;
                 break;
             }
@@ -1625,33 +1632,35 @@ public class Switch {
         }
     }
 
-    private class TapHandler extends NetworkStack implements Handler<TunTapDatagramFD> {
+    private class TapHandler extends NetworkStack implements Handler<DatagramFD> {
         private final TapIface iface;
+        private final TapDatagramFD tapDatagramFD;
 
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
 
-        private TapHandler(TapIface iface) {
+        private TapHandler(TapIface iface, TapDatagramFD tapDatagramFD) {
             this.iface = iface;
+            this.tapDatagramFD = tapDatagramFD;
         }
 
         @Override
-        public void accept(HandlerContext<TunTapDatagramFD> ctx) {
+        public void accept(HandlerContext<DatagramFD> ctx) {
             // will not fire
         }
 
         @Override
-        public void connected(HandlerContext<TunTapDatagramFD> ctx) {
+        public void connected(HandlerContext<DatagramFD> ctx) {
             // will not fire
         }
 
         @Override
-        public void readable(HandlerContext<TunTapDatagramFD> ctx) {
+        public void readable(HandlerContext<DatagramFD> ctx) {
             while (true) {
                 rcvBuf.limit(rcvBuf.capacity()).position(0);
                 try {
                     ctx.getChannel().read(rcvBuf);
                 } catch (IOException e) {
-                    Logger.error(LogType.CONN_ERROR, "tap device " + ctx.getChannel() + " got error when reading", e);
+                    Logger.error(LogType.CONN_ERROR, "tap device " + tapDatagramFD + " got error when reading", e);
                     return;
                 }
                 if (rcvBuf.position() == 0) {
@@ -1678,15 +1687,15 @@ public class Switch {
         }
 
         @Override
-        public void writable(HandlerContext<TunTapDatagramFD> ctx) {
+        public void writable(HandlerContext<DatagramFD> ctx) {
             // ignore, and will not fire
         }
 
         @Override
-        public void removed(HandlerContext<TunTapDatagramFD> ctx) {
-            Logger.warn(LogType.CONN_ERROR, "tap device " + ctx.getChannel() + " removed from loop, it's not handled anymore, need to be closed");
+        public void removed(HandlerContext<DatagramFD> ctx) {
+            Logger.warn(LogType.CONN_ERROR, "tap device " + tapDatagramFD + " removed from loop, it's not handled anymore, need to be closed");
             try {
-                delTap(ctx.getChannel().tuntap.dev);
+                delTap(tapDatagramFD.tap.dev);
             } catch (NotFoundException ignore) {
             }
         }

@@ -191,7 +191,12 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeDeleteEventLoop
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_setBlocking
   (JNIEnv* env, jobject self, jint fd, jboolean v) {
-    int on = 1;
+    int on;
+    if (v) {
+        on = 0;
+    } else {
+        on = 1;
+    }
     int res = v_ioctl(fd, V_FIONBIO, &on);
     if (res == -1) {
         throwIOExceptionBasedOnErrno(env);
@@ -626,48 +631,98 @@ JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_currentTimeMillis
     return ((long)tv.tv_sec) * 1000 + tv.tv_usec / 1000;
 }
 
-JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTunTapFD
-  (JNIEnv* env, jobject self, jstring dev, jint flags) {
+JNIEXPORT jboolean JNICALL Java_vfd_posix_GeneralPosix_tapNonBlockingSupported
+  (JNIEnv* env, jobject self) {
     #ifdef __linux__
-      const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
-      struct ifreq ifr;
-      int fd = 0;
+      return JNI_TRUE;
+    #elif defined(__APPLE__)
+      return JNI_FALSE;
+    #else
+      throwIOException(env, "unsupported on current platform");
+    #endif
+}
+
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
+  (JNIEnv* env, jobject self, jstring dev) {
+    // the returned device name
+    char devName[IFNAMSIZ + 1];
+    // get java input dev name
+    const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
+    // fd for the tap char device
+    int fd = 0;
+    // tmpFd might be used
+    int tmpFd = 0;
+    // prepare the ifreq object
+    struct ifreq ifr;
+    memset(&ifr, 0, sizeof(ifr));
+
+    #ifdef __linux__
 
       if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
           goto fail;
       }
-      memset(&ifr, 0, sizeof(ifr));
-      int realFlags = 0;
-      if ((flags & V_IFF_TUN) == V_IFF_TUN) realFlags |= IFF_TUN;
-      if ((flags & V_IFF_TAP) == V_IFF_TAP) realFlags |= IFF_TAP;
-      if ((flags & V_IFF_NO_PI) == V_IFF_NO_PI) realFlags |= IFF_NO_PI;
-
-      ifr.ifr_flags = realFlags;
+      ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
       strncpy(ifr.ifr_name, devChars, IFNAMSIZ);
 
       if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
           goto fail;
       }
 
-      char devName[IFNAMSIZ + 1];
       strcpy(devName, ifr.ifr_name);
+      goto success;
+
+    #elif defined(__APPLE__)
+      char tapFileName[16]; // usually /dev/tapX which is in minimum 5 + 4 chars and give it 16 would definitely be enough in normal cases
+      int inputLen = strlen(devChars);
+      if (inputLen > 10) { // 10 == 16 - 1 - 5
+        throwIOException(env, "input dev name is too long");
+        return NULL;
+      }
+      if (sprintf(tapFileName, "/dev/%s", devChars) < 0) {
+          goto fail;
+      }
+      if ((fd = open(tapFileName, O_RDWR)) < 0) {
+          goto fail;
+      }
+      // need to explicitly set the device to UP
+      if ((tmpFd = v_socket(V_AF_INET, V_SOCK_DGRAM, 0)) < 0) {
+          goto fail;
+      }
+      strncpy(ifr.ifr_name, devChars, IFNAMSIZ);
+      if (v_ioctl(tmpFd, V_SIOCGIFFLAGS, &ifr) < 0) {
+          goto fail;
+      }
+      ifr.ifr_flags |= IFF_UP;
+      if (v_ioctl(tmpFd, V_SIOCSIFFLAGS, &ifr) < 0) {
+          goto fail;
+      }
+      // copy the dev name to return str
+      strncpy(devName, devChars, IFNAMSIZ);
+    #else
+      throwIOException(env, "unsupported on current platform");
+      return NULL;
+    #endif
+success:
+      devName[IFNAMSIZ] = '\0'; // make sure the last byte is 0
       jstring genDevName = (*env)->NewStringUTF(env, devName);
 
-      jclass sCls = (*env)->FindClass(env, "vfd/posix/TunTapInfo");
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/TapInfo");
       jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
       jobject ret = (*env)->NewObject(env, sCls, constructor, genDevName, fd);
 
       (*env)->ReleaseStringUTFChars(env, genDevName, devChars);
+      if (tmpFd > 0) {
+          v_close(tmpFd);
+      }
       return ret;
 fail:
       if (fd > 0) {
           v_close(fd);
       }
+      if (tmpFd > 0) {
+          v_close(tmpFd);
+      }
       (*env)->ReleaseStringUTFChars(env, dev, devChars);
       throwIOExceptionBasedOnErrno(env);
       return NULL;
-    #else
-      throwIOException(env, "unsupported on current platform");
-      return NULL;
-    #endif
 }

@@ -114,7 +114,10 @@
     // f-stack bug, use ioctl instead
     // https://github.com/F-Stack/f-stack/issues/146#issuecomment-356867119
     #include <sys/ioctl.h>
+    #include <net/if.h>
     #define V_FIONBIO FIONBIO
+    #define V_SIOCGIFFLAGS SIOCGIFFLAGS
+    #define V_SIOCSIFFLAGS SIOCSIFFLAGS
     #ifdef FSTACK
         #define v_ioctl ff_ioctl
     #else
@@ -147,17 +150,19 @@
 
 
     #include <strings.h>
+    #include <stdio.h>
     #define v_bzero bzero
 
-    // for TunTap support
-    #define V_IFF_TUN   1
-    #define V_IFF_TAP   2
-    #define V_IFF_NO_PI 4
+    #include <fcntl.h>
+
+    // for tap support
     #ifdef __linux__
-      #include <fcntl.h>
       #include <string.h>
       #include <linux/if.h>
       #include <linux/if_tun.h>
+    #endif
+    #ifndef IFNAMSIZ
+      #define IFNAMSIZ 16
     #endif
 
 

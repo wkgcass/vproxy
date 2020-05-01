@@ -353,11 +353,19 @@ JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_currentTimeMillis
 
 /*
  * Class:     vfd_posix_GeneralPosix
- * Method:    createTunTapFD
- * Signature: (Ljava/lang/String;I)Lvfd/posix/TunTapInfo;
+ * Method:    tapNonBlockingSupported
+ * Signature: ()Z
  */
-JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTunTapFD
-  (JNIEnv *, jobject, jstring, jint);
+JNIEXPORT jboolean JNICALL Java_vfd_posix_GeneralPosix_tapNonBlockingSupported
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
+ * Method:    createTapFD
+ * Signature: (Ljava/lang/String;)Lvfd/posix/TapInfo;
+ */
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
+  (JNIEnv *, jobject, jstring);
 
 #ifdef __cplusplus
 }

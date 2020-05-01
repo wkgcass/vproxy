@@ -1,7 +1,7 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
-import vfd.posix.TunTapDatagramFD;
+import vfd.posix.TapDatagramFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Logger;
 import vswitch.packet.VXLanPacket;
@@ -11,13 +11,13 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class TapIface implements Iface {
-    public final TunTapDatagramFD tap;
+    public final TapDatagramFD tap;
     public final int localSideVni;
     public final String postScript;
 
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TunTapDatagramFD tap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
+    public TapIface(TapDatagramFD tap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
         this.tap = tap;
         this.localSideVni = localSideVni;
         this.postScript = postScript;
@@ -39,7 +39,7 @@ public class TapIface implements Iface {
 
     @Override
     public String toString() {
-        return "Iface(tap:" + tap.tuntap.dev + ",vni:" + localSideVni + ")";
+        return "Iface(tap:" + tap.tap.dev + ",vni:" + localSideVni + ")";
     }
 
     @Override

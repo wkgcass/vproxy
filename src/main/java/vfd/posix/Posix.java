@@ -90,5 +90,7 @@ public interface Posix {
 
     long currentTimeMillis();
 
-    TunTapInfo createTunTapFD(String dev, int flags) throws IOException;
+    boolean tapNonBlockingSupported() throws IOException;
+
+    TapInfo createTapFD(String dev) throws IOException;
 }

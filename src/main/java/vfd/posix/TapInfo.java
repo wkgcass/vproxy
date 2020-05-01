@@ -1,17 +1,17 @@
 package vfd.posix;
 
-public class TunTapInfo {
+public class TapInfo {
     public final String dev;
     public final int fd;
 
-    public TunTapInfo(String dev, int fd) {
+    public TapInfo(String dev, int fd) {
         this.dev = dev;
         this.fd = fd;
     }
 
     @Override
     public String toString() {
-        return "TunTapInfo{" +
+        return "TapInfo{" +
             "dev='" + dev + '\'' +
             ", fd=" + fd +
             '}';

@@ -6,7 +6,7 @@ import java.io.IOException;
 import java.lang.reflect.Proxy;
 
 public class PosixFDs implements FDs {
-    private final Posix posix;
+    public final Posix posix;
 
     public PosixFDs() {
         assert VFDConfig.vfdlibname != null;
@@ -81,8 +81,8 @@ public class PosixFDs implements FDs {
         return posix.currentTimeMillis();
     }
 
-    public TunTapDatagramFD openTunTap(String devPattern, int flags) throws IOException {
-        TunTapInfo info = posix.createTunTapFD(devPattern, flags);
-        return new TunTapDatagramFD(posix, info, flags);
+    public TapDatagramFD openTap(String devPattern) throws IOException {
+        TapInfo info = posix.createTapFD(devPattern);
+        return new TapDatagramFD(posix, info);
     }
 }
