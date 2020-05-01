@@ -26,4 +26,14 @@ void throwIOExceptionBasedOnErrno(JNIEnv* env) {
     throwIOException(env, msg);
 }
 
+    #ifdef _WIN32
+        #include <windows.h>
+
+        void throwIOExceptionBasedOnLastError(JNIEnv* env, char* msgPrefix) {
+            char errMsg[128];
+            sprintf(errMsg, "%s: %d", msgPrefix, GetLastError());
+            throwIOException(env, errMsg);
+        }
+    #endif
+
 #endif
