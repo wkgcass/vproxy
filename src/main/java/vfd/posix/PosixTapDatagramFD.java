@@ -1,16 +1,17 @@
 package vfd.posix;
 
-import vfd.DatagramFD;
+import vfd.TapDatagramFD;
+import vfd.TapInfo;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class TapDatagramFD extends PosixNetworkFD implements DatagramFD {
+public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD {
     public final TapInfo tap;
 
-    public TapDatagramFD(Posix posix, TapInfo tap) {
+    public PosixTapDatagramFD(Posix posix, TapInfo tap) {
         super(posix);
         this.fd = tap.fd;
         this.connected = true;
@@ -38,5 +39,10 @@ public class TapDatagramFD extends PosixNetworkFD implements DatagramFD {
             "dev=" + tap.dev +
             ", fd=" + tap.fd +
             '}';
+    }
+
+    @Override
+    public TapInfo getTap() {
+        return tap;
     }
 }

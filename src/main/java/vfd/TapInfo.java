@@ -1,4 +1,4 @@
-package vfd.posix;
+package vfd;
 
 public class TapInfo {
     public final String dev;

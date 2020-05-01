@@ -12,7 +12,7 @@ public class VFDConfig {
     public static final String fstack;
     public static final boolean useFStack;
 
-    // -Dvfdlibname="vfdposix"
+    // this field is generated
     public static String vfdlibname;
 
     // -Dvfdtrace=1
@@ -23,10 +23,14 @@ public class VFDConfig {
         useFStack = !fstack.isBlank();
         vfdImpl = useFStack ? "posix" : System.getProperty("vfd", "provided");
         if (!vfdImpl.equals("provided")) {
-            if (useFStack) {
-                vfdlibname = "vfdfstack";
-            } else {
-                vfdlibname = "vfdposix";
+            if (vfdImpl.equals("posix")) {
+                if (useFStack) {
+                    vfdlibname = "vfdfstack";
+                } else {
+                    vfdlibname = "vfdposix";
+                }
+            } else if (vfdImpl.equals("windows")) {
+                vfdlibname = "vfdwindows";
             }
         }
 

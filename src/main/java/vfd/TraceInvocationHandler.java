@@ -1,4 +1,4 @@
-package vfd.posix;
+package vfd;
 
 import vproxy.util.Logger;
 
@@ -8,10 +8,10 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.nio.ByteBuffer;
 
-class TracePosixInvocationHandler implements InvocationHandler {
+public class TraceInvocationHandler implements InvocationHandler {
     private final Object target;
 
-    TracePosixInvocationHandler(Object target) {
+    public TraceInvocationHandler(Object target) {
         this.target = target;
     }
 

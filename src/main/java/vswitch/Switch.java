@@ -1,11 +1,6 @@
 package vswitch;
 
-import vfd.DatagramFD;
-import vfd.EventSet;
-import vfd.FDProvider;
-import vfd.FDs;
-import vfd.posix.PosixFDs;
-import vfd.posix.TapDatagramFD;
+import vfd.*;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
@@ -305,15 +300,15 @@ public class Switch {
         SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
 
         FDs fds = FDProvider.get().getProvided();
-        if (!(fds instanceof PosixFDs)) {
-            throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix");
+        if (!(fds instanceof FDsWithTap)) {
+            throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        PosixFDs posixFDs = (PosixFDs) fds;
-        TapDatagramFD fd = posixFDs.openTap(devPattern);
+        FDsWithTap tapFDs = (FDsWithTap) fds;
+        TapDatagramFD fd = tapFDs.openTap(devPattern);
         TapIface iface = new TapIface(fd, vni, postScript, loop);
         try {
             DatagramFD fdToPutIntoLoop;
-            if (posixFDs.posix.tapNonBlockingSupported()) {
+            if (tapFDs.tapNonBlockingSupported()) {
                 fdToPutIntoLoop = fd;
                 fd.configureBlocking(false);
             } else {
@@ -329,7 +324,7 @@ public class Switch {
             throw e;
         }
         try {
-            executePostScript(fd.tap.dev, vni, postScript);
+            executePostScript(fd.getTap().dev, vni, postScript);
         } catch (Exception e) {
             // executing script failed
             // close the fd
@@ -345,8 +340,8 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
-        Logger.alert("tap device added: " + fd.tap.dev);
-        return fd.tap.dev;
+        Logger.alert("tap device added: " + fd.getTap().dev);
+        return fd.getTap().dev;
     }
 
     private void executePostScript(String dev, int vni, String postScript) throws Exception {
@@ -379,7 +374,7 @@ public class Switch {
                 continue;
             }
             TapIface tapIface = (TapIface) i;
-            if (tapIface.tap.tap.dev.equals(devName)) {
+            if (tapIface.tap.getTap().dev.equals(devName)) {
                 iface = i;
                 break;
             }
@@ -1695,7 +1690,7 @@ public class Switch {
         public void removed(HandlerContext<DatagramFD> ctx) {
             Logger.warn(LogType.CONN_ERROR, "tap device " + tapDatagramFD + " removed from loop, it's not handled anymore, need to be closed");
             try {
-                delTap(tapDatagramFD.tap.dev);
+                delTap(tapDatagramFD.getTap().dev);
             } catch (NotFoundException ignore) {
             }
         }

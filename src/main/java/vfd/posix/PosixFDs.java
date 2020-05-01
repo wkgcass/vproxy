@@ -5,7 +5,7 @@ import vfd.*;
 import java.io.IOException;
 import java.lang.reflect.Proxy;
 
-public class PosixFDs implements FDs {
+public class PosixFDs implements FDs, FDsWithTap {
     public final Posix posix;
 
     public PosixFDs() {
@@ -30,7 +30,7 @@ public class PosixFDs implements FDs {
                 // should not happen
                 throw new RuntimeException(e);
             }
-            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{cls}, new TracePosixInvocationHandler(new GeneralPosix()));
+            posix = (Posix) Proxy.newProxyInstance(Posix.class.getClassLoader(), new Class[]{cls}, new TraceInvocationHandler(new GeneralPosix()));
         } else {
             posix = new GeneralPosix();
         }
@@ -81,8 +81,14 @@ public class PosixFDs implements FDs {
         return posix.currentTimeMillis();
     }
 
+    @Override
     public TapDatagramFD openTap(String devPattern) throws IOException {
         TapInfo info = posix.createTapFD(devPattern);
-        return new TapDatagramFD(posix, info);
+        return new PosixTapDatagramFD(posix, info);
+    }
+
+    @Override
+    public boolean tapNonBlockingSupported() throws IOException {
+        return posix.tapNonBlockingSupported();
     }
 }

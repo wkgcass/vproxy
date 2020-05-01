@@ -1,5 +1,7 @@
 package vfd.posix;
 
+import vfd.TapInfo;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 

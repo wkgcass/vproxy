@@ -2,43 +2,23 @@ package vfd.posix;
 
 import vfd.FD;
 import vfd.SocketOptions;
-import vproxy.util.Utils;
+import vfd.abs.AbstractBaseFD;
 
 import java.io.IOException;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
-import java.nio.ByteBuffer;
 import java.util.HashMap;
 import java.util.Map;
 
-public class PosixFD implements FD {
+public class PosixFD extends AbstractBaseFD implements FD {
     protected final Posix posix;
     private boolean closed = false;
     protected int fd = -1;
     private Boolean blocking = null;
     private Map<SocketOption, Object> opts = new HashMap<>();
-    private ByteBuffer directBuffer = null;
 
     protected PosixFD(Posix posix) {
         this.posix = posix;
-    }
-
-    protected ByteBuffer getDirectBuffer(int len) {
-        if (directBuffer != null && directBuffer.capacity() < len) {
-            Utils.clean(directBuffer);
-            directBuffer = null;
-        }
-        if (directBuffer == null) {
-            directBuffer = ByteBuffer.allocateDirect(2 * len);
-        }
-        return directBuffer;
-    }
-
-    protected void resetDirectBuffer() {
-        if (directBuffer == null) {
-            return;
-        }
-        directBuffer.limit(directBuffer.capacity()).position(0);
     }
 
     protected void checkFD() throws IOException {
@@ -121,9 +101,7 @@ public class PosixFD implements FD {
         if (fd != -1) {
             posix.close(fd);
         }
-        if (directBuffer != null) {
-            Utils.clean(directBuffer);
-        }
+        super.close();
     }
 
     @Override

@@ -111,6 +111,8 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -De
 
 如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
 
+Windows有一个特别版本用于支持Tap设备：`-Dvfd=windows`，但是普通fd和事件循环依旧是jdk selector channel.
+
 </details>
 
 ## 目标

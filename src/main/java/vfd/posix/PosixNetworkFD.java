@@ -96,32 +96,7 @@ public class PosixNetworkFD extends PosixFD {
         checkConnected();
         checkNotClosed();
 
-        int off = 0;
-        int len = dst.limit() - dst.position();
-        ByteBuffer directBuffer;
-        boolean needCopy = false;
-        if (dst.isDirect()) {
-            directBuffer = dst;
-            off = dst.position();
-        } else {
-            directBuffer = getDirectBuffer(len);
-            needCopy = true;
-        }
-        int n = 0;
-        try {
-            n = posix.read(fd, directBuffer, off, len);
-        } finally {
-            if (n > 0) {
-                if (needCopy) {
-                    directBuffer.limit(n).position(0);
-                    dst.put(directBuffer);
-                } else {
-                    dst.position(dst.position() + n);
-                }
-            }
-            resetDirectBuffer();
-        }
-        return n;
+        return utilRead(dst, (buf, off, len) -> posix.read(fd, buf, off, len));
     }
 
     public int write(ByteBuffer src) throws IOException {
@@ -129,34 +104,7 @@ public class PosixNetworkFD extends PosixFD {
         checkConnected();
         checkNotClosed();
 
-        int off = 0;
-        int len = src.limit() - src.position();
-        ByteBuffer directBuffer;
-        boolean needCopy = false;
-        if (src.isDirect()) {
-            directBuffer = src;
-            off = src.position();
-        } else {
-            directBuffer = getDirectBuffer(len);
-            directBuffer.put(src);
-            needCopy = true;
-        }
-        int n = 0;
-        try {
-            n = posix.write(fd, directBuffer, off, len);
-        } finally {
-            if (needCopy) { // src was fully read
-                if (n < len) {
-                    src.position(src.limit() - len + n);
-                }
-            } else { // src was not modified
-                if (n > 0) {
-                    src.position(src.position() + n);
-                }
-            }
-            resetDirectBuffer();
-        }
-        return n;
+        return utilWrite(src, (buf, off, len) -> posix.write(fd, buf, off, len));
     }
 
     @Override

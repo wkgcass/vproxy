@@ -1,7 +1,7 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
-import vfd.posix.TapDatagramFD;
+import vfd.TapDatagramFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Logger;
 import vswitch.packet.VXLanPacket;
@@ -39,7 +39,7 @@ public class TapIface implements Iface {
 
     @Override
     public String toString() {
-        return "Iface(tap:" + tap.tap.dev + ",vni:" + localSideVni + ")";
+        return "Iface(tap:" + tap.getTap().dev + ",vni:" + localSideVni + ")";
     }
 
     @Override

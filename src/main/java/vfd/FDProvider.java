@@ -2,6 +2,7 @@ package vfd;
 
 import vfd.jdk.ChannelFDs;
 import vfd.posix.PosixFDs;
+import vfd.windows.WindowsFDs;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -14,7 +15,7 @@ public class FDProvider {
     private final FDs provided;
 
     private FDProvider() {
-        var supported = Arrays.asList("provided", "jdk", "posix");
+        var supported = Arrays.asList("provided", "jdk", "posix", "windows");
         var selected = VFDConfig.vfdImpl;
         if (!supported.contains(selected)) {
             selected = "provided";
@@ -24,6 +25,9 @@ public class FDProvider {
         } else if ("posix".equals(selected)) {
             provided = new PosixFDs();
             System.out.println("USING POSIX NATIVE FDs Impl");
+        } else if ("windows".equals(selected)) {
+            provided = new WindowsFDs();
+            System.out.println("USING WINDOWS NATIVE FDs Impl");
         } else {
             ServiceLoader<FDs> loader = ServiceLoader.load(FDs.class);
             Optional<FDs> vChannels = loader.findFirst();

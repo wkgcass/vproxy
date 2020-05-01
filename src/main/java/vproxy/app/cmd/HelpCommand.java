@@ -1367,7 +1367,7 @@ public class HelpCommand {
                 ))
             )),
         tap("tap", null, "add/remove a tap device and bind it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
-            "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix",
+            "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix or -Dvfd=windows",
             Arrays.asList(
                 new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni assigned for the user"),

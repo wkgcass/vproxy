@@ -41,6 +41,24 @@ Ok, Let's play with it!
 
 ## Basic
 
+### 0. prepare the environment
+
+On Linux, nothing to do in this step.
+
+On MacOS, run `brew cask install tuntap`, which would install the `tuntap` kernel extension.
+
+On Windows, follow these steps:
+
+1. Download OpenVPN installer
+2. If you do not want to use OpenVPN, you may remove all checks except the `TAP Driver` when installing.
+3. Go to `Network and Sharing Center` > `Change adapter settings` (on the left side)
+4. Rename the `TAP-Windows Adaptor` to `tap0`
+5. When adding tap devices to vproxy, use the above name
+
+For more info, you may check the `Out-Of-Date` article `ManagingWindowsTAPDrivers – OpenVPN Community`, it seems the web page cannot be directly accessed (maybe because of a check to the referrer header), so use a google [search page](https://www.google.com/search?q=https%3A%2F%2Fcommunity.openvpn.net%2Fopenvpn%2Fwiki%2FManagingWindowsTAPDrivers&oq=https%3A%2F%2Fcommunity.openvpn.net%2Fopenvpn%2Fwiki%2FManagingWindowsTAPDrivers) instead.  
+It's a little bit old, but there are some useful info (which I referred to when adapting the Windows implementation).  
+In the article, chapter `Manual configuration of the TAP-Windows adapter` tells you how to configure a tap adapter, and chapter `Installing and uninstalling TAP-drivers` tells you how to add/remove a tap adapter.
+
 ### 1. create the switch
 
 The following commands should work properly in linux.
@@ -70,6 +88,8 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -Deploy=HelloWorld -jar build/
 
 Check the output, and play with it with `telnet/curl/nc` if you want. Then `ctrl-c` to quit.
 
+Note: on windows, use `-Dvfd=windows` instead.
+
 #### 4) run
 
 ```
@@ -79,6 +99,8 @@ sudo java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.ja
 Sometimes you may have to use `sudo env PATH=$PATH` prefix.
 
 You should see some output, and you can write things into the stdin.
+
+Note: on windows, use `-Dvfd=windows` instead.
 
 #### 5) use redis-cli to manage the vproxy (optional)
 

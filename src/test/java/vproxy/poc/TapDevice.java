@@ -2,8 +2,8 @@ package vproxy.poc;
 
 import vfd.FDProvider;
 import vfd.FDs;
-import vfd.posix.PosixFDs;
-import vfd.posix.TapDatagramFD;
+import vfd.FDsWithTap;
+import vfd.TapDatagramFD;
 import vproxy.util.ByteArray;
 import vswitch.packet.EthernetPacket;
 
@@ -13,13 +13,13 @@ import java.nio.ByteBuffer;
 public class TapDevice {
     public static void main(String[] args) throws Exception {
         FDs fds = FDProvider.get().getProvided();
-        if (!(fds instanceof PosixFDs)) {
+        if (!(fds instanceof FDsWithTap)) {
             throw new Exception("unsupported");
         }
-        PosixFDs posixFDs = (PosixFDs) fds;
-        TapDatagramFD fd = posixFDs.openTap("tap1");
+        FDsWithTap tapFDs = (FDsWithTap) fds;
+        TapDatagramFD fd = tapFDs.openTap("tap1");
         System.out.println("Tap fd opened: " + fd);
-        System.out.println("Supports non-blocking: " + posixFDs.posix.tapNonBlockingSupported());
+        System.out.println("Supports non-blocking: " + tapFDs.tapNonBlockingSupported());
         ByteBuffer buf = ByteBuffer.allocate(2048); // should always be enough for a network packet
         //noinspection InfiniteLoopStatement
         while (true) {
