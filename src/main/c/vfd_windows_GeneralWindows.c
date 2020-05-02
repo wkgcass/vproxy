@@ -189,7 +189,8 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
-            long offset = ((long)(ov->Offset)) | (((long) ov->OffsetHigh) << 32);
+            unsigned long long offset = ((unsigned long long) (ov->Offset)) |
+                                       (((unsigned long long) (ov->OffsetHigh)) << 32);
             offset += n;
             ov->Offset = offset & 0xffffffff;
             ov->OffsetHigh = (offset >> 32) & 0xffffffff;
@@ -229,7 +230,8 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
         }
         status = GetOverlappedResult(handle, ov, &n, TRUE);
         if (status) {
-            long offset = ((long)(ov->Offset)) | (((long) ov->OffsetHigh) << 32);
+            unsigned long long offset = ((unsigned long long) (ov->Offset)) |
+                                       (((unsigned long long) (ov->OffsetHigh)) << 32);
             offset += n;
             ov->Offset = offset & 0xffffffff;
             ov->OffsetHigh = (offset >> 32) & 0xffffffff;
