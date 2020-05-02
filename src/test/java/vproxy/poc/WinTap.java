@@ -1,7 +1,7 @@
 package vproxy.poc;
 
-import vfd.windows.GeneralWindows;
-import vfd.windows.Windows;
+import vfd.TapDatagramFD;
+import vfd.windows.WindowsFDs;
 import vproxy.util.ByteArray;
 
 import java.io.IOException;
@@ -11,16 +11,18 @@ import java.util.LinkedList;
 public class WinTap {
     public static void main(String[] args) throws IOException {
         System.loadLibrary("vfdwindows");
-        Windows win = new GeneralWindows();
-        long handle = win.createTapFD("tap0");
-        ByteBuffer rcvBuf = ByteBuffer.allocateDirect(2048);
-        ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
+        WindowsFDs windowsFDs = new WindowsFDs();
+        TapDatagramFD fd = windowsFDs.openTap("tap0");
+
+        ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
+        ByteBuffer sndBuf = ByteBuffer.allocate(2048);
         LinkedList<ByteArray> q = new LinkedList<>();
         new Thread(() -> {
             while (true) {
+                rcvBuf.limit(rcvBuf.capacity()).position(0);
                 int n;
                 try {
-                    n = win.read(handle, rcvBuf, 0, rcvBuf.capacity());
+                    n = fd.read(rcvBuf);
                 } catch (IOException e) {
                     e.printStackTrace();
                     continue;
@@ -57,7 +59,7 @@ public class WinTap {
                 sndBuf.put(arr.toJavaArray());
                 int n = -1;
                 try {
-                    n = win.write(handle, sndBuf, 0, arr.length());
+                    n = fd.write(sndBuf);
                 } catch (IOException e) {
                     e.printStackTrace();
                 }
