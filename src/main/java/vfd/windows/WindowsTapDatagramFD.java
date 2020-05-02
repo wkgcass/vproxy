@@ -4,6 +4,7 @@ import vfd.FD;
 import vfd.TapDatagramFD;
 import vfd.TapInfo;
 import vfd.abs.AbstractBaseFD;
+import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -83,7 +84,13 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
     public int write(ByteBuffer src) throws IOException {
         checkNotClosed();
 
-        return utilWrite(src, (buf, off, len) -> windows.write(handle, buf, off, len, writeOverlapped));
+        int srcLen = src.limit() - src.position();
+        int n = utilWrite(src, (buf, off, len) -> windows.write(handle, buf, off, len, writeOverlapped));
+        if (n == 0) {
+            assert Logger.lowLevelDebug("windows tap driver may reject packets not belong to this endpoint (e.g. ipv6 multicast) and return 0, we need to skip this packet");
+            return srcLen;
+        }
+        return n;
     }
 
     @Override
