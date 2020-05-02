@@ -17,10 +17,26 @@ JNIEXPORT jboolean JNICALL Java_vfd_windows_GeneralWindows_tapNonBlockingSupport
 
 /*
  * Class:     vfd_windows_GeneralWindows
- * Method:    createTapFD
+ * Method:    allocateOverlapped
+ * Signature: ()J
+ */
+JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_allocateOverlapped
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     vfd_windows_GeneralWindows
+ * Method:    releaseOverlapped
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_vfd_windows_GeneralWindows_releaseOverlapped
+  (JNIEnv *, jobject, jlong);
+
+/*
+ * Class:     vfd_windows_GeneralWindows
+ * Method:    createTapHandle
  * Signature: (Ljava/lang/String;)J
  */
-JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_createTapFD
+JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_createTapHandle
   (JNIEnv *, jobject, jstring);
 
 /*
@@ -34,18 +50,18 @@ JNIEXPORT void JNICALL Java_vfd_windows_GeneralWindows_closeHandle
 /*
  * Class:     vfd_windows_GeneralWindows
  * Method:    read
- * Signature: (JLjava/nio/ByteBuffer;II)I
+ * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
 JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
-  (JNIEnv *, jobject, jlong, jobject, jint, jint);
+  (JNIEnv *, jobject, jlong, jobject, jint, jint, jlong);
 
 /*
  * Class:     vfd_windows_GeneralWindows
  * Method:    write
- * Signature: (JLjava/nio/ByteBuffer;II)I
+ * Signature: (JLjava/nio/ByteBuffer;IIJ)I
  */
 JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
-  (JNIEnv *, jobject, jlong, jobject, jint, jint);
+  (JNIEnv *, jobject, jlong, jobject, jint, jint, jlong);
 
 #ifdef __cplusplus
 }

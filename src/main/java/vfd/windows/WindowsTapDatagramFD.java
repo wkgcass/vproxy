@@ -14,14 +14,21 @@ import java.nio.ByteBuffer;
 public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramFD {
     public final long handle;
     public final TapInfo tap;
+    private final long readOverlapped;
+    private final long writeOverlapped;
     private final Windows windows;
 
     private boolean closed = false;
+    private boolean handleClosed = false;
+    private boolean readOverlappedReleased = false;
+    private boolean writeOverlappedReleased = false;
 
-    public WindowsTapDatagramFD(Windows windows, long handle, TapInfo tap) {
+    public WindowsTapDatagramFD(Windows windows, long handle, TapInfo tap, long readOverlapped, long writeOverlapped) {
         this.handle = handle;
         this.tap = tap;
         this.windows = windows;
+        this.readOverlapped = readOverlapped;
+        this.writeOverlapped = writeOverlapped;
     }
 
     @Override
@@ -69,14 +76,14 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
     public int read(ByteBuffer dst) throws IOException {
         checkNotClosed();
 
-        return utilRead(dst, (buf, off, len) -> windows.read(handle, buf, off, len));
+        return utilRead(dst, (buf, off, len) -> windows.read(handle, buf, off, len, readOverlapped));
     }
 
     @Override
     public int write(ByteBuffer src) throws IOException {
         checkNotClosed();
 
-        return utilWrite(src, (buf, off, len) -> windows.write(handle, buf, off, len));
+        return utilWrite(src, (buf, off, len) -> windows.write(handle, buf, off, len, writeOverlapped));
     }
 
     @Override
@@ -104,7 +111,18 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
         if (closed) {
             return;
         }
-        windows.closeHandle(handle);
+        if (!handleClosed) {
+            windows.closeHandle(handle);
+            handleClosed = true;
+        }
+        if (!readOverlappedReleased) {
+            windows.releaseOverlapped(readOverlapped);
+            readOverlappedReleased = true;
+        }
+        if (!writeOverlappedReleased) {
+            windows.releaseOverlapped(writeOverlapped);
+            writeOverlappedReleased = true;
+        }
         closed = true;
     }
 

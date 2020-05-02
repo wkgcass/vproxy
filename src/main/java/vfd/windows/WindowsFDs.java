@@ -4,6 +4,7 @@ import vfd.*;
 import vfd.jdk.ChannelFDs;
 import vfd.posix.Posix;
 import vfd.TraceInvocationHandler;
+import vproxy.util.Logger;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -69,8 +70,35 @@ public class WindowsFDs implements FDs, FDsWithTap {
 
     @Override
     public TapDatagramFD openTap(String dev) throws IOException {
-        long handle = windows.createTapFD(dev);
-        return new WindowsTapDatagramFD(windows, handle, new TapInfo(dev, (int) handle));
+        long handle = windows.createTapHandle(dev);
+        long readOverlapped;
+        try {
+            readOverlapped = windows.allocateOverlapped();
+        } catch (IOException e) {
+            try {
+                windows.closeHandle(handle);
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("close handle " + handle + " failed when allocating readOverlapped failed", t);
+            }
+            throw e;
+        }
+        long writeOverlapped;
+        try {
+            writeOverlapped = windows.allocateOverlapped();
+        } catch (IOException e) {
+            try {
+                windows.closeHandle(handle);
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("close handle " + handle + " failed when allocating writeOverlapped failed", t);
+            }
+            try {
+                windows.releaseOverlapped(readOverlapped);
+            } catch (Throwable t) {
+                Logger.shouldNotHappen("releasing readOverlapped " + readOverlapped + " failed when allocating writeOverlapped failed", t);
+            }
+            throw e;
+        }
+        return new WindowsTapDatagramFD(windows, handle, new TapInfo(dev, (int) handle), readOverlapped, writeOverlapped);
     }
 
     @Override

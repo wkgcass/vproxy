@@ -7,6 +7,31 @@ JNIEXPORT jboolean JNICALL Java_vfd_windows_GeneralWindows_tapNonBlockingSupport
     return JNI_FALSE;
 }
 
+JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_allocateOverlapped
+  (JNIEnv* env, jobject self) {
+    OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
+    HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
+    if (event == NULL) {
+        throwIOExceptionBasedOnLastError(env, "create event failed");
+        free(ov);
+        return 0;
+    }
+    ov.hEvent = event;
+    return (jlong) ov;
+}
+
+JNIEXPORT void JNICALL Java_vfd_windows_GeneralWindows_releaseOverlapped
+  (JNIEnv* env, jobject self, jlong ovJ) {
+    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
+    HANDLE event = ov.event;
+    BOOL status = CloseHandle(event);
+    if (!status) {
+        throwIOExceptionBasedOnLastError(env, "close event failed");
+        return;
+    }
+    free(ov);
+}
+
 #define GUID_MAX_LEN 256
 
 BOOL findTapGuidByNameInNetworkPanel(JNIEnv* env, const char* dev, char* guid) {
@@ -79,7 +104,7 @@ BOOL openTapDevice(JNIEnv* env, char* guid, HANDLE* outHandle) {
                     0,
                     0,
                     OPEN_EXISTING,
-                    FILE_ATTRIBUTE_SYSTEM,
+                    FILE_ATTRIBUTE_SYSTEM | FILE_FLAG_OVERLAPPED,
                     0);
     if (handle == INVALID_HANDLE_VALUE) {
         throwIOExceptionBasedOnLastError(env, "open tap device failed");
@@ -100,7 +125,7 @@ BOOL plugCableToTabDevice(JNIEnv* env, HANDLE handle) {
     }
 }
 
-JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_createTapFD
+JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_createTapHandle
   (JNIEnv* env, jobject self, jstring dev) {
     const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
 
@@ -137,14 +162,32 @@ JNIEXPORT void JNICALL Java_vfd_windows_GeneralWindows_closeHandle
 }
 
 JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
-  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len) {
+  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
         return 0;
     }
     byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
-    BOOL status = ReadFile(handle, buf + off, len, &n, NULL);
+    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
+    BOOL status = ReadFile(handle, buf + off, len, &n, ov);
+    if (!status && GetLastError() == ERROR_IO_PENDING) {
+        DWORD waitStatus = WaitForSingleObject(ov.hEvent, INFINITE);
+        if (waitStatus == WAIT_FAILED) {
+            throwIOExceptionBasedOnLastError(env, "wait failed when reading");
+            return 0;
+        } else if (waitStatus != WAIT_OBJECT_0) {
+            if (waitStatus == WAIT_ABANDONED) {
+                throwIOException(env, "WAIT_ABANDONED when reading");
+            } else if (waitStatus == WAIT_TIMEOUT) {
+                throwIOException(env, "WAIT_TIMEOUT when reading");
+            } else {
+                throwIOException(env, "unknown WAIT error when reading");
+            }
+            return 0;
+        }
+        status = TRUE;
+    }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "read failed");
         return 0;
@@ -153,14 +196,32 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
 }
 
 JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
-  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len) {
+  (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
         return 0;
     }
     byte* buf = (*env)->GetDirectBufferAddress(env, directBuffer);
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
-    BOOL status = WriteFile(handle, buf + off, len, &n, NULL);
+    OVERLAPPED* ov = (OVERLAPPED*) ovJ;
+    BOOL status = WriteFile(handle, buf + off, len, &n, ov);
+    if (!status && GetLastError() == ERROR_IO_PENDING) {
+        DWORD waitStatus = WaitForSingleObject(ov.hEvent, INFINITE);
+        if (waitStatus == WAIT_FAILED) {
+            throwIOExceptionBasedOnLastError(env, "wait failed when writing");
+            return 0;
+        } else if (waitStatus != WAIT_OBJECT_0) {
+            if (waitStatus == WAIT_ABANDONED) {
+                throwIOException(env, "WAIT_ABANDONED when writing");
+            } else if (waitStatus == WAIT_TIMEOUT) {
+                throwIOException(env, "WAIT_TIMEOUT when writing");
+            } else {
+                throwIOException(env, "unknown WAIT error when writing");
+            }
+            return 0;
+        }
+        status = TRUE;
+    }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "write failed");
         return 0;
