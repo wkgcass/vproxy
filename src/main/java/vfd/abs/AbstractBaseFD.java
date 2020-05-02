@@ -7,30 +7,52 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractBaseFD implements FD {
-    private ByteBuffer directBuffer = null;
+    private ByteBuffer directBufferForReading = null;
+    private ByteBuffer directBufferForWriting = null;
 
-    protected ByteBuffer getDirectBuffer(int len) {
-        if (directBuffer != null && directBuffer.capacity() < len) {
-            Utils.clean(directBuffer);
-            directBuffer = null;
+    protected ByteBuffer getDirectBufferForReading(int len) {
+        if (directBufferForReading != null && directBufferForReading.capacity() < len) {
+            Utils.clean(directBufferForReading);
+            directBufferForReading = null;
         }
-        if (directBuffer == null) {
-            directBuffer = ByteBuffer.allocateDirect(2 * len);
+        if (directBufferForReading == null) {
+            directBufferForReading = ByteBuffer.allocateDirect(2 * len);
         }
-        return directBuffer;
+        return directBufferForReading;
     }
 
-    protected void resetDirectBuffer() {
-        if (directBuffer == null) {
+    protected ByteBuffer getDirectBufferForWriting(int len) {
+        if (directBufferForWriting != null && directBufferForWriting.capacity() < len) {
+            Utils.clean(directBufferForWriting);
+            directBufferForWriting = null;
+        }
+        if (directBufferForWriting == null) {
+            directBufferForWriting = ByteBuffer.allocateDirect(2 * len);
+        }
+        return directBufferForWriting;
+    }
+
+    protected void resetDirectBufferForReading() {
+        if (directBufferForReading == null) {
             return;
         }
-        directBuffer.limit(directBuffer.capacity()).position(0);
+        directBufferForReading.limit(directBufferForReading.capacity()).position(0);
+    }
+
+    protected void resetDirectBufferForWriting() {
+        if (directBufferForWriting == null) {
+            return;
+        }
+        directBufferForWriting.limit(directBufferForWriting.capacity()).position(0);
     }
 
     @Override
     public void close() throws IOException {
-        if (directBuffer != null) {
-            Utils.clean(directBuffer);
+        if (directBufferForReading != null) {
+            Utils.clean(directBufferForReading);
+        }
+        if (directBufferForWriting != null) {
+            Utils.clean(directBufferForWriting);
         }
     }
 
@@ -48,7 +70,7 @@ public abstract class AbstractBaseFD implements FD {
             directBuffer = dst;
             off = dst.position();
         } else {
-            directBuffer = getDirectBuffer(len);
+            directBuffer = getDirectBufferForReading(len);
             needCopy = true;
         }
         int n = 0;
@@ -63,7 +85,7 @@ public abstract class AbstractBaseFD implements FD {
                     dst.position(dst.position() + n);
                 }
             }
-            resetDirectBuffer();
+            resetDirectBufferForReading();
         }
         return n;
     }
@@ -82,7 +104,7 @@ public abstract class AbstractBaseFD implements FD {
             directBuffer = src;
             off = src.position();
         } else {
-            directBuffer = getDirectBuffer(len);
+            directBuffer = getDirectBufferForWriting(len);
             directBuffer.put(src);
             needCopy = true;
         }
@@ -99,7 +121,7 @@ public abstract class AbstractBaseFD implements FD {
                     src.position(src.position() + n);
                 }
             }
-            resetDirectBuffer();
+            resetDirectBufferForWriting();
         }
         return n;
     }

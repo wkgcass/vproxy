@@ -93,7 +93,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             directBuffer = buf;
             off = buf.position();
         } else {
-            directBuffer = getDirectBuffer(len);
+            directBuffer = getDirectBufferForWriting(len);
             directBuffer.put(buf);
             needCopy = true;
         }
@@ -117,7 +117,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
                     buf.position(buf.position() + n);
                 }
             }
-            resetDirectBuffer();
+            resetDirectBufferForWriting();
         }
         return n;
     }
@@ -137,7 +137,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             directBuffer = buf;
             off = buf.position();
         } else {
-            directBuffer = getDirectBuffer(len);
+            directBuffer = getDirectBufferForReading(len);
             needCopy = true;
         }
         VSocketAddress l4addr;
@@ -163,7 +163,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
                     buf.position(buf.position() + n);
                 }
             }
-            resetDirectBuffer();
+            resetDirectBufferForReading();
         }
         return l4addr.toInetSocketAddress();
     }
