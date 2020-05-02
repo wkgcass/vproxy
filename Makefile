@@ -5,10 +5,10 @@ VERSION := $(shell cat src/main/java/vproxy/app/Application.java | grep '_THE_VE
 
 clean:
 	./gradlew clean
-	rm -f  ./src/main/c/libvfdposix.dylib
-	rm -f  ./src/main/c/libvfdposix.so
-	rm -f  ./src/main/c/libvfdposix.dll
-	rm -f  ./src/main/c/libvfdfstack.so
+	rm -f ./src/main/c/libvfdposix.dylib
+	rm -f ./src/main/c/libvfdposix.so
+	rm -f ./src/main/c/libvfdfstack.so
+	rm -f ./src/main/c/vfdwindows.dll
 	rm -f ./vproxy
 	rm -f ./vproxy-*
 
