@@ -6,6 +6,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.Lock;
+import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
@@ -160,15 +161,20 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
         try (var x = writeQLock.lock()) {
             // check len limit
             if (currentWriteQueueBytes + srcLen > writeQByteLimit) { // cannot write
-                assert Logger.lowLevelDebug("cannot store bytes into the write queue: current: " + currentWriteQueueBytes + ", input: " + srcLen + ", limit: " + writeQByteLimit);
+                Logger.warn(LogType.BUFFER_INSUFFICIENT, "cannot store bytes into the write queue: current: " + currentWriteQueueBytes + ", input: " + srcLen + ", limit: " + writeQByteLimit);
                 return 0;
             }
             var copy = ByteBuffer.allocate(srcLen);
             copy.put(src);
+            copy.flip();
             writeQueue.add(copy);
             currentWriteQueueBytes += srcLen;
+            if (currentWriteQueueBytes > writeQByteLimit * 0.8) {
+                Logger.warn(LogType.BUFFER_INSUFFICIENT, "the write queue consumes more than 80% of the limit: current: " + currentWriteQueueBytes + ", limit: " + writeQByteLimit);
+            }
         }
-        return 0;
+        resumeBlockingWrite();
+        return srcLen;
     }
 
     @Override

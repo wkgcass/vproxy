@@ -23,4 +23,5 @@ public enum LogType {
     PROBE,
     SOCKET_ERROR,
     FILE_ERROR,
+    BUFFER_INSUFFICIENT,
 }

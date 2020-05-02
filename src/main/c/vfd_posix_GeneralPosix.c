@@ -706,7 +706,7 @@ success:
       devName[IFNAMSIZ] = '\0'; // make sure the last byte is 0
       jstring genDevName = (*env)->NewStringUTF(env, devName);
 
-      jclass sCls = (*env)->FindClass(env, "vfd/posix/TapInfo");
+      jclass sCls = (*env)->FindClass(env, "vfd/TapInfo");
       jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
       jobject ret = (*env)->NewObject(env, sCls, constructor, genDevName, fd);
 
