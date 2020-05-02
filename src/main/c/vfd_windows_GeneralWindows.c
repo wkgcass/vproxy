@@ -10,20 +10,21 @@ JNIEXPORT jboolean JNICALL Java_vfd_windows_GeneralWindows_tapNonBlockingSupport
 JNIEXPORT jlong JNICALL Java_vfd_windows_GeneralWindows_allocateOverlapped
   (JNIEnv* env, jobject self) {
     OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
+    memset(ov, 0, sizeof(OVERLAPPED));
     HANDLE event = CreateEvent(NULL, FALSE, FALSE, NULL);
     if (event == NULL) {
         throwIOExceptionBasedOnLastError(env, "create event failed");
         free(ov);
         return 0;
     }
-    ov.hEvent = event;
+    ov->hEvent = event;
     return (jlong) ov;
 }
 
 JNIEXPORT void JNICALL Java_vfd_windows_GeneralWindows_releaseOverlapped
   (JNIEnv* env, jobject self, jlong ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    HANDLE event = ov.event;
+    HANDLE event = ov->hEvent;
     BOOL status = CloseHandle(event);
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "close event failed");
@@ -170,9 +171,9 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    BOOL status = ReadFile(handle, buf + off, len, &n, ov);
+    BOOL status = ReadFile(handle, buf + off, len, NULL, ov);
     if (!status && GetLastError() == ERROR_IO_PENDING) {
-        DWORD waitStatus = WaitForSingleObject(ov.hEvent, INFINITE);
+        DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
             throwIOExceptionBasedOnLastError(env, "wait failed when reading");
             return 0;
@@ -186,7 +187,13 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_read
             }
             return 0;
         }
-        status = TRUE;
+        status = GetOverlappedResult(handle, ov, &n, TRUE);
+        if (status) {
+            long offset = ((long)(ov->Offset)) | (((long) ov->OffsetHigh) << 32);
+            offset += n;
+            ov->Offset = offset & 0xffffffff;
+            ov->OffsetHigh = (offset >> 32) & 0xffffffff;
+        }
     }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "read failed");
@@ -204,9 +211,9 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
     DWORD n = 0;
     HANDLE handle = (HANDLE) handleJ;
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
-    BOOL status = WriteFile(handle, buf + off, len, &n, ov);
+    BOOL status = WriteFile(handle, buf + off, len, NULL, ov);
     if (!status && GetLastError() == ERROR_IO_PENDING) {
-        DWORD waitStatus = WaitForSingleObject(ov.hEvent, INFINITE);
+        DWORD waitStatus = WaitForSingleObject(ov->hEvent, INFINITE);
         if (waitStatus == WAIT_FAILED) {
             throwIOExceptionBasedOnLastError(env, "wait failed when writing");
             return 0;
@@ -220,7 +227,13 @@ JNIEXPORT jint JNICALL Java_vfd_windows_GeneralWindows_write
             }
             return 0;
         }
-        status = TRUE;
+        status = GetOverlappedResult(handle, ov, &n, TRUE);
+        if (status) {
+            long offset = ((long)(ov->Offset)) | (((long) ov->OffsetHigh) << 32);
+            offset += n;
+            ov->Offset = offset & 0xffffffff;
+            ov->OffsetHigh = (offset >> 32) & 0xffffffff;
+        }
     }
     if (!status) {
         throwIOExceptionBasedOnLastError(env, "write failed");
