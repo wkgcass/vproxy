@@ -25,7 +25,7 @@ and the following security features:
 * access control for encrypted vxlan link (username and password)
 
 vproxy is a zero-dependency networking tool, which provides lb, socks5, dns, server-group (with health check) and may other utilities.  
-It's easy to read, learn or modify since it's zero-dependency, all code is only simple java code and.  
+It's easy to read, learn or modify since it's zero-dependency, all codes are simple java code with a little piece of optional jni extension.  
 Here we talk about SDN switches, it's really easy for you to modify the networking stack, all you need is in one file `Switch.java`.  
 Packets for common protocols in L3 are parsed in `vswitch.packet` package.  
 Interfaces are placed in `vproxy.iface` package.
@@ -45,7 +45,7 @@ Ok, Let's play with it!
 
 On Linux, nothing to do in this step.
 
-On MacOS, run `brew cask install tuntap`, which would install the `tuntap` kernel extension.
+On MacOS, run `brew cask install tuntap`, which would install the `tuntap` kernel extension. You can see these character files under `/dev/` directory: `tap0`, `tap1`, ..., `tap10`, ... devices. Use these names in vproxy (without `/dev/` prefix).
 
 On Windows, follow these steps:
 
@@ -58,6 +58,8 @@ On Windows, follow these steps:
 For more info, you may check the `Out-Of-Date` article `ManagingWindowsTAPDrivers – OpenVPN Community`, it seems the web page cannot be directly accessed (maybe because of a check to the referrer header), so use a google [search page](https://www.google.com/search?q=https%3A%2F%2Fcommunity.openvpn.net%2Fopenvpn%2Fwiki%2FManagingWindowsTAPDrivers&oq=https%3A%2F%2Fcommunity.openvpn.net%2Fopenvpn%2Fwiki%2FManagingWindowsTAPDrivers) instead.  
 It's a little bit old, but there are some useful info (which I referred to when adapting the Windows implementation).  
 In the article, chapter `Manual configuration of the TAP-Windows adapter` tells you how to configure a tap adapter, and chapter `Installing and uninstalling TAP-drivers` tells you how to add/remove a tap adapter.
+
+You can also use the bat scripts in `C:\Program Files\TAP-Windows\bin` to add a new tap device. It's recommended to rename the new devices to short names before using.
 
 ### 1. create the switch
 
@@ -78,6 +80,12 @@ make
 make vfdposix
 ```
 
+If you are using windows, it's recommended to use `msys2` and `mingw64` environment. And compile the `vfdwindows` with:
+
+```
+make vfdwindows
+```
+
 #### 3) check
 
 Run the HelloWorld program to check if things went ok:
@@ -88,7 +96,7 @@ java -Dvfd=posix -Djava.library.path=./src/main/c -Deploy=HelloWorld -jar build/
 
 Check the output, and play with it with `telnet/curl/nc` if you want. Then `ctrl-c` to quit.
 
-Note: on windows, use `-Dvfd=windows` instead.
+On windows, use `-Dvfd=windows` instead of `-Dvfd=posix`.
 
 #### 4) run
 
