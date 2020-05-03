@@ -78,15 +78,60 @@ public class Utils {
     }
 
     private static String ipv6Str(byte[] ip) {
-        return "[" + addTo(4, Integer.toHexString((((ip[0] & 0xFF) << 8) & 0xFFFF) | (ip[1] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[2] & 0xFF) << 8) & 0xFFFF) | (ip[3] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[4] & 0xFF) << 8) & 0xFFFF) | (ip[5] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[6] & 0xFF) << 8) & 0xFFFF) | (ip[7] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[8] & 0xFF) << 8) & 0xFFFF) | (ip[9] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[10] & 0xFF) << 8) & 0xFFFF) | (ip[11] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[12] & 0xFF) << 8) & 0xFFFF) | (ip[13] & 0xFF)))
-            + ":" + addTo(4, Integer.toHexString((((ip[14] & 0xFF) << 8) & 0xFFFF) | (ip[15] & 0xFF)))
-            + "]";
+        String[] split = {Integer.toHexString((((ip[0] & 0xFF) << 8) & 0xFFFF) | (ip[1] & 0xFF)),
+            Integer.toHexString((((ip[2] & 0xFF) << 8) & 0xFFFF) | (ip[3] & 0xFF)),
+            Integer.toHexString((((ip[4] & 0xFF) << 8) & 0xFFFF) | (ip[5] & 0xFF)),
+            Integer.toHexString((((ip[6] & 0xFF) << 8) & 0xFFFF) | (ip[7] & 0xFF)),
+            Integer.toHexString((((ip[8] & 0xFF) << 8) & 0xFFFF) | (ip[9] & 0xFF)),
+            Integer.toHexString((((ip[10] & 0xFF) << 8) & 0xFFFF) | (ip[11] & 0xFF)),
+            Integer.toHexString((((ip[12] & 0xFF) << 8) & 0xFFFF) | (ip[13] & 0xFF)),
+            Integer.toHexString((((ip[14] & 0xFF) << 8) & 0xFFFF) | (ip[15] & 0xFF)),
+        };
+
+        int max = 0;
+        int idx = split.length;
+        int endExclusive = 0;
+        int curLen = 0;
+        int curIdx = -1;
+        for (int i = 0; i <= split.length; i++) {
+            String s;
+            if (i < split.length) {
+                s = split[i];
+            } else {
+                s = ""; // not 0
+            }
+            if (s.equals("0")) {
+                if (curIdx == -1) { // not started yet
+                    curIdx = i;
+                }
+                curLen += 1;
+            } else {
+                if (curIdx != -1) { // end
+                    if (max < curLen) {
+                        max = curLen;
+                        idx = curIdx;
+                        endExclusive = i;
+                    }
+                    curLen = 0;
+                    curIdx = -1;
+                }
+            }
+        }
+
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        for (int i = 0; i < split.length; ++i) {
+            if (i < idx || i >= endExclusive) {
+                if (i != 0 && i != endExclusive) {
+                    sb.append(":");
+                }
+                sb.append(split[i]);
+            } else if (i == idx) {
+                sb.append("::");
+            }
+        }
+        sb.append("]");
+        return sb.toString();
     }
 
     private static String ipv4Str(byte[] ip) {

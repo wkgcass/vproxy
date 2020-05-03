@@ -50,27 +50,35 @@ public class TestIpParser {
     }
 
     private void check(String s) throws Exception {
+        check(s, true);
+    }
+
+    private void check(String s, boolean recurse) throws Exception {
         InetAddress addr = InetAddress.getByName(s); // check with JDK impl
-        byte[] b1 = addr.getAddress();
-        byte[] b2 = Utils.parseIpv6String(s);
-        assert b2 != null;
+        byte[] bParsedByJDK = addr.getAddress();
+        byte[] bParsedByVproxy = Utils.parseIpv6String(s);
+        assert bParsedByVproxy != null;
         if (addr instanceof Inet6Address) {
-            assertArrayEquals(b1, b2);
+            assertArrayEquals(bParsedByJDK, bParsedByVproxy);
         } else {
             for (int i = 0; i < 10; ++i) {
-                assertEquals(0, b2[i]);
+                assertEquals(0, bParsedByVproxy[i]);
             }
             for (int i = 11; i < 12; ++i) {
-                assertEquals((byte) 0xFF, b2[i]);
+                assertEquals((byte) 0xFF, bParsedByVproxy[i]);
             }
             for (int i = 0; i < 4; ++i) {
-                assertEquals(b1[i], b2[i + 12]);
+                assertEquals(bParsedByJDK[i], bParsedByVproxy[i + 12]);
             }
         }
-        if (s.startsWith("[")) {
-            return;
+        // ipStr and check again
+        String ipStrResult = Utils.ipStr(bParsedByVproxy);
+        if (recurse) {
+            check(ipStrResult, false);
         }
-        check("[" + s + "]");
+        if (recurse) {
+            check("[" + s + "]", false);
+        }
     }
 
     @Test
