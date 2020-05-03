@@ -1,0 +1,74 @@
+[
+	{
+		"name": "java.lang.Runnable",
+		"methods": [
+			{
+				"name": "run",
+				"parameterTypes": []
+			}
+		]
+	},
+	{
+		"name": "vfd.posix.FDInfo",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "int", "int", "java.lang.Object" ]
+			}
+		]
+	},
+	{
+		"name": "vfd.posix.SocketAddressIPv4",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "int", "int" ]
+			}
+		]
+	},
+	{
+		"name": "vfd.posix.SocketAddressIPv6",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "java.lang.String", "int" ]
+			}
+		]
+	},
+	{
+		"name": "vfd.posix.UDPRecvResult",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "vfd.posix.VSocketAddress", "int" ]
+			}
+		]
+	},
+	{
+		"name": "vfd.TapInfo",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "java.lang.String", "int" ]
+			}
+		]
+	},
+	{
+		"name": "java.lang.UnsupportedOperationException",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "java.lang.String" ]
+			}
+		]
+	},
+	{
+		"name": "java.io.IOException",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "java.lang.String" ]
+			}
+		]
+	}
+]

@@ -51,7 +51,7 @@ public class SystemCommand {
     }
 
     public static void handleSystemCall(String line, Callback<CmdResult, ? super Throwable> cb) {
-        String from = Thread.currentThread().getStackTrace()[2].getClassName();
+        String from = Utils.stackTraceStartingFromThisMethodInclusive()[1].getClassName();
         String cmd = line.substring("System call:".length()).trim();
         outswitch:
         switch (cmd) {

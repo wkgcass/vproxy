@@ -1093,4 +1093,20 @@ public class Utils {
             }
         }).start();
     }
+
+    // the returned array would be without getStackTrace() and this method
+    public static StackTraceElement[] stackTraceStartingFromThisMethodInclusive() {
+        final String meth = "stackTraceStartingFromThisMethodInclusive";
+        StackTraceElement[] arr = Thread.currentThread().getStackTrace();
+        int i = 0;
+        for (StackTraceElement elem : arr) {
+            i += 1;
+            if (elem.getMethodName().equals(meth)) {
+                break;
+            }
+        }
+        StackTraceElement[] ret = new StackTraceElement[arr.length - i];
+        System.arraycopy(arr, i, ret, 0, ret.length);
+        return ret;
+    }
 }

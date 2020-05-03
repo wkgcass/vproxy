@@ -106,7 +106,7 @@ public class RESPParser {
     private static final int WANT_MORE = 1;
 
     private int error(String msg) {
-        assert Logger.lowLevelDebug(Thread.currentThread().getStackTrace()[2].getLineNumber() + " - " + msg);
+        assert Logger.lowLevelDebug(Utils.stackTraceStartingFromThisMethodInclusive()[1].getLineNumber() + " - " + msg);
         this.errorMessage = msg;
         return GOT_ERROR;
     }

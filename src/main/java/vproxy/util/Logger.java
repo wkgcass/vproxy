@@ -68,6 +68,24 @@ public class Logger {
             "] ";
     }
 
+    private static StackTraceElement getFirstElementOutOfLoggerLib() {
+        final String loggerClass = Logger.class.getName();
+        var arr = Thread.currentThread().getStackTrace();
+        boolean intoLoggerLib = false;
+        for (StackTraceElement e : arr) {
+            if (e.getClassName().equals(loggerClass)) {
+                intoLoggerLib = true;
+            } else {
+                if (intoLoggerLib) {
+                    // out of logger lib now
+                    return e;
+                }
+            }
+        }
+        // should not reach here, however return the last element if it really happens
+        return arr[arr.length - 1];
+    }
+
     // some message for debugging this project
     // use assert to print this log
     // e.g. assert Logger.lowLevelDebug("i will not be here in production environment")
@@ -75,7 +93,7 @@ public class Logger {
         if (!lowLevelDebugOn)
             return true;
         String threadName = Thread.currentThread().getName();
-        StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
+        StackTraceElement elem = getFirstElementOutOfLoggerLib();
         System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + msg);
         return true;
     }
@@ -84,14 +102,14 @@ public class Logger {
         if (!lowLevelNetDebugOn || !lowLevelDebugOn)
             return true;
         String threadName = Thread.currentThread().getName();
-        StackTraceElement elem = Thread.currentThread().getStackTrace()[2];
+        StackTraceElement elem = getFirstElementOutOfLoggerLib();
         System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + msg);
         return true;
     }
 
     private static void privateErr(String err) {
         String threadName = Thread.currentThread().getName();
-        StackTraceElement elem = Thread.currentThread().getStackTrace()[3];
+        StackTraceElement elem = getFirstElementOutOfLoggerLib();
         System.out.println(ERROR_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + err);
     }
 
