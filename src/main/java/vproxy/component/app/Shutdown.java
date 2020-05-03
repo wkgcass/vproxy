@@ -742,7 +742,7 @@ public class Shutdown {
                 continue;
             }
 
-            Logger.info(LogType.BEFORE_PARSING_CMD, line);
+            assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + line);
             Command cmd;
             try {
                 cmd = Command.parseStrCmd(line);
@@ -750,7 +750,7 @@ public class Shutdown {
                 Logger.warn(LogType.AFTER_PARSING_CMD, "parse command `" + line + "` failed");
                 throw e;
             }
-            Logger.info(LogType.AFTER_PARSING_CMD, cmd.toString());
+            assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
             commands.add(cmd);
         }
         runCommandsOnLoading(commands, 0, cb);
@@ -763,6 +763,7 @@ public class Shutdown {
             return;
         }
         Command cmd = commands.get(idx);
+        Logger.alert("loading command: " + cmd);
         cmd.run(new Callback<>() {
             @Override
             protected void onSucceeded(CmdResult value) {
