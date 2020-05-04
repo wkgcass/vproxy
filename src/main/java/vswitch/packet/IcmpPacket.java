@@ -58,12 +58,7 @@ public class IcmpPacket extends AbstractPacket {
 
         ByteArray ret = ByteArray.allocate(4).set(0, (byte) type).set(1, (byte) code)/*skip checksum here*/.concat(other);
 
-        ByteArray pseudoHeaderTail = ByteArray.allocate(8);
-        ByteArray pseudoHeader = ByteArray.from(ipv6.getSrc().getAddress())
-            .concat(ByteArray.from(ipv6.getDst().getAddress()))
-            .concat(pseudoHeaderTail);
-        pseudoHeaderTail.int32(0, ret.length());
-        pseudoHeaderTail.set(7, (byte) Consts.IP_PROTOCOL_ICMPv6);
+        ByteArray pseudoHeader = SwitchUtils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_ICMPv6, ret.length());
 
         ByteArray toCalculate = pseudoHeader.concat(ret);
         checksum = SwitchUtils.calculateChecksum(toCalculate, toCalculate.length());

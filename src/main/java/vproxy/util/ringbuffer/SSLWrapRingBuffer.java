@@ -1,9 +1,8 @@
 package vproxy.util.ringbuffer;
 
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
+import vmirror.Mirror;
+import vmirror.MirrorData;
+import vproxy.util.*;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -46,6 +45,29 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         }
     }
 
+    private void mirror(ByteBuffer plain, int posBefore, SSLEngineResult result) {
+        if (plain.position() == posBefore) {
+            return; // nothing wrote, so do not mirror data out
+        }
+        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+            return; // nothing should have been written, but the buffer index may change
+        }
+
+        // build meta message
+        String meta = "r.s=" + result.getStatus() +
+            ";" +
+            "e.hs=" + engine.getHandshakeStatus() +
+            ";" +
+            "ib=" + intermediateBufferCap() +
+            ";";
+
+        Mirror.mirror(new MirrorData("ssl")
+            .setSrcRef(engine)
+            .setDstRef(this)
+            .setMeta(meta)
+            .setDataAfter(plain, posBefore));
+    }
+
     @Override
     protected void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = bufferPlain.position();
@@ -59,6 +81,10 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             errored[0] = true;
             ex[0] = e;
             return;
+        }
+
+        if (Mirror.isEnabled()) {
+            mirror(bufferPlain, positionBeforeHandling, result);
         }
 
         assert Logger.lowLevelDebug("wrap: " + result);
@@ -81,6 +107,11 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
                 ex[0] = e;
                 return;
             }
+
+            if (Mirror.isEnabled()) {
+                mirror(bufferPlain, positionBeforeHandling, result);
+            }
+
             assert Logger.lowLevelDebug("wrap2: " + result);
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
             assert Logger.lowLevelDebug("buffer underflow, waiting for more data");

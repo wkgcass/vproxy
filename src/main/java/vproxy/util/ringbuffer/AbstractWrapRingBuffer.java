@@ -59,7 +59,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         intermediateBuffers.add(SimpleRingBuffer.wrap(b));
     }
 
-    private int intermediateBufferCap() {
+    protected int intermediateBufferCap() {
         int cap = 0;
         for (ByteBufferRingBuffer buf : intermediateBuffers) {
             cap += buf.capacity();

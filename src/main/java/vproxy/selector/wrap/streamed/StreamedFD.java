@@ -2,11 +2,13 @@ package vproxy.selector.wrap.streamed;
 
 import vfd.FD;
 import vfd.SocketFD;
+import vmirror.Mirror;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
+import vswitch.util.Consts;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -185,6 +187,23 @@ public class StreamedFD implements SocketFD, VirtualFD {
         return true; // always return true
     }
 
+    private void mirrorRead(ByteBuffer dst, int posBefore) {
+        int posAfter = dst.position();
+        int lim = dst.limit();
+
+        byte[] arr = new byte[posAfter - posBefore];
+        if (arr.length == 0) { // nothing read
+            return;
+        }
+
+        dst.limit(posAfter).position(posBefore);
+        dst.get(arr);
+        // set offset back
+        dst.limit(lim).position(posAfter);
+
+        handler.mirror(this, false, Consts.TCP_FLAGS_PSH, ByteArray.from(arr));
+    }
+
     @Override
     public int read(ByteBuffer dst) throws IOException {
         assert Logger.lowLevelDebug("read() called on " + this);
@@ -195,7 +214,13 @@ public class StreamedFD implements SocketFD, VirtualFD {
             }
         }
 
+        int posBefore = dst.position();
         int n = Utils.writeFromFIFOQueueToBuffer(readableBuffers, dst);
+
+        if (Mirror.isEnabled()) {
+            mirrorRead(dst, posBefore);
+        }
+
         if (readableBuffers.isEmpty()) {
             // nothing can be read anymore
             if (!state.readReturnNegative1) { // keep firing readable when fin received or stream closed
@@ -206,13 +231,36 @@ public class StreamedFD implements SocketFD, VirtualFD {
         return n;
     }
 
+    private void mirrorWrite(ByteBuffer src, int posBefore) {
+        int posAfter = src.position();
+        int lim = src.limit();
+
+        byte[] arr = new byte[posAfter - posBefore];
+        if (arr.length == 0) { // nothing read
+            return;
+        }
+
+        src.limit(posAfter).position(posBefore);
+        src.get(arr);
+        // set offset back
+        src.limit(lim).position(posAfter);
+
+        handler.mirror(this, true, Consts.TCP_FLAGS_PSH, ByteArray.from(arr));
+    }
+
     @Override
     public int write(ByteBuffer src) throws IOException {
         checkState();
         if (state == State.fin_sent) {
             throw new IOException("cannot write when in state " + state);
         }
+        int posBefore = src.position();
         int wrote = handler.send(this, src);
+
+        if (Mirror.isEnabled()) {
+            mirrorWrite(src, posBefore);
+        }
+
         assert Logger.lowLevelDebug("streamed fd wrote " + wrote + " bytes: " + this);
         return wrote;
     }

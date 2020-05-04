@@ -1,6 +1,7 @@
 package vswitch;
 
 import vfd.*;
+import vmirror.Mirror;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
 import vproxy.component.exception.AlreadyExistException;
@@ -572,6 +573,10 @@ public class Switch {
             if (table == null) {
                 assert Logger.lowLevelDebug(logId + "vni not defined: " + vni);
                 return;
+            }
+
+            if (Mirror.isEnabled()) {
+                Mirror.switchPacket(vxlan.getPacket());
             }
 
             entrance(logId, vxlan, table, iface);
@@ -1415,6 +1420,10 @@ public class Switch {
 
         private void unicast(String logId, Iface iface, VXLanPacket vxlan) {
             assert Logger.lowLevelDebug(logId + "into unicast(" + iface + "," + vxlan + ")");
+
+            if (Mirror.isEnabled()) {
+                Mirror.switchPacket(vxlan.getPacket());
+            }
 
             sndBuf.limit(sndBuf.capacity()).position(0);
             try {

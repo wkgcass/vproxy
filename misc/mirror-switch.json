@@ -1,0 +1,18 @@
+{
+	"enabled": false,
+	"mirrors": [
+		{
+			"tap": "tap7",
+			"mtu": 1500,
+			"origins": [
+				{
+					"origin": "switch",
+					"filters": [
+						{
+						}
+					]
+				}
+			]
+		}
+	]
+}

@@ -2,6 +2,8 @@ package vproxy.selector.wrap.streamed;
 
 import vfd.EventSet;
 import vfd.SocketFD;
+import vmirror.Mirror;
+import vmirror.MirrorData;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
@@ -13,6 +15,7 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
+import vswitch.util.Consts;
 
 import java.io.IOException;
 import java.net.InetAddress;
@@ -595,6 +598,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
+
+        if (Mirror.isEnabled()) {
+            mirror(sfd, false, Consts.TCP_FLAGS_SYN, ByteArray.allocate(0));
+        }
+
         if (client) {
             if (sfd.getState() != StreamedFD.State.syn_sent) {
                 assert Logger.lowLevelDebug("fd: " + sfd + " state = " + sfd.getState() + " != " + StreamedFD.State.syn_sent);
@@ -617,6 +625,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
+
+        if (Mirror.isEnabled()) {
+            mirror(sfd, false, Consts.TCP_FLAGS_FIN, ByteArray.allocate(0));
+        }
+
         if (sfd.getState() == StreamedFD.State.none || sfd.getState() == StreamedFD.State.real_closed) {
             assert Logger.lowLevelDebug("fd: " + sfd + " state = " + sfd.getState());
             return false;
@@ -642,6 +655,11 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
+
+        if (Mirror.isEnabled()) {
+            mirror(sfd, false, Consts.TCP_FLAGS_RST, ByteArray.allocate(0));
+        }
+
         if (sfd.getState() == StreamedFD.State.dead || sfd.getState() == StreamedFD.State.real_closed) {
             return false; // already closed
         }
@@ -746,6 +764,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             case real_closed:
                 // nothing to do
                 break;
+        }
+
+        if (Mirror.isEnabled()) {
+            mirror(fd, true, Consts.TCP_FLAGS_FIN, ByteArray.allocate(0));
         }
     }
 
@@ -861,6 +883,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         // append syn to the last of the queue
         addMessageToWrite(formatSYN(fd.streamId));
         fd.setState(StreamedFD.State.syn_sent);
+
+        if (Mirror.isEnabled()) {
+            mirror(fd, true, Consts.TCP_FLAGS_SYN, ByteArray.allocate(0));
+        }
     }
 
     abstract protected ByteArray formatRST(int streamId);
@@ -879,6 +905,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             fd.setState(StreamedFD.State.dead);
         }
         fdMap.values().remove(fd);
+
+        if (Mirror.isEnabled()) {
+            mirror(fd, true, Consts.TCP_FLAGS_RST, ByteArray.allocate(0));
+        }
     }
 
     private boolean accept(int streamId) {
@@ -912,5 +942,46 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         messagesToWrite.clear();
         fdMap.clear();
         keepaliveTimeouts.clear();
+    }
+
+    @MethodForStreamedFD
+    public void mirror(StreamedFD fd, boolean isSend, byte flags, ByteArray data) {
+        if (!Mirror.isEnabled()) {
+            return;
+        }
+
+        // build meta
+        String meta = "c=" + (client ? "1" : "0") + ";fd=" + this.fd.toString();
+
+        MirrorData mirrorData = new MirrorData("streamed")
+            .setMeta(meta)
+            .setFlags(flags)
+            .setData(data);
+
+        // build src and dst
+        {
+            InetSocketAddress local = (InetSocketAddress) fd.getLocalAddress();
+            InetSocketAddress remote = (InetSocketAddress) fd.getRemoteAddress();
+
+            if (isSend) {
+                mirrorData.setIpSrc(local.getAddress());
+                mirrorData.setIpDst(remote.getAddress());
+
+                mirrorData.setTransportLayerProtocol("UDP");
+
+                mirrorData.setPortSrc(local.getPort());
+                mirrorData.setPortDst(remote.getPort());
+            } else {
+                mirrorData.setIpSrc(remote.getAddress());
+                mirrorData.setIpDst(local.getAddress());
+
+                mirrorData.setTransportLayerProtocol("UDP");
+
+                mirrorData.setPortSrc(remote.getPort());
+                mirrorData.setPortDst(local.getPort());
+            }
+        }
+
+        Mirror.mirror(mirrorData);
     }
 }

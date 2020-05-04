@@ -12,6 +12,17 @@ public class Network {
         this.mask = mask;
     }
 
+    public Network(String net) {
+        if (!Utils.validNetworkStr(net)) {
+            throw new IllegalArgumentException();
+        }
+        String ip = net.substring(0, net.lastIndexOf("/"));
+        int mask = Integer.parseInt(net.substring(net.indexOf("/") + 1));
+
+        this.ip = Utils.parseIpString(ip);
+        this.mask = Utils.parseMask(mask);
+    }
+
     public boolean contains(InetAddress address) {
         return Utils.maskMatch(address.getAddress(), ip, mask);
     }

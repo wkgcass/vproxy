@@ -3,6 +3,8 @@ package vproxy.selector.wrap.arqudp;
 import vfd.EventSet;
 import vfd.FD;
 import vfd.SocketFD;
+import vmirror.Mirror;
+import vmirror.MirrorData;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
@@ -107,6 +109,33 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         }
     }
 
+    private void mirrorRead(ByteBuffer dstBuf, int posBefore) {
+        if (dstBuf.position() == posBefore) { // nothing read
+            return;
+        }
+
+        String meta = "r=" + readBufs.size() + ";w=" + writeBufs.size() + ";p=" + handler.getClass().getSimpleName();
+        MirrorData mirrorData = new MirrorData("arq-udp")
+            .setMeta(meta)
+            .setDataAfter(dstBuf, posBefore);
+        mirrorData.setTransportLayerProtocol("UDP");
+        try {
+            InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+            mirrorData.setIpDst(local.getAddress());
+            mirrorData.setPortDst(local.getPort());
+        } catch (IOException e) {
+            mirrorData.setDstRef(this);
+        }
+        try {
+            InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+            mirrorData.setIpSrc(remote.getAddress());
+            mirrorData.setPortSrc(remote.getPort());
+        } catch (IOException e) {
+            mirrorData.setSrcRef(fd);
+        }
+        Mirror.mirror(mirrorData);
+    }
+
     @Override
     public int read(ByteBuffer dst) throws IOException {
         if (readBufs.isEmpty()) {
@@ -129,6 +158,10 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         int oldPos = dst.position();
         int ret = Utils.writeFromFIFOQueueToBuffer(readBufs, dst);
 
+        if (Mirror.isEnabled()) {
+            mirrorRead(dst, oldPos);
+        }
+
         assert Utils.debug(() -> {
             int newPos = dst.position();
             dst.position(oldPos);
@@ -150,6 +183,29 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         return handler.writableLen();
     }
 
+    private void mirrorWrite(byte[] data) {
+        String meta = "r=" + readBufs.size() + ";w=" + writeBufs.size() + ";p=" + handler.getClass().getSimpleName();
+        MirrorData mirrorData = new MirrorData("arq-udp")
+            .setMeta(meta)
+            .setData(data);
+        mirrorData.setTransportLayerProtocol("UDP");
+        try {
+            InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+            mirrorData.setIpDst(remote.getAddress());
+            mirrorData.setPortDst(remote.getPort());
+        } catch (IOException e) {
+            mirrorData.setDstRef(fd);
+        }
+        try {
+            InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+            mirrorData.setIpSrc(local.getAddress());
+            mirrorData.setPortSrc(local.getPort());
+        } catch (IOException e) {
+            mirrorData.setSrcRef(this);
+        }
+        Mirror.mirror(mirrorData);
+    }
+
     @Override
     public int write(ByteBuffer src) throws IOException {
         int n = src.limit() - src.position();
@@ -167,6 +223,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         n = Math.min(writableLen, n);
         byte[] copy = new byte[n];
         src.get(copy);
+
+        if (Mirror.isEnabled()) {
+            mirrorWrite(copy);
+        }
+
         assert Logger.lowLevelDebug("write " + n + " bytes to ArqUDPSocketFD");
         assert Logger.lowLevelNetDebugPrintBytes(copy);
 

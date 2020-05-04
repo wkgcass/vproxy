@@ -4,9 +4,20 @@ import vproxy.util.ByteArray;
 import vswitch.iface.RemoteSideVniGetterSetter;
 import vswitch.iface.Iface;
 import vswitch.iface.LocalSideVniGetterSetter;
+import vswitch.packet.Ipv6Packet;
 
 public class SwitchUtils {
     private SwitchUtils() {
+    }
+
+    public static ByteArray buildPseudoIPv6Header(Ipv6Packet ipv6, int upperType, int upperLength) {
+        ByteArray pseudoHeaderTail = ByteArray.allocate(8);
+        ByteArray pseudoHeader = ByteArray.from(ipv6.getSrc().getAddress())
+            .concat(ByteArray.from(ipv6.getDst().getAddress()))
+            .concat(pseudoHeaderTail);
+        pseudoHeaderTail.int32(0, upperLength);
+        pseudoHeaderTail.set(7, (byte) upperType);
+        return pseudoHeader;
     }
 
     public static int calculateChecksum(ByteArray array, int limit) {

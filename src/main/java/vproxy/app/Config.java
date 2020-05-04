@@ -67,6 +67,10 @@ public class Config {
     // -DomainWhichShouldResolve
     public static final String domainWhichShouldResolve;
 
+    // the config file path for mirror
+    // -DmirrorConf=...
+    public static final String mirrorConfigPath;
+
     static {
         appClass = System.getProperty("eploy"); // -Deploy
         String probeConf = System.getProperty("probe", "");
@@ -76,6 +80,7 @@ public class Config {
             probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
         }
         domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
+        mirrorConfigPath = System.getProperty("mirrorConf", "");
     }
 
     public static boolean supportReusePortLB() {

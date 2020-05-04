@@ -1,11 +1,10 @@
 package vproxy.util.ringbuffer;
 
 import tlschannel.impl.TlsExplorer;
+import vmirror.Mirror;
+import vmirror.MirrorData;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
+import vproxy.util.*;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.ssl.SSL;
 
@@ -134,6 +133,28 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // helper functions END
     // -------------------
 
+    private void mirror(ByteBuffer plain, SSLEngineResult result) {
+        if (plain.position() == 0) {
+            return;
+        }
+
+        // build meta message
+        String meta = "r.s=" + result.getStatus() +
+            ";" +
+            "e.hs=" + engine.getHandshakeStatus() +
+            ";" +
+            "ib=" + intermediateBufferCap() +
+            ";" +
+            "i=" + this.toString() +
+            ";";
+
+        Mirror.mirror(new MirrorData("ssl")
+            .setSrcRef(pair)
+            .setDstRef(engine)
+            .setMeta(meta)
+            .setDataAfter(plain, 0));
+    }
+
     @Override
     protected void handleEncryptedBuffer(ByteBuffer encryptedBuffer, boolean[] underflow, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = encryptedBuffer.position();
@@ -148,6 +169,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             ex[0] = e;
             return;
         }
+
+        if (Mirror.isEnabled()) {
+            mirror(plainBuffer, result);
+        }
+
         assert Logger.lowLevelDebug("unwrap: " + result);
         if (result.getStatus() == SSLEngineResult.Status.CLOSED) {
             assert Logger.lowLevelDebug("the unwrapping returned CLOSED");
@@ -167,6 +193,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 ex[0] = e;
                 return;
             }
+
+            if (Mirror.isEnabled()) {
+                mirror(plainBuffer, result);
+            }
+
             assert Logger.lowLevelDebug("unwrap2: " + result);
         } else if (result.getStatus() == SSLEngineResult.Status.BUFFER_UNDERFLOW) {
             // manipulate the position back to the original one

@@ -1,5 +1,8 @@
 package vproxy.util.ringbuffer;
 
+import vmirror.Mirror;
+import vmirror.MirrorData;
+import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.crypto.BlockCipherKey;
@@ -49,6 +52,21 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
         cipher = new StreamingCFBCipher(key, false, iv);
     }
 
+    private void mirror(byte[] bytes) {
+        // build ref
+        ByteArray ref = ByteArray.from("IVInDataWrapUnwrapRingBuffer".getBytes());
+
+        // build meta message
+        String meta = "iv=" + ByteArray.from(iv).toHexString() +
+            ";";
+
+        Mirror.mirror(new MirrorData("iv")
+            .setSrc(ref)
+            .setDstRef(cipher)
+            .setMeta(meta)
+            .setData(bytes));
+    }
+
     private void readData(ByteBuffer input) {
         int len = input.limit() - input.position();
         if (len == 0) {
@@ -58,6 +76,11 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
         input.get(array);
 
         byte[] ret = cipher.update(array, 0, array.length);
+
+        if (Mirror.isEnabled()) {
+            mirror(ret);
+        }
+
         assert Logger.lowLevelDebug("decrypt " + ret.length + " bytes");
         assert Logger.lowLevelNetDebugPrintBytes(ret);
         recordIntermediateBuffer(ByteBuffer.wrap(ret));

@@ -39,6 +39,13 @@ public class Consts {
     public static final int ICMP_PROTOCOL_CODE_PORT_UNREACHABLE = 3;
     public static final int ICMPv6_PROTOCOL_TYPE_DEST_UNREACHABLE = 1;
     public static final int ICMPv6_PROTOCOL_CODE_PORT_UNREACHABLE = 4;
+    public static final int IPv6_NEXT_HEADER_HOP_BY_HOP_OPTIONS = 0;
+    public static final int IPv6_NEXT_HEADER_ROUTING = 43;
 
     public static final ByteArray IPv6_Solicitation_Node_Multicast_Address = ByteArray.from(Utils.parseIpString("ff02::1:ff00:0"));
+
+    public static final byte TCP_FLAGS_PSH = 0b1000;
+    public static final byte TCP_FLAGS_RST = 0b0100;
+    public static final byte TCP_FLAGS_SYN = 0b0010;
+    public static final byte TCP_FLAGS_FIN = 0b0001;
 }

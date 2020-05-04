@@ -1,6 +1,7 @@
 package vproxy.app;
 
 import vfd.VFDConfig;
+import vmirror.Mirror;
 import vproxy.app.args.*;
 import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
@@ -58,6 +59,15 @@ public class Main {
                 FStackUtil.init();
             } catch (IOException e) {
                 Logger.shouldNotHappen("initiate f-stack failed", e);
+                System.exit(1);
+            }
+        }
+
+        if (!Config.mirrorConfigPath.isBlank()) {
+            try {
+                Mirror.init(Config.mirrorConfigPath);
+            } catch (Exception e) {
+                Logger.fatal(LogType.INVALID_EXTERNAL_DATA, "initiate mirror failed", e);
                 System.exit(1);
             }
         }

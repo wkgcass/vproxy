@@ -228,11 +228,13 @@ public class Http1ClientImpl implements HttpClient {
         closed = true;
         if (noInputLoop) {
             // should close the input loop because it's created by the lib
-            try {
-                loop.getSelectorEventLoop().close();
-            } catch (IOException e) {
-                Logger.shouldNotHappen("got error when closing the event loop", e);
-            }
+            loop.getSelectorEventLoop().nextTick(() -> {
+                try {
+                    loop.getSelectorEventLoop().close();
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("got error when closing the event loop", e);
+                }
+            });
         }
     }
 }

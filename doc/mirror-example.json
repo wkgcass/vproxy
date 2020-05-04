@@ -1,0 +1,36 @@
+{
+  "enabled": false,
+  "mirrors": [
+    {
+      "tap": "tap0",
+      "mtu": 1500,
+      "origins": [
+        {
+          "origin": "any string",
+          "filters": [
+            {
+              "mac": "00:00:00:00:00:00",
+              "mac2": "ff:ff:ff:ff:ff:ff",
+              "network": "172.16.0.0/24",
+              "network2": "172.16.3.55/32",
+              "transportLayerProtocol": "any string",
+              "port": [
+                1,
+                65535
+              ],
+              "port2": [
+                80,
+                80
+              ],
+              "applicationLayerProtocol": "any string"
+            },
+            "(remove the following string elements, these are simply explanations)",
+            "all entries in a filter can be omitted, which means do not check the field",
+            "the filters will only check the entries they have, and will not consider other entries in a MirrorData",
+            "portX and portY takes an array of length 2, which means the minimum port and the maximum port, both inclusive"
+          ]
+        }
+      ]
+    }
+  ]
+}
