@@ -438,6 +438,7 @@ public class HelpCommand {
         noipv6("noipv6", null, "do not use ipv6 address. Use the flag with param: address"),
         allownonbackend("allow-non-backend", null, "allow to access non backend endpoints"),
         denynonbackend("deny-non-backend", null, "only able to access backend endpoints"),
+        noswitchflag("no-switch-flag", null, "do not add switch flag on vxlan packet"),
         ;
         public final String flag;
         public final String shortVer;
@@ -1261,12 +1262,16 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "add a remote switch ref to a local switch. note: use list iface to see these remote switches",
                     Collections.singletonList(
                         new ResActParamMan(ParamMan.address, "the remote switch address")
-                    ), Collections.singletonList(
-                    new Tuple<>(
-                        "add switch sw1 to switch sw0 address 100.64.0.1:18472",
-                        "\"OK\""
-                    )
-                )),
+                    ),
+                    Collections.singletonList(
+                        new ResActFlagMan(FlagMan.noswitchflag, "do not add switch flag on vxlan packets sent through this iface", false)
+                    ),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "add switch sw1 to switch sw0 address 100.64.0.1:18472",
+                            "\"OK\""
+                        )
+                    )),
                 new ResActMan(ActMan.removefrom, "remove a remote switch ref from a local switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove switch sw1 from switch sw0",

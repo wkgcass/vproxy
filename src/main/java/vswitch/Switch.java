@@ -479,7 +479,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr) throws XException, AlreadyExistException {
+    public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = currentEventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
@@ -498,7 +498,7 @@ public class Switch {
                 throw new AlreadyExistException("switch", Utils.l4addrStr(vxlanSockAddr));
             }
         }
-        Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr);
+        Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr, addSwitchFlag);
         loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
     }
 

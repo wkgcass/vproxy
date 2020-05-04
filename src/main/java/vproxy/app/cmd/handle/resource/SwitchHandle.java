@@ -1,10 +1,7 @@
 package vproxy.app.cmd.handle.resource;
 
 import vproxy.app.Application;
-import vproxy.app.cmd.Command;
-import vproxy.app.cmd.Param;
-import vproxy.app.cmd.Resource;
-import vproxy.app.cmd.ResourceType;
+import vproxy.app.cmd.*;
 import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -100,7 +97,11 @@ public class SwitchHandle {
         InetSocketAddress addr = AddrHandle.get(cmd);
 
         Switch sw = get(cmd.prepositionResource);
-        sw.addRemoteSwitch(alias, addr);
+        boolean addSwitchFlag = true;
+        if (cmd.flags.contains(Flag.noswitchflag)) {
+            addSwitchFlag = false;
+        }
+        sw.addRemoteSwitch(alias, addr, addSwitchFlag);
     }
 
     public static void add(Command cmd) throws Exception {

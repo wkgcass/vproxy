@@ -6,6 +6,8 @@ public enum Flag {
 
     allownonbackend("allow-non-backend"),
     denynonbackend("deny-non-backend"),
+
+    noswitchflag("no-switch-flag"),
     ;
     public final String fullname;
 

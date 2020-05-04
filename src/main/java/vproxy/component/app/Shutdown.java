@@ -634,6 +634,9 @@ public class Shutdown {
                     }
                     var rsi = (RemoteSwitchIface) iface;
                     cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + Utils.l4addrStr(rsi.udpSockAddress);
+                    if (!rsi.addSwitchFlag) {
+                        cmd += " no-switch-flag";
+                    }
                     commands.add(cmd);
                 }
                 // create user-cli

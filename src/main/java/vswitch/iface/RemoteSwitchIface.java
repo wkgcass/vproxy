@@ -13,10 +13,12 @@ import java.util.Objects;
 public class RemoteSwitchIface implements Iface {
     public final String alias;
     public final InetSocketAddress udpSockAddress;
+    public final boolean addSwitchFlag;
 
-    public RemoteSwitchIface(String alias, InetSocketAddress udpSockAddress) {
+    public RemoteSwitchIface(String alias, InetSocketAddress udpSockAddress, boolean addSwitchFlag) {
         this.alias = alias;
         this.udpSockAddress = udpSockAddress;
+        this.addSwitchFlag = addSwitchFlag;
     }
 
     @Override
@@ -43,7 +45,15 @@ public class RemoteSwitchIface implements Iface {
         byte[] bytes = vxlan.getRawPacket().toJavaArray();
         writeBuf.put(bytes);
         writeBuf.flip();
-        writeBuf.put(1, (byte) (bytes[1] | ((Consts.I_AM_FROM_SWITCH >> 16) & 0xff)));
+        if (addSwitchFlag) {
+            writeBuf.put(1, (byte) (bytes[1] | ((Consts.I_AM_FROM_SWITCH >> 16) & 0xff)));
+        } else {
+            // remove all possible flags or counters
+            writeBuf.put(1, (byte) 0);
+            writeBuf.put(2, (byte) 0);
+            writeBuf.put(3, (byte) 0);
+            writeBuf.put(7, (byte) 0);
+        }
         serverUDPSock.send(writeBuf, udpSockAddress);
     }
 
