@@ -579,6 +579,36 @@ public class Switch {
                 Mirror.switchPacket(vxlan.getPacket());
             }
 
+            // loop detect mechanism
+            {
+                int r1 = vxlan.getReserved1();
+                int r2 = vxlan.getReserved2();
+
+                if (r2 > 250) {
+                    Logger.error(LogType.INVALID_EXTERNAL_DATA, "possible loop detected from " + iface + " with packet " + vxlan);
+
+                    final int I_DETECTED_A_POSSIBLE_LOOP =
+                        0b000010000000000000000000;
+                    final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN =
+                        0b000001000000000000000000;
+
+                    boolean possibleLoop = (r1 & I_DETECTED_A_POSSIBLE_LOOP) == I_DETECTED_A_POSSIBLE_LOOP;
+                    boolean willDisconnect = (r1 & I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN) == I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN;
+
+                    if (possibleLoop && willDisconnect) {
+                        Logger.error(LogType.INVALID_EXTERNAL_DATA, "disconnect from " + iface + " due to possible loop");
+                        table.macTable.disconnect(iface);
+                        return;
+                    }
+                    if (!possibleLoop && !willDisconnect) {
+                        vxlan.setReserved1(r1 | I_DETECTED_A_POSSIBLE_LOOP);
+                    } else {
+                        vxlan.setReserved1(r1 | I_DETECTED_A_POSSIBLE_LOOP | I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN);
+                    }
+                }
+                vxlan.setReserved2(r2 + 1);
+            }
+
             entrance(logId, vxlan, table, iface);
         }
 

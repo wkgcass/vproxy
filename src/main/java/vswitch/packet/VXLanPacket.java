@@ -9,7 +9,9 @@ import static vproxy.util.Utils.runAvoidNull;
 
 public class VXLanPacket extends AbstractPacket {
     private int flags = 0b00001000; // this flag almost never changes
+    private int reserved1 = 0;
     private int vni;
+    private int reserved2 = 0;
     private AbstractEthernetPacket packet;
 
     @Override
@@ -18,7 +20,9 @@ public class VXLanPacket extends AbstractPacket {
             return "input packet length too short for a vxlan packet";
         }
         flags = bytes.uint8(0);
+        reserved1 = bytes.uint24(1);
         vni = bytes.uint24(4);
+        reserved2 = bytes.uint8(7);
         // for now, we only consider it being this type of ethernet packet
         packet = new EthernetPacket();
         String err = packet.from(bytes.sub(8, bytes.length() - 8));
@@ -32,14 +36,21 @@ public class VXLanPacket extends AbstractPacket {
 
     @Override
     protected ByteArray buildPacket() {
-        return ByteArray.allocate(8).set(0, (byte) flags).int24(4, vni).concat(packet.getRawPacket());
+        return ByteArray.allocate(8)
+            .set(0, (byte) flags)
+            .int24(1, reserved1)
+            .int24(4, vni)
+            .set(7, (byte) reserved2)
+            .concat(packet.getRawPacket());
     }
 
     @Override
     public String toString() {
         return "VXLanPacket{" +
             "flags=" + Utils.toBinaryString(flags) +
+            ", reserved1=" + reserved1 +
             ", vni=" + runAvoidNull(() -> vni, "null") +
+            ", reserved2=" + reserved2 +
             ", packet=" + packet +
             '}';
     }
@@ -53,6 +64,15 @@ public class VXLanPacket extends AbstractPacket {
         this.flags = flags;
     }
 
+    public int getReserved1() {
+        return reserved1;
+    }
+
+    public void setReserved1(int reserved1) {
+        clearRawPacket();
+        this.reserved1 = reserved1;
+    }
+
     public int getVni() {
         return vni;
     }
@@ -60,6 +80,15 @@ public class VXLanPacket extends AbstractPacket {
     public void setVni(int vni) {
         clearRawPacket();
         this.vni = vni;
+    }
+
+    public int getReserved2() {
+        return reserved2;
+    }
+
+    public void setReserved2(int reserved2) {
+        clearRawPacket();
+        this.reserved2 = reserved2;
     }
 
     public AbstractEthernetPacket getPacket() {
