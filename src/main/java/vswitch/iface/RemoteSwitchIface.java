@@ -3,6 +3,7 @@ package vswitch.iface;
 import vfd.DatagramFD;
 import vproxy.util.Utils;
 import vswitch.packet.VXLanPacket;
+import vswitch.util.Consts;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -42,6 +43,7 @@ public class RemoteSwitchIface implements Iface {
         byte[] bytes = vxlan.getRawPacket().toJavaArray();
         writeBuf.put(bytes);
         writeBuf.flip();
+        writeBuf.put(1, (byte) (bytes[1] | ((Consts.I_AM_FROM_SWITCH >> 16) & 0xff)));
         serverUDPSock.send(writeBuf, udpSockAddress);
     }
 

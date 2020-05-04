@@ -580,17 +580,14 @@ public class Switch {
             }
 
             // loop detect mechanism
+            int r1 = vxlan.getReserved1();
+            int r2 = vxlan.getReserved2();
             {
-                int r1 = vxlan.getReserved1();
-                int r2 = vxlan.getReserved2();
-
                 if (r2 > 250) {
                     Logger.error(LogType.INVALID_EXTERNAL_DATA, "possible loop detected from " + iface + " with packet " + vxlan);
 
-                    final int I_DETECTED_A_POSSIBLE_LOOP =
-                        0b000010000000000000000000;
-                    final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN =
-                        0b000001000000000000000000;
+                    final int I_DETECTED_A_POSSIBLE_LOOP = Consts.I_DETECTED_A_POSSIBLE_LOOP;
+                    final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN = Consts.I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN;
 
                     boolean possibleLoop = (r1 & I_DETECTED_A_POSSIBLE_LOOP) == I_DETECTED_A_POSSIBLE_LOOP;
                     boolean willDisconnect = (r1 & I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN) == I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN;
@@ -598,7 +595,7 @@ public class Switch {
                     if (possibleLoop && willDisconnect) {
                         Logger.error(LogType.INVALID_EXTERNAL_DATA, "disconnect from " + iface + " due to possible loop");
                         table.macTable.disconnect(iface);
-                        return;
+                        return; // drop
                     }
                     if (!possibleLoop && !willDisconnect) {
                         vxlan.setReserved1(r1 | I_DETECTED_A_POSSIBLE_LOOP);
@@ -1550,13 +1547,32 @@ public class Switch {
                         BareVXLanIface biface = new BareVXLanIface(remote);
                         iface = biface;
                         biface.setLocalSideVni(vxLanPacket.getVni());
+
+                        // distinguish bare vxlan sock and switch vxlan link
+                        {
+                            int r1 = vxLanPacket.getReserved1();
+                            final int I_AM_FROM_SWITCH = Consts.I_AM_FROM_SWITCH;
+                            if ((r1 & I_AM_FROM_SWITCH) == I_AM_FROM_SWITCH) {
+                                Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                                    "received a packet which should come from a remote switch, but actually coming from bare vxlan sock: " + iface + " with packet " + vxLanPacket);
+                                return null; // drop
+                            }
+                        }
                     } else { // is from a remote switch
                         iface = remoteSwitch;
                     }
                     assert Logger.lowLevelDebug(logId + "got vxlan packet " + vxLanPacket + " from " + iface);
                     // fall through
                 } else {
-                    assert Logger.lowLevelDebug(logId + "invalid packet: " + err + ", drop it");
+                    assert Logger.lowLevelDebug(logId + "not in allowed security-group or invalid packet: " + err + ", drop it");
+                    return null;
+                }
+            }
+
+            // check whether the packet's src and dst mac are the same
+            if (vxLanPacket != null) {
+                if (vxLanPacket.getPacket().getSrc().equals(vxLanPacket.getPacket().getDst())) {
+                    assert Logger.lowLevelDebug(logId + "got packet with same src and dst: " + vxLanPacket);
                     return null;
                 }
             }

@@ -37,15 +37,16 @@ public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
 
     @Override
     public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
-        byte[] bytes = vxlan.getRawPacket().toNewJavaArray();
-        // keep reserved fields empty
-        bytes[1] = 0;
-        bytes[2] = 0;
-        bytes[3] = 0;
-        bytes[7] = 0;
+        byte[] bytes = vxlan.getRawPacket().toJavaArray();
 
         writeBuf.put(bytes);
         writeBuf.flip();
+
+        // keep reserved fields empty
+        writeBuf.put(1, (byte) 0);
+        writeBuf.put(2, (byte) 0);
+        writeBuf.put(3, (byte) 0);
+        writeBuf.put(7, (byte) 0);
         serverUDPSock.send(writeBuf, udpSockAddress);
     }
 

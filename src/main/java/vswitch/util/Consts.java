@@ -48,4 +48,11 @@ public class Consts {
     public static final byte TCP_FLAGS_RST = 0b0100;
     public static final byte TCP_FLAGS_SYN = 0b0010;
     public static final byte TCP_FLAGS_FIN = 0b0001;
+
+    public static final int I_DETECTED_A_POSSIBLE_LOOP =
+        0b00001000_00000000_00000000;
+    public static final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN =
+        0b00000100_00000000_00000000;
+    public static final int I_AM_FROM_SWITCH =
+        0b00100000_00000000_00000000;
 }
