@@ -204,6 +204,12 @@ add switch sw1 to switch sw2 address 100.64.0.1:18472
 
 Then packets will go freely between two switches.
 
+Also, you may use this feature to expose this switch to a bare vxlan sock. To do this, you have to specify a flag to the command:
+
+```
+add switch bare to switch sw1 address 192.168.56.3 no-switch-flag
+```
+
 ### 6. encrypted vxlan
 
 This allows a switch to connect to another (usually public) switch with an encrypted link. To achieve this, you need to configure `user`s on the switch to be connected to, and configure the link on the switch to connect.
