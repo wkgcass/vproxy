@@ -60,19 +60,12 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
         writeThread.start();
     }
 
-    private boolean isReadable() {
-        //noinspection unused
-        try (var x = readQLock.lock()) {
-            return !readQueue.isEmpty();
-        }
-    }
-
     private void setReadable() {
-        selector.registerVirtualReadable(this);
+        loop.runOnLoop(() -> selector.registerVirtualReadable(this));
     }
 
     private void cancelReadable() {
-        selector.removeVirtualReadable(this);
+        loop.runOnLoop(() -> selector.removeVirtualReadable(this));
     }
 
     private void setWritable() {
@@ -127,6 +120,7 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
         //noinspection unused
         try (var x = readQLock.lock()) {
             if (readQueue.isEmpty()) {
+                cancelReadable();
                 return 0;
             }
             ByteBuffer src = readQueue.getFirst();
@@ -180,8 +174,11 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
     @Override
     public void onRegister() {
         resumeBlockingThreads();
-        if (isReadable()) {
-            setReadable();
+        //noinspection unused
+        try (var x = readQLock.lock()) {
+            if (!readQueue.isEmpty()) {
+                setReadable();
+            }
         }
         setWritable();
     }
@@ -278,7 +275,7 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
         try (var x = readQLock.lock()) {
             if (readQueue.size() >= readBufPacketLimit) {
                 assert Logger.lowLevelDebug("cannot store packets into the readQueue: size = " + readQueue.size() + ", limit = " + readBufPacketLimit);
-                loop.runOnLoop(this::setReadable);
+                setReadable();
                 isReading = false;
                 return;
             }
@@ -296,7 +293,7 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
         //noinspection unused
         try (var x = readQLock.lock()) {
             readQueue.addLast(buf);
-            loop.runOnLoop(this::setReadable);
+            setReadable();
         }
     }
 
