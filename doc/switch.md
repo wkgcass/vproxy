@@ -172,7 +172,11 @@ add tap tap1 to switch sw0 vni 2
 
 Then you can see the `tap1` with `ip link`. Operate the device freely.
 
-Note: the tap devices may be removed when the tap in vproxy is removed, or when vproxy instance is terminated. And the commands for creating the tap devices will not be saved into auto-saving config file.
+You may specify a `post-script` when adding the tap device. The script will be called after the tap device is created/enabled.
+
+```
+add tap tap1 to switch sw0 vni 2 post-script /root/up-tap1.sh
+```
 
 ### 4. bare vxlan socks
 
