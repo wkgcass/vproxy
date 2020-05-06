@@ -55,16 +55,14 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
                 // the kernel extension will block forever if the tap is not assigned with any ip
                 // so assign one for it to make sure it doesn't reach that condition
                 // BSD will definitely have /sbin/ifconfig, so it's safe to call
-                new Thread(() -> {
-                    ProcessBuilder pb = new ProcessBuilder()
-                        .command("/sbin/ifconfig", tap.dev, "0.0.0.1/32");
-                    try {
-                        var p = pb.start();
-                        p.waitFor(1, TimeUnit.SECONDS);
-                        p.destroyForcibly();
-                    } catch (Throwable ignore) {
-                    }
-                }).start();
+                ProcessBuilder pb = new ProcessBuilder()
+                    .command("/sbin/ifconfig", tap.dev, "0.0.0.1/32");
+                try {
+                    var p = pb.start();
+                    p.waitFor(1, TimeUnit.SECONDS);
+                    p.destroyForcibly();
+                } catch (Throwable ignore) {
+                }
             }
         }
         super.close();
