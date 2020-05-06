@@ -303,9 +303,9 @@ public class Switch {
         }
         FDsWithTap tapFDs = (FDsWithTap) fds;
         TapDatagramFD fd = tapFDs.openTap(devPattern);
+        DatagramFD fdToPutIntoLoop = null;
         TapIface iface;
         try {
-            DatagramFD fdToPutIntoLoop;
             if (tapFDs.tapNonBlockingSupported()) {
                 fdToPutIntoLoop = fd;
                 fd.configureBlocking(false);
@@ -315,6 +315,13 @@ public class Switch {
             iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, loop);
             loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
         } catch (IOException e) {
+            if (fdToPutIntoLoop != null) {
+                try {
+                    fdToPutIntoLoop.close();
+                } catch (IOException t) {
+                    Logger.shouldNotHappen("failed to close the tap device wrapper when rolling back the creation", t);
+                }
+            }
             try {
                 fd.close();
             } catch (IOException t) {
@@ -326,10 +333,15 @@ public class Switch {
             executePostScript(fd.getTap().dev, vni, postScript);
         } catch (Exception e) {
             // executing script failed
-            // close the fd
+            // close the fds
             try {
-                loop.remove(fd);
+                loop.remove(fdToPutIntoLoop);
             } catch (Throwable ignore) {
+            }
+            try {
+                fdToPutIntoLoop.close();
+            } catch (IOException t) {
+                Logger.shouldNotHappen("failed to close the tap device wrapper when rolling back the creation", t);
             }
             try {
                 fd.close();

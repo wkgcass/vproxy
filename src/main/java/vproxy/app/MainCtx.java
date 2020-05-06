@@ -1,5 +1,7 @@
 package vproxy.app;
 
+import vproxy.util.Utils;
+
 import java.util.*;
 
 public class MainCtx {
@@ -29,7 +31,7 @@ public class MainCtx {
         assert op.argCount() == args.length;
         int checkExitCode = op.pre(this, args);
         if (checkExitCode != 0) {
-            System.exit(checkExitCode);
+            Utils.exit(checkExitCode);
             return;
         }
         todoList.add(new Todo(op, args));
@@ -52,7 +54,7 @@ public class MainCtx {
         todoList.stream().sorted(Comparator.comparingInt(a -> a.op.order())).forEach(foo -> {
             int exitCode = foo.op.execute(this, foo.args);
             if (exitCode != 0) {
-                System.exit(exitCode);
+                Utils.exit(exitCode);
             }
         });
     }

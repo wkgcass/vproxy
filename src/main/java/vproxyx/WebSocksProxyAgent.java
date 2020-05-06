@@ -43,7 +43,7 @@ public class WebSocksProxyAgent {
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
             System.out.println("If not specified, the config will be read from " + configFile);
-            System.exit(1);
+            Utils.exit(1);
             return;
         }
         if (args.length == 0) {
@@ -55,7 +55,7 @@ public class WebSocksProxyAgent {
                 System.out.println("Please visit https://vproxy-tools.github.io/vpwsui/ to generate a config file");
                 System.out.println("Or you may refer to the config file example https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
                 Browser.open("https://vproxy-tools.github.io/vpwsui/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
-                System.exit(1);
+                Utils.exit(1);
                 return;
             }
         } else {

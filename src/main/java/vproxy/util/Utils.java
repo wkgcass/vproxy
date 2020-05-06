@@ -1154,4 +1154,8 @@ public class Utils {
         System.arraycopy(arr, i, ret, 0, ret.length);
         return ret;
     }
+
+    public static void exit(int code) {
+        System.exit(code);
+    }
 }

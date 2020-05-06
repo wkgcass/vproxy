@@ -3,10 +3,7 @@ package vproxyx;
 import vproxy.app.Application;
 import vproxy.component.app.Shutdown;
 import vproxy.connection.ServerSock;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.OS;
-import vproxy.util.SignalHook;
+import vproxy.util.*;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -48,7 +45,7 @@ public class Daemon {
         {
             if (OS.isWindows()) {
                 System.err.println("Daemon is not supported on Windows");
-                System.exit(1);
+                Utils.exit(1);
                 return;
             }
         }
@@ -88,14 +85,14 @@ public class Daemon {
             if (process != null) {
                 process.destroy();
             }
-            System.exit(128 + 2);
+            Utils.exit(128 + 2);
         });
         start(false);
         join();
 
         var exitCode = 128 + 15; // exit normally on sigterm
         Logger.alert("Daemon exits: " + exitCode + ", pid: " + ProcessHandle.current().pid());
-        System.exit(exitCode);
+        Utils.exit(exitCode);
     }
 
     private static void start(boolean isReload) throws Exception {
@@ -115,7 +112,7 @@ public class Daemon {
                 return;
             } else {
                 Logger.error(LogType.ALERT, "check failed when starting, exit code is: " + checkExit);
-                System.exit(1);
+                Utils.exit(1);
                 return;
             }
         }
@@ -190,7 +187,7 @@ public class Daemon {
                     if (deadCount > 10) {
                         // dead too many times
                         process = null;
-                        System.exit(1);
+                        Utils.exit(1);
                         return;
                     }
 

@@ -2,6 +2,7 @@ package vproxy.fstack;
 
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 import java.util.List;
 
@@ -25,7 +26,7 @@ public class FStack implements IFStack {
             }
         });
         // now the program can exit
-        System.exit(0);
+        Utils.exit(0);
     }
 
     native private void ff_run0(Runnable r);

@@ -3,6 +3,7 @@ package vproxy.poc;
 import vproxy.dns.*;
 import vproxy.dns.rdata.PTR;
 import vproxy.util.Callback;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -41,13 +42,13 @@ public class DNSReverseLookup {
                     System.out.println(((PTR) value.answers.get(0).rdata).ptrdname);
                 } catch (RuntimeException ignore) {
                 }
-                System.exit(0);
+                Utils.exit(0);
             }
 
             @Override
             protected void onFailed(IOException err) {
                 err.printStackTrace();
-                System.exit(1);
+                Utils.exit(1);
             }
         });
     }

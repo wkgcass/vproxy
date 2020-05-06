@@ -1,6 +1,7 @@
 package vfd.posix;
 
 import vfd.*;
+import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.lang.reflect.Proxy;
@@ -16,7 +17,7 @@ public class PosixFDs implements FDs, FDsWithTap {
         } catch (UnsatisfiedLinkError e) {
             System.out.println(lib + " not found, requires lib" + lib + ".dylib or lib" + lib + ".so or " + lib + ".dll on java.library.path");
             e.printStackTrace(System.out);
-            System.exit(1);
+            Utils.exit(1);
         }
         if (VFDConfig.vfdtrace) {
             // make it difficult for graalvm native image initializer to detect the Posix.class

@@ -7,10 +7,7 @@ import vproxy.component.app.Shutdown;
 import vproxy.component.app.StdIOController;
 import vproxy.dns.Resolver;
 import vproxy.fstack.FStackUtil;
-import vproxy.util.Callback;
-import vproxy.util.LogType;
-import vproxy.util.Logger;
-import vproxy.util.Utils;
+import vproxy.util.*;
 import vproxyx.*;
 
 import java.io.File;
@@ -59,7 +56,7 @@ public class Main {
                 FStackUtil.init();
             } catch (IOException e) {
                 Logger.shouldNotHappen("initiate f-stack failed", e);
-                System.exit(1);
+                Utils.exit(1);
             }
         }
 
@@ -68,7 +65,7 @@ public class Main {
                 Mirror.init(Config.mirrorConfigPath);
             } catch (Exception e) {
                 Logger.fatal(LogType.INVALID_EXTERNAL_DATA, "initiate mirror failed", e);
-                System.exit(1);
+                Utils.exit(1);
             }
         }
 
@@ -107,11 +104,11 @@ public class Main {
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
-                    System.exit(1);
+                    Utils.exit(1);
             }
         } catch (Exception e) {
             e.printStackTrace();
-            System.exit(1);
+            Utils.exit(1);
         }
     }
 
@@ -170,7 +167,7 @@ public class Main {
         } catch (IOException e) {
             System.err.println("start application failed! " + e);
             e.printStackTrace();
-            System.exit(1);
+            Utils.exit(1);
             return;
         }
         // init the address updater (should be called after Application initiates)
@@ -203,17 +200,17 @@ public class Main {
             switch (arg) {
                 case "version":
                     System.out.println(Application.get().version);
-                    System.exit(0);
+                    Utils.exit(0);
                     return;
                 case "help":
                     System.out.println(_HELP_STR_);
-                    System.exit(0);
+                    Utils.exit(0);
                     return;
                 default:
                     var op = ctx.seekOp(arg);
                     if (op == null) {
                         System.err.println("unknown argument `" + arg + "`");
-                        System.exit(1);
+                        Utils.exit(1);
                         return;
                     }
                     var cnt = op.argCount();
@@ -224,7 +221,7 @@ public class Main {
                         // check next
                         if (next == null) {
                             System.err.println("`" + arg + "` expects more arguments");
-                            System.exit(1);
+                            Utils.exit(1);
                             return;
                         }
                         if (cnt == 1) {
@@ -234,7 +231,7 @@ public class Main {
                             assert cnt == 2;
                             if (next2 == null) {
                                 System.err.println("`" + arg + "` expects more arguments");
-                                System.exit(1);
+                                Utils.exit(1);
                                 return;
                             }
                             ctx.addTodo(op, new String[]{next, next2});
@@ -254,13 +251,15 @@ public class Main {
                 if (ctx.get("isCheck", false)) {
                     exitAfterLoading = true;
                 }
+                JoinCallback<String, Throwable> cb = new JoinCallback<>(new CallbackInMain());
                 try {
-                    Shutdown.load(null, new CallbackInMain());
+                    Shutdown.load(null, cb);
                 } catch (Exception e) {
                     Logger.error(LogType.ALERT, "got exception when do pre-loading: " + Utils.formatErr(e));
-                    System.exit(1);
+                    Utils.exit(1);
                     return;
                 }
+                cb.join();
             }
         }
         // launch the default http controller
@@ -268,7 +267,7 @@ public class Main {
             String hostport = "127.0.0.1:18776";
             int ret = new HttpControllerOp().execute(ctx, new String[]{hostport});
             if (ret != 0) {
-                System.exit(ret);
+                Utils.exit(ret);
             }
             Logger.alert("default http-controller started on " + hostport);
         }
@@ -278,7 +277,7 @@ public class Main {
             String pass = "123456";
             int ret = new RespControllerOp().execute(ctx, new String[]{hostport, pass});
             if (ret != 0) {
-                System.exit(ret);
+                Utils.exit(ret);
             }
             Logger.alert("default resp-controller started on " + hostport + " with password " + pass);
         }
@@ -298,7 +297,7 @@ public class Main {
         if (ctx.get("isCheck", false)) {
             if (!exitAfterLoading) {
                 System.out.println("ok");
-                System.exit(0);
+                Utils.exit(0);
                 return;
             }
         }
@@ -336,14 +335,14 @@ public class Main {
             Config.checkBind = true;
             if (exitAfterLoading) {
                 System.out.println("ok");
-                System.exit(0);
+                Utils.exit(0);
             }
         }
 
         @Override
         protected void onFailed(Throwable err) {
             System.err.println(Utils.formatErr(err));
-            System.exit(1);
+            Utils.exit(1);
         }
     }
 }

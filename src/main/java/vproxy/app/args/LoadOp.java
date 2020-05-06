@@ -4,6 +4,7 @@ import vproxy.app.Main;
 import vproxy.app.MainCtx;
 import vproxy.app.MainOp;
 import vproxy.component.app.Shutdown;
+import vproxy.util.JoinCallback;
 import vproxy.util.Utils;
 
 public class LoadOp implements MainOp {
@@ -34,12 +35,14 @@ public class LoadOp implements MainOp {
 
     @Override
     public int execute(MainCtx ctx, String[] args) {
+        JoinCallback<String, Throwable> cb = new JoinCallback<>(new Main.CallbackInMain());
         try {
-            Shutdown.load(args[0], new Main.CallbackInMain());
+            Shutdown.load(args[0], cb);
         } catch (Exception e) {
             System.err.println("got exception when do pre-loading: " + Utils.formatErr(e));
             return 1;
         }
+        cb.join();
         return 0;
     }
 }

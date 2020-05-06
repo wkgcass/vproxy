@@ -102,7 +102,7 @@ public class Shutdown {
         } catch (Exception e) {
             Logger.shouldNotHappen("save failed", e);
         }
-        System.exit(exitCode);
+        Utils.exit(exitCode);
     }
 
     private static void endSaveAndSoftQuit(@SuppressWarnings("SameParameterValue") int exitCode) {
@@ -177,7 +177,7 @@ public class Shutdown {
             }
             // use error to make log more obvious
             Logger.error(LogType.ALERT, "No connections, shutdown now");
-            System.exit(exitCode);
+            Utils.exit(exitCode);
         }).start();
     }
 

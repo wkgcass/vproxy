@@ -2,6 +2,7 @@ package vproxy.app;
 
 import vproxy.util.LogType;
 import vproxy.util.Logger;
+import vproxy.util.Utils;
 
 public class OOMHandler {
     private static byte[] _512K;
@@ -35,7 +36,7 @@ public class OOMHandler {
                     Logger.shouldNotHappen("oom-handler got exception", t);
                 }
             }
-            System.exit(137);
+            Utils.exit(137);
         }, "oom-handler").start();
     }
 }

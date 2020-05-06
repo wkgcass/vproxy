@@ -57,7 +57,7 @@ public class Simple {
     public static void main0(String[] args) throws Exception {
         if (args.length == 0) {
             System.out.println(_HELP_STR_);
-            System.exit(0);
+            Utils.exit(0);
             return;
         }
 
@@ -82,7 +82,7 @@ public class Simple {
             switch (arg) {
                 case "help":
                     System.out.println(_HELP_STR_);
-                    System.exit(0);
+                    Utils.exit(0);
                     return;
                 case "bind":
                     if (next == null) {
@@ -244,7 +244,7 @@ public class Simple {
         // check for `gen`
         if (gen) {
             System.out.println("Config is printed in stderr");
-            System.exit(0);
+            Utils.exit(0);
             return;
         }
 
