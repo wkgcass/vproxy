@@ -787,7 +787,9 @@ public class Switch {
                     assert Logger.lowLevelDebug(netCtx + "is unicast and mac address not match");
                     continue;
                 }
-                syntheticIpMacMatches = true;
+                if (!allReceives) {
+                    syntheticIpMacMatches = true;
+                }
                 // check l3
                 if (arpReq != null) {
                     assert Logger.lowLevelDebug(netCtx + "check arp");
