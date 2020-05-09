@@ -673,7 +673,14 @@ public class Switch {
                         var other = icmp.getOther();
                         if (other.length() >= 28) { // 4 reserved and 16 target address and 8 option
                             assert Logger.lowLevelDebug(netCtx + "ndp length is ok");
-                            var targetIp = other.sub(4, 16);
+                            var targetIp = Utils.l3addr(other.sub(4, 16).toJavaArray());
+                            // check the target ip
+                            if (table.v6network == null || !table.v6network.contains(targetIp)) {
+                                assert Logger.lowLevelDebug(netCtx + "got ndp packet not allowed in the network: " + targetIp + " not in " + table.v6network);
+                                return;
+                            }
+
+                            // try to build arp table
                             var optType = other.uint8(20);
                             var optLen = other.uint8(21);
                             if (optLen == 1) {
@@ -682,21 +689,13 @@ public class Switch {
                                 if (optType == Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address) {
                                     assert Logger.lowLevelDebug(netCtx + "ndp has opt source link layer address");
                                     // mac is the sender's mac, record with src ip in ip packet
+                                    // this ip address might be solicited node address, but it won't harm to record
                                     InetAddress ip = ipPkt.getSrc();
-                                    if (table.v6network == null || !table.v6network.contains(ip)) {
-                                        assert Logger.lowLevelDebug(netCtx + "got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
-                                        return;
-                                    }
                                     table.arpTable.record(mac, ip);
-                                } else {
+                                } else if (optType == Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address) {
                                     assert Logger.lowLevelDebug(netCtx + "ndp has opt target link layer address");
                                     // mac is the target's mac, record with target ip in icmp packet
-                                    InetAddress ip = Utils.l3addr(targetIp.toJavaArray());
-                                    if (table.v6network == null || !table.v6network.contains(ip)) {
-                                        assert Logger.lowLevelDebug(netCtx + "got ndp packet not allowed in the network: " + ip + " not in " + table.v6network);
-                                        return;
-                                    }
-                                    table.arpTable.record(mac, ip);
+                                    table.arpTable.record(mac, targetIp);
                                 }
                             }
                         }
