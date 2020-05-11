@@ -560,8 +560,6 @@ add route internet to vpc 1 in switch sw2 network 0.0.0.0/0 vni 3
 add route internet-v6 to vpc 1 in switch sw2 network ::/0 vni 3
 
 # route packets to the default gateway in vpc 3
-remove route default from vpc 3 in switch sw2
-remove route default-v6 from vpc 3 in switch sw2
 add route internet-forward to vpc 3 in switch sw2 network 0.0.0.0/0 via 172.16.3.254
 add route internet-forward-v6 to vpc 3 in switch sw2 network ::/0 via fd00::3fe
 
