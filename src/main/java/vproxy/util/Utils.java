@@ -807,6 +807,10 @@ public class Utils {
         return l3addr(new byte[]{a, b, c, d});
     }
 
+    public static InetSocketAddress bindAnyAddress() {
+        return new InetSocketAddress(l3addr(0, 0, 0, 0), 0);
+    }
+
     private static Unsafe U;
 
     static {

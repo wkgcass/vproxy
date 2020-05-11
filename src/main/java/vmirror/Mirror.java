@@ -117,7 +117,8 @@ public class Mirror {
         }
 
         for (MirrorConfig c : mirrors) {
-            var packets = formatPacket(c.mtu, data.origin,
+            var packets = formatPacket(data.ctx,
+                c.mtu, data.origin,
                 data.macSrc, data.macDst,
                 data.ipSrc, data.ipDst,
                 data.transportLayerProtocol,
@@ -137,7 +138,8 @@ public class Mirror {
         }
     }
 
-    private static List<EthernetPacket> formatPacket(int mtu,
+    private static List<EthernetPacket> formatPacket(MirrorContext ctx,
+                                                     int mtu,
                                                      String originType,
                                                      MacAddress macSrc, MacAddress macDst,
                                                      InetAddress ipSrc, InetAddress ipDst,
@@ -165,28 +167,8 @@ public class Mirror {
                 ipDst = Utils.l3addr(b);
             }
             // use ipv6 if it's provided as ipv4
-            if (ipSrc instanceof Inet4Address) {
-                byte[] v4 = ipSrc.getAddress();
-                byte[] v6 = new byte[16];
-                v6[10] = (byte) 0xff;
-                v6[11] = (byte) 0xff;
-                v6[12] = v4[0];
-                v6[13] = v4[1];
-                v6[14] = v4[2];
-                v6[15] = v4[3];
-                ipSrc = Utils.l3addr(v6);
-            }
-            if (ipDst instanceof Inet4Address) {
-                byte[] v4 = ipDst.getAddress();
-                byte[] v6 = new byte[16];
-                v6[10] = (byte) 0xff;
-                v6[11] = (byte) 0xff;
-                v6[12] = v4[0];
-                v6[13] = v4[1];
-                v6[14] = v4[2];
-                v6[15] = v4[3];
-                ipDst = Utils.l3addr(v6);
-            }
+            ipSrc = getIpv6FromIpv4(ipSrc);
+            ipDst = getIpv6FromIpv4(ipDst);
             // set default transport layer protocol
             if (transportLayerProtocol == null) {
                 transportLayerProtocol = "";
@@ -199,8 +181,6 @@ public class Mirror {
         // prepare port
         ByteArray srcPort = ByteArray.allocate(2).int16(0, portSrc);
         ByteArray dstPort = ByteArray.allocate(2).int16(0, portDst);
-        // prepare seq
-        int seq = new Random().nextInt() & 0x00ffffff; // we only use 24bits
         // prepare payload
         List<ByteArray> dataList = new ArrayList<>();
         while (true) {
@@ -218,7 +198,7 @@ public class Mirror {
             ByteArray data = dataList.get(i);
             // increase the sequence
             if (i > 0) {
-                seq += dataList.get(i - 1).length();
+                ctx.incrSeq(dataList.get(i - 1).length());
             }
 
             final int dataOffset = 5; // 20 bytes
@@ -226,7 +206,7 @@ public class Mirror {
             ByteArray tcpPacketBytes =
                 srcPort.concat(dstPort) // src(2) dst(2)
                     .concat(ByteArray.allocate(16)
-                            .int32(0, seq) // seq(4)
+                            .int32(0, ctx.getSeq()) // seq(4)
                             // ack(4)
                             .set(8, dataOffsetByte).set(9, flags).int16(10, 0xffff) // dataOffset,flags,windowSize
                         // checksum and urg-ptr
@@ -312,6 +292,24 @@ public class Mirror {
             retList.add(pkt);
         }
         return retList;
+    }
+
+    private static Inet6Address getIpv6FromIpv4(InetAddress ipSrc) {
+        if (ipSrc instanceof Inet4Address) {
+            byte[] v4 = ipSrc.getAddress();
+            byte[] v6 = new byte[16];
+            v6[0] = (byte) 0xff;
+            v6[1] = (byte) 0xff;
+            v6[10] = (byte) 0xff;
+            v6[11] = (byte) 0xff;
+            v6[12] = v4[0];
+            v6[13] = v4[1];
+            v6[14] = v4[2];
+            v6[15] = v4[3];
+            return (Inet6Address) Utils.l3addr(v6);
+        } else {
+            return (Inet6Address) ipSrc;
+        }
     }
 
     private void loadConfig() throws Exception {

@@ -1,15 +1,19 @@
 package vproxy.util.ringbuffer;
 
+import vfd.NetworkFD;
 import vmirror.Mirror;
-import vmirror.MirrorData;
+import vmirror.MirrorDataFactory;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
+import vproxy.util.Utils;
 import vproxy.util.crypto.BlockCipherKey;
 import vproxy.util.crypto.StreamingCFBCipher;
 
 import java.io.IOException;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
+import java.util.function.Supplier;
 
 public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer implements RingBuffer {
     private final BlockCipherKey key;
@@ -18,11 +22,44 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
     private byte[] iv;
     private StreamingCFBCipher cipher;
 
+    private final MirrorDataFactory mirrorDataFactory;
+
+    public DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key, NetworkFD fd) {
+        this(plainBufferForApp, key,
+            () -> {
+                try {
+                    return (InetSocketAddress) fd.getRemoteAddress();
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("getting remote address of " + fd + " failed", e);
+                    return Utils.bindAnyAddress();
+                }
+            }, () -> {
+                try {
+                    return (InetSocketAddress) fd.getLocalAddress();
+                } catch (IOException e) {
+                    Logger.shouldNotHappen("getting local address of " + fd + " failed", e);
+                    return Utils.bindAnyAddress();
+                }
+            });
+    }
+
     public DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key) {
+        this(plainBufferForApp, key, Utils::bindAnyAddress, Utils::bindAnyAddress);
+    }
+
+    private DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key,
+                                            Supplier<InetSocketAddress> srcAddrSupplier,
+                                            Supplier<InetSocketAddress> dstAddrSupplier) {
         super(plainBufferForApp);
         this.key = key;
         this.requiredIvLen = key.ivLen();
         this.iv = new byte[requiredIvLen];
+
+        this.mirrorDataFactory = new MirrorDataFactory("iv-prepend", d -> {
+            InetSocketAddress src = srcAddrSupplier.get();
+            InetSocketAddress dst = dstAddrSupplier.get();
+            d.setSrc(src).setDst(dst);
+        });
     }
 
     @Override
@@ -53,18 +90,14 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
     }
 
     private void mirror(byte[] bytes) {
-        // build ref
-        ByteArray ref = ByteArray.from("IVInDataWrapUnwrapRingBuffer".getBytes());
-
         // build meta message
         String meta = "iv=" + ByteArray.from(iv).toHexString() +
             ";";
 
-        Mirror.mirror(new MirrorData("iv")
-            .setSrc(ref)
-            .setDstRef(cipher)
+        mirrorDataFactory.build()
             .setMeta(meta)
-            .setData(bytes));
+            .setData(bytes)
+            .mirror();
     }
 
     private void readData(ByteBuffer input) {

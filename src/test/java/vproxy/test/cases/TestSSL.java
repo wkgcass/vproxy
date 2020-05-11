@@ -124,10 +124,11 @@ public class TestSSL {
                 "may be network is wrong, we ignore this case");
             return;
         }
+        var remote = new InetSocketAddress(inet, port);
         // make a socket to test whether it's accessible
         {
             try (Socket sock = new Socket()) {
-                sock.connect(new InetSocketAddress(inet, port));
+                sock.connect(remote);
             } catch (IOException e) {
                 System.out.println("we cannot connect to the remote," +
                     "may be network is wrong, we ignore this case");
@@ -148,10 +149,11 @@ public class TestSSL {
             engine,
             RingBuffer.allocate(16384),
             RingBuffer.allocate(16384),
-            selectorEventLoop
+            selectorEventLoop,
+            remote
         );
         ConnectableConnection conn = ConnectableConnection.create(
-            new InetSocketAddress(inet, port),
+            remote,
             ConnectionOpts.getDefault(),
             pair.left, pair.right
         );

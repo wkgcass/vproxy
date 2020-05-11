@@ -367,7 +367,8 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine,
             // we can allocate new buffer here, but it's ok to use the original allocated buffers
             (ByteBufferRingBuffer) ctx.connection.getInBuffer(),
-            (ByteBufferRingBuffer) ctx.connection.getOutBuffer());
+            (ByteBufferRingBuffer) ctx.connection.getOutBuffer(),
+            ctx.connection.channel);
         try {
             // when init, there should have not read any data yet
             // so we should safely replace the buffers

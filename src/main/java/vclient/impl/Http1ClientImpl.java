@@ -124,7 +124,7 @@ public class Http1ClientImpl implements HttpClient {
                             params.setServerNames(Collections.singletonList(new SNIHostName(opts.host)));
                         }
                         engine.setSSLParameters(params);
-                        SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
+                        SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), remote);
                         in = pair.left;
                         out = pair.right;
                     } else {

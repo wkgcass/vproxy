@@ -4,7 +4,7 @@ import vfd.EventSet;
 import vfd.FD;
 import vfd.SocketFD;
 import vmirror.Mirror;
-import vmirror.MirrorData;
+import vmirror.MirrorDataFactory;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
@@ -43,6 +43,9 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     private PeriodicEvent periodicEvent;
 
+    private final MirrorDataFactory readingMirrorDataFactory;
+    private final MirrorDataFactory writingMirrorDataFactory;
+
     protected ArqUDPSocketFD(SocketFD fd, SelectorEventLoop loop, Function<Consumer<ByteArrayChannel>, ArqUDPHandler> handlerConstructor) {
         this(false, fd, loop, handlerConstructor);
     }
@@ -71,6 +74,38 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         });
         // the fd is always writable when just constructed because writing queue is empty
         this.fdHandler.setSelfFDWritable();
+
+        // mirrors
+        this.readingMirrorDataFactory = new MirrorDataFactory("arq-udp",
+            d -> {
+                try {
+                    InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+                    d.setSrc(remote);
+                } catch (IOException e) {
+                    d.setSrcRef(fd);
+                }
+                try {
+                    InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+                    d.setDst(local);
+                } catch (IOException e) {
+                    d.setDstRef(this);
+                }
+            });
+        this.writingMirrorDataFactory = new MirrorDataFactory("arq-udp",
+            d -> {
+                try {
+                    InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+                    d.setSrc(local);
+                } catch (IOException e) {
+                    d.setSrcRef(this);
+                }
+                try {
+                    InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+                    d.setDst(remote);
+                } catch (IOException e) {
+                    d.setDstRef(fd);
+                }
+            });
     }
 
     @Override
@@ -115,25 +150,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         }
 
         String meta = "r=" + readBufs.size() + ";w=" + writeBufs.size() + ";p=" + handler.getClass().getSimpleName();
-        MirrorData mirrorData = new MirrorData("arq-udp")
+        readingMirrorDataFactory.build()
             .setMeta(meta)
-            .setDataAfter(dstBuf, posBefore);
-        mirrorData.setTransportLayerProtocol("UDP");
-        try {
-            InetSocketAddress local = (InetSocketAddress) getLocalAddress();
-            mirrorData.setIpDst(local.getAddress());
-            mirrorData.setPortDst(local.getPort());
-        } catch (IOException e) {
-            mirrorData.setDstRef(this);
-        }
-        try {
-            InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
-            mirrorData.setIpSrc(remote.getAddress());
-            mirrorData.setPortSrc(remote.getPort());
-        } catch (IOException e) {
-            mirrorData.setSrcRef(fd);
-        }
-        Mirror.mirror(mirrorData);
+            .setDataAfter(dstBuf, posBefore)
+            .setTransportLayerProtocol("UDP")
+            .mirror();
     }
 
     @Override
@@ -185,25 +206,11 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
     private void mirrorWrite(byte[] data) {
         String meta = "r=" + readBufs.size() + ";w=" + writeBufs.size() + ";p=" + handler.getClass().getSimpleName();
-        MirrorData mirrorData = new MirrorData("arq-udp")
+        writingMirrorDataFactory.build()
             .setMeta(meta)
-            .setData(data);
-        mirrorData.setTransportLayerProtocol("UDP");
-        try {
-            InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
-            mirrorData.setIpDst(remote.getAddress());
-            mirrorData.setPortDst(remote.getPort());
-        } catch (IOException e) {
-            mirrorData.setDstRef(fd);
-        }
-        try {
-            InetSocketAddress local = (InetSocketAddress) getLocalAddress();
-            mirrorData.setIpSrc(local.getAddress());
-            mirrorData.setPortSrc(local.getPort());
-        } catch (IOException e) {
-            mirrorData.setSrcRef(this);
-        }
-        Mirror.mirror(mirrorData);
+            .setData(data)
+            .setTransportLayerProtocol("UDP")
+            .mirror();
     }
 
     @Override

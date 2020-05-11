@@ -315,7 +315,7 @@ public class Proxy {
                     }));
                 }
             }
-            SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, inBuffer, (ByteBufferRingBuffer) outBuffer);
+            SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, inBuffer, (ByteBufferRingBuffer) outBuffer, channel);
             return new Tuple<>(pair.left, pair.right);
         }
 

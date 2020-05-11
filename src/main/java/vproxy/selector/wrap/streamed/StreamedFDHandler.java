@@ -3,7 +3,7 @@ package vproxy.selector.wrap.streamed;
 import vfd.EventSet;
 import vfd.SocketFD;
 import vmirror.Mirror;
-import vmirror.MirrorData;
+import vmirror.MirrorDataFactory;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
@@ -953,35 +953,17 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         // build meta
         String meta = "c=" + (client ? "1" : "0") + ";fd=" + this.fd.toString();
 
-        MirrorData mirrorData = new MirrorData("streamed")
+        MirrorDataFactory factory;
+        if (isSend) {
+            factory = fd.writingMirrorDataFactory;
+        } else {
+            factory = fd.readingMirrorDataFactory;
+        }
+        factory.build()
             .setMeta(meta)
             .setFlags(flags)
-            .setData(data);
-
-        // build src and dst
-        {
-            InetSocketAddress local = (InetSocketAddress) fd.getLocalAddress();
-            InetSocketAddress remote = (InetSocketAddress) fd.getRemoteAddress();
-
-            if (isSend) {
-                mirrorData.setIpSrc(local.getAddress());
-                mirrorData.setIpDst(remote.getAddress());
-
-                mirrorData.setTransportLayerProtocol("UDP");
-
-                mirrorData.setPortSrc(local.getPort());
-                mirrorData.setPortDst(remote.getPort());
-            } else {
-                mirrorData.setIpSrc(remote.getAddress());
-                mirrorData.setIpDst(local.getAddress());
-
-                mirrorData.setTransportLayerProtocol("UDP");
-
-                mirrorData.setPortSrc(remote.getPort());
-                mirrorData.setPortDst(local.getPort());
-            }
-        }
-
-        Mirror.mirror(mirrorData);
+            .setData(data)
+            .setTransportLayerProtocol("UDP")
+            .mirror();
     }
 }

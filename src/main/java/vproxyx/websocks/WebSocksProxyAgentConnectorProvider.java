@@ -545,13 +545,15 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 pair = SSLUtils.genbuf(
                     engine,
                     RingBuffer.allocate(24576),
-                    RingBuffer.allocate(24576));
+                    RingBuffer.allocate(24576),
+                    connector.remote);
             } else {
                 pair = SSLUtils.genbuf(
                     engine,
                     RingBuffer.allocate(24576),
                     RingBuffer.allocate(24576),
-                    loop);
+                    loop,
+                    connector.remote);
             }
             if (sharedData.useKCP) {
                 var fds = sharedData.fds.get(loop);
@@ -767,10 +769,16 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 params.setApplicationProtocols(new String[]{"h2", "http/1.1"});
                 engine.setSSLParameters(params);
 
-                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
+                var remtoe = new InetSocketAddress(value, 443);
+                SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
+                    engine,
+                    RingBuffer.allocate(24576),
+                    RingBuffer.allocate(24576),
+                    loop.getSelectorEventLoop(),
+                    remtoe);
                 ConnectableConnection conn;
                 try {
-                    conn = ConnectableConnection.create(new InetSocketAddress(value, 443), new ConnectionOpts().setTimeout(60_000),
+                    conn = ConnectableConnection.create(remtoe, new ConnectionOpts().setTimeout(60_000),
                         pair.left, pair.right);
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "connecting to " + address + "(" + value + "):443 failed");

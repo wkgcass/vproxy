@@ -7,7 +7,7 @@ import java.nio.ByteBuffer;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 
-public interface DatagramFD extends FD, ReadableByteChannel, WritableByteChannel {
+public interface DatagramFD extends FD, NetworkFD, ReadableByteChannel, WritableByteChannel {
     void connect(InetSocketAddress l4addr) throws IOException;
 
     void bind(InetSocketAddress l4addr) throws IOException;
@@ -15,8 +15,4 @@ public interface DatagramFD extends FD, ReadableByteChannel, WritableByteChannel
     int send(ByteBuffer buf, InetSocketAddress remote) throws IOException;
 
     SocketAddress receive(ByteBuffer buf) throws IOException;
-
-    SocketAddress getLocalAddress() throws IOException;
-
-    SocketAddress getRemoteAddress() throws IOException;
 }

@@ -115,7 +115,7 @@ public class SSLHelper {
         if (alpn != null) {
             builder.configure(engine -> engine.setHandshakeApplicationProtocolSelector((e, as) -> alpn));
         }
-        SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, RingBuffer.allocate(24576), RingBuffer.allocate(24576));
+        SSLUtils.SSLBufferPair pair = SSLUtils.genbufForServer(ssl, RingBuffer.allocate(24576), RingBuffer.allocate(24576), accepted.channel);
         try {
             accepted.UNSAFE_replaceBuffer(pair.left, pair.right);
         } catch (IOException e) {

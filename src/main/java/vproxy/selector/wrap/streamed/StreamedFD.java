@@ -3,6 +3,7 @@ package vproxy.selector.wrap.streamed;
 import vfd.FD;
 import vfd.SocketFD;
 import vmirror.Mirror;
+import vmirror.MirrorDataFactory;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
 import vproxy.util.ByteArray;
@@ -34,6 +35,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     private boolean readable = false;
     private boolean writable = false;
+
+    final MirrorDataFactory readingMirrorDataFactory;
+    final MirrorDataFactory writingMirrorDataFactory;
 
     public enum State {
         none(Logger.DEBUG_COLOR, false),
@@ -67,6 +71,30 @@ public class StreamedFD implements SocketFD, VirtualFD {
         this.remoteAddress = remoteAddress;
         this.handler = handler;
         this.client = client;
+
+        // mirror
+        readingMirrorDataFactory = new MirrorDataFactory("streamed",
+            d -> {
+                {
+                    InetSocketAddress remote = (InetSocketAddress) this.getRemoteAddress();
+                    d.setSrc(remote);
+                }
+                {
+                    InetSocketAddress local = (InetSocketAddress) this.getLocalAddress();
+                    d.setDst(local);
+                }
+            });
+        writingMirrorDataFactory = new MirrorDataFactory("streamed",
+            d -> {
+                {
+                    InetSocketAddress local = (InetSocketAddress) this.getLocalAddress();
+                    d.setSrc(local);
+                }
+                {
+                    InetSocketAddress remote = (InetSocketAddress) this.getRemoteAddress();
+                    d.setDst(remote);
+                }
+            });
     }
 
     public State getState() {

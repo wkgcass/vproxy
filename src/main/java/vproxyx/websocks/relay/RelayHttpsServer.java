@@ -186,10 +186,16 @@ public class RelayHttpsServer {
                     }
                     engine.setSSLParameters(sslParams);
 
-                    SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), loop.getSelectorEventLoop());
+                    var remote = new InetSocketAddress(value, 443);
+                    SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
+                        engine,
+                        RingBuffer.allocate(24576),
+                        RingBuffer.allocate(24576),
+                        loop.getSelectorEventLoop(),
+                        remote);
                     ConnectableConnection conn;
                     try {
-                        conn = ConnectableConnection.create(new InetSocketAddress(value, 443), new ConnectionOpts().setTimeout(60_000),
+                        conn = ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(60_000),
                             pair.left, pair.right);
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "connecting to " + finalHostname + "(" + value + "):443 failed");

@@ -6,9 +6,11 @@ import vswitch.util.Consts;
 import vswitch.util.MacAddress;
 
 import java.net.InetAddress;
+import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 public class MirrorData {
+    public final MirrorContext ctx;
     public final String origin;
     MacAddress macSrc = new MacAddress("00:00:00:00:00:00");
     MacAddress macDst = new MacAddress("ff:ff:ff:ff:ff:ff");
@@ -22,7 +24,8 @@ public class MirrorData {
     byte flags = Consts.TCP_FLAGS_PSH;
     ByteArray data;
 
-    public MirrorData(String origin) {
+    public MirrorData(MirrorContext ctx, String origin) {
+        this.ctx = ctx;
         this.origin = origin;
     }
 
@@ -60,6 +63,14 @@ public class MirrorData {
         }
         this.portDst = portDst;
         return this;
+    }
+
+    public MirrorData setSrc(InetSocketAddress src) {
+        return setIpSrc(src.getAddress()).setPortSrc(src.getPort());
+    }
+
+    public MirrorData setDst(InetSocketAddress dst) {
+        return setIpDst(dst.getAddress()).setPortDst(dst.getPort());
     }
 
     public MirrorData setSrc(ByteArray src) {
@@ -186,5 +197,9 @@ public class MirrorData {
                 c2.set(2 - 1 - i, array.get(total - 1 - i));
             }
         }
+    }
+
+    public void mirror() {
+        Mirror.mirror(this);
     }
 }
