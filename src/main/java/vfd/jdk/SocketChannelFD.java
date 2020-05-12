@@ -1,10 +1,9 @@
 package vfd.jdk;
 
+import vfd.IPPort;
 import vfd.SocketFD;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 
@@ -22,18 +21,18 @@ public class SocketChannelFD extends ChannelFD implements SocketFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
-        channel.connect(l4addr);
+    public void connect(IPPort l4addr) throws IOException {
+        channel.connect(l4addr.toInetSocketAddress());
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
-        return channel.getLocalAddress();
+    public IPPort getLocalAddress() throws IOException {
+        return IPPort.fromNullable(channel.getLocalAddress());
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
-        return channel.getRemoteAddress();
+    public IPPort getRemoteAddress() throws IOException {
+        return IPPort.fromNullable(channel.getRemoteAddress());
     }
 
     @Override

@@ -1,9 +1,8 @@
 package vfd.posix;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
-
-import java.net.InetSocketAddress;
 
 public class SocketAddressIPv6 implements VSocketAddress {
     public final String ip;
@@ -15,13 +14,13 @@ public class SocketAddressIPv6 implements VSocketAddress {
     }
 
     @Override
-    public InetSocketAddress toInetSocketAddress() {
-        byte[] ip = Utils.parseIpString(this.ip);
+    public IPPort toIPPort() {
+        byte[] ip = IP.parseIpString(this.ip);
         if (ip == null) {
             Logger.shouldNotHappen("parse ipv6 from bytes " + this.ip + " failed");
             throw new RuntimeException("parse ip " + this.ip + " failed");
         }
-        return new InetSocketAddress(Utils.l3addr(ip), port);
+        return new IPPort(IP.from(ip), port);
     }
 
     @Override

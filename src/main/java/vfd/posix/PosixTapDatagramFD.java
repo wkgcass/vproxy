@@ -1,12 +1,11 @@
 package vfd.posix;
 
+import vfd.NoSockAddr;
 import vfd.TapDatagramFD;
 import vfd.TapInfo;
 import vproxy.util.OS;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.concurrent.TimeUnit;
 
@@ -21,17 +20,22 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void connect(NoSockAddr l4addr) throws IOException {
         throw new IOException(new UnsupportedOperationException("tun-tap dev"));
     }
 
     @Override
-    public int send(ByteBuffer buf, InetSocketAddress remote) throws IOException {
+    public void bind(NoSockAddr l4addr) throws IOException {
         throw new IOException(new UnsupportedOperationException("tun-tap dev"));
     }
 
     @Override
-    public SocketAddress receive(ByteBuffer buf) throws IOException {
+    public int send(ByteBuffer buf, NoSockAddr remote) throws IOException {
+        throw new IOException(new UnsupportedOperationException("tun-tap dev"));
+    }
+
+    @Override
+    public NoSockAddr receive(ByteBuffer buf) throws IOException {
         throw new IOException(new UnsupportedOperationException("tun-tap dev"));
     }
 
@@ -66,5 +70,15 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
             }
         }
         super.close();
+    }
+
+    @Override
+    public NoSockAddr getLocalAddress() throws IOException {
+        throw new IOException(new UnsupportedOperationException("tun-tap dev"));
+    }
+
+    @Override
+    public NoSockAddr getRemoteAddress() throws IOException {
+        throw new IOException(new UnsupportedOperationException("tun-tap dev"));
     }
 }

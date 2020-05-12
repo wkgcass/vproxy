@@ -1,10 +1,11 @@
 package vfd;
 
 import java.io.IOException;
-import java.net.SocketAddress;
+import java.nio.channels.ReadableByteChannel;
+import java.nio.channels.WritableByteChannel;
 
-public interface NetworkFD extends FD {
-    SocketAddress getLocalAddress() throws IOException;
+public interface NetworkFD<ADDR extends SockAddr> extends FD, ReadableByteChannel, WritableByteChannel {
+    ADDR getLocalAddress() throws IOException;
 
-    SocketAddress getRemoteAddress() throws IOException;
+    ADDR getRemoteAddress() throws IOException;
 }

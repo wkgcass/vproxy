@@ -3,7 +3,6 @@ package vfd.windows;
 import vfd.*;
 import vfd.jdk.ChannelFDs;
 import vfd.posix.Posix;
-import vfd.TraceInvocationHandler;
 import vproxy.util.Logger;
 import vproxy.util.Utils;
 

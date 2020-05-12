@@ -1,10 +1,9 @@
 package vfd.jdk;
 
 import vfd.DatagramFD;
+import vfd.IPPort;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.DatagramChannel;
@@ -18,33 +17,33 @@ public class DatagramChannelFD extends ChannelFD implements DatagramFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
-        channel.connect(l4addr);
+    public void connect(IPPort l4addr) throws IOException {
+        channel.connect(l4addr.toInetSocketAddress());
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
-        channel.bind(l4addr);
+    public void bind(IPPort l4addr) throws IOException {
+        channel.bind(l4addr.toInetSocketAddress());
     }
 
     @Override
-    public int send(ByteBuffer buf, InetSocketAddress remote) throws IOException {
-        return channel.send(buf, remote);
+    public int send(ByteBuffer buf, IPPort remote) throws IOException {
+        return channel.send(buf, remote.toInetSocketAddress());
     }
 
     @Override
-    public SocketAddress receive(ByteBuffer buf) throws IOException {
-        return channel.receive(buf);
+    public IPPort receive(ByteBuffer buf) throws IOException {
+        return IPPort.fromNullable(channel.receive(buf));
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
-        return channel.getLocalAddress();
+    public IPPort getLocalAddress() throws IOException {
+        return IPPort.fromNullable(channel.getLocalAddress());
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
-        return channel.getRemoteAddress();
+    public IPPort getRemoteAddress() throws IOException {
+        return IPPort.fromNullable(channel.getRemoteAddress());
     }
 
     @Override

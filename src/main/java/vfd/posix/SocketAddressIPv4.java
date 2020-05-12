@@ -1,8 +1,7 @@
 package vfd.posix;
 
-import vproxy.util.Utils;
-
-import java.net.InetSocketAddress;
+import vfd.IP;
+import vfd.IPPort;
 
 public class SocketAddressIPv4 implements VSocketAddress {
     public final int ip;
@@ -14,14 +13,14 @@ public class SocketAddressIPv4 implements VSocketAddress {
     }
 
     @Override
-    public InetSocketAddress toInetSocketAddress() {
-        return new InetSocketAddress(Utils.l3addr(Utils.ipv4Int2Bytes(ip)), port);
+    public IPPort toIPPort() {
+        return new IPPort(IP.from(IP.ipv4Int2Bytes(ip)), port);
     }
 
     @Override
     public String toString() {
         return "SocketAddressIPv4{" +
-            "ip=" + Utils.ipStr(Utils.ipv4Int2Bytes(ip)) +
+            "ip=" + IP.ipStr(IP.ipv4Int2Bytes(ip)) +
             ", port=" + port +
             '}';
     }

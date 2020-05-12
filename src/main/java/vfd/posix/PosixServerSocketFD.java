@@ -1,24 +1,18 @@
 package vfd.posix;
 
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
-import vproxy.util.Utils;
+import vfd.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 public class PosixServerSocketFD extends PosixFD implements ServerSocketFD {
-    private InetSocketAddress local;
+    private IPPort local;
 
     protected PosixServerSocketFD(Posix posix) {
         super(posix);
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    public IPPort getLocalAddress() {
         return local;
     }
 
@@ -30,25 +24,25 @@ public class PosixServerSocketFD extends PosixFD implements ServerSocketFD {
         if (subFd == 0) {
             return null;
         }
-        return new PosixSocketFD(posix, subFd, local.getAddress() instanceof Inet4Address);
+        return new PosixSocketFD(posix, subFd, local.getAddress() instanceof IPv4);
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(IPPort l4addr) throws IOException {
         checkNotClosed();
         if (local != null) {
             throw new IOException("already bond " + local);
         }
         int port = l4addr.getPort();
-        if (l4addr.getAddress() instanceof Inet4Address) {
+        if (l4addr.getAddress() instanceof IPv4) {
             fd = posix.createIPv4TcpFD();
             finishConfigAfterFDCreated();
-            int ipv4 = Utils.ipv4Bytes2Int(l4addr.getAddress().getAddress());
+            int ipv4 = IP.ipv4Bytes2Int(l4addr.getAddress().getAddress());
             posix.bindIPv4(fd, ipv4, port);
-        } else if (l4addr.getAddress() instanceof Inet6Address) {
+        } else if (l4addr.getAddress() instanceof IPv6) {
             fd = posix.createIPv6TcpFD();
             finishConfigAfterFDCreated();
-            String ipv6 = Utils.ipStr(l4addr.getAddress().getAddress());
+            String ipv6 = l4addr.getAddress().formatToIPString();
             posix.bindIPv6(fd, ipv6, port);
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());

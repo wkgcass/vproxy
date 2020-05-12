@@ -1,13 +1,9 @@
 package vfd;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
-public interface SocketFD extends FD, NetworkFD, ReadableByteChannel, WritableByteChannel {
-    void connect(InetSocketAddress l4addr) throws IOException;
+public interface SocketFD extends FD, NetworkFD<IPPort> {
+    void connect(IPPort l4addr) throws IOException;
 
     boolean isConnected();
 

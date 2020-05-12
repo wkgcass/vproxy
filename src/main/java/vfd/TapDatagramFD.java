@@ -1,5 +1,5 @@
 package vfd;
 
-public interface TapDatagramFD extends DatagramFD {
+public interface TapDatagramFD extends AbstractDatagramFD<NoSockAddr> {
     TapInfo getTap();
 }

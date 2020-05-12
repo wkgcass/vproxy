@@ -1,16 +1,11 @@
 package vfd.posix;
 
-import vfd.DatagramFD;
-import vproxy.util.Utils;
+import vfd.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 
-public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
+public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
     private boolean bond = false;
 
     public PosixDatagramFD(Posix posix) {
@@ -28,13 +23,13 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
+    public void connect(IPPort l4addr) throws IOException {
         super.connect(l4addr);
         connected = true;
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(IPPort l4addr) throws IOException {
         checkNotClosed();
         if (connected) {
             throw new IOException("is already connected");
@@ -43,17 +38,17 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             throw new IOException("is already bond");
         }
         int port = l4addr.getPort();
-        if (l4addr.getAddress() instanceof Inet4Address) {
+        if (l4addr.getAddress() instanceof IPv4) {
             fd = posix.createIPv4UdpFD();
             finishConfigAfterFDCreated();
             ipv4 = true;
-            int ipv4 = Utils.ipv4Bytes2Int(l4addr.getAddress().getAddress());
+            int ipv4 = IP.ipv4Bytes2Int(l4addr.getAddress().getAddress());
             posix.bindIPv4(fd, ipv4, port);
-        } else if (l4addr.getAddress() instanceof Inet6Address) {
+        } else if (l4addr.getAddress() instanceof IPv6) {
             fd = posix.createIPv6UdpFD();
             finishConfigAfterFDCreated();
             ipv4 = false;
-            String ipv6 = Utils.ipStr(l4addr.getAddress().getAddress());
+            String ipv6 = l4addr.getAddress().formatToIPString();
             posix.bindIPv6(fd, ipv6, port);
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
@@ -62,13 +57,13 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
     }
 
     @Override
-    public int send(ByteBuffer buf, InetSocketAddress remote) throws IOException {
+    public int send(ByteBuffer buf, IPPort remote) throws IOException {
         if (connected) {
             throw new IOException("this fd is already connected");
         }
         checkNotClosed();
         if (fd == -1) {
-            if (remote.getAddress() instanceof Inet4Address) {
+            if (remote.getAddress() instanceof IPv4) {
                 fd = createIPv4FD();
                 ipv4 = true;
             } else {
@@ -77,11 +72,11 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             }
         }
         if (ipv4) {
-            if (!(remote.getAddress() instanceof Inet4Address)) {
+            if (!(remote.getAddress() instanceof IPv4)) {
                 throw new IOException("unsupported address for this fd: " + remote);
             }
         } else {
-            if (!(remote.getAddress() instanceof Inet6Address)) {
+            if (!(remote.getAddress() instanceof IPv6)) {
                 throw new IOException("unsupported address for this fd: " + remote);
             }
         }
@@ -101,10 +96,10 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
         try {
             int port = remote.getPort();
             if (ipv4) {
-                int ip = Utils.ipv4Bytes2Int(remote.getAddress().getAddress());
+                int ip = IP.ipv4Bytes2Int(remote.getAddress().getAddress());
                 n = posix.sendtoIPv4(fd, directBuffer, off, len, ip, port);
             } else {
-                String ip = Utils.ipStr(remote.getAddress().getAddress());
+                String ip = remote.getAddress().formatToIPString();
                 n = posix.sendtoIPv6(fd, directBuffer, off, len, ip, port);
             }
         } finally {
@@ -123,7 +118,7 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
     }
 
     @Override
-    public SocketAddress receive(ByteBuffer buf) throws IOException {
+    public IPPort receive(ByteBuffer buf) throws IOException {
         checkFD();
         checkNotClosed();
         if (!bond) {
@@ -165,6 +160,6 @@ public class PosixDatagramFD extends PosixNetworkFD implements DatagramFD {
             }
             resetDirectBufferForReading();
         }
-        return l4addr.toInetSocketAddress();
+        return l4addr.toIPPort();
     }
 }

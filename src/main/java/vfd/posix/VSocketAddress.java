@@ -1,7 +1,7 @@
 package vfd.posix;
 
-import java.net.InetSocketAddress;
+import vfd.IPPort;
 
 public interface VSocketAddress {
-    InetSocketAddress toInetSocketAddress();
+    IPPort toIPPort();
 }

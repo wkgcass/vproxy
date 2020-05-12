@@ -4,7 +4,7 @@ import vfd.SocketFD;
 
 import java.io.IOException;
 
-public class PosixSocketFD extends PosixNetworkFD implements SocketFD {
+public class PosixSocketFD extends PosixInetNetworkFD implements SocketFD {
     public PosixSocketFD(Posix posix) {
         super(posix);
     }

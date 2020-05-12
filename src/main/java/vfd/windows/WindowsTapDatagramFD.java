@@ -1,14 +1,13 @@
 package vfd.windows;
 
 import vfd.FD;
+import vfd.NoSockAddr;
 import vfd.TapDatagramFD;
 import vfd.TapInfo;
 import vfd.abs.AbstractBaseFD;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 
@@ -44,32 +43,32 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
+    public void connect(NoSockAddr l4addr) throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(NoSockAddr l4addr) throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
     @Override
-    public int send(ByteBuffer buf, InetSocketAddress remote) throws IOException {
+    public int send(ByteBuffer buf, NoSockAddr remote) throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
     @Override
-    public SocketAddress receive(ByteBuffer buf) throws IOException {
+    public NoSockAddr receive(ByteBuffer buf) throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public NoSockAddr getLocalAddress() throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
+    public NoSockAddr getRemoteAddress() throws IOException {
         throw new IOException(new UnsupportedOperationException());
     }
 
