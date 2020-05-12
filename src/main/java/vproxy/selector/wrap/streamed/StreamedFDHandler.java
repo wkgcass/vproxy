@@ -4,7 +4,6 @@ import vfd.EventSet;
 import vfd.IP;
 import vfd.IPPort;
 import vfd.SocketFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
@@ -597,7 +596,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
 
-        if (Mirror.isEnabled()) {
+        if (sfd.readingMirrorDataFactory.isEnabled()) {
             mirror(sfd, false, Consts.TCP_FLAGS_SYN, ByteArray.allocate(0));
         }
 
@@ -624,7 +623,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
 
-        if (Mirror.isEnabled()) {
+        if (sfd.readingMirrorDataFactory.isEnabled()) {
             mirror(sfd, false, Consts.TCP_FLAGS_FIN, ByteArray.allocate(0));
         }
 
@@ -654,7 +653,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         StreamedFD sfd = fdMap.get(streamId);
         assert sfd != null;
 
-        if (Mirror.isEnabled()) {
+        if (sfd.readingMirrorDataFactory.isEnabled()) {
             mirror(sfd, false, Consts.TCP_FLAGS_RST, ByteArray.allocate(0));
         }
 
@@ -764,7 +763,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                 break;
         }
 
-        if (Mirror.isEnabled()) {
+        if (fd.writingMirrorDataFactory.isEnabled()) {
             mirror(fd, true, Consts.TCP_FLAGS_FIN, ByteArray.allocate(0));
         }
     }
@@ -882,7 +881,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         addMessageToWrite(formatSYN(fd.streamId));
         fd.setState(StreamedFD.State.syn_sent);
 
-        if (Mirror.isEnabled()) {
+        if (fd.writingMirrorDataFactory.isEnabled()) {
             mirror(fd, true, Consts.TCP_FLAGS_SYN, ByteArray.allocate(0));
         }
     }
@@ -904,7 +903,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
         fdMap.values().remove(fd);
 
-        if (Mirror.isEnabled()) {
+        if (fd.writingMirrorDataFactory.isEnabled()) {
             mirror(fd, true, Consts.TCP_FLAGS_RST, ByteArray.allocate(0));
         }
     }
@@ -944,19 +943,20 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     @MethodForStreamedFD
     public void mirror(StreamedFD fd, boolean isSend, byte flags, ByteArray data) {
-        if (!Mirror.isEnabled()) {
-            return;
-        }
-
-        // build meta
-        String meta = "c=" + (client ? "1" : "0") + ";fd=" + this.fd.toString();
-
         MirrorDataFactory factory;
         if (isSend) {
             factory = fd.writingMirrorDataFactory;
         } else {
             factory = fd.readingMirrorDataFactory;
         }
+
+        if (!factory.isEnabled()) {
+            return;
+        }
+
+        // build meta
+        String meta = "c=" + (client ? "1" : "0") + ";fd=" + this.fd.toString();
+
         factory.build()
             .setMeta(meta)
             .setFlags(flags)

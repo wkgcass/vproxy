@@ -2,7 +2,6 @@ package vproxy.util.ringbuffer;
 
 import vfd.IPPort;
 import vfd.NetworkFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
@@ -101,7 +100,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
 
         byte[] res = cipher.update(buf, 0, buf.length);
 
-        if (Mirror.isEnabled()) {
+        if (mirrorDataFactory.isEnabled()) {
             mirror(input, plainInputPositionBefore);
         }
 

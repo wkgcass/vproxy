@@ -4,7 +4,6 @@ import vfd.EventSet;
 import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.app.Config;
 import vproxy.selector.Handler;
@@ -178,7 +177,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         int oldPos = dst.position();
         int ret = Utils.writeFromFIFOQueueToBuffer(readBufs, dst);
 
-        if (Mirror.isEnabled()) {
+        if (readingMirrorDataFactory.isEnabled()) {
             mirrorRead(dst, oldPos);
         }
 
@@ -230,7 +229,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         byte[] copy = new byte[n];
         src.get(copy);
 
-        if (Mirror.isEnabled()) {
+        if (writingMirrorDataFactory.isEnabled()) {
             mirrorWrite(copy);
         }
 

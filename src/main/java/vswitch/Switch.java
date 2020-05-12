@@ -580,7 +580,7 @@ public class Switch {
                 return;
             }
 
-            if (Mirror.isEnabled()) {
+            if (Mirror.isEnabled("switch")) {
                 Mirror.switchPacket(vxlan.getPacket());
             }
 
@@ -1454,7 +1454,7 @@ public class Switch {
         private void unicast(NetworkContext netCtx, Iface iface, VXLanPacket vxlan) {
             assert Logger.lowLevelDebug(netCtx + "into unicast(" + iface + "," + vxlan + ")");
 
-            if (Mirror.isEnabled()) {
+            if (Mirror.isEnabled("switch")) {
                 Mirror.switchPacket(vxlan.getPacket());
             }
 

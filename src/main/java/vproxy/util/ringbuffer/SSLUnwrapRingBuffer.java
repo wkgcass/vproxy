@@ -3,7 +3,6 @@ package vproxy.util.ringbuffer;
 import tlschannel.impl.TlsExplorer;
 import vfd.IPPort;
 import vfd.NetworkFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
@@ -254,7 +253,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             return;
         }
 
-        if (Mirror.isEnabled()) {
+        if (mirrorDataFactory.isEnabled()) {
             mirror(plainBuffer, result);
         }
 
@@ -278,7 +277,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 return;
             }
 
-            if (Mirror.isEnabled()) {
+            if (mirrorDataFactory.isEnabled()) {
                 mirror(plainBuffer, result);
             }
 

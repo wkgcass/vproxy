@@ -13,6 +13,10 @@ public class MirrorDataFactory {
         this.addressSetter = addressSetter;
     }
 
+    public boolean isEnabled() {
+        return Mirror.isEnabled(origin);
+    }
+
     public MirrorData build() {
         MirrorData d = new MirrorData(ctx, origin);
         addressSetter.accept(d);

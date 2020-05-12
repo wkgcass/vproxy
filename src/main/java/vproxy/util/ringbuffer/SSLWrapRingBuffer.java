@@ -2,7 +2,6 @@ package vproxy.util.ringbuffer;
 
 import vfd.IPPort;
 import vfd.NetworkFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
@@ -66,9 +65,6 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         super(plainBytesBuffer);
         this.engine = engine;
 
-        // do init first few bytes
-        init();
-
         // mirror
         mirrorDataFactory = new MirrorDataFactory("ssl",
             d -> {
@@ -76,6 +72,9 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
                 IPPort dst = dstAddrSupplier.get();
                 d.setSrc(src).setDst(dst);
             });
+
+        // do init first few bytes
+        init();
     }
 
     // for server
@@ -160,7 +159,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             return;
         }
 
-        if (Mirror.isEnabled()) {
+        if (mirrorDataFactory.isEnabled()) {
             mirror(bufferPlain, positionBeforeHandling, result);
         }
 
@@ -185,7 +184,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
                 return;
             }
 
-            if (Mirror.isEnabled()) {
+            if (mirrorDataFactory.isEnabled()) {
                 mirror(bufferPlain, positionBeforeHandling, result);
             }
 

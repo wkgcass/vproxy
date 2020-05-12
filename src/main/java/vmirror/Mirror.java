@@ -32,6 +32,7 @@ public class Mirror {
     private SelectorEventLoop loop;
 
     private List<MirrorConfig> mirrors = Collections.emptyList();
+    private Set<String> enabledOrigins = Collections.emptySet();
     private List<FilterConfig> filters = Collections.emptyList();
 
     private Mirror() {
@@ -63,8 +64,11 @@ public class Mirror {
         mirror.filters = Collections.emptyList();
     }
 
-    public static boolean isEnabled() {
-        return mirror.enabled;
+    public static boolean isEnabled(String origin) {
+        if (!mirror.enabled) {
+            return false;
+        }
+        return mirror.enabledOrigins.contains(origin);
     }
 
     public static void switchPacket(AbstractEthernetPacket packet) {
@@ -345,6 +349,7 @@ public class Mirror {
         String handling = "";
         boolean enabled;
         List<FilterConfig> filters;
+        Set<String> enabledOrigins;
         List<MirrorConfig> mirrorConfigs;
         try {
             handling = "input";
@@ -357,12 +362,13 @@ public class Mirror {
             JSON.Array mirrors = o.getArray("mirrors");
 
             filters = new LinkedList<>();
+            enabledOrigins = new HashSet<>();
             mirrorConfigs = new LinkedList<>();
 
             for (int i = 0; i < mirrors.length(); ++i) {
                 MirrorConfig mirrorConfig = new MirrorConfig();
                 handling = "mirrors[" + i + "]";
-                parseAndLoadMirror(filters, mirrorConfig, (JSON.Object) mirrors.get(i));
+                parseAndLoadMirror(enabledOrigins, filters, mirrorConfig, (JSON.Object) mirrors.get(i));
                 mirrorConfigs.add(mirrorConfig);
             }
         } catch (ClassCastException e) {
@@ -442,6 +448,7 @@ public class Mirror {
         boolean thisEnabledOld = this.enabled;
         this.enabled = false;
         this.mirrors = mirrorConfigs;
+        this.enabledOrigins = enabledOrigins;
         this.filters = filters;
         this.enabled = enabled;
 
@@ -496,7 +503,7 @@ public class Mirror {
         }
     }
 
-    private void parseAndLoadMirror(List<FilterConfig> filters, MirrorConfig mirrorConfig, JSON.Object mirror) {
+    private void parseAndLoadMirror(Set<String> enabledOrigins, List<FilterConfig> filters, MirrorConfig mirrorConfig, JSON.Object mirror) {
         runSub(handling -> {
             handling[0] = "tap";
             mirrorConfig.tapName = mirror.getString("tap");
@@ -514,15 +521,16 @@ public class Mirror {
             for (int i = 0; i < origins.length(); ++i) {
                 OriginConfig originConfig = new OriginConfig(mirrorConfig);
                 handling[0] = "origins[" + i + "]";
-                parseAndLoadOrigin(filters, originConfig, (JSON.Object) origins.get(i));
+                parseAndLoadOrigin(enabledOrigins, filters, originConfig, (JSON.Object) origins.get(i));
             }
         });
     }
 
-    private void parseAndLoadOrigin(List<FilterConfig> filterConfigs, OriginConfig originConfig, JSON.Object origin) {
+    private void parseAndLoadOrigin(Set<String> enabledOrigins, List<FilterConfig> filterConfigs, OriginConfig originConfig, JSON.Object origin) {
         runSub(handling -> {
             handling[0] = "origin";
             originConfig.origin = origin.getString("origin");
+            enabledOrigins.add(originConfig.origin);
 
             handling[0] = "filters";
             JSON.Array filters = origin.getArray("filters");

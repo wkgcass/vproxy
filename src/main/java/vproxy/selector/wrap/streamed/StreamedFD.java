@@ -3,7 +3,6 @@ package vproxy.selector.wrap.streamed;
 import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
-import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
@@ -244,7 +243,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int posBefore = dst.position();
         int n = Utils.writeFromFIFOQueueToBuffer(readableBuffers, dst);
 
-        if (Mirror.isEnabled()) {
+        if (readingMirrorDataFactory.isEnabled()) {
             mirrorRead(dst, posBefore);
         }
 
@@ -284,7 +283,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int posBefore = src.position();
         int wrote = handler.send(this, src);
 
-        if (Mirror.isEnabled()) {
+        if (writingMirrorDataFactory.isEnabled()) {
             mirrorWrite(src, posBefore);
         }
 
