@@ -1,11 +1,10 @@
 package vproxy.processor.http1;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.processor.Hint;
 import vproxy.processor.OOContext;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
-
-import java.net.InetSocketAddress;
 
 public class HttpContext extends OOContext<HttpSubContext> {
     final String clientAddress;
@@ -16,8 +15,8 @@ public class HttpContext extends OOContext<HttpSubContext> {
     private boolean hintExists = false;
     private Hint hint;
 
-    public HttpContext(InetSocketAddress clientSock) {
-        clientAddress = clientSock == null ? null : Utils.ipStr(clientSock.getAddress().getAddress());
+    public HttpContext(IPPort clientSock) {
+        clientAddress = clientSock == null ? null : clientSock.getAddress().formatToIPString();
         clientPort = clientSock == null ? null : "" + clientSock.getPort();
     }
 
@@ -51,7 +50,7 @@ public class HttpContext extends OOContext<HttpSubContext> {
         if (host.contains(":")) { // remove port in Host header
             host = host.substring(0, host.lastIndexOf(":"));
         }
-        if (Utils.isIpLiteral(host)) {
+        if (IP.isIpLiteral(host)) {
             hintExists = true;
             return null; // no hint if requesting directly using ip
         }

@@ -1,5 +1,7 @@
 package vproxy.app.cmd.handle.param;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Flag;
 import vproxy.app.cmd.Param;
@@ -7,30 +9,28 @@ import vproxy.component.exception.XException;
 import vproxy.dns.Resolver;
 import vproxy.util.BlockCallback;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 public class AddrHandle {
     private AddrHandle() {
     }
 
-    public static InetSocketAddress get(Command cmd) throws Exception {
+    public static IPPort get(Command cmd) throws Exception {
         boolean ipv4 = !cmd.flags.contains(Flag.noipv4);
         boolean ipv6 = !cmd.flags.contains(Flag.noipv6);
         String addrStr = cmd.args.get(Param.addr);
         return get(addrStr, ipv4, ipv6);
     }
 
-    public static InetSocketAddress get(String addrStr, boolean ipv4, boolean ipv6) throws Exception {
+    public static IPPort get(String addrStr, boolean ipv4, boolean ipv6) throws Exception {
         int idx = addrStr.lastIndexOf(":");
         String addrIp = addrStr.substring(0, idx);
         int addrPort = Integer.parseInt(addrStr.substring(idx + 1));
 
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         Resolver.getDefault().resolve(addrIp, ipv4, ipv6, cb);
-        InetAddress addr = cb.block();
-        return new InetSocketAddress(addr, addrPort);
+        IP addr = cb.block();
+        return new IPPort(addr, addrPort);
     }
 
     public static void check(Command cmd) throws Exception {

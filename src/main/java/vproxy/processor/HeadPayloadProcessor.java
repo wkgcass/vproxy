@@ -1,8 +1,7 @@
 package vproxy.processor;
 
+import vfd.IPPort;
 import vproxy.util.ByteArray;
-
-import java.net.InetSocketAddress;
 
 class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
     int nextConnId = -1;
@@ -136,12 +135,12 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadContex
     }
 
     @Override
-    public HeadPayloadContext init(InetSocketAddress ignore) {
+    public HeadPayloadContext init(IPPort ignore) {
         return new HeadPayloadContext();
     }
 
     @Override
-    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, InetSocketAddress ignore) {
+    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, IPPort ignore) {
         return new HeadPayloadSubContext(headPayloadContext, id, head, off, len, maxLen);
     }
 

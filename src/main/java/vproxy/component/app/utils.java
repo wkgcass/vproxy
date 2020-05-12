@@ -1,5 +1,6 @@
 package vproxy.component.app;
 
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.simple.SimpleArray;
 import vjson.simple.SimpleNull;
@@ -22,10 +23,8 @@ import vproxy.connection.ServerSock;
 import vproxy.dns.DNSServer;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 import vserver.RoutingContext;
 
-import java.net.InetSocketAddress;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -96,8 +95,8 @@ class utils {
     }
 
     static void respondBytesInFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        InetSocketAddress l4addr = tl.bindAddress;
-        if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
+        IPPort l4addr = tl.bindAddress;
+        if (l4addr.formatToIPPortString().equals(l4addrStr)) {
             long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getFromRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
@@ -106,8 +105,8 @@ class utils {
     }
 
     static void respondBytesOutFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        InetSocketAddress l4addr = tl.bindAddress;
-        if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
+        IPPort l4addr = tl.bindAddress;
+        if (l4addr.formatToIPPortString().equals(l4addrStr)) {
             long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getToRemoteBytes).sum();
             respondWithTotal(sum, cb);
         } else {
@@ -176,8 +175,8 @@ class utils {
     }
 
     static void respondAcceptedConnFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        InetSocketAddress l4addr = tl.bindAddress;
-        if (Utils.l4addrStr(l4addr).equals(l4addrStr)) {
+        IPPort l4addr = tl.bindAddress;
+        if (l4addr.formatToIPPortString().equals(l4addrStr)) {
             long sum = tl.servers.keySet().stream().mapToLong(ServerSock::getHistoryAcceptedConnectionCount).sum();
             respondWithTotal(sum, cb);
         } else {
@@ -192,8 +191,8 @@ class utils {
     public static void respondConnectionList(List<Connection> conns, Callback<JSON.Instance, Throwable> cb) {
         cb.succeeded(new SimpleArray(
             conns.stream().map(conn -> new ObjectBuilder()
-                .put("remote", Utils.l4addrStr(conn.remote))
-                .put("local", conn.getLocal() == null ? null : Utils.l4addrStr(conn.getLocal()))
+                .put("remote", conn.remote.formatToIPPortString())
+                .put("local", conn.getLocal() == null ? null : conn.getLocal().formatToIPPortString())
                 .build()).collect(Collectors.toList())
         ));
     }
@@ -201,7 +200,7 @@ class utils {
     public static void respondServerSockListInTl(TcpLB tl, Callback<JSON.Instance, Throwable> cb) {
         cb.succeeded(new SimpleArray(
             tl.servers.keySet().stream().map(s -> new ObjectBuilder()
-                .put("bind", Utils.l4addrStr(s.bind))
+                .put("bind", s.bind.formatToIPPortString())
                 .build()).collect(Collectors.toList())
         ));
     }
@@ -209,7 +208,7 @@ class utils {
     static void respondServerSockList(Collection<ServerSock> list, Callback<JSON.Instance, Throwable> cb) {
         cb.succeeded(new SimpleArray(
             list.stream().map(s -> new ObjectBuilder()
-                .put("bind", Utils.l4addrStr(s.bind))
+                .put("bind", s.bind.formatToIPPortString())
                 .build()).collect(Collectors.toList())
         ));
     }
@@ -353,9 +352,9 @@ class utils {
     static JSON.Object formatServer(ServerGroup.ServerHandle svr) {
         return new ObjectBuilder()
             .put("name", svr.alias)
-            .put("address", svr.hostName == null ? Utils.l4addrStr(svr.server) : (svr.hostName + ":" + svr.server.getPort()))
+            .put("address", svr.hostName == null ? svr.server.formatToIPPortString() : (svr.hostName + ":" + svr.server.getPort()))
             .put("weight", svr.getWeight())
-            .put("currentIp", Utils.ipStr(svr.server.getAddress().getAddress()))
+            .put("currentIp", svr.server.getAddress().formatToIPString())
             .put("status", svr.healthy ? "UP" : "DOWN")
             .put("cost", svr.getHcCost())
             .put("downReason", svr.getHcDownReason())
@@ -414,7 +413,7 @@ class utils {
     static JSON.Object formatSocks5Server(Socks5Server socks5) {
         return new ObjectBuilder()
             .put("name", socks5.alias)
-            .put("address", Utils.l4addrStr(socks5.bindAddress))
+            .put("address", socks5.bindAddress.formatToIPPortString())
             .put("backend", socks5.backend.alias)
             .put("acceptorLoopGroup", socks5.acceptorGroup.alias)
             .put("workerLoopGroup", socks5.workerGroup.alias)
@@ -428,7 +427,7 @@ class utils {
     static JSON.Object formatSocks5ServerDetail(Socks5Server socks5) {
         return new ObjectBuilder()
             .put("name", socks5.alias)
-            .put("address", Utils.l4addrStr(socks5.bindAddress))
+            .put("address", socks5.bindAddress.formatToIPPortString())
             .putInst("backend", formatUpstreamDetail(socks5.backend))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(socks5.acceptorGroup))
             .putInst("workerLoopGroup", formatEventLoopGroupDetail(socks5.workerGroup))
@@ -442,7 +441,7 @@ class utils {
     static JSON.Object formatDNSServer(DNSServer dns) {
         return new ObjectBuilder()
             .put("name", dns.alias)
-            .put("address", Utils.l4addrStr(dns.bindAddress))
+            .put("address", dns.bindAddress.formatToIPPortString())
             .put("ttl", dns.ttl)
             .put("rrsets", dns.rrsets.alias)
             .put("eventLoopGroup", dns.eventLoopGroup.alias)
@@ -453,7 +452,7 @@ class utils {
     static JSON.Object formatDNSServerDetail(DNSServer dns) {
         return new ObjectBuilder()
             .put("name", dns.alias)
-            .put("address", Utils.l4addrStr(dns.bindAddress))
+            .put("address", dns.bindAddress.formatToIPPortString())
             .put("ttl", dns.ttl)
             .putInst("rrsets", formatUpstreamDetail(dns.rrsets))
             .putInst("eventLoopGroup", formatEventLoopGroupDetail(dns.eventLoopGroup))
@@ -474,7 +473,7 @@ class utils {
         }
         return new ObjectBuilder()
             .put("name", tl.alias)
-            .put("address", Utils.l4addrStr(tl.bindAddress))
+            .put("address", tl.bindAddress.formatToIPPortString())
             .put("backend", tl.backend.alias)
             .put("protocol", tl.protocol)
             .put("acceptorLoopGroup", tl.acceptorGroup.alias)
@@ -499,7 +498,7 @@ class utils {
         }
         return new ObjectBuilder()
             .put("name", tl.alias)
-            .put("address", Utils.l4addrStr(tl.bindAddress))
+            .put("address", tl.bindAddress.formatToIPPortString())
             .put("protocol", tl.protocol)
             .putInst("backend", formatUpstreamDetail(tl.backend))
             .putInst("acceptorLoopGroup", formatEventLoopGroupDetail(tl.acceptorGroup))

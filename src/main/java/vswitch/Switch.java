@@ -16,18 +16,14 @@ import vproxy.selector.HandlerContext;
 import vproxy.selector.PeriodicEvent;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.blocking.BlockingDatagramFD;
-import vproxy.util.*;
 import vproxy.util.Timer;
+import vproxy.util.*;
 import vproxy.util.crypto.Aes256Key;
 import vswitch.iface.*;
 import vswitch.packet.*;
 import vswitch.util.*;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -35,7 +31,7 @@ import java.util.concurrent.TimeUnit;
 
 public class Switch {
     public final String alias;
-    public final InetSocketAddress vxlanBindingAddress;
+    public final IPPort vxlanBindingAddress;
     public final EventLoopGroup eventLoopGroup;
     private NetEventLoop currentEventLoop;
     private PeriodicEvent refreshCacheEvent;
@@ -51,7 +47,7 @@ public class Switch {
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
-    public Switch(String alias, InetSocketAddress vxlanBindingAddress, EventLoopGroup eventLoopGroup,
+    public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
                   int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws IOException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
@@ -193,11 +189,11 @@ public class Switch {
         }
     }
 
-    private void refreshArpCache(Table t, InetAddress ip, MacAddress mac) {
+    private void refreshArpCache(Table t, IP ip, MacAddress mac) {
         var networkStack = (new NetworkStack() {
         });
         NetworkContext netCtx = networkStack.newContext();
-        assert Logger.lowLevelDebug(netCtx + "trigger arp cache refresh for " + Utils.ipStr(ip) + " " + mac);
+        assert Logger.lowLevelDebug(netCtx + "trigger arp cache refresh for " + ip.formatToIPString() + " " + mac);
 
         networkStack.refreshArpOrNdp(netCtx, t, ip, mac);
     }
@@ -303,14 +299,14 @@ public class Switch {
         }
         FDsWithTap tapFDs = (FDsWithTap) fds;
         TapDatagramFD fd = tapFDs.openTap(devPattern);
-        DatagramFD fdToPutIntoLoop = null;
+        AbstractDatagramFD<?> fdToPutIntoLoop = null;
         TapIface iface;
         try {
             if (tapFDs.tapNonBlockingSupported()) {
                 fdToPutIntoLoop = fd;
                 fd.configureBlocking(false);
             } else {
-                fdToPutIntoLoop = new BlockingDatagramFD(fd, loop, 2048, 65536, 32);
+                fdToPutIntoLoop = new BlockingDatagramFD<>(fd, loop, 2048, 65536, 32);
             }
             iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, loop);
             loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
@@ -407,7 +403,7 @@ public class Switch {
         }
     }
 
-    public void addUserClient(String user, String password, int vni, InetSocketAddress remoteAddr) throws AlreadyExistException, IOException, XException {
+    public void addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, IOException, XException {
         char[] chars = user.toCharArray();
         if (chars.length < 3 || chars.length > 8) {
             throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
@@ -469,7 +465,7 @@ public class Switch {
         ifaces.put(iface, new IfaceTimer(loop, -1, iface));
     }
 
-    public void delUserClient(String user, InetSocketAddress remoteAddr) throws NotFoundException {
+    public void delUserClient(String user, IPPort remoteAddr) throws NotFoundException {
         UserClientIface iface = null;
         for (Iface i : ifaces.keySet()) {
             if (!(i instanceof UserClientIface)) {
@@ -488,7 +484,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addRemoteSwitch(String alias, InetSocketAddress vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
+    public void addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = currentEventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
@@ -504,7 +500,7 @@ public class Switch {
                 throw new AlreadyExistException("switch", alias);
             }
             if (vxlanSockAddr.equals(rsi.udpSockAddress)) {
-                throw new AlreadyExistException("switch", Utils.l4addrStr(vxlanSockAddr));
+                throw new AlreadyExistException("switch", vxlanSockAddr.formatToIPPortString());
             }
         }
         Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr, addSwitchFlag);
@@ -639,7 +635,7 @@ public class Switch {
                         if (senderIp.length() == 4) {
                             assert Logger.lowLevelDebug(netCtx + "arp sender is ipv4");
                             // only handle ipv4 in arp, v6 should be handled with ndp
-                            InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
+                            IP ip = IP.from(senderIp.toJavaArray());
                             if (!table.v4network.contains(ip)) {
                                 assert Logger.lowLevelDebug(netCtx + "got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
                                 return;
@@ -651,7 +647,7 @@ public class Switch {
                         ByteArray senderIp = arp.getSenderIp();
                         if (senderIp.length() == 4) {
                             // only handle ipv4 for now
-                            InetAddress ip = Utils.l3addr(senderIp.toJavaArray());
+                            IP ip = IP.from(senderIp.toJavaArray());
                             if (!table.v4network.contains(ip)) {
                                 assert Logger.lowLevelDebug(netCtx + "got arp packet not allowed in the network: " + ip + " not in " + table.v4network);
                                 return;
@@ -673,7 +669,7 @@ public class Switch {
                         var other = icmp.getOther();
                         if (other.length() >= 28) { // 4 reserved and 16 target address and 8 option
                             assert Logger.lowLevelDebug(netCtx + "ndp length is ok");
-                            var targetIp = Utils.l3addr(other.sub(4, 16).toJavaArray());
+                            var targetIp = IP.from(other.sub(4, 16).toJavaArray());
                             // check the target ip
                             if (table.v6network == null || !table.v6network.contains(targetIp)) {
                                 assert Logger.lowLevelDebug(netCtx + "got ndp packet not allowed in the network: " + targetIp + " not in " + table.v6network);
@@ -690,7 +686,7 @@ public class Switch {
                                     assert Logger.lowLevelDebug(netCtx + "ndp has opt source link layer address");
                                     // mac is the sender's mac, record with src ip in ip packet
                                     // this ip address might be solicited node address, but it won't harm to record
-                                    InetAddress ip = ipPkt.getSrc();
+                                    IP ip = ipPkt.getSrc();
                                     table.arpTable.record(mac, ip);
                                 } else if (optType == Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address) {
                                     assert Logger.lowLevelDebug(netCtx + "ndp has opt target link layer address");
@@ -732,16 +728,16 @@ public class Switch {
             }
         }
 
-        private void l3Stack(NetworkContext netCtx, Table table, Collection<InetAddress> ips, VXLanPacket vxlan, boolean allReceives) {
+        private void l3Stack(NetworkContext netCtx, Table table, Collection<IP> ips, VXLanPacket vxlan, boolean allReceives) {
             assert Logger.lowLevelDebug(netCtx + "into l3Stack(" + table + "," + ips + "," + vxlan + ")");
 
             // analyse the packet
             AbstractPacket l3Packet = vxlan.getPacket().getPacket();
             ArpPacket arp = null;
-            InetAddress arpReq = null;
+            IP arpReq = null;
             AbstractIpPacket ipPkt = null;
             IcmpPacket icmp = null;
-            Inet6Address ndpNeighborSolicitation = null;
+            IPv6 ndpNeighborSolicitation = null;
             if (l3Packet instanceof ArpPacket) {
                 assert Logger.lowLevelDebug(netCtx + "is arp packet");
                 arp = (ArpPacket) l3Packet;
@@ -750,7 +746,7 @@ public class Switch {
                     byte[] targetIpBytes = arp.getTargetIp().toJavaArray();
                     if (targetIpBytes.length == 4 || targetIpBytes.length == 16) {
                         assert Logger.lowLevelDebug(netCtx + "target protocol address might be an ip address");
-                        arpReq = Utils.l3addr(targetIpBytes);
+                        arpReq = IP.from(targetIpBytes);
                     }
                 }
             } else if (l3Packet instanceof AbstractIpPacket) {
@@ -768,7 +764,7 @@ public class Switch {
                         } else {
                             assert Logger.lowLevelDebug(netCtx + "is a valid neighbor solicitation");
                             byte[] targetAddr = other.sub(4, 16).toJavaArray();
-                            ndpNeighborSolicitation = (Inet6Address) Utils.l3addr(targetAddr);
+                            ndpNeighborSolicitation = IP.fromIPv6(targetAddr);
                         }
                     }
                 }
@@ -777,7 +773,7 @@ public class Switch {
             // handle the ip self (arp/ndp/icmp)
             boolean doNotRouteThePacket = false;
             boolean syntheticIpMacMatches = false;
-            for (InetAddress ip : ips) {
+            for (IP ip : ips) {
                 assert Logger.lowLevelDebug(netCtx + "handle synthetic ip " + ip);
 
                 MacAddress mac = table.ips.lookup(ip);
@@ -941,19 +937,19 @@ public class Switch {
             l2Stack(netCtx, vxlan, table, null);
         }
 
-        private Map.Entry<InetAddress, MacAddress> getRoutedSrcIpAndMac(NetworkContext netCtx, Table targetTable, InetAddress dstIp) {
+        private Map.Entry<IP, MacAddress> getRoutedSrcIpAndMac(NetworkContext netCtx, Table targetTable, IP dstIp) {
             assert Logger.lowLevelDebug(netCtx + "into getRoutedSrcIpAndMac(" + targetTable + "," + dstIp + ")");
 
             // find an ip in that table to be used for the src mac address
             var ipsInTable = targetTable.ips.entries();
-            boolean useIpv6 = dstIp instanceof Inet6Address;
-            Map.Entry<InetAddress, MacAddress> src = null;
+            boolean useIpv6 = dstIp instanceof IPv6;
+            Map.Entry<IP, MacAddress> src = null;
             for (var x : ipsInTable) {
-                if (useIpv6 && x.getKey() instanceof Inet6Address) {
+                if (useIpv6 && x.getKey() instanceof IPv6) {
                     src = x;
                     break;
                 }
-                if (!useIpv6 && x.getKey() instanceof Inet4Address) {
+                if (!useIpv6 && x.getKey() instanceof IPv4) {
                     src = x;
                     break;
                 }
@@ -961,7 +957,7 @@ public class Switch {
             return src;
         }
 
-        private MacAddress getRoutedSrcMac(NetworkContext netCtx, Table targetTable, InetAddress dstIp) {
+        private MacAddress getRoutedSrcMac(NetworkContext netCtx, Table targetTable, IP dstIp) {
             assert Logger.lowLevelDebug(netCtx + "into getRoutedSrcMac(" + targetTable + "," + dstIp + ")");
             var entry = getRoutedSrcIpAndMac(netCtx, targetTable, dstIp);
             if (entry == null) {
@@ -970,7 +966,7 @@ public class Switch {
             return entry.getValue();
         }
 
-        private void routeToNetwork(NetworkContext netCtx, Table table, InetAddress dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt) {
+        private void routeToNetwork(NetworkContext netCtx, Table table, IP dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt) {
             assert Logger.lowLevelDebug(netCtx + "into routeToNetwork(" + table + "," + dstIp + "," + vxlan + ")");
 
             // set vni to the target one
@@ -1006,7 +1002,7 @@ public class Switch {
             ensureIfaceExistBeforeL2Stack(netCtx, table, vxlan, ipPkt);
         }
 
-        private void routeToTarget(NetworkContext netCtx, Table table, InetAddress dstIp, VXLanPacket vxlan, InetAddress targetIp) {
+        private void routeToTarget(NetworkContext netCtx, Table table, IP dstIp, VXLanPacket vxlan, IP targetIp) {
             assert Logger.lowLevelDebug(netCtx + "into routeToTarget(" + table + "," + dstIp + "," + vxlan + "," + targetIp + ")");
 
             MacAddress mac = table.lookup(targetIp);
@@ -1044,16 +1040,16 @@ public class Switch {
             unicast(netCtx, targetIface, vxlan);
         }
 
-        protected void refreshArpOrNdp(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac) {
+        protected void refreshArpOrNdp(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into refreshArpOrNdp(" + table + "," + ip + "," + mac + ")");
-            if (ip instanceof Inet4Address) {
+            if (ip instanceof IPv4) {
                 refreshArp(netCtx, table, ip, mac);
             } else {
                 refreshNdp(netCtx, table, ip, mac);
             }
         }
 
-        private void refreshArp(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac) {
+        private void refreshArp(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into refreshArp(" + table + "," + ip + "," + mac + ")");
             var iface = table.macTable.lookup(mac);
             if (iface == null) {
@@ -1065,24 +1061,24 @@ public class Switch {
             }
         }
 
-        private void broadcastArpOrNdp(NetworkContext netCtx, Table table, InetAddress ip) {
+        private void broadcastArpOrNdp(NetworkContext netCtx, Table table, IP ip) {
             assert Logger.lowLevelDebug(netCtx + "into broadcastArpOrNdp(" + table + "," + ip + ")");
-            if (ip instanceof Inet4Address) {
+            if (ip instanceof IPv4) {
                 broadcastArp(netCtx, table, ip);
             } else {
                 broadcastNdp(netCtx, table, ip);
             }
         }
 
-        private VXLanPacket buildArpReq(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac) {
+        private VXLanPacket buildArpReq(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into buildArpPacket(" + table + "," + ip + "," + mac + ")");
 
-            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet4Address).findAny();
+            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof IPv4).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find synthetic ipv4 in the table");
                 return null;
             }
-            InetAddress reqIp = optIp.get().getKey();
+            IP reqIp = optIp.get().getKey();
             MacAddress reqMac = optIp.get().getValue();
 
             ArpPacket req = new ArpPacket();
@@ -1110,7 +1106,7 @@ public class Switch {
             return vxlan;
         }
 
-        private void unicastArp(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac, Iface iface) {
+        private void unicastArp(NetworkContext netCtx, Table table, IP ip, MacAddress mac, Iface iface) {
             assert Logger.lowLevelDebug(netCtx + "into unicastArp(" + table + "," + ip + "," + mac + "," + iface + ")");
 
             VXLanPacket vxlan = buildArpReq(netCtx, table, ip, mac);
@@ -1121,7 +1117,7 @@ public class Switch {
             unicast(netCtx, iface, vxlan);
         }
 
-        private void broadcastArp(NetworkContext netCtx, Table table, InetAddress ip) {
+        private void broadcastArp(NetworkContext netCtx, Table table, IP ip) {
             assert Logger.lowLevelDebug(netCtx + "into broadcastArp(" + table + "," + ip + ")");
 
             VXLanPacket vxlan = buildArpReq(netCtx, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
@@ -1132,7 +1128,7 @@ public class Switch {
             broadcast(netCtx, table, vxlan, null);
         }
 
-        private void refreshNdp(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac) {
+        private void refreshNdp(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into refreshNdp(" + table + "," + ip + "," + mac + ")");
             var iface = table.macTable.lookup(mac);
             if (iface == null) {
@@ -1144,15 +1140,15 @@ public class Switch {
             }
         }
 
-        private VXLanPacket buildNdpNeighborSolicitation(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac) {
+        private VXLanPacket buildNdpNeighborSolicitation(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into buildNdpNeighborSolicitation(" + table + "," + ip + "," + mac + ")");
 
-            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof Inet6Address).findAny();
+            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof IPv6).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find synthetic ipv4 in the table");
                 return null;
             }
-            InetAddress reqIp = optIp.get().getKey();
+            IP reqIp = optIp.get().getKey();
             MacAddress reqMac = optIp.get().getValue();
 
             IcmpPacket icmp = new IcmpPacket(true);
@@ -1171,13 +1167,13 @@ public class Switch {
             ipv6.setVersion(6);
             ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
             ipv6.setHopLimit(255);
-            ipv6.setSrc((Inet6Address) reqIp);
+            ipv6.setSrc((IPv6) reqIp);
             byte[] foo = Consts.IPv6_Solicitation_Node_Multicast_Address.toNewJavaArray();
             byte[] bar = ip.getAddress();
             foo[13] = bar[13];
             foo[14] = bar[14];
             foo[15] = bar[15];
-            ipv6.setDst((Inet6Address) Utils.l3addr(foo));
+            ipv6.setDst(IP.fromIPv6(foo));
             ipv6.setExtHeaders(Collections.emptyList());
             ipv6.setPacket(icmp);
             ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
@@ -1196,7 +1192,7 @@ public class Switch {
             return vxlan;
         }
 
-        private void unicastNdp(NetworkContext netCtx, Table table, InetAddress ip, MacAddress mac, Iface iface) {
+        private void unicastNdp(NetworkContext netCtx, Table table, IP ip, MacAddress mac, Iface iface) {
             assert Logger.lowLevelDebug(netCtx + "into unicastNdp(" + table + "," + ip + "," + mac + "," + iface + ")");
 
             VXLanPacket vxlan = buildNdpNeighborSolicitation(netCtx, table, ip, mac);
@@ -1208,7 +1204,7 @@ public class Switch {
             unicast(netCtx, iface, vxlan);
         }
 
-        private void broadcastNdp(NetworkContext netCtx, Table table, InetAddress ip) {
+        private void broadcastNdp(NetworkContext netCtx, Table table, IP ip) {
             assert Logger.lowLevelDebug(netCtx + "into broadcastNdp(" + table + "," + ip + ")");
 
             VXLanPacket vxlan = buildNdpNeighborSolicitation(netCtx, table, ip, new MacAddress("ff:ff:ff:ff:ff:ff"));
@@ -1220,7 +1216,7 @@ public class Switch {
             broadcast(netCtx, table, vxlan, null);
         }
 
-        private void respondArp(NetworkContext netCtx, Table table, VXLanPacket inVxlan, ArpPacket inArp, InetAddress ip, MacAddress mac) {
+        private void respondArp(NetworkContext netCtx, Table table, VXLanPacket inVxlan, ArpPacket inArp, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into respondArp(" + table + "," + inVxlan + "," + inArp + "," + ip + "," + mac + ")");
 
             ArpPacket resp = new ArpPacket();
@@ -1243,30 +1239,30 @@ public class Switch {
             originate(netCtx, table, ether, false);
         }
 
-        private EthernetPacket buildEtherIpIcmpPacket(NetworkContext netCtx, MacAddress dstMac, MacAddress srcMac, InetAddress srcIp, InetAddress dstIp, IcmpPacket icmp) {
+        private EthernetPacket buildEtherIpIcmpPacket(NetworkContext netCtx, MacAddress dstMac, MacAddress srcMac, IP srcIp, IP dstIp, IcmpPacket icmp) {
             assert Logger.lowLevelDebug(netCtx + "into buildIcmpIpEtherPacket(" + ")");
 
             AbstractIpPacket ipPkt;
-            if (srcIp instanceof Inet4Address) {
+            if (srcIp instanceof IPv4) {
                 var ipv4 = new Ipv4Packet();
                 ipv4.setVersion(4);
                 ipv4.setIhl(5);
                 ipv4.setTotalLength(20 + icmp.getRawPacket().length());
                 ipv4.setTtl(64);
                 ipv4.setProtocol(Consts.IP_PROTOCOL_ICMP);
-                ipv4.setSrc((Inet4Address) srcIp);
-                ipv4.setDst((Inet4Address) dstIp);
+                ipv4.setSrc((IPv4) srcIp);
+                ipv4.setDst((IPv4) dstIp);
                 ipv4.setOptions(ByteArray.allocate(0));
                 ipv4.setPacket(icmp);
                 ipPkt = ipv4;
             } else {
-                assert srcIp instanceof Inet6Address;
+                assert srcIp instanceof IPv6;
                 var ipv6 = new Ipv6Packet();
                 ipv6.setVersion(6);
                 ipv6.setNextHeader(icmp.isIpv6() ? Consts.IP_PROTOCOL_ICMPv6 : Consts.IP_PROTOCOL_ICMP);
                 ipv6.setHopLimit(64);
-                ipv6.setSrc((Inet6Address) srcIp);
-                ipv6.setDst((Inet6Address) dstIp);
+                ipv6.setSrc((IPv6) srcIp);
+                ipv6.setDst((IPv6) dstIp);
                 ipv6.setExtHeaders(Collections.emptyList());
                 ipv6.setPacket(icmp);
                 ipv6.setPayloadLength(
@@ -1280,16 +1276,16 @@ public class Switch {
             EthernetPacket ether = new EthernetPacket();
             ether.setDst(dstMac);
             ether.setSrc(srcMac);
-            ether.setType(srcIp instanceof Inet4Address ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
+            ether.setType(srcIp instanceof IPv4 ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
             ether.setPacket(ipPkt);
 
             return ether;
         }
 
-        private void respondIcmpPing(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac) {
+        private void respondIcmpPing(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into respondIcmpPing(" + table + "," + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + ")");
 
-            IcmpPacket icmp = new IcmpPacket(ip instanceof Inet6Address);
+            IcmpPacket icmp = new IcmpPacket(ip instanceof IPv6);
             icmp.setType(inIcmp.isIpv6() ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP : Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP);
             icmp.setCode(0);
             icmp.setOther(inIcmp.getOther());
@@ -1302,7 +1298,7 @@ public class Switch {
         private void respondIcmpTimeExceeded(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt) {
             assert Logger.lowLevelDebug(netCtx + "into respondIcmpTimeExceeded(" + table + "," + inVxlan + "," + inIpPkt + ")");
 
-            boolean isIpv6 = inIpPkt.getSrc() instanceof Inet6Address;
+            boolean isIpv6 = inIpPkt.getSrc() instanceof IPv6;
             var srcIpAndMac = getRoutedSrcIpAndMac(netCtx, table, inIpPkt.getSrc());
             if (srcIpAndMac == null) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find src ip for sending the icmp time exceeded packet");
@@ -1336,7 +1332,7 @@ public class Switch {
         private void respondIcmpPortUnreachable(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt) {
             assert Logger.lowLevelDebug(netCtx + "into respondIcmpPortUnreachable(" + table + "," + inVxlan + "," + inIpPkt + ")");
 
-            boolean isIpv6 = inIpPkt.getSrc() instanceof Inet6Address;
+            boolean isIpv6 = inIpPkt.getSrc() instanceof IPv6;
             var srcIpAndMac = getRoutedSrcIpAndMac(netCtx, table, inIpPkt.getSrc());
             if (srcIpAndMac == null) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find src ip for sending the icmp time exceeded packet");
@@ -1367,7 +1363,7 @@ public class Switch {
             originate(netCtx, table, ether, true);
         }
 
-        private void respondIcmpNDP(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, InetAddress ip, MacAddress mac) {
+        private void respondIcmpNDP(NetworkContext netCtx, Table table, VXLanPacket inVxlan, AbstractIpPacket inIpPkt, IcmpPacket inIcmp, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into respondIcmpNDP(" + table + "," + inVxlan + "," + inIpPkt + "," + inIcmp + "," + ip + "," + mac + ")");
 
             assert inIcmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation;
@@ -1389,8 +1385,8 @@ public class Switch {
             ipv6.setVersion(6);
             ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
             ipv6.setHopLimit(255);
-            ipv6.setSrc((Inet6Address) ip);
-            ipv6.setDst((Inet6Address) inIpPkt.getSrc());
+            ipv6.setSrc((IPv6) ip);
+            ipv6.setDst((IPv6) inIpPkt.getSrc());
             ipv6.setExtHeaders(Collections.emptyList());
             ipv6.setPacket(icmp);
             ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
@@ -1496,7 +1492,7 @@ public class Switch {
             // will not fire
         }
 
-        private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(NetworkContext netCtx, SelectorEventLoop loop, InetSocketAddress remote, ByteArray data) {
+        private Tuple<VXLanPacket, Iface> handleNetworkAndGetVXLanPacket(NetworkContext netCtx, SelectorEventLoop loop, IPPort remote, ByteArray data) {
             VProxyEncryptedPacket packet = new VProxyEncryptedPacket(Switch.this::getKey);
             VXLanPacket vxLanPacket;
             Iface iface;
@@ -1601,9 +1597,9 @@ public class Switch {
             DatagramFD sock = ctx.getChannel();
             while (true) {
                 rcvBuf.limit(rcvBuf.capacity()).position(0);
-                InetSocketAddress remote;
+                IPPort remote;
                 try {
-                    remote = (InetSocketAddress) sock.receive(rcvBuf);
+                    remote = sock.receive(rcvBuf);
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
                     return;
@@ -1693,7 +1689,7 @@ public class Switch {
         }
     }
 
-    private class TapHandler extends NetworkStack implements Handler<DatagramFD> {
+    private class TapHandler extends NetworkStack implements Handler<AbstractDatagramFD<?>> {
         private final TapIface iface;
         private final TapDatagramFD tapDatagramFD;
 
@@ -1705,17 +1701,17 @@ public class Switch {
         }
 
         @Override
-        public void accept(HandlerContext<DatagramFD> ctx) {
+        public void accept(HandlerContext<AbstractDatagramFD<?>> ctx) {
             // will not fire
         }
 
         @Override
-        public void connected(HandlerContext<DatagramFD> ctx) {
+        public void connected(HandlerContext<AbstractDatagramFD<?>> ctx) {
             // will not fire
         }
 
         @Override
-        public void readable(HandlerContext<DatagramFD> ctx) {
+        public void readable(HandlerContext<AbstractDatagramFD<?>> ctx) {
             while (true) {
                 rcvBuf.limit(rcvBuf.capacity()).position(0);
                 try {
@@ -1748,12 +1744,12 @@ public class Switch {
         }
 
         @Override
-        public void writable(HandlerContext<DatagramFD> ctx) {
+        public void writable(HandlerContext<AbstractDatagramFD<?>> ctx) {
             // ignore, and will not fire
         }
 
         @Override
-        public void removed(HandlerContext<DatagramFD> ctx) {
+        public void removed(HandlerContext<AbstractDatagramFD<?>> ctx) {
             Logger.warn(LogType.CONN_ERROR, "tap device " + tapDatagramFD + " removed from loop, it's not handled anymore, need to be closed");
             try {
                 delTap(tapDatagramFD.getTap().dev);

@@ -1,5 +1,6 @@
 package vswitch.iface;
 
+import vfd.AbstractDatagramFD;
 import vfd.DatagramFD;
 import vfd.TapDatagramFD;
 import vproxy.selector.SelectorEventLoop;
@@ -15,10 +16,10 @@ public class TapIface implements Iface {
     public final int localSideVni;
     public final String postScript;
 
-    private final DatagramFD operateTap;
+    private final AbstractDatagramFD<?> operateTap;
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TapDatagramFD tap, DatagramFD operateTap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
+    public TapIface(TapDatagramFD tap, AbstractDatagramFD<?> operateTap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
         this.tap = tap;
         this.localSideVni = localSideVni;
         this.postScript = postScript;

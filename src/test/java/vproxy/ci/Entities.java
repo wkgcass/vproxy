@@ -1,10 +1,10 @@
 package vproxy.ci;
 
+import vfd.IPPort;
 import vjson.JSON;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
-import java.net.InetSocketAddress;
 
 @SuppressWarnings("unused")
 public class Entities {
@@ -67,7 +67,7 @@ public class Entities {
 
     static class TcpLB {
         String name;
-        InetSocketAddress address;
+        IPPort address;
         String backend;
         @Optional Protocol protocol;
         @Optional String acceptorLoopGroup;
@@ -80,7 +80,7 @@ public class Entities {
 
     static class TcpLBWithTLS {
         String name;
-        InetSocketAddress address;
+        IPPort address;
         String backend;
         @Optional Protocol protocol;
         @Optional String acceptorLoopGroup;
@@ -93,7 +93,7 @@ public class Entities {
 
     static class Socks5Server {
         String name;
-        InetSocketAddress address;
+        IPPort address;
         String backend;
         @Optional String acceptorLoopGroup;
         @Optional String workerLoopGroup;
@@ -105,7 +105,7 @@ public class Entities {
 
     static class DNSServer {
         String name;
-        InetSocketAddress address;
+        IPPort address;
         String rrsets;
         @Optional @Modifiable int ttl;
         @Optional String eventLoopGroup;
@@ -128,7 +128,7 @@ public class Entities {
 
     static class Server {
         String name;
-        InetSocketAddress address;
+        IPPort address;
         @Optional @Modifiable int weight;
     }
 

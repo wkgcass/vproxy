@@ -4,15 +4,17 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.dns.*;
 import vproxy.dns.rdata.*;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.UnknownHostException;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -83,13 +85,13 @@ public class TestResolver {
 
     private DNSResource getAResource() {
         A a = new A();
-        a.address = (Inet4Address) Utils.l3addr(new byte[]{1, 2, 3, 4});
+        a.address = IP.fromIPv4(new byte[]{1, 2, 3, 4});
         return getResource("www.example.com.", a);
     }
 
     private DNSResource getAAAAResource() {
         AAAA aaaa = new AAAA();
-        aaaa.address = (Inet6Address) Utils.l3addr("ABCD:EF01:2345:6789:ABCD:EF01:2345:6789");
+        aaaa.address = IP.fromIPv6("ABCD:EF01:2345:6789:ABCD:EF01:2345:6789");
         return getResource("www.example.com.", aaaa);
     }
 
@@ -108,23 +110,23 @@ public class TestResolver {
 
     @Test
     public void resolveCustomized() throws Exception {
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         resolver.resolve("github.com", cb);
-        InetAddress addr = cb.block();
-        assertTrue(addr instanceof Inet4Address);
+        IP addr = cb.block();
+        assertTrue(addr instanceof IPv4);
 
         cb = new BlockCallback<>();
         resolver.resolve("ipv6.taobao.com", false, true, cb);
         addr = cb.block();
-        assertTrue(addr instanceof Inet6Address);
+        assertTrue(addr instanceof IPv6);
     }
 
     @Test
     public void resolve() throws Exception {
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         resolver.resolve("localhost", cb);
-        InetAddress address = cb.block();
-        assertEquals("127.0.0.1", Utils.ipStr(address.getAddress()));
+        IP address = cb.block();
+        assertEquals("127.0.0.1", address.formatToIPString());
 
         List<Cache> cacheList = new LinkedList<>();
         resolver.copyCache(cacheList);
@@ -134,22 +136,22 @@ public class TestResolver {
 
     @Test
     public void resolveIpv6() throws Exception {
-        BlockCallback<Inet6Address, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         resolver.resolveV6("localhost", cb);
-        InetAddress address = cb.block();
-        assertEquals("[0000:0000:0000:0000:0000:0000:0000:0001]", Utils.ipStr(address.getAddress()));
+        IP address = cb.block();
+        assertEquals("[::1]", address.formatToIPString());
     }
 
     @Test
     public void resolveCache() throws Exception {
         resolver.ttl = 2000;
         // let's resolve
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         resolver.resolve("localhost", cb);
-        InetAddress address = cb.block();
+        IP address = cb.block();
 
         // check
-        assertEquals("127.0.0.1", Utils.ipStr(address.getAddress()));
+        assertEquals("127.0.0.1", address.formatToIPString());
         assertEquals("cache count should be 1 because only one resolve", 1, resolver.cacheCount());
 
         // wait for > 2000 ms for cache to expire
@@ -160,7 +162,7 @@ public class TestResolver {
         cb = new BlockCallback<>();
         resolver.resolve("localhost", cb);
         address = cb.block();
-        assertEquals("127.0.0.1", Utils.ipStr(address.getAddress()));
+        assertEquals("127.0.0.1", address.formatToIPString());
 
         assertEquals("now should be 1 cache because resolved again", 1, resolver.cacheCount());
 
@@ -168,7 +170,7 @@ public class TestResolver {
         cb = new BlockCallback<>();
         resolver.resolve("localhost", cb);
         address = cb.block();
-        assertEquals("127.0.0.1", Utils.ipStr(address.getAddress()));
+        assertEquals("127.0.0.1", address.formatToIPString());
 
         assertEquals("should still be 1 cache because already cached", 1, resolver.cacheCount());
     }

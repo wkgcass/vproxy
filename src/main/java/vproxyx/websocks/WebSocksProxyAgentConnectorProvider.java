@@ -1,5 +1,7 @@
 package vproxyx.websocks;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.SvrHandleConnector;
 import vproxy.connection.*;
@@ -21,8 +23,6 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.*;
 import java.util.function.Consumer;
@@ -346,7 +346,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
             switch (addressType) {
                 case ipv4:
-                    byte[] v4 = Utils.parseIpv4StringConsiderV6Compatible(domain);
+                    byte[] v4 = IP.parseIpv4StringConsiderV6Compatible(domain);
                     if (v4 == null) {
                         Logger.shouldNotHappen("the socks lib produces an invalid ipv4: " + domain);
                         utilAlertFail(ctx);
@@ -359,7 +359,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     System.arraycopy(chars, 0, toSend, 5, chars.length);
                     break;
                 case ipv6:
-                    byte[] v6 = Utils.parseIpv4StringConsiderV6Compatible(domain);
+                    byte[] v6 = IP.parseIpv4StringConsiderV6Compatible(domain);
                     if (v6 == null) {
                         Logger.shouldNotHappen("the socks lib produces an invalid ipv6: " + domain);
                         utilAlertFail(ctx);
@@ -741,10 +741,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 }
             }
 
-            String hostname = conn.remote.getHostString();
-            if (Utils.isIpLiteral(hostname)) {
-                hostname = null;
-            }
+            String hostname = conn.remote.formatToIPPortString();
             try {
                 loop.addConnectableConnection(conn, null, new AgentConnectableConnectionHandler(
                     hostname, type, address, port,
@@ -759,7 +756,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
     private void handleHttpsSniErasure(NetEventLoop loop, String address, Consumer<Connector> cb) {
         WebSocksUtils.agentDNSServer.resolve(address, new Callback<>() {
             @Override
-            protected void onSucceeded(InetAddress value) {
+            protected void onSucceeded(IP value) {
                 SSLEngine engine = WebSocksUtils.createEngine();
                 engine.setUseClientMode(true);
                 SSLParameters params = new SSLParameters();
@@ -769,7 +766,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 params.setApplicationProtocols(new String[]{"h2", "http/1.1"});
                 engine.setSSLParameters(params);
 
-                var remtoe = new InetSocketAddress(value, 443);
+                var remtoe = new IPPort(value, 443);
                 SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
                     engine,
                     RingBuffer.allocate(24576),

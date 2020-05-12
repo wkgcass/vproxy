@@ -1,9 +1,8 @@
 package vproxy.processor;
 
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.util.ByteArray;
-
-import java.net.InetSocketAddress;
 
 public interface Processor<CTX extends Processor.Context, SUB extends Processor.SubContext> {
     class Context {
@@ -30,7 +29,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @param clientAddress the client address
      * @return the context
      */
-    CTX init(InetSocketAddress clientAddress);
+    CTX init(IPPort clientAddress);
 
     /**
      * create a sub context object
@@ -40,7 +39,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @param associatedAddress associated address, frontend address for frontend, backend address for backend
      * @return the sub context
      */
-    SUB initSub(CTX ctx, int id, InetSocketAddress associatedAddress);
+    SUB initSub(CTX ctx, int id, IPPort associatedAddress);
 
     enum Mode {
         /**

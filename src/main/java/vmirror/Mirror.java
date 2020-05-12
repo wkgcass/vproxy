@@ -1,21 +1,18 @@
 package vmirror;
 
-import vfd.FDProvider;
-import vfd.FDs;
-import vfd.FDsWithTap;
-import vfd.TapDatagramFD;
+import vfd.*;
 import vjson.JSON;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.*;
+import vproxy.util.ByteArray;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
+import vproxy.util.Network;
 import vswitch.packet.*;
 import vswitch.util.Consts;
 import vswitch.util.MacAddress;
 import vswitch.util.SwitchUtils;
 
 import java.io.*;
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Consumer;
@@ -142,7 +139,7 @@ public class Mirror {
                                                      int mtu,
                                                      String originType,
                                                      MacAddress macSrc, MacAddress macDst,
-                                                     InetAddress ipSrc, InetAddress ipDst,
+                                                     IP ipSrc, IP ipDst,
                                                      String transportLayerProtocol,
                                                      int portSrc, int portDst,
                                                      String applicationLayerProtocol,
@@ -161,10 +158,10 @@ public class Mirror {
             byte[] b = new byte[16];
             b[0] = (byte) 0xfd;
             if (ipSrc == null) {
-                ipSrc = Utils.l3addr(b);
+                ipSrc = IP.fromIPv6(b);
             }
             if (ipDst == null) {
-                ipDst = Utils.l3addr(b);
+                ipDst = IP.fromIPv6(b);
             }
             // use ipv6 if it's provided as ipv4
             ipSrc = getIpv6FromIpv4(ipSrc);
@@ -227,8 +224,8 @@ public class Mirror {
             ip.setFlowLabel(0);
             ip.setNextHeader(DUMMY_ORIGIN_NEXT_HEADER);
             ip.setHopLimit(255);
-            ip.setSrc((Inet6Address) Utils.l3addr(ipSrc.getAddress()));
-            ip.setDst((Inet6Address) Utils.l3addr(ipDst.getAddress()));
+            ip.setSrc(IP.fromIPv6(ipSrc.getAddress()));
+            ip.setDst(IP.fromIPv6(ipDst.getAddress()));
             ip.setExtHeaders(new ArrayList<>());
             ip.setPacket(tcpPacket);
 
@@ -294,21 +291,19 @@ public class Mirror {
         return retList;
     }
 
-    private static Inet6Address getIpv6FromIpv4(InetAddress ipSrc) {
-        if (ipSrc instanceof Inet4Address) {
+    private static IPv6 getIpv6FromIpv4(IP ipSrc) {
+        if (ipSrc instanceof IPv4) {
             byte[] v4 = ipSrc.getAddress();
             byte[] v6 = new byte[16];
-            v6[0] = (byte) 0xff;
-            v6[1] = (byte) 0xff;
             v6[10] = (byte) 0xff;
             v6[11] = (byte) 0xff;
             v6[12] = v4[0];
             v6[13] = v4[1];
             v6[14] = v4[2];
             v6[15] = v4[3];
-            return (Inet6Address) Utils.l3addr(v6);
+            return IP.fromIPv6(v6);
         } else {
-            return (Inet6Address) ipSrc;
+            return (IPv6) ipSrc;
         }
     }
 
@@ -329,7 +324,7 @@ public class Mirror {
         while ((s = br.readLine()) != null) {
             sb.append(s);
         }
-        JSON.Instance inst = JSON.parse(sb.toString());
+        JSON.Instance<?> inst = JSON.parse(sb.toString());
         parseAndLoad(inst);
         mirror.lastTimestamp = ts;
     }
@@ -346,7 +341,7 @@ public class Mirror {
         loop.delay(timeout, this::loadConfigAndSetTimer);
     }
 
-    private void parseAndLoad(JSON.Instance inst) throws Exception {
+    private void parseAndLoad(JSON.Instance<?> inst) throws Exception {
         String handling = "";
         boolean enabled;
         List<FilterConfig> filters;

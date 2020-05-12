@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyEventHandler;
 import vproxy.component.proxy.ProxyNetConfig;
@@ -9,7 +10,6 @@ import vproxy.connection.ServerSock;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 // create an echo server, and create a proxy
 // client requests proxy, proxy requests echo server
@@ -21,13 +21,13 @@ public class ProxyEchoServer {
         // create event loop (just use the returned event loop)
         NetEventLoop netEventLoop = new NetEventLoop(selectorEventLoop);
         // create server
-        ServerSock server = ServerSock.create(new InetSocketAddress(18080));
+        ServerSock server = ServerSock.create(new IPPort(18080));
         // init config
         ProxyNetConfig config = new ProxyNetConfig()
             .setAcceptLoop(netEventLoop)
             .setConnGen((conn, hint) -> {
                 // connect to localhost 19080
-                return new Connector(new InetSocketAddress("127.0.0.1", 19080));
+                return new Connector(new IPPort("127.0.0.1", 19080));
             })
             .setHandleLoopProvider(ignore -> netEventLoop) // use same event loop as the acceptor for demonstration
             .setServer(server)

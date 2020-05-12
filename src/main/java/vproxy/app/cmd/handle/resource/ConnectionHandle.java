@@ -5,7 +5,6 @@ import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.elgroup.EventLoopWrapper;
 import vproxy.component.exception.NotFoundException;
-import vproxy.component.exception.XException;
 import vproxy.component.proxy.Session;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.connection.Connection;

@@ -2,15 +2,20 @@ package vproxy.util;
 
 import sun.misc.Unsafe;
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.connection.Connector;
 import vproxy.dns.Resolver;
 import vproxy.socks.AddressType;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.net.*;
+import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Deque;
+import java.util.LinkedList;
+import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Consumer;
@@ -73,89 +78,6 @@ public class Utils {
         return sb.toString();
     }
 
-    public static String ipport(InetSocketAddress addr) {
-        return ipStr(addr.getAddress().getAddress()) + ":" + addr.getPort();
-    }
-
-    private static String ipv6Str(byte[] ip) {
-        String[] split = {Integer.toHexString((((ip[0] & 0xFF) << 8) & 0xFFFF) | (ip[1] & 0xFF)),
-            Integer.toHexString((((ip[2] & 0xFF) << 8) & 0xFFFF) | (ip[3] & 0xFF)),
-            Integer.toHexString((((ip[4] & 0xFF) << 8) & 0xFFFF) | (ip[5] & 0xFF)),
-            Integer.toHexString((((ip[6] & 0xFF) << 8) & 0xFFFF) | (ip[7] & 0xFF)),
-            Integer.toHexString((((ip[8] & 0xFF) << 8) & 0xFFFF) | (ip[9] & 0xFF)),
-            Integer.toHexString((((ip[10] & 0xFF) << 8) & 0xFFFF) | (ip[11] & 0xFF)),
-            Integer.toHexString((((ip[12] & 0xFF) << 8) & 0xFFFF) | (ip[13] & 0xFF)),
-            Integer.toHexString((((ip[14] & 0xFF) << 8) & 0xFFFF) | (ip[15] & 0xFF)),
-        };
-
-        int max = 0;
-        int idx = split.length;
-        int endExclusive = 0;
-        int curLen = 0;
-        int curIdx = -1;
-        for (int i = 0; i <= split.length; i++) {
-            String s;
-            if (i < split.length) {
-                s = split[i];
-            } else {
-                s = ""; // not 0
-            }
-            if (s.equals("0")) {
-                if (curIdx == -1) { // not started yet
-                    curIdx = i;
-                }
-                curLen += 1;
-            } else {
-                if (curIdx != -1) { // end
-                    if (max < curLen) {
-                        max = curLen;
-                        idx = curIdx;
-                        endExclusive = i;
-                    }
-                    curLen = 0;
-                    curIdx = -1;
-                }
-            }
-        }
-
-        StringBuilder sb = new StringBuilder();
-        sb.append("[");
-        for (int i = 0; i < split.length; ++i) {
-            if (i < idx || i >= endExclusive) {
-                if (i != 0 && i != endExclusive) {
-                    sb.append(":");
-                }
-                sb.append(split[i]);
-            } else if (i == idx) {
-                sb.append("::");
-            }
-        }
-        sb.append("]");
-        return sb.toString();
-    }
-
-    private static String ipv4Str(byte[] ip) {
-        return positive(ip[0]) + "." + positive(ip[1]) + "." + positive(ip[2]) + "." + positive(ip[3]);
-    }
-
-    public static String l4addrStr(InetSocketAddress l4addr) {
-        return ipStr(l4addr.getAddress().getAddress()) + ":" + l4addr.getPort();
-    }
-
-    public static String ipStr(InetAddress ip) {
-        return ipStr(ip.getAddress());
-    }
-
-    public static String ipStr(byte[] ip) {
-        if (ip.length == 16) {
-            return ipv6Str(ip);
-        } else if (ip.length == 4) {
-            return ipv4Str(ip);
-        } else {
-            throw new IllegalArgumentException("unknown ip " + Arrays.toString(ip));
-        }
-    }
-
     private static String formatErrBase(Throwable err) {
         if (err.getMessage() != null && !err.getMessage().isBlank()) {
             return err.getMessage().trim();
@@ -173,19 +95,7 @@ public class Utils {
         }
     }
 
-    public static int maskInt(byte[] mask) {
-        // run from end to start and check how many zeros
-        int m = 0;
-        for (int i = mask.length - 1; i >= 0; --i) {
-            int cnt = zeros(mask[i]);
-            if (cnt == 0)
-                break;
-            m += cnt;
-        }
-        return mask.length * 8 - m;
-    }
-
-    private static int zeros(byte b) {
+    public static int zeros(byte b) {
         if ((b & /*-------*/0b1) == /*-------*/0b1) return 0;
         if ((b & /*------*/0b10) == /*------*/0b10) return 1;
         if ((b & /*-----*/0b100) == /*-----*/0b100) return 2;
@@ -195,82 +105,6 @@ public class Utils {
         if ((b & /*-*/0b1000000) == /*-*/0b1000000) return 6;
         if ((b & /**/0b10000000) == /**/0b10000000) return 7;
         return 8;
-    }
-
-    public static boolean validNetworkStr(String net) {
-        if (!net.contains("/")) {
-            return false;
-        }
-        String[] arrs = net.split("/");
-        if (arrs.length != 2) {
-            return false;
-        }
-        int intMask;
-        try {
-            intMask = Integer.parseInt(arrs[1]);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        String nStr = arrs[0];
-        byte[] nBytes = parseIpString(nStr);
-        if (nBytes == null) {
-            return false;
-        }
-        byte[] maskBytes;
-        try {
-            maskBytes = parseMask(intMask);
-        } catch (Exception e) {
-            return false;
-        }
-        return validNetwork(nBytes, maskBytes);
-    }
-
-    public static boolean validL4AddrStr(String l4addr) {
-        if (!l4addr.contains(":")) {
-            return false;
-        }
-        String portStr = l4addr.substring(l4addr.lastIndexOf(":") + 1);
-        String l3addr = l4addr.substring(0, l4addr.lastIndexOf(":"));
-        if (parseIpString(l3addr) == null) {
-            return false;
-        }
-        int port;
-        try {
-            port = Integer.parseInt(portStr);
-        } catch (NumberFormatException e) {
-            return false;
-        }
-        //noinspection RedundantIfStatement
-        if (port < 0 || port > 65535) {
-            return false;
-        }
-        return true;
-    }
-
-    public static InetSocketAddress blockParseL4Addr(String l4addr) throws Exception {
-        if (!l4addr.contains(":")) {
-            throw new Exception("missing port");
-        }
-        String ip = l4addr.substring(0, l4addr.lastIndexOf(":"));
-        String portStr = l4addr.substring(l4addr.lastIndexOf(":") + 1);
-        int port;
-        try {
-            port = Integer.parseInt(portStr);
-        } catch (NumberFormatException e) {
-            throw new Exception("invalid port number");
-        }
-        if (port < 0 || port > 65535) {
-            throw new Exception("invalid port number: out of range");
-        }
-
-        byte[] ipBytes = Utils.parseIpString(ip);
-        if (ipBytes != null) {
-            return new InetSocketAddress(Utils.l3addr(ipBytes), port);
-        }
-        // try hostname
-        var cb = new BlockCallback<InetAddress, IOException>();
-        Resolver.getDefault().resolve(ip, cb);
-        return new InetSocketAddress(cb.block(), port);
     }
 
     public static byte[] long2bytes(long v) {
@@ -289,140 +123,7 @@ public class Utils {
         return ret;
     }
 
-    public static void eraseToNetwork(byte[] addr, byte[] mask) {
-        if (addr.length < mask.length)
-            throw new IllegalArgumentException();
-        // few bytes set to bitwise-and
-        for (int i = 0; i < mask.length; ++i) {
-            byte a = addr[i];
-            byte m = mask[i];
-            addr[i] = (byte) (a & m);
-        }
-        // last few bytes are all zero
-        // because mask is zero
-        for (int i = mask.length; i < addr.length; ++i) {
-            addr[i] = 0;
-        }
-    }
-
-    public static boolean validNetwork(byte[] addr, byte[] mask) {
-        if (addr.length < mask.length)
-            return false; // ipv4 and mask > 32, absolutely wrong
-        // only check first few bytes in the loop
-        for (int i = 0; i < mask.length; ++i) {
-            byte a = addr[i];
-            byte m = mask[i];
-            if ((a & m) != a)
-                return false;
-        }
-        // check whether last few bytes are all zero
-        // because mask is zero
-        for (int i = mask.length; i < addr.length; ++i) {
-            byte a = addr[i];
-            if (a != 0)
-                return false;
-        }
-        return true;
-    }
-
-    public static boolean maskMatch(byte[] input, byte[] rule, byte[] mask) {
-        // the mask and rule length might not match each other
-        // see comments in parseMask()
-        // and input length might not be the same as the rule
-        // because we might apply an ipv4 rule to an ipv6 lb
-
-        // let's consider all situations:
-        // 1) input.length == rule.length > mask.length
-        //    which means ipv6 input and ipv6 rule and mask <= 32
-        //    so we check the first 4 bytes in the sequence
-        // 2) input.length < rule.length > mask.length
-        //    which means ipv4 input and ipv6 rule and mask <= 32
-        //    in this case, all highest 32 bits of real mask are 0
-        //    and the requester's ip address cannot be 0.0.0.0
-        //    so returning `not matching` would be ok
-        // 3) input.length < rule.length == mask.length
-        //    which means ipv4 input and ipv6 rule and mask > 32
-        //    the low bits are 0 for ipv4
-        //    so if rule low bits [all 0] or [all 0][ffff], then check high bits
-        //    otherwise directly returning `not matching` would be ok
-        // 4) input.length > rule.length == mask.length
-        //    which means ipv6 input and ipv4 rule
-        //    so let's only compare the last 32 bits
-        //    additionally:
-        //    there might be deprecated `IPv4-Compatible IPv6 address` e.g.:
-        //                                  127.0.0.1
-        //    0000:0000:0000:0000:0000:0000:7f00:0001
-        //    and there might be `IPv4-Mapped IPv6 address` e.g.:
-        //                                  127.0.0.1
-        //    0000:0000:0000:0000:0000:ffff:7f00:0001
-        //    so let's then check whether the first few bits
-        //    like this [all 0][ffff]
-        // 5) input.length == rule.length == mask.length
-        //    which means ipv4 input and ipv4 rule and mask <= 32
-        //    or ipv6 input and ipv6 input and mask > 32
-        //    just do normal check
-        //    see implementation for detail
-
-        if (input.length == rule.length && rule.length > mask.length) {
-            // 1
-            for (int i = 0; i < mask.length; ++i) {
-                byte inputB = input[i];
-                byte ruleB = rule[i];
-                byte maskB = mask[i];
-                if ((inputB & maskB) != ruleB)
-                    return false;
-            }
-            return true;
-        } else if (input.length < rule.length && rule.length > mask.length) {
-            // 2
-            return false;
-        } else if (input.length < rule.length && rule.length == mask.length) {
-            // 3
-            // input =            [.......]
-            //  rule = [..................]
-            int lastLowIdx = rule.length - input.length - 1;
-            int secondLastLowIdx = lastLowIdx - 1;
-            // high part
-            for (int i = 0; i < input.length; ++i) {
-                byte inputB = input[i];
-                byte ruleB = rule[i + rule.length - input.length];
-                byte maskB = mask[i + rule.length - input.length];
-                if ((inputB & maskB) != ruleB)
-                    return false;
-            }
-            return lowBitsV6V4(rule, lastLowIdx, secondLastLowIdx);
-        }
-        // else:
-        // for (4) and (5)
-
-        int minLen = input.length;
-        if (rule.length < minLen)
-            minLen = rule.length;
-        if (mask.length < minLen)
-            minLen = mask.length;
-
-        for (int i = 0; i < minLen; ++i) {
-            byte inputB = input[input.length - i - 1];
-            byte ruleB = rule[rule.length - i - 1];
-            byte maskB = mask[mask.length - i - 1];
-
-            if ((inputB & maskB) != ruleB)
-                return false;
-        }
-
-        // then check for additional rules in (4)
-        if (input.length > rule.length) {
-            // input = [..................]
-            //  rule =            [.......]
-            int lastLowIdx = input.length - rule.length - 1;
-            int secondLastLowIdx = lastLowIdx - 1;
-            return lowBitsV6V4(input, lastLowIdx, secondLastLowIdx);
-        }
-
-        return true;
-    }
-
-    private static boolean lowBitsV6V4(byte[] ip, int lastLowIdx, int secondLastLowIdx) {
+    public static boolean lowBitsV6V4(byte[] ip, int lastLowIdx, int secondLastLowIdx) {
         for (int i = 0; i < secondLastLowIdx; ++i) {
             if (ip[i] != 0)
                 return false;
@@ -435,72 +136,9 @@ public class Utils {
             return false;
     }
 
-    public static void parseAddress(String address, Callback<byte[], IllegalArgumentException> cb) {
-        Resolver.getDefault().resolve(address, new Callback<>() {
-            @Override
-            protected void onSucceeded(InetAddress value) {
-                cb.succeeded(value.getAddress());
-            }
-
-            @Override
-            protected void onFailed(UnknownHostException err) {
-                cb.failed(new IllegalArgumentException("unknown ip " + address));
-            }
-        });
-    }
-
-    public static byte[] blockParseAddress(String address) throws IllegalArgumentException {
-        BlockCallback<byte[], IllegalArgumentException> cb = new BlockCallback<>();
-        parseAddress(address, cb);
-        return cb.block();
-    }
-
-    public static InetAddress blockParseAddressToInet(String address) throws IllegalArgumentException {
-        byte[] arr = blockParseAddress(address);
-        try {
-            return InetAddress.getByAddress(arr);
-        } catch (UnknownHostException e) {
-            throw new IllegalArgumentException("cannot get inet from byte array");
-        }
-    }
-
-    public static byte[] parseMask(int mask) {
-        if (mask > 128) { // mask should not greater than 128
-            throw new IllegalArgumentException("unknown mask " + mask);
-        } else if (mask > 32) {
-            // ipv6
-            return getMask(new byte[16], mask);
-        } else {
-            // ipv4
-            return getMask(new byte[4], mask);
-        }
-        // maybe the mask <= 32 but is for ipv6
-        // in this case, we handle it as an ipv4 mask
-        // and do some additional work when
-        // checking and comparing
-    }
-
-    // fill bytes into the `masks` array
-    private static byte[] getMask(byte[] masks, int mask) {
-        // because java always fill the byte with 0
-        // so we only need to set 1 into the bit sequence
-        // start from the first bit
-        for (int i = 0; i < masks.length; ++i) {
-            //noinspection ManualMinMaxCalculation
-            masks[i] = getByte(mask > 8
-                ? 8 // a byte can contain maximum 8 bits
-                : mask // it's ok if mask < 0, see comment in getByte()
-            );
-            // the `to-do` bit sequence moves 8 bits forward each round
-            // so subtract 8 from the integer represented mask
-            mask -= 8;
-        }
-        return masks;
-    }
-
     // specify the number of 1 in the head of bit sequence
     // and return a byte
-    private static byte getByte(int ones) {
+    public static byte getByte(int ones) {
         switch (ones) {
             case 8:
                 return (byte) 0b11111111;
@@ -525,46 +163,6 @@ public class Utils {
         }
     }
 
-    public static InetAddress getInetAddressFromNic(String nicName, IPType ipType) throws SocketException {
-        InetAddress bindInetAddress;
-        Inet4Address v4Addr = null;
-        Inet6Address v6Addr = null;
-        Enumeration<NetworkInterface> nics = NetworkInterface.getNetworkInterfaces();
-        while (nics.hasMoreElements()) {
-            NetworkInterface nic = nics.nextElement();
-            if (nicName.equals(nic.getDisplayName())) {
-                Enumeration<InetAddress> addresses = nic.getInetAddresses();
-                while (addresses.hasMoreElements()) {
-                    InetAddress a = addresses.nextElement();
-                    if (a instanceof Inet4Address) {
-                        v4Addr = (Inet4Address) a;
-                    } else if (a instanceof Inet6Address) {
-                        v6Addr = (Inet6Address) a;
-                    }
-                    if (v4Addr != null && v6Addr != null)
-                        break; // both v4 and v6 found
-                }
-                break; // nic found, so break
-            }
-        }
-        if (v4Addr == null && v6Addr == null)
-            throw new SocketException("nic " + nicName + " not found or no ip address");
-        if (ipType == IPType.v4 && v4Addr == null)
-            throw new SocketException("nic " + nicName + " do not have a v4 ip");
-        if (ipType == IPType.v6 && v6Addr == null)
-            throw new SocketException("nic " + nicName + " do not have a v6 ip");
-        if (ipType == IPType.v4) {
-            //noinspection ConstantConditions
-            assert v4Addr != null;
-            bindInetAddress = v4Addr;
-        } else {
-            assert v6Addr != null;
-            bindInetAddress = v6Addr;
-        }
-
-        return bindInetAddress;
-    }
-
     public static String[] split(String str, String e) {
         List<String> ls = new LinkedList<>();
         int idx = -e.length();
@@ -580,235 +178,6 @@ public class Utils {
         }
         //noinspection ToArrayCallWithZeroLengthArrayArgument
         return ls.toArray(new String[ls.size()]);
-    }
-
-    // return null if not ip literal
-    public static byte[] parseIpString(String ip) {
-        if (ip.contains(":"))
-            return parseIpv6String(ip);
-        else
-            return parseIpv4String(ip);
-    }
-
-    // return null if not ipv4
-    public static byte[] parseIpv4String(String ipv4) {
-        byte[] ipBytes = new byte[4];
-        if (parseIpv4String(ipv4, ipBytes, 0) == -1) {
-            return null; // wrong len or parse fail
-        } else {
-            return ipBytes;
-        }
-    }
-
-    private static int parseIpv4String(String ipv4, byte[] ipBytes, int fromIdx) {
-        String[] split = split(ipv4, ".");
-        if (split.length != 4)
-            return -1; // wrong len
-        for (int i = 0; i < split.length; ++i) {
-            int idx = fromIdx + i;
-            if (idx >= ipBytes.length) {
-                return -1; // too long
-            }
-            String s = split[i];
-            char[] digits = s.toCharArray();
-            if (digits.length > 3 || digits.length == 0) {
-                return -1; // invalid for a byte
-            }
-            for (char c : digits) {
-                if (c < '0' || c > '9')
-                    return -1; // should be decimal digits
-            }
-            if (s.startsWith("0") && s.length() > 1)
-                return -1; // 0n is invalid
-            int num = Integer.parseInt(s);
-            if (num > 255)
-                return -1; // invalid byte
-            ipBytes[idx] = (byte) num;
-        }
-        return split.length;
-    }
-
-    // return null if not ipv6
-    public static byte[] parseIpv6String(String ipv6) {
-        if (ipv6.startsWith("[") && ipv6.endsWith("]")) {
-            ipv6 = ipv6.substring(1, ipv6.length() - 1);
-        }
-        { // check how many ::
-            int count = split(ipv6, "::").length - 1;
-            if (count > 1)
-                return null; // at most 1
-        }
-        boolean hasDblColon;
-        String colonOnly;
-        String colonAndDot;
-        {
-            int idx = ipv6.indexOf("::");
-            if (idx == -1) {
-                hasDblColon = false;
-                colonOnly = null;
-                colonAndDot = ipv6;
-            } else {
-                hasDblColon = true;
-                colonOnly = ipv6.substring(0, idx);
-                colonAndDot = ipv6.substring(idx + "::".length());
-            }
-        }
-        byte[] ipBytes = new byte[16];
-        int consumed = parseIpv6ColonPart(colonOnly, ipBytes, 0);
-        if (consumed == -1)
-            return null; // parse failed
-        int consumed2 = parseIpv6LastBits(colonAndDot, ipBytes);
-        if (consumed2 == -1)
-            return null; // parse failed
-        if (hasDblColon) {
-            if (consumed + consumed2 >= 16)
-                return null; // wrong len
-        } else {
-            if (consumed + consumed2 != 16)
-                return null; // wrong len
-        }
-        return ipBytes;
-    }
-
-    // -1 for fail
-    private static int parseIpv6ColonPart(String s, byte[] ipBytes, int fromIdx) {
-        if (s == null || s.isEmpty())
-            return 0;
-        if (fromIdx < 0)
-            return -1;
-        // only hex number splited by `:`
-        String[] split = split(s, ":");
-        for (int i = 0; i < split.length; ++i) {
-            int baseIndex = fromIdx + 2 * i; // every field occupy 2 bytes
-            if (baseIndex >= ipBytes.length) {
-                return -1; // too long
-            }
-            char[] field = split[i].toCharArray();
-            if (field.length > 4) {
-                // four hexadecimal digits
-                return -1;
-            }
-            if (field.length == 0) {
-                // there must be at least one numeral in every field
-                return -1;
-            }
-            for (char c : field) {
-                if ((c < 'A' || c > 'F') && (c < 'a' || c > 'f') && (c < '0' || c > '9')) {
-                    // hexadecimal
-                    return -1;
-                }
-            }
-            switch (field.length) {
-                case 1:
-                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[0] + "", 16);
-                    break;
-                case 2:
-                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[0] + "" + field[1], 16);
-                    break;
-                case 3:
-                    ipBytes[baseIndex] = (byte) Integer.parseInt(field[0] + "", 16);
-                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[1] + "" + field[2], 16);
-                    break;
-                case 4:
-                    ipBytes[baseIndex] = (byte) Integer.parseInt(field[0] + "" + field[1], 16);
-                    ipBytes[baseIndex + 1] = (byte) Integer.parseInt(field[2] + "" + field[3], 16);
-                    break;
-                default:
-                    // should not happen
-                    return -1;
-            }
-        }
-        return split.length * 2;
-    }
-
-    // -1 for fail
-    private static int parseIpv6LastBits(String s, byte[] ipBytes) {
-        if (s.contains(".")) {
-            int idx = s.indexOf('.');
-            idx = s.lastIndexOf(':', idx);
-            if (idx == -1) {
-                return parseIpv4String(s, ipBytes, ipBytes.length - 4);
-            } else {
-                String colonPart = s.substring(0, idx);
-                String dotPart = s.substring(idx + 1);
-                int r = parseIpv4String(dotPart, ipBytes, ipBytes.length - 4);
-                if (r == -1) {
-                    return -1; // wrong len or parse failed
-                }
-                return 4 + parseIpv6ColonPart(colonPart, ipBytes, ipBytes.length - 4 - split(colonPart, ":").length * 2);
-            }
-        } else {
-            return parseIpv6ColonPart(s, ipBytes, ipBytes.length - split(s, ":").length * 2);
-        }
-    }
-
-    public static byte[] parseIpv4StringConsiderV6Compatible(String s) {
-        byte[] v6 = parseIpv6String(s);
-        if (v6 != null) {
-            // maybe v4-compatible ipv6
-            for (int i = 0; i < 10; ++i) {
-                if (0 != v6[i])
-                    return null;
-            }
-            for (int i = 11; i < 12; ++i) {
-                if ((byte) 0xFF != v6[i])
-                    return null;
-            }
-            byte[] v4 = new byte[4];
-            System.arraycopy(v6, 12, v4, 0, 4);
-            return v4;
-        }
-        return parseIpv4String(s);
-    }
-
-    public static boolean isIpv4(String s) {
-        return parseIpv4StringConsiderV6Compatible(s) != null;
-    }
-
-    public static boolean isIpv6(String s) {
-        return parseIpv6String(s) != null;
-    }
-
-    public static boolean isIpLiteral(String s) {
-        return isIpv4(s) || isIpv6(s);
-    }
-
-    public static InetAddress l3addr(String ip) {
-        try {
-            return InetAddress.getByAddress(Utils.parseIpString(ip));
-        } catch (UnknownHostException e) {
-            Logger.shouldNotHappen("creating l3addr from " + ip + " failed", e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static InetAddress l3addr(byte[] addr) {
-        try {
-            return InetAddress.getByAddress(addr);
-        } catch (UnknownHostException e) {
-            StringBuilder err = new StringBuilder("creating l3addr from ");
-            boolean isFirst = true;
-            for (byte x : addr) {
-                if (isFirst) isFirst = false;
-                else err.append(".");
-                err.append(x & 0xff);
-            }
-            err.append(" failed");
-            Logger.shouldNotHappen(err.toString(), e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static InetAddress l3addr(int a, int b, int c, int d) {
-        return l3addr(new byte[]{(byte) a, (byte) b, (byte) c, (byte) d});
-    }
-
-    public static InetAddress l3addr(byte a, byte b, byte c, byte d) {
-        return l3addr(new byte[]{a, b, c, d});
-    }
-
-    public static InetSocketAddress bindAnyAddress() {
-        return new InetSocketAddress(l3addr(0, 0, 0, 0), 0);
     }
 
     private static Unsafe U;
@@ -838,8 +207,8 @@ public class Utils {
         if (type == AddressType.domain) { // resolve if it's domain
             Resolver.getDefault().resolve(address, new Callback<>() {
                 @Override
-                protected void onSucceeded(InetAddress value) {
-                    providedCallback.accept(new Connector(new InetSocketAddress(value, port)));
+                protected void onSucceeded(IP value) {
+                    providedCallback.accept(new Connector(new IPPort(value, port)));
                 }
 
                 @Override
@@ -850,13 +219,13 @@ public class Utils {
                 }
             });
         } else {
-            if (!Utils.isIpLiteral(address)) {
+            if (!IP.isIpLiteral(address)) {
                 assert Logger.lowLevelDebug("client request with an invalid ip " + address);
                 providedCallback.accept(null);
                 return;
             }
-            InetAddress remote = l3addr(address);
-            providedCallback.accept(new Connector(new InetSocketAddress(remote, port)));
+            IP remote = IP.from(address);
+            providedCallback.accept(new Connector(new IPPort(remote, port)));
         }
     }
 
@@ -990,19 +359,6 @@ public class Utils {
             return true;
         }).getAsBoolean();
         return true;
-    }
-
-    public static int ipv4Bytes2Int(byte[] host) {
-        return ((host[0] & 0xff) << 24) | ((host[1] & 0xff) << 16) | ((host[2] & 0xff) << 8) | (host[3] & 0xff);
-    }
-
-    public static byte[] ipv4Int2Bytes(int ip) {
-        byte[] ret = new byte[4];
-        ret[0] = (byte) ((ip >> 24) & 0xff);
-        ret[1] = (byte) ((ip >> 16) & 0xff);
-        ret[2] = (byte) ((ip >> 8) & 0xff);
-        ret[3] = (byte) ((ip) & 0xff);
-        return ret;
     }
 
     public static byte[] gzipCompress(ByteArrayOutputStream baos, byte[] plain) {

@@ -1,20 +1,15 @@
 package vproxy.connection;
 
-import vfd.DatagramFD;
-import vfd.FDProvider;
-import vfd.ServerSocketFD;
-import vfd.SocketOptions;
+import vfd.*;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.udp.ServerDatagramFD;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.BindException;
-import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -22,7 +17,7 @@ public class ServerSock implements NetFlowRecorder {
     private static int supportReusePort = -1; // 1:true 0:false -1:not decided yet
     private static int supportTransparent = -1; // 1:true 0:false -1:not decided yet
 
-    public final InetSocketAddress bind;
+    public final IPPort bind;
     private final String _id;
     public final ServerSocketFD channel;
 
@@ -48,7 +43,7 @@ public class ServerSock implements NetFlowRecorder {
         }
         try {
             chnl.setOption(StandardSocketOptions.SO_REUSEPORT, true);
-            chnl.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0));
+            chnl.bind(new IPPort(IP.from("0.0.0.0"), 0));
         } catch (UnsupportedOperationException ignore) {
             Logger.warn(LogType.SYS_ERROR, "the operating system does not support SO_REUSEPORT");
             supportReusePort = 0;
@@ -81,7 +76,7 @@ public class ServerSock implements NetFlowRecorder {
         }
         try {
             chnl.setOption(SocketOptions.IP_TRANSPARENT, true);
-            chnl.bind(new InetSocketAddress(Utils.l3addr(new byte[]{100, 66, 77, 88}), 11223));
+            chnl.bind(new IPPort(IP.from("100.66.77.88"), 11223));
         } catch (UnsupportedOperationException ignore) {
             Logger.warn(LogType.SYS_ERROR, "the operating system or implementation does not support IP_TRANSPARENT");
             supportTransparent = 0;
@@ -110,7 +105,7 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    public static void checkBind(InetSocketAddress bindAddress) throws IOException {
+    public static void checkBind(IPPort bindAddress) throws IOException {
         try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
             foo.bind(bindAddress);
         } catch (BindException ex) {
@@ -118,7 +113,7 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    public static void checkBind(Protocol protocol, InetSocketAddress bindAddress) throws IOException {
+    public static void checkBind(Protocol protocol, IPPort bindAddress) throws IOException {
         if (protocol == Protocol.TCP) {
             checkBind(bindAddress);
         } else {
@@ -130,7 +125,7 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    private static ServerSock create(ServerSocketFD channel, InetSocketAddress bindAddress, BindOptions opts) throws IOException {
+    private static ServerSock create(ServerSocketFD channel, IPPort bindAddress, BindOptions opts) throws IOException {
         channel.configureBlocking(false);
         if (supportReusePort()) {
             channel.setOption(StandardSocketOptions.SO_REUSEPORT, true);
@@ -150,30 +145,30 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    public static ServerSock create(InetSocketAddress bindAddress) throws IOException {
+    public static ServerSock create(IPPort bindAddress) throws IOException {
         return create(bindAddress, new BindOptions());
     }
 
-    public static ServerSock create(InetSocketAddress bindAddress, BindOptions opts) throws IOException {
+    public static ServerSock create(IPPort bindAddress, BindOptions opts) throws IOException {
         ServerSocketFD channel = FDProvider.get().openServerSocketFD();
         return create(channel, bindAddress, opts);
     }
 
     // note: the input loop should be the same that would be added
-    public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop) throws IOException {
+    public static ServerSock createUDP(IPPort bindAddress, SelectorEventLoop loop) throws IOException {
         DatagramFD channel = FDProvider.get().openDatagramFD();
         ServerDatagramFD fd = new ServerDatagramFD(channel, loop);
         return create(fd, bindAddress, new BindOptions());
     }
 
-    public static ServerSock createUDP(InetSocketAddress bindAddress, SelectorEventLoop loop, UDPBasedFDs fds) throws IOException {
+    public static ServerSock createUDP(IPPort bindAddress, SelectorEventLoop loop, UDPBasedFDs fds) throws IOException {
         return create(fds.openServerSocketFD(loop), bindAddress, new BindOptions());
     }
 
     private ServerSock(ServerSocketFD channel) throws IOException {
         this.channel = channel;
-        bind = (InetSocketAddress) channel.getLocalAddress();
-        _id = Utils.ipStr(bind.getAddress().getAddress()) + ":" + bind.getPort();
+        bind = channel.getLocalAddress();
+        _id = bind.formatToIPPortString();
     }
 
     // --- START statistics ---

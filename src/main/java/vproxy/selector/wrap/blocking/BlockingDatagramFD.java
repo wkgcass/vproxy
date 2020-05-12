@@ -1,7 +1,8 @@
 package vproxy.selector.wrap.blocking;
 
-import vfd.DatagramFD;
+import vfd.AbstractDatagramFD;
 import vfd.FD;
+import vfd.SockAddr;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.VirtualFD;
 import vproxy.selector.wrap.WrappedSelector;
@@ -10,14 +11,12 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.util.LinkedList;
 
-public class BlockingDatagramFD implements DatagramFD, VirtualFD {
-    private final DatagramFD fd;
+public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagramFD<ADDR>, VirtualFD {
+    private final AbstractDatagramFD<ADDR> fd;
     private final SelectorEventLoop loop;
     private final WrappedSelector selector;
     private final int readBufSize;
@@ -41,7 +40,7 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
     private IOException lastWriteException = null;
     private volatile boolean isWriting = false;
 
-    public BlockingDatagramFD(DatagramFD fd, SelectorEventLoop loop,
+    public BlockingDatagramFD(AbstractDatagramFD<ADDR> fd, SelectorEventLoop loop,
                               int readBufSize, int writeQByteLimit, int readBufPacketLimit) {
         if (!fd.isOpen()) {
             throw new IllegalArgumentException("trying to handle a closed channel: " + fd);
@@ -73,32 +72,32 @@ public class BlockingDatagramFD implements DatagramFD, VirtualFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
-        fd.connect(l4addr);
+    public void connect(ADDR addr) throws IOException {
+        fd.connect(addr);
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
-        fd.bind(l4addr);
+    public void bind(ADDR addr) throws IOException {
+        fd.bind(addr);
     }
 
     @Override
-    public int send(ByteBuffer buf, InetSocketAddress remote) throws UnsupportedOperationException {
+    public int send(ByteBuffer buf, ADDR remote) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("not supported for now");
     }
 
     @Override
-    public SocketAddress receive(ByteBuffer buf) throws UnsupportedOperationException {
+    public ADDR receive(ByteBuffer buf) throws UnsupportedOperationException {
         throw new UnsupportedOperationException("not supported for now");
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public ADDR getLocalAddress() throws IOException {
         return fd.getLocalAddress();
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
+    public ADDR getRemoteAddress() throws IOException {
         return fd.getRemoteAddress();
     }
 

@@ -13,6 +13,7 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
 import org.junit.*;
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
@@ -26,7 +27,6 @@ import vproxy.util.Tuple;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Field;
-import java.net.InetSocketAddress;
 import java.net.NetworkInterface;
 import java.util.*;
 import java.util.function.Consumer;
@@ -1564,7 +1564,7 @@ public class CI {
             });
         } else if (valueType == boolean.class) {
             ob.put(key, (boolean) value);
-        } else if (valueType.isEnum() || valueType == InetSocketAddress.class) {
+        } else if (valueType.isEnum() || valueType == IPPort.class) {
             ob.put(key, value.toString());
         } else if (valueType == JSON.Object.class) {
             ob.putInst(key, (JSON.Object) value);
@@ -1600,7 +1600,7 @@ public class CI {
             Object[] enums = valueType.getEnumConstants();
             Object v = enums[(int) (Math.random() * enums.length)];
             putValue(ob, key, valueType, v);
-        } else if (valueType == InetSocketAddress.class) {
+        } else if (valueType == IPPort.class) {
             int port = getNextListeningPort();
             putValue(ob, key, valueType, "0.0.0.0:" + port);
         } else if (valueType == boolean.class) {

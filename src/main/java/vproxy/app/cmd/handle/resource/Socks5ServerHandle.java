@@ -1,5 +1,6 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.Command;
@@ -15,9 +16,7 @@ import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -91,7 +90,7 @@ public class Socks5ServerHandle {
         String alias = cmd.resource.alias;
         EventLoopGroup acceptor = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.aelg));
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
@@ -153,7 +152,7 @@ public class Socks5ServerHandle {
         @Override
         public String toString() {
             return socks5.alias + " -> acceptor " + socks5.acceptorGroup.alias + " worker " + socks5.workerGroup.alias
-                + " bind " + Utils.ipStr(socks5.bindAddress.getAddress().getAddress()) + ":" + socks5.bindAddress.getPort()
+                + " bind " + socks5.bindAddress.getAddress().formatToIPString() + ":" + socks5.bindAddress.getPort()
                 + " backend " + socks5.backend.alias
                 + " timeout " + socks5.getTimeout()
                 + " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize()

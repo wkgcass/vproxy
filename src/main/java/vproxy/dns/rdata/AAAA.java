@@ -1,15 +1,15 @@
 package vproxy.dns.rdata;
 
+import vfd.IP;
+import vfd.IPv6;
 import vproxy.dns.DNSType;
 import vproxy.dns.InvalidDNSPacketException;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
-import java.net.Inet6Address;
 import java.util.Objects;
 
 public class AAAA implements RData {
-    public Inet6Address address;
+    public IPv6 address;
 
     @Override
     public boolean equals(Object o) {
@@ -46,6 +46,6 @@ public class AAAA implements RData {
         if (data.length() != 16)
             throw new InvalidDNSPacketException("AAAA record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();
-        address = (Inet6Address) Utils.l3addr(arr);
+        address = IP.fromIPv6(arr);
     }
 }

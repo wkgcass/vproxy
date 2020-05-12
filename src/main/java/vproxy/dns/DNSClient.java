@@ -1,8 +1,6 @@
 package vproxy.dns;
 
-import vfd.DatagramFD;
-import vfd.EventSet;
-import vfd.FDProvider;
+import vfd.*;
 import vproxy.app.Config;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
@@ -21,8 +19,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
@@ -39,7 +35,7 @@ public class DNSClient {
 
     private final SelectorEventLoop loop;
     private final DatagramFD sock;
-    private List<InetSocketAddress> nameServers;
+    private List<IPPort> nameServers;
     private final int dnsReqTimeout;
     private final int maxRetry;
 
@@ -47,7 +43,7 @@ public class DNSClient {
     private int nextId = 0;
     private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
-    public DNSClient(SelectorEventLoop loop, DatagramFD sock, List<InetSocketAddress> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
+    public DNSClient(SelectorEventLoop loop, DatagramFD sock, List<IPPort> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
         this.loop = loop;
         this.sock = sock;
         this.nameServers = initialNameServers;
@@ -96,7 +92,7 @@ public class DNSClient {
             throw new RuntimeException(e);
         }
         try {
-            sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0));
+            sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0));
         } catch (IOException e) {
             Logger.shouldNotHappen("bind sock on random port failed", e);
             try {
@@ -148,7 +144,7 @@ public class DNSClient {
         return DEFAULT_INSTANCE;
     }
 
-    public void setNameServers(List<InetSocketAddress> nameServers) {
+    public void setNameServers(List<IPPort> nameServers) {
         if (nameServers.isEmpty()) {
             return;
         }
@@ -195,7 +191,7 @@ public class DNSClient {
 
         void request() {
             // retrieve the field to local variable because it might be switched
-            List<InetSocketAddress> nameServers = DNSClient.this.nameServers;
+            List<IPPort> nameServers = DNSClient.this.nameServers;
 
             assert Logger.lowLevelDebug("request() called on dns request: " + id);
             if (nameServerIndex >= nameServers.size()) {
@@ -325,7 +321,7 @@ public class DNSClient {
         return id;
     }
 
-    private void getAllByName0(String domain, boolean ipv4, Callback<List<InetAddress>, UnknownHostException> cb) {
+    private void getAllByName0(String domain, boolean ipv4, Callback<List<IP>, UnknownHostException> cb) {
         DNSPacket reqPacket = new DNSPacket();
         reqPacket.id = getNextId();
         reqPacket.isResponse = false;
@@ -342,7 +338,7 @@ public class DNSClient {
         reqPacket.questions.add(q);
         assert Logger.lowLevelDebug("is going to send packet " + reqPacket);
 
-        BiFunction<DNSPacket, IOException[], List<InetAddress>> transform = (packet, errHolder) -> {
+        BiFunction<DNSPacket, IOException[], List<IP>> transform = (packet, errHolder) -> {
             if (packet.rcode != DNSPacket.RCode.NoError) {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, "the remote dns server respond with error: " + packet.rcode);
                 return null;
@@ -356,7 +352,7 @@ public class DNSClient {
                 errHolder[0] = new UnknownHostException(domain);
                 return null;
             }
-            List<InetAddress> addresses = new ArrayList<>();
+            List<IP> addresses = new ArrayList<>();
             for (DNSResource answer : packet.answers) {
                 if (answer.type == DNSType.A) {
                     addresses.add(((A) answer.rdata).address);
@@ -376,11 +372,11 @@ public class DNSClient {
         new Request<>(reqPacket, transform, () -> new UnknownHostException(domain), cb);
     }
 
-    public void resolveIPv4(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
+    public void resolveIPv4(String domain, Callback<List<IP>, UnknownHostException> cb) {
         getAllByName0(domain, true, new RunOnLoopCallback<>(cb));
     }
 
-    public void resolveIPv6(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
+    public void resolveIPv6(String domain, Callback<List<IP>, UnknownHostException> cb) {
         getAllByName0(domain, false, new RunOnLoopCallback<>(cb));
     }
 

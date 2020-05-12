@@ -6,7 +6,10 @@ import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
 import vswitch.util.SwitchUtils;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class MacTable {
     public static final int MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME = 60 * 1000;

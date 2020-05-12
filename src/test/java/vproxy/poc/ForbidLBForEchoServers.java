@@ -1,5 +1,7 @@
 package vproxy.poc;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.HealthCheckConfig;
@@ -15,10 +17,8 @@ import vproxy.component.svrgroup.Upstream;
 import vproxy.connection.Protocol;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 @SuppressWarnings("Duplicates")
 public class ForbidLBForEchoServers {
@@ -38,14 +38,14 @@ public class ForbidLBForEchoServers {
         SecurityGroup secg = new SecurityGroup("secg0", false);
         TcpLB lb = new TcpLB("myLb",
             eventLoopGroup, eventLoopGroup, // use the same group for acceptor and worker
-            new InetSocketAddress(18080), upstream,
+            new IPPort(18080), upstream,
             Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
             secg
         );
         lb.start();
         // add each group one server
-        grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), 10);
-        grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), 10);
+        grp1.add("s1", new IPPort("127.0.0.1", 19080), 10);
+        grp2.add("s2", new IPPort("127.0.0.1", 19081), 10);
 
         // start client in another thread
         new Thread(() -> {
@@ -72,7 +72,7 @@ public class ForbidLBForEchoServers {
         Thread.sleep(10000);
         System.out.println("\033[1;30m---------------------allow port 18080 now------------------\033[0m");
         SecurityGroupRule rule = new SecurityGroupRule("allow18080",
-            new Network(Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32)),
+            new Network(IP.blockParseAddress("127.0.0.1"), Network.parseMask(32)),
             Protocol.TCP, 18080, 18080, true);
         secg.addRule(rule);
         Thread.sleep(10000);

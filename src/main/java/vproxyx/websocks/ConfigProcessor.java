@@ -2,6 +2,8 @@ package vproxyx.websocks;
 
 import vclient.HttpClient;
 import vclient.HttpResponse;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.CertKeyHolder;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
@@ -16,11 +18,10 @@ import vproxy.selector.wrap.h2streamed.H2StreamedClientFDs;
 import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.BlockCallback;
 import vproxy.util.Logger;
+import vproxy.util.Network;
 import vproxy.util.Utils;
 
 import java.io.*;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -49,7 +50,7 @@ public class ConfigProcessor {
     private List<CertKey> httpsSniErasureCertKeys = new ArrayList<>();
     private boolean directRelay = false;
     private String directRelayIpRange = null;
-    private InetSocketAddress directRelayListen = null;
+    private IPPort directRelayListen = null;
     private int directRelayIpBondTimeout = 10_000;
     private String user;
     private String pass;
@@ -142,7 +143,7 @@ public class ConfigProcessor {
         return directRelay;
     }
 
-    public InetSocketAddress getDirectRelayListen() {
+    public IPPort getDirectRelayListen() {
         return directRelayListen;
     }
 
@@ -340,18 +341,18 @@ public class ConfigProcessor {
                     }
                 } else if (line.startsWith("agent.direct-relay.ip-range ")) {
                     String val = line.substring("agent.direct-relay.ip-range ".length()).trim();
-                    if (!Utils.validNetworkStr(val)) {
+                    if (!Network.validNetworkStr(val)) {
                         throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
                     }
                     directRelayIpRange = val;
                 } else if (line.startsWith("agent.direct-relay.listen ")) {
                     String val = line.substring("agent.direct-relay.listen ".length()).trim();
-                    if (!Utils.validL4AddrStr(val)) {
+                    if (!IPPort.validL4AddrStr(val)) {
                         throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
                     }
                     String host = val.substring(0, val.lastIndexOf(":"));
                     int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
-                    directRelayListen = new InetSocketAddress(Utils.l3addr(host), port);
+                    directRelayListen = new IPPort(IP.from(host), port);
                 } else if (line.startsWith("agent.direct-relay.ip-bond-timeout ")) {
                     String val = line.substring("agent.direct-relay.ip-bond-timeout ".length()).trim();
                     int timeout;
@@ -546,14 +547,14 @@ public class ConfigProcessor {
                 }
 
                 ServerGroup.ServerHandle handle;
-                if (Utils.isIpLiteral(hostPart)) {
-                    InetAddress inet = Utils.l3addr(hostPart);
-                    handle = getGroup(currentAlias).add(line, new InetSocketAddress(inet, port), 10);
+                if (IP.isIpLiteral(hostPart)) {
+                    IP inet = IP.from(hostPart);
+                    handle = getGroup(currentAlias).add(line, new IPPort(inet, port), 10);
                 } else {
-                    BlockCallback<InetAddress, IOException> cb = new BlockCallback<>();
+                    BlockCallback<IP, IOException> cb = new BlockCallback<>();
                     Resolver.getDefault().resolveV4(hostPart, cb);
-                    InetAddress inet = cb.block();
-                    handle = getGroup(currentAlias).add(line, hostPart, new InetSocketAddress(inet, port), 10);
+                    IP inet = cb.block();
+                    handle = getGroup(currentAlias).add(line, hostPart, new IPPort(inet, port), 10);
                 }
 
                 // init streamed fds

@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.HealthCheckConfig;
@@ -13,7 +14,6 @@ import vproxy.component.svrgroup.Upstream;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 @SuppressWarnings("Duplicates")
@@ -35,14 +35,14 @@ public class LBForEchoServers {
         upstream.add(grp2, 10);
         TcpLB lb = new TcpLB("myLb",
             acceptorGroup, eventLoopGroup, // use the same group for acceptor and worker
-            new InetSocketAddress(18080), upstream,
+            new IPPort(18080), upstream,
             Config.tcpTimeout, 8, 4, // make buffers small to demonstrate what happen when buffer is full
             SecurityGroup.allowAll()
         );
         lb.start();
         // add each group one server
-        grp1.add("s1", new InetSocketAddress("127.0.0.1", 19080), 10);
-        grp2.add("s2", new InetSocketAddress("127.0.0.1", 19081), 10);
+        grp1.add("s1", new IPPort("127.0.0.1", 19080), 10);
+        grp2.add("s2", new IPPort("127.0.0.1", 19081), 10);
 
         // print
         SelectorEventLoop delayPrintLoop = SelectorEventLoop.open();

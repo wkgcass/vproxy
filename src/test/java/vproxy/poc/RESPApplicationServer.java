@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolServerConfig;
@@ -11,7 +12,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Callback;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
@@ -25,7 +25,7 @@ public class RESPApplicationServer {
         NetEventLoop netEventLoop = new NetEventLoop(loop);
         ProtocolServerHandler.apply(
             netEventLoop,
-            ServerSock.create(new InetSocketAddress("127.0.0.1", 16309)),
+            ServerSock.create(new IPPort("127.0.0.1", 16309)),
             new ProtocolServerConfig().setInBufferSize(8).setOutBufferSize(4),
             new RESPProtocolHandler(new RESPConfig().setMaxParseLen(16384),
                 new RESPApplicationHandler(new RESPApplicationConfig(), new MyRESPApplication())));

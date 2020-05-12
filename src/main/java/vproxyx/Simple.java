@@ -1,5 +1,7 @@
 package vproxyx;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.Main;
@@ -17,8 +19,6 @@ import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -190,16 +190,16 @@ public class Simple {
             new HealthCheckConfig(1000, 5000, 2, 3), Method.wrr, null);
         int svrCnt = 0;
         for (HostPort svr : backendList) {
-            if (Utils.isIpLiteral(svr.host)) {
-                group.add("backend" + (++svrCnt), new InetSocketAddress(Resolver.getDefault().blockResolve(svr.host), svr.port), 10);
+            if (IP.isIpLiteral(svr.host)) {
+                group.add("backend" + (++svrCnt), new IPPort(Resolver.getDefault().blockResolve(svr.host), svr.port), 10);
             } else {
-                InetAddress addr;
+                IP addr;
                 try {
                     addr = Resolver.getDefault().blockResolve(svr.host);
                 } catch (UnknownHostException e) {
                     throw new Exception("unknown host in `backend {host:port}`: " + svr.host);
                 }
-                group.add("backend" + (++svrCnt), svr.host, new InetSocketAddress(addr, svr.port), 10);
+                group.add("backend" + (++svrCnt), svr.host, new IPPort(addr, svr.port), 10);
             }
         }
         Application.get().upstreamHolder.get(upstreamName).add(group, 10);
@@ -207,7 +207,7 @@ public class Simple {
         Application.get().tcpLBHolder.add("loadbalancer",
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME),
             Application.get().eventLoopGroupHolder.get(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
-            new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port),
+            new IPPort(IP.from(new byte[]{0, 0, 0, 0}), port),
             Application.get().upstreamHolder.get(upstreamName),
             60_000,
             4096,
@@ -220,7 +220,7 @@ public class Simple {
         Logger.alert("try to launch dns server on 53 (optional)");
         // try to bind 53 first
         boolean launchUdp = true;
-        InetSocketAddress dnsBind = new InetSocketAddress(Utils.l3addr(0, 0, 0, 0), 53);
+        IPPort dnsBind = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 53);
         try {
             ServerSock.checkBind(Protocol.UDP, dnsBind);
         } catch (IOException ignore) {

@@ -1,7 +1,7 @@
 package vswitch.util;
 
+import vfd.IP;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
 import java.util.Set;
 
@@ -42,7 +42,7 @@ public class Consts {
     public static final int IPv6_NEXT_HEADER_HOP_BY_HOP_OPTIONS = 0;
     public static final int IPv6_NEXT_HEADER_ROUTING = 43;
 
-    public static final ByteArray IPv6_Solicitation_Node_Multicast_Address = ByteArray.from(Utils.parseIpString("ff02::1:ff00:0"));
+    public static final ByteArray IPv6_Solicitation_Node_Multicast_Address = ByteArray.from(IP.parseIpString("ff02::1:ff00:0"));
 
     public static final byte TCP_FLAGS_PSH = 0b1000;
     public static final byte TCP_FLAGS_RST = 0b0100;

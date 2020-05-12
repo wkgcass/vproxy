@@ -1,12 +1,12 @@
 package vproxy.processor.http2;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.processor.Hint;
 import vproxy.processor.OOContext;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -32,8 +32,8 @@ public class Http2Context extends OOContext<Http2SubContext> {
     private boolean hintExists = false;
     private Hint hint;
 
-    public Http2Context(InetSocketAddress clientAddress) {
-        String clientIpStr = Utils.ipStr(clientAddress.getAddress().getAddress());
+    public Http2Context(IPPort clientAddress) {
+        String clientIpStr = clientAddress.getAddress().formatToIPString();
         hPackTransformer = new HPackTransformer(Http2SubContext.SIZE_DEFAULT_HEADER_TABLE_SIZE,
             new Header[]{
                 new Header("x-forwarded-for", clientIpStr),
@@ -71,7 +71,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
         if (host.contains(":")) { // remove port in Host header
             host = host.substring(0, host.lastIndexOf(":"));
         }
-        if (Utils.isIpLiteral(host)) {
+        if (IP.isIpLiteral(host)) {
             hintExists = true;
             return null; // no hint if requesting directly using ip
         }

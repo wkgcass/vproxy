@@ -1,5 +1,6 @@
 package vproxyx.websocks.relay;
 
+import vfd.IPPort;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
@@ -14,11 +15,9 @@ import vproxy.socks.AddressType;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
-import vproxy.util.Utils;
 import vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 /*
  * For more info about this impl, please visit https://blog.cloudflare.com/how-we-built-spectrum/
@@ -26,9 +25,9 @@ import java.net.InetSocketAddress;
 public class RelayBindAnyPortServer {
     private final WebSocksProxyAgentConnectorProvider connectorProvider;
     private final DomainBinder domainBinder;
-    private final InetSocketAddress bindAddress;
+    private final IPPort bindAddress;
 
-    public RelayBindAnyPortServer(WebSocksProxyAgentConnectorProvider connectorProvider, DomainBinder domainBinder, InetSocketAddress bindAddress) {
+    public RelayBindAnyPortServer(WebSocksProxyAgentConnectorProvider connectorProvider, DomainBinder domainBinder, IPPort bindAddress) {
         this.connectorProvider = connectorProvider;
         this.domainBinder = domainBinder;
         this.bindAddress = bindAddress;
@@ -89,7 +88,7 @@ public class RelayBindAnyPortServer {
                         ctx.data.right.failed(new IOException(msg));
                         return;
                     } else {
-                        Logger.alert("[PROXY] ipMap: " + Utils.l4addrStr(l4addr) + " -> " + hostname + ":" + port);
+                        Logger.alert("[PROXY] ipMap: " + l4addr.formatToIPPortString() + " -> " + hostname + ":" + port);
                     }
                     connectorProvider.provide(ctx.connection, AddressType.domain, hostname, port, connector -> {
                         assert Logger.lowLevelDebug("relay-bind-any-port-server got a connector: " + connector + ", finished?: " + finished);

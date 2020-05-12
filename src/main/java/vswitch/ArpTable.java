@@ -1,11 +1,14 @@
 package vswitch;
 
+import vfd.IP;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Timer;
 import vswitch.util.MacAddress;
 
-import java.net.InetAddress;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 
 public class ArpTable {
     public static final int ARP_REFRESH_CACHE_BEFORE_TTL_TIME = 60 * 1000;
@@ -14,7 +17,7 @@ public class ArpTable {
     private int timeout;
 
     private final Set<ArpEntry> entries = new HashSet<>();
-    private final Map<InetAddress, ArpEntry> ipMap = new HashMap<>();
+    private final Map<IP, ArpEntry> ipMap = new HashMap<>();
     private final Map<MacAddress, Set<ArpEntry>> macMap = new HashMap<>();
 
     public ArpTable(SelectorEventLoop loop, int timeout) {
@@ -22,7 +25,7 @@ public class ArpTable {
         this.timeout = timeout;
     }
 
-    public void record(MacAddress mac, InetAddress ip) {
+    public void record(MacAddress mac, IP ip) {
         var entry = ipMap.get(ip);
         if (entry != null && entry.mac.equals(mac)) {
             entry.resetTimer();
@@ -32,7 +35,7 @@ public class ArpTable {
         entry.record();
     }
 
-    public MacAddress lookup(InetAddress ip) {
+    public MacAddress lookup(IP ip) {
         var entry = ipMap.get(ip);
         if (entry == null) {
             return null;
@@ -72,9 +75,9 @@ public class ArpTable {
 
     public class ArpEntry extends Timer {
         public final MacAddress mac;
-        public final InetAddress ip;
+        public final IP ip;
 
-        private ArpEntry(MacAddress mac, InetAddress ip) {
+        private ArpEntry(MacAddress mac, IP ip) {
             super(ArpTable.this.loop, timeout);
             this.mac = mac;
             this.ip = ip;

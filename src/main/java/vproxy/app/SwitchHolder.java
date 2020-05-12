@@ -1,16 +1,14 @@
 package vproxy.app;
 
+import vfd.IPPort;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.Upstream;
-import vproxy.dns.DNSServer;
 import vswitch.Switch;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -24,7 +22,7 @@ public class SwitchHolder {
     }
 
     public void add(String alias,
-                    InetSocketAddress vxlanBindingAddress,
+                    IPPort vxlanBindingAddress,
                     EventLoopGroup eventLoopGroup,
                     int macTableTimeout,
                     int arpTableTimeout,

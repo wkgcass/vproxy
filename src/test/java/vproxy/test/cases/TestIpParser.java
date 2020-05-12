@@ -1,7 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
-import vproxy.util.Utils;
+import vfd.IP;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;
@@ -16,7 +16,7 @@ public class TestIpParser {
         int c = 12;
         int d = 34;
         String s = a + "." + b + "." + c + "." + d;
-        byte[] bytes = Utils.parseIpv4String(s);
+        byte[] bytes = IP.parseIpv4String(s);
         assert bytes != null;
         assertEquals((byte) a, bytes[0]);
         assertEquals((byte) b, bytes[1]);
@@ -28,7 +28,7 @@ public class TestIpParser {
         c = 0;
         d = 0;
         s = a + "." + b + "." + c + "." + d;
-        bytes = Utils.parseIpv4String(s);
+        bytes = IP.parseIpv4String(s);
         assert bytes != null;
         assertEquals((byte) a, bytes[0]);
         assertEquals((byte) b, bytes[1]);
@@ -38,15 +38,15 @@ public class TestIpParser {
 
     @Test
     public void parseIpv4Fail() {
-        assertNull(Utils.parseIpv4String("1"));
-        assertNull(Utils.parseIpv4String("a.b.c.d"));
-        assertNull(Utils.parseIpv4String("1.2.3."));
-        assertNull(Utils.parseIpv4String("..."));
-        assertNull(Utils.parseIpv4String("1.2.."));
-        assertNull(Utils.parseIpv4String("..3.4"));
-        assertNull(Utils.parseIpv4String("1...4"));
-        assertNull(Utils.parseIpv4String("256.1.1.1"));
-        assertNull(Utils.parseIpv4String("1.256.1.1"));
+        assertNull(IP.parseIpv4String("1"));
+        assertNull(IP.parseIpv4String("a.b.c.d"));
+        assertNull(IP.parseIpv4String("1.2.3."));
+        assertNull(IP.parseIpv4String("..."));
+        assertNull(IP.parseIpv4String("1.2.."));
+        assertNull(IP.parseIpv4String("..3.4"));
+        assertNull(IP.parseIpv4String("1...4"));
+        assertNull(IP.parseIpv4String("256.1.1.1"));
+        assertNull(IP.parseIpv4String("1.256.1.1"));
     }
 
     private void check(String s) throws Exception {
@@ -54,9 +54,9 @@ public class TestIpParser {
     }
 
     private void check(String s, boolean recurse) throws Exception {
-        InetAddress addr = InetAddress.getByName(s); // check with JDK impl
+        var addr = InetAddress.getByName(s); // check with JDK impl
         byte[] bParsedByJDK = addr.getAddress();
-        byte[] bParsedByVproxy = Utils.parseIpv6String(s);
+        byte[] bParsedByVproxy = IP.parseIpv6String(s);
         assert bParsedByVproxy != null;
         if (addr instanceof Inet6Address) {
             assertArrayEquals(bParsedByJDK, bParsedByVproxy);
@@ -72,7 +72,7 @@ public class TestIpParser {
             }
         }
         // ipStr and check again
-        String ipStrResult = Utils.ipStr(bParsedByVproxy);
+        String ipStrResult = IP.ipStr(bParsedByVproxy);
         if (recurse) {
             check(ipStrResult, false);
         }
@@ -185,7 +185,7 @@ public class TestIpParser {
     @Test
     public void parseIpFail() {
         for (String ip : bogusInputs) {
-            assertNull(Utils.parseIpString(ip));
+            assertNull(IP.parseIpString(ip));
         }
     }
 }

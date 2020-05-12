@@ -1,5 +1,7 @@
 package vproxyx;
 
+import vfd.IP;
+import vfd.IPPort;
 import vfd.VFDConfig;
 import vproxy.app.cmd.handle.resource.ServerHandle;
 import vproxy.component.elgroup.EventLoopGroup;
@@ -15,10 +17,10 @@ import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolServerConfig;
 import vproxy.protocol.ProtocolServerHandler;
 import vproxy.socks.Socks5ProxyProtocolHandler;
-import vproxyx.util.Browser;
 import vproxy.util.Logger;
 import vproxy.util.Tuple3;
 import vproxy.util.Utils;
+import vproxyx.util.Browser;
 import vproxyx.websocks.*;
 import vproxyx.websocks.relay.DomainBinder;
 import vproxyx.websocks.relay.RelayBindAnyPortServer;
@@ -27,7 +29,6 @@ import vproxyx.websocks.relay.RelayHttpsServer;
 import vproxyx.websocks.ss.SSProtocolHandler;
 
 import java.io.File;
-import java.net.InetSocketAddress;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
@@ -120,7 +121,7 @@ public class WebSocksProxyAgent {
             if (port == 0) {
                 port = 53; // just a hint. if not configured, the dns server won't start
             }
-            var l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), port);
+            var l4addr = new IPPort(IP.from("0.0.0.0"), port);
             WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", l4addr, worker, configProcessor, domainBinder);
             // may need to start dns server
             if (configProcessor.getDnsListenPort() != 0) {
@@ -181,7 +182,7 @@ public class WebSocksProxyAgent {
             var l3addr = tuple._3
                 ? "0.0.0.0"
                 : "127.0.0.1";
-            var l4addr = new InetSocketAddress(Utils.l3addr(l3addr), port);
+            var l4addr = new IPPort(IP.from(l3addr), port);
             ServerSock.checkBind(l4addr);
             ServerSock server = ServerSock.create(l4addr);
 
@@ -207,8 +208,8 @@ public class WebSocksProxyAgent {
         // maybe we can start the pac server
         if (configProcessor.getPacServerPort() != 0) {
             assert Logger.lowLevelDebug("start pac server");
-            var l4addr = new InetSocketAddress(
-                Utils.l3addr("0.0.0.0"),
+            var l4addr = new IPPort(
+                IP.from("0.0.0.0"),
                 configProcessor.getPacServerPort()
             );
             ServerSock.checkBind(l4addr);
@@ -230,10 +231,10 @@ public class WebSocksProxyAgent {
             new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
             Logger.alert("https relay server started on 443");
             if (configProcessor.getDirectRelayIpRange() != null) {
-                InetSocketAddress listen = configProcessor.getDirectRelayListen();
+                IPPort listen = configProcessor.getDirectRelayListen();
                 String ipRange = configProcessor.getDirectRelayIpRange();
                 new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
-                Logger.alert("relay-bind-any-port-server started on " + Utils.l4addrStr(listen) + " which handles " + ipRange);
+                Logger.alert("relay-bind-any-port-server started on " + listen.formatToIPPortString() + " which handles " + ipRange);
             }
         }
     }

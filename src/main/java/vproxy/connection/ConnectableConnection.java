@@ -1,6 +1,7 @@
 package vproxy.connection;
 
 import vfd.FDProvider;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
@@ -8,10 +9,8 @@ import vproxy.selector.wrap.udp.UDPFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 
 public class ConnectableConnection extends Connection {
@@ -21,7 +20,7 @@ public class ConnectableConnection extends Connection {
         return connector;
     }
 
-    private static ConnectableConnection create(SocketFD channel, InetSocketAddress remote, ConnectionOpts opts,
+    private static ConnectableConnection create(SocketFD channel, IPPort remote, ConnectionOpts opts,
                                                 RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         try {
             channel.configureBlocking(false);
@@ -33,20 +32,20 @@ public class ConnectableConnection extends Connection {
         }
     }
 
-    public static ConnectableConnection create(InetSocketAddress remote,
+    public static ConnectableConnection create(IPPort remote,
                                                ConnectionOpts opts,
                                                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         SocketFD channel = FDProvider.get().openSocketFD();
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 
-    public static ConnectableConnection createUDP(InetSocketAddress remote,
+    public static ConnectableConnection createUDP(IPPort remote,
                                                   ConnectionOpts opts,
                                                   RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
         return createUDP(remote, opts, inBuffer, outBuffer, null, UDPFDs.get());
     }
 
-    public static ConnectableConnection createUDP(InetSocketAddress remote,
+    public static ConnectableConnection createUDP(IPPort remote,
                                                   ConnectionOpts opts,
                                                   RingBuffer inBuffer, RingBuffer outBuffer,
                                                   SelectorEventLoop loop,
@@ -61,7 +60,7 @@ public class ConnectableConnection extends Connection {
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 
-    private ConnectableConnection(SocketFD channel, InetSocketAddress remote,
+    private ConnectableConnection(SocketFD channel, IPPort remote,
                                   ConnectionOpts opts,
                                   RingBuffer inBuffer, RingBuffer outBuffer) {
         super(channel, remote, null, opts, inBuffer, outBuffer);
@@ -72,9 +71,9 @@ public class ConnectableConnection extends Connection {
         if (local != null) {
             return;
         }
-        InetSocketAddress a;
+        IPPort a;
         try {
-            a = (InetSocketAddress) channel.getLocalAddress();
+            a = channel.getLocalAddress();
         } catch (IOException ignore) {
             return;
         }
@@ -86,10 +85,10 @@ public class ConnectableConnection extends Connection {
     protected String genId() {
         return (local == null ? "[unbound]" :
             (
-                Utils.ipStr(local.getAddress().getAddress()) + ":" + local.getPort()
+                local.formatToIPPortString()
             ))
             + "/"
-            + Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort();
+            + remote.formatToIPPortString();
     }
 
     @Override

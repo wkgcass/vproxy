@@ -6,6 +6,8 @@ import io.grpc.ManagedChannelBuilder;
 import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
@@ -20,9 +22,7 @@ import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.processor.ProcessorProvider;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -44,9 +44,9 @@ public class GrpcOverH2Proxy {
 
         // start proxy
         NetEventLoop el = new NetEventLoop(SelectorEventLoop.open());
-        InetSocketAddress backend1 = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 17890);
-        InetSocketAddress backend2 = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 17891);
-        InetSocketAddress frontend = new InetSocketAddress(Utils.l3addr("127.0.0.1"), 7890);
+        IPPort backend1 = new IPPort(IP.from("127.0.0.1"), 17890);
+        IPPort backend2 = new IPPort(IP.from("127.0.0.1"), 17891);
+        IPPort frontend = new IPPort(IP.from("127.0.0.1"), 7890);
         ServerSock svr = ServerSock.create(frontend);
         Proxy proxy = new Proxy(new ProxyNetConfig()
             .setInBufferSize(8)

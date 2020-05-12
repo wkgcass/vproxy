@@ -1,15 +1,15 @@
 package vserver;
 
+import vfd.IPPort;
 import vproxy.util.ByteArray;
 
-import java.net.InetSocketAddress;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class RoutingContext {
-    private final InetSocketAddress remote;
-    private final InetSocketAddress local;
+    private final IPPort remote;
+    private final IPPort local;
     private final HttpMethod method;
     private final String uri;
     private final Map<String, String> query;
@@ -24,8 +24,8 @@ public class RoutingContext {
     public interface StorageKey<T> {
     }
 
-    public RoutingContext(InetSocketAddress remote,
-                          InetSocketAddress local,
+    public RoutingContext(IPPort remote,
+                          IPPort local,
                           HttpMethod method,
                           String uri,
                           Map<String, String> query,
@@ -44,11 +44,11 @@ public class RoutingContext {
         this.chain = chain;
     }
 
-    public InetSocketAddress getRemote() {
+    public IPPort getRemote() {
         return remote;
     }
 
-    public InetSocketAddress getLocal() {
+    public IPPort getLocal() {
         return local;
     }
 

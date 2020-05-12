@@ -10,8 +10,6 @@ import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.util.Deque;
@@ -26,8 +24,8 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
     private final ByteBuffer buf = ByteBuffer.allocate(Config.udpMtu); // enough for any udp packet
     private final Deque<VirtualDatagramFD> acceptQ = new LinkedList<>();
-    private final Map<SocketAddress, VirtualDatagramFD> acceptMap = new HashMap<>();
-    private final Map<SocketAddress, VirtualDatagramFD> conns = new HashMap<>();
+    private final Map<IPPort, VirtualDatagramFD> acceptMap = new HashMap<>();
+    private final Map<IPPort, VirtualDatagramFD> conns = new HashMap<>();
 
     public ServerDatagramFD(DatagramFD server, SelectorEventLoop loop) {
         this.server = server;
@@ -36,12 +34,12 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(IPPort l4addr) throws IOException {
         server.bind(l4addr);
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public IPPort getLocalAddress() throws IOException {
         return server.getLocalAddress();
     }
 
@@ -50,7 +48,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     public VirtualDatagramFD accept() throws IOException {
         while (true) {
             try {
-                SocketAddress addr = server.receive(buf);
+                IPPort addr = server.receive(buf);
                 if (addr == null) {
                     // no data for now
                     break;
@@ -155,16 +153,16 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         private final ServerDatagramFD serverSelf = ServerDatagramFD.this;
         private final Deque<ByteBuffer> bufs = new LinkedList<>();
 
-        private final SocketAddress remoteAddress;
+        private final IPPort remoteAddress;
 
         private boolean closed = false;
 
-        VirtualDatagramFD(SocketAddress remoteAddress) {
+        VirtualDatagramFD(IPPort remoteAddress) {
             this.remoteAddress = remoteAddress;
         }
 
         @Override
-        public void connect(InetSocketAddress l4addr) {
+        public void connect(IPPort l4addr) {
             throw new UnsupportedOperationException("not supported");
         }
 
@@ -179,12 +177,12 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         }
 
         @Override
-        public SocketAddress getLocalAddress() throws IOException {
+        public IPPort getLocalAddress() throws IOException {
             return serverSelf.getLocalAddress();
         }
 
         @Override
-        public SocketAddress getRemoteAddress() {
+        public IPPort getRemoteAddress() {
             return remoteAddress;
         }
 
@@ -212,7 +210,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         @Override
         public int write(ByteBuffer src) throws IOException {
             int contained = src.limit() - src.position();
-            int wrote = server.send(src, (InetSocketAddress) remoteAddress);
+            int wrote = server.send(src, remoteAddress);
             if (wrote < contained) {
                 assert Logger.lowLevelDebug("wrote(" + wrote + ") < contained(" + contained + "), cancelWritable");
                 cancelWritable(true);

@@ -2,11 +2,10 @@ package vproxy.selector.wrap.udp;
 
 import vfd.DatagramFD;
 import vfd.FD;
+import vfd.IPPort;
 import vfd.SocketFD;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 
@@ -19,7 +18,7 @@ public final class DatagramSocketFDWrapper implements SocketFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
+    public void connect(IPPort l4addr) throws IOException {
         fd.connect(l4addr);
     }
 
@@ -34,12 +33,12 @@ public final class DatagramSocketFDWrapper implements SocketFD {
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public IPPort getLocalAddress() throws IOException {
         return fd.getLocalAddress();
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
+    public IPPort getRemoteAddress() throws IOException {
         return fd.getRemoteAddress();
     }
 

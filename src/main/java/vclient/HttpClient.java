@@ -1,28 +1,27 @@
 package vclient;
 
 import vclient.impl.Http1ClientImpl;
-import vproxy.util.Utils;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.util.ringbuffer.SSLUtils;
 import vserver.HttpMethod;
 
 import javax.net.ssl.SSLContext;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 
 public interface HttpClient {
     static HttpClient to(String host, int port) {
-        return to(Utils.l3addr(host), port);
+        return to(IP.from(host), port);
     }
 
-    static HttpClient to(InetAddress l3addr, int port) {
-        return to(new InetSocketAddress(l3addr, port));
+    static HttpClient to(IP l3addr, int port) {
+        return to(new IPPort(l3addr, port));
     }
 
-    static HttpClient to(InetSocketAddress l4addr) {
+    static HttpClient to(IPPort l4addr) {
         return to(l4addr, new Options());
     }
 
-    static HttpClient to(InetSocketAddress l4addr, Http1ClientImpl.Options opts) {
+    static HttpClient to(IPPort l4addr, Http1ClientImpl.Options opts) {
         return new Http1ClientImpl(l4addr, opts);
     }
 
@@ -42,10 +41,10 @@ public interface HttpClient {
             tls = true;
             port = 443;
         }
-        InetAddress l3addr;
+        IP l3addr;
         String host;
-        if (Utils.isIpLiteral(hostAndPort)) {
-            l3addr = Utils.l3addr(hostAndPort);
+        if (IP.isIpLiteral(hostAndPort)) {
+            l3addr = IP.from(hostAndPort);
             host = null;
         } else {
             if (hostAndPort.contains(":")) {
@@ -60,9 +59,9 @@ public interface HttpClient {
             } else {
                 host = hostAndPort;
             }
-            l3addr = Utils.blockParseAddressToInet(host);
+            l3addr = IP.blockResolve(host);
         }
-        return to(new InetSocketAddress(l3addr, port), new Options()
+        return to(new IPPort(l3addr, port), new Options()
             .setSSLContext(
                 tls ? SSLUtils.getDefaultClientSSLContext() : null
             )
@@ -99,6 +98,7 @@ public interface HttpClient {
 
         public Options(Options that) {
             this.sslContext = that.sslContext;
+            this.host = that.host;
         }
 
         public Options setSSLContext(SSLContext sslContext) {

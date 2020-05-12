@@ -1,13 +1,15 @@
 package vproxy.util.ringbuffer;
 
+import vfd.IPPort;
 import vfd.NetworkFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Tuple;
-import vproxy.util.Utils;
 import vproxy.util.ringbuffer.ssl.SSL;
 
-import javax.net.ssl.*;
-import java.net.InetSocketAddress;
+import javax.net.ssl.KeyManager;
+import javax.net.ssl.SSLContext;
+import javax.net.ssl.SSLEngine;
+import javax.net.ssl.TrustManager;
 import java.security.KeyManagementException;
 import java.security.NoSuchAlgorithmException;
 import java.util.function.Consumer;
@@ -30,7 +32,7 @@ public class SSLUtils {
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
                                        SelectorEventLoop loop,
-                                       InetSocketAddress remote) {
+                                       IPPort remote) {
         return genbuf(engine, input, output, loop::nextTick, remote);
     }
 
@@ -40,7 +42,7 @@ public class SSLUtils {
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
                                        Consumer<Runnable> resumer,
-                                       InetSocketAddress remote) {
+                                       IPPort remote) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, remote);
         SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, remote);
         return new SSLBufferPair(unwrap, wrap);
@@ -53,8 +55,8 @@ public class SSLUtils {
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
                                        Consumer<Runnable> resumer) {
-        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, Utils::bindAnyAddress, Utils::bindAnyAddress);
-        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, Utils::bindAnyAddress, Utils::bindAnyAddress);
+        SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
+        SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
         return new SSLBufferPair(unwrap, wrap);
     }
 
@@ -64,7 +66,7 @@ public class SSLUtils {
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
                                        Consumer<Runnable> resumer,
-                                       NetworkFD fd) {
+                                       NetworkFD<IPPort> fd) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, engine, fd);
         SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, engine, resumer, wrap, fd);
         return new SSLBufferPair(unwrap, wrap);
@@ -77,7 +79,7 @@ public class SSLUtils {
                                                 ByteBufferRingBuffer input,
                                                 ByteBufferRingBuffer output,
                                                 Consumer<Runnable> resumer,
-                                                NetworkFD fd) {
+                                                NetworkFD<IPPort> fd) {
         SSLWrapRingBuffer wrap = new SSLWrapRingBuffer(output, fd);
         SSLUnwrapRingBuffer unwrap = new SSLUnwrapRingBuffer(input, ssl, resumer, wrap, fd);
         return new SSLBufferPair(unwrap, wrap);
@@ -88,7 +90,7 @@ public class SSLUtils {
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
-                                       InetSocketAddress remote) {
+                                       IPPort remote) {
         return genbuf(engine, input, output, (Consumer<Runnable>) null, remote);
     }
 
@@ -97,7 +99,7 @@ public class SSLUtils {
     public static SSLBufferPair genbuf(SSLEngine engine,
                                        ByteBufferRingBuffer input,
                                        ByteBufferRingBuffer output,
-                                       NetworkFD fd) {
+                                       NetworkFD<IPPort> fd) {
         return genbuf(engine, input, output, (Consumer<Runnable>) null, fd);
     }
 
@@ -106,7 +108,7 @@ public class SSLUtils {
     public static SSLBufferPair genbufForServer(SSL ssl,
                                                 ByteBufferRingBuffer input,
                                                 ByteBufferRingBuffer output,
-                                                NetworkFD fd) {
+                                                NetworkFD<IPPort> fd) {
         return genbufForServer(ssl, input, output, null, fd);
     }
 

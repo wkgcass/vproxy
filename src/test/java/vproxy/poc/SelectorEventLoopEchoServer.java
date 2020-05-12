@@ -2,12 +2,12 @@ package vproxy.poc;
 
 import vfd.EventSet;
 import vfd.FDProvider;
+import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.test.tool.EchoServerHandler;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 // this example shows how to create a echo server with classes defined in `selector` package
 public class SelectorEventLoopEchoServer {
@@ -27,7 +27,7 @@ public class SelectorEventLoopEchoServer {
         // create a server socket
         ServerSocketFD server = FDProvider.get().openServerSocketFD();
         // bind it to local address
-        server.bind(new InetSocketAddress(port));
+        server.bind(new IPPort(port));
         // add it to event loop
         eventLoop.add(server, EventSet.read(), null, new EchoServerHandler());
 

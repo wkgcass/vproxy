@@ -1,6 +1,8 @@
 package vproxy.test.cases;
 
 import org.junit.*;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.app.util.AnnotationKeys;
 import vproxy.component.app.Socks5Server;
@@ -15,9 +17,7 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.socks.AddressType;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
@@ -25,6 +25,7 @@ import java.util.Map;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertTrue;
 
+@SuppressWarnings("FieldCanBeLocal")
 public class TestSocks5 {
     private static final int lbPort = 18080;
 
@@ -62,16 +63,16 @@ public class TestSocks5 {
         elg0 = new EventLoopGroup("elg0");
         elg0.add("el0");
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), 10);
-        sg0.add("svr1", new InetSocketAddress("::1", 19081), 10);
+        sg0.add("svr0", new IPPort("127.0.0.1", 19080), 10);
+        sg0.add("svr1", new IPPort("::1", 19081), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg0.getServerHandles()) {
             h.healthy = true;
         }
         domainDotComGroup = new ServerGroup("test-domain", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
         domainDotComGroup.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "domain.com", AnnotationKeys.ServerGroup_HintPort, "80"));
-        domainDotComGroup.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
-        domainDotComGroup.add("svr3", new InetSocketAddress("127.0.0.1", 19083), 10);
+        domainDotComGroup.add("svr2", new IPPort("127.0.0.1", 19082), 10);
+        domainDotComGroup.add("svr3", new IPPort("127.0.0.1", 19083), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : domainDotComGroup.getServerHandles()) {
             h.healthy = true;
@@ -84,7 +85,7 @@ public class TestSocks5 {
 
         socks5 = new Socks5Server(
             "socks5", elg0, elg0,
-            new InetSocketAddress(Utils.l3addr("127.0.0.1"), 18080),
+            new IPPort(IP.from("127.0.0.1"), 18080),
             ups0,
             Config.tcpTimeout, 16384, 16384, SecurityGroup.allowAll()
         );

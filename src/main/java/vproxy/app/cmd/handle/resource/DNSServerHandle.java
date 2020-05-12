@@ -1,5 +1,6 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
@@ -11,9 +12,7 @@ import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -60,7 +59,7 @@ public class DNSServerHandle {
 
         String alias = cmd.resource.alias;
         EventLoopGroup eventLoopGroup = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
         int ttl;
         if (cmd.args.containsKey(Param.ttl)) {
@@ -107,7 +106,7 @@ public class DNSServerHandle {
         @Override
         public String toString() {
             return dnsServer.alias + " -> event-loop-group " + dnsServer.eventLoopGroup.alias
-                + " bind " + Utils.ipStr(dnsServer.bindAddress.getAddress().getAddress()) + ":" + dnsServer.bindAddress.getPort()
+                + " bind " + dnsServer.bindAddress.getAddress().formatToIPString() + ":" + dnsServer.bindAddress.getPort()
                 + " rrsets " + dnsServer.rrsets.alias
                 + " ttl " + dnsServer.ttl
                 + " security-group " + dnsServer.securityGroup.alias;

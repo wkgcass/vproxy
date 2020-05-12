@@ -1,26 +1,21 @@
 package vproxy.dns;
 
-import vfd.DatagramFD;
-import vfd.FDs;
+import vfd.*;
 import vproxy.util.Callback;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.Inet4Address;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 public class VResolver extends AbstractResolver {
-    private static final InetAddress[] LOCALHOST;
+    private static final IP[] LOCALHOST;
 
     static {
-        LOCALHOST = new InetAddress[]{
-            Utils.l3addr("127.0.0.1"),
-            Utils.l3addr("::1")
+        LOCALHOST = new IP[]{
+            IP.from("127.0.0.1"),
+            IP.from("::1")
         };
     }
 
@@ -29,7 +24,7 @@ public class VResolver extends AbstractResolver {
     private static final int MAX_RETRY = 2;
 
     private final DatagramFD sock;
-    private Map<String, InetAddress> hosts;
+    private Map<String, IP> hosts;
     private final DNSClient client;
 
     public VResolver(String alias, FDs fds) throws IOException {
@@ -41,7 +36,7 @@ public class VResolver extends AbstractResolver {
         try {
             sock = fds.openDatagramFD();
             sock.configureBlocking(false);
-            sock.bind(new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), 0)); // bind any port
+            sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0)); // bind any port
             client = new DNSClient(loop.getSelectorEventLoop(), sock, Resolver.getNameServers(), DNS_REQ_TIMEOUT, MAX_RETRY);
         } catch (IOException e) {
             try {
@@ -76,17 +71,17 @@ public class VResolver extends AbstractResolver {
         }); // no need to record the periodic event, when the resolver is shutdown, the loop would be shutdown as well
     }
 
-    private InetAddress[] listToArray(List<InetAddress> list) {
-        InetAddress[] ret = new InetAddress[list.size()];
+    private IP[] listToArray(List<IP> list) {
+        IP[] ret = new IP[list.size()];
         return list.toArray(ret);
     }
 
-    private InetAddress[] searchInHosts(String domain) {
+    private IP[] searchInHosts(String domain) {
         if (hosts.containsKey(domain)) {
-            InetAddress addr = hosts.get(domain);
+            IP addr = hosts.get(domain);
             if (domain.equals("localhost") || domain.equals("localhost.")) {
-                InetAddress[] ret = new InetAddress[2];
-                if (addr instanceof Inet4Address) {
+                IP[] ret = new IP[2];
+                if (addr instanceof IPv4) {
                     ret[0] = addr;
                     ret[1] = LOCALHOST[1];
                 } else {
@@ -95,7 +90,7 @@ public class VResolver extends AbstractResolver {
                 }
                 return ret;
             } else {
-                return new InetAddress[]{};
+                return new IP[]{};
             }
         }
         if (domain.equals("localhost") || domain.equals("localhost.")) {
@@ -105,21 +100,21 @@ public class VResolver extends AbstractResolver {
     }
 
     @Override
-    protected void getAllByName(String domain, Callback<InetAddress[], UnknownHostException> cb) {
+    protected void getAllByName(String domain, Callback<IP[], UnknownHostException> cb) {
         {
-            InetAddress[] result = searchInHosts(domain);
+            IP[] result = searchInHosts(domain);
             if (result != null) {
                 cb.succeeded(result);
                 return;
             }
         }
 
-        List<InetAddress> addresses = new ArrayList<>();
+        List<IP> addresses = new ArrayList<>();
         final int MAX_STEP = 2;
         int[] step = {0};
-        class TmpCB extends Callback<List<InetAddress>, UnknownHostException> {
+        class TmpCB extends Callback<List<IP>, UnknownHostException> {
             @Override
-            protected void onSucceeded(List<InetAddress> value) {
+            protected void onSucceeded(List<IP> value) {
                 addresses.addAll(value);
                 ++step[0];
                 if (step[0] == MAX_STEP) {

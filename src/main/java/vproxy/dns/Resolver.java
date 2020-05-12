@@ -1,23 +1,27 @@
 package vproxy.dns;
 
+import vfd.IP;
+import vfd.IPPort;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.util.*;
 
 import java.io.*;
-import java.net.*;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public interface Resolver {
-    void resolve(String host, Callback<? super InetAddress, ? super UnknownHostException> cb);
+    void resolve(String host, Callback<? super IP, ? super UnknownHostException> cb);
 
-    void resolve(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb);
+    void resolve(String host, boolean ipv4, boolean ipv6, Callback<? super IP, ? super UnknownHostException> cb);
 
-    void resolveV6(String host, Callback<? super Inet6Address, ? super UnknownHostException> cb);
+    void resolveV6(String host, Callback<? super IPv6, ? super UnknownHostException> cb);
 
-    void resolveV4(String host, Callback<? super Inet4Address, ? super UnknownHostException> cb);
+    void resolveV4(String host, Callback<? super IPv4, ? super UnknownHostException> cb);
 
-    default InetAddress blockResolve(String host) throws UnknownHostException {
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+    default IP blockResolve(String host) throws UnknownHostException {
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         resolve(host, cb);
         return cb.block();
     }
@@ -42,7 +46,7 @@ public interface Resolver {
 
     void stop() throws IOException;
 
-    static List<InetSocketAddress> getNameServers() {
+    static List<IPPort> getNameServers() {
         File f = getNameServerFile();
         boolean needLog = true;
         if (f == null) {
@@ -59,7 +63,7 @@ public interface Resolver {
                 AbstractResolver.fileNameServerUpdateTimestamp = lastUpdate;
             }
         }
-        List<InetSocketAddress> ret;
+        List<IPPort> ret;
         if (f == null) {
             ret = Collections.emptyList();
         } else {
@@ -69,8 +73,8 @@ public interface Resolver {
             ret = new ArrayList<>(2);
             if (needLog)
                 Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
-            ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 8, 8}), 53));
-            ret.add(new InetSocketAddress(Utils.l3addr(new byte[]{8, 8, 4, 4}), 53));
+            ret.add(new IPPort(IP.from(new byte[]{8, 8, 8, 8}), 53));
+            ret.add(new IPPort(IP.from(new byte[]{8, 8, 4, 4}), 53));
         }
         return ret;
     }
@@ -90,7 +94,7 @@ public interface Resolver {
         return null;
     }
 
-    private static List<InetSocketAddress> getNameServersFromFile(File f, boolean needLog) {
+    private static List<IPPort> getNameServersFromFile(File f, boolean needLog) {
         FileInputStream stream;
         try {
             stream = new FileInputStream(f);
@@ -102,7 +106,7 @@ public interface Resolver {
             Logger.alert("trying to get name servers from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
-            List<InetSocketAddress> ret = new ArrayList<>();
+            List<IPPort> ret = new ArrayList<>();
             while (true) {
                 String line;
                 try {
@@ -120,15 +124,15 @@ public interface Resolver {
                 } else {
                     continue;
                 }
-                if (Utils.isIpLiteral(line)) {
-                    InetSocketAddress addr = new InetSocketAddress(Utils.l3addr(line), 53);
+                if (IP.isIpLiteral(line)) {
+                    IPPort addr = new IPPort(IP.from(line), 53);
                     // need to remove localhost addresses because it might be vproxy itself
                     {
-                        String ipName = Utils.ipStr(addr.getAddress().getAddress());
+                        String ipName = addr.getAddress().formatToIPString();
                         if (ipName.startsWith("127.") ||
-                            ipName.equals("[0000:0000:0000:0000:0000:0000:0000:0001]") || // only one ipv6 loopback address
-                            ipName.startsWith("[0000:0000:0000:0000:0000:ffff:7f]") || // v4-mapped v6
-                            ipName.startsWith("[0000:0000:0000:0000:0000:0000:7f]")) { // v4-compatible v6
+                            ipName.equals("[::1]") || // only one ipv6 loopback address
+                            ipName.startsWith("[::ffff:7f]") || // v4-mapped v6
+                            ipName.startsWith("[::7f]")) { // v4-compatible v6
                             continue;
                         }
                     }
@@ -146,7 +150,7 @@ public interface Resolver {
         }
     }
 
-    static Map<String, InetAddress> getHosts() {
+    static Map<String, IP> getHosts() {
         // try ~/hosts for customized host config
         File f = new File(Utils.homefile("hosts"));
         if (!f.exists() || !f.isFile()) { // try linux|bsd host file
@@ -172,7 +176,7 @@ public interface Resolver {
             Logger.alert("trying to get hosts from " + f.getAbsolutePath());
         try {
             BufferedReader br = new BufferedReader(new InputStreamReader(stream));
-            Map<String, InetAddress> ret = new HashMap<>();
+            Map<String, IP> ret = new HashMap<>();
             while (true) {
                 String line;
                 try {
@@ -195,12 +199,12 @@ public interface Resolver {
                     continue;
                 }
                 String ip = split.get(0);
-                byte[] ipBytes = Utils.parseIpString(ip);
+                byte[] ipBytes = IP.parseIpString(ip);
                 if (ipBytes == null) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, f + " contains invalid host config: not ip: " + line);
                     continue;
                 }
-                InetAddress l3addr = Utils.l3addr(ipBytes);
+                IP l3addr = IP.from(ipBytes);
                 for (int i = 1; i < split.size(); ++i) {
                     String domain1 = split.get(i);
                     String domain2;

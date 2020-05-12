@@ -1,11 +1,11 @@
 package vswitch.packet;
 
+import vfd.IP;
+import vfd.IPv4;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 import vswitch.util.Consts;
 import vswitch.util.SwitchUtils;
 
-import java.net.Inet4Address;
 import java.util.Objects;
 
 public class Ipv4Packet extends AbstractIpPacket {
@@ -20,8 +20,8 @@ public class Ipv4Packet extends AbstractIpPacket {
     private int ttl;
     private int protocol;
     private int headerChecksum;
-    private Inet4Address src;
-    private Inet4Address dst;
+    private IPv4 src;
+    private IPv4 dst;
     private ByteArray options;
     private AbstractPacket packet;
 
@@ -70,9 +70,9 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // 12-20
         byte[] srcBytes = bytes.sub(12, 4).toJavaArray();
-        src = (Inet4Address) Utils.l3addr(srcBytes);
+        src = IP.fromIPv4(srcBytes);
         byte[] dstBytes = bytes.sub(16, 4).toJavaArray();
-        dst = (Inet4Address) Utils.l3addr(dstBytes);
+        dst = IP.fromIPv4(dstBytes);
 
         // options
         if (ihl > 5) {
@@ -271,21 +271,21 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     @Override
-    public Inet4Address getSrc() {
+    public IPv4 getSrc() {
         return this.src;
     }
 
-    public void setSrc(Inet4Address src) {
+    public void setSrc(IPv4 src) {
         clearRawPacket();
         this.src = src;
     }
 
     @Override
-    public Inet4Address getDst() {
+    public IPv4 getDst() {
         return this.dst;
     }
 
-    public void setDst(Inet4Address dst) {
+    public void setDst(IPv4 dst) {
         clearRawPacket();
         this.dst = dst;
     }

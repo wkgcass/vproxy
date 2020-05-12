@@ -1,6 +1,7 @@
 package vproxy.poc;
 
 import vclient.HttpClient;
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vmirror.Mirror;
@@ -10,7 +11,6 @@ import vproxy.util.ringbuffer.SSLUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.net.InetSocketAddress;
 
 public class TLSMirror {
     public static void main(String[] args) throws Exception {
@@ -61,7 +61,7 @@ public class TLSMirror {
         System.out.println("start");
 
         var l3addr = Resolver.getDefault().blockResolve("cip.cc");
-        var cli = HttpClient.to(new InetSocketAddress(l3addr, 443), new HttpClient.Options()
+        var cli = HttpClient.to(new IPPort(l3addr, 443), new HttpClient.Options()
             .setHost("cip.cc")
             .setSSLContext(SSLUtils.getDefaultClientSSLContext()));
         cli.get("/").header("User-Agent", "curl/vproxy").send((err, resp) -> {

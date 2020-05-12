@@ -1,5 +1,6 @@
 package vproxy.app.cmd;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.HttpControllerHolder;
 import vproxy.app.RESPControllerHolder;
@@ -16,7 +17,6 @@ import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -239,7 +239,7 @@ public class SystemCommand {
             return;
         }
 
-        InetSocketAddress addr;
+        IPPort addr;
         try {
             addr = AddrHandle.get(cmd);
         } catch (Exception e) {
@@ -333,7 +333,7 @@ public class SystemCommand {
                 controllers.add(c);
                 sb.append(c.alias);
                 if (detail) {
-                    sb.append(" -> ").append(Utils.l4addrStr(c.address));
+                    sb.append(" -> ").append(c.address.toInetSocketAddress());
                 }
             }
         }

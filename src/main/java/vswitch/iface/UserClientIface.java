@@ -1,30 +1,29 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
+import vfd.IPPort;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 import vswitch.packet.VProxyEncryptedPacket;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
 import vswitch.util.UserInfo;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
     public final UserInfo user;
     public final DatagramFD sock;
-    public final InetSocketAddress remoteAddress;
+    public final IPPort remoteAddress;
 
     private SelectorEventLoop bondLoop;
 
     private boolean connected = false;
 
-    public UserClientIface(UserInfo user, DatagramFD sock, InetSocketAddress remoteAddress) {
+    public UserClientIface(UserInfo user, DatagramFD sock, IPPort remoteAddress) {
         this.user = user;
         this.sock = sock;
         this.remoteAddress = remoteAddress;
@@ -58,7 +57,7 @@ public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
 
     @Override
     public String toString() {
-        return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + Utils.l4addrStr(remoteAddress) + ",vni:" + user.vni
+        return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + remoteAddress.formatToIPPortString() + ",vni:" + user.vni
             + ")" + (connected ? "[UP]" : "[DOWN]");
     }
 

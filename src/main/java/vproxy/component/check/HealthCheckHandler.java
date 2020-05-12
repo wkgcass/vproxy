@@ -1,13 +1,13 @@
 package vproxy.component.check;
 
-import java.net.SocketAddress;
+import vfd.SockAddr;
 
 public interface HealthCheckHandler {
-    void up(SocketAddress remote);
+    void up(SockAddr remote);
 
-    void down(SocketAddress remote, String reason);
+    void down(SockAddr remote, String reason);
 
-    void upOnce(SocketAddress remote, ConnectResult cost);
+    void upOnce(SockAddr remote, ConnectResult cost);
 
-    void downOnce(SocketAddress remote, String reason);
+    void downOnce(SockAddr remote, String reason);
 }

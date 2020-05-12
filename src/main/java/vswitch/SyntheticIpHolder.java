@@ -1,15 +1,14 @@
 package vswitch;
 
+import vfd.IP;
+import vfd.IPv4;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.util.ConcurrentHashSet;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 import vswitch.util.MacAddress;
 
-import java.net.Inet4Address;
-import java.net.InetAddress;
 import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
@@ -18,56 +17,56 @@ import java.util.concurrent.ConcurrentHashMap;
 public class SyntheticIpHolder {
     private final Network allowedV4Network;
     private final Network allowedV6Network;
-    private final ConcurrentHashMap<InetAddress, MacAddress> ipMap = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<MacAddress, Set<InetAddress>> macMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<IP, MacAddress> ipMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<MacAddress, Set<IP>> macMap = new ConcurrentHashMap<>();
 
     public SyntheticIpHolder(Table table) {
         allowedV4Network = table.v4network;
         allowedV6Network = table.v6network;
     }
 
-    public MacAddress lookup(InetAddress ip) {
+    public MacAddress lookup(IP ip) {
         return ipMap.get(ip);
     }
 
-    public Collection<InetAddress> lookupByMac(MacAddress mac) {
+    public Collection<IP> lookupByMac(MacAddress mac) {
         return macMap.get(mac);
     }
 
-    public Collection<InetAddress> allIps() {
+    public Collection<IP> allIps() {
         return ipMap.keySet();
     }
 
-    public Collection<Map.Entry<InetAddress, MacAddress>> entries() {
+    public Collection<Map.Entry<IP, MacAddress>> entries() {
         return ipMap.entrySet();
     }
 
-    public void add(InetAddress ip, MacAddress mac) throws AlreadyExistException, XException {
-        if (ip instanceof Inet4Address) {
+    public void add(IP ip, MacAddress mac) throws AlreadyExistException, XException {
+        if (ip instanceof IPv4) {
             if (!allowedV4Network.contains(ip)) {
-                throw new XException("the ip to add (" + Utils.ipStr(ip) + ") is not in the allowed range " + allowedV4Network);
+                throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV4Network);
             }
         } else {
             if (allowedV6Network == null) {
                 throw new XException("ipv6 not allowed");
             }
             if (!allowedV6Network.contains(ip)) {
-                throw new XException("the ip to add (" + Utils.ipStr(ip) + ") is not in the allowed range " + allowedV6Network);
+                throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV6Network);
             }
         }
 
         MacAddress oldMac = ipMap.putIfAbsent(ip, mac);
         if (oldMac != null) {
-            throw new AlreadyExistException("synthetic ip " + Utils.ipStr(ip) + " already exists in the requested switch");
+            throw new AlreadyExistException("synthetic ip " + ip.formatToIPString() + " already exists in the requested switch");
         }
         var set = macMap.computeIfAbsent(mac, m -> new ConcurrentHashSet<>());
         set.add(ip);
     }
 
-    public void del(InetAddress ip) throws NotFoundException {
+    public void del(IP ip) throws NotFoundException {
         MacAddress mac = ipMap.remove(ip);
         if (mac == null) {
-            throw new NotFoundException("ip", Utils.ipStr(ip));
+            throw new NotFoundException("ip", ip.formatToIPString());
         }
         var set = macMap.get(mac);
         assert set != null;

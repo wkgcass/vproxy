@@ -2,6 +2,7 @@ package vproxy.selector.wrap.arqudp;
 
 import vfd.EventSet;
 import vfd.FD;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
@@ -19,8 +20,6 @@ import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.CancelledKeyException;
@@ -79,13 +78,13 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         this.readingMirrorDataFactory = new MirrorDataFactory("arq-udp",
             d -> {
                 try {
-                    InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+                    IPPort remote = getRemoteAddress();
                     d.setSrc(remote);
                 } catch (IOException e) {
                     d.setSrcRef(fd);
                 }
                 try {
-                    InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+                    IPPort local = getLocalAddress();
                     d.setDst(local);
                 } catch (IOException e) {
                     d.setDstRef(this);
@@ -94,13 +93,13 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         this.writingMirrorDataFactory = new MirrorDataFactory("arq-udp",
             d -> {
                 try {
-                    InetSocketAddress local = (InetSocketAddress) getLocalAddress();
+                    IPPort local = getLocalAddress();
                     d.setSrc(local);
                 } catch (IOException e) {
                     d.setSrcRef(this);
                 }
                 try {
-                    InetSocketAddress remote = (InetSocketAddress) getRemoteAddress();
+                    IPPort remote = getRemoteAddress();
                     d.setDst(remote);
                 } catch (IOException e) {
                     d.setDstRef(fd);
@@ -109,7 +108,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
+    public void connect(IPPort l4addr) throws IOException {
         fd.connect(l4addr);
     }
 
@@ -124,12 +123,12 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public IPPort getLocalAddress() throws IOException {
         return fd.getLocalAddress();
     }
 
     @Override
-    public SocketAddress getRemoteAddress() throws IOException {
+    public IPPort getRemoteAddress() throws IOException {
         return fd.getRemoteAddress();
     }
 

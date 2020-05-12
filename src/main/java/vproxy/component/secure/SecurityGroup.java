@@ -1,10 +1,10 @@
 package vproxy.component.secure;
 
+import vfd.IP;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.connection.Protocol;
 
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
@@ -27,7 +27,7 @@ public class SecurityGroup {
         return new SecurityGroup(defaultName, true);
     }
 
-    public boolean allow(Protocol protocol, InetAddress address, int port) {
+    public boolean allow(Protocol protocol, IP address, int port) {
         LinkedList<SecurityGroupRule> rules;
         if (protocol == Protocol.TCP) {
             rules = tcpRules;

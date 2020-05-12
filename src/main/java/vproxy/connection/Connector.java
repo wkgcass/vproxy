@@ -1,17 +1,18 @@
 package vproxy.connection;
 
+import vfd.IPPort;
 import vproxy.util.RingBuffer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class Connector {
-    public final InetSocketAddress remote;
+    public final IPPort remote;
 
-    public Connector(InetSocketAddress remote) {
+    public Connector(IPPort remote) {
         this.remote = remote;
     }
 
+    @SuppressWarnings("RedundantThrows")
     public void beforeConnect(@SuppressWarnings("unused") Connection accepted) throws IOException {
         // do nothing
     }

@@ -1,6 +1,7 @@
 package vproxy.selector.wrap.streamed;
 
 import vfd.EventSet;
+import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
 import vproxy.app.Config;
@@ -14,10 +15,8 @@ import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.selector.wrap.udp.UDPBasedFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.Supplier;
@@ -25,7 +24,7 @@ import java.util.function.Supplier;
 public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     private final ArqUDPBasedFDs fds;
     private final SelectorEventLoop loop;
-    private final InetSocketAddress local;
+    private final IPPort local;
 
     private ArqUDPServerSocketFD fd;
     private Map<ArqUDPSocketFD, PeriodicEvent> keepaliveEvents = new HashMap<>();
@@ -34,7 +33,7 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
 
     private final StreamedServerSocketFD[] serverPtr = new StreamedServerSocketFD[1];
 
-    protected StreamedArqUDPServerFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, InetSocketAddress local,
+    protected StreamedArqUDPServerFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, IPPort local,
                                       Supplier<StreamedFDHandler> handlerSupplier) throws IOException {
         this.fds = fds;
         this.loop = loop;
@@ -52,13 +51,13 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     private void initProbe() {
         if (Config.probe.contains("streamed-arq-udp-record")) {
             loop.period(30_000, () -> {
-                String localStr = Utils.l4addrStr(local);
+                String localStr = local.formatToIPPortString();
                 for (Map.Entry<ArqUDPSocketFD, StreamedFDHandler> entry : currentHandlers.entrySet()) {
                     ArqUDPSocketFD k = entry.getKey();
                     // StreamedFDHandler v = entry.getValue();
 
                     try {
-                        String remoteStr = Utils.l4addrStr((InetSocketAddress) k.getRemoteAddress());
+                        String remoteStr = k.getRemoteAddress().formatToIPPortString();
                         Logger.probe("accepted: " + localStr + " <- " + remoteStr);
                     } catch (Throwable t) {
                         Logger.shouldNotHappen("got exception when probing", t);

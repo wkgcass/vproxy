@@ -1,15 +1,14 @@
 package vproxy.connection;
 
 import vfd.EventSet;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vproxy.selector.TimerEvent;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
 import vproxy.util.RingBufferETHandler;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.StandardSocketOptions;
 import java.nio.channels.CancelledKeyException;
 import java.util.List;
@@ -136,8 +135,8 @@ public class Connection implements NetFlowRecorder {
         }
     }
 
-    public final InetSocketAddress remote;
-    protected InetSocketAddress local; // may be modified if not connected (in this case, local will be null)
+    public final IPPort remote;
+    protected IPPort local; // may be modified if not connected (in this case, local will be null)
     protected String _id; // may be modified if local was null
     public final SocketFD channel;
 
@@ -170,7 +169,7 @@ public class Connection implements NetFlowRecorder {
     private boolean noQuickWrite = false;
 
     Connection(SocketFD channel,
-               InetSocketAddress remote, InetSocketAddress local,
+               IPPort remote, IPPort local,
                ConnectionOpts opts,
                RingBuffer inBuffer, RingBuffer outBuffer) {
         // set TCP_NODELAY
@@ -197,7 +196,7 @@ public class Connection implements NetFlowRecorder {
         // if buffer did not wrote all content, simply ignore the left part
     }
 
-    public InetSocketAddress getLocal() {
+    public IPPort getLocal() {
         return local;
     }
 
@@ -238,11 +237,11 @@ public class Connection implements NetFlowRecorder {
     }
 
     protected String genId() {
-        return Utils.ipStr(remote.getAddress().getAddress()) + ":" + remote.getPort()
+        return remote.getAddress().formatToIPString() + ":" + remote.getPort()
             + "/"
             + (local == null ? "[unbound]" :
             (
-                Utils.ipStr(local.getAddress().getAddress()) + ":" + local.getPort()
+                local.getAddress().formatToIPString() + ":" + local.getPort()
             )
         );
     }

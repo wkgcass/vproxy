@@ -1,11 +1,11 @@
 package vswitch.packet;
 
-import java.net.InetAddress;
+import vfd.IP;
 
 public abstract class AbstractIpPacket extends AbstractPacket {
-    public abstract InetAddress getSrc();
+    public abstract IP getSrc();
 
-    public abstract InetAddress getDst();
+    public abstract IP getDst();
 
     public abstract AbstractPacket getPacket();
 

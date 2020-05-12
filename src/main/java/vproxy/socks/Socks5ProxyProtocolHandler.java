@@ -1,5 +1,6 @@
 package vproxy.socks;
 
+import vfd.IP;
 import vproxy.connection.Connector;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
@@ -237,7 +238,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         if (pctx.reqType == AddressType.domain) {
             address = new String(pctx.address, StandardCharsets.UTF_8);
         } else {
-            address = Utils.ipStr(pctx.address);
+            address = IP.ipStr(pctx.address);
         }
         boolean[] sameThread = {false}; // tell the outside method, that callback and method are running in the same thread
         boolean[] returned = {false}; // tell the callback, that the outside method has already returned

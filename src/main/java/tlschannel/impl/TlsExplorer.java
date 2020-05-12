@@ -24,15 +24,14 @@ SOFTWARE.
 
 package tlschannel.impl;
 
-import java.nio.ByteBuffer;
-import java.nio.BufferUnderflowException;
-import java.util.HashMap;
-import java.util.Map;
-
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLProtocolException;
 import javax.net.ssl.StandardConstants;
+import java.nio.BufferUnderflowException;
+import java.nio.ByteBuffer;
+import java.util.HashMap;
+import java.util.Map;
 
 /*
  * Implement basic TLS parsing, just to read the SNI (as this is not done by

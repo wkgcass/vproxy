@@ -1,5 +1,6 @@
 package vproxy.app;
 
+import vfd.IPPort;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
@@ -9,7 +10,6 @@ import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -25,7 +25,7 @@ public class Socks5ServerHolder {
     public Socks5Server add(String alias,
                             EventLoopGroup acceptorEventLoopGroup,
                             EventLoopGroup workerEventLoopGroup,
-                            InetSocketAddress bindAddress,
+                            IPPort bindAddress,
                             Upstream backend,
                             int timeout,
                             int inBufferSize,

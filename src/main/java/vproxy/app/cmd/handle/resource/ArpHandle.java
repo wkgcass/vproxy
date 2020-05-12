@@ -1,18 +1,20 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IP;
 import vproxy.app.Application;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.exception.NotFoundException;
-import vproxy.util.Utils;
 import vswitch.MacTable;
 import vswitch.Switch;
 import vswitch.Table;
 import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
 
-import java.net.InetAddress;
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.List;
 
 public class ArpHandle {
     private ArpHandle() {
@@ -93,7 +95,7 @@ public class ArpHandle {
             }
             //noinspection ConstantConditions
             if (a.ip != null && b.ip != null) {
-                r = Utils.ipStr(a.ip.getAddress()).compareTo(Utils.ipStr(b.ip.getAddress()));
+                r = a.ip.formatToIPString().compareTo(b.ip.formatToIPString());
                 if (r != 0) {
                     return r;
                 }
@@ -121,12 +123,12 @@ public class ArpHandle {
 
     public static class ArpEntry {
         public final MacAddress mac;
-        public final InetAddress ip;
+        public final IP ip;
         public final Iface iface;
         public final long arpTTL;
         public final long macTTL;
 
-        public ArpEntry(MacAddress mac, InetAddress ip, Iface iface, long arpTTL, long macTTL) {
+        public ArpEntry(MacAddress mac, IP ip, Iface iface, long arpTTL, long macTTL) {
             this.mac = mac;
             this.ip = ip;
             this.iface = iface;
@@ -136,7 +138,7 @@ public class ArpHandle {
 
         private String strForIp(ArpEntry e) {
             if (e.ip == null) return "";
-            return Utils.ipStr(e.ip);
+            return e.ip.formatToIPString();
         }
 
         private String strForIface(ArpEntry e) {

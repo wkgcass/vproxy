@@ -1,5 +1,7 @@
 package vproxyx;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
@@ -12,12 +14,9 @@ import vproxy.selector.wrap.kcp.KCPFDs;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
 import vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 
 public class KcpTun {
     private static final String HELP_STR = "" +
@@ -92,7 +91,7 @@ public class KcpTun {
 
         boolean isServer;
         int port;
-        InetSocketAddress target;
+        IPPort target;
         KCPFDs kcpFDs;
         {
             if (modeStr.equals("client")) {
@@ -124,8 +123,8 @@ public class KcpTun {
             if (targetPort < 1 || targetPort > 65535) {
                 throw new Exception("invalid port value range for `target`");
             }
-            InetAddress l3addr = Resolver.getDefault().blockResolve(hostPart);
-            target = new InetSocketAddress(l3addr, targetPort);
+            IP l3addr = Resolver.getDefault().blockResolve(hostPart);
+            target = new IPPort(l3addr, targetPort);
             int fast;
             try {
                 fast = Integer.parseInt(fastStr);
@@ -157,14 +156,14 @@ public class KcpTun {
         ConnectorGen connectorGen;
         if (isServer) {
             // listen on kcptun
-            InetSocketAddress local = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port);
+            IPPort local = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), port);
             ServerSock.checkBind(Protocol.UDP, local);
             sock = ServerSock.createUDP(local, sLoop, new H2StreamedServerFDs(kcpFDs, sLoop, local));
             // connect to remote server using raw tcp
             connectorGen = (v, hint) -> new Connector(target);
         } else {
             // listen on tcp
-            InetSocketAddress local = new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), port);
+            IPPort local = new IPPort(IP.from(new byte[]{127, 0, 0, 1}), port);
             ServerSock.checkBind(local);
             sock = ServerSock.create(local);
             // connect to remote server using kcptun

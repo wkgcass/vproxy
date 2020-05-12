@@ -8,7 +8,6 @@ import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.WeightHandle;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
-import vproxy.util.Utils;
 
 import java.util.List;
 import java.util.Optional;
@@ -102,7 +101,7 @@ public class ServerHandle {
              */
             return (h.isLogicDelete() ? "*" : "") + h.alias + " ->"
                 + (h.hostName == null ? "" : " host " + h.hostName /* now connected to */)
-                + " connect-to " + Utils.ipStr(h.server.getAddress().getAddress()) + ":" + h.server.getPort()
+                + " connect-to " + h.server.formatToIPPortString()
                 + " weight " + h.getWeight()
                 + " currently " + (h.healthy ? "UP" : "DOWN")
                 + " cost " + h.getHcCost()

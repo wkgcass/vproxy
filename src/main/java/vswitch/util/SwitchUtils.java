@@ -1,9 +1,9 @@
 package vswitch.util;
 
 import vproxy.util.ByteArray;
-import vswitch.iface.RemoteSideVniGetterSetter;
 import vswitch.iface.Iface;
 import vswitch.iface.LocalSideVniGetterSetter;
+import vswitch.iface.RemoteSideVniGetterSetter;
 import vswitch.packet.Ipv6Packet;
 
 public class SwitchUtils {

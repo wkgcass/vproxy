@@ -1,9 +1,6 @@
 package vproxy.selector.wrap.arqudp;
 
-import vfd.EventSet;
-import vfd.FD;
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
+import vfd.*;
 import vproxy.selector.Handler;
 import vproxy.selector.HandlerContext;
 import vproxy.selector.SelectorEventLoop;
@@ -14,8 +11,6 @@ import vproxy.util.Logger;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -31,11 +26,11 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
         this.fd = fd;
         this.loop = loop;
         this.handlerConstructorProvider = handlerConstructorProvider;
-        this.selector = (WrappedSelector) loop.selector;
+        this.selector = loop.selector;
     }
 
     @Override
-    public SocketAddress getLocalAddress() throws IOException {
+    public IPPort getLocalAddress() throws IOException {
         return fd.getLocalAddress();
     }
 
@@ -50,7 +45,7 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(IPPort l4addr) throws IOException {
         fd.bind(l4addr);
     }
 

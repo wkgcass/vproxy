@@ -2,6 +2,10 @@ package vproxyx.websocks;
 
 import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
+import vfd.IP;
+import vfd.IPPort;
+import vfd.IPv4;
+import vfd.IPv6;
 import vjson.JSON;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.secure.SecurityGroup;
@@ -18,20 +22,20 @@ import vproxy.util.Utils;
 import vproxyx.websocks.relay.DomainBinder;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.UnknownHostException;
 import java.util.*;
 import java.util.stream.Collectors;
 
 public class AgentDNSServer extends DNSServer {
     private final Map<String, ServerGroup> serverGroups;
     private final Map<String, List<DomainChecker>> resolves;
-    private final Map<String, InetAddress> cache = new HashMap<>();
+    private final Map<String, IP> cache = new HashMap<>();
     private final List<DomainChecker> selfDomains = new LinkedList<>();
     private final List<DomainChecker> bondDomains = new LinkedList<>();
     private final ConfigProcessor config;
     private final DomainBinder domainBinder;
 
-    public AgentDNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
+    public AgentDNSServer(String alias, IPPort bindAddress, EventLoopGroup eventLoopGroup, ConfigProcessor config,
                           // domainBinder is optional, respond managed domains with self ip if null
                           DomainBinder domainBinder) {
         super(alias, bindAddress, eventLoopGroup, new Upstream("not-used"), 0, SecurityGroup.allowAll());
@@ -72,8 +76,8 @@ public class AgentDNSServer extends DNSServer {
         });
     }
 
-    private InetAddress getFromCache(String domain) {
-        InetAddress l3addr = cache.get(domain);
+    private IP getFromCache(String domain) {
+        IP l3addr = cache.get(domain);
         if (l3addr == null) {
             String tmp;
             if (domain.endsWith(".")) {
@@ -87,13 +91,13 @@ public class AgentDNSServer extends DNSServer {
     }
 
     @Override
-    protected List<Record> runInternal(String domain, InetSocketAddress remote) {
+    protected List<Record> runInternal(String domain, IPPort remote) {
         var res = super.runInternal(domain, remote);
         if (res != null && !res.isEmpty()) {
             return res;
         }
         List<Record> ret = new ArrayList<>();
-        InetAddress localAddr = getLocalAddressFor(remote);
+        IP localAddr = getLocalAddressFor(remote);
         switch (domain) {
             case "socks5.agent":
                 Record r = getSocks5Record(localAddr);
@@ -141,35 +145,35 @@ public class AgentDNSServer extends DNSServer {
         return ret;
     }
 
-    private Record getSocks5Record(InetAddress localAddr) {
+    private Record getSocks5Record(IP localAddr) {
         if (config.getSocks5ListenPort() == 0) {
             return null;
         }
         return new Record(localAddr, config.getSocks5ListenPort(), "socks5.agent.vproxy.local");
     }
 
-    private Record getHttpConnectRecord(InetAddress localAddr) {
+    private Record getHttpConnectRecord(IP localAddr) {
         if (config.getHttpConnectListenPort() == 0) {
             return null;
         }
         return new Record(localAddr, config.getHttpConnectListenPort(), "httpconnect.agent.vproxy.local");
     }
 
-    private Record getSsRecord(InetAddress localAddr) {
+    private Record getSsRecord(IP localAddr) {
         if (config.getSsListenPort() == 0) {
             return null;
         }
         return new Record(localAddr, config.getSsListenPort(), "ss.agent.vproxy.local");
     }
 
-    private Record getPacServerRecord(InetAddress localAddr) {
+    private Record getPacServerRecord(IP localAddr) {
         if (config.getPacServerPort() == 0) {
             return null;
         }
         return new Record(localAddr, config.getPacServerPort(), "pac.agent.vproxy.local");
     }
 
-    private Record getDNSServerRecord(InetAddress localAddr) {
+    private Record getDNSServerRecord(IP localAddr) {
         if (config.getDnsListenPort() == 0) {
             return null;
         }
@@ -177,7 +181,7 @@ public class AgentDNSServer extends DNSServer {
     }
 
     @Override
-    protected void runRecursive(DNSPacket p, InetSocketAddress remote) {
+    protected void runRecursive(DNSPacket p, IPPort remote) {
         String domain = null;
         for (DNSQuestion q : p.questions) {
             if (q.qtype == DNSType.ANY || q.qtype == DNSType.A || q.qtype == DNSType.AAAA) {
@@ -214,9 +218,9 @@ public class AgentDNSServer extends DNSServer {
             }
             // try cache
             {
-                InetAddress l3addr = getFromCache(domain);
+                IP l3addr = getFromCache(domain);
                 if (l3addr != null) {
-                    Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
+                    Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
                     respond(p, domain, l3addr, remote);
                     return;
                 }
@@ -237,12 +241,12 @@ public class AgentDNSServer extends DNSServer {
         super.runRecursive(p, remote);
     }
 
-    public void resolve(String domain, Callback<InetAddress, UnknownHostException> cb) {
+    public void resolve(String domain, Callback<IP, UnknownHostException> cb) {
         // try cache first
         {
-            InetAddress l3addr = getFromCache(domain);
+            IP l3addr = getFromCache(domain);
             if (l3addr != null) {
-                Logger.alert("[DNS] use cache for " + domain + " -> " + Utils.ipStr(l3addr.getAddress()));
+                Logger.alert("[DNS] use cache for " + domain + " -> " + l3addr.formatToIPString());
                 cb.succeeded(l3addr);
                 return;
             }
@@ -265,7 +269,7 @@ public class AgentDNSServer extends DNSServer {
         Resolver.getDefault().resolve(domain, cb);
     }
 
-    private void requestAndGetResult(ServerGroup serverGroup, String domain, Callback<InetAddress, UnknownHostException> cb) {
+    private void requestAndGetResult(ServerGroup serverGroup, String domain, Callback<IP, UnknownHostException> cb) {
         var svr = serverGroup.next(null /*will not use serverGroup*/);
         if (svr == null) {
             cb.failed(new UnknownHostException("cannot find server to send the dns request - " + domain));
@@ -295,7 +299,7 @@ public class AgentDNSServer extends DNSServer {
                 JSON.Object ins = (JSON.Object) resp.bodyAsJson();
                 JSON.Array arr = ins.getArray("addresses");
                 ip = arr.getString(0);
-                ipBytes = Utils.parseIpString(ip);
+                ipBytes = IP.parseIpString(ip);
                 if (ipBytes.length != 4 && ipBytes.length != 16) {
                     throw new RuntimeException();
                 }
@@ -307,16 +311,16 @@ public class AgentDNSServer extends DNSServer {
             }
 
             Logger.alert("[DNS] resolve: " + domain + " -> " + ip);
-            InetAddress l3addr = Utils.l3addr(ipBytes);
+            IP l3addr = IP.from(ipBytes);
             cache.put(domain, l3addr);
             cb.succeeded(l3addr);
         });
     }
 
-    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String domain, InetSocketAddress remote) {
+    private void requestAndResponse(DNSPacket p, ServerGroup serverGroup, String domain, IPPort remote) {
         requestAndGetResult(serverGroup, domain, new Callback<>() {
             @Override
-            protected void onSucceeded(InetAddress value) {
+            protected void onSucceeded(IP value) {
                 respond(p, domain, value, remote);
             }
 
@@ -327,33 +331,33 @@ public class AgentDNSServer extends DNSServer {
         });
     }
 
-    private void respondWithSelfIp(DNSPacket p, String domain, InetSocketAddress remote) {
-        InetAddress result = getLocalAddressFor(remote);
+    private void respondWithSelfIp(DNSPacket p, String domain, IPPort remote) {
+        IP result = getLocalAddressFor(remote);
 
         if (result == null) {
-            String msg = "cannot find ip address to return for remote " + Utils.l4addrStr(remote);
+            String msg = "cannot find ip address to return for remote " + remote.formatToIPPortString();
             Logger.error(LogType.SYS_ERROR, msg);
             sendError(p, remote, new IOException(msg));
         } else {
-            Logger.alert("[DNS] choose local ip " + Utils.ipStr(result.getAddress()) + " for remote " + Utils.l4addrStr(remote) + " and domain " + domain);
+            Logger.alert("[DNS] choose local ip " + result.formatToIPString() + " for remote " + remote.formatToIPPortString() + " and domain " + domain);
             respond(p, domain, result, remote);
         }
     }
 
-    private void respondWithBondIp(DNSPacket p, String domain, InetSocketAddress remote) {
-        InetAddress l3addr = domainBinder.assignForDomain(domain, config.getDirectRelayIpBondTimeout());
+    private void respondWithBondIp(DNSPacket p, String domain, IPPort remote) {
+        IP l3addr = domainBinder.assignForDomain(domain, config.getDirectRelayIpBondTimeout());
         if (l3addr == null) {
             String msg = "[DNS] cannot assign ip for domain " + domain;
             Logger.error(LogType.SYS_ERROR, msg);
             sendError(p, remote, new IOException(msg));
         } else {
-            Logger.alert("[DNS] assigned ip " + Utils.ipStr(l3addr.getAddress()) + " for domain " + domain);
+            Logger.alert("[DNS] assigned ip " + l3addr.formatToIPString() + " for domain " + domain);
             respond(p, domain, l3addr, remote);
         }
     }
 
-    private void respond(DNSPacket p, String domain, InetAddress result, InetSocketAddress remote) {
-        Logger.alert("[DNS] respond " + domain + " -> " + Utils.ipStr(result.getAddress()) + " to " + Utils.l4addrStr(remote));
+    private void respond(DNSPacket p, String domain, IP result, IPPort remote) {
+        Logger.alert("[DNS] respond " + domain + " -> " + result.formatToIPString() + " to " + remote.formatToIPPortString());
 
         DNSPacket dnsResp = new DNSPacket();
         dnsResp.id = p.id;
@@ -369,15 +373,15 @@ public class AgentDNSServer extends DNSServer {
         res.name = domain;
         res.clazz = DNSClass.IN;
         res.ttl = ttl;
-        if (result instanceof Inet4Address) {
+        if (result instanceof IPv4) {
             res.type = DNSType.A;
             A a = new A();
-            a.address = (Inet4Address) result;
+            a.address = (IPv4) result;
             res.rdata = a;
         } else {
             res.type = DNSType.AAAA;
             AAAA aaaa = new AAAA();
-            aaaa.address = (Inet6Address) result;
+            aaaa.address = (IPv6) result;
             res.rdata = aaaa;
         }
         dnsResp.answers.add(res);

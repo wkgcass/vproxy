@@ -1,10 +1,10 @@
 package vswitch.packet;
 
+import vfd.IP;
+import vfd.IPv6;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 import vswitch.util.Consts;
 
-import java.net.Inet6Address;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -16,8 +16,8 @@ public class Ipv6Packet extends AbstractIpPacket {
     private int payloadLength;
     private int nextHeader;
     private int hopLimit;
-    private Inet6Address src;
-    private Inet6Address dst;
+    private IPv6 src;
+    private IPv6 dst;
     private List<ExtHeader> extHeaders;
     private AbstractPacket packet;
 
@@ -52,8 +52,8 @@ public class Ipv6Packet extends AbstractIpPacket {
 
         byte[] srcBytes = bytes.sub(8, 16).toJavaArray();
         byte[] dstBytes = bytes.sub(24, 16).toJavaArray();
-        src = (Inet6Address) Utils.l3addr(srcBytes);
-        dst = (Inet6Address) Utils.l3addr(dstBytes);
+        src = IP.fromIPv6(srcBytes);
+        dst = IP.fromIPv6(dstBytes);
 
         int skipLengthForExtHeaders = 0;
         extHeaders = new ArrayList<>();
@@ -199,21 +199,21 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     @Override
-    public Inet6Address getSrc() {
+    public IPv6 getSrc() {
         return src;
     }
 
-    public void setSrc(Inet6Address src) {
+    public void setSrc(IPv6 src) {
         clearRawPacket();
         this.src = src;
     }
 
     @Override
-    public Inet6Address getDst() {
+    public IPv6 getDst() {
         return dst;
     }
 
-    public void setDst(Inet6Address dst) {
+    public void setDst(IPv6 dst) {
         clearRawPacket();
         this.dst = dst;
     }

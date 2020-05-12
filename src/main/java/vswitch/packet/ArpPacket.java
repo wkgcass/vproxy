@@ -1,5 +1,6 @@
 package vswitch.packet;
 
+import vfd.IP;
 import vproxy.util.ByteArray;
 import vproxy.util.Utils;
 import vswitch.util.Consts;
@@ -95,8 +96,8 @@ public class ArpPacket extends AbstractPacket {
             if (opcode == Consts.ARP_PROTOCOL_OPCODE_REQ) { // request
                 if (targetIp != null && targetIp.length() == 4 && senderIp != null && senderIp.length() == 4) {
                     return "ArpPacket(" +
-                        "who has " + Utils.ipStr(targetIp.toJavaArray()) + "?" +
-                        " tell " + Utils.ipStr(senderIp.toJavaArray())
+                        "who has " + IP.ipStr(targetIp.toJavaArray()) + "?" +
+                        " tell " + IP.ipStr(senderIp.toJavaArray())
                         + " senderMac=" + runAvoidNull(() -> senderMac.toHexString(), "null")
                         + " targetMac=" + runAvoidNull(() -> targetMac.toHexString(), "null")
                         + ")";
@@ -104,7 +105,7 @@ public class ArpPacket extends AbstractPacket {
             } else if (opcode == Consts.ARP_PROTOCOL_OPCODE_RESP) { // response
                 if (senderIp != null && senderIp.length() == 4 && senderMac != null) {
                     return "ArpPacket(" +
-                        Utils.ipStr(senderIp.toJavaArray()) + " is at " + senderMac.toHexString()
+                        IP.ipStr(senderIp.toJavaArray()) + " is at " + senderMac.toHexString()
                         + " targetMac=" + runAvoidNull(() -> targetMac.toHexString(), "null")
                         + " targetIp=" + runAvoidNull(() -> targetIp.toHexString(), "null")
                         + ")";

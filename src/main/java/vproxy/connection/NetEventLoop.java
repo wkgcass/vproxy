@@ -9,7 +9,6 @@ import vproxy.selector.wrap.VirtualFD;
 import vproxy.util.*;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 
@@ -165,8 +164,8 @@ class HandlerForTCPServer implements Handler<ServerSocketFD> {
             Connection conn;
             try {
                 conn = new Connection(sock,
-                    (InetSocketAddress) sock.getRemoteAddress(),
-                    (InetSocketAddress) sock.getLocalAddress(),
+                    sock.getRemoteAddress(),
+                    sock.getLocalAddress(),
                     sctx.handler.connectionOpts(),
                     ioBuffers.left, ioBuffers.right);
             } catch (IOException e) {

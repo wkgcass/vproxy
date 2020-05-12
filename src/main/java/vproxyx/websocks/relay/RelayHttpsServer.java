@@ -1,5 +1,7 @@
 package vproxyx.websocks.relay;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
@@ -13,13 +15,14 @@ import vproxy.socks.AddressType;
 import vproxy.util.*;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
-import vproxyx.websocks.*;
+import vproxyx.websocks.ConfigProcessor;
+import vproxyx.websocks.DomainChecker;
+import vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
+import vproxyx.websocks.WebSocksUtils;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.LinkedList;
@@ -40,7 +43,7 @@ public class RelayHttpsServer {
     }
 
     public void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
-        InetSocketAddress l4addr = new InetSocketAddress(Utils.l3addr("0.0.0.0"), 443);
+        IPPort l4addr = new IPPort(IP.from("0.0.0.0"), 443);
         ServerSock.checkBind(l4addr);
 
         ServerSock server = ServerSock.create(l4addr);
@@ -177,7 +180,7 @@ public class RelayHttpsServer {
             final String finalHostname = hostname;
             WebSocksUtils.agentDNSServer.resolve(hostname, new Callback<>() {
                 @Override
-                protected void onSucceeded(InetAddress value) {
+                protected void onSucceeded(IP value) {
                     SSLEngine engine = WebSocksUtils.createEngine();
                     engine.setUseClientMode(true);
                     SSLParameters sslParams = new SSLParameters();
@@ -186,7 +189,7 @@ public class RelayHttpsServer {
                     }
                     engine.setSSLParameters(sslParams);
 
-                    var remote = new InetSocketAddress(value, 443);
+                    var remote = new IPPort(value, 443);
                     SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(
                         engine,
                         RingBuffer.allocate(24576),

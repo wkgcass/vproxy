@@ -1,6 +1,8 @@
 package vproxy.selector.wrap.streamed;
 
 import vfd.EventSet;
+import vfd.IP;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
@@ -13,14 +15,10 @@ import vproxy.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxy.util.ByteArray;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 import vswitch.util.Consts;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Deque;
 import java.util.HashMap;
@@ -500,30 +498,30 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             assert Logger.lowLevelDebug("trying to add existing fd to fdMap: " + fd);
             return false;
         }
-        InetAddress virtualAddress;
+        IP virtualAddress;
         {
             byte b1 = (byte) ((streamId >> 24) & 0xff);
             byte b2 = (byte) ((streamId >> 16) & 0xff);
             byte b3 = (byte) ((streamId >> 8) & 0xff);
             byte b4 = (byte) (streamId & 0xff);
-            virtualAddress = Utils.l3addr(b1, b2, b3, b4);
+            virtualAddress = IP.from(new byte[]{b1, b2, b3, b4});
         }
         int virtualPort;
         {
             try {
                 if (client) {
-                    virtualPort = ((InetSocketAddress) fd.getLocalAddress()).getPort();
+                    virtualPort = fd.getLocalAddress().getPort();
                 } else {
-                    virtualPort = ((InetSocketAddress) fd.getRemoteAddress()).getPort();
+                    virtualPort = fd.getRemoteAddress().getPort();
                 }
             } catch (IOException e) {
                 fail(e);
                 return false;
             }
         }
-        SocketAddress virtual = new InetSocketAddress(virtualAddress, virtualPort);
-        SocketAddress local;
-        SocketAddress remote;
+        IPPort virtual = new IPPort(virtualAddress, virtualPort);
+        IPPort local;
+        IPPort remote;
         if (client) {
             local = virtual;
             try {
@@ -830,13 +828,13 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         if (Config.probe.contains("streamed-arq-udp-record")) {
             try {
                 Logger.probe("isClient=" + client + ", state=" + state);
-                InetSocketAddress arqSockLocal = (InetSocketAddress) fd.getLocalAddress();
-                String arqSockLocalStr = Utils.l4addrStr(arqSockLocal);
+                IPPort arqSockLocal = fd.getLocalAddress();
+                String arqSockLocalStr = arqSockLocal.formatToIPPortString();
                 for (Map.Entry<Integer, StreamedFD> entry : fdMap.entrySet()) {
                     int streamId = entry.getKey();
                     StreamedFD sfd = entry.getValue();
-                    String local = Utils.l4addrStr((InetSocketAddress) sfd.getLocalAddress());
-                    String remote = Utils.l4addrStr((InetSocketAddress) sfd.getRemoteAddress());
+                    String local = sfd.getLocalAddress().formatToIPPortString();
+                    String remote = sfd.getRemoteAddress().formatToIPPortString();
 
                     Logger.probe(
                         "record: " + arqSockLocalStr

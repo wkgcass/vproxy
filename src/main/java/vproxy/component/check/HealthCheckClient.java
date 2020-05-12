@@ -1,12 +1,12 @@
 package vproxy.component.check;
 
+import vfd.IPPort;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.TimerEvent;
 import vproxy.util.Callback;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class HealthCheckClient {
     class ConnectResultHandler {
@@ -75,7 +75,7 @@ public class HealthCheckClient {
     private boolean stopped = true;
 
     public HealthCheckClient(NetEventLoop eventLoop,
-                             InetSocketAddress remote,
+                             IPPort remote,
                              HealthCheckConfig healthCheckConfig,
                              AnnotatedHcConfig annotatedHcConfig,
                              boolean initialIsUp,

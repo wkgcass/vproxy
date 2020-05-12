@@ -1,6 +1,8 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vfd.IP;
+import vproxy.util.Network;
 import vproxy.util.Tuple;
 import vproxy.util.Utils;
 
@@ -13,7 +15,7 @@ public class TestNetMask {
     @Test
     public void mask() {
         for (int m = 0; m <= 128; ++m) {
-            byte[] bytes = Utils.parseMask(m);
+            byte[] bytes = Network.parseMask(m);
             StringBuilder sb = new StringBuilder();
             for (byte b : bytes) {
                 int positive = Utils.positive(b);
@@ -61,9 +63,9 @@ public class TestNetMask {
             boolean b = tup.left;
             String addr = tup.right.left;
             int mask = tup.right.right;
-            byte[] bip = Utils.blockParseAddress(addr);
-            byte[] bmask = Utils.parseMask(mask);
-            assertEquals("check for " + tup, b, Utils.validNetwork(bip, bmask));
+            byte[] bip = IP.parseIpString(addr);
+            byte[] bmask = Network.parseMask(mask);
+            assertEquals("check for " + tup, b, Network.validNetwork(bip, bmask));
         }
     }
 
@@ -103,10 +105,10 @@ public class TestNetMask {
             boolean b = tup.left;
             String input = tup.right.left;
             String net = tup.right.right;
-            byte[] binput = Utils.blockParseAddress(input);
-            byte[] baddr = Utils.blockParseAddress(net.split("/")[0]);
-            byte[] bmask = Utils.parseMask(Integer.parseInt(net.split("/")[1]));
-            assertEquals("match for " + tup, b, Utils.maskMatch(binput, baddr, bmask));
+            byte[] binput = IP.parseIpString(input);
+            byte[] baddr = IP.parseIpString(net.split("/")[0]);
+            byte[] bmask = Network.parseMask(Integer.parseInt(net.split("/")[1]));
+            assertEquals("match for " + tup, b, Network.maskMatch(binput, baddr, bmask));
         }
     }
 }

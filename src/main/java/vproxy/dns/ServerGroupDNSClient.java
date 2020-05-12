@@ -1,17 +1,16 @@
 package vproxy.dns;
 
 import vfd.DatagramFD;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.component.svrgroup.ServerListener;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Callback;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.util.Collections;
 import java.util.HashSet;
@@ -51,12 +50,12 @@ public class ServerGroupDNSClient extends DNSClient {
     }
 
     @Override
-    public void setNameServers(List<InetSocketAddress> nameServers) {
-        var toAdd = new HashSet<InetSocketAddress>();
+    public void setNameServers(List<IPPort> nameServers) {
+        var toAdd = new HashSet<IPPort>();
         var toDel = new HashSet<ServerGroup.ServerHandle>();
         var servers = serverGroup.getServerHandles();
         out:
-        for (InetSocketAddress addr : nameServers) {
+        for (IPPort addr : nameServers) {
             for (ServerGroup.ServerHandle svr : servers) {
                 if (svr.server.equals(addr)) {
                     // found
@@ -68,7 +67,7 @@ public class ServerGroupDNSClient extends DNSClient {
         }
         out:
         for (ServerGroup.ServerHandle svr : servers) {
-            for (InetSocketAddress addr : nameServers) {
+            for (IPPort addr : nameServers) {
                 if (svr.server.equals(addr)) {
                     // found
                     continue out;
@@ -87,7 +86,7 @@ public class ServerGroupDNSClient extends DNSClient {
         }
         for (var add : toAdd) {
             try {
-                serverGroup.add(Utils.l4addrStr(add), add, 10);
+                serverGroup.add(add.formatToIPPortString(), add, 10);
             } catch (AlreadyExistException ignore) {
             }
         }
@@ -102,12 +101,12 @@ public class ServerGroupDNSClient extends DNSClient {
     }
 
     @Override
-    public void resolveIPv4(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
+    public void resolveIPv4(String domain, Callback<List<IP>, UnknownHostException> cb) {
         super.resolveIPv4(domain, cb);
     }
 
     @Override
-    public void resolveIPv6(String domain, Callback<List<InetAddress>, UnknownHostException> cb) {
+    public void resolveIPv6(String domain, Callback<List<IP>, UnknownHostException> cb) {
         super.resolveIPv6(domain, cb);
     }
 

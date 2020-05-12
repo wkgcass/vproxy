@@ -1,6 +1,7 @@
 package vproxy.selector.wrap.streamed;
 
 import vfd.FD;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
@@ -12,8 +13,6 @@ import vproxy.util.Utils;
 import vswitch.util.Consts;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
@@ -24,8 +23,8 @@ public class StreamedFD implements SocketFD, VirtualFD {
     public final int streamId;
     private final FD realFD;
     private final WrappedSelector selector;
-    private final SocketAddress localAddress;
-    private final SocketAddress remoteAddress;
+    private final IPPort localAddress;
+    private final IPPort remoteAddress;
     private final StreamedFDHandler handler;
     private final boolean client;
     private final Deque<ByteBuffer> readableBuffers = new LinkedList<>();
@@ -60,8 +59,8 @@ public class StreamedFD implements SocketFD, VirtualFD {
     public StreamedFD(int streamId,
                       FD realFD,
                       WrappedSelector selector,
-                      SocketAddress localAddress,
-                      SocketAddress remoteAddress,
+                      IPPort localAddress,
+                      IPPort remoteAddress,
                       StreamedFDHandler handler,
                       boolean client) {
         this.streamId = streamId;
@@ -76,22 +75,22 @@ public class StreamedFD implements SocketFD, VirtualFD {
         readingMirrorDataFactory = new MirrorDataFactory("streamed",
             d -> {
                 {
-                    InetSocketAddress remote = (InetSocketAddress) this.getRemoteAddress();
+                    IPPort remote = this.getRemoteAddress();
                     d.setSrc(remote);
                 }
                 {
-                    InetSocketAddress local = (InetSocketAddress) this.getLocalAddress();
+                    IPPort local = this.getLocalAddress();
                     d.setDst(local);
                 }
             });
         writingMirrorDataFactory = new MirrorDataFactory("streamed",
             d -> {
                 {
-                    InetSocketAddress local = (InetSocketAddress) this.getLocalAddress();
+                    IPPort local = this.getLocalAddress();
                     d.setSrc(local);
                 }
                 {
-                    InetSocketAddress remote = (InetSocketAddress) this.getRemoteAddress();
+                    IPPort remote = this.getRemoteAddress();
                     d.setDst(remote);
                 }
             });
@@ -159,7 +158,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public void connect(InetSocketAddress l4addr) throws IOException {
+    public void connect(IPPort l4addr) throws IOException {
         if (!remoteAddress.equals(l4addr)) {
             throw new IOException("cannot connect to " + l4addr + "(you could only connect to " + remoteAddress + ")");
         }
@@ -200,12 +199,12 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    public IPPort getLocalAddress() {
         return localAddress;
     }
 
     @Override
-    public SocketAddress getRemoteAddress() {
+    public IPPort getRemoteAddress() {
         return remoteAddress;
     }
 

@@ -1,14 +1,13 @@
 package vswitch;
 
+import vfd.IP;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.exception.XException;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -42,8 +41,8 @@ public class RouteTable {
         }
     }
 
-    public RouteRule lookup(InetAddress ip) {
-        if (ip instanceof Inet4Address) {
+    public RouteRule lookup(IP ip) {
+        if (ip instanceof IPv4) {
             for (RouteRule r : rulesV4) {
                 if (r.rule.contains(ip)) {
                     return r;
@@ -93,7 +92,7 @@ public class RouteTable {
                 throw new XException("validation failed for the rule with name " + r.alias);
         }
         if (r.ip != null) {
-            if (defaultV6Rule == null && r.ip instanceof Inet6Address) {
+            if (defaultV6Rule == null && r.ip instanceof IPv6) {
                 throw new XException("this network does not support ipv6");
             }
             if (!defaultV4Rule.rule.contains(r.ip) && (defaultV6Rule == null || !defaultV6Rule.rule.contains(r.ip))) {
@@ -184,7 +183,7 @@ public class RouteTable {
         public final String alias;
         public final Network rule;
         public final int toVni;
-        public final InetAddress ip;
+        public final IP ip;
 
         public RouteRule(String alias, Network rule, int toVni) {
             this.alias = alias;
@@ -193,7 +192,7 @@ public class RouteTable {
             this.ip = null;
         }
 
-        public RouteRule(String alias, Network rule, InetAddress ip) {
+        public RouteRule(String alias, Network rule, IP ip) {
             this.alias = alias;
             this.rule = rule;
             this.toVni = 0;
@@ -203,7 +202,7 @@ public class RouteTable {
         @Override
         public String toString() {
             return alias + " -> network " + rule + (
-                ip == null ? (" vni " + toVni) : (" via " + Utils.ipStr(ip))
+                ip == null ? (" vni " + toVni) : (" via " + ip.formatToIPString())
             );
         }
 

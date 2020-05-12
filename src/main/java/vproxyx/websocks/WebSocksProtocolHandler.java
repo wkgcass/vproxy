@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vfd.IP;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.app.Application;
@@ -20,7 +21,6 @@ import vproxy.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -50,10 +50,10 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         public void handle(WebSocksHttpProtocolHandler handler, ProtocolHandlerContext<HttpContext> ctx, String argument) {
             Resolver.getDefault().resolve(argument, new Callback<>() {
                 @Override
-                protected void onSucceeded(InetAddress value) {
+                protected void onSucceeded(IP value) {
                     JSON.Object object = new ObjectBuilder()
                         .put("domain", argument)
-                        .putArray("addresses", arr -> arr.add(Utils.ipStr(value.getAddress()))).build();
+                        .putArray("addresses", arr -> arr.add(value.formatToIPString())).build();
                     ctx.write(handler.response(object));
                 }
 
@@ -320,7 +320,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 }
                 resp.headers.add(new Header("Content-Type", "text/html"));
                 {
-                    String rawIp = Utils.ipStr(ctx.connection.remote.getAddress().getAddress());
+                    String rawIp = ctx.connection.remote.getAddress().formatToIPString();
                     String xff = null;
                     if (ctx.data != null && ctx.data.result != null && ctx.data.result.headers != null) {
                         var headers = ctx.data.result.headers;

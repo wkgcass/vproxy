@@ -1,5 +1,6 @@
 package vserver.server;
 
+import vfd.IPPort;
 import vjson.JSON;
 import vproxy.app.Application;
 import vproxy.connection.NetEventLoop;
@@ -19,7 +20,6 @@ import vserver.*;
 import vserver.route.WildcardRoute;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -78,7 +78,7 @@ public class Http1ServerImpl implements HttpServer {
     }
 
     @Override
-    public void listen(InetSocketAddress addr) throws IOException {
+    public void listen(IPPort addr) throws IOException {
         if (started) {
             throw new IllegalStateException("This http server is already started");
         }

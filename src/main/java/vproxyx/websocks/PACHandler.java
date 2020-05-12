@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vfd.IP;
 import vproxy.connection.Connection;
 import vproxy.http.HttpContext;
 import vproxy.http.HttpProtocolHandler;
@@ -8,10 +9,12 @@ import vproxy.processor.http1.entity.Request;
 import vproxy.protocol.ProtocolHandlerContext;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.Inet4Address;
+import java.net.InetAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.List;
@@ -46,7 +49,7 @@ public class PACHandler extends HttpProtocolHandler {
                     if (v.isEmpty()) {
                         continue;
                     }
-                    if (Utils.isIpLiteral(v)) {
+                    if (IP.isIpLiteral(v)) {
                         return v;
                     }
                     if (v.contains(":")) {
@@ -59,7 +62,7 @@ public class PACHandler extends HttpProtocolHandler {
         // try to get local address from connection
         Connection conn = ctx.connection;
         try {
-            return Utils.ipStr(((InetSocketAddress) conn.channel.getLocalAddress()).getAddress().getAddress());
+            return (conn.channel.getLocalAddress()).getAddress().formatToIPString();
         } catch (IOException ignore) {
         }
 
@@ -78,11 +81,11 @@ public class PACHandler extends HttpProtocolHandler {
             String selectedV6 = null;
 
             NetworkInterface nic = nics.nextElement();
-            Enumeration<InetAddress> addresses = nic.getInetAddresses();
+            var addresses = nic.getInetAddresses();
             while (addresses.hasMoreElements()) {
                 InetAddress addr = addresses.nextElement();
-                String strAddr = Utils.ipStr(addr.getAddress());
-                if (strAddr.equals("127.0.0.1") || strAddr.equals("0000:0000:0000:0000:0000:0000:0000:0001")) {
+                String strAddr = IP.ipStr(addr.getAddress());
+                if (strAddr.equals("127.0.0.1") || strAddr.equals("::1")) {
                     isLocal = true;
                     break;
                 } else if (addr instanceof Inet4Address) {

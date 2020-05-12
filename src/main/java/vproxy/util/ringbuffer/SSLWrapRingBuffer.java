@@ -1,15 +1,18 @@
 package vproxy.util.ringbuffer;
 
+import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
-import vproxy.util.*;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
+import vproxy.util.Utils;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
 import javax.net.ssl.SSLException;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
@@ -29,21 +32,21 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
     // for client
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
                       SSLEngine engine,
-                      NetworkFD fd) {
+                      NetworkFD<IPPort> fd) {
         this(plainBytesBuffer, engine,
             () -> {
                 try {
-                    return (InetSocketAddress) fd.getLocalAddress();
+                    return fd.getLocalAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting local address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             }, () -> {
                 try {
-                    return (InetSocketAddress) fd.getRemoteAddress();
+                    return fd.getRemoteAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting remote address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             });
     }
@@ -51,15 +54,15 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
     // for client
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
                       SSLEngine engine,
-                      InetSocketAddress remote) {
-        this(plainBytesBuffer, engine, Utils::bindAnyAddress, () -> remote);
+                      IPPort remote) {
+        this(plainBytesBuffer, engine, IPPort::bindAnyAddress, () -> remote);
     }
 
     // for client
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
                       SSLEngine engine,
-                      Supplier<InetSocketAddress> srcAddrSupplier,
-                      Supplier<InetSocketAddress> dstAddrSupplier) {
+                      Supplier<IPPort> srcAddrSupplier,
+                      Supplier<IPPort> dstAddrSupplier) {
         super(plainBytesBuffer);
         this.engine = engine;
 
@@ -69,44 +72,44 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         // mirror
         mirrorDataFactory = new MirrorDataFactory("ssl",
             d -> {
-                InetSocketAddress src = srcAddrSupplier.get();
-                InetSocketAddress dst = dstAddrSupplier.get();
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
                 d.setSrc(src).setDst(dst);
             });
     }
 
     // for server
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
-                      NetworkFD fd) {
+                      NetworkFD<IPPort> fd) {
         this(plainBytesBuffer,
             () -> {
                 try {
-                    return (InetSocketAddress) fd.getLocalAddress();
+                    return fd.getLocalAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting local address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             }, () -> {
                 try {
-                    return (InetSocketAddress) fd.getRemoteAddress();
+                    return fd.getRemoteAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting remote address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             });
     }
 
     // for server
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
-                      Supplier<InetSocketAddress> srcAddrSupplier,
-                      Supplier<InetSocketAddress> dstAddrSupplier) {
+                      Supplier<IPPort> srcAddrSupplier,
+                      Supplier<IPPort> dstAddrSupplier) {
         super(plainBytesBuffer);
 
         // mirror
         mirrorDataFactory = new MirrorDataFactory("ssl",
             d -> {
-                InetSocketAddress src = srcAddrSupplier.get();
-                InetSocketAddress dst = dstAddrSupplier.get();
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
                 d.setSrc(src).setDst(dst);
             });
     }

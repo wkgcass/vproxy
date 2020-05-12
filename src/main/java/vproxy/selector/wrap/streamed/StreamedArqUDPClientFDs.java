@@ -1,6 +1,7 @@
 package vproxy.selector.wrap.streamed;
 
 import vfd.EventSet;
+import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
 import vproxy.app.Config;
@@ -13,13 +14,12 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.function.Supplier;
 
 public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private final ArqUDPBasedFDs fds;
     private final SelectorEventLoop loop;
-    private final InetSocketAddress remote;
+    private final IPPort remote;
 
     private ArqUDPSocketFD fd;
     private boolean ready = false;
@@ -27,7 +27,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private PeriodicEvent keepaliveEvent;
     private final Supplier<StreamedFDHandler> handlerSupplier;
 
-    public StreamedArqUDPClientFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, InetSocketAddress remote,
+    public StreamedArqUDPClientFDs(ArqUDPBasedFDs fds, SelectorEventLoop loop, IPPort remote,
                                    Supplier<StreamedFDHandler> handlerSupplier) throws IOException {
         this.fds = fds;
         this.loop = loop;

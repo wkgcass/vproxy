@@ -1,5 +1,6 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IP;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
@@ -10,7 +11,6 @@ import vproxy.util.Utils;
 import vswitch.RouteTable;
 import vswitch.Table;
 
-import java.net.InetAddress;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -59,7 +59,7 @@ public class RouteHandle {
         if (vni != null && !Utils.isInteger(vni)) {
             throw new Exception("invalid argument for " + Param.vni + ": should be an integer");
         }
-        if (ip != null && Utils.parseIpString(ip) == null) {
+        if (ip != null && !IP.isIpLiteral(ip)) {
             throw new Exception("invalid argument for " + Param.via.fullname);
         }
     }
@@ -73,7 +73,7 @@ public class RouteHandle {
             int vni = Integer.parseInt(cmd.args.get(Param.vni));
             rule = new RouteTable.RouteRule(alias, net, vni);
         } else {
-            InetAddress ip = Utils.l3addr(cmd.args.get(Param.via));
+            IP ip = IP.from(cmd.args.get(Param.via));
             rule = new RouteTable.RouteRule(alias, net, ip);
         }
 

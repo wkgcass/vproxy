@@ -2,9 +2,10 @@ package vproxy.util;
 
 import vfd.DatagramFD;
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPPort;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Date;
 
@@ -222,8 +223,8 @@ public class Logger {
         return logChannel;
     }
 
-    private static InetSocketAddress getLogAddress() {
-        return new InetSocketAddress(Utils.l3addr(127, 0, 0, 1), 23456);
+    private static IPPort getLogAddress() {
+        return new IPPort(IP.from(new byte[]{127, 0, 0, 1}), 23456);
     }
 
     public static void shouldNotHappen(String msg, Throwable err) {

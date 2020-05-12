@@ -1,5 +1,6 @@
 package vproxyx.websocks.ss;
 
+import vfd.IP;
 import vproxy.connection.Connector;
 import vproxy.protocol.ProtocolHandler;
 import vproxy.protocol.ProtocolHandlerContext;
@@ -157,7 +158,7 @@ public class SSProtocolHandler implements ProtocolHandler<Tuple<SSContext, Callb
         if (pctx.reqType == AddressType.domain) {
             address = new String(pctx.address, StandardCharsets.UTF_8);
         } else {
-            address = Utils.ipStr(pctx.address);
+            address = IP.ipStr(pctx.address);
         }
         connectorProvider.provide(ctx.connection, pctx.reqType, address, pctx.port, connector -> {
             if (connector == null) {

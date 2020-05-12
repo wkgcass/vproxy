@@ -1,5 +1,7 @@
 package vproxyx;
 
+import vfd.IP;
+import vfd.IPPort;
 import vfd.VFDConfig;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
@@ -25,7 +27,6 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -217,7 +218,7 @@ public class WebSocksProxyServer {
         }
 
         // init the listening server
-        var listeningServerL4addr = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), port);
+        var listeningServerL4addr = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), port);
         List<ServerSock> servers = new LinkedList<>();
         {
             ServerSock.checkBind(listeningServerL4addr);
@@ -233,7 +234,7 @@ public class WebSocksProxyServer {
         }
         ServerSock redirectServer = null;
         if (redirectPort != -1) {
-            var l4addr = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), redirectPort);
+            var l4addr = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), redirectPort);
             redirectServer = ServerSock.create(l4addr);
         }
 

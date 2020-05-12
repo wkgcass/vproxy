@@ -1,11 +1,11 @@
 package vproxy.app;
 
+import vfd.IPPort;
 import vproxy.component.app.HttpController;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +19,7 @@ public class HttpControllerHolder {
     }
 
     public HttpController add(String alias,
-                              InetSocketAddress address) throws AlreadyExistException, IOException {
+                              IPPort address) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("http-controller", alias);
         HttpController rc = new HttpController(alias, address);

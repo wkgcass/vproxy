@@ -4,7 +4,10 @@ import vproxy.component.svrgroup.ServerGroup;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 
-import java.util.*;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 public class GlobalEvents {

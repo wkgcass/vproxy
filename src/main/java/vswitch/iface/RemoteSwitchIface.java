@@ -1,21 +1,20 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
-import vproxy.util.Utils;
+import vfd.IPPort;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class RemoteSwitchIface implements Iface {
     public final String alias;
-    public final InetSocketAddress udpSockAddress;
+    public final IPPort udpSockAddress;
     public final boolean addSwitchFlag;
 
-    public RemoteSwitchIface(String alias, InetSocketAddress udpSockAddress, boolean addSwitchFlag) {
+    public RemoteSwitchIface(String alias, IPPort udpSockAddress, boolean addSwitchFlag) {
         this.alias = alias;
         this.udpSockAddress = udpSockAddress;
         this.addSwitchFlag = addSwitchFlag;
@@ -37,7 +36,7 @@ public class RemoteSwitchIface implements Iface {
 
     @Override
     public String toString() {
-        return "Iface(remote:" + alias + "," + Utils.l4addrStr(udpSockAddress) + ")";
+        return "Iface(remote:" + alias + "," + udpSockAddress.formatToIPPortString() + ")";
     }
 
     @Override

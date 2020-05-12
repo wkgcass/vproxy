@@ -1,6 +1,8 @@
 package vproxy.test.cases;
 
 import org.junit.*;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.HealthCheckConfig;
@@ -21,10 +23,8 @@ import vproxy.test.tool.Client;
 import vproxy.test.tool.EchoServer;
 import vproxy.test.tool.IdServer;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -82,27 +82,27 @@ public class TestTcpLB {
         elg0.add("el0");
         secg0 = new SecurityGroup("secg0", true);
         lb0 = new TcpLB("lb0", elg0, elg0,
-            new InetSocketAddress("127.0.0.1", lbPort), upstream0,
+            new IPPort("127.0.0.1", lbPort), upstream0,
             Config.tcpTimeout, 16384, 16384, secg0);
         lb0.start();
 
         sg0 = new ServerGroup("sg0", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg0.add("svr0", new InetSocketAddress("127.0.0.1", 19080), 10);
-        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), 10);
+        sg0.add("svr0", new IPPort("127.0.0.1", 19080), 10);
+        sg0.add("svr1", new IPPort("127.0.0.1", 19081), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg0.getServerHandles()) {
             h.healthy = true;
         }
 
         sg1 = new ServerGroup("sg1", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        sg1.add("svr2", new InetSocketAddress("127.0.0.1", 19082), 10);
+        sg1.add("svr2", new IPPort("127.0.0.1", 19082), 10);
         // manually set to healthy
         for (ServerGroup.ServerHandle h : sg1.getServerHandles()) {
             h.healthy = true;
         }
 
         sgEcho = new ServerGroup("sgEcho", elg0, new HealthCheckConfig(400, 1000, 1, 3), Method.wrr);
-        sgEcho.add("echo", new InetSocketAddress("127.0.0.1", 20080), 10);
+        sgEcho.add("echo", new IPPort("127.0.0.1", 20080), 10);
 
         loop = SelectorEventLoop.open();
 
@@ -205,7 +205,7 @@ public class TestTcpLB {
             client.close();
         }
 
-        sg0.add("svr1", new InetSocketAddress("127.0.0.1", 19081), 5);
+        sg0.add("svr1", new IPPort("127.0.0.1", 19081), 5);
         sg0.getServerHandles().stream().filter(s -> s.alias.equals("svr1")).findFirst().get().healthy = true;
 
         int zero = 0;
@@ -642,13 +642,13 @@ public class TestTcpLB {
 
         // start another lb
         TcpLB lb1 = new TcpLB("lb1", elg0, elg0,
-            new InetSocketAddress("127.0.0.1", lbPort + 1), upstream0,
+            new IPPort("127.0.0.1", lbPort + 1), upstream0,
             Config.tcpTimeout, 16384, 16384, secg0);
         lb1.start();
 
         // deny lbPort
         SecurityGroupRule secgr0 = new SecurityGroupRule(
-            "secgr0", new Network(Utils.blockParseAddress("127.0.0.1"), Utils.parseMask(32)), Protocol.TCP, lbPort, lbPort, false
+            "secgr0", new Network(IP.blockParseAddress("127.0.0.1"), Network.parseMask(32)), Protocol.TCP, lbPort, lbPort, false
         );
         secg0.addRule(secgr0);
 
@@ -683,7 +683,7 @@ public class TestTcpLB {
         assertEquals("requesting svr2 should return 2", "2", res);
         client1.close();
 
-        sg1.replaceIp("svr2", Utils.l3addr("127.1.2.3")); // a backend not exist
+        sg1.replaceIp("svr2", IP.from("127.1.2.3")); // a backend not exist
         // now there should be 2 backend named svr2
         List<ServerGroup.ServerHandle> list = sg1.getServerHandles();
         assertEquals("should be two servers", 2, list.size());
@@ -701,7 +701,7 @@ public class TestTcpLB {
         assertFalse("old server is not logic deleted now", old.isLogicDelete());
 
         // let's try a server that will succeed
-        sg1.replaceIp("svr2", Utils.l3addr(addressOtherThan127)); // use another one this time
+        sg1.replaceIp("svr2", IP.from(addressOtherThan127)); // use another one this time
         list = sg1.getServerHandles();
         assertEquals("should be two servers", 2, list.size());
 

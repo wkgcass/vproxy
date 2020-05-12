@@ -1,6 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.*;
+import vfd.IPPort;
 import vproxy.component.check.AnnotatedHcConfig;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.ConnectClient;
@@ -13,7 +14,6 @@ import vproxy.test.tool.SendOnConnectIdServer;
 import vproxy.util.BlockCallback;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.channels.InterruptedByTimeoutException;
 
 import static org.junit.Assert.*;
@@ -62,7 +62,7 @@ public class TestConnectClient {
 
     private void doConnect(String targetAddress, CheckProtocol protocol, int port) throws Exception {
         ConnectClient client = new ConnectClient(netEventLoop,
-            new InetSocketAddress(targetAddress, port),
+            new IPPort(targetAddress, port),
             protocol,
             100,
             new AnnotatedHcConfig());

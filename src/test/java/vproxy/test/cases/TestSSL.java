@@ -6,6 +6,8 @@ import io.vertx.core.http.HttpClientOptions;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.CheckProtocol;
 import vproxy.component.check.HealthCheckConfig;
@@ -23,7 +25,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.BlockCallback;
 import vproxy.util.RingBuffer;
 import vproxy.util.RingBufferETHandler;
-import vproxy.util.Utils;
 import vproxy.util.nio.ByteArrayChannel;
 import vproxy.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxy.util.ringbuffer.SSLUtils;
@@ -33,7 +34,9 @@ import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.*;
 import java.io.IOException;
-import java.net.*;
+import java.net.ServerSocket;
+import java.net.Socket;
+import java.net.UnknownHostException;
 import java.security.KeyStore;
 import java.util.concurrent.ConcurrentLinkedQueue;
 
@@ -114,9 +117,9 @@ public class TestSSL {
         String url = "https://cip.cc";
         String host = url.substring("https://".length());
         int port = 443;
-        BlockCallback<InetAddress, UnknownHostException> cb = new BlockCallback<>();
+        BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
         Resolver.getDefault().resolveV4(host, cb);
-        InetAddress inet;
+        IP inet;
         try {
             inet = cb.block();
         } catch (UnknownHostException e) {
@@ -124,11 +127,11 @@ public class TestSSL {
                 "may be network is wrong, we ignore this case");
             return;
         }
-        var remote = new InetSocketAddress(inet, port);
+        var remote = new IPPort(inet, port);
         // make a socket to test whether it's accessible
         {
             try (Socket sock = new Socket()) {
-                sock.connect(remote);
+                sock.connect(remote.toInetSocketAddress());
             } catch (IOException e) {
                 System.out.println("we cannot connect to the remote," +
                     "may be network is wrong, we ignore this case");
@@ -409,13 +412,13 @@ public class TestSSL {
 
             Thread.sleep(1000);
 
-            sg.add("svr", new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), 39999), 10);
+            sg.add("svr", new IPPort(IP.from(new byte[]{127, 0, 0, 1}), 39999), 10);
 
             TcpLB tl = new TcpLB(
                 "testSslProxy",
                 elg,
                 elg,
-                new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), 19999),
+                new IPPort(IP.from(new byte[]{127, 0, 0, 1}), 19999),
                 ups,
                 1000,
                 4096,

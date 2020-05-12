@@ -1,11 +1,11 @@
 package vserver;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.dns.Resolver;
 import vserver.server.Http1ServerImpl;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 
 public interface HttpServer {
@@ -52,7 +52,7 @@ public interface HttpServer {
     }
 
     default void listen(int port, String address) throws IOException {
-        InetAddress l3addr;
+        IP l3addr;
         try {
             l3addr = Resolver.getDefault().blockResolve(address);
         } catch (UnknownHostException e) {
@@ -61,11 +61,11 @@ public interface HttpServer {
         listen(port, l3addr);
     }
 
-    default void listen(int port, InetAddress addr) throws IOException {
-        listen(new InetSocketAddress(addr, port));
+    default void listen(int port, IP addr) throws IOException {
+        listen(new IPPort(addr, port));
     }
 
-    void listen(InetSocketAddress addr) throws IOException;
+    void listen(IPPort addr) throws IOException;
 
     void close();
 }

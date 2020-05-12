@@ -1,9 +1,8 @@
 package vproxy.component.secure;
 
+import vfd.IP;
 import vproxy.connection.Protocol;
 import vproxy.util.Network;
-
-import java.net.InetAddress;
 
 public class SecurityGroupRule {
     public final String alias;
@@ -25,7 +24,7 @@ public class SecurityGroupRule {
         this.allow = allow;
     }
 
-    public boolean match(InetAddress address, int port) {
+    public boolean match(IP address, int port) {
         return network.contains(address) && minPort <= port && port <= maxPort;
     }
 

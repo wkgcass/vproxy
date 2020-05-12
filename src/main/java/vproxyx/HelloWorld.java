@@ -1,17 +1,21 @@
 package vproxyx;
 
 import vclient.HttpClient;
+import vfd.IP;
+import vfd.IPPort;
 import vfd.SocketFD;
 import vfd.VFDConfig;
 import vproxy.app.Application;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
-import vproxy.util.*;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
+import vproxy.util.Tuple;
 import vproxy.util.nio.ByteArrayChannel;
 import vserver.HttpServer;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class HelloWorld {
     public static void main0(@SuppressWarnings("unused") String[] args) throws Exception {
@@ -28,8 +32,8 @@ public class HelloWorld {
             ))
             .get("/hello", rctx -> rctx.response().end(
                 "Welcome to vproxy " + Application.VERSION + ".\r\n" +
-                    "Your request address is " + Utils.l4addrStr(rctx.getRemote()) + ".\r\n" +
-                    "Server address is " + Utils.l4addrStr(rctx.getLocal()) + ".\r\n"
+                    "Your request address is " + rctx.getRemote().formatToIPPortString() + ".\r\n" +
+                    "Server address is " + rctx.getLocal().formatToIPPortString() + ".\r\n"
             ))
             .listen(listenPort);
         Logger.alert("HTTP server is listening on " + listenPort);
@@ -54,8 +58,8 @@ public class HelloWorld {
             });
         }
 
-        InetSocketAddress listenAddress = new InetSocketAddress(Utils.l3addr(new byte[]{0, 0, 0, 0}), listenPort);
-        InetSocketAddress connectAddress = new InetSocketAddress(Utils.l3addr(new byte[]{127, 0, 0, 1}), listenPort);
+        IPPort listenAddress = new IPPort(IP.from(new byte[]{0, 0, 0, 0}), listenPort);
+        IPPort connectAddress = new IPPort(IP.from(new byte[]{127, 0, 0, 1}), listenPort);
         final int bufferSize = 1024;
         ServerSock sock = ServerSock.createUDP(listenAddress, sLoop);
         nLoop.addServer(sock, null, new ServerHandler() {

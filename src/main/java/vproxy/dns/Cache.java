@@ -1,15 +1,14 @@
 package vproxy.dns;
 
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.selector.TimerEvent;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
-import vproxy.util.Utils;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
@@ -18,23 +17,23 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class Cache {
     private AbstractResolver abstractResolver;
     public final String host;
-    public final List<Inet4Address> ipv4;
-    public final List<Inet6Address> ipv6;
+    public final List<IPv4> ipv4;
+    public final List<IPv6> ipv6;
     private final AtomicInteger idxIpv4 = new AtomicInteger(0);
     private final AtomicInteger idxIpv6 = new AtomicInteger(0);
     final TimerEvent te;
     public final long timestamp;
 
-    Cache(AbstractResolver abstractResolver, String host, InetAddress[] addresses) {
+    Cache(AbstractResolver abstractResolver, String host, IP[] addresses) {
         this.abstractResolver = abstractResolver;
         this.host = host;
-        List<Inet4Address> ipv4 = new LinkedList<>();
-        List<Inet6Address> ipv6 = new LinkedList<>();
-        for (InetAddress a : addresses) {
-            if (a instanceof Inet4Address) {
-                ipv4.add((Inet4Address) a);
-            } else if (a instanceof Inet6Address) {
-                ipv6.add((Inet6Address) a);
+        List<IPv4> ipv4 = new LinkedList<>();
+        List<IPv6> ipv6 = new LinkedList<>();
+        for (IP a : addresses) {
+            if (a instanceof IPv4) {
+                ipv4.add((IPv4) a);
+            } else if (a instanceof IPv6) {
+                ipv6.add((IPv6) a);
             }
         }
         this.ipv4 = Collections.unmodifiableList(ipv4);
@@ -66,9 +65,9 @@ public class Cache {
         }
     }
 
-    public Tuple<Inet4Address, Inet6Address> next() {
-        Inet4Address v4 = null;
-        Inet6Address v6 = null;
+    public Tuple<IPv4, IPv6> next() {
+        IPv4 v4 = null;
+        IPv6 v6 = null;
         //noinspection Duplicates
         if (ipv4.size() != 0) {
             int idx = idxIpv4.getAndIncrement();
@@ -95,17 +94,17 @@ public class Cache {
         StringBuilder sb = new StringBuilder();
         sb.append(host).append(" -> ipv4 [");
         boolean isFirst = true;
-        for (Inet4Address i : ipv4) {
+        for (IPv4 i : ipv4) {
             if (isFirst) isFirst = false;
             else sb.append(",");
-            sb.append(Utils.ipStr(i.getAddress()));
+            sb.append(i.formatToIPString());
         }
         sb.append("] ipv6 [");
         isFirst = true;
-        for (Inet6Address i : ipv6) {
+        for (IPv6 i : ipv6) {
             if (isFirst) isFirst = false;
             else sb.append(",");
-            sb.append(Utils.ipStr(i.getAddress()));
+            sb.append(i.formatToIPString());
         }
         return sb.toString();
     }

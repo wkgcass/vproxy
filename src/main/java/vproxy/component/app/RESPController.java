@@ -1,5 +1,6 @@
 package vproxy.component.app;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.*;
@@ -17,14 +18,13 @@ import vproxy.util.Logger;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 
 public class RESPController {
     public final String alias;
     public final ServerSock server;
 
-    public RESPController(String alias, InetSocketAddress address, byte[] password) throws IOException {
+    public RESPController(String alias, IPPort address, byte[] password) throws IOException {
         this.alias = alias;
         if (Config.checkBind) {
             ServerSock.checkBind(address);

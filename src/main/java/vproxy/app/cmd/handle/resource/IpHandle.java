@@ -1,15 +1,14 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IP;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.component.exception.XException;
-import vproxy.util.Utils;
 import vswitch.Table;
 import vswitch.util.MacAddress;
 
-import java.net.InetAddress;
 import java.util.Collection;
 import java.util.Map;
 
@@ -31,12 +30,12 @@ public class IpHandle {
         VpcHandle.checkVpcName(parent);
     }
 
-    public static Collection<InetAddress> names(Resource parent) throws Exception {
+    public static Collection<IP> names(Resource parent) throws Exception {
         Table tbl = VpcHandle.get(parent);
         return tbl.ips.allIps();
     }
 
-    public static Collection<Map.Entry<InetAddress, MacAddress>> list(Resource parent) throws Exception {
+    public static Collection<Map.Entry<IP, MacAddress>> list(Resource parent) throws Exception {
         Table tbl = VpcHandle.get(parent);
         return tbl.ips.entries();
     }
@@ -52,11 +51,11 @@ public class IpHandle {
         String ip = cmd.resource.alias;
         String mac = cmd.args.get(Param.mac);
 
-        byte[] ipBytes = Utils.parseIpString(ip);
+        byte[] ipBytes = IP.parseIpString(ip);
         if (ipBytes == null) {
             throw new XException("invalid ip address: " + ip);
         }
-        InetAddress inet = Utils.l3addr(ipBytes);
+        IP inet = IP.from(ipBytes);
         MacAddress macO;
         try {
             macO = new MacAddress(mac);
@@ -70,11 +69,11 @@ public class IpHandle {
     public static void forceRemove(Command cmd) throws Exception {
         String ip = cmd.resource.alias;
 
-        byte[] ipBytes = Utils.parseIpString(ip);
+        byte[] ipBytes = IP.parseIpString(ip);
         if (ipBytes == null) {
             throw new XException("invalid ip address: " + ip);
         }
-        InetAddress inet = Utils.l3addr(ipBytes);
+        IP inet = IP.from(ipBytes);
 
         VpcHandle.get(cmd.prepositionResource).ips.del(inet);
     }

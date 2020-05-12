@@ -1,5 +1,6 @@
 package vproxy.test.tool;
 
+import vfd.IPPort;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolHandler;
@@ -9,7 +10,6 @@ import vproxy.protocol.ProtocolServerHandler;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.concurrent.atomic.AtomicLong;
 
 public class IdServer {
@@ -26,7 +26,7 @@ public class IdServer {
 
     public IdServer(String id, NetEventLoop loop, int port, String addr) throws IOException {
         this.id = id;
-        ServerSock serverSocks = ServerSock.create(new InetSocketAddress(addr, port));
+        ServerSock serverSocks = ServerSock.create(new IPPort(addr, port));
         ProtocolServerHandler.apply(loop, serverSocks,
             new ProtocolServerConfig(), new IdProtocolHandler());
     }

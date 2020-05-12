@@ -1,6 +1,7 @@
 package vproxy.selector.wrap.streamed;
 
 import vfd.FD;
+import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
 import vproxy.selector.SelectorEventLoop;
@@ -10,8 +11,6 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 import java.net.SocketOption;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -19,7 +18,7 @@ import java.util.LinkedList;
 public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     private final ServerSocketFD readFD;
     private final WrappedSelector selector;
-    private final SocketAddress local;
+    private final IPPort local;
     private final StreamedServerSocketFD[] serverPtr;
 
     private boolean isOpen = true;
@@ -27,10 +26,10 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
 
     public StreamedServerSocketFD(ServerSocketFD readFD,
                                   SelectorEventLoop loop,
-                                  SocketAddress local,
+                                  IPPort local,
                                   StreamedServerSocketFD[] serverPtr) throws IOException {
         this.readFD = readFD;
-        this.selector = (WrappedSelector) loop.selector;
+        this.selector = loop.selector;
         this.local = local;
         this.serverPtr = serverPtr;
 
@@ -43,7 +42,7 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public SocketAddress getLocalAddress() {
+    public IPPort getLocalAddress() {
         return local;
     }
 
@@ -61,7 +60,7 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public void bind(InetSocketAddress l4addr) throws IOException {
+    public void bind(IPPort l4addr) throws IOException {
         if (!l4addr.equals(local)) {
             throw new IOException("cannot bind " + l4addr + "(you could only bind " + local + ")");
         }

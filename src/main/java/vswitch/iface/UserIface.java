@@ -1,21 +1,20 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
+import vfd.IPPort;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
-import vswitch.util.UserInfo;
 import vswitch.packet.VProxyEncryptedPacket;
 import vswitch.packet.VXLanPacket;
 import vswitch.util.Consts;
+import vswitch.util.UserInfo;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 
 public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVniGetterSetter, IfaceCanSendVProxyPacket {
-    public final InetSocketAddress udpSockAddress;
+    public final IPPort udpSockAddress;
     public final String user;
 
     private int remoteSideVni;
@@ -23,7 +22,7 @@ public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVni
 
     private final Map<String, UserInfo> userMapRef;
 
-    public UserIface(InetSocketAddress udpSockAddress, String user, Map<String, UserInfo> userMapRef) {
+    public UserIface(IPPort udpSockAddress, String user, Map<String, UserInfo> userMapRef) {
         this.udpSockAddress = udpSockAddress;
         this.user = user;
         this.userMapRef = userMapRef;
@@ -45,7 +44,7 @@ public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVni
 
     @Override
     public String toString() {
-        return "Iface(user:" + user.replace(Consts.USER_PADDING, "") + "," + Utils.l4addrStr(udpSockAddress) + ",lvni:" + localSideVni + ",rvni:" + remoteSideVni + ')';
+        return "Iface(user:" + user.replace(Consts.USER_PADDING, "") + "," + udpSockAddress.formatToIPPortString() + ",lvni:" + localSideVni + ",rvni:" + remoteSideVni + ')';
     }
 
     @Override

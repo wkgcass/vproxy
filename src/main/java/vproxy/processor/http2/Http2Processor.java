@@ -1,10 +1,9 @@
 package vproxy.processor.http2;
 
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.processor.OOProcessor;
 import vproxy.util.Logger;
-
-import java.net.InetSocketAddress;
 
 public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     private static final int HTTP2_ZERO_COPY_THRESHOLD;
@@ -33,12 +32,12 @@ public class Http2Processor extends OOProcessor<Http2Context, Http2SubContext> {
     }
 
     @Override
-    public Http2Context init(InetSocketAddress clientAddress) {
+    public Http2Context init(IPPort clientAddress) {
         return new Http2Context(clientAddress);
     }
 
     @Override
-    public Http2SubContext initSub(Http2Context ctx, int id, InetSocketAddress associatedAddress) {
+    public Http2SubContext initSub(Http2Context ctx, int id, IPPort associatedAddress) {
         return new Http2SubContext(ctx, id);
     }
 

@@ -1,13 +1,12 @@
 package vproxy.processor.http;
 
+import vfd.IPPort;
 import vproxy.processor.Hint;
 import vproxy.processor.Processor;
 import vproxy.processor.http1.HttpProcessor;
 import vproxy.processor.http2.Http2Processor;
 import vproxy.processor.http2.Http2SubContext;
 import vproxy.util.ByteArray;
-
-import java.net.InetSocketAddress;
 
 public class GeneralHttpProcessor implements Processor<GeneralHttpContext, GeneralHttpSubContext> {
     private final HttpProcessor httpProcessor = new HttpProcessor();
@@ -29,12 +28,12 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
     }
 
     @Override
-    public GeneralHttpContext init(InetSocketAddress clientAddress) {
+    public GeneralHttpContext init(IPPort clientAddress) {
         return new GeneralHttpContext(httpProcessor.init(clientAddress), http2Processor.init(clientAddress));
     }
 
     @Override
-    public GeneralHttpSubContext initSub(GeneralHttpContext ctx, int id, InetSocketAddress associatedAddress) {
+    public GeneralHttpSubContext initSub(GeneralHttpContext ctx, int id, IPPort associatedAddress) {
         return new GeneralHttpSubContext(
             id,
             httpProcessor.initSub(ctx.httpContext, id, associatedAddress),

@@ -1,19 +1,18 @@
 package vswitch.iface;
 
 import vfd.DatagramFD;
-import vproxy.util.Utils;
+import vfd.IPPort;
 import vswitch.packet.VXLanPacket;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
-    public final InetSocketAddress udpSockAddress; // for vxlan or vproxy wrapped vxlan
+    public final IPPort udpSockAddress; // for vxlan or vproxy wrapped vxlan
     private int serverSideVni;
 
-    public BareVXLanIface(InetSocketAddress udpSockAddress) {
+    public BareVXLanIface(IPPort udpSockAddress) {
         this.udpSockAddress = udpSockAddress;
     }
 
@@ -32,7 +31,7 @@ public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
 
     @Override
     public String toString() {
-        return "Iface(" + Utils.l4addrStr(udpSockAddress) + ')';
+        return "Iface(" + udpSockAddress.formatToIPPortString() + ')';
     }
 
     @Override

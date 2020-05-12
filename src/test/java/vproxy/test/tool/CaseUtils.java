@@ -16,7 +16,7 @@ public class CaseUtils {
         out:
         while (nics.hasMoreElements()) {
             NetworkInterface nic = nics.nextElement();
-            Enumeration<InetAddress> ips = nic.getInetAddresses();
+            var ips = nic.getInetAddresses();
             while (ips.hasMoreElements()) {
                 InetAddress addr = ips.nextElement();
                 if (addr instanceof Inet4Address && !addr.getHostAddress().equals("127.0.0.1")) {

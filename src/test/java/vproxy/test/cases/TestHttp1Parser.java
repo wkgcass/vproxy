@@ -1,6 +1,8 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.processor.Processor;
 import vproxy.processor.http1.HttpContext;
 import vproxy.processor.http1.HttpProcessor;
@@ -8,9 +10,7 @@ import vproxy.processor.http1.HttpSubContext;
 import vproxy.processor.http1.entity.Request;
 import vproxy.processor.http1.entity.Response;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedHashMap;
 import java.util.Objects;
 
@@ -19,8 +19,8 @@ import static org.junit.Assert.*;
 public class TestHttp1Parser {
     private static final String forwardedFor = "1.2.3.4";
     private static final String clientPort = "1122";
-    private static final InetSocketAddress address = new InetSocketAddress(
-        Utils.l3addr(Objects.requireNonNull(Utils.parseIpv4String(forwardedFor))),
+    private static final IPPort address = new IPPort(
+        IP.from(Objects.requireNonNull(IP.parseIpv4String(forwardedFor))),
         Integer.parseInt(clientPort)
     );
 

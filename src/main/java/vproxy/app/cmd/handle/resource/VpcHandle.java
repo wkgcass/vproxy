@@ -1,5 +1,6 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IP;
 import vproxy.app.Application;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
@@ -7,8 +8,6 @@ import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.NetworkHandle;
 import vproxy.util.Network;
-import vproxy.util.Tuple;
-import vproxy.util.Utils;
 import vswitch.Switch;
 import vswitch.Table;
 
@@ -50,20 +49,20 @@ public class VpcHandle {
             throw new Exception("missing argument " + Param.v4net);
         }
         String v4net = cmd.args.get(Param.v4net);
-        if (!Utils.validNetworkStr(v4net)) {
+        if (!Network.validNetworkStr(v4net)) {
             throw new Exception("invalid argument " + Param.v4net + ": " + v4net);
         }
         String n = v4net.split("/")[0];
-        if (Utils.parseIpString(n).length != 4) {
+        if (IP.parseIpString(n).length != 4) {
             throw new Exception("invalid argument " + Param.v4net + ": not ipv4 network" + ": " + v4net);
         }
         if (cmd.args.containsKey(Param.v6net)) {
             String v6net = cmd.args.get(Param.v6net);
-            if (!Utils.validNetworkStr(v6net)) {
+            if (!Network.validNetworkStr(v6net)) {
                 throw new Exception("invalid argument " + Param.v6net + ": " + v6net);
             }
             n = v6net.split("/")[0];
-            if (Utils.parseIpString(n).length != 16) {
+            if (IP.parseIpString(n).length != 16) {
                 throw new Exception("invalid argument " + Param.v6net + ": not ipv6 network" + ": " + v6net);
             }
         }

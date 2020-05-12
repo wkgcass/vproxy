@@ -1,39 +1,39 @@
 package vproxy.poc;
 
+import vfd.IPPort;
+import vfd.SockAddr;
 import vproxy.component.check.*;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
-import java.net.SocketAddress;
 
 public class HealthCheckClientExample {
     public static void main(String[] args) throws IOException, InterruptedException {
         SelectorEventLoop loop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(loop);
         HealthCheckClient client = new HealthCheckClient(eventLoop,
-            new InetSocketAddress("127.0.0.1", 18080),
+            new IPPort("127.0.0.1", 18080),
             new HealthCheckConfig(200, 800, 4, 5),
             new AnnotatedHcConfig(),
             true, new HealthCheckHandler() {
             @Override
-            public void up(SocketAddress remote) {
+            public void up(SockAddr remote) {
                 System.out.println("health check status change to \033[1;32mup\033[0m");
             }
 
             @Override
-            public void down(SocketAddress remote, String reason) {
+            public void down(SockAddr remote, String reason) {
                 System.out.println("health check status change to \033[1;31mdown\033[0m, " + reason);
             }
 
             @Override
-            public void upOnce(SocketAddress remote, ConnectResult cost) {
+            public void upOnce(SockAddr remote, ConnectResult cost) {
                 System.out.println("health check got \033[0;32mone up\033[0m");
             }
 
             @Override
-            public void downOnce(SocketAddress remote, String reason) {
+            public void downOnce(SockAddr remote, String reason) {
                 System.out.println("health check got \033[0;31mone down\033[0m, " + reason);
             }
         });

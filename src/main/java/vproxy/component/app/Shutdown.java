@@ -16,11 +16,11 @@ import vproxy.dns.DNSServer;
 import vproxy.util.*;
 import vswitch.RouteTable;
 import vswitch.Switch;
+import vswitch.iface.RemoteSwitchIface;
 import vswitch.iface.TapIface;
 import vswitch.iface.UserClientIface;
 import vswitch.util.Consts;
 import vswitch.util.UserInfo;
-import vswitch.iface.RemoteSwitchIface;
 
 import java.io.*;
 import java.util.*;
@@ -490,7 +490,7 @@ public class Shutdown {
                 }
                 StringBuilder cmd = new StringBuilder("add tcp-lb " + tl.alias + " acceptor-elg " + tl.acceptorGroup.alias +
                     " event-loop-group " + tl.workerGroup.alias +
-                    " address " + Utils.ipport(tl.bindAddress) + " upstream " + tl.backend.alias +
+                    " address " + tl.bindAddress.formatToIPPortString() + " upstream " + tl.backend.alias +
                     " timeout " + tl.getTimeout() +
                     " in-buffer-size " + tl.getInBufferSize() + " out-buffer-size " + tl.getOutBufferSize() +
                     " protocol " + tl.protocol);
@@ -537,7 +537,7 @@ public class Shutdown {
                 }
                 String cmd = "add socks5-server " + socks5.alias + " acceptor-elg " + socks5.acceptorGroup.alias +
                     " event-loop-group " + socks5.workerGroup.alias +
-                    " address " + Utils.ipport(socks5.bindAddress) + " upstream " + socks5.backend.alias +
+                    " address " + socks5.bindAddress.formatToIPPortString() + " upstream " + socks5.backend.alias +
                     " timeout " + socks5.getTimeout() +
                     " in-buffer-size " + socks5.getInBufferSize() + " out-buffer-size " + socks5.getOutBufferSize() +
                     " " + (socks5.allowNonBackend ? "allow-non-backend" : "deny-non-backend");
@@ -570,7 +570,7 @@ public class Shutdown {
                 }
                 String cmd = "add dns-server " + dns.alias +
                     " event-loop-group " + dns.eventLoopGroup.alias +
-                    " address " + Utils.ipport(dns.bindAddress) + " upstream " + dns.rrsets.alias;
+                    " address " + dns.bindAddress.formatToIPPortString() + " upstream " + dns.rrsets.alias;
                 commands.add(cmd);
             }
         }
@@ -583,7 +583,7 @@ public class Shutdown {
                     String cmd = "add server " + sh.alias + " to server-group " + sg.alias +
                         " address "
                         + (sh.hostName == null
-                        ? Utils.ipStr(sh.server.getAddress().getAddress())
+                        ? sh.server.getAddress().formatToIPString()
                         : sh.hostName)
                         + ":" + sh.server.getPort()
                         + " weight " + sh.getWeight();
@@ -612,7 +612,7 @@ public class Shutdown {
                 }
 
                 String cmd = "add switch " + sw.alias
-                    + " address " + Utils.l4addrStr(sw.vxlanBindingAddress)
+                    + " address " + sw.vxlanBindingAddress.formatToIPPortString()
                     + " mac-table-timeout " + sw.getMacTableTimeout()
                     + " arp-table-timeout " + sw.getArpTableTimeout()
                     + " event-loop-group " + sw.eventLoopGroup.alias;
@@ -633,7 +633,7 @@ public class Shutdown {
                         continue;
                     }
                     var rsi = (RemoteSwitchIface) iface;
-                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + Utils.l4addrStr(rsi.udpSockAddress);
+                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + rsi.udpSockAddress.formatToIPPortString();
                     if (!rsi.addSwitchFlag) {
                         cmd += " no-switch-flag";
                     }
@@ -646,7 +646,7 @@ public class Shutdown {
                     }
                     var ucliIface = (UserClientIface) iface;
                     cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
-                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + Utils.l4addrStr(ucliIface.remoteAddress);
+                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remoteAddress.formatToIPPortString();
                     commands.add(cmd);
                 }
                 // create tap
@@ -673,7 +673,7 @@ public class Shutdown {
                     var table = entry.getValue();
                     // create ips
                     for (var ip : table.ips.entries()) {
-                        cmd = "add ip " + Utils.ipStr(ip.getKey()) + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ip.getValue();
+                        cmd = "add ip " + ip.getKey().formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ip.getValue();
                         commands.add(cmd);
                     }
                     // create|remove routes
@@ -703,7 +703,7 @@ public class Shutdown {
                         if (r.ip == null) {
                             cmd += " vni " + r.toVni;
                         } else {
-                            cmd += " via " + Utils.ipStr(r.ip);
+                            cmd += " via " + r.ip.formatToIPString();
                         }
                         commands.add(cmd);
                     }

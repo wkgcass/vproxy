@@ -1,16 +1,18 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IPPort;
 import vproxy.app.Application;
-import vproxy.app.cmd.*;
+import vproxy.app.cmd.Command;
+import vproxy.app.cmd.Flag;
+import vproxy.app.cmd.Param;
+import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.handle.param.AddrHandle;
 import vproxy.app.cmd.handle.param.TimeoutHandle;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
-import vproxy.util.Utils;
 import vswitch.Switch;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -70,7 +72,7 @@ public class SwitchHandle {
 
         String alias = cmd.resource.alias;
         EventLoopGroup eventLoopGroup = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         int macTableTimeout;
         if (cmd.args.containsKey(Param.mactabletimeout)) {
             macTableTimeout = TimeoutHandle.get(cmd, Param.mactabletimeout);
@@ -94,7 +96,7 @@ public class SwitchHandle {
 
     public static void addSubLevel(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
 
         Switch sw = get(cmd.prepositionResource);
         boolean addSwitchFlag = true;
@@ -158,7 +160,7 @@ public class SwitchHandle {
         @Override
         public String toString() {
             return sw.alias + " -> event-loop-group " + sw.eventLoopGroup.alias
-                + " bind " + Utils.l4addrStr(sw.vxlanBindingAddress)
+                + " bind " + sw.vxlanBindingAddress.formatToIPPortString()
                 + " mac-table-timeout " + sw.getMacTableTimeout()
                 + " arp-table-timeout " + sw.getArpTableTimeout()
                 + " bare-vxlan-access " + sw.bareVXLanAccess.alias;

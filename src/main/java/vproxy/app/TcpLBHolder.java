@@ -1,5 +1,6 @@
 package vproxy.app;
 
+import vfd.IPPort;
 import vproxy.component.app.TcpLB;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
@@ -12,7 +13,6 @@ import vproxy.util.Logger;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -28,7 +28,7 @@ public class TcpLBHolder {
     public void add(String alias,
                     EventLoopGroup acceptorEventLoopGroup,
                     EventLoopGroup workerEventLoopGroup,
-                    InetSocketAddress bindAddress,
+                    IPPort bindAddress,
                     Upstream backend,
                     int timeout,
                     int inBufferSize,

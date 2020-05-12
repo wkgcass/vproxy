@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
@@ -8,7 +9,6 @@ import vproxy.util.Tuple;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 /**
  * the server is almost the same as {@link NetEventLoopEchoServer} but splits inBuffer and outBuffer
@@ -19,7 +19,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
         NetEventLoop eventLoop = new NetEventLoop(selectorEventLoop);
         // create server wrapper object
-        ServerSock server = ServerSock.create(new InetSocketAddress(18080));
+        ServerSock server = ServerSock.create(new IPPort(18080));
         // register the server into event loop
         eventLoop.addServer(server, null, new My2ServerHandler());
         // start loop in another thread

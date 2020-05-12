@@ -4,6 +4,7 @@ import vclient.HttpClient;
 import vclient.HttpRequest;
 import vclient.HttpResponse;
 import vclient.ResponseHandler;
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.connection.*;
 import vproxy.http.HttpRespParser;
@@ -23,29 +24,28 @@ import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
 public class Http1ClientImpl implements HttpClient {
-    private final InetSocketAddress remote;
+    private final IPPort remote;
     private final boolean noInputLoop;
     private NetEventLoop loop;
     private final int timeout;
     private final Options opts;
     private boolean closed = false;
 
-    public Http1ClientImpl(InetSocketAddress remote, Options opts) {
+    public Http1ClientImpl(IPPort remote, Options opts) {
         this(remote, null, 10_000, opts);
     }
 
-    public Http1ClientImpl(InetSocketAddress remote, NetEventLoop loop, int timeout) {
+    public Http1ClientImpl(IPPort remote, NetEventLoop loop, int timeout) {
         this(remote, loop, timeout, new Options());
     }
 
-    public Http1ClientImpl(InetSocketAddress remote, NetEventLoop loop, int timeout, Options opts) {
+    public Http1ClientImpl(IPPort remote, NetEventLoop loop, int timeout, Options opts) {
         this.remote = remote;
         this.loop = loop;
         this.timeout = timeout;

@@ -1,8 +1,6 @@
 package vproxy.dns;
 
-import vfd.DatagramFD;
-import vfd.EventSet;
-import vfd.FDProvider;
+import vfd.*;
 import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
@@ -26,17 +24,20 @@ import vproxy.selector.HandlerContext;
 import vproxy.util.*;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.InterfaceAddress;
+import java.net.NetworkInterface;
+import java.net.SocketException;
+import java.net.StandardSocketOptions;
 import java.nio.ByteBuffer;
 import java.util.*;
 
 public class DNSServer {
     public final String alias;
-    public final InetSocketAddress bindAddress;
+    public final IPPort bindAddress;
     public final EventLoopGroup eventLoopGroup;
     public final Upstream rrsets;
     public final DNSClient client;
-    private Map<String, InetAddress> hosts;
+    private Map<String, IP> hosts;
     private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
     private final Attach attach = new Attach();
@@ -46,7 +47,7 @@ public class DNSServer {
     public int ttl;
     public SecurityGroup securityGroup;
 
-    public DNSServer(String alias, InetSocketAddress bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets, int ttl, SecurityGroup securityGroup) {
+    public DNSServer(String alias, IPPort bindAddress, EventLoopGroup eventLoopGroup, Upstream rrsets, int ttl, SecurityGroup securityGroup) {
         this.alias = alias;
         this.bindAddress = bindAddress;
         this.eventLoopGroup = eventLoopGroup;
@@ -80,7 +81,7 @@ public class DNSServer {
         }
     }
 
-    private void handleRequest(DNSPacket p, InetSocketAddress remote) {
+    private void handleRequest(DNSPacket p, IPPort remote) {
         Map<String, Map<DNSType, List<Record>>> addresses = new LinkedHashMap<>();
         for (DNSQuestion q : p.questions) {
             String domain = q.qname;
@@ -91,7 +92,7 @@ public class DNSServer {
                 case SRV:
                     List<Record> records = domainMap.computeIfAbsent(q.qtype, k -> new ArrayList<>());
 
-                    InetAddress hostResult = hosts.get(domain);
+                    IP hostResult = hosts.get(domain);
                     if (hostResult != null) {
                         records.add(new Record(hostResult));
                         break;
@@ -104,11 +105,11 @@ public class DNSServer {
                     if (gh == null) {
                         // not found in user defined rrsets
                         // try some internal queries
-                        if (Utils.isIpLiteral(domain)) {
-                            InetAddress l3addr = Utils.l3addr(domain);
-                            if ((q.qtype == DNSType.A && l3addr instanceof Inet4Address)
+                        if (IP.isIpLiteral(domain)) {
+                            IP l3addr = IP.from(domain);
+                            if ((q.qtype == DNSType.A && l3addr instanceof IPv4)
                                 ||
-                                (q.qtype == DNSType.AAAA && l3addr instanceof Inet6Address)
+                                (q.qtype == DNSType.AAAA && l3addr instanceof IPv6)
                                 ||
                                 q.qtype == DNSType.SRV) {
                                 records.add(new Record(l3addr));
@@ -163,7 +164,7 @@ public class DNSServer {
         // it means we can directly respond when reaches here
 
         // a map of additional A/AAAA records for srv records
-        Map<String, List<InetAddress>> additional = new LinkedHashMap<>();
+        Map<String, List<IP>> additional = new LinkedHashMap<>();
 
         DNSPacket resp = new DNSPacket();
         resp.id = p.id;
@@ -196,20 +197,20 @@ public class DNSServer {
                         srv.weight = record.weight;
                         srv.target =
                             record.name == null
-                                ? Utils.ipStr(record.target.getAddress())
+                                ? IP.ipStr(record.target.getAddress())
                                 : record.name;
                         if (record.name != null) {
                             additional.computeIfAbsent(record.name, n -> new ArrayList<>()).add(record.target);
                         }
                         rdata = srv;
-                    } else if (record.target instanceof Inet4Address) {
+                    } else if (record.target instanceof IPv4) {
                         A a = new A();
-                        a.address = (Inet4Address) record.target;
+                        a.address = (IPv4) record.target;
                         rdata = a;
                     } else {
-                        assert record.target instanceof Inet6Address;
+                        assert record.target instanceof IPv6;
                         AAAA aaaa = new AAAA();
-                        aaaa.address = (Inet6Address) record.target;
+                        aaaa.address = (IPv6) record.target;
                         rdata = aaaa;
                     }
 
@@ -220,8 +221,8 @@ public class DNSServer {
                 }
             }
         }
-        for (Map.Entry<String, List<InetAddress>> entry : additional.entrySet()) {
-            for (InetAddress l3addr : entry.getValue()) {
+        for (Map.Entry<String, List<IP>> entry : additional.entrySet()) {
+            for (IP l3addr : entry.getValue()) {
                 DNSResource r = new DNSResource();
                 r.name = entry.getKey();
                 r.clazz = DNSClass.IN;
@@ -232,16 +233,16 @@ public class DNSServer {
 
                 DNSType type;
                 RData rdata;
-                if (l3addr instanceof Inet4Address) {
+                if (l3addr instanceof IPv4) {
                     type = DNSType.A;
                     A a = new A();
-                    a.address = (Inet4Address) l3addr;
+                    a.address = (IPv4) l3addr;
                     rdata = a;
                 } else {
-                    assert l3addr instanceof Inet6Address;
+                    assert l3addr instanceof IPv6;
                     type = DNSType.AAAA;
                     AAAA aaaa = new AAAA();
-                    aaaa.address = (Inet6Address) l3addr;
+                    aaaa.address = (IPv6) l3addr;
                     rdata = aaaa;
                 }
 
@@ -254,12 +255,12 @@ public class DNSServer {
         sendPacket(p.id, remote, resp);
     }
 
-    protected InetAddress getLocalAddressFor(InetSocketAddress remote) {
+    protected IP getLocalAddressFor(IPPort remote) {
         // we may create a new sock to respond to the remote
         {
             try (DatagramFD channel = FDProvider.get().openDatagramFD()) {
                 channel.connect(remote);
-                InetAddress addr = ((InetSocketAddress) channel.getLocalAddress()).getAddress();
+                IP addr = channel.getLocalAddress().getAddress();
                 if (!addr.isAnyLocalAddress()) {
                     return addr;
                 }
@@ -288,14 +289,14 @@ public class DNSServer {
         }
 
         // find ip in the same network
-        InetAddress result = null;
+        IP result = null;
         for (InterfaceAddress a : candidates) {
-            InetAddress addr = a.getAddress();
+            IP addr = IP.from(a.getAddress());
             byte[] rule = addr.getAddress();
             int mask = a.getNetworkPrefixLength();
-            byte[] maskBytes = Utils.parseMask(mask);
-            Utils.eraseToNetwork(rule, maskBytes);
-            if (Utils.maskMatch(remote.getAddress().getAddress(), rule, maskBytes)) {
+            byte[] maskBytes = Network.parseMask(mask);
+            Network.eraseToNetwork(rule, maskBytes);
+            if (Network.maskMatch(remote.getAddress().getAddress(), rule, maskBytes)) {
                 result = addr;
                 break;
             }
@@ -303,11 +304,11 @@ public class DNSServer {
         return result;
     }
 
-    protected List<Record> runInternal(String domain, InetSocketAddress remote) {
+    protected List<Record> runInternal(String domain, IPPort remote) {
         if (domain.equals("who.am.i")) {
             return Collections.singletonList(new Record(remote.getAddress()));
         } else if (domain.equals("who.are.you")) {
-            InetAddress l3addr = getLocalAddressFor(remote);
+            IP l3addr = getLocalAddressFor(remote);
             if (l3addr != null) {
                 return Collections.singletonList(new Record(getLocalAddressFor(remote)));
             }
@@ -315,7 +316,7 @@ public class DNSServer {
         return null;
     }
 
-    protected void runRecursive(DNSPacket p, InetSocketAddress remote) {
+    protected void runRecursive(DNSPacket p, IPPort remote) {
         client.request(p, new Callback<>() {
             @Override
             protected void onSucceeded(DNSPacket value) {
@@ -329,7 +330,7 @@ public class DNSServer {
         });
     }
 
-    protected void sendPacket(int id, InetSocketAddress remote, DNSPacket p) {
+    protected void sendPacket(int id, IPPort remote, DNSPacket p) {
         p.id = id;
         ByteBuffer buf = ByteBuffer.wrap(p.toByteArray().toJavaArray());
         int len = buf.limit();
@@ -345,7 +346,7 @@ public class DNSServer {
         }
     }
 
-    protected void sendError(DNSPacket requestPacket, InetSocketAddress remote, IOException err) {
+    protected void sendError(DNSPacket requestPacket, IPPort remote, IOException err) {
         assert Logger.lowLevelDebug("sending error to " + remote + ": " + err);
         DNSPacket p = new DNSPacket();
         p.id = requestPacket.id;
@@ -407,9 +408,9 @@ public class DNSServer {
             public void readable(HandlerContext<DatagramFD> ctx) {
                 while (true) { // read until no packet available
                     buffer.limit(buffer.capacity()).position(0);
-                    InetSocketAddress remote;
+                    IPPort remote;
                     try {
-                        remote = (InetSocketAddress) ctx.getChannel().receive(buffer);
+                        remote = ctx.getChannel().receive(buffer);
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "reading data from dns sock " + ctx.getChannel() + " failed", e);
                         return;

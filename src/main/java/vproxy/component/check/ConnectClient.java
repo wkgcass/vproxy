@@ -2,6 +2,8 @@ package vproxy.component.check;
 
 import vfd.DatagramFD;
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.connection.*;
 import vproxy.dns.DNSClient;
 import vproxy.http.HttpRespParser;
@@ -9,12 +11,13 @@ import vproxy.processor.http1.entity.Header;
 import vproxy.processor.http1.entity.Request;
 import vproxy.processor.http1.entity.Response;
 import vproxy.selector.TimerEvent;
-import vproxy.util.*;
+import vproxy.util.ByteArray;
+import vproxy.util.Callback;
+import vproxy.util.Logger;
+import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.net.UnknownHostException;
 import java.nio.channels.InterruptedByTimeoutException;
 import java.util.ArrayList;
@@ -206,7 +209,7 @@ public class ConnectClient {
     }
 
     public final NetEventLoop eventLoop;
-    public final InetSocketAddress remote;
+    public final IPPort remote;
     public final CheckProtocol checkProtocol;
     public final int timeout;
     public final AnnotatedHcConfig annotatedHcConfig;
@@ -217,7 +220,7 @@ public class ConnectClient {
     private DNSClient dnsClient = null;
 
     public ConnectClient(NetEventLoop eventLoop,
-                         InetSocketAddress remote,
+                         IPPort remote,
                          CheckProtocol checkProtocol,
                          int timeout,
                          AnnotatedHcConfig annotatedHcConfig) {
@@ -294,7 +297,7 @@ public class ConnectClient {
         }
         dnsClient.resolveIPv4(annotatedHcConfig.getDnsDomain(), new Callback<>() {
             @Override
-            protected void onSucceeded(List<InetAddress> value) {
+            protected void onSucceeded(List<IP> value) {
                 cb.succeeded(null);
             }
 
@@ -314,9 +317,8 @@ public class ConnectClient {
         req.version = "HTTP/1.1";
         req.headers = new ArrayList<>(1);
         String host = annotatedHcConfig.getHttpHost();
-        //noinspection ReplaceNullCheck
         if (host == null) {
-            req.headers.add(new Header("Host", Utils.l4addrStr(remote)));
+            req.headers.add(new Header("Host", remote.formatToIPPortString()));
         } else {
             req.headers.add(new Header("Host", host));
         }

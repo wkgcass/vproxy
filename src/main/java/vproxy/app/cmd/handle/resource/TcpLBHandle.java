@@ -1,5 +1,6 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.Command;
@@ -16,10 +17,8 @@ import vproxy.component.exception.XException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Upstream;
-import vproxy.util.Utils;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
 
-import java.net.InetSocketAddress;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -93,7 +92,7 @@ public class TcpLBHandle {
         String alias = cmd.resource.alias;
         EventLoopGroup acceptor = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.aelg));
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
         int inBufferSize = InBufferSizeHandle.get(cmd);
         int outBufferSize = OutBufferSizeHandle.get(cmd);
@@ -168,7 +167,7 @@ public class TcpLBHandle {
         @Override
         public String toString() {
             return tcpLB.alias + " -> acceptor " + tcpLB.acceptorGroup.alias + " worker " + tcpLB.workerGroup.alias
-                + " bind " + Utils.ipStr(tcpLB.bindAddress.getAddress().getAddress()) + ":" + tcpLB.bindAddress.getPort()
+                + " bind " + tcpLB.bindAddress.getAddress().formatToIPString() + ":" + tcpLB.bindAddress.getPort()
                 + " backend " + tcpLB.backend.alias
                 + " timeout " + tcpLB.getTimeout()
                 + " in-buffer-size " + tcpLB.getInBufferSize() + " out-buffer-size " + tcpLB.getOutBufferSize()

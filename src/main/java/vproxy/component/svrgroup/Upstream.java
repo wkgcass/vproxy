@@ -1,11 +1,11 @@
 package vproxy.component.svrgroup;
 
+import vfd.IPPort;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 import vproxy.connection.Connector;
 import vproxy.processor.Hint;
 
-import java.net.InetSocketAddress;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -167,7 +167,7 @@ public class Upstream {
         return new ArrayList<>(serverGroupHandles);
     }
 
-    public Connector next(InetSocketAddress source) {
+    public Connector next(IPPort source) {
         return next(source, null);
     }
 
@@ -189,7 +189,7 @@ public class Upstream {
         return lastMax;
     }
 
-    public Connector next(InetSocketAddress source, Hint hint) {
+    public Connector next(IPPort source, Hint hint) {
         if (hint != null) {
             ServerGroupHandle h = searchForGroup(hint);
             if (h != null) {
@@ -202,7 +202,7 @@ public class Upstream {
         return next(source, wrr, 0);
     }
 
-    private /*use static to prevent access local variable*/ static Connector next(InetSocketAddress source, WRR wrr, int recursion) {
+    private /*use static to prevent access local variable*/ static Connector next(IPPort source, WRR wrr, int recursion) {
         if (recursion > wrr.seq.length)
             return null;
         if (wrr.seq.length == 0)

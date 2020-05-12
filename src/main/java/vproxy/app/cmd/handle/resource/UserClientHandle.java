@@ -1,16 +1,14 @@
 package vproxy.app.cmd.handle.resource;
 
+import vfd.IPPort;
 import vproxy.app.Application;
 import vproxy.app.cmd.Command;
 import vproxy.app.cmd.Param;
 import vproxy.app.cmd.Resource;
 import vproxy.app.cmd.ResourceType;
 import vproxy.app.cmd.handle.param.AddrHandle;
-import vproxy.component.exception.XException;
 import vproxy.util.Utils;
 import vswitch.Switch;
-
-import java.net.InetSocketAddress;
 
 public class UserClientHandle {
     private UserClientHandle() {
@@ -43,7 +41,7 @@ public class UserClientHandle {
         String user = cmd.resource.alias;
         String pass = cmd.args.get(Param.pass);
         int vni = Integer.parseInt(cmd.args.get(Param.vni));
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
         sw.addUserClient(user, pass, vni, addr);
     }
@@ -54,7 +52,7 @@ public class UserClientHandle {
 
     public static void forceRemove(Command cmd) throws Exception {
         String user = cmd.resource.alias;
-        InetSocketAddress addr = AddrHandle.get(cmd);
+        IPPort addr = AddrHandle.get(cmd);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
         sw.delUserClient(user, addr);
     }

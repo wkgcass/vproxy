@@ -1,9 +1,8 @@
 package vmirror;
 
+import vfd.IP;
 import vproxy.util.Network;
 import vswitch.util.MacAddress;
-
-import java.net.InetAddress;
 
 public class FilterConfig {
     final OriginConfig originConfig;
@@ -39,7 +38,7 @@ public class FilterConfig {
     }
 
     boolean matchIp(MacAddress macSrc, MacAddress macDst,
-                    InetAddress ipSrc, InetAddress ipDst) {
+                    IP ipSrc, IP ipDst) {
         if (!matchEthernet(macSrc, macDst)) {
             return false;
         }
@@ -56,7 +55,7 @@ public class FilterConfig {
     }
 
     boolean matchTransport(MacAddress macSrc, MacAddress macDst,
-                           InetAddress ipSrc, InetAddress ipDst,
+                           IP ipSrc, IP ipDst,
                            String transportLayerProtocol,
                            int portSrc, int portDst) {
         if (!matchIp(macSrc, macDst, ipSrc, ipDst)) {
@@ -81,7 +80,7 @@ public class FilterConfig {
     }
 
     boolean matchApplication(MacAddress macSrc, MacAddress macDst,
-                             InetAddress ipSrc, InetAddress ipDst,
+                             IP ipSrc, IP ipDst,
                              String transportLayerProtocol,
                              int portSrc, int portDst,
                              String applicationLayerProtocol) {

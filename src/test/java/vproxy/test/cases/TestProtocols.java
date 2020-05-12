@@ -21,6 +21,8 @@ import org.apache.thrift.transport.TTransport;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.util.AnnotationKeys;
 import vproxy.component.app.TcpLB;
 import vproxy.component.check.CheckProtocol;
@@ -35,9 +37,7 @@ import vproxy.poc.grpc.GreeterGrpc;
 import vproxy.poc.grpc.HelloRequest;
 import vproxy.poc.grpc.HelloResponse;
 import vproxy.poc.thrift.HelloWorldService;
-import vproxy.util.Utils;
 
-import java.net.InetSocketAddress;
 import java.util.Map;
 import java.util.function.Consumer;
 
@@ -66,11 +66,11 @@ public class TestProtocols {
         ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
         sg1.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s1.test.com"));
-        sg1.add("svr1", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port1), 10);
+        sg1.add("svr1", new IPPort(IP.from("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
         sg2.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s2.test.com"));
-        sg2.add("svr2", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port2), 10);
+        sg2.add("svr2", new IPPort(IP.from("127.0.0.1"), port2), 10);
 
         // set to up
         sg1.getServerHandles().forEach(h -> h.healthy = true);
@@ -93,7 +93,7 @@ public class TestProtocols {
 
     private void initLb(String protocol) throws Exception {
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), ups, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new IPPort("0.0.0.0", lbPort), ups, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
         );
         lb.start();
     }
@@ -103,11 +103,11 @@ public class TestProtocols {
         ServerGroup sg = new ServerGroup("dubboSg", elg, new HealthCheckConfig(1000, 10000, 1, 3), Method.wrr);
         ups.add(sg, 10);
         lb = new TcpLB(
-            "tl0", elg, elg, new InetSocketAddress("0.0.0.0", lbPort), ups, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
+            "tl0", elg, elg, new IPPort("0.0.0.0", lbPort), ups, 10000, 16384, 16384, "dubbo", null, null, SecurityGroup.allowAll()
         );
         lb.start();
-        sg.add("svr3", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port3dubbo), 10);
-        sg.add("svr4", new InetSocketAddress(Utils.l3addr("127.0.0.1"), port4dubbo), 10);
+        sg.add("svr3", new IPPort(IP.from("127.0.0.1"), port3dubbo), 10);
+        sg.add("svr4", new IPPort(IP.from("127.0.0.1"), port4dubbo), 10);
     }
 
     @SuppressWarnings("deprecation")

@@ -1,5 +1,7 @@
 package vproxy.component.app;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.app.Config;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.elgroup.EventLoopGroupAttach;
@@ -20,8 +22,6 @@ import vproxy.util.Logger;
 import vproxy.util.ringbuffer.ssl.VSSLContext;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.List;
@@ -68,7 +68,7 @@ public class TcpLB {
     public final String alias;
     public final EventLoopGroup acceptorGroup;
     public final EventLoopGroup workerGroup;
-    public final InetSocketAddress bindAddress;
+    public final IPPort bindAddress;
     public final Upstream backend;
     private int timeout; // modifiable
     private int inBufferSize; // modifiable
@@ -96,7 +96,7 @@ public class TcpLB {
     public TcpLB(String alias,
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
-                 InetSocketAddress bindAddress,
+                 IPPort bindAddress,
                  Upstream backend,
                  int timeout,
                  int inBufferSize, int outBufferSize,
@@ -107,7 +107,7 @@ public class TcpLB {
     public TcpLB(String alias,
                  EventLoopGroup acceptorGroup,
                  EventLoopGroup workerGroup,
-                 InetSocketAddress bindAddress,
+                 IPPort bindAddress,
                  Upstream backend,
                  int timeout,
                  int inBufferSize, int outBufferSize,
@@ -165,7 +165,7 @@ public class TcpLB {
     // provide a connector
     private Connector connectorProvider(Connection connectableConn, Hint hint) {
         // check whitelist
-        InetAddress remoteAddress = connectableConn.remote.getAddress();
+        IP remoteAddress = connectableConn.remote.getAddress();
         if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort()))
             return null; // terminated by securityGroup
 

@@ -2,11 +2,11 @@ package vproxy.poc;
 
 import vclient.HttpClient;
 import vclient.HttpResponse;
+import vfd.IP;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vjson.util.Transformer;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.Tool;
@@ -108,7 +108,8 @@ public class ApplicationLevelHttpServer {
     }
 
     private void log(RoutingContext rctx) {
-        Logger.alert("received request remote=" + Utils.l4addrStr(rctx.getRemote()) + " -> local=" + Utils.l4addrStr(rctx.getLocal()) + " " + rctx.method() + " " + rctx.uri());
+        Logger.alert("received request remote=" + rctx.getRemote().formatToIPPortString()
+            + " -> local=" + rctx.getLocal().formatToIPPortString() + " " + rctx.method() + " " + rctx.uri());
         rctx.next();
     }
 
@@ -127,7 +128,7 @@ public class ApplicationLevelHttpServer {
             String address = o.getString("address");
             int port = o.getInt("port");
 
-            if (!Utils.isIpLiteral(address)) {
+            if (!IP.isIpLiteral(address)) {
                 throw new IllegalArgumentException();
             }
             if (port < 1 || port > 65535) {
@@ -171,7 +172,7 @@ public class ApplicationLevelHttpServer {
             JSON.Object o = (JSON.Object) body;
             if (o.containsKey("address")) {
                 address = o.getString("address");
-                if (!Utils.isIpLiteral(address)) {
+                if (!IP.isIpLiteral(address)) {
                     throw new IllegalArgumentException();
                 }
             }

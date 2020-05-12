@@ -1,5 +1,6 @@
 package vproxy.app.cmd;
 
+import vfd.IP;
 import vproxy.app.Application;
 import vproxy.app.Config;
 import vproxy.app.cmd.handle.resource.*;
@@ -9,12 +10,13 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.connection.Connection;
 import vproxy.connection.ServerSock;
 import vproxy.dns.Cache;
-import vproxy.util.*;
+import vproxy.util.Callback;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vswitch.iface.Iface;
 import vswitch.util.MacAddress;
 
 import java.lang.reflect.Field;
-import java.net.InetAddress;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -1043,8 +1045,8 @@ public class Command {
                         List<Cache> caches = DnsCacheHandle.detail();
                         List<Object> cacheStrList = caches.stream().map(c -> Arrays.asList(
                             c.host,
-                            c.ipv4.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList()),
-                            c.ipv6.stream().map(i -> Utils.ipStr(i.getAddress())).collect(Collectors.toList())
+                            c.ipv4.stream().map(IP::formatToIPString).collect(Collectors.toList()),
+                            c.ipv6.stream().map(IP::formatToIPString).collect(Collectors.toList())
                         )).collect(Collectors.toList());
                         return new CmdResult(caches, cacheStrList, utilJoinList(caches));
                     case R:
@@ -1130,11 +1132,11 @@ public class Command {
                 switch (action) {
                     case l:
                         var names = IpHandle.names(targetResource);
-                        List<String> strNames = names.stream().map(Utils::ipStr).collect(Collectors.toList());
+                        List<String> strNames = names.stream().map(IP::formatToIPString).collect(Collectors.toList());
                         return new CmdResult(names, strNames, utilJoinList(strNames));
                     case L:
-                        Collection<Map.Entry<InetAddress, MacAddress>> tuples = IpHandle.list(targetResource);
-                        List<Object> strTuples = tuples.stream().map(o -> Utils.ipStr(o.getKey().getAddress()) + " -> mac " + o.getValue()).collect(Collectors.toList());
+                        Collection<Map.Entry<IP, MacAddress>> tuples = IpHandle.list(targetResource);
+                        List<Object> strTuples = tuples.stream().map(o -> o.getKey().formatToIPString() + " -> mac " + o.getValue()).collect(Collectors.toList());
                         return new CmdResult(tuples, strTuples, utilJoinList(strTuples));
                     case a:
                         IpHandle.add(this);

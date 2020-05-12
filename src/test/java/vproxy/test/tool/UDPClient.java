@@ -1,6 +1,6 @@
 package vproxy.test.tool;
 
-import vproxy.util.Utils;
+import vfd.IP;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -17,7 +17,7 @@ public class UDPClient {
 
     public void connect() throws IOException {
         socket = new DatagramSocket();
-        socket.connect(Utils.l3addr("127.0.0.1"), port);
+        socket.connect(IP.from("127.0.0.1").toInetAddress(), port);
     }
 
     public String sendAndRecv(String data) throws IOException {

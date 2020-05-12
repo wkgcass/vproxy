@@ -5,7 +5,10 @@ import vproxy.util.Logger;
 import javax.net.ssl.SSLContext;
 import java.security.cert.CertificateParsingException;
 import java.security.cert.X509Certificate;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class SSLContextHolder {

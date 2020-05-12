@@ -1,15 +1,13 @@
 package vproxy.dns;
 
-import vfd.FDProvider;
-import vfd.FDs;
-import vfd.VFDConfig;
+import vfd.*;
 import vfd.jdk.ChannelFDs;
 import vproxy.connection.NetEventLoop;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.*;
 
 import java.io.IOException;
-import java.net.*;
+import java.net.UnknownHostException;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.concurrent.ConcurrentHashMap;
@@ -19,11 +17,11 @@ import java.util.concurrent.CopyOnWriteArraySet;
 public abstract class AbstractResolver implements Resolver {
     static class ResolveTask {
         final String host;
-        final Callback<InetAddress, UnknownHostException> cb;
+        final Callback<IP, UnknownHostException> cb;
         final boolean ipv4;
         final boolean ipv6;
 
-        ResolveTask(String host, Callback<InetAddress, UnknownHostException> cb,
+        ResolveTask(String host, Callback<IP, UnknownHostException> cb,
                     boolean ipv4, boolean ipv6) {
             this.host = host;
             this.cb = cb;
@@ -101,12 +99,12 @@ public abstract class AbstractResolver implements Resolver {
         loop.getSelectorEventLoop().loop(r -> new Thread(r, alias));
     }
 
-    abstract protected void getAllByName(String domain, Callback<InetAddress[], UnknownHostException> cb);
+    abstract protected void getAllByName(String domain, Callback<IP[], UnknownHostException> cb);
 
     private void doResolve(ResolveTask task) {
         getAllByName(task.host, new Callback<>() {
             @Override
-            protected void onSucceeded(InetAddress[] addresses) {
+            protected void onSucceeded(IP[] addresses) {
                 // record
                 if (addresses.length > 0) {
                     Cache cache = new Cache(AbstractResolver.this, task.host, addresses);
@@ -123,7 +121,7 @@ public abstract class AbstractResolver implements Resolver {
                 }
 
                 // filter the result
-                InetAddress result = filter(addresses, task.ipv4, task.ipv6);
+                IP result = filter(addresses, task.ipv4, task.ipv6);
                 if (result != null) {
                     task.cb.succeeded(result);
                     return;
@@ -141,17 +139,17 @@ public abstract class AbstractResolver implements Resolver {
         });
     }
 
-    private InetAddress filter(InetAddress[] addresses, boolean ipv4, boolean ipv6) {
+    private IP filter(IP[] addresses, boolean ipv4, boolean ipv6) {
         // get first returned ipv4 and ipv6
-        Inet4Address ipv4Addr = null;
-        Inet6Address ipv6Addr = null;
-        for (InetAddress addr : addresses) {
+        IPv4 ipv4Addr = null;
+        IPv6 ipv6Addr = null;
+        for (IP addr : addresses) {
             if (ipv4Addr != null && ipv6Addr != null)
                 break;
-            if (addr instanceof Inet4Address && ipv4Addr == null)
-                ipv4Addr = (Inet4Address) addr;
-            else if (addr instanceof Inet6Address && ipv6Addr == null)
-                ipv6Addr = (Inet6Address) addr;
+            if (addr instanceof IPv4 && ipv4Addr == null)
+                ipv4Addr = (IPv4) addr;
+            else if (addr instanceof IPv6 && ipv6Addr == null)
+                ipv6Addr = (IPv6) addr;
         }
         // check required and callback
         // if ipv4 is allowed, return the ipv4
@@ -168,19 +166,19 @@ public abstract class AbstractResolver implements Resolver {
     }
 
     @SuppressWarnings("unchecked")
-    private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
+    private void resolveN(String host, boolean ipv4, boolean ipv6, Callback<? super IP, ? super UnknownHostException> cb) {
         // check whether it's ipv4 or ipv6
-        if (Utils.isIpv4(host)) {
+        if (IP.isIpv4(host)) {
             if (ipv4) {
-                Inet4Address addr = (Inet4Address) Utils.l3addr(host);
+                IPv4 addr = IP.fromIPv4(host);
                 cb.succeeded(addr);
             } else {
                 cb.failed(new UnknownHostException(host));
             }
             return;
-        } else if (Utils.isIpv6(host)) {
+        } else if (IP.isIpv6(host)) {
             if (ipv6) {
-                Inet6Address addr = (Inet6Address) Utils.l3addr(host);
+                IPv6 addr = IP.fromIPv6(host);
                 cb.succeeded(addr);
             } else {
                 cb.failed(new UnknownHostException(host));
@@ -196,9 +194,9 @@ public abstract class AbstractResolver implements Resolver {
                 doResolve(new ResolveTask(host, new RunOnLoopCallback<>((Callback) cb), ipv4, ipv6)));
             return;
         }
-        Tuple<Inet4Address, Inet6Address> tup = r.next();
-        Inet4Address v4 = tup.left;
-        Inet6Address v6 = tup.right;
+        Tuple<IPv4, IPv6> tup = r.next();
+        IPv4 v4 = tup.left;
+        IPv6 v6 = tup.right;
         @SuppressWarnings("UnnecessaryLocalVariable")
         Callback rawCB = cb; // to suppress compile error
         // check ipv4 first
@@ -216,24 +214,24 @@ public abstract class AbstractResolver implements Resolver {
     }
 
     @Override
-    public void resolve(String host, Callback<? super InetAddress, ? super UnknownHostException> cb) {
+    public void resolve(String host, Callback<? super IP, ? super UnknownHostException> cb) {
         resolveN(host, true, true, cb);
     }
 
     @Override
-    public void resolve(String host, boolean ipv4, boolean ipv6, Callback<? super InetAddress, ? super UnknownHostException> cb) {
+    public void resolve(String host, boolean ipv4, boolean ipv6, Callback<? super IP, ? super UnknownHostException> cb) {
         resolveN(host, ipv4, ipv6, cb);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void resolveV6(String host, Callback<? super Inet6Address, ? super UnknownHostException> cb) {
+    public void resolveV6(String host, Callback<? super IPv6, ? super UnknownHostException> cb) {
         resolveN(host, false, true, (Callback) cb);
     }
 
     @SuppressWarnings("unchecked")
     @Override
-    public void resolveV4(String host, Callback<? super Inet4Address, ? super UnknownHostException> cb) {
+    public void resolveV4(String host, Callback<? super IPv4, ? super UnknownHostException> cb) {
         resolveN(host, true, false, (Callback) cb);
     }
 

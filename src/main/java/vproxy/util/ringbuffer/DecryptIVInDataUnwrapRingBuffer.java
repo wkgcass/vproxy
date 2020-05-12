@@ -1,17 +1,16 @@
 package vproxy.util.ringbuffer;
 
+import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.Mirror;
 import vmirror.MirrorDataFactory;
 import vproxy.util.ByteArray;
 import vproxy.util.Logger;
 import vproxy.util.RingBuffer;
-import vproxy.util.Utils;
 import vproxy.util.crypto.BlockCipherKey;
 import vproxy.util.crypto.StreamingCFBCipher;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 import java.util.function.Supplier;
 
@@ -24,40 +23,40 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
 
     private final MirrorDataFactory mirrorDataFactory;
 
-    public DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key, NetworkFD fd) {
+    public DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key, NetworkFD<IPPort> fd) {
         this(plainBufferForApp, key,
             () -> {
                 try {
-                    return (InetSocketAddress) fd.getRemoteAddress();
+                    return fd.getRemoteAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting remote address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             }, () -> {
                 try {
-                    return (InetSocketAddress) fd.getLocalAddress();
+                    return fd.getLocalAddress();
                 } catch (IOException e) {
                     Logger.shouldNotHappen("getting local address of " + fd + " failed", e);
-                    return Utils.bindAnyAddress();
+                    return IPPort.bindAnyAddress();
                 }
             });
     }
 
     public DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key) {
-        this(plainBufferForApp, key, Utils::bindAnyAddress, Utils::bindAnyAddress);
+        this(plainBufferForApp, key, IPPort::bindAnyAddress, IPPort::bindAnyAddress);
     }
 
     private DecryptIVInDataUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp, BlockCipherKey key,
-                                            Supplier<InetSocketAddress> srcAddrSupplier,
-                                            Supplier<InetSocketAddress> dstAddrSupplier) {
+                                            Supplier<IPPort> srcAddrSupplier,
+                                            Supplier<IPPort> dstAddrSupplier) {
         super(plainBufferForApp);
         this.key = key;
         this.requiredIvLen = key.ivLen();
         this.iv = new byte[requiredIvLen];
 
         this.mirrorDataFactory = new MirrorDataFactory("iv-prepend", d -> {
-            InetSocketAddress src = srcAddrSupplier.get();
-            InetSocketAddress dst = dstAddrSupplier.get();
+            IPPort src = srcAddrSupplier.get();
+            IPPort dst = dstAddrSupplier.get();
             d.setSrc(src).setDst(dst);
         });
     }

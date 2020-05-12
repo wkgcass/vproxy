@@ -6,16 +6,16 @@ package vproxy.dns.rdata;
  *     +--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+--+
  */
 
+import vfd.IP;
+import vfd.IPv4;
 import vproxy.dns.DNSType;
 import vproxy.dns.InvalidDNSPacketException;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
-import java.net.Inet4Address;
 import java.util.Objects;
 
 public class A implements RData {
-    public Inet4Address address;
+    public IPv4 address;
 
     @Override
     public boolean equals(Object o) {
@@ -52,6 +52,6 @@ public class A implements RData {
         if (data.length() != 4)
             throw new InvalidDNSPacketException("A record rdata length is not wrong: " + data.length());
         byte[] arr = data.toJavaArray();
-        address = (Inet4Address) Utils.l3addr(arr);
+        address = IP.fromIPv4(arr);
     }
 }

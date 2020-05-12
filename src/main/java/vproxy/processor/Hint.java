@@ -1,7 +1,7 @@
 package vproxy.processor;
 
+import vfd.IP;
 import vproxy.app.util.AnnotationKeys;
-import vproxy.util.Utils;
 
 import java.util.Map;
 
@@ -13,7 +13,7 @@ public class Hint {
 
     public Hint(String hint) {
         this.hint = hint;
-        if (Utils.isIpv6(hint) || !hint.contains(":")) {
+        if (IP.isIpv6(hint) || !hint.contains(":")) {
             // consider as hostname or ip
             host = hint;
             port = null;

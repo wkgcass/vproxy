@@ -1,12 +1,12 @@
 package vproxy.test.tool;
 
+import vfd.IPPort;
 import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class DirectCloseServer {
     public DirectCloseServer(NetEventLoop loop, int port) throws IOException {
@@ -14,7 +14,7 @@ public class DirectCloseServer {
     }
 
     public DirectCloseServer(NetEventLoop loop, int port, String addr) throws IOException {
-        ServerSock serverSock = ServerSock.create(new InetSocketAddress(addr, port));
+        ServerSock serverSock = ServerSock.create(new IPPort(addr, port));
         loop.addServer(serverSock, null, new CloseHandler());
     }
 

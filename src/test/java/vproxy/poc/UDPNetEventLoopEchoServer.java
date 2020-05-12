@@ -1,19 +1,19 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.connection.*;
 import vproxy.selector.wrap.udp.UDPFDs;
 import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.nio.charset.StandardCharsets;
 
 public class UDPNetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         NetEventLoop loop = NetEventLoopEchoServer.create(18080, UDPFDs.get());
 
-        ConnectableConnection conn = ConnectableConnection.createUDP(new InetSocketAddress(18080),
+        ConnectableConnection conn = ConnectableConnection.createUDP(new IPPort(18080),
             new ConnectionOpts(), RingBuffer.allocateDirect(1024), RingBuffer.allocateDirect(3));
         loop.addConnectableConnection(conn, null, new EchoClientConnectableConnectionHandler());
 

@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolHandler;
@@ -11,7 +12,6 @@ import vproxy.util.RingBuffer;
 import vproxy.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class EchoProtocolServer {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -24,7 +24,7 @@ public class EchoProtocolServer {
         config.setOutBufferSize(4);
 
         ProtocolServerHandler.apply(
-            netEventLoop, ServerSock.create(new InetSocketAddress("127.0.0.1", 18080)), config,
+            netEventLoop, ServerSock.create(new IPPort("127.0.0.1", 18080)), config,
             new ProtocolHandler() {
                 @Override
                 public void init(ProtocolHandlerContext ctx) {

@@ -1,8 +1,8 @@
 package vproxyx.websocks.relay;
 
+import vfd.IP;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.util.ErrorPages;
-import vproxy.util.Utils;
 import vserver.HttpServer;
 import vserver.RoutingHandler;
 import vserver.server.Http1ServerImpl;
@@ -22,7 +22,7 @@ public class RelayHttpServer {
                     host = host.substring(0, host.indexOf(":"));
                 }
             }
-            if (Utils.isIpLiteral(host)) {
+            if (IP.isIpLiteral(host)) {
                 host = null;
             }
             if (host == null || host.isEmpty()) {

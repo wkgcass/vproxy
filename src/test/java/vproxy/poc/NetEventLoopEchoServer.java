@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vfd.SocketFD;
 import vproxy.connection.*;
 import vproxy.selector.SelectorEventLoop;
@@ -8,7 +9,6 @@ import vproxy.util.RingBuffer;
 import vproxy.util.Tuple;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 
 public class NetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -29,9 +29,9 @@ public class NetEventLoopEchoServer {
         // create server wrapper object
         ServerSock server;
         if (fds != null) {
-            server = ServerSock.createUDP(new InetSocketAddress(port), selectorEventLoop, fds);
+            server = ServerSock.createUDP(new IPPort(port), selectorEventLoop, fds);
         } else {
-            server = ServerSock.create(new InetSocketAddress(port));
+            server = ServerSock.create(new IPPort(port));
         }
         // register the server into event loop
         eventLoop.addServer(server, null, new MyServerHandler());

@@ -1,12 +1,11 @@
 package vmirror;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 import vswitch.util.Consts;
 import vswitch.util.MacAddress;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.nio.ByteBuffer;
 
 public class MirrorData {
@@ -14,8 +13,8 @@ public class MirrorData {
     public final String origin;
     MacAddress macSrc = new MacAddress("00:00:00:00:00:00");
     MacAddress macDst = new MacAddress("ff:ff:ff:ff:ff:ff");
-    InetAddress ipSrc;
-    InetAddress ipDst;
+    IP ipSrc;
+    IP ipDst;
     String transportLayerProtocol;
     int portSrc;
     int portDst;
@@ -39,12 +38,12 @@ public class MirrorData {
         return this;
     }
 
-    public MirrorData setIpSrc(InetAddress ipSrc) {
+    public MirrorData setIpSrc(IP ipSrc) {
         this.ipSrc = ipSrc;
         return this;
     }
 
-    public MirrorData setIpDst(InetAddress ipDst) {
+    public MirrorData setIpDst(IP ipDst) {
         this.ipDst = ipDst;
         return this;
     }
@@ -65,11 +64,11 @@ public class MirrorData {
         return this;
     }
 
-    public MirrorData setSrc(InetSocketAddress src) {
+    public MirrorData setSrc(IPPort src) {
         return setIpSrc(src.getAddress()).setPortSrc(src.getPort());
     }
 
-    public MirrorData setDst(InetSocketAddress dst) {
+    public MirrorData setDst(IPPort dst) {
         return setIpDst(dst.getAddress()).setPortDst(dst.getPort());
     }
 
@@ -83,7 +82,7 @@ public class MirrorData {
         }
 
         return this.setMacSrc(new MacAddress(mac))
-            .setIpSrc(Utils.l3addr(ip.toJavaArray()))
+            .setIpSrc(IP.from(ip.toJavaArray()))
             .setPortSrc(port.uint16(0));
     }
 
@@ -102,7 +101,7 @@ public class MirrorData {
         }
 
         return this.setMacDst(new MacAddress(mac))
-            .setIpDst(Utils.l3addr(ip.toJavaArray()))
+            .setIpDst(IP.from(ip.toJavaArray()))
             .setPortDst(port.uint16(0));
     }
 

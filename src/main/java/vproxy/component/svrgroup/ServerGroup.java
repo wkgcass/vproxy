@@ -1,5 +1,6 @@
 package vproxy.component.svrgroup;
 
+import vfd.*;
 import vproxy.app.GlobalEvents;
 import vproxy.component.check.*;
 import vproxy.component.elgroup.EventLoopAttach;
@@ -15,9 +16,7 @@ import vproxy.connection.NetFlowRecorder;
 import vproxy.util.ConcurrentHashSet;
 import vproxy.util.LogType;
 import vproxy.util.Logger;
-import vproxy.util.Utils;
 
-import java.net.*;
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -30,7 +29,7 @@ public class ServerGroup {
     public class ServerHandle implements EventLoopAttach, NetFlowRecorder, ConnCloseHandler {
         class ServerHealthCheckHandler implements HealthCheckHandler {
             @Override
-            public void up(SocketAddress remote) {
+            public void up(SockAddr remote) {
                 healthy = true;
                 hcDownReason = null;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
@@ -51,7 +50,7 @@ public class ServerGroup {
             }
 
             @Override
-            public void down(SocketAddress remote, String reason) {
+            public void down(SockAddr remote, String reason) {
                 healthy = false;
                 Logger.info(LogType.HEALTH_CHECK_CHANGE,
                     "server " + ServerHandle.this.alias + "(" + server + ") status changed to DOWN, reason: " + reason);
@@ -64,7 +63,7 @@ public class ServerGroup {
             }
 
             @Override
-            public void upOnce(SocketAddress remote, ConnectResult result) {
+            public void upOnce(SockAddr remote, ConnectResult result) {
                 assert Logger.lowLevelDebug("up once for " + ServerHandle.this.alias + "(" + server + "), cost = " + result.cost);
                 hcCost.addLast(result.cost);
                 if (hcCost.size() > 10) {
@@ -73,7 +72,7 @@ public class ServerGroup {
             }
 
             @Override
-            public void downOnce(SocketAddress remote, String reason) {
+            public void downOnce(SockAddr remote, String reason) {
                 assert Logger.lowLevelDebug("down once for " + ServerHandle.this.alias + "(" + server + "), reason: " + reason);
                 hcCost.clear();
                 hcDownReason = reason;
@@ -111,7 +110,7 @@ public class ServerGroup {
         private final long sid;
         public final String hostName;
         private final ServerHealthCheckHandler handler = new ServerHealthCheckHandler();
-        public final InetSocketAddress server;
+        public final IPPort server;
         private int weight;
         private ServerHandle toLogicDelete; // the server will be deleted when this server is UP, may be null
         EventLoopWrapper el;
@@ -132,7 +131,7 @@ public class ServerGroup {
 
         ServerHandle(String alias, /**/long sid/**/,
                      String hostName,
-                     InetSocketAddress server,
+                     IPPort server,
                      int initialWeight,
                      ServerHandle toLogicDelete) {
             this.alias = alias;
@@ -404,7 +403,7 @@ public class ServerGroup {
     /**
      * @return null if not found any healthy
      */
-    public SvrHandleConnector next(InetSocketAddress source) {
+    public SvrHandleConnector next(IPPort source) {
         if (method == Method.wrr) {
             return wrrNext();
         } else if (method == Method.wlc) {
@@ -418,7 +417,7 @@ public class ServerGroup {
         }
     }
 
-    public SvrHandleConnector nextIPv4(InetSocketAddress source) {
+    public SvrHandleConnector nextIPv4(IPPort source) {
         if (method == Method.wrr) {
             return wrrNextIPv4();
         } else if (method == Method.wlc) {
@@ -432,7 +431,7 @@ public class ServerGroup {
         }
     }
 
-    public SvrHandleConnector nextIPv6(InetSocketAddress source) {
+    public SvrHandleConnector nextIPv6(IPPort source) {
         if (method == Method.wrr) {
             return wrrNextIPv6();
         } else if (method == Method.wlc) {
@@ -446,17 +445,17 @@ public class ServerGroup {
         }
     }
 
-    private SvrHandleConnector sourceHashGet(InetAddress source) {
+    private SvrHandleConnector sourceHashGet(IP source) {
         byte[] bytes = source.getAddress();
         return sourceHashGet(_source, _source.hash(bytes), 0);
     }
 
-    private SvrHandleConnector sourceHashGetIPv4(InetAddress source) {
+    private SvrHandleConnector sourceHashGetIPv4(IP source) {
         byte[] bytes = source.getAddress();
         return sourceHashGet(_sourceIPv4, _sourceIPv4.hash(bytes), 0);
     }
 
-    private SvrHandleConnector sourceHashGetIPv6(InetAddress source) {
+    private SvrHandleConnector sourceHashGetIPv6(IP source) {
         byte[] bytes = source.getAddress();
         return sourceHashGet(_sourceIPv6, _sourceIPv6.hash(bytes), 0);
     }
@@ -604,8 +603,8 @@ public class ServerGroup {
 
     private void sourceReset() {
         _source = sourceReset(servers);
-        _sourceIPv4 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof Inet4Address).collect(Collectors.toList()));
-        _sourceIPv6 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof Inet6Address).collect(Collectors.toList()));
+        _sourceIPv4 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof IPv4).collect(Collectors.toList()));
+        _sourceIPv6 = sourceReset(servers.stream().filter(s -> s.server.getAddress() instanceof IPv6).collect(Collectors.toList()));
     }
 
     private SOURCE sourceReset(List<ServerHandle> servers) {
@@ -652,11 +651,11 @@ public class ServerGroup {
         this._wlc = new WLC(this.servers.stream().filter(s -> s.weight > 0).collect(Collectors.toList()));
         this._wlcIPv4 = new WLC(this.servers.stream()
             .filter(s -> s.weight > 0)
-            .filter(s -> s.server.getAddress() instanceof Inet4Address)
+            .filter(s -> s.server.getAddress() instanceof IPv4)
             .collect(Collectors.toList()));
         this._wlcIPv6 = new WLC(this.servers.stream()
             .filter(s -> s.weight > 0)
-            .filter(s -> s.server.getAddress() instanceof Inet6Address)
+            .filter(s -> s.server.getAddress() instanceof IPv6)
             .collect(Collectors.toList()));
     }
 
@@ -666,11 +665,11 @@ public class ServerGroup {
             .collect(Collectors.toList())));
         this._wrrIPv4 = wrrReset(new WRR(this.servers.stream()
             .filter(s -> s.weight > 0)
-            .filter(s -> s.server.getAddress() instanceof Inet4Address)
+            .filter(s -> s.server.getAddress() instanceof IPv4)
             .collect(Collectors.toList())));
         this._wrrIPv6 = wrrReset(new WRR(this.servers.stream()
             .filter(s -> s.weight > 0)
-            .filter(s -> s.server.getAddress() instanceof Inet6Address)
+            .filter(s -> s.server.getAddress() instanceof IPv6)
             .collect(Collectors.toList())));
     }
 
@@ -794,15 +793,15 @@ public class ServerGroup {
         }
     }
 
-    public synchronized ServerHandle add(String alias, InetSocketAddress server, int weight) throws AlreadyExistException {
+    public synchronized ServerHandle add(String alias, IPPort server, int weight) throws AlreadyExistException {
         return add(alias, null, server, weight);
     }
 
-    public synchronized ServerHandle add(String alias, /*nullable*/ String hostName, InetSocketAddress server, int weight) throws AlreadyExistException {
+    public synchronized ServerHandle add(String alias, /*nullable*/ String hostName, IPPort server, int weight) throws AlreadyExistException {
         return add(alias, hostName, false, server, weight);
     }
 
-    public synchronized void replaceIp(String alias, InetAddress newIp) throws NotFoundException {
+    public synchronized void replaceIp(String alias, IP newIp) throws NotFoundException {
         // find the server to replace
         ServerHandle toReplace = null;
         ArrayList<ServerHandle> list = servers;
@@ -819,7 +818,7 @@ public class ServerGroup {
         // do replace
         try {
             add(alias, toReplace.hostName, true,
-                new InetSocketAddress(newIp, toReplace.server.getPort()),
+                new IPPort(newIp, toReplace.server.getPort()),
                 toReplace.weight);
         } catch (AlreadyExistException e) {
             // should not raise the error
@@ -845,9 +844,9 @@ public class ServerGroup {
      * @param weight   server weight
      * @throws AlreadyExistException already exists
      */
-    private synchronized ServerHandle add(String alias, String hostName, boolean replace, InetSocketAddress server, int weight) throws AlreadyExistException {
+    private synchronized ServerHandle add(String alias, String hostName, boolean replace, IPPort server, int weight) throws AlreadyExistException {
         // set the hostName to null if it's an ip literal
-        if (hostName != null && Utils.isIpLiteral(hostName))
+        if (hostName != null && IP.isIpLiteral(hostName))
             hostName = null;
 
         // the server which will be logic deleted

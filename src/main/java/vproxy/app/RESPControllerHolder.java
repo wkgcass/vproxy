@@ -1,11 +1,11 @@
 package vproxy.app;
 
+import vfd.IPPort;
 import vproxy.component.app.RESPController;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.NotFoundException;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -19,7 +19,7 @@ public class RESPControllerHolder {
     }
 
     public RESPController add(String alias,
-                              InetSocketAddress address,
+                              IPPort address,
                               byte[] password) throws AlreadyExistException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("resp-controller", alias);

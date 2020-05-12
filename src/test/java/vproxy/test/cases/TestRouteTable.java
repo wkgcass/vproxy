@@ -1,8 +1,8 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vfd.IP;
 import vproxy.util.Network;
-import vproxy.util.Utils;
 import vswitch.RouteTable;
 
 import java.util.Arrays;
@@ -16,7 +16,7 @@ public class TestRouteTable {
         String[] ab = s.split("/");
         String a = ab[0];
         int b = Integer.parseInt(ab[1]);
-        return new Network(Utils.parseIpString(a), Utils.parseMask(b));
+        return new Network(IP.parseIpString(a), Network.parseMask(b));
     }
 
     private List<String> expect = Arrays.asList(

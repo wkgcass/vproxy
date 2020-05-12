@@ -1,10 +1,8 @@
 package vproxy.util.bytearray;
 
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 
 import java.nio.ByteBuffer;
-import java.nio.charset.StandardCharsets;
 
 public abstract class AbstractByteArray implements ByteArray {
     public static final ByteArray EMPTY = new SimpleByteArray(new byte[0]);

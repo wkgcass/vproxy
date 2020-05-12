@@ -1,5 +1,6 @@
 package vproxy.component.app;
 
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.simple.SimpleArray;
 import vjson.util.ArrayBuilder;
@@ -14,7 +15,10 @@ import vproxy.component.exception.XException;
 import vproxy.connection.ServerSock;
 import vproxy.dns.Cache;
 import vproxy.dns.Resolver;
-import vproxy.util.*;
+import vproxy.util.ByteArray;
+import vproxy.util.Callback;
+import vproxy.util.LogType;
+import vproxy.util.Logger;
 import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.RoutingHandler;
@@ -22,7 +26,6 @@ import vserver.Tool;
 import vserver.server.Http1ServerImpl;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
@@ -40,10 +43,10 @@ public class HttpController {
     private static final String watch = apiV1Base + "/watch";
 
     public final String alias;
-    public final InetSocketAddress address;
+    public final IPPort address;
     private final HttpServer server;
 
-    public HttpController(String alias, InetSocketAddress address) throws IOException {
+    public HttpController(String alias, IPPort address) throws IOException {
         this.alias = alias;
         this.address = address;
         var loop = Application.get().controlEventLoop;
@@ -1161,8 +1164,8 @@ public class HttpController {
         Resolver.getDefault().copyCache(list);
         var ret = list.stream().map(c -> new ObjectBuilder()
             .put("host", c.host)
-            .putArray("ipv4", arr -> c.ipv4.forEach(i -> arr.add(Utils.ipStr(i.getAddress()))))
-            .putArray("ipv6", arr -> c.ipv6.forEach(i -> arr.add(Utils.ipStr(i.getAddress()))))
+            .putArray("ipv4", arr -> c.ipv4.forEach(i -> arr.add(i.formatToIPString())))
+            .putArray("ipv6", arr -> c.ipv6.forEach(i -> arr.add(i.formatToIPString())))
             .put("timestamp", c.timestamp)
             .build()).collect(Collectors.toList());
         cb.succeeded(new SimpleArray(ret));

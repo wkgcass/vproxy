@@ -1,14 +1,14 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vfd.IP;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.util.ByteArray;
-import vproxy.util.Utils;
 import vswitch.packet.*;
 import vswitch.util.Consts;
 import vswitch.util.MacAddress;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
 import java.util.Collections;
 import java.util.Random;
 import java.util.function.Supplier;
@@ -22,16 +22,16 @@ public class TestPacket {
         return new MacAddress(ByteArray.from(mac));
     }
 
-    Inet4Address randomIpv4() {
+    IPv4 randomIpv4() {
         byte[] b = new byte[4];
         new Random().nextBytes(b);
-        return (Inet4Address) Utils.l3addr(b);
+        return IP.fromIPv4(b);
     }
 
-    Inet6Address randomIpv6() {
+    IPv6 randomIpv6() {
         byte[] b = new byte[16];
         new Random().nextBytes(b);
-        return (Inet6Address) Utils.l3addr(b);
+        return IP.fromIPv6(b);
     }
 
     PacketBytes randomPacket() {

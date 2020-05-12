@@ -1,5 +1,7 @@
 package vproxy.component.app;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxy.component.elgroup.EventLoopGroup;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.ClosedException;
@@ -21,8 +23,6 @@ import vproxy.util.Tuple;
 import vproxy.util.Utils;
 
 import java.io.IOException;
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
 import java.util.function.Consumer;
 
 public class Socks5Server extends TcpLB {
@@ -51,7 +51,7 @@ public class Socks5Server extends TcpLB {
         @Override
         public void provide(Connection accepted, AddressType type, String address, int port, Consumer<Connector> providedCallback) {
             // check whitelist
-            InetAddress remoteAddress = accepted.remote.getAddress();
+            IP remoteAddress = accepted.remote.getAddress();
             if (!securityGroup.allow(Protocol.TCP, remoteAddress, bindAddress.getPort())) {
                 providedCallback.accept(null);
                 return; // terminated by securityGroup
@@ -59,7 +59,7 @@ public class Socks5Server extends TcpLB {
 
             // then let's try to find a connector
             Upstream upstream = Socks5Server.super.backend;
-            if (type == AddressType.domain && !Utils.isIpLiteral(address) /*some implementation may always send domain socks5 request event if it's plain ip*/) {
+            if (type == AddressType.domain && !IP.isIpLiteral(address) /*some implementation may always send domain socks5 request event if it's plain ip*/) {
                 Hint hint = new Hint(address + ":" + port);
                 Connector connector = upstream.next(accepted.remote, hint);
                 providedCallback.accept(connector);
@@ -73,7 +73,7 @@ public class Socks5Server extends TcpLB {
                 for (Upstream.ServerGroupHandle gh : upstream.getServerGroupHandles()) {
                     for (ServerGroup.ServerHandle sh : gh.group.getServerHandles()) {
                         // match address and port
-                        if (Utils.ipStr(sh.server.getAddress().getAddress()).equals(address) && sh.server.getPort() == port) {
+                        if (sh.server.getAddress().formatToIPString().equals(address) && sh.server.getPort() == port) {
                             providedCallback.accept(sh.makeConnector());
                             return;
                         }
@@ -99,7 +99,7 @@ public class Socks5Server extends TcpLB {
     private final Socks5ServerConnectorProvider connectorProvider = new Socks5ServerConnectorProvider();
     public boolean allowNonBackend = false;
 
-    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, InetSocketAddress bindAddress, Upstream backend, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
+    public Socks5Server(String alias, EventLoopGroup acceptorGroup, EventLoopGroup workerGroup, IPPort bindAddress, Upstream backend, int timeout, int inBufferSize, int outBufferSize, SecurityGroup securityGroup) throws AlreadyExistException, ClosedException {
         super(alias, acceptorGroup, workerGroup, bindAddress, backend, timeout, inBufferSize, outBufferSize, securityGroup);
     }
 

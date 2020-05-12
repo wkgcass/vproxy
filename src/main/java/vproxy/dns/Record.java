@@ -1,39 +1,39 @@
 package vproxy.dns;
 
-import java.net.InetAddress;
-import java.net.InetSocketAddress;
+import vfd.IP;
+import vfd.IPPort;
 
 public class Record {
-    public final InetAddress target;
+    public final IP target;
     public final int port;
     public final int weight;
     public final String name;
 
-    public Record(InetAddress target) {
+    public Record(IP target) {
         this(target, 0, 0);
     }
 
-    public Record(InetSocketAddress target) {
+    public Record(IPPort target) {
         this(target.getAddress(), target.getPort());
     }
 
-    public Record(InetAddress target, int port) {
+    public Record(IP target, int port) {
         this(target, port, 0);
     }
 
-    public Record(InetAddress target, int port, String name) {
+    public Record(IP target, int port, String name) {
         this(target, port, 0, name);
     }
 
-    public Record(InetSocketAddress target, int weight) {
+    public Record(IPPort target, int weight) {
         this(target.getAddress(), target.getPort(), weight);
     }
 
-    public Record(InetAddress target, int port, int weight) {
+    public Record(IP target, int port, int weight) {
         this(target, port, weight, null);
     }
 
-    public Record(InetAddress target, int port, int weight, String name) {
+    public Record(IP target, int port, int weight, String name) {
         this.target = target;
         this.port = port;
         this.weight = weight;

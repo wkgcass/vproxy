@@ -1,12 +1,11 @@
 package vswitch;
 
+import vfd.IP;
 import vproxy.component.exception.AlreadyExistException;
 import vproxy.component.exception.XException;
 import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Network;
 import vswitch.util.MacAddress;
-
-import java.net.InetAddress;
 
 public class Table {
     public final int vni;
@@ -38,7 +37,7 @@ public class Table {
         arpTable.setTimeout(arpTableTimeout);
     }
 
-    public void addIp(InetAddress ip, MacAddress mac) throws AlreadyExistException, XException {
+    public void addIp(IP ip, MacAddress mac) throws AlreadyExistException, XException {
         ips.add(ip, mac);
     }
 
@@ -52,7 +51,7 @@ public class Table {
         arpTable.setLoop(loop);
     }
 
-    public MacAddress lookup(InetAddress ip) {
+    public MacAddress lookup(IP ip) {
         var mac = arpTable.lookup(ip);
         if (mac == null) {
             mac = ips.lookup(ip);

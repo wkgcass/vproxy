@@ -1,8 +1,7 @@
 package vproxy.processor.http1;
 
+import vfd.IPPort;
 import vproxy.processor.OOProcessor;
-
-import java.net.InetSocketAddress;
 
 public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     @Override
@@ -16,12 +15,12 @@ public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     }
 
     @Override
-    public HttpContext init(InetSocketAddress clientAddress) {
+    public HttpContext init(IPPort clientAddress) {
         return new HttpContext(clientAddress);
     }
 
     @Override
-    public HttpSubContext initSub(HttpContext httpContext, int id, InetSocketAddress associatedAddress) {
+    public HttpSubContext initSub(HttpContext httpContext, int id, IPPort associatedAddress) {
         return new HttpSubContext(httpContext, id);
     }
 }

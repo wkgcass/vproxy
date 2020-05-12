@@ -1,6 +1,9 @@
 package vproxy.app;
 
 import vfd.FDProvider;
+import vfd.IP;
+import vfd.IPv4;
+import vfd.IPv6;
 import vproxy.component.exception.NotFoundException;
 import vproxy.component.svrgroup.ServerGroup;
 import vproxy.dns.Cache;
@@ -11,9 +14,6 @@ import vproxy.util.LogType;
 import vproxy.util.Logger;
 import vproxy.util.Tuple;
 
-import java.net.Inet4Address;
-import java.net.Inet6Address;
-import java.net.InetAddress;
 import java.net.UnknownHostException;
 import java.util.HashSet;
 import java.util.List;
@@ -54,7 +54,7 @@ public class ServerAddressUpdater implements ResolveListener {
     }
 
     private static void checkAll(String host, Cache c) {
-        Set<InetAddress> addresses = new HashSet<>();
+        Set<IP> addresses = new HashSet<>();
         addresses.addAll(c.ipv4);
         addresses.addAll(c.ipv6);
 
@@ -80,14 +80,14 @@ public class ServerAddressUpdater implements ResolveListener {
     }
 
     private static void checkMissing(String host, Cache newCache, Cache oldCache) {
-        Set<InetAddress> missing = new HashSet<>();
-        for (Inet4Address n : oldCache.ipv4) {
+        Set<IP> missing = new HashSet<>();
+        for (IPv4 n : oldCache.ipv4) {
             if (!newCache.ipv4.contains(n)) {
                 // in old, but not in new
                 missing.add(n);
             }
         }
-        for (Inet6Address n : oldCache.ipv6) {
+        for (IPv6 n : oldCache.ipv6) {
             if (!newCache.ipv6.contains(n)) {
                 // in old, but not in new
                 missing.add(n);
@@ -98,7 +98,7 @@ public class ServerAddressUpdater implements ResolveListener {
         }
     }
 
-    private static void handleMissing(String host, Cache c, Set<InetAddress> missing) {
+    private static void handleMissing(String host, Cache c, Set<IP> missing) {
         List<String> groupNames = Application.get().serverGroupHolder.names();
 
         for (String groupName : groupNames) {
@@ -121,8 +121,8 @@ public class ServerAddressUpdater implements ResolveListener {
     }
 
     private static void doReplace(ServerGroup grp, Cache c, ServerGroup.ServerHandle h) {
-        Tuple<Inet4Address, Inet6Address> tup = c.next();
-        if (h.server.getAddress() instanceof Inet4Address) {
+        Tuple<IPv4, IPv6> tup = c.next();
+        if (h.server.getAddress() instanceof IPv4) {
             if (tup.left != null) {
                 Logger.info(LogType.RESOLVE_REPLACE,
                     "replace grp=" + grp.alias +
@@ -135,7 +135,7 @@ public class ServerAddressUpdater implements ResolveListener {
                     // ignore if it's deleted
                 }
             }
-        } else if (h.server.getAddress() instanceof Inet6Address) {
+        } else if (h.server.getAddress() instanceof IPv6) {
             if (tup.right != null) {
                 Logger.info(LogType.RESOLVE_REPLACE,
                     "replace grp=" + grp.alias +
@@ -158,7 +158,7 @@ public class ServerAddressUpdater implements ResolveListener {
         String host = cache.host;
         Resolver.getDefault().resolve(host, new Callback<>() {
             @Override
-            protected void onSucceeded(InetAddress value) {
+            protected void onSucceeded(IP value) {
                 // ignore
             }
 

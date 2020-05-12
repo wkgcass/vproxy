@@ -1,5 +1,6 @@
 package vproxy.poc;
 
+import vfd.IPPort;
 import vproxy.connection.NetEventLoop;
 import vproxy.connection.ServerSock;
 import vproxy.protocol.ProtocolServerConfig;
@@ -11,7 +12,6 @@ import vproxy.selector.SelectorEventLoop;
 import vproxy.util.Callback;
 
 import java.io.IOException;
-import java.net.InetSocketAddress;
 import java.util.List;
 
 public class RESPPingPongServer {
@@ -25,7 +25,7 @@ public class RESPPingPongServer {
         RESPConfig rconfig = new RESPConfig();
 
         ProtocolServerHandler.apply(loop,
-            ServerSock.create(new InetSocketAddress("127.0.0.1", 16309)),
+            ServerSock.create(new IPPort("127.0.0.1", 16309)),
             pconfig,
             new RESPProtocolHandler(rconfig, new MyRESPHandler()));
 
