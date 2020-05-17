@@ -115,7 +115,9 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
                 setOperating(false);
             }
         } while (
-            plainBufferForApp.used() != 0 && encryptedBufferForOutput.used() == 0 && transferring
+            (plainBufferForApp.used() != 0 || !intermediateBuffers.isEmpty())
+                && encryptedBufferForOutput.used() == 0
+                && transferring
             // in the triggerReadable() process, the encrypted buffer might be flushed to channel
             // but will not notify the plain buffer to write data to encrypted buffer
             //
@@ -126,6 +128,9 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             // then there's no chance for the network flow to be handled
             //
             // so we should handle again here if plain buffer is not empty and encrypted buffer is empty
+            //
+            // also, for the similar reason, we have to give the intermediateBuffers a chance to flush into encryptedBuffer
+            // because the 'generalWrap' forbids recursive calls.
             //
             // the transferring check is because of the consideration that sometimes data cannot be transferred
         );
