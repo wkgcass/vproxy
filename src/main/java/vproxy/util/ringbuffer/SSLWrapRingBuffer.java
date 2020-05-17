@@ -26,7 +26,8 @@ import java.util.function.Supplier;
 public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implements RingBuffer {
     SSLEngine engine; // will be set when first bytes reaches if it's null
 
-    private final MirrorDataFactory mirrorDataFactory;
+    private final MirrorDataFactory plainMirrorDataFactory;
+    private final MirrorDataFactory encryptedMirrorDataFactory;
 
     // for client
     SSLWrapRingBuffer(ByteBufferRingBuffer plainBytesBuffer,
@@ -66,7 +67,13 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         this.engine = engine;
 
         // mirror
-        mirrorDataFactory = new MirrorDataFactory("ssl",
+        plainMirrorDataFactory = new MirrorDataFactory("ssl",
+            d -> {
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
+                d.setSrc(src).setDst(dst);
+            });
+        encryptedMirrorDataFactory = new MirrorDataFactory("ssl-encrypted",
             d -> {
                 IPPort src = srcAddrSupplier.get();
                 IPPort dst = dstAddrSupplier.get();
@@ -105,7 +112,13 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         super(plainBytesBuffer);
 
         // mirror
-        mirrorDataFactory = new MirrorDataFactory("ssl",
+        plainMirrorDataFactory = new MirrorDataFactory("ssl",
+            d -> {
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
+                d.setSrc(src).setDst(dst);
+            });
+        encryptedMirrorDataFactory = new MirrorDataFactory("ssl-encrypted",
             d -> {
                 IPPort src = srcAddrSupplier.get();
                 IPPort dst = dstAddrSupplier.get();
@@ -122,7 +135,18 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
         }
     }
 
-    private void mirror(ByteBuffer plain, int posBefore, SSLEngineResult result) {
+    private String mirrorMeta(SSLEngineResult result) {
+        return "r.s=" + result.getStatus() +
+            ";" +
+            "e.hs=" + engine.getHandshakeStatus() +
+            ";" +
+            "ib=" + intermediateBufferCap() + "/" + intermediateBufferCount() +
+            ";" +
+            "e=" + getEncryptedBufferForOutputUsedSize() + "/" + getEncryptedBufferForOutputCap() +
+            ";";
+    }
+
+    private void mirrorPlain(ByteBuffer plain, int posBefore, SSLEngineResult result) {
         if (plain.position() == posBefore) {
             return; // nothing wrote, so do not mirror data out
         }
@@ -130,17 +154,23 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             return; // nothing should have been written, but the buffer index may change
         }
 
-        // build meta message
-        String meta = "r.s=" + result.getStatus() +
-            ";" +
-            "e.hs=" + engine.getHandshakeStatus() +
-            ";" +
-            "ib=" + intermediateBufferCap() +
-            ";";
-
-        mirrorDataFactory.build()
-            .setMeta(meta)
+        plainMirrorDataFactory.build()
+            .setMeta(mirrorMeta(result))
             .setDataAfter(plain, posBefore)
+            .mirror();
+    }
+
+    private void mirrorEncrypted(ByteBuffer encrypted, SSLEngineResult result) {
+        if (encrypted.position() == 0) {
+            return;
+        }
+        if (result.getStatus() == SSLEngineResult.Status.BUFFER_OVERFLOW) {
+            return;
+        }
+
+        encryptedMirrorDataFactory.build()
+            .setMeta(mirrorMeta(result))
+            .setDataAfter(encrypted, 0)
             .mirror();
     }
 
@@ -159,8 +189,11 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             return;
         }
 
-        if (mirrorDataFactory.isEnabled()) {
-            mirror(bufferPlain, positionBeforeHandling, result);
+        if (plainMirrorDataFactory.isEnabled()) {
+            mirrorPlain(bufferPlain, positionBeforeHandling, result);
+        }
+        if (encryptedMirrorDataFactory.isEnabled()) {
+            mirrorEncrypted(bufferEncrypted, result);
         }
 
         assert Logger.lowLevelDebug("wrap: " + result);
@@ -184,8 +217,11 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
                 return;
             }
 
-            if (mirrorDataFactory.isEnabled()) {
-                mirror(bufferPlain, positionBeforeHandling, result);
+            if (plainMirrorDataFactory.isEnabled()) {
+                mirrorPlain(bufferPlain, positionBeforeHandling, result);
+            }
+            if (encryptedMirrorDataFactory.isEnabled()) {
+                mirrorEncrypted(bufferEncrypted, result);
             }
 
             assert Logger.lowLevelDebug("wrap2: " + result);

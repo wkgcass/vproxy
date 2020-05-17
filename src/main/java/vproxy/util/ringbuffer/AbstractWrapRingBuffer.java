@@ -28,7 +28,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
     private static final int MAX_INTERMEDIATE_BUFFER_CAPACITY = 1024 * 1024; // 1M
 
     private /*might change when switching*/ ByteBufferRingBuffer plainBufferForApp;
-    final SimpleRingBuffer encryptedBufferForOutput;
+    private final SimpleRingBuffer encryptedBufferForOutput;
     private final ReadableHandler readableHandler = new ReadableHandler();
     private final Deque<ByteBufferRingBuffer> intermediateBuffers = new LinkedList<>();
     private ByteBuffer temporaryBuffer = null;
@@ -55,6 +55,14 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         return plainBufferForApp;
     }
 
+    protected int getEncryptedBufferForOutputUsedSize() {
+        return encryptedBufferForOutput.used();
+    }
+
+    protected int getEncryptedBufferForOutputCap() {
+        return encryptedBufferForOutput.capacity();
+    }
+
     protected void recordIntermediateBuffer(ByteBuffer b) {
         intermediateBuffers.add(SimpleRingBuffer.wrap(b));
     }
@@ -65,6 +73,10 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             cap += buf.capacity();
         }
         return cap;
+    }
+
+    protected int intermediateBufferCount() {
+        return intermediateBuffers.size();
     }
 
     protected ByteBuffer getTemporaryBuffer(int cap) {
@@ -214,9 +226,15 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             int wrote = encryptedBufferForOutput.writeTo(channel, maxBytesToWrite);
             generalWrap();
             if (wrote == 0) {
-                break;
+                // try to write again, maybe generaWrap produces some bytes
+                wrote = encryptedBufferForOutput.writeTo(channel, maxBytesToWrite);
+                if (wrote == 0) {
+                    // still no bytes wrote, break the loop
+                    break;
+                }
             }
             bytes += wrote;
+            maxBytesToWrite -= wrote;
         }
         return bytes;
     }

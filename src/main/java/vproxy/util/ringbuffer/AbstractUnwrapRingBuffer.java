@@ -94,6 +94,10 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         return cap;
     }
 
+    protected int intermediateBufferCount() {
+        return intermediateBuffers.size();
+    }
+
     protected ByteBuffer getTemporaryBuffer(int cap) {
         if (temporaryBuffer != null && temporaryBuffer.capacity() >= cap) {
             temporaryBuffer.limit(temporaryBuffer.capacity()).position(0);

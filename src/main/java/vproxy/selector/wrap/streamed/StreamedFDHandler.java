@@ -955,7 +955,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         }
 
         // build meta
-        String meta = "c=" + (client ? "1" : "0") + ";fd=" + this.fd.toString();
+        String meta = "c=" + (client ? "1" : "0") +
+            ";" +
+            "s=" + fd.getState().name() +
+            ";" +
+            "wl=" + writableLen() +
+            ";";
 
         factory.build()
             .setMeta(meta)

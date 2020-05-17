@@ -38,7 +38,8 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // only used when resume if resumer not specified
     private SelectorEventLoop lastLoop = null;
 
-    private final MirrorDataFactory mirrorDataFactory;
+    private final MirrorDataFactory plainMirrorDataFactory;
+    private final MirrorDataFactory encryptedMirrorDataFactory;
 
     // for client
     SSLUnwrapRingBuffer(ByteBufferRingBuffer plainBufferForApp,
@@ -89,7 +90,13 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         ssl = null;
 
         // mirror
-        mirrorDataFactory = new MirrorDataFactory("ssl",
+        plainMirrorDataFactory = new MirrorDataFactory("ssl",
+            d -> {
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
+                d.setSrc(src).setDst(dst);
+            });
+        encryptedMirrorDataFactory = new MirrorDataFactory("ssl-encrypted",
             d -> {
                 IPPort src = srcAddrSupplier.get();
                 IPPort dst = dstAddrSupplier.get();
@@ -134,7 +141,13 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         this.pair = pair;
 
         // mirror
-        mirrorDataFactory = new MirrorDataFactory("ssl",
+        plainMirrorDataFactory = new MirrorDataFactory("ssl",
+            d -> {
+                IPPort src = srcAddrSupplier.get();
+                IPPort dst = dstAddrSupplier.get();
+                d.setSrc(src).setDst(dst);
+            });
+        encryptedMirrorDataFactory = new MirrorDataFactory("ssl-encrypted",
             d -> {
                 IPPort src = srcAddrSupplier.get();
                 IPPort dst = dstAddrSupplier.get();
@@ -217,24 +230,36 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     // helper functions END
     // -------------------
 
-    private void mirror(ByteBuffer plain, SSLEngineResult result) {
+    private String mirrorMeta(SSLEngineResult result) {
+        return "r.s=" + result.getStatus() +
+            ";" +
+            "e.hs=" + engine.getHandshakeStatus() +
+            ";" +
+            "ib=" + intermediateBufferCap() + "/" + intermediateBufferCount() +
+            ";" +
+            "p=" + getPlainBufferForApp().used() + "/" + getPlainBufferForApp().capacity() +
+            ";";
+    }
+
+    private void mirrorPlain(ByteBuffer plain, SSLEngineResult result) {
         if (plain.position() == 0) {
             return;
         }
 
-        // build meta message
-        String meta = "r.s=" + result.getStatus() +
-            ";" +
-            "e.hs=" + engine.getHandshakeStatus() +
-            ";" +
-            "ib=" + intermediateBufferCap() +
-            ";" +
-            "i=" + this.toString() +
-            ";";
-
-        mirrorDataFactory.build()
-            .setMeta(meta)
+        plainMirrorDataFactory.build()
+            .setMeta(mirrorMeta(result))
             .setDataAfter(plain, 0)
+            .mirror();
+    }
+
+    private void mirrorEncrypted(ByteBuffer encrypted, int posBefore, SSLEngineResult result) {
+        if (encrypted.position() <= posBefore) {
+            return;
+        }
+
+        encryptedMirrorDataFactory.build()
+            .setMeta(mirrorMeta(result))
+            .setDataAfter(encrypted, posBefore)
             .mirror();
     }
 
@@ -253,8 +278,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             return;
         }
 
-        if (mirrorDataFactory.isEnabled()) {
-            mirror(plainBuffer, result);
+        if (encryptedMirrorDataFactory.isEnabled()) {
+            mirrorEncrypted(encryptedBuffer, positionBeforeHandling, result);
+        }
+        if (plainMirrorDataFactory.isEnabled()) {
+            mirrorPlain(plainBuffer, result);
         }
 
         assert Logger.lowLevelDebug("unwrap: " + result);
@@ -277,8 +305,11 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 return;
             }
 
-            if (mirrorDataFactory.isEnabled()) {
-                mirror(plainBuffer, result);
+            if (encryptedMirrorDataFactory.isEnabled()) {
+                mirrorEncrypted(encryptedBuffer, positionBeforeHandling, result);
+            }
+            if (plainMirrorDataFactory.isEnabled()) {
+                mirrorPlain(plainBuffer, result);
             }
 
             assert Logger.lowLevelDebug("unwrap2: " + result);
