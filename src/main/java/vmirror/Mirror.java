@@ -195,13 +195,7 @@ public class Mirror {
         // the result array
         List<EthernetPacket> retList = new ArrayList<>(dataList.size());
 
-        for (int i = 0; i < dataList.size(); i++) {
-            ByteArray data = dataList.get(i);
-            // increase the sequence
-            if (i > 0) {
-                ctx.incrSeq(dataList.get(i - 1).length());
-            }
-
+        for (ByteArray data : dataList) {
             final int dataOffset = 5; // 20 bytes
             byte dataOffsetByte = (byte) (dataOffset << 4);
             ByteArray tcpPacketBytes =
@@ -241,7 +235,7 @@ public class Mirror {
                 ByteArray other = ByteArray.allocate(2).set(0, (byte) 254).set(1, (byte) opBytes.length())
                     .concat(opBytes);
                 if ((2 + other.length()) % 8 != 0) {
-                    int foo = other.length() / 8;
+                    int foo = (2 + other.length()) / 8;
                     int pad = (foo + 1) * 8 - (2 + other.length());
                     other = other.concat(ByteArray.allocate(pad));
                 }
@@ -260,7 +254,7 @@ public class Mirror {
                 ByteArray other = ByteArray.allocate(2).set(0, (byte) 254) // routing type
                     .concat(metaBytes);
                 if ((2 + other.length()) % 8 != 0) {
-                    int foo = other.length() / 8;
+                    int foo = (2 + other.length()) / 8;
                     int pad = (foo + 1) * 8 - (2 + other.length());
                     other = other.concat(ByteArray.allocate(pad));
                 }
@@ -291,6 +285,9 @@ public class Mirror {
             pkt.setPacket(ip);
 
             retList.add(pkt);
+
+            // increase the sequence
+            ctx.incrSeq(data.length());
         }
         return retList;
     }
@@ -331,6 +328,7 @@ public class Mirror {
         JSON.Instance<?> inst = JSON.parse(sb.toString());
         parseAndLoad(inst);
         mirror.lastTimestamp = ts;
+        Logger.alert("mirror config reloaded");
     }
 
     private void loadConfigAndSetTimer() {
