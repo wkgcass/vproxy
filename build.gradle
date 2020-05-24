@@ -1,5 +1,4 @@
 plugins {
-    id 'java'
     id 'idea'
     id "org.beryx.jlink" version "2.15.1"
 }
@@ -7,31 +6,89 @@ plugins {
 group 'vproxy'
 version loadVersion()
 
-mainClassName = 'vproxy.app.Main'
-sourceCompatibility = 11.0
+mainClassName = 'vproxyapp.app.Main'
+
+jar {
+    archiveName 'vproxy.jar'
+    manifest {
+        attributes 'Main-Class': mainClassName
+    }
+    exclude 'module-info.class'
+    from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+}
+
+subprojects {
+    apply plugin: 'java'
+
+    sourceCompatibility = 11.0
+
+    repositories {
+        mavenLocal()
+        mavenCentral()
+    }
+}
 
 repositories {
     mavenLocal()
     mavenCentral()
 }
 
-dependencies {
-    // make sure no `compile` dependencies appear here
-
-    testCompile group: 'junit', name: 'junit', version: '4.12'
-    testCompile group: 'io.vertx', name: 'vertx-redis-client', version: '3.7.0'
-    testCompile group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
-    testCompile group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
-    testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
-    testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
-    testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
+project(':base') {
+    dependencies {
+    }
 }
 
-jar {
-    archiveName = "vproxy.jar"
-    manifest {
-        attributes 'Main-Class': mainClassName
+project(':core') {
+    dependencies {
+        compile project(':base')
     }
+}
+
+project(':lib') {
+    dependencies {
+        compile project(':base')
+        compile project(':core')
+    }
+}
+
+project(':extended') {
+    dependencies {
+        compile project(':base')
+        compile project(':core')
+        compile project(':lib')
+    }
+}
+
+project(':app') {
+    dependencies {
+        compile project(':base')
+        compile project(':core')
+        compile project(':lib')
+        compile project(':extended')
+    }
+}
+
+project(':test') {
+    dependencies {
+        compile project(':base')
+        compile project(':core')
+        compile project(':extended')
+        compile project(':lib')
+        compile project(':app')
+
+        testCompile group: 'junit', name: 'junit', version: '4.12'
+        testCompile group: 'io.vertx', name: 'vertx-redis-client', version: '3.7.0'
+        testCompile group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
+        testCompile group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
+        testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+        testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
+        testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
+    }
+}
+
+dependencies {
+    compile project(':app')
+    testCompile project(':test')
 }
 
 jlink {
@@ -43,7 +100,7 @@ jlink {
 def loadVersion() {
     def PREFIX = "public static final String VERSION = \""
     def SUFFIX = "\"; // _THE_VERSION_"
-    def ver = file(sourceSets.main.java.srcDirs[0].path + "/vproxy/app/Application.java")
+    def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/vproxybase/util/Version.java")
     def lines = ver.getText().split("\n")
     for (def line : lines) {
         line = line.trim()

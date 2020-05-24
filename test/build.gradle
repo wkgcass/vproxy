@@ -1,0 +1,9 @@
+test {
+    useJUnit()
+    filter {
+        includeTestsMatching 'vproxy.test.VSuite'
+        includeTestsMatching 'vproxy.ci.CI'
+    }
+    testLogging.showStandardStreams(true)
+    forkEvery = 1
+}

@@ -27,7 +27,7 @@ and the following security features:
 vproxy is a zero-dependency networking tool, which provides lb, socks5, dns, server-group (with health check) and may other utilities.  
 It's easy to read, learn or modify since it's zero-dependency, all codes are simple java code with a little piece of optional jni extension.  
 Here we talk about SDN switches, it's really easy for you to modify the networking stack, all you need is in one file `Switch.java`.  
-Packets for common protocols in L3 are parsed in `vswitch.packet` package.  
+Packets for common protocols in L3 are parsed in `vpacket` package.  
 Interfaces are placed in `vproxy.iface` package.
 
 Ok, Let's play with it!
