@@ -45,7 +45,7 @@ else
 	echo "runtime tar extracted"
 fi
 
-version=`curl https://raw.githubusercontent.com/wkgcass/vproxy/master/src/main/java/vproxy/app/Application.java 2>/dev/null | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2`
+version=`curl https://raw.githubusercontent.com/wkgcass/vproxy/master/base/src/main/java/vproxybase/util/Version.java 2>/dev/null | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2`
 jar_name="vproxy-$version.jar"
 
 check=`ls vproxy.jar 2>/dev/null`

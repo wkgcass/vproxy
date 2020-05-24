@@ -83,7 +83,7 @@ Use `load ${filename}` to load a configuration file when the vproxy instance sta
 e.g.
 
 ```
-java vproxy.app.Main load ~/vproxy.conf
+java vproxyapp.app.Main load ~/vproxy.conf
 ```
 
 > Multiple config files can be specified at the same time, they will be loaded one by one.
@@ -93,7 +93,7 @@ java vproxy.app.Main load ~/vproxy.conf
 Start the vproxy instance:
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 Then type in:
@@ -113,7 +113,7 @@ Then type in:
 Start the vproxy instance:
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 Then the StdIOController starts by default, you can type in commands directly through console.
@@ -149,7 +149,7 @@ Use `resp-controller ${address} ${password}` arguments to start the RESPControll
 e.g.
 
 ```
-java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
+java vproxyapp.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
 #### 5.2. system call command
@@ -157,7 +157,7 @@ java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 Start the vproxy instance:
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 To create a RESPController, you can type in:
@@ -200,7 +200,7 @@ Use `http-controller ${address}` arguments to start the HTTPController
 e.g.
 
 ```
-java vproxy.app.Main http-controller 0.0.0.0:18776
+java vproxyapp.app.Main http-controller 0.0.0.0:18776
 ```
 
 #### 6.2. system call command
@@ -208,7 +208,7 @@ java vproxy.app.Main http-controller 0.0.0.0:18776
 Start the vproxy instance:
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 To create a HTTPController, you can type in:

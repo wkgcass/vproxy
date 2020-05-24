@@ -4,7 +4,7 @@ vproxy 不但支持传统的负载均衡、socks5服务、service mesh、服务�
 
 ## 如何使用
 
-扩展应用在包`vproxyx`下，每一个应用入口都是一个`void main0(String[])`方法。
+扩展应用在`vproxy.extended/vproxyx`以及`vproxy.app/vproxyapp.vproxyx`里，每一个应用入口都是一个`void main0(String[])`方法。
 
 使用`系统属性 -D`来指定要运行的应用所在的类。
 
@@ -19,7 +19,7 @@ java -Deploy=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $applicat
 #
 # 或者
 #
-java -Deploy=$simple_name_of_a_class $JVM_OPTS vproxy.app.Main $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS vproxyapp.app.Main $application_args
 ```
 
 例如：

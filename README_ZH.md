@@ -102,16 +102,18 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 仅支持macos(bsd)/linux。另外在编译前，你可能需要配置`JAVA_HOME`环境变量。
 
 ```
-cd ./src/main/c
-./make-general.sh
-
-cd ../../../
-java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+make vfdposix
+java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 如果要使用`F-Stack`版本，可以按照这个文档的步骤执行：[fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md)。
 
-Windows有一个特别版本用于支持Tap设备：`-Dvfd=windows`，但是普通fd和事件循环依旧是jdk selector channel.
+此外，Windows有一个特别版本用于支持Tap设备：`-Dvfd=windows`，但是普通fd和事件循环依旧是jdk selector channel.
+
+```
+make vfdwindows
+java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+```
 
 </details>
 

@@ -49,7 +49,7 @@ tmux
 
 ## then start vproxy in tmux terminal
 
-java vproxy.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
+java vproxyapp.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
 ```
 
 Start the vproxy and start a resp-controller and bind `10.0.3.10:16309` for the `ADMIN` to access.

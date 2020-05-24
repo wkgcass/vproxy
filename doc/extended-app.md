@@ -4,7 +4,7 @@ VProxy supports not only traditional loadbalancer, socks5 server, service mesh a
 
 ## How to use
 
-The extended apps are defined in package `vproxyx`, each app entrance is a `void main0(String[])` method.
+The extended apps are defined in package `vproxy.extended/vproxyx` and `vproxy.app/vproxyapp.vproxyx`, each app entrance is a `void main0(String[])` method.
 
 Use `system property -D` to specify the app's class.
 
@@ -21,7 +21,7 @@ java -Deploy=$simple_name_of_a_class $JVM_OPTS -jar $the_jar_of_vproxy $applicat
 #
 # or
 #
-java -Deploy=$simple_name_of_a_class $JVM_OPTS vproxy.app.Main $application_args
+java -Deploy=$simple_name_of_a_class $JVM_OPTS vproxyapp.app.Main $application_args
 ```
 
 e.g.

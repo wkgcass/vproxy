@@ -275,12 +275,12 @@ make vfdposix          # 编译vfdposix库
 ./gradlew clean jar    # 编译java文件为jar包
 ```
 
-你可以使用`java -Deploy=HelloWorld -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar`来检查vfd实现是否正常运行。
+你可以使用`java -Deploy=HelloWorld -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar`来检查vfd实现是否正常运行。
 
 接下来就可以运行vpws-agent了。
 
 ```
-sudo java -Deploy=WebSocksProxyAgent -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar "$配置文件路径"
+sudo java -Deploy=WebSocksProxyAgent -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar "$配置文件路径"
 ```
 
 ### 客户端配置

@@ -158,7 +158,7 @@ export RTE_SDK=/data/f-stack/dpdk
 export RTE_TARGET=x86_64-native-linuxapp-gcc
 export FF_DPDK="$RTE_SDK/$RTE_TARGET"
 export CONF_CFLAGS=-fPIC
-export LD_LIBRARY_PATH="$FF_PATH/lib:$FF_DPDK/lib:/data/vproxy/src/main/c"
+export LD_LIBRARY_PATH="$FF_PATH/lib:$FF_DPDK/lib:/data/vproxy/base/src/main/c"
 ```
 
 添加后执行`source ~/.bashrc`
@@ -266,20 +266,16 @@ gateway=192.168.56.1
 ### 12. 编译vproxy
 
 ```
-# 编译java部分
+# 编译java和c
 cd /data/vproxy
-./gradlew clean jar
-
-# 编译c部分
-cd src/main/c
-./make-fstack.sh
+make jar fstack
 ```
 
 ### 13. 运行vproxy HelloWorld
 
 ```
 cd /data/vproxy
-java -Deploy=HelloWorld -Dfstack="--conf /etc/f-stack.conf" -Djava.library.path="./src/main/c" -jar build/libs/vproxy.jar
+java -Deploy=HelloWorld -Dfstack="--conf /etc/f-stack.conf" -Djava.library.path="./base/src/main/c" -jar build/libs/vproxy.jar
 ```
 
 正常的话应当能够看到如下打印：（后续版本更新后可能打印有所变化，不过大概应当如此）

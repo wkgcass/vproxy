@@ -86,7 +86,7 @@ vproxy启动时会自动加载最后一次保存的配置文件。
 例如：
 
 ```
-java vproxy.app.Main load ~/vproxy.conf
+java vproxyapp.app.Main load ~/vproxy.conf
 ```
 
 > 可以同时指定多个配置文件，每个配置文件都会被读取
@@ -96,7 +96,7 @@ java vproxy.app.Main load ~/vproxy.conf
 启动一个vproxy实例：
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 然后输入：
@@ -116,7 +116,7 @@ java vproxy.app.Main
 启动vproxy实例：
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 此时，StdIOController就已经默认启动了。你可以直接在控制台输入命令。
@@ -152,7 +152,7 @@ redis-cli -p 16309 -a m1paSsw0rd
 例如：
 
 ```
-java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
+java vproxyapp.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
 #### 5.2. System call 命令
@@ -160,7 +160,7 @@ java vproxy.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 启动vproxy实例：
 
 ```
-java vproxy.app.Main
+java vproxyapp.app.Main
 ```
 
 你可以输入如下命令来启动RESPController：
@@ -203,7 +203,7 @@ curl http://127.0.0.1:18776/healthz
 e.g.
 
 ```
-java vproxy.app.Main http-controller 0.0.0.0:18776
+java vproxyapp.app.Main http-controller 0.0.0.0:18776
 ```
 
 #### 6.2. System Call 命令

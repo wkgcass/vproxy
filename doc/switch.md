@@ -91,7 +91,7 @@ make vfdwindows
 Run the HelloWorld program to check if things went ok:
 
 ```
-java -Dvfd=posix -Djava.library.path=./src/main/c -Deploy=HelloWorld -jar build/libs/vproxy.jar
+java -Dvfd=posix -Djava.library.path=./base/src/main/c -Deploy=HelloWorld -jar build/libs/vproxy.jar
 ```
 
 Check the output, and play with it with `telnet/curl/nc` if you want. Then `ctrl-c` to quit.
@@ -101,7 +101,7 @@ On windows, use `-Dvfd=windows` instead of `-Dvfd=posix`.
 #### 4) run
 
 ```
-sudo java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar
+sudo java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar
 ```
 
 Sometimes you may have to use `sudo env PATH=$PATH` prefix.

@@ -1,14 +1,14 @@
 .PHONY: clean jar vfdposix vfdwindows fstack image image-docker release all
 .DEFAULT: jar
 
-VERSION := $(shell cat src/main/java/vproxy/app/Application.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
+VERSION := $(shell cat base/src/main/java/vproxybase/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 
 clean:
 	./gradlew clean
-	rm -f ./src/main/c/libvfdposix.dylib
-	rm -f ./src/main/c/libvfdposix.so
-	rm -f ./src/main/c/libvfdfstack.so
-	rm -f ./src/main/c/vfdwindows.dll
+	rm -f ./base/src/main/c/libvfdposix.dylib
+	rm -f ./base/src/main/c/libvfdposix.so
+	rm -f ./base/src/main/c/libvfdfstack.so
+	rm -f ./base/src/main/c/vfdwindows.dll
 	rm -f ./vproxy
 	rm -f ./vproxy-*
 
@@ -16,13 +16,13 @@ jar:
 	./gradlew jar
 
 vfdposix:
-	cd ./src/main/c && ./make-general.sh
+	cd ./base/src/main/c && ./make-general.sh
 
 vfdwindows:
-	cd ./src/main/c && ./make-windows.sh
+	cd ./base/src/main/c && ./make-windows.sh
 
 fstack:
-	cd ./src/main/c && ./make-fstack.sh
+	cd ./base/src/main/c && ./make-fstack.sh
 
 image: jar
 	native-image -jar build/libs/vproxy.jar -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy

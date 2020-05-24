@@ -577,7 +577,7 @@ function launch() {
 		fi
 	done
 
-	cmd="ip netns exec $ns $JAVA -Dvfd=posix -Djava.library.path=/vproxy/vproxy/src/main/c -jar /vproxy/vproxy/build/libs/vproxy.jar $loadConf noSave sigIntDirectlyShutdown noStdIOController pidFile /vproxy/$conf.pid"
+	cmd="ip netns exec $ns $JAVA -Dvfd=posix -Djava.library.path=/vproxy/vproxy/base/src/main/c -jar /vproxy/vproxy/build/libs/vproxy.jar $loadConf noSave sigIntDirectlyShutdown noStdIOController pidFile /vproxy/$conf.pid"
 	echo "$cmd"
 	nohup $cmd 2>&1 1>"/vproxy/$conf.log" &
 	echo "process $conf: $!"

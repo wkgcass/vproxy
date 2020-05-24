@@ -102,16 +102,18 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 Only macos(bsd)/linux supported. And you might need to set the `JAVA_HOME` env variable before compiling.
 
 ```
-cd ./src/main/c
-./make-general.sh
-
-cd ../../../
-java -Dvfd=posix -Djava.library.path=./src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+make vfdposix
+java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
-There's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
+And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
+
+```
+make vfdwindows
+java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+```
 
 </details>
 

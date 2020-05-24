@@ -1,22 +1,22 @@
 [
 	{
-		"name": "vproxy.app.cmd.Action",
+		"name": "vproxyapp.app.cmd.Action",
 		"allPublicFields": true
 	},
 	{
-		"name": "vproxy.app.cmd.ResourceType",
+		"name": "vproxyapp.app.cmd.ResourceType",
 		"allPublicFields": true
 	},
 	{
-		"name": "vproxy.app.cmd.Preposition",
+		"name": "vproxyapp.app.cmd.Preposition",
 		"allPublicFields": true
 	},
 	{
-		"name": "vproxy.app.cmd.Flag",
+		"name": "vproxyapp.app.cmd.Flag",
 		"allPublicFields": true
 	},
 	{
-		"name": "vproxy.app.cmd.Param",
+		"name": "vproxyapp.app.cmd.Param",
 		"allPublicFields": true
 	}
 ]
