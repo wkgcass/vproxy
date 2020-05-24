@@ -1,8 +1,8 @@
 package vproxyapp.app.args;
 
-import vproxybase.Config;
 import vproxyapp.app.MainCtx;
 import vproxyapp.app.MainOp;
+import vproxybase.Config;
 import vproxybase.connection.ServerSock;
 
 public class NoStartupBindCheckOp implements MainOp {

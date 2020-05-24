@@ -2,9 +2,9 @@ package vmirror;
 
 import vfd.IP;
 import vfd.IPPort;
+import vfd.MacAddress;
 import vproxybase.util.ByteArray;
 import vproxybase.util.Consts;
-import vfd.MacAddress;
 
 import java.nio.ByteBuffer;
 

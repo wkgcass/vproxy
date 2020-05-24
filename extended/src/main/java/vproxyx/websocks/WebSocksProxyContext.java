@@ -1,9 +1,9 @@
 package vproxyx.websocks;
 
+import vproxy.socks.Socks5ProxyContext;
 import vproxybase.connection.Connector;
 import vproxybase.http.HttpContext;
 import vproxybase.protocol.ProtocolHandlerContext;
-import vproxy.socks.Socks5ProxyContext;
 import vproxybase.util.Callback;
 import vproxybase.util.Tuple;
 import vproxybase.util.nio.ByteArrayChannel;

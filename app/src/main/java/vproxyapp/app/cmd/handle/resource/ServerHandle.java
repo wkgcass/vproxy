@@ -6,8 +6,8 @@ import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
 import vproxyapp.app.cmd.handle.param.AddrHandle;
 import vproxyapp.app.cmd.handle.param.WeightHandle;
-import vproxybase.util.exception.NotFoundException;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.util.exception.NotFoundException;
 
 import java.util.List;
 import java.util.Optional;

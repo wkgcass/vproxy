@@ -2,16 +2,16 @@ package vproxyx.websocks.relay;
 
 import vfd.IP;
 import vfd.IPPort;
-import vproxybase.component.elgroup.EventLoopGroup;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
+import vproxy.socks.AddressType;
+import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.connection.*;
 import vproxybase.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
 import vproxybase.processor.Hint;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
-import vproxy.socks.AddressType;
 import vproxybase.util.*;
 import vproxybase.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxybase.util.ringbuffer.SSLUtils;

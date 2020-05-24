@@ -5,8 +5,8 @@ import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
-import vproxybase.util.exception.XException;
 import vproxybase.util.Utils;
+import vproxybase.util.exception.XException;
 import vswitch.Switch;
 
 public class TapHandle {

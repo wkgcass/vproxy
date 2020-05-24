@@ -1,6 +1,7 @@
 package vproxyapp.app.cmd.handle.resource;
 
 import vjson.util.ObjectBuilder;
+import vproxy.component.svrgroup.Upstream;
 import vproxyapp.app.Application;
 import vproxyapp.app.ServerGroupHolder;
 import vproxyapp.app.cmd.Command;
@@ -13,10 +14,9 @@ import vproxyapp.app.cmd.handle.param.MethHandle;
 import vproxyapp.app.cmd.handle.param.WeightHandle;
 import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
+import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
-import vproxybase.component.svrgroup.ServerGroup;
-import vproxy.component.svrgroup.Upstream;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -4,7 +4,6 @@ import vproxyapp.app.util.SignalHook;
 import vproxyapp.process.Shutdown;
 import vproxybase.connection.ServerSock;
 import vproxybase.util.*;
-import vproxybase.util.Version;
 
 import java.io.*;
 import java.util.ArrayList;

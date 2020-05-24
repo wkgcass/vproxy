@@ -1,9 +1,9 @@
 package vswitch;
 
+import vfd.MacAddress;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Timer;
 import vswitch.iface.Iface;
-import vfd.MacAddress;
 import vswitch.util.SwitchUtils;
 
 import java.util.HashMap;

@@ -1,8 +1,8 @@
 package vproxyapp.app.cmd;
 
+import vproxy.component.secure.SecurityGroup;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.handle.resource.SwitchHandle;
-import vproxy.component.secure.SecurityGroup;
 import vproxybase.util.Tuple;
 
 import java.util.Arrays;

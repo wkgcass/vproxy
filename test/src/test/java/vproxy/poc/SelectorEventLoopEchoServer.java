@@ -4,8 +4,8 @@ import vfd.EventSet;
 import vfd.FDProvider;
 import vfd.IPPort;
 import vfd.ServerSocketFD;
-import vproxybase.selector.SelectorEventLoop;
 import vproxy.test.tool.EchoServerHandler;
+import vproxybase.selector.SelectorEventLoop;
 
 import java.io.IOException;
 

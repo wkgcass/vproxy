@@ -1,14 +1,14 @@
 package vproxyapp.app.cmd.handle.resource;
 
+import vproxy.component.app.Socks5Server;
+import vproxy.component.app.TcpLB;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
-import vproxy.component.app.Socks5Server;
-import vproxy.component.app.TcpLB;
 import vproxybase.component.elgroup.EventLoopGroup;
-import vproxybase.util.exception.XException;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.util.exception.XException;
 
 import java.util.List;
 

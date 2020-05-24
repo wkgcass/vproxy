@@ -2,10 +2,9 @@ package vmirror;
 
 import vfd.*;
 import vjson.JSON;
+import vpacket.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
-import vpacket.*;
-import vfd.MacAddress;
 
 import java.io.*;
 import java.nio.ByteBuffer;

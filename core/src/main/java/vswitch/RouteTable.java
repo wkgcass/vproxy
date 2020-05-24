@@ -3,10 +3,10 @@ package vswitch;
 import vfd.IP;
 import vfd.IPv4;
 import vfd.IPv6;
+import vproxybase.util.Network;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
-import vproxybase.util.Network;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,11 +1,11 @@
 package vswitch;
 
 import vfd.IP;
-import vproxybase.util.exception.AlreadyExistException;
-import vproxybase.util.exception.XException;
+import vfd.MacAddress;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Network;
-import vfd.MacAddress;
+import vproxybase.util.exception.AlreadyExistException;
+import vproxybase.util.exception.XException;
 
 public class Table {
     public final int vni;

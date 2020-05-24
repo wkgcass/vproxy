@@ -1,5 +1,6 @@
 package vproxyapp.app.cmd.handle.resource;
 
+import vproxy.component.secure.SecurityGroup;
 import vproxyapp.app.Application;
 import vproxyapp.app.SecurityGroupHolder;
 import vproxyapp.app.cmd.Command;
@@ -10,7 +11,6 @@ import vproxyapp.app.cmd.handle.param.SecGRDefaultHandle;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
-import vproxy.component.secure.SecurityGroup;
 
 import java.util.ArrayList;
 import java.util.List;

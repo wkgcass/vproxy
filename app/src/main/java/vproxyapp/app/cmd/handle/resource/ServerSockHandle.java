@@ -2,8 +2,8 @@ package vproxyapp.app.cmd.handle.resource;
 
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
-import vproxybase.util.exception.NotFoundException;
 import vproxybase.connection.ServerSock;
+import vproxybase.util.exception.NotFoundException;
 
 import java.util.LinkedList;
 import java.util.List;

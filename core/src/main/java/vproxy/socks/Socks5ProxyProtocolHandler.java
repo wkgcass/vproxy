@@ -4,8 +4,8 @@ import vfd.IP;
 import vproxybase.connection.Connector;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.*;
+import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

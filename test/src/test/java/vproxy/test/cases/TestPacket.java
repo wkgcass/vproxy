@@ -4,10 +4,10 @@ import org.junit.Test;
 import vfd.IP;
 import vfd.IPv4;
 import vfd.IPv6;
+import vfd.MacAddress;
 import vpacket.*;
 import vproxybase.util.ByteArray;
 import vproxybase.util.Consts;
-import vfd.MacAddress;
 
 import java.util.Collections;
 import java.util.Random;

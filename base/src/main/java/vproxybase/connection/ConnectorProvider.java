@@ -1,8 +1,5 @@
 package vproxybase.connection;
 
-import vproxybase.connection.Connection;
-import vproxybase.connection.Connector;
-
 import java.util.function.Consumer;
 
 public interface ConnectorProvider {

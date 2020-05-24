@@ -12,10 +12,10 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.TimerEvent;
 import vproxybase.selector.wrap.arqudp.ArqUDPSocketFD;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Consts;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.Consts;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

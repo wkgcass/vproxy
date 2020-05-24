@@ -1,16 +1,14 @@
 package vproxyapp.app;
 
+import vproxy.component.ssl.CertKey;
 import vproxy.util.CoreUtils;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.NotFoundException;
-import vproxy.component.ssl.CertKey;
-import vproxybase.util.Utils;
 
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 public class CertKeyHolder {
     private Map<String, CertKey> map = new HashMap<>();

@@ -1,8 +1,8 @@
 package vmirror;
 
 import vfd.IP;
-import vproxybase.util.Network;
 import vfd.MacAddress;
+import vproxybase.util.Network;
 
 public class FilterConfig {
     final OriginConfig originConfig;

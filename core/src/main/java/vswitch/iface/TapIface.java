@@ -3,9 +3,9 @@ package vswitch.iface;
 import vfd.AbstractDatagramFD;
 import vfd.DatagramFD;
 import vfd.TapDatagramFD;
+import vpacket.VXLanPacket;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Logger;
-import vpacket.VXLanPacket;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -2,12 +2,12 @@ package vswitch.iface;
 
 import vfd.DatagramFD;
 import vfd.IPPort;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
 import vpacket.VProxyEncryptedPacket;
 import vpacket.VXLanPacket;
+import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Consts;
+import vproxybase.util.LogType;
+import vproxybase.util.Logger;
 import vswitch.util.UserInfo;
 
 import java.io.IOException;

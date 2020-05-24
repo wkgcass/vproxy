@@ -1,13 +1,13 @@
 package vproxyapp.app.cmd.handle.resource;
 
 import vfd.IP;
+import vfd.MacAddress;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
 import vproxybase.util.exception.XException;
 import vswitch.Table;
-import vfd.MacAddress;
 
 import java.util.Collection;
 import java.util.Map;

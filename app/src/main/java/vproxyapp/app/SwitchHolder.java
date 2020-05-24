@@ -1,11 +1,11 @@
 package vproxyapp.app;
 
 import vfd.IPPort;
+import vproxy.component.secure.SecurityGroup;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 import vproxybase.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
 import vswitch.Switch;
 
 import java.io.IOException;

@@ -4,7 +4,6 @@ import vfd.FDProvider;
 import vfd.IP;
 import vfd.IPv4;
 import vfd.IPv6;
-import vproxybase.util.exception.NotFoundException;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.dns.Cache;
 import vproxybase.dns.ResolveListener;
@@ -13,6 +12,7 @@ import vproxybase.util.Callback;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.Tuple;
+import vproxybase.util.exception.NotFoundException;
 
 import java.net.UnknownHostException;
 import java.util.HashSet;

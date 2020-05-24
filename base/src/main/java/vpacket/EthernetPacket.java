@@ -1,11 +1,7 @@
 package vpacket;
 
-import vproxybase.util.ByteArray;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Utils;
-import vproxybase.util.Consts;
 import vfd.MacAddress;
+import vproxybase.util.*;
 
 import java.util.Objects;
 

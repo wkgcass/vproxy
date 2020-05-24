@@ -2,8 +2,8 @@ package vpacket;
 
 import vfd.IP;
 import vproxybase.util.ByteArray;
-import vproxybase.util.Utils;
 import vproxybase.util.Consts;
+import vproxybase.util.Utils;
 
 import java.util.Objects;
 

@@ -4,8 +4,8 @@ import vfd.FDProvider;
 import vfd.FDs;
 import vfd.FDsWithTap;
 import vfd.TapDatagramFD;
-import vproxybase.util.ByteArray;
 import vpacket.EthernetPacket;
+import vproxybase.util.ByteArray;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

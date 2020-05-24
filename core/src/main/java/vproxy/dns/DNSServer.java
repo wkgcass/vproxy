@@ -1,22 +1,18 @@
 package vproxy.dns;
 
 import vfd.*;
+import vproxy.component.secure.SecurityGroup;
+import vproxy.component.svrgroup.Upstream;
 import vproxybase.Config;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.elgroup.EventLoopGroupAttach;
 import vproxybase.component.elgroup.EventLoopWrapper;
-import vproxybase.dns.*;
-import vproxybase.dns.Formatter;
-import vproxybase.util.*;
-import vproxybase.util.exception.AlreadyExistException;
-import vproxybase.util.exception.ClosedException;
-import vproxybase.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.Upstream;
 import vproxybase.connection.Connector;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.Protocol;
 import vproxybase.connection.ServerSock;
+import vproxybase.dns.Formatter;
+import vproxybase.dns.*;
 import vproxybase.dns.rdata.A;
 import vproxybase.dns.rdata.AAAA;
 import vproxybase.dns.rdata.RData;
@@ -24,6 +20,10 @@ import vproxybase.dns.rdata.SRV;
 import vproxybase.processor.Hint;
 import vproxybase.selector.Handler;
 import vproxybase.selector.HandlerContext;
+import vproxybase.util.*;
+import vproxybase.util.exception.AlreadyExistException;
+import vproxybase.util.exception.ClosedException;
+import vproxybase.util.exception.NotFoundException;
 
 import java.io.IOException;
 import java.net.InterfaceAddress;

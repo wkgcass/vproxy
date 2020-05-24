@@ -16,11 +16,11 @@ import org.junit.*;
 import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
+import vproxy.test.cases.TestSSL;
 import vproxyapp.app.Application;
 import vproxybase.Config;
-import vproxybase.util.AnnotationKeys;
 import vproxybase.connection.ServerSock;
-import vproxy.test.cases.TestSSL;
+import vproxybase.util.AnnotationKeys;
 import vproxybase.util.Logger;
 import vproxybase.util.Tuple;
 

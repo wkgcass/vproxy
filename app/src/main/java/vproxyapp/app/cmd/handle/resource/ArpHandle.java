@@ -1,6 +1,7 @@
 package vproxyapp.app.cmd.handle.resource;
 
 import vfd.IP;
+import vfd.MacAddress;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
@@ -9,7 +10,6 @@ import vswitch.MacTable;
 import vswitch.Switch;
 import vswitch.Table;
 import vswitch.iface.Iface;
-import vfd.MacAddress;
 
 import java.util.HashMap;
 import java.util.HashSet;

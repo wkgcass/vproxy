@@ -1,9 +1,9 @@
 package vproxy.socks;
 
 import vfd.IP;
-import vproxybase.connection.ConnectorProvider;
 import vproxybase.connection.Connection;
 import vproxybase.connection.Connector;
+import vproxybase.connection.ConnectorProvider;
 
 import java.util.function.Consumer;
 

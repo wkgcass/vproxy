@@ -1,7 +1,7 @@
 package vproxybase.http.connect;
 
-import vproxybase.connection.ConnectorProvider;
 import vproxybase.connection.Connector;
+import vproxybase.connection.ConnectorProvider;
 import vproxybase.http.HttpContext;
 import vproxybase.http.HttpProtocolHandler;
 import vproxybase.processor.http1.entity.Request;

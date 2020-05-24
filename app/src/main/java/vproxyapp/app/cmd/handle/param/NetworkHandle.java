@@ -3,8 +3,8 @@ package vproxyapp.app.cmd.handle.param;
 import vfd.IP;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
-import vproxybase.util.exception.XException;
 import vproxybase.util.Network;
+import vproxybase.util.exception.XException;
 
 public class NetworkHandle {
     private NetworkHandle() {

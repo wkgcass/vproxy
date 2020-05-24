@@ -7,9 +7,9 @@ import vmirror.MirrorDataFactory;
 import vproxybase.selector.wrap.VirtualFD;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Consts;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
-import vproxybase.util.Consts;
 
 import java.io.IOException;
 import java.net.SocketOption;

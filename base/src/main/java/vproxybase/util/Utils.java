@@ -2,14 +2,10 @@ package vproxybase.util;
 
 import sun.misc.Unsafe;
 import vfd.FDProvider;
-import vfd.IP;
-import vfd.IPPort;
 import vpacket.Ipv6Packet;
-import vproxybase.dns.Resolver;
 
 import java.io.*;
 import java.lang.reflect.Field;
-import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Deque;
@@ -17,7 +13,6 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
-import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
 import java.util.zip.GZIPInputStream;

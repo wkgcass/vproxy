@@ -1,11 +1,11 @@
 package vproxyx.websocks.ss;
 
 import vfd.IP;
+import vproxy.socks.AddressType;
+import vproxy.socks.Socks5ConnectorProvider;
 import vproxybase.connection.Connector;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
-import vproxy.socks.AddressType;
-import vproxy.socks.Socks5ConnectorProvider;
 import vproxybase.util.Callback;
 import vproxybase.util.Logger;
 import vproxybase.util.Tuple;

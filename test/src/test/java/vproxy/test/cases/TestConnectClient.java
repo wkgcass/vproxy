@@ -2,15 +2,15 @@ package vproxy.test.cases;
 
 import org.junit.*;
 import vfd.IPPort;
+import vproxy.test.tool.DirectCloseServer;
+import vproxy.test.tool.IdServer;
+import vproxy.test.tool.SendOnConnectIdServer;
 import vproxybase.component.check.AnnotatedHcConfig;
 import vproxybase.component.check.CheckProtocol;
 import vproxybase.component.check.ConnectClient;
 import vproxybase.component.check.ConnectResult;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
-import vproxy.test.tool.DirectCloseServer;
-import vproxy.test.tool.IdServer;
-import vproxy.test.tool.SendOnConnectIdServer;
 import vproxybase.util.BlockCallback;
 
 import java.io.IOException;

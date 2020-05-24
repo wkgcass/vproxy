@@ -1,6 +1,7 @@
 package vproxyapp.app.cmd.handle.resource;
 
 import vfd.IPPort;
+import vproxy.component.secure.SecurityGroup;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Flag;
@@ -10,7 +11,6 @@ import vproxyapp.app.cmd.handle.param.AddrHandle;
 import vproxyapp.app.cmd.handle.param.TimeoutHandle;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
 import vswitch.Switch;
 
 import java.util.LinkedList;
