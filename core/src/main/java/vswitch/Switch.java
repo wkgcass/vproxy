@@ -1230,7 +1230,7 @@ public class Switch {
             resp.setSenderMac(mac.bytes);
             resp.setSenderIp(ByteArray.from(ip.getAddress()));
             resp.setTargetMac(inArp.getSenderMac());
-            resp.setTargetIp(inArp.getTargetIp());
+            resp.setTargetIp(inArp.getSenderIp());
 
             EthernetPacket ether = new EthernetPacket();
             ether.setDst(inVxlan.getPacket().getSrc());
