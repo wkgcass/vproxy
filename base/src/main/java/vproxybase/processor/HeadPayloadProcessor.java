@@ -100,6 +100,7 @@ public abstract class HeadPayloadProcessor extends AbstractProcessor<HeadPayload
                 }
                 wantProxy(head - (off + len) + sub.parsedLength);
                 sub.step = 2;
+                return;
             case 2:
                 frameDone();
                 sub.step = 0;
