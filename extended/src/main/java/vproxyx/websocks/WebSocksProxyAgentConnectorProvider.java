@@ -46,8 +46,8 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             @Override
             public void readable(ConnectionHandlerContext ctx) {
                 CommonProcess.parseUpgradeResp(ctx, httpRespParser,
-                    /* fail */() -> {
-                        Logger.error(LogType.CONN_ERROR, "handshake for the pool failed");
+                    /* fail */msg -> {
+                        Logger.error(LogType.CONN_ERROR, "handshake for the pool failed: " + msg);
                         cb.connectionError((ConnectableConnection) ctx.connection);
                     },
                     /* succ */() -> {
@@ -205,7 +205,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         public void readable(ConnectionHandlerContext ctx) {
             if (step == 1) {
                 CommonProcess.parseUpgradeResp(ctx, httpRespParser,
-                    /* fail */ () -> utilAlertFail(ctx),
+                    /* fail */ msg -> utilAlertFail(ctx),
                     /* succ */ () -> {
                         // remove the parser
                         httpRespParser = null;
@@ -592,13 +592,13 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         static void parseUpgradeResp(ConnectionHandlerContext ctx, HttpRespParser httpRespParser,
-                                     Runnable failCallback, Runnable successCallback) {
+                                     Consumer<String> failCallback, Runnable successCallback) {
             // http
             int res = httpRespParser.feed(ctx.connection.getInBuffer());
             if (res != 0) {
                 String errMsg = httpRespParser.getErrorMessage();
                 if (errMsg != null) {
-                    failCallback.run();
+                    failCallback.accept(errMsg);
                 } // otherwise // want more data
                 return;
             }
@@ -609,12 +609,12 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             // status code should be 101
             if (resp.statusCode != 101) {
                 // the server refused to upgrade to WebSocket
-                failCallback.run();
+                failCallback.accept("statusCode " + resp.statusCode + " not 101");
                 return;
             }
             // check headers
             if (!WebSocksUtils.checkUpgradeToWebSocketHeaders(resp.headers, true)) {
-                failCallback.run();
+                failCallback.accept("invalid headers");
                 return;
             }
 
