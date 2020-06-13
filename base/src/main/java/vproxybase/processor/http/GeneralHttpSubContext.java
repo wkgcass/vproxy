@@ -10,6 +10,7 @@ public class GeneralHttpSubContext extends Processor.SubContext {
     final Http2SubContext http2SubContext;
 
     public GeneralHttpSubContext(int connId, HttpSubContext httpSubContext, Http2SubContext http2SubContext) {
+        super(connId);
         this.connId = connId;
         this.httpSubContext = httpSubContext;
         this.http2SubContext = http2SubContext;

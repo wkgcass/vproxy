@@ -7,6 +7,7 @@ public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubC
     public final int connId;
 
     public OOSubContext(CTX ctx, int connId) {
+        super(connId);
         this.ctx = ctx;
         this.connId = connId;
     }

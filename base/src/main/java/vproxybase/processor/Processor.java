@@ -9,6 +9,16 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     }
 
     class SubContext {
+        public final int connId;
+        public int step = 0; // a helper field for the state machine, won't be used by the lib
+
+        public SubContext(int connId) {
+            this.connId = connId;
+        }
+
+        public boolean isFrontend() {
+            return connId == 0;
+        }
     }
 
     /**

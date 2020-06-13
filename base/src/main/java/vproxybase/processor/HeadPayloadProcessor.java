@@ -3,120 +3,18 @@ package vproxybase.processor;
 import vfd.IPPort;
 import vproxybase.util.ByteArray;
 
-class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
-    int nextConnId = -1;
+class HeadPayloadContext extends Processor.Context {
+}
 
-    @Override
-    public int connection(HeadPayloadSubContext front) {
-        return nextConnId;
-    }
+class HeadPayloadSubContext extends Processor.SubContext {
+    int parsedLength = 0;
 
-    @Override
-    public Hint connectionHint(HeadPayloadSubContext front) {
-        return null; // we do not choose backend by protocol
-    }
-
-    @Override
-    public void chosen(HeadPayloadSubContext front, HeadPayloadSubContext subCtx) {
-        nextConnId = subCtx.connId;
+    public HeadPayloadSubContext(int connId) {
+        super(connId);
     }
 }
 
-class HeadPayloadSubContext extends OOSubContext<HeadPayloadContext> {
-    private final int off; // the offset of length property in bytes
-    private final int len; // the length of length property in bytes
-    private final int maxLen; // the max supported length
-
-    private final int handleLen;
-    private final int proxyBaseLen;
-
-    private boolean expectingHead = true;
-    private int parsedLength = 0;
-
-    public HeadPayloadSubContext(HeadPayloadContext headPayloadContext, int connId,
-                                 int head, int off, int len, int maxLen) {
-        super(headPayloadContext, connId);
-        this.off = off;
-        this.len = len;
-        this.maxLen = maxLen;
-
-        handleLen = off + len;
-        proxyBaseLen = head - handleLen;
-    }
-
-    @Override
-    public Processor.Mode mode() {
-        return expectingHead ? Processor.Mode.handle : Processor.Mode.proxy;
-    }
-
-    @Override
-    public boolean expectNewFrame() {
-        // proxy length 0 also means that the previous frame is finished
-        return expectingHead || (proxyBaseLen + parsedLength == 0);
-    }
-
-    @Override
-    public int len() {
-        return expectingHead ? handleLen : proxyBaseLen + parsedLength;
-    }
-
-    @Override
-    public ByteArray feed(ByteArray data) throws Exception {
-        if (len < 5) { // 1,2,3,4
-            if (len == 1) {
-                parsedLength = data.uint8(off);
-            } else if (len == 2) {
-                parsedLength = data.uint16(off);
-            } else if (len == 3) {
-                parsedLength = data.uint24(off);
-            } else {
-                assert len == 4;
-                parsedLength = data.int32(off);
-            }
-            expectingHead = false;
-            return data;
-        }
-
-        int n = 0;
-        for (int i = 0; i < len; ++i) {
-            int shift = (8 * (len - i - 1));
-            int b = data.uint8(off + i);
-            if (shift > 31) {
-                if (b > 0)
-                    throw new Exception("unsupported length: greater than 2^32-1");
-                continue; // otherwise it's 0, no need to consider this byte
-            } else if (shift > 23) {
-                if (b >= 0x80)
-                    throw new Exception("unsupported length: greater than 2^32-1");
-            }
-            n |= b << shift;
-        }
-        if (n > maxLen)
-            throw new Exception("unsupported length: " + n + " > " + maxLen);
-        parsedLength = n;
-        expectingHead = false;
-        return data;
-    }
-
-    @Override
-    public ByteArray produce() {
-        return null; // always produce nothing
-    }
-
-    @Override
-    public void proxyDone() {
-        if (connId == 0)
-            ctx.nextConnId = -1;
-        expectingHead = true;
-    }
-
-    @Override
-    public ByteArray connected() {
-        return null; // send nothing when connected
-    }
-}
-
-public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadContext, HeadPayloadSubContext> {
+public abstract class HeadPayloadProcessor extends AbstractProcessor<HeadPayloadContext, HeadPayloadSubContext> {
     private final String name;
     private final int head; // length of head in bytes
     private final int off; // the offset of length property in bytes
@@ -141,11 +39,70 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadContex
 
     @Override
     public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, IPPort ignore) {
-        return new HeadPayloadSubContext(headPayloadContext, id, head, off, len, maxLen);
+        return new HeadPayloadSubContext(id);
     }
 
     @Override
     public String name() {
         return this.name;
+    }
+
+    @Override
+    protected void handle(HeadPayloadContext ctx, HeadPayloadSubContext sub) throws Exception {
+        switch (sub.step) {
+            case 0:
+                ByteArray data = wantData(off + len);
+                if (data == null)
+                    return;
+
+                int parsedLength;
+                if (len < 5) { // 1,2,3,4
+                    if (len == 1) {
+                        parsedLength = data.uint8(off);
+                    } else if (len == 2) {
+                        parsedLength = data.uint16(off);
+                    } else if (len == 3) {
+                        parsedLength = data.uint24(off);
+                    } else {
+                        assert len == 4;
+                        parsedLength = data.int32(off);
+                    }
+                } else {
+                    int n = 0;
+                    for (int i = 0; i < len; ++i) {
+                        int shift = (8 * (len - i - 1));
+                        int b = data.uint8(off + i);
+                        if (shift > 31) {
+                            if (b > 0)
+                                throw new Exception("unsupported length: greater than 2^32-1");
+                            continue; // otherwise it's 0, no need to consider this byte
+                        } else if (shift > 23) {
+                            if (b >= 0x80)
+                                throw new Exception("unsupported length: greater than 2^32-1");
+                        }
+                        n |= b << shift;
+                    }
+                    parsedLength = n;
+                }
+                if (parsedLength > maxLen)
+                    throw new Exception("unsupported length: " + parsedLength + " > " + maxLen);
+                sub.parsedLength = parsedLength;
+                send(data);
+
+                sub.step = 1;
+            case 1:
+                HeadPayloadSubContext sendTo = chooseConn();
+                if (sub.isFrontend()) {
+                    if (sendTo == null) {
+                        return;
+                    }
+                    reuseConn(sendTo.connId);
+                }
+                wantProxy(head - (off + len) + sub.parsedLength);
+                sub.step = 2;
+            case 2:
+                frameDone();
+                sub.step = 0;
+        }
     }
 }
