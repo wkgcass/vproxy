@@ -35,7 +35,7 @@ public class DomainBinder {
                 entry.resetTimer(timeout);
                 return entry.l3addr;
             }
-            var l3addr = assignNext();
+            var l3addr = assignNext(domain);
             entry = new EntryWithTimeout(domain, l3addr, timeout);
             domainMap.put(domain, entry);
             ipMap.put(l3addr, entry);
@@ -44,8 +44,20 @@ public class DomainBinder {
         }
     }
 
-    private IP assignNext() {
-        IP i = assignNext0();
+    private IP assignNext(String domain) {
+        // first use hash to try to keep the old ip
+        int hash = domain.hashCode();
+        if (hash < 0) {
+            hash = -hash;
+        }
+        int off = hash % ipLimit;
+        IP i = buildIPFromIncr(off);
+        if (!ipMap.containsKey(i)) {
+            return i;
+        }
+        Logger.warn(LogType.ALERT, "cannot use hash-generated ip for " + domain + ", choose one instead");
+        // it's already allocated, so try to choose a free ip
+        i = assignNext0();
         if (i != null) {
             return i;
         }
@@ -66,18 +78,21 @@ public class DomainBinder {
             if (incr >= ipLimit) {
                 return null;
             }
-            byte[] l3addr = new byte[network.length];
-            System.arraycopy(network, 0, l3addr, 0, network.length);
-            byte[] sub = Utils.long2bytes(incr);
-            for (int i = 0; i < sub.length; ++i) {
-                l3addr[l3addr.length - i - 1] = (byte) (l3addr[l3addr.length - i - 1] | sub[sub.length - i - 1]);
-            }
-            IP inet = IP.from(l3addr);
+            IP inet = buildIPFromIncr(incr);
             if (ipMap.containsKey(inet)) {
                 continue;
             }
             return inet;
         }
+    }
+    private IP buildIPFromIncr(int incr) {
+        byte[] l3addr = new byte[network.length];
+        System.arraycopy(network, 0, l3addr, 0, network.length);
+        byte[] sub = Utils.long2bytes(incr);
+        for (int i = 0; i < sub.length; ++i) {
+            l3addr[l3addr.length - i - 1] = (byte) (l3addr[l3addr.length - i - 1] | sub[sub.length - i - 1]);
+        }
+        return IP.from(l3addr);
     }
 
     public String getDomain(IP l3addr) {
