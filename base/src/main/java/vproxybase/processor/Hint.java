@@ -6,25 +6,73 @@ import vproxybase.util.AnnotationKeys;
 import java.util.Map;
 
 public class Hint {
-    public final String hint;
-
     private final String host;
     private final String port;
+    private final String uri;
 
-    public Hint(String hint) {
-        this.hint = hint;
-        if (IP.isIpv6(hint) || !hint.contains(":")) {
-            // consider as hostname or ip
-            host = hint;
-            port = null;
-        } else {
-            // consider as (hostname/ip):port
-            host = hint.substring(0, hint.lastIndexOf(':'));
-            port = hint.substring(hint.lastIndexOf(':') + 1);
+    private String formatHost(String s) {
+        if (s == null) {
+            return null;
         }
+        int colonIndex = s.indexOf(':');
+        if (IP.isIpv6(s) || colonIndex == -1) {
+            return s;
+        }
+        s = s.substring(0, colonIndex);
+        if (s.startsWith("www.")) {
+            s = s.substring("www.".length());
+        }
+        if (s.isEmpty()) {
+            return null;
+        }
+        return s;
+    }
+
+    public Hint(String host) {
+        this.host = formatHost(host);
+        this.port = null;
+        this.uri = null;
+    }
+
+    public Hint(String host, int port) {
+        this.host = formatHost(host);
+        this.port = "" + port;
+        this.uri = null;
+    }
+
+    private String formatUri(String s) {
+        if (s == null) {
+            return null;
+        }
+        int questionIndex = s.indexOf('?');
+        if (questionIndex != -1) {
+            s = s.substring(0, questionIndex);
+        }
+        if (s.equals("/")) {
+            return "/";
+        }
+        if (s.endsWith("/")) {
+            s = s.substring(0, s.length() - 1);
+        }
+        return s;
+    }
+
+    public Hint(String host, String uri) {
+        this.host = formatHost(host);
+        this.port = null;
+        this.uri = formatUri(uri);
+    }
+
+    public Hint(String host, int port, String uri) {
+        this.host = formatHost(host);
+        this.port = "" + port;
+        this.uri = formatUri(uri);
     }
 
     public static final int MAX_MATCH_LEVEL = 3;
+    private static final int HOST_EXACT_MATCH = 2048;
+    private static final int HOST_SUFFIX_MATCH = 1024;
+    private static final int URI_MAX_MATCH = 1023;
 
     @SuppressWarnings("unchecked")
     public int matchLevel(Map<String, String>... annotations) {
@@ -33,6 +81,7 @@ public class Hint {
         }
         String annoHost = null;
         String annoPort = null;
+        String annoUri = null;
 
         for (Map<String, String> a : annotations) {
             if (a == null) {
@@ -44,12 +93,12 @@ public class Hint {
             if (annoPort == null) {
                 annoPort = a.get(AnnotationKeys.ServerGroup_HintPort);
             }
+            if (annoUri == null) {
+                annoUri = a.get(AnnotationKeys.ServerGroup_HintUri);
+            }
         }
 
-        if (annoHost == null && annoPort == null) {
-            return 0;
-        }
-        if (annoHost == null) { // for now, we do not support to determine from annotations without `host`
+        if (annoHost == null && annoPort == null && annoUri == null) {
             return 0;
         }
 
@@ -58,22 +107,37 @@ public class Hint {
                 return 0;
             }
         }
-        if (this.host.equals(annoHost)) { // exact match
-            return 3;
+
+        int level = 0;
+        if (annoHost != null && this.host != null) {
+            if (this.host.equals(annoHost)) { // exact match
+                level += HOST_EXACT_MATCH;
+            } else if (this.host.endsWith("." + annoHost)) { // input value is a sub domain name of the hint
+                level += HOST_SUFFIX_MATCH;
+            }
         }
-        if (this.host.endsWith("." + annoHost)) { // input value is a sub domain name of the hint
-            return 2;
+        int uriLevel = 0;
+        if (annoUri != null && this.uri != null) {
+            if (this.uri.equals(annoUri)) {
+                uriLevel = this.uri.length();
+            } else if (this.uri.startsWith(annoUri)) {
+                uriLevel = annoUri.length();
+            }
         }
-        if (annoHost.endsWith("." + this.host)) { // hint is a sub domain name of input value
-            return 1;
+        if (uriLevel > URI_MAX_MATCH) {
+            uriLevel = URI_MAX_MATCH;
         }
-        return 0; // not matched
+        level += uriLevel;
+
+        return level;
     }
 
     @Override
     public String toString() {
         return "Hint{" +
-            "hint=" + hint +
+            "host=" + host +
+            ", port=" + port +
+            ", uri=" + uri +
             '}';
     }
 }

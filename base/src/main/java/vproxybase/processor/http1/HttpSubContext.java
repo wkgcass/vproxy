@@ -47,7 +47,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
      * 24 => reason ~> \r\n -> 4
      */
 
-    private Handler[] handlers = new Handler[]{
+    private final Handler[] handlers = new Handler[]{
         HttpSubContext.this::state0,
         HttpSubContext.this::state1,
         HttpSubContext.this::state2,
@@ -91,6 +91,9 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     private HeaderBuilder trailer;
     private int proxyLen = -1;
 
+    // value of the uri
+    // would be used as the hint
+    String theUri = null;
     // value of the Host: header
     // would be used as the hint
     // only accessed when it's a frontend sub context
@@ -186,6 +189,16 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
+        boolean isIdleBeforeFeeding = state == 0;
+        ByteArray ret = feed1(data);
+        boolean isIdleAfterFeeding = state == 0;
+        if (isFrontend() && isIdleBeforeFeeding && isIdleAfterFeeding) {
+            ctx.currentBackend = -1;
+        }
+        return ret;
+    }
+
+    private ByteArray feed1(ByteArray data) throws Exception {
         int consumedBytes = 0;
         while (consumedBytes < data.length()) {
             feed(data.get(consumedBytes++));
@@ -322,10 +335,12 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     private void state2(ByteArray data) {
         int b = data.uint8(0);
         if (b == ' ') {
+            theUri = req.uri.toString();
             state = 3;
         } else if (b == '\r') {
             // do nothing
         } else if (b == '\n') {
+            theUri = req.uri.toString();
             state = 4;
         } else {
             req.uri.append((char) b);

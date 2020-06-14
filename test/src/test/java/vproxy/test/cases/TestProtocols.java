@@ -65,11 +65,16 @@ public class TestProtocols {
 
         ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg1.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s1.test.com"));
+        sg1.setAnnotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost, "s1.test.com",
+            AnnotationKeys.ServerGroup_HintUri, "/a"));
         sg1.add("svr1", new IPPort(IP.from("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg2.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "s2.test.com"));
+        sg2.setAnnotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost, "s2.test.com",
+            AnnotationKeys.ServerGroup_HintUri, "/b"
+        ));
         sg2.add("svr2", new IPPort(IP.from("127.0.0.1"), port2), 10);
 
         // set to up
@@ -463,13 +468,36 @@ public class TestProtocols {
     @SuppressWarnings("deprecation")
     @Test
     public void h1() throws Throwable {
+        int[] conn = {0};
+        int[] svr1 = {0};
+        int[] svr2 = {0};
+        Throwable[] err = new Throwable[]{null};
+        HttpClient client;
+        Consumer<HttpClientRequest> doWithReq = req -> {
+            req.handler(resp -> resp.bodyHandler(buf -> {
+                try {
+                    String expect = buf.toString().substring("resp-".length());
+                    if (expect.equals("" + port1)) {
+                        ++svr1[0];
+                    } else {
+                        ++svr2[0];
+                    }
+                    ++step;
+                } catch (Throwable t) {
+                    err[0] = t;
+                }
+            }));
+            req.end();
+        };
+
         Vertx vertx = Vertx.vertx();
         try {
-            Throwable[] err = new Throwable[]{null};
-
             Handler<HttpServerRequest> handler = req -> {
                 try {
-                    assertEquals("/", req.uri());
+                    assertTrue(req.uri().equals("/") ||
+                        req.uri().equals("/a") ||
+                        req.uri().equals("/b")
+                    );
                 } catch (Throwable t) {
                     err[0] = t;
                 }
@@ -481,30 +509,14 @@ public class TestProtocols {
 
             initLb("http/1.x");
 
-            int[] conn = {0};
-            HttpClient client = vertx.createHttpClient(new HttpClientOptions()
+            conn[0] = 0;
+            client = vertx.createHttpClient(new HttpClientOptions()
                 .setMaxPoolSize(1)
                 .setKeepAlive(true));
             client.connectionHandler(connV -> ++conn[0]);
 
-            int[] svr1 = {0};
-            int[] svr2 = {0};
-            Consumer<HttpClientRequest> doWithReq = req -> {
-                req.handler(resp -> resp.bodyHandler(buf -> {
-                    try {
-                        String expect = buf.toString().substring("resp-".length());
-                        if (expect.equals("" + port1)) {
-                            ++svr1[0];
-                        } else {
-                            ++svr2[0];
-                        }
-                        ++step;
-                    } catch (Throwable t) {
-                        err[0] = t;
-                    }
-                }));
-                req.end();
-            };
+            svr1[0] = 0;
+            svr2[0] = 0;
 
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
@@ -564,6 +576,34 @@ public class TestProtocols {
             assertEquals(3, svr1[0]);
             assertEquals(1, svr2[0]);
             assertEquals(4, conn[0]);
+
+            // =======
+            // test forwarding using uri
+
+            client.close();
+            client = vertx.createHttpClient(new HttpClientOptions()
+                .setMaxPoolSize(1));
+            client.connectionHandler(connV -> ++conn[0]);
+            step = 0;
+            svr1[0] = 0;
+            svr2[0] = 0;
+            conn[0] = 0;
+
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/b"));
+
+            while (step != 4 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(4, step);
+            assertEquals(3, svr1[0]);
+            assertEquals(1, svr2[0]);
+            assertEquals(1, conn[0]);
+
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);

@@ -1,19 +1,14 @@
 package vproxybase.processor.http1;
 
-import vfd.IP;
 import vfd.IPPort;
 import vproxybase.processor.Hint;
 import vproxybase.processor.OOContext;
-import vproxybase.util.Logger;
 
 public class HttpContext extends OOContext<HttpSubContext> {
     final String clientAddress;
     final String clientPort;
 
     int currentBackend = -1;
-
-    private boolean hintExists = false;
-    private Hint hint;
 
     public HttpContext(IPPort clientSock) {
         clientAddress = clientSock == null ? null : clientSock.getAddress().formatToIPString();
@@ -39,27 +34,21 @@ public class HttpContext extends OOContext<HttpSubContext> {
 
     @Override
     public Hint connectionHint(HttpSubContext front) {
-        if (hintExists) {
-            return hint;
-        }
+        String uri = front.theUri;
         String host = front.theHostHeader;
-        if (host == null) {
+
+        if (host == null && uri == null) {
             return null;
+        } else if (host == null) {
+            // assert uri != null;
+            return new Hint(null, uri);
+        } else if (uri == null) {
+            // assert host != null;
+            return new Hint(host);
+        } else {
+            // assert host != null && uri != null;
+            return new Hint(host, uri);
         }
-        assert Logger.lowLevelDebug("got Host from front sub context: " + host);
-        if (host.contains(":")) { // remove port in Host header
-            host = host.substring(0, host.lastIndexOf(":"));
-        }
-        if (IP.isIpLiteral(host)) {
-            hintExists = true;
-            return null; // no hint if requesting directly using ip
-        }
-        if (host.startsWith("www.")) { // remove www. convention
-            host = host.substring("www.".length());
-        }
-        hintExists = true;
-        hint = new Hint(host);
-        return hint;
     }
 
     @Override
