@@ -60,7 +60,7 @@ public class Socks5Server extends TcpLB {
             // then let's try to find a connector
             Upstream upstream = Socks5Server.super.backend;
             if (type == AddressType.domain && !IP.isIpLiteral(address) /*some implementation may always send domain socks5 request event if it's plain ip*/) {
-                Hint hint = new Hint(address + ":" + port);
+                Hint hint = new Hint(address, port);
                 Connector connector = upstream.next(accepted.remote, hint);
                 providedCallback.accept(connector);
                 return;
