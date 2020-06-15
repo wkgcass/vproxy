@@ -173,7 +173,6 @@ public class Upstream {
     }
 
     public ServerGroupHandle searchForGroup(Hint hint) {
-        int maxLvl = Hint.MAX_MATCH_LEVEL;
         int level = 0;
         ServerGroupHandle lastMax = null;
         for (ServerGroupHandle h : serverGroupHandles) {
@@ -182,9 +181,6 @@ public class Upstream {
             if (l > level) {
                 level = l;
                 lastMax = h;
-            }
-            if (l == maxLvl) { // directly return if it's the best match
-                break;
             }
         }
         return lastMax;

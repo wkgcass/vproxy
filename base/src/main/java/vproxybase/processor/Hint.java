@@ -69,7 +69,6 @@ public class Hint {
         this.uri = formatUri(uri);
     }
 
-    public static final int MAX_MATCH_LEVEL = 3;
     private static final int HOST_EXACT_MATCH = 2048;
     private static final int HOST_SUFFIX_MATCH = 1024;
     private static final int URI_MAX_MATCH = 1023;
