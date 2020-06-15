@@ -124,7 +124,9 @@ public class TestProtocols {
 
             Handler<HttpServerRequest> handler = req -> {
                 try {
-                    assertEquals("/", req.uri());
+                    assertTrue(req.uri().equals("/") ||
+                        req.uri().equals("/a") ||
+                        req.uri().equals("/b"));
                 } catch (Throwable t) {
                     err[0] = t;
                 }
@@ -188,15 +190,17 @@ public class TestProtocols {
 
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
             doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
 
-            while (step != 4 && err[0] == null) {
+            while (step != 8 && err[0] == null) {
                 Thread.sleep(1);
             }
             if (err[0] != null)
                 throw err[0];
-            assertEquals(4, step);
-            assertEquals(1, svr1[0]);
-            assertEquals(1, svr2[0]);
+            assertEquals(8, step);
+            assertEquals(2, svr1[0]);
+            assertEquals(2, svr2[0]);
             assertEquals(1, conn[0]);
 
             // =====
@@ -212,20 +216,51 @@ public class TestProtocols {
             svr2[0] = 0;
             conn[0] = 0;
 
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/")
+                .putHeader("Host", "s1.test.com"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/")
+                .putHeader("Host", "s1.test.com"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/")
+                .putHeader("Host", "s1.test.com"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/")
+                .putHeader("Host", "s2.test.com"));
 
-            HttpClientRequest req = client.get(lbPort, "127.0.0.1", "/");
-            req.headers().add("Host", "s2.test.com");
-            doWithReq.accept(req);
-            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/"));
-
-            while (step != 4 && err[0] == null) {
+            while (step != 8 && err[0] == null) {
                 Thread.sleep(1);
             }
             if (err[0] != null)
                 throw err[0];
-            assertEquals(4, step);
-            assertEquals(0, svr1[0]);
-            assertEquals(2, svr2[0]);
+            assertEquals(8, step);
+            assertEquals(3, svr1[0]);
+            assertEquals(1, svr2[0]);
+            assertEquals(1, conn[0]);
+
+            // =====
+            // test forwarding using uri
+
+            client.close();
+            client = vertx.createHttpClient(new HttpClientOptions()
+                .setProtocolVersion(HttpVersion.HTTP_2)
+                .setHttp2ClearTextUpgrade(false));
+            client.connectionHandler(connV -> ++conn[0]);
+            step = 0;
+            svr1[0] = 0;
+            svr2[0] = 0;
+            conn[0] = 0;
+
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/a"));
+            doWithReq.accept(client.get(lbPort, "127.0.0.1", "/b"));
+
+            while (step != 8 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null)
+                throw err[0];
+            assertEquals(8, step);
+            assertEquals(3, svr1[0]);
+            assertEquals(1, svr2[0]);
             assertEquals(1, conn[0]);
         } finally {
             boolean[] closeDone = {false};

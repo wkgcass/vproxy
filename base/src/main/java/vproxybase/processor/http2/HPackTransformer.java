@@ -18,10 +18,11 @@ class HPackTransformer {
 
     HPackTransformer(int maxHeaderTableSize,
                      Header[] additionalHeaders,
+                     Consumer<String> uriListener,
                      Consumer<String> hostHeaderListener) {
         this.decoder = new Decoder(BUFFER_SIZE, maxHeaderTableSize);
         Encoder encoder = new Encoder(0);
-        this.lsn = new SyncOutputListener(encoder, outBuffer, additionalHeaders, hostHeaderListener);
+        this.lsn = new SyncOutputListener(encoder, outBuffer, additionalHeaders, uriListener, hostHeaderListener);
     }
 
     ByteArray transform(ByteArray array, boolean addHeaders) throws IOException {

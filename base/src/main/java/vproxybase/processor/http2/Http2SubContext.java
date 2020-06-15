@@ -225,7 +225,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
      * 8 -> (hpack) content of headers or continuation for hpack to process -> 1
      */
 
-    private Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
+    private final Map<Integer, Integer> streamIdBack2Front = new HashMap<>();
     private Integer backendIdForStreamToRemove = null;
 
     // the ack of settings frame
@@ -247,8 +247,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     // set this field to true to respond data to the processor lib, otherwise data would be cached
     // only accessed when it's a frontend sub context
     // if it's a backend sub context, the field will be set but never used
-    // when this field is set to true, it will not be set to false again
-    boolean hostHeaderRetrieved;
+    boolean headersRetrieved;
 
     public Http2SubContext(Http2Context ctx, int connId) {
         super(ctx, connId);
@@ -256,11 +255,11 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         if (connId == 0) {
             state = 0;
             syntheticAckFlag = false; // this field will not be used if it's frontend connection
-            hostHeaderRetrieved = false;
+            headersRetrieved = false;
         } else {
             state = 1;
             syntheticAckFlag = !ctx.backendHandshaking; // this field will only be used when the first backend handshaking is done
-            hostHeaderRetrieved = true; // backend can always respond data to the frontend
+            headersRetrieved = true; // backend can always respond data to the frontend
         }
     }
 
@@ -354,7 +353,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
     public ByteArray feed(ByteArray data) throws Exception {
         boolean frontendSettingsSent = ctx.frontendSettingsSent; // this value may be changed in the handling process, so we need to cache it before handling
         ByteArray arr = _feed(data);
-        if (hostHeaderRetrieved || !frontendSettingsSent) { // first settings frame should pass freely
+        if (headersRetrieved || !frontendSettingsSent) { // first settings frame should pass freely
             if (storedBytes == null) {
                 return arr;
             } else if (arr == null) {
@@ -552,6 +551,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
             && SIZE_DEFAULT_HEADER_TABLE_SIZE != 0 // would be compressed
         ) {
             assert Logger.lowLevelDebug("got HEADERS frame from frontend");
+            headersRetrieved = false;
             state = 8;
             return null; // send nothing for now
         } else if (frame.type == Http2Frame.Type.HEADERS && frame.priority) {
@@ -749,7 +749,7 @@ public class Http2SubContext extends OOSubContext<Http2Context> {
         // set header end before return the result
         if (frame.endHeaders) {
             ctx.hPackTransformer.endHeaders();
-            hostHeaderRetrieved = true; // headers frame ends, connection related headers must have been retrieved, so send data
+            headersRetrieved = true; // headers frame ends, connection related headers must have been retrieved, so send data
         }
         // set state to idle
         state = 1;

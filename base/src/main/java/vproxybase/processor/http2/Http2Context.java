@@ -1,6 +1,5 @@
 package vproxybase.processor.http2;
 
-import vfd.IP;
 import vfd.IPPort;
 import vproxybase.processor.Hint;
 import vproxybase.processor.OOContext;
@@ -28,9 +27,8 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     ByteArray settingsFrameHeader = null; // this is a temporary field
 
-    private String host;
-    private boolean hintExists = false;
-    private Hint hint;
+    private String theUri;
+    private String theHostHeader;
 
     public Http2Context(IPPort clientAddress) {
         String clientIpStr = clientAddress.getAddress().formatToIPString();
@@ -38,7 +36,9 @@ public class Http2Context extends OOContext<Http2SubContext> {
             new Header[]{
                 new Header("x-forwarded-for", clientIpStr),
                 new Header("x-client-port", "" + clientAddress.getPort())
-            }, host -> this.host = host);
+            },
+            uri -> this.theUri = uri,
+            host -> this.theHostHeader = host);
     }
 
     @Override
@@ -49,7 +49,7 @@ public class Http2Context extends OOContext<Http2SubContext> {
             if (!frontendSettingsSent) { // the first settings frame should pass freely
                 return -1;
             }
-            if (front.hostHeaderRetrieved) {
+            if (front.headersRetrieved) {
                 return -1;
             }
             return 0;
@@ -60,27 +60,21 @@ public class Http2Context extends OOContext<Http2SubContext> {
 
     @Override
     public Hint connectionHint(Http2SubContext front) {
-        if (hintExists) {
-            return hint;
-        }
-        String host = this.host;
-        if (host == null) {
+        String uri = this.theUri;
+        String host = this.theHostHeader;
+
+        if (host == null && uri == null) {
             return null;
+        } else if (host == null) {
+            // assert uri != null;
+            return new Hint(null, uri);
+        } else if (uri == null) {
+            // assert host != null;
+            return new Hint(host);
+        } else {
+            // assert host != null && uri != null;
+            return new Hint(host, uri);
         }
-        assert Logger.lowLevelDebug("got Host header: " + host);
-        if (host.contains(":")) { // remove port in Host header
-            host = host.substring(0, host.lastIndexOf(":"));
-        }
-        if (IP.isIpLiteral(host)) {
-            hintExists = true;
-            return null; // no hint if requesting directly using ip
-        }
-        if (host.startsWith("www.")) { // remove www. convention
-            host = host.substring("www.".length());
-        }
-        hintExists = true;
-        hint = new Hint(host);
-        return hint;
     }
 
     @Override
