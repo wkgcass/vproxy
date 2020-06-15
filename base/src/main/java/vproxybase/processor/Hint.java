@@ -69,9 +69,13 @@ public class Hint {
         this.uri = formatUri(uri);
     }
 
-    private static final int HOST_EXACT_MATCH = 2048;
-    private static final int HOST_SUFFIX_MATCH = 1024;
+    private static final int HOST_SHIFT = 10;
+    private static final int HOST_EXACT_MATCH = 3;
+    private static final int HOST_SUFFIX_MATCH = 2;
+    private static final int HOST_WILDCARD_MATCH = 1;
+    private static final int URI_SHIFT = 0;
     private static final int URI_MAX_MATCH = 1023;
+    private static final int URI_WILDCARD_MATCH = 1;
 
     @SuppressWarnings("unchecked")
     public int matchLevel(Map<String, String>... annotations) {
@@ -108,25 +112,33 @@ public class Hint {
         }
 
         int level = 0;
+
+        int hostLevel = 0;
         if (annoHost != null && this.host != null) {
             if (this.host.equals(annoHost)) { // exact match
-                level += HOST_EXACT_MATCH;
+                hostLevel = HOST_EXACT_MATCH;
             } else if (this.host.endsWith("." + annoHost)) { // input value is a sub domain name of the hint
-                level += HOST_SUFFIX_MATCH;
+                hostLevel = HOST_SUFFIX_MATCH;
+            } else if (annoHost.equals("*")) { // the annotation is a wildcard
+                hostLevel = HOST_WILDCARD_MATCH;
             }
         }
+        level += hostLevel << HOST_SHIFT;
+
         int uriLevel = 0;
         if (annoUri != null && this.uri != null) {
             if (this.uri.equals(annoUri)) {
-                uriLevel = this.uri.length();
+                uriLevel = this.uri.length() + URI_WILDCARD_MATCH;
             } else if (this.uri.startsWith(annoUri)) {
-                uriLevel = annoUri.length();
+                uriLevel = annoUri.length() + URI_WILDCARD_MATCH;
+            } else if (annoUri.equals("*")) {
+                uriLevel = URI_WILDCARD_MATCH;
             }
         }
         if (uriLevel > URI_MAX_MATCH) {
             uriLevel = URI_MAX_MATCH;
         }
-        level += uriLevel;
+        level += uriLevel << URI_SHIFT;
 
         return level;
     }
