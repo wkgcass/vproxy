@@ -36,6 +36,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public class HttpController {
+    private static final String htmlBase = "/html";
     private static final String apiBase = "/api";
     private static final String apiV1Base = apiBase + "/v1";
     private static final String moduleBase = apiV1Base + "/module";
@@ -47,6 +48,7 @@ public class HttpController {
     public final String alias;
     public final IPPort address;
     private final HttpServer server;
+    private final ClasspathResourceHolder classpathResourceHolder = new ClasspathResourceHolder("controller/http/webroot");
 
     public HttpController(String alias, IPPort address) throws IOException {
         this.alias = alias;
@@ -56,6 +58,17 @@ public class HttpController {
 
         // hc
         server.get("/healthz", ctx -> ctx.response().end("OK"));
+        // html
+        server.get("/html", ctx -> ctx.response().status(302).header("Location", "/html/index.html").end());
+        server.get("/html/*", ctx -> {
+            String path = ctx.uri().substring("/html/".length());
+            ByteArray b = classpathResourceHolder.get(path);
+            if (b == null) {
+                ctx.response().status(404).end("Page Not Found\r\n");
+            } else {
+                ctx.response().header("Content-Type", "text/html").end(b);
+            }
+        });
         // json
         server.all(apiBase + "/*", Tool.bodyJsonHandler());
         // all
