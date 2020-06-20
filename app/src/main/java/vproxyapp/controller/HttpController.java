@@ -59,9 +59,9 @@ public class HttpController {
         // hc
         server.get("/healthz", ctx -> ctx.response().end("OK"));
         // html
-        server.get("/html", ctx -> ctx.response().status(302).header("Location", "/html/index.html").end());
-        server.get("/html/*", ctx -> {
-            String path = ctx.uri().substring("/html/".length());
+        server.get(htmlBase, ctx -> ctx.response().status(302).header("Location", "/html/index.html").end());
+        server.get(htmlBase + "/*", ctx -> {
+            String path = ctx.uri().substring(htmlBase.length());
             ByteArray b = classpathResourceHolder.get(path);
             if (b == null) {
                 ctx.response().status(404).end("Page Not Found\r\n");
