@@ -2350,6 +2350,41 @@ paths:
           schema:
             $ref: '#/definitions/Error500'
 
+  /cert-key/pem:
+    post:
+      tags:
+        - "cert-key"
+      summary: "add cert-key pem"
+      operationId: "addCertKeyPem"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/CertKeyCreatePem'
+      responses:
+        204:
+          description: "ok"
+        400:
+          description: "invalid input parameters"
+          schema:
+            $ref: '#/definitions/Error400'
+        404:
+          description: "resource not found"
+          schema:
+            $ref: '#/definitions/Error404'
+        409:
+          description: "conflict"
+          schema:
+            $ref: '#/definitions/Error409'
+        500:
+          description: "internal error"
+          schema:
+            $ref: '#/definitions/Error500'
 ######################
 # End Generated Code #
 ######################
@@ -3037,6 +3072,23 @@ definitions:
       key:
         type: string
         description: "file path of the key"
+  CertKeyCreatePem:
+    type: object
+    required:
+      - name
+      - certs
+      - key
+    properties:
+      name:
+        type: string
+      certs:
+        type: array
+        items:
+          type: string
+          description: "pem of the cert"
+      key:
+        type: string
+        description: "pem of the key"
   CertKeyDetail:
     type: object
     properties:

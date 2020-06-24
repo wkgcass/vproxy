@@ -7,6 +7,8 @@ import vpacket.Ipv6Packet;
 import java.io.*;
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
@@ -512,5 +514,17 @@ public class Utils {
             }
         }
         return 0xffff - sum;
+    }
+
+    public static byte[] sha1(byte[] input) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("SHA-1");
+        } catch (NoSuchAlgorithmException e) {
+            Logger.shouldNotHappen("SHA-1 not found");
+            throw new RuntimeException(e);
+        }
+        md.update(input);
+        return md.digest();
     }
 }

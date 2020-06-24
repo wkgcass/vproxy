@@ -7,6 +7,7 @@ import vjson.util.ArrayBuilder;
 import vjson.util.ObjectBuilder;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.app.TcpLB;
+import vproxy.component.ssl.CertKey;
 import vproxyapp.app.Application;
 import vproxybase.Config;
 import vproxybase.GlobalEvents;
@@ -35,6 +36,7 @@ import java.util.UUID;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
+@SuppressWarnings({"rawtypes", "DuplicatedCode"})
 public class HttpController {
     private static final String htmlBase = "/html";
     private static final String apiBase = "/api";
@@ -255,6 +257,12 @@ public class HttpController {
                 .put("name", "alias of the cert-key")
                 .putArray("certs", arr -> arr.add("path to certificate pem file"))
                 .put("key", "path to private key pem file")
+                .build(),
+            "name", "certs", "key"));
+        server.pst(moduleBase + "/cert-key/pem", wrapAsync(this::uploadCertKey, new ObjectBuilder()
+                .put("name", "")
+                .putArray("certs", arr -> arr.add("pem of certificate to upload"))
+                .put("key", "pem of key to upload")
                 .build(),
             "name", "certs", "key"));
         server.del(moduleBase + "/cert-key/:ck", wrapAsync(this::deleteCertKey));
@@ -1046,6 +1054,50 @@ public class HttpController {
         }
         utils.execute(cb,
             "add", "cert-key", name, "cert", cert.toString(), "key", key);
+    }
+
+    private void uploadCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {
+        var body = (JSON.Object) rctx.get(Tool.bodyJson);
+        var bodyCerts = body.getArray("certs");
+        // validate the cert key
+        String[] certs = new String[body.getArray("certs").length()];
+        String key;
+        for (int i = 0; i < bodyCerts.length(); ++i) {
+            certs[i] = bodyCerts.getString(i);
+        }
+        key = body.getString("key");
+
+        // validate
+        CertKey ck = new CertKey("tmp", certs, key);
+        try {
+            ck.validate();
+        } catch (Exception e) {
+            throw new Err(400, "invalid certs or key or invalid combination of certs and key");
+        }
+
+        // save the files
+        String[] certFileNames = new String[certs.length];
+        String keyFileName;
+        try {
+            for (int i = 0; i < certs.length; ++i) {
+                certFileNames[i] = utils.savePem(certs[i]);
+            }
+            keyFileName = utils.savePem(key);
+        } catch (XException e) {
+            throw new Err(500, e.getMessage());
+        }
+
+        // prepare to call commands
+        String name = body.getString("name");
+        StringBuilder certFileNamesStr = new StringBuilder();
+        for (int i = 0; i < certFileNames.length; ++i) {
+            if (i != 0) {
+                certFileNamesStr.append(",");
+            }
+            certFileNamesStr.append(certFileNames[i]);
+        }
+        utils.execute(cb,
+            "add", "cert-key", name, "cert", certFileNamesStr.toString(), "key", keyFileName);
     }
 
     private void deleteCertKey(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) {

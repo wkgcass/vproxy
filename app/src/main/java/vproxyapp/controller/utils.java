@@ -17,16 +17,23 @@ import vproxy.dns.DNSServer;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.CmdResult;
 import vproxyapp.app.cmd.Command;
+import vproxybase.Config;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.Connection;
 import vproxybase.connection.ServerSock;
 import vproxybase.util.Callback;
+import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 import vproxybase.util.exception.NotFoundException;
+import vproxybase.util.exception.XException;
 import vserver.RoutingContext;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
@@ -294,15 +301,7 @@ class utils {
     }
 
     static JSON.Object formatCertKeyDetail(CertKey certKey) {
-        MessageDigest md;
-        try {
-            md = MessageDigest.getInstance("SHA-1");
-        } catch (NoSuchAlgorithmException e) {
-            Logger.shouldNotHappen("SHA-1 not found");
-            throw new RuntimeException(e);
-        }
-        md.update(certKey.key.getBytes());
-        byte[] bytes = md.digest();
+        byte[] bytes = Utils.sha1(certKey.key.getBytes());
         return new ObjectBuilder()
             .put("name", certKey.alias)
             .putArray("certs", arr -> Arrays.asList(certKey.certPaths).forEach(arr::add))
@@ -605,5 +604,59 @@ class utils {
             ret.putInst("certKeyHolder", arr.build());
         }
         return ret.build();
+    }
+
+    static void ensurePemDirectory() throws XException {
+        String workDirPath = Config.getWorkingDirectory();
+        File workDir = new File(workDirPath);
+        if (workDir.exists()) {
+            if (!workDir.isDirectory()) {
+                Logger.error(LogType.IMPROPER_USE, "working directory " + workDirPath + " is not a directory");
+                throw new XException("vproxy working directory is not a directory");
+            }
+        } else {
+            if (!workDir.mkdirs()) {
+                Logger.error(LogType.IMPROPER_USE, "working directory " + workDirPath + " creation failed");
+                throw new XException("failed when creating the vproxy working directory");
+            }
+        }
+        String pemDirPath = workDirPath + File.separator + "temp-pem";
+        File pemDir = new File(pemDirPath);
+        if (pemDir.exists()) {
+            if (!pemDir.isDirectory()) {
+                Logger.error(LogType.IMPROPER_USE, "pem directory " + pemDirPath + " is not a directory");
+                throw new XException("vproxy pem dir is not a directory");
+            }
+        } else {
+            if (!pemDir.mkdirs()) {
+                Logger.error(LogType.IMPROPER_USE, "pem directory " + pemDirPath + " creation failed");
+                throw new XException("failed when creating the vproxy pem directory");
+            }
+        }
+    }
+
+    static synchronized String savePem(String pem) throws XException {
+        ensurePemDirectory();
+        pem = pem.trim();
+        String sha1 = Utils.bytesToHex(Utils.sha1(pem.getBytes()));
+        File newPem = new File(Config.getWorkingDirectory() + File.separator + "temp-pem" + File.separator + sha1);
+        if (newPem.exists()) {
+            return newPem.getAbsolutePath();
+        }
+        try {
+            //noinspection ResultOfMethodCallIgnored
+            newPem.createNewFile();
+        } catch (IOException e) {
+            Logger.shouldNotHappen("creating pem file failed: " + newPem, e);
+            throw new XException("creating pem file failed");
+        }
+        try (FileOutputStream fos = new FileOutputStream(newPem)) {
+            fos.write(pem.getBytes());
+            fos.flush();
+        } catch (Exception e) {
+            Logger.shouldNotHappen("writing pem file failed: " + newPem, e);
+            throw new XException("writing pem file failed");
+        }
+        return newPem.getAbsolutePath();
     }
 }

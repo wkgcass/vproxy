@@ -2,6 +2,7 @@ package vproxybase;
 
 import vproxybase.util.Logger;
 import vproxybase.util.OS;
+import vproxybase.util.Utils;
 
 import java.util.Arrays;
 import java.util.Set;
@@ -52,6 +53,17 @@ public class Config {
     // the location of auto saved file path
     // null for the default path
     public static String autoSaveFilePath = null;
+
+    // the working directory of vproxy
+    // null for the default dir
+    private static String workingDirectory = null;
+
+    public static String getWorkingDirectory() {
+        if (workingDirectory == null) {
+            return Utils.homefile(".vproxy");
+        }
+        return workingDirectory;
+    }
 
     // -Deploy=xxx
     public static final String appClass;

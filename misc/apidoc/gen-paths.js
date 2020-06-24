@@ -1,6 +1,7 @@
 var fs = require('fs');
 var templateTop = fs.readFileSync('./template-top', 'utf8');
 var templateSub = fs.readFileSync('./template-sub', 'utf8');
+var templateCreateResponse = fs.readFileSync('./template-create-response', 'utf8').trimEnd();
 
 function RT(name, urlName, shortName, description, noUpdate) {
   this.name = name;
@@ -84,6 +85,27 @@ console.log('tags:');
 console.log(tagResults.join(''));
 console.log('paths:');
 console.log(pathResults.join(''));
+
+// extra
+console.log('  ' + `
+  /cert-key/pem:
+    post:
+      tags:
+        - "cert-key"
+      summary: "add cert-key pem"
+      operationId: "addCertKeyPem"
+      consumes:
+        - "application/json"
+      produces:
+        - "application/json"
+      parameters:
+        - in: "body"
+          name: "body"
+          required: true
+          schema:
+            $ref: '#/definitions/CertKeyCreatePem'
+`.trim() + '\n' + templateCreateResponse);
+
 console.log("######################");
 console.log("# End Generated Code #");
 console.log("######################");
