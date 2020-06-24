@@ -1,6 +1,6 @@
-package vproxy.redis;
+package vproxybase.redis;
 
-import vproxy.redis.entity.*;
+import vproxybase.redis.entity.*;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Utils;

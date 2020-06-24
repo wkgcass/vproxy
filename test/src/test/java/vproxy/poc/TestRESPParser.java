@@ -1,7 +1,7 @@
 package vproxy.poc;
 
-import vproxy.redis.RESPParser;
-import vproxy.redis.entity.*;
+import vproxybase.redis.RESPParser;
+import vproxybase.redis.entity.*;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.nio.ByteArrayChannel;
 

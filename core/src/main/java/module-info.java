@@ -5,9 +5,6 @@ module vproxy.core {
     requires vproxy.base;
 
     exports vproxy.util;
-    exports vproxy.redis;
-    exports vproxy.redis.entity;
-    exports vproxy.redis.application;
     exports vproxy.fstack;
     exports vproxy.component.ssl;
     exports vproxy.component.app;

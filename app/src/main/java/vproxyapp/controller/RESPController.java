@@ -1,9 +1,9 @@
 package vproxyapp.controller;
 
 import vfd.IPPort;
-import vproxy.redis.RESPConfig;
-import vproxy.redis.RESPProtocolHandler;
-import vproxy.redis.application.*;
+import vproxybase.redis.RESPConfig;
+import vproxybase.redis.RESPProtocolHandler;
+import vproxybase.redis.application.*;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.*;
 import vproxybase.Config;

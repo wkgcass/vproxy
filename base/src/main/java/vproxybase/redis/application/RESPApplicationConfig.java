@@ -1,4 +1,4 @@
-package vproxy.redis.application;
+package vproxybase.redis.application;
 
 import vproxybase.util.Logger;
 

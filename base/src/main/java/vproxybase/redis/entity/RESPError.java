@@ -1,4 +1,4 @@
-package vproxy.redis.entity;
+package vproxybase.redis.entity;
 
 import vproxybase.util.exception.XException;
 

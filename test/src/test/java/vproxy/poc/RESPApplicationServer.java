@@ -1,9 +1,9 @@
 package vproxy.poc;
 
 import vfd.IPPort;
-import vproxy.redis.RESPConfig;
-import vproxy.redis.RESPProtocolHandler;
-import vproxy.redis.application.*;
+import vproxybase.redis.RESPConfig;
+import vproxybase.redis.RESPProtocolHandler;
+import vproxybase.redis.application.*;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.protocol.ProtocolServerConfig;
@@ -17,7 +17,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import static vproxy.redis.application.RESPCommand.*;
+import static vproxybase.redis.application.RESPCommand.*;
 
 public class RESPApplicationServer {
     public static void main(String[] args) throws IOException, InterruptedException {

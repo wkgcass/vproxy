@@ -1,6 +1,6 @@
-package vproxy.redis.application;
+package vproxybase.redis.application;
 
-import vproxy.redis.RESPHandler;
+import vproxybase.redis.RESPHandler;
 import vproxybase.util.Callback;
 import vproxybase.util.Logger;
 

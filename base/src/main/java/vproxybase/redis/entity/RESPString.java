@@ -1,4 +1,4 @@
-package vproxy.redis.entity;
+package vproxybase.redis.entity;
 
 public class RESPString extends RESP {
     public final StringBuilder string = new StringBuilder();

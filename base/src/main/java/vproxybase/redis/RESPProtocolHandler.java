@@ -1,4 +1,4 @@
-package vproxy.redis;
+package vproxybase.redis;
 
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;

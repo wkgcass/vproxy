@@ -42,6 +42,9 @@ module vproxy.base {
     exports vproxybase.component.svrgroup;
     exports vproxybase.component.check;
     exports vproxybase.protocol;
+    exports vproxybase.redis;
+    exports vproxybase.redis.entity;
+    exports vproxybase.redis.application;
     exports vproxybase.http;
     exports vproxybase.http.connect;
     exports vproxybase.dns;

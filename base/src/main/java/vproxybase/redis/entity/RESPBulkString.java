@@ -1,4 +1,4 @@
-package vproxy.redis.entity;
+package vproxybase.redis.entity;
 
 public class RESPBulkString extends RESP {
     public int negative = 1;

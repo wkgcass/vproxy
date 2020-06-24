@@ -1,4 +1,4 @@
-package vproxy.redis;
+package vproxybase.redis;
 
 public class RESPConfig {
     int maxParseLen = 16384;

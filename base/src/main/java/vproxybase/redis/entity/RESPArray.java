@@ -1,6 +1,6 @@
-package vproxy.redis.entity;
+package vproxybase.redis.entity;
 
-import vproxy.redis.RESPParser;
+import vproxybase.redis.RESPParser;
 
 import java.util.LinkedList;
 import java.util.List;

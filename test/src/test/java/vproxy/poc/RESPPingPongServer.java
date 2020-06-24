@@ -1,9 +1,9 @@
 package vproxy.poc;
 
 import vfd.IPPort;
-import vproxy.redis.RESPConfig;
-import vproxy.redis.RESPHandler;
-import vproxy.redis.RESPProtocolHandler;
+import vproxybase.redis.RESPConfig;
+import vproxybase.redis.RESPHandler;
+import vproxybase.redis.RESPProtocolHandler;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.protocol.ProtocolServerConfig;
