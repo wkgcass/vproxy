@@ -17,6 +17,12 @@ public class ClasspathResourceHolder {
     }
 
     public ByteArray get(String path) {
+        if (path.contains("#")) {
+            path = path.substring(0, path.indexOf('#'));
+        }
+        if (path.contains("?")) {
+            path = path.substring(0, path.indexOf('?'));
+        }
         if (!path.startsWith("/")) {
             path = "/" + path;
         }
@@ -35,6 +41,7 @@ public class ClasspathResourceHolder {
                 if (len < BUF_LEN) {
                     b = b.sub(0, len);
                 }
+                b = b.copy();
                 if (ret == null) {
                     ret = b;
                 } else {

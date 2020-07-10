@@ -37,6 +37,7 @@ public class ConfigProcessor {
     private int ssListenPort = 0;
     private String ssPassword = "";
     private int dnsListenPort = 0;
+    private int adminListenPort = 0;
     private boolean gateway = false;
     private Map<String, ServerGroup> servers = new HashMap<>();
     private Map<String, List<DomainChecker>> domains = new HashMap<>();
@@ -87,6 +88,10 @@ public class ConfigProcessor {
 
     public int getDnsListenPort() {
         return dnsListenPort;
+    }
+
+    public int getAdminListenPort() {
+        return adminListenPort;
     }
 
     public boolean isGateway() {
@@ -314,6 +319,16 @@ public class ConfigProcessor {
                     }
                     if (dnsListenPort < 1 || dnsListenPort > 65535) {
                         throw new Exception("invalid agent.dns.listen, port number out of range");
+                    }
+                } else if (line.startsWith("agent.admin.listen ")) {
+                    String port = line.substring("agent.admin.listen ".length()).trim();
+                    try {
+                        adminListenPort = Integer.parseInt(port);
+                    } catch (NumberFormatException e) {
+                        throw new Exception("invalid agent.admin.listen, expecting an integer");
+                    }
+                    if (adminListenPort < 1 || adminListenPort > 65535) {
+                        throw new Exception("invalid agent.admin.listen, port number out of range");
                     }
                 } else if (line.startsWith("agent.gateway ")) {
                     String val = line.substring("agent.gateway ".length()).trim();

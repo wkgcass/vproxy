@@ -1,0 +1,41 @@
+<html>
+<head>
+    <title>config not found</title>
+    <meta charset='UTF-8'>
+    <link rel="stylesheet" type="text/css" href="css/semantic.min.css">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/semantic.min.js"></script>
+</head>
+<body>
+<div class="ui container">
+    <h1>Config not found</h1>
+    <h1>找不到配置文件</h1>
+    <p id="configFile"></p>
+    <div class="ui divider"></div>
+    <p>Please visit
+        <a href="index.html">this page</a>
+        to generate a config file.</p>
+    <p>请访问 <a href="index.html">这个页面</a> 生成配置文件。</p>
+    <div class="ui divider"></div>
+    <p>Or you may refer to the config file example <a
+            href="https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf">https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf</a>
+    </p>
+    <p>或者也可以参考配置模板自行配置 <a href="https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf">https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf</a>
+    </p>
+</div>
+</body>
+<script>
+  function getQueryString(name) {
+    var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+    var r = window.location.search.substr(1).match(reg);
+    if (r != null) {
+      return unescape(r[2]);
+    }
+    return null;
+  }
+  var configFile = getQueryString("configFile");
+  if (configFile) {
+    $('#configFile').html(configFile);
+  }
+</script>
+</html>

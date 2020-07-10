@@ -52,10 +52,13 @@ public class WebSocksProxyAgent {
             File file = new File(configFile);
             if (!file.exists()) {
                 System.out.println("Config file not found at " + configFile);
-                System.out.println("Please visit https://vproxy-tools.github.io/vpwsui/ to generate a config file");
+                System.out.println("Please visit http://127.0.0.1:44380 to generate a config file");
                 System.out.println("Or you may refer to the config file example https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
-                Browser.open("https://vproxy-tools.github.io/vpwsui/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
-                Utils.exit(1);
+
+                var adminServer = new AdminServer();
+                adminServer.listen(44380);
+
+                Browser.open("http://127.0.0.1:44380/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
                 return;
             }
         } else {
@@ -127,6 +130,15 @@ public class WebSocksProxyAgent {
                 assert Logger.lowLevelDebug("start dns server");
                 WebSocksUtils.agentDNSServer.start();
                 Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+            }
+        }
+
+        // init admin server
+        {
+            int port = configProcessor.getAdminListenPort();
+            if (port != 0) {
+                var adminServer = new AdminServer();
+                adminServer.listen(port);
             }
         }
 

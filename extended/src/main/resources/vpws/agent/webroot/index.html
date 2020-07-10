@@ -1,0 +1,533 @@
+<html>
+<head>
+    <title>vpws配置生成工具</title>
+    <meta charset='UTF-8'>
+    <link rel="stylesheet" type="text/css" href="css/semantic.min.css">
+    <script src="js/jquery.min.js"></script>
+    <script src="js/semantic.min.js"></script>
+    <script src="js/vue.min.js"></script>
+    <script src="js/app.js"></script>
+    <style>
+        .clickable {
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<div class="ui container" id="app">
+    <div class="ui top attached tabular menu">
+        <div class="item clickable" v-bind:class="{active: page == 'functionality'}"
+             v-on:click="page = 'functionality'">
+            功能开关
+        </div>
+        <div class="item clickable" v-bind:class="{active: page == 'server'}" v-on:click="page = 'server'">
+            服务器配置
+        </div>
+        <div class="item clickable" v-bind:class="{active: page == 'https-sni-erasure'}"
+             v-on:click="page = 'https-sni-erasure'">
+            SNI消除配置
+        </div>
+        <div class="item clickable" v-bind:class="{active: page == 'generate'}" v-on:click="doGenerate()">
+            生成配置文件
+        </div>
+        <!--
+        <div class="item clickable" v-bind:class="{active: page == 'run'}" v-on:click="page = 'run'">
+            运行状态
+        </div>
+        -->
+    </div>
+    <div class="ui bottom attached tab segment" v-bind:class="{active: page == 'functionality'}">
+        <div class="ui form">
+            <div>
+                <div class="inline fields">
+                    <div id="socks5-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(socks5)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(socks5)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(socks5)">
+                        <label>启用socks5</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="socks5.enabled">
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>socks5监听端口</label>
+                            <input type="text" placeholder="agent.socks5.listen" v-model="socks5.listen">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="httpconnect-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(httpconnect)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(httpconnect)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(httpconnect)">
+                        <label>启用http-connect</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="httpconnect.enabled">
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>http-connect监听端口</label>
+                            <input type="text" placeholder="agent.httpconnect.listen" v-model="httpconnect.listen">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="ss-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(ss)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(ss)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(ss)">
+                        <label>启用shadowsocks</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="ss.enabled">
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>shadowsocks监听端口</label>
+                            <input type="text" placeholder="agent.ss.listen" v-model="ss.listen">
+                        </div>
+                    </div>
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>shadowsocks连接密码</label>
+                            <input type="text" placeholder="agent.ss.password" v-model="ss.password">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="dns-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(dns)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(dns)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(dns)">
+                        <label>启用dns</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="dns.enabled">
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>dns监听端口</label>
+                            <input type="text" placeholder="agent.dns.listen" v-model="dns.listen">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields"
+                     v-on:click="handleCheckboxClick(pac)"
+                     v-on:mouseleave="handleCheckboxMouseLeaveEvent(pac)"
+                     v-on:mouseenter="handleCheckboxMouseEnterEvent(pac)">
+                    <div id="pac-checkbox" class="ui toggle checkbox">
+                        <label>启用pac服务</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="pac.enabled">
+                    <div class="inline fields">
+                        <div class="field">
+                            <label>pac服务监听端口</label>
+                            <input type="text" placeholder="agent.gateway.pac.address" v-model="pac.listen">
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="gateway-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(gateway)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(gateway)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(gateway)">
+                        <label>启用网关功能</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                    <div class="field" v-show="gateway.enabled">
+                        &nbsp;
+                        <i class="check icon"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="autosign-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(autosign)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(autosign)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(autosign)">
+                        <label>自动证书签发</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="autosign.enabled">
+                    <p>使用该功能前，需要自行准备自签名的ca根证书，并且将根证书配置到浏览器信任列表中。</p>
+                    <div class="ui form">
+                        <div class="inline fields">
+                            <div class="field">
+                                <label>CA根证书文件路径</label>
+                                <input type="text" placeholder="CA根证书" v-model="autosign.cacert">
+                            </div>
+                            <div class="field">
+                                <label>私钥文件路径</label>
+                                <input type="text" placeholder="私钥" v-model="autosign.cakey">
+                            </div>
+                        </div>
+                    </div>
+                    <div class="ui message">
+                        <div class="header">如何生成自签名的ca根证书？</div>
+                        <ul class="list">
+                            <li>在Windows平台下，可能没有安装OpenSSL。可参考
+                                <a href="https://jingyan.baidu.com/article/870c6fc3e3815bf03ee4be4f.html">这篇文章</a>
+                                安装以及配置OpenSSL。
+                            </li>
+                            <li>准备一个文件：<code>openssl.cnf</code>，输入如下内容
+                                <div class="ui existing segment">
+                                    <pre>
+[ req ]
+default_bits		= 2048
+default_md		= sha256
+distinguished_name	= req_distinguished_name
+attributes		= req_attributes
+
+[ req_distinguished_name ]
+countryName			= Country Name (2 letter code)
+countryName_min			= 2
+countryName_max			= 2
+stateOrProvinceName		= State or Province Name (full name)
+localityName			= Locality Name (eg, city)
+0.organizationName		= Organization Name (eg, company)
+organizationalUnitName		= Organizational Unit Name (eg, section)
+commonName			= Common Name (eg, fully qualified host name)
+commonName_max			= 64
+emailAddress			= Email Address
+emailAddress_max		= 64
+
+[ req_attributes ]
+challengePassword		= A challenge password
+challengePassword_min		= 4
+challengePassword_max		= 20
+
+[ v3_ca ]
+subjectKeyIdentifier=hash
+authorityKeyIdentifier=keyid:always,issuer
+basicConstraints = critical, CA:TRUE, pathlen:3
+keyUsage = critical, cRLSign, keyCertSign
+nsCertType = sslCA, emailCA
+                                    </pre>
+                                </div>
+                            </li>
+                            <li>使用如下命令创建私钥以及自签名的ca根证书：
+                                <div class="ui existing segment">
+                                    <pre>
+openssl genrsa -out ca.key 2048
+openssl req -new -x509 -extensions v3_ca -days 36500 -key ca.key -out ca.crt -config openssl.cnf
+                                    </pre>
+                                </div>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <div class="inline fields">
+                    <div id="directrelay-checkbox" class="ui toggle checkbox"
+                         v-on:click="handleCheckboxClick(directrelay)"
+                         v-on:mouseleave="handleCheckboxMouseLeaveEvent(directrelay)"
+                         v-on:mouseenter="handleCheckboxMouseEnterEvent(directrelay)">
+                        <label>启用直接中继（通过DNS将域名解析到agent上，应用程序会直接请求agent，不需要应用程序适配任何代理协议）</label>
+                        <input type="checkbox" class="hidden">
+                    </div>
+                </div>
+                <div v-show="directrelay.enabled">
+                    <div style="margin-top: 5px;">
+                        <div class="inline fields">
+                            <div id="directrelayadvanced-checkbox" class="ui toggle checkbox"
+                                 v-on:click="handleCheckboxClick(directrelayadvanced)"
+                                 v-on:mouseleave="handleCheckboxMouseLeaveEvent(directrelayadvanced)"
+                                 v-on:mouseenter="handleCheckboxMouseEnterEvent(directrelayadvanced)">
+                                <label>启用直接中继的高级功能（仅Linux操作系统可使用）</label>
+                                <input type="checkbox" class="hidden">
+                            </div>
+                        </div>
+                    </div>
+                    <div v-show="directrelayadvanced.enabled">
+                        <div style="margin-top: 5px;">
+                            <div class="ui form">
+                                <div class="inline fields">
+                                    <div class="field">
+                                        <label>用于绑定域名的网段</label>
+                                        <input type="text" placeholder="网段" v-model="directrelayadvanced.network">
+                                    </div>
+                                    <div class="field">
+                                        <label>IP_TRANSPARENT socket 监听地址</label>
+                                        <input type="text" placeholder="监听地址" v-model="directrelayadvanced.listen">
+                                    </div>
+                                    <div class="field">
+                                        <label>IP绑定超时时间</label>
+                                        <input type="text" placeholder="超时时间" v-model="directrelayadvanced.timeout">
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="ui bottom attached tab segment" v-bind:class="{active: page == 'server'}">
+        <div class="ui form">
+            <div class="inline fields">
+                <div class="field">
+                    <label>用户名</label>
+                    <input type="text" placeholder="用户名" v-model="serverUser">
+                </div>
+                <div class="field">
+                    <label>密码</label>
+                    <input type="password" placeholder="密码" v-model="serverPass">
+                </div>
+            </div>
+            <div class="inline fields">
+                <div id="hc-checkbox" class="ui slider checkbox"
+                     v-on:click="handleCheckboxClick(hc)"
+                     v-on:mouseleave="handleCheckboxMouseLeaveEvent(hc)"
+                     v-on:mouseenter="handleCheckboxMouseEnterEvent(hc)">
+                    <label>启用健康检查 <i class="check icon" v-show="hc.enabled"></i></label>
+                    <input type="checkbox" class="hidden">
+                </div>
+            </div>
+            <div class="inline fields">
+                <div id="certauth-checkbox" class="ui slider checkbox"
+                     v-on:click="handleCheckboxClick(certauth)"
+                     v-on:mouseleave="handleCheckboxMouseLeaveEvent(certauth)"
+                     v-on:mouseenter="handleCheckboxMouseEnterEvent(certauth)">
+                    <label>启用证书校验 <i class="check icon" v-show="certauth.enabled"></i></label>
+                    <input type="checkbox" class="hidden">
+                </div>
+            </div>
+            <div v-for="group in serverGroupList">
+                <div class="ui divider"></div>
+                <div class="inline fields">
+                    <div class="field">
+                        <label>服务器组名称</label>
+                        <input type="text" placeholder="服务器组名称" v-model="group.name">
+                    </div>
+                    <div class="field">
+                        <button class="ui small red button" v-on:click="deleteGroup(group.index)">删除该服务器组
+                        </button>
+                    </div>
+                </div>
+                <table class="ui celled table">
+                    <thead>
+                    <tr>
+                        <th class="seven wide">协议（+ 是否启用KCP）</th>
+                        <th class="five wide">地址</th>
+                        <th class="three wide">端口号</th>
+                        <th class="one wide">操作</th>
+                    </tr>
+                    </thead>
+                    <tr v-for="server in group.serverList">
+                        <td data-label="protocol">
+                            <div class="inline fields">
+                                <select v-bind:id="'protocol-g-' + group.index + '-s-' + server.index + '-select'"
+                                        class="ui search dropdown" v-model="server.protocol">
+                                    <option value="websockss">websockss</option>
+                                    <option value="websocks">websocks</option>
+                                </select>
+                                &nbsp;&nbsp;&nbsp;&nbsp;
+                                <div v-bind:id="'kcp-g-' + group.index + '-s-' + server.index + '-checkbox'"
+                                     class="ui slider checkbox"
+                                     v-on:click="handleCheckboxClick(server.kcp)"
+                                     v-on:mouseleave="handleCheckboxMouseLeaveEvent(server.kcp)"
+                                     v-on:mouseenter="handleCheckboxMouseEnterEvent(server.kcp)">
+                                    <label>KCP &nbsp; <i class="check icon"
+                                                         v-show="server.kcp.enabled"></i></label>
+                                    <input type="checkbox" class="hidden">
+                                </div>
+                            </div>
+                        </td>
+                        <td data-label="address">
+                            <input type="text" placeholder="地址" v-model="server.ip">
+                        </td>
+                        <td data-label="port">
+                            <input type="text" placeholder="端口号" v-model="server.port">
+                        </td>
+                        <td data-label="operation">
+                            <button class="ui mini red basic icon button"
+                                    v-on:click="deleteServer(group.index, server.index)">
+                                <i class="trash icon"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <button class="ui mini green basic icon button"
+                                    v-on:click="addServer(group.index)">
+                                <i class="add icon"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+                <table class="ui celled table">
+                    <thead>
+                    <tr>
+                        <th class="thirteen wide">流量代理规则</th>
+                        <th class="two wide">白名单</th>
+                        <th class="one wide">操作</th>
+                    </tr>
+                    </thead>
+                    <tr v-for="rule in group.proxyRuleList">
+                        <td data-label="rule">
+                            <input type="text" name="rule" placeholder="代理规则" v-model="rule.rule">
+                        </td>
+                        <td>
+                            <div v-bind:id="'white-g-' + group.index + '-r-' + rule.index + '-checkbox'"
+                                 class="ui slider checkbox"
+                                 v-on:click="handleCheckboxClick(rule.white)"
+                                 v-on:mouseleave="handleCheckboxMouseLeaveEvent(rule.white)"
+                                 v-on:mouseenter="handleCheckboxMouseEnterEvent(rule.white)">
+                                <label><i class="check icon" v-show="rule.white.enabled"></i></label>
+                                <input type="checkbox" class="hidden">
+                            </div>
+                        </td>
+                        <td data-label="operation" v-on:click="deleteRule(group.index, rule.index)">
+                            <button class="ui mini red basic icon button"><i class="trash icon"></i></button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                        <td>
+                            <button class="ui mini green basic icon button" v-on:click="addRule(group.index)">
+                                <i class="add icon"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+                <table class="ui celled table">
+                    <thead>
+                    <tr>
+                        <th class="fifteen wide">DNS代理规则</th>
+                        <th class="one wide">操作</th>
+                    </tr>
+                    </thead>
+                    <tr v-for="dnsRule in group.dnsRuleList">
+                        <td data-label="rule">
+                            <input type="text" name="rule" placeholder="DNS代理规则" v-model="dnsRule.rule">
+                        </td>
+                        <td data-label="operation">
+                            <button class="ui mini red basic icon button"
+                                    v-on:click="deleteDnsRule(group.index, dnsRule.index)">
+                                <i class="trash icon"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td></td>
+                        <td>
+                            <button class="ui mini green basic icon button"
+                                    v-on:click="addDnsRule(group.index)">
+                                <i class="add icon"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </table>
+            </div>
+            <div class="ui divider"></div>
+            <button class="ui green button" v-on:click="addGroup()">添加新的服务器组</button>
+        </div>
+    </div>
+    <div class="ui bottom attached tab segment" v-bind:class="{active: page == 'https-sni-erasure'}">
+        <div class="ui form">
+            <table class="ui celled table">
+                <thead>
+                <tr>
+                    <th class="fifteen wide">https-sni-erasure 通过清除SNI来避免防火墙检查，流量不会经过代理服务器</th>
+                    <th class="one wide">操作</th>
+                </tr>
+                </thead>
+                <tr v-for="hseRule in httpsSniErasureRuleList">
+                    <td data-label="rule">
+                        <input type="text" name="rule" placeholder="https-sni-erasure规则" v-model="hseRule.rule">
+                    </td>
+                    <td data-label="operation">
+                        <button class="ui mini red basic icon button"
+                                v-on:click="deleteHttpsSniErasureRule(hseRule.index)">
+                            <i class="trash icon"></i>
+                        </button>
+                    </td>
+                </tr>
+                <tr>
+                    <td></td>
+                    <td>
+                        <button class="ui mini green basic icon button" v-on:click="addHttpsSniErasureRule()">
+                            <i class="add icon"></i>
+                        </button>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+    <div class="ui bottom attached tab segment" v-bind:class="{active: page == 'generate'}">
+        <div class="ui red message" v-show="generateErrors.length">
+            <div class="header">错误</div>
+            <ul class="list">
+                <li v-for="eStr in generateErrors">{{eStr}}</li>
+            </ul>
+        </div>
+        <div class="ui message">
+            <p>请将配置文件放置在家目录下的vpws-agent.conf文件中，或者在启动agent时指定配置文件路径。</p>
+            <div class="ui divider"></div>
+            <button id="download" class="ui black icon button" v-bind:class="{disabled: generateErrors.length > 0}">
+                <i class="download icon"></i> 下载
+            </button>
+            <div class="ui existing segment">
+                <template v-for="line in generated.split('\n')">{{line}}<br></template>
+            </div>
+        </div>
+    </div>
+    <!--
+    <div class="ui bottom attached tab segment" v-bind:class="{active: page == 'run'}">
+        <div class="ui message">
+            <div class="header">运行状态</div>
+            <p></p>
+            <div style="font-weight: bold;">
+                <span v-show="running" style="color: #59b655;">运行中</span><span v-show="!running" style="color: #ca3b33">已停止</span>
+                <span v-show="starting || stopping">...</span>
+            </div>
+            <div class="ui divider"></div>
+            <div>
+                <button class="ui green icon button" v-bind:class="{disabled: running}" v-on:click="run()"><i
+                        class="play icon"></i> 启动
+                </button>
+                <button class="ui red icon button" v-bind:class="{disabled: !running}" v-on:click="stop()"><i
+                        class="stop icon"></i> 停止
+                </button>
+            </div>
+            <div class="ui divider"></div>
+            <div class="ui existing segment">
+                <template v-for="line in output.split('\n')">{{line}}<br></template>
+            </div>
+        </div>
+    </div>
+    -->
+</div>
+</body>
+<script>
+  pageMain();
+</script>
+</html>
