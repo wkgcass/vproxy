@@ -1,7 +1,4 @@
-package vproxyapp.controller;
-
-import vproxybase.util.ByteArray;
-import vproxybase.util.Logger;
+package vproxybase.util;
 
 import java.io.IOException;
 import java.io.InputStream;
