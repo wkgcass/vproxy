@@ -9,20 +9,28 @@ import vproxybase.util.Logger;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
+import java.util.Collections;
+import java.util.Map;
 import java.util.Objects;
 
 public class TapIface implements Iface {
     public final TapDatagramFD tap;
     public final int localSideVni;
     public final String postScript;
+    public final Map<String, String> annotations;
 
     private final AbstractDatagramFD<?> operateTap;
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TapDatagramFD tap, AbstractDatagramFD<?> operateTap, int localSideVni, String postScript, SelectorEventLoop bondLoop) {
+    public TapIface(TapDatagramFD tap, AbstractDatagramFD<?> operateTap, int localSideVni, String postScript, Map<String, String> annotations,
+                    SelectorEventLoop bondLoop) {
         this.tap = tap;
         this.localSideVni = localSideVni;
         this.postScript = postScript;
+        if (annotations == null) {
+            annotations = Collections.emptyMap();
+        }
+        this.annotations = Collections.unmodifiableMap(annotations);
         this.operateTap = operateTap;
         this.bondLoop = bondLoop;
     }

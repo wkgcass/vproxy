@@ -6,7 +6,9 @@ import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
+import vproxyapp.app.cmd.handle.param.AnnotationsHandle;
 import vproxybase.util.exception.XException;
+import vswitch.IPMac;
 import vswitch.Table;
 
 import java.util.Collection;
@@ -35,7 +37,7 @@ public class IpHandle {
         return tbl.ips.allIps();
     }
 
-    public static Collection<Map.Entry<IP, MacAddress>> list(Resource parent) throws Exception {
+    public static Collection<IPMac> list(Resource parent) throws Exception {
         Table tbl = VpcHandle.get(parent);
         return tbl.ips.entries();
     }
@@ -63,7 +65,12 @@ public class IpHandle {
             throw new XException("invalid mac address: " + mac);
         }
 
-        VpcHandle.get(cmd.prepositionResource).addIp(inet, macO);
+        Map<String, String> anno = null;
+        if (cmd.args.containsKey(Param.anno)) {
+            anno = AnnotationsHandle.get(cmd);
+        }
+
+        VpcHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
     }
 
     public static void forceRemove(Command cmd) throws Exception {

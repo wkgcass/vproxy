@@ -6,6 +6,7 @@ import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
+import vproxyapp.app.cmd.handle.param.AnnotationsHandle;
 import vproxyapp.app.cmd.handle.param.NetworkHandle;
 import vproxybase.util.Network;
 import vswitch.Switch;
@@ -14,6 +15,7 @@ import vswitch.Table;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 
 public class VpcHandle {
     private VpcHandle() {
@@ -75,7 +77,11 @@ public class VpcHandle {
         if (cmd.args.containsKey(Param.v6net)) {
             v6net = NetworkHandle.get(cmd.args.get(Param.v6net));
         }
-        sw.addTable(Integer.parseInt(cmd.resource.alias), v4net, v6net);
+        Map<String, String> annotations = null;
+        if (cmd.args.containsKey(Param.anno)) {
+            annotations = AnnotationsHandle.get(cmd);
+        }
+        sw.addTable(Integer.parseInt(cmd.resource.alias), v4net, v6net, annotations);
     }
 
     public static void forceRemove(Command cmd) throws Exception {
@@ -89,7 +95,7 @@ public class VpcHandle {
 
         List<VpcEntry> ls = new ArrayList<>();
         for (var tbl : tables) {
-            ls.add(new VpcEntry(tbl.vni, tbl.v4network, tbl.v6network));
+            ls.add(new VpcEntry(tbl.vni, tbl.v4network, tbl.v6network, tbl.getAnnotations()));
         }
         ls.sort(Comparator.comparingInt(a -> a.vpc));
         return ls;
@@ -99,16 +105,20 @@ public class VpcHandle {
         public final int vpc;
         public final Network v4network;
         public final Network v6network;
+        public final Map<String, String> annotations;
 
-        public VpcEntry(int vpc, Network v4network, Network v6network) {
+        public VpcEntry(int vpc, Network v4network, Network v6network, Map<String, String> annotations) {
             this.vpc = vpc;
             this.v4network = v4network;
             this.v6network = v6network;
+            this.annotations = annotations;
         }
 
         @Override
         public String toString() {
-            return vpc + " -> v4network " + v4network + (v6network != null ? (" v6network " + v6network) : "");
+            return vpc + " -> v4network " + v4network
+                + (v6network != null ? (" v6network " + v6network) : "")
+                + (!annotations.isEmpty() ? (" annotations " + annotations) : "");
         }
     }
 }

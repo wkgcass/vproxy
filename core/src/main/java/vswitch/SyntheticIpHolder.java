@@ -13,12 +13,13 @@ import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.stream.Collectors;
 
 public class SyntheticIpHolder {
     private final Network allowedV4Network;
     private final Network allowedV6Network;
-    private final ConcurrentHashMap<IP, MacAddress> ipMap = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<MacAddress, Set<IP>> macMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<IP, IPMac> ipMap = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<MacAddress, Set<IPMac>> macMap = new ConcurrentHashMap<>();
 
     public SyntheticIpHolder(Table table) {
         allowedV4Network = table.v4network;
@@ -26,22 +27,30 @@ public class SyntheticIpHolder {
     }
 
     public MacAddress lookup(IP ip) {
-        return ipMap.get(ip);
+        var info = ipMap.get(ip);
+        if (info == null) {
+            return null;
+        }
+        return info.mac;
     }
 
     public Collection<IP> lookupByMac(MacAddress mac) {
-        return macMap.get(mac);
+        var set = macMap.get(mac);
+        if (set == null) {
+            return null;
+        }
+        return set.stream().map(x -> x.ip).collect(Collectors.toSet());
     }
 
     public Collection<IP> allIps() {
         return ipMap.keySet();
     }
 
-    public Collection<Map.Entry<IP, MacAddress>> entries() {
-        return ipMap.entrySet();
+    public Collection<IPMac> entries() {
+        return ipMap.values();
     }
 
-    public void add(IP ip, MacAddress mac) throws AlreadyExistException, XException {
+    public void add(IP ip, MacAddress mac, Map<String, String> annotations) throws AlreadyExistException, XException {
         if (ip instanceof IPv4) {
             if (!allowedV4Network.contains(ip)) {
                 throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV4Network);
@@ -55,24 +64,25 @@ public class SyntheticIpHolder {
             }
         }
 
-        MacAddress oldMac = ipMap.putIfAbsent(ip, mac);
-        if (oldMac != null) {
+        IPMac info = new IPMac(ip, mac, annotations);
+        IPMac oldInfo = ipMap.putIfAbsent(ip, info);
+        if (oldInfo != null) {
             throw new AlreadyExistException("synthetic ip " + ip.formatToIPString() + " already exists in the requested switch");
         }
         var set = macMap.computeIfAbsent(mac, m -> new ConcurrentHashSet<>());
-        set.add(ip);
+        set.add(info);
     }
 
     public void del(IP ip) throws NotFoundException {
-        MacAddress mac = ipMap.remove(ip);
-        if (mac == null) {
+        IPMac info = ipMap.remove(ip);
+        if (info == null) {
             throw new NotFoundException("ip", ip.formatToIPString());
         }
-        var set = macMap.get(mac);
+        var set = macMap.get(info.mac);
         assert set != null;
-        set.remove(ip);
+        set.remove(info);
         if (set.isEmpty()) {
-            macMap.remove(mac);
+            macMap.remove(info.mac);
         }
     }
 }

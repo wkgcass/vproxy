@@ -21,7 +21,6 @@ import vproxybase.util.exception.XException;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class ServerGroupHandle {
@@ -175,7 +174,7 @@ public class ServerGroupHandle {
             var h = Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
                 .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
             if (cmd.args.containsKey(Param.anno)) {
-                h.annotations = AnnotationsHandle.get(cmd);
+                h.setAnnotations(AnnotationsHandle.get(cmd));
             }
         }
     }
@@ -224,7 +223,7 @@ public class ServerGroupHandle {
                 h.setWeight(WeightHandle.get(cmd));
             }
             if (cmd.args.containsKey(Param.anno)) {
-                h.annotations = AnnotationsHandle.get(cmd);
+                h.setAnnotations(AnnotationsHandle.get(cmd));
             }
         }
     }
@@ -260,9 +259,9 @@ public class ServerGroupHandle {
         private String formatAnno() {
             Map<String, String> annos;
             if (h == null) {
-                annos = Objects.requireNonNullElseGet(g.getAnnotations(), Map::of);
+                annos = g.getAnnotations();
             } else {
-                annos = Objects.requireNonNullElseGet(h.annotations, Map::of);
+                annos = h.getAnnotations();
             }
 
             ObjectBuilder ob = new ObjectBuilder();

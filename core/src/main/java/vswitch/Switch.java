@@ -234,14 +234,14 @@ public class Switch {
         return t;
     }
 
-    public void addTable(int vni, Network v4network, Network v6network) throws AlreadyExistException, XException {
+    public void addTable(int vni, Network v4network, Network v6network, Map<String, String> annotations) throws AlreadyExistException, XException {
         if (tables.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
         if (currentEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        tables.computeIfAbsent(vni, n -> new Table(n, currentEventLoop.getSelectorEventLoop(), v4network, v6network, macTableTimeout, arpTableTimeout));
+        tables.computeIfAbsent(vni, n -> new Table(n, currentEventLoop.getSelectorEventLoop(), v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
     }
 
     public void delTable(int vni) throws NotFoundException {
@@ -288,7 +288,7 @@ public class Switch {
     }
 
     // return created dev name
-    public String addTap(String devPattern, int vni, String postScript) throws XException, IOException {
+    public String addTap(String devPattern, int vni, String postScript, Map<String, String> annotations) throws XException, IOException {
         NetEventLoop netEventLoop = currentEventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -310,7 +310,7 @@ public class Switch {
             } else {
                 fdToPutIntoLoop = new BlockingDatagramFD<>(fd, loop, 2048, 65536, 32);
             }
-            iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, loop);
+            iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, annotations, loop);
             loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
         } catch (IOException e) {
             if (fdToPutIntoLoop != null) {
@@ -939,19 +939,19 @@ public class Switch {
             l2Stack(netCtx, vxlan, table, null);
         }
 
-        private Map.Entry<IP, MacAddress> getRoutedSrcIpAndMac(NetworkContext netCtx, Table targetTable, IP dstIp) {
+        private IPMac getRoutedSrcIpAndMac(NetworkContext netCtx, Table targetTable, IP dstIp) {
             assert Logger.lowLevelDebug(netCtx + "into getRoutedSrcIpAndMac(" + targetTable + "," + dstIp + ")");
 
             // find an ip in that table to be used for the src mac address
             var ipsInTable = targetTable.ips.entries();
             boolean useIpv6 = dstIp instanceof IPv6;
-            Map.Entry<IP, MacAddress> src = null;
+            IPMac src = null;
             for (var x : ipsInTable) {
-                if (useIpv6 && x.getKey() instanceof IPv6) {
+                if (useIpv6 && x.ip instanceof IPv6) {
                     src = x;
                     break;
                 }
-                if (!useIpv6 && x.getKey() instanceof IPv4) {
+                if (!useIpv6 && x.ip instanceof IPv4) {
                     src = x;
                     break;
                 }
@@ -965,7 +965,7 @@ public class Switch {
             if (entry == null) {
                 return null;
             }
-            return entry.getValue();
+            return entry.mac;
         }
 
         private void routeToNetwork(NetworkContext netCtx, Table table, IP dstIp, VXLanPacket vxlan, AbstractIpPacket ipPkt) {
@@ -1075,13 +1075,13 @@ public class Switch {
         private VXLanPacket buildArpReq(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into buildArpPacket(" + table + "," + ip + "," + mac + ")");
 
-            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof IPv4).findAny();
+            var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv4).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find synthetic ipv4 in the table");
                 return null;
             }
-            IP reqIp = optIp.get().getKey();
-            MacAddress reqMac = optIp.get().getValue();
+            IP reqIp = optIp.get().ip;
+            MacAddress reqMac = optIp.get().mac;
 
             ArpPacket req = new ArpPacket();
             req.setHardwareType(Consts.ARP_HARDWARE_TYPE_ETHER);
@@ -1145,13 +1145,13 @@ public class Switch {
         private VXLanPacket buildNdpNeighborSolicitation(NetworkContext netCtx, Table table, IP ip, MacAddress mac) {
             assert Logger.lowLevelDebug(netCtx + "into buildNdpNeighborSolicitation(" + table + "," + ip + "," + mac + ")");
 
-            var optIp = table.ips.entries().stream().filter(x -> x.getKey() instanceof IPv6).findAny();
+            var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv6).findAny();
             if (optIp.isEmpty()) {
                 assert Logger.lowLevelDebug(netCtx + "cannot find synthetic ipv4 in the table");
                 return null;
             }
-            IP reqIp = optIp.get().getKey();
-            MacAddress reqMac = optIp.get().getValue();
+            IP reqIp = optIp.get().ip;
+            MacAddress reqMac = optIp.get().mac;
 
             IcmpPacket icmp = new IcmpPacket(true);
             icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
@@ -1326,7 +1326,7 @@ public class Switch {
                     .concat(toSet)
             );
 
-            EthernetPacket ether = buildEtherIpIcmpPacket(netCtx, inVxlan.getPacket().getSrc(), srcIpAndMac.getValue(), srcIpAndMac.getKey(), inIpPkt.getSrc(), icmp);
+            EthernetPacket ether = buildEtherIpIcmpPacket(netCtx, inVxlan.getPacket().getSrc(), srcIpAndMac.mac, srcIpAndMac.ip, inIpPkt.getSrc(), icmp);
 
             originate(netCtx, table, ether, true);
         }
@@ -1360,7 +1360,7 @@ public class Switch {
                     .concat(toSet)
             );
 
-            EthernetPacket ether = buildEtherIpIcmpPacket(netCtx, inVxlan.getPacket().getSrc(), srcIpAndMac.getValue(), srcIpAndMac.getKey(), inIpPkt.getSrc(), icmp);
+            EthernetPacket ether = buildEtherIpIcmpPacket(netCtx, inVxlan.getPacket().getSrc(), srcIpAndMac.mac, srcIpAndMac.ip, inIpPkt.getSrc(), icmp);
 
             originate(netCtx, table, ether, true);
         }

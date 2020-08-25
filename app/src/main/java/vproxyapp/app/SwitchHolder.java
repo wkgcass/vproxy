@@ -21,12 +21,12 @@ public class SwitchHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    public void add(String alias,
-                    IPPort vxlanBindingAddress,
-                    EventLoopGroup eventLoopGroup,
-                    int macTableTimeout,
-                    int arpTableTimeout,
-                    SecurityGroup bareVXLanAccess) throws AlreadyExistException, ClosedException, IOException {
+    public Switch add(String alias,
+                      IPPort vxlanBindingAddress,
+                      EventLoopGroup eventLoopGroup,
+                      int macTableTimeout,
+                      int arpTableTimeout,
+                      SecurityGroup bareVXLanAccess) throws AlreadyExistException, ClosedException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("switch", alias);
 
@@ -38,6 +38,7 @@ public class SwitchHolder {
             throw e;
         }
         map.put(alias, sw);
+        return sw;
     }
 
     public Switch get(String alias) throws NotFoundException {

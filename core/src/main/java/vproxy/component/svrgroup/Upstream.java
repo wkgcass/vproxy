@@ -16,7 +16,7 @@ public class Upstream {
         public final String alias;
         public final ServerGroup group;
         private int weight;
-        public Map<String, String> annotations = null;
+        private Map<String, String> annotations = Collections.emptyMap();
 
         public ServerGroupHandle(ServerGroup group, int weight) {
             this.alias = group.alias;
@@ -31,6 +31,17 @@ public class Upstream {
         public void setWeight(int weight) {
             this.weight = weight;
             recalculateWRR();
+        }
+
+        public Map<String, String> getAnnotations() {
+            return annotations;
+        }
+
+        public void setAnnotations(Map<String, String> annotations) {
+            if (annotations == null) {
+                annotations = Collections.emptyMap();
+            }
+            this.annotations = annotations;
         }
     }
 

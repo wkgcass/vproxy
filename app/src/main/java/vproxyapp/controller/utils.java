@@ -312,7 +312,7 @@ class utils {
     }
 
     static JSON.Object formatAnnotations(Map<String, String> map) {
-        if (map == null) {
+        if (map.isEmpty()) {
             return new ObjectBuilder().build();
         } else {
             ObjectBuilder ob = new ObjectBuilder();
@@ -379,7 +379,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
-            .putInst("annotations", formatAnnotations(sg.annotations))
+            .putInst("annotations", formatAnnotations(sg.getAnnotations()))
             .build();
     }
 
@@ -387,7 +387,7 @@ class utils {
         return new ObjectBuilder()
             .put("name", sg.alias)
             .put("weight", sg.getWeight())
-            .putInst("annotations", formatAnnotations(sg.annotations))
+            .putInst("annotations", formatAnnotations(sg.getAnnotations()))
             .putInst("serverGroup", formatServerGroupDetail(sg.group))
             .build();
     }

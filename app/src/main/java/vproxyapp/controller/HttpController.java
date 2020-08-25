@@ -312,6 +312,9 @@ public class HttpController {
         // watch
         server.get(watch + "/server-group/-/server/-/health-check", this::watchHealthCheck);
 
+        // docker
+        DockerNetworkPluginController.init(server);
+
         // start
         if (Config.checkBind) {
             ServerSock.checkBind(address);

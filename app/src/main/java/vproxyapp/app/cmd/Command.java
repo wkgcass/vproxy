@@ -1,7 +1,6 @@
 package vproxyapp.app.cmd;
 
 import vfd.IP;
-import vfd.MacAddress;
 import vproxy.component.proxy.Session;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.secure.SecurityGroupRule;
@@ -14,6 +13,7 @@ import vproxybase.dns.Cache;
 import vproxybase.util.Callback;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vswitch.IPMac;
 import vswitch.iface.Iface;
 
 import java.lang.reflect.Field;
@@ -1135,8 +1135,10 @@ public class Command {
                         List<String> strNames = names.stream().map(IP::formatToIPString).collect(Collectors.toList());
                         return new CmdResult(names, strNames, utilJoinList(strNames));
                     case L:
-                        Collection<Map.Entry<IP, MacAddress>> tuples = IpHandle.list(targetResource);
-                        List<Object> strTuples = tuples.stream().map(o -> o.getKey().formatToIPString() + " -> mac " + o.getValue()).collect(Collectors.toList());
+                        Collection<IPMac> tuples = IpHandle.list(targetResource);
+                        List<Object> strTuples = tuples.stream().map(o -> o.ip.formatToIPString() + " -> mac " + o.mac +
+                            (o.annotations.isEmpty() ? "" : " annotations " + o.annotations)
+                        ).collect(Collectors.toList());
                         return new CmdResult(tuples, strTuples, utilJoinList(strTuples));
                     case a:
                         IpHandle.add(this);

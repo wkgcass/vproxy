@@ -35,8 +35,8 @@ public class Network {
         return getMask() < that.getMask();
     }
 
-    public String getIp() {
-        return IP.ipStr(ip);
+    public IP getIp() {
+        return IP.from(ip);
     }
 
     public int getMask() {
@@ -65,7 +65,7 @@ public class Network {
 
     @Override
     public String toString() {
-        return getIp() + "/" + getMask();
+        return IP.ipStr(ip) + "/" + getMask();
     }
 
     // BEGIN UTILS:

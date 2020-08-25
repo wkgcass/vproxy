@@ -794,14 +794,17 @@ public class ServerGroup {
     }
 
     public Map<String, String> getAnnotations() {
-        return annotations;
+        return Collections.unmodifiableMap(annotations);
     }
 
     public void setAnnotations(Map<String, String> annotations) {
+        if (annotations == null) {
+            annotations = Collections.emptyMap();
+        }
         this.annotations = annotations;
 
         // set hc client annotations
-        if (annotations == null) {
+        if (annotations.isEmpty()) {
             annotatedHcConfig.clear();
         } else {
             annotatedHcConfig.set(annotations);

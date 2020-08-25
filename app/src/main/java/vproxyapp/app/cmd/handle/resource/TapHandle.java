@@ -5,9 +5,12 @@ import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
+import vproxyapp.app.cmd.handle.param.AnnotationsHandle;
 import vproxybase.util.Utils;
 import vproxybase.util.exception.XException;
 import vswitch.Switch;
+
+import java.util.Map;
 
 public class TapHandle {
     private TapHandle() {
@@ -40,7 +43,11 @@ public class TapHandle {
         int vni = Integer.parseInt(cmd.args.get(Param.vni));
         String postScript = cmd.args.get(Param.postscript);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        return sw.addTap(devPattern, vni, postScript);
+        Map<String, String> anno = null;
+        if (cmd.args.containsKey(Param.anno)) {
+            anno = AnnotationsHandle.get(cmd);
+        }
+        return sw.addTap(devPattern, vni, postScript, anno);
     }
 
     public static void forceRemove(Command cmd) throws Exception {
