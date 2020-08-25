@@ -12,6 +12,8 @@ import vswitch.Switch;
 import vswitch.Table;
 import vswitch.iface.TapIface;
 
+import java.io.File;
+import java.io.FileOutputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
@@ -27,6 +29,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String TAP_ENDPOINT_IPv4_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv4;
     private static final String TAP_ENDPOINT_IPv6_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv6;
     private static final String TAP_ENDPOINT_MAC_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointMac;
+    private static final String POST_SCRIPT_BASE_DIRECTORY = "/var/vproxy/docker-network-plugin/post-scripts/";
 
     @Override
     public synchronized void createNetwork(CreateNetworkRequest req) throws Exception {
@@ -230,8 +233,11 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         if (req.netInterface.macAddress != null && !req.netInterface.macAddress.isEmpty()) {
             anno.put(TAP_ENDPOINT_MAC_ANNOTATION, req.netInterface.macAddress);
         }
-        String suffix = req.endpointId.substring(0, 12);
-        String tapName = sw.addTap("tap" + suffix, tbl.vni, null, anno);
+
+        ensurePostScript(req.endpointId, "");
+
+        String nameSuffix = req.endpointId.substring(0, 12);
+        String tapName = sw.addTap("tap" + nameSuffix, tbl.vni, POST_SCRIPT_BASE_DIRECTORY + req.endpointId, anno);
         Logger.alert("tap added: " + tapName + ", vni=" + tbl.vni
             + ", endpointId=" + req.endpointId
             + ", ipv4=" + anno.get(TAP_ENDPOINT_IPv4_ANNOTATION)
@@ -242,6 +248,30 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var resp = new CreateEndpointResponse();
         resp.netInterface = null;
         return resp;
+    }
+
+    private void ensurePostScript(String filename, String content) throws Exception {
+        File dir = new File(POST_SCRIPT_BASE_DIRECTORY);
+        if (!dir.exists()) {
+            if (!dir.mkdirs()) {
+                throw new Exception("mkdir " + POST_SCRIPT_BASE_DIRECTORY + " failed");
+            }
+        }
+        File file = new File(POST_SCRIPT_BASE_DIRECTORY + filename);
+        if (!file.exists()) {
+            if (!file.createNewFile()) {
+                throw new Exception("creating post script " + filename + " failed");
+            }
+        }
+        byte[] bytes = content.getBytes();
+        try (FileOutputStream fos = new FileOutputStream(file)) {
+            fos.write(bytes);
+            fos.flush();
+        }
+        if (!file.setExecutable(true)) {
+            throw new Exception("setting post script +x failed");
+        }
+        Logger.alert("post script updated(" + bytes.length + " bytes): " + file.getAbsolutePath());
     }
 
     private TapIface findEndpoint(Switch sw, String endpointId) throws Exception {
@@ -265,6 +295,11 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var tap = findEndpoint(sw, endpointId);
         sw.delTap(tap.tap.getTap().dev);
         Logger.alert("tap deleted: " + tap.tap.getTap().dev + ", endpointId=" + endpointId);
+
+        File f = new File(POST_SCRIPT_BASE_DIRECTORY + endpointId);
+        //noinspection ResultOfMethodCallIgnored
+        f.delete();
+        Logger.alert("post script deleted: " + f.getAbsolutePath());
     }
 
     @Override
@@ -273,9 +308,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var tbl = findNetwork(sw, networkId);
         var tap = findEndpoint(sw, endpointId);
         var tapName = tap.tap.getTap().dev;
-        // var ipv4 = tap.annotations.get(TAP_ENDPOINT_IPv4_ANNOTATION);
+        var ipv4 = tap.annotations.get(TAP_ENDPOINT_IPv4_ANNOTATION);
         var ipv6 = tap.annotations.get(TAP_ENDPOINT_IPv6_ANNOTATION);
-        // var mac = tap.annotations.get(TAP_ENDPOINT_MAC_ANNOTATION);
+        var mac = tap.annotations.get(TAP_ENDPOINT_MAC_ANNOTATION);
 
         if (tbl.v6network == null && ipv6 != null) {
             throw new Exception("internal error: should not reach here: " +
@@ -300,22 +335,86 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         if (gatewayV6 == null && ipv6 != null) {
             throw new Exception("ipv6 gateway not found in network " + networkId);
         }
+        if (gatewayV6 != null && gatewayV6.startsWith("[") && gatewayV6.endsWith("]")) {
+            gatewayV6 = gatewayV6.substring(1, gatewayV6.length() - 1);
+        }
+
+        String postScript = "";
+        {
+            String netnsAlias = sandboxKey.substring(sandboxKey.lastIndexOf("/") + 1);
+            postScript += "#!/bin/bash\n";
+            postScript += "set -e\n";
+            postScript += "if [ ! -f " + sandboxKey + " ]\n";
+            postScript += "then\n";
+            postScript += "  rm -f " + POST_SCRIPT_BASE_DIRECTORY + endpointId + "\n";
+            postScript += "  exit 0\n";
+            postScript += "fi\n";
+            postScript += "if [ ! -d /var/run/netns ]\n";
+            postScript += "then\n";
+            postScript += "  mkdir -p /var/run/netns\n";
+            postScript += "fi\n";
+            postScript += "if [ ! -f /var/run/netns/" + netnsAlias + " ]\n";
+            postScript += "then\n";
+            postScript += "  ln -s " + sandboxKey + " /var/run/netns/" + netnsAlias + "\n";
+            postScript += "fi\n";
+            postScript += "ip link set $DEV netns " + netnsAlias + "\n";
+            // change nic name
+            postScript += "nic_list=`ip netns exec " + netnsAlias + " ip -o link show | awk -F': ' '{print $2}'`\n";
+            postScript += "n=0\n";
+            postScript += "while [ 1 ]\n";
+            postScript += "do\n";
+            postScript += "  found=0\n";
+            postScript += "  for nic in $nic_list\n";
+            postScript += "  do\n";
+            postScript += "    if [ \"eth$n\" == $nic ]\n";
+            postScript += "    then\n";
+            postScript += "      found=1\n";
+            postScript += "      break\n";
+            postScript += "    fi\n";
+            postScript += "  done\n";
+            postScript += "  if [ \"$found\" == \"0\" ]\n";
+            postScript += "  then\n";
+            postScript += "    break\n";
+            postScript += "  fi\n";
+            postScript += "  n=$((n + 1))\n";
+            postScript += "done\n";
+            postScript += "NEW_DEV=\"eth$n\"\n";
+            postScript += "ip netns exec " + netnsAlias + " ip link set $DEV name $NEW_DEV\n";
+            postScript += "DEV=\"$NEW_DEV\"\n";
+            // set mac
+            if (mac != null) {
+                postScript += "ip netns exec " + netnsAlias + " ip link set $DEV address " + mac + "\n";
+            }
+            // set to up
+            postScript += "ip netns exec " + netnsAlias + " ip link set $DEV up\n";
+            // ipv4
+            {
+                postScript += "ip netns exec " + netnsAlias + " ip address add " + ipv4 + " dev $DEV\n";
+                postScript += "ip netns exec " + netnsAlias + " ip route add default via " + gatewayV4 + " dev $DEV\n";
+            }
+            // ipv6
+            if (ipv6 != null) {
+                postScript += "ip netns exec " + netnsAlias + " sysctl -w net.ipv6.conf.$DEV.disable_ipv6=0\n";
+                postScript += "ip netns exec " + netnsAlias + " ip -6 address add " + ipv6 + " dev $DEV\n";
+                postScript += "ip netns exec " + netnsAlias + " ip -6 route add default via " + gatewayV6 + " dev $DEV\n";
+            }
+            // remove the symbolic link after handling
+            postScript += "rm -f /var/run/netns/" + netnsAlias + "\n";
+        }
+        ensurePostScript(endpointId, postScript);
 
         var resp = new JoinResponse();
         resp.interfaceName.srcName = tapName;
         resp.interfaceName.dstPrefix = "eth";
         resp.gateway = gatewayV4;
         if (gatewayV6 != null && ipv6 != null) {
-            if (gatewayV6.startsWith("[") && gatewayV6.endsWith("]")) {
-                gatewayV6 = gatewayV6.substring(1, gatewayV6.length() - 1);
-            }
             resp.gatewayIPv6 = gatewayV6;
         }
         return resp;
     }
 
     @Override
-    public synchronized void leave(String networkId, String endpointId) {
-        // do nothing when leaving
+    public synchronized void leave(String networkId, String endpointId) throws Exception {
+        ensurePostScript(endpointId, "");
     }
 }

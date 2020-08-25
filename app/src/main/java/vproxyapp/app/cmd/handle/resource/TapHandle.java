@@ -26,8 +26,8 @@ public class TapHandle {
 
     public static void checkCreateTap(Command cmd) throws Exception {
         String devPattern = cmd.resource.alias;
-        if (devPattern.length() > 10) {
-            throw new XException("tap dev name pattern too long: should <= 10");
+        if (devPattern.length() > 15) {
+            throw new XException("tap dev name pattern too long: should <= 15");
         }
         String vni = cmd.args.get(Param.vni);
         if (vni == null) {
