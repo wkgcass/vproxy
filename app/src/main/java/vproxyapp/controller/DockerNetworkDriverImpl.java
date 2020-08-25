@@ -15,7 +15,6 @@ import vswitch.iface.TapIface;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Random;
 
 public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String SWITCH_NAME = "DockerNetworkDriverSW";
@@ -274,9 +273,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var tbl = findNetwork(sw, networkId);
         var tap = findEndpoint(sw, endpointId);
         var tapName = tap.tap.getTap().dev;
-        var ipv4 = tap.annotations.get(TAP_ENDPOINT_IPv4_ANNOTATION);
+        // var ipv4 = tap.annotations.get(TAP_ENDPOINT_IPv4_ANNOTATION);
         var ipv6 = tap.annotations.get(TAP_ENDPOINT_IPv6_ANNOTATION);
-        var mac = tap.annotations.get(TAP_ENDPOINT_MAC_ANNOTATION);
+        // var mac = tap.annotations.get(TAP_ENDPOINT_MAC_ANNOTATION);
 
         if (tbl.v6network == null && ipv6 != null) {
             throw new Exception("internal error: should not reach here: " +
@@ -307,13 +306,16 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         resp.interfaceName.dstPrefix = "eth";
         resp.gateway = gatewayV4;
         if (gatewayV6 != null && ipv6 != null) {
+            if (gatewayV6.startsWith("[") && gatewayV6.endsWith("]")) {
+                gatewayV6 = gatewayV6.substring(1, gatewayV6.length() - 1);
+            }
             resp.gatewayIPv6 = gatewayV6;
         }
         return resp;
     }
 
     @Override
-    public synchronized void leave(String networkId, String endpointId) throws Exception {
+    public synchronized void leave(String networkId, String endpointId) {
         // do nothing when leaving
     }
 }
