@@ -36,6 +36,15 @@
 		]
 	},
 	{
+		"name": "vfd.posix.SocketAddressUDS",
+		"methods": [
+			{
+				"name": "<init>",
+				"parameterTypes": [ "java.lang.String" ]
+			}
+		]
+	},
+	{
 		"name": "vfd.posix.UDPRecvResult",
 		"methods": [
 			{

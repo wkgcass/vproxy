@@ -57,3 +57,8 @@ build/
 /misc/ca/*.csr
 /misc/ca/*.crt
 /misc/ca/*.srl
+
+# docker plugin
+docker-plugin-rootfs
+docker-plugin/vproxy
+docker-plugin/libvfdposix.so

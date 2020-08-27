@@ -1,0 +1,58 @@
+{
+  "description": "vproxy docker network plugin",
+  "documentation": "https://github.com/wkgcass/vproxy",
+  "interface": {
+    "types": [ "docker.networkdriver/1.0" ],
+    "socket": "vproxy.sock"
+  },
+  "entrypoint": [
+    "/vproxy",
+    "-Dvfd=posix", "-Djava.library.path=/",
+    "allowSystemCallInNonStdIOController",
+    "noStdIOController",
+    "sigIntDirectlyShutdown",
+
+    "docker-network-plugin-controller", "/run/docker/plugins/vproxy.sock",
+    "load", "/conf/vproxy.last",
+    "autoSaveFile", "/conf/vproxy.last"
+  ],
+  "workdir": "/",
+  "network": {
+    "type": "host"
+  },
+  "mounts": [
+    {
+      "name": "post-scripts",
+      "description": "directory of tap dev post scripts",
+      "source": "/var/vproxy/docker-network-plugin/post-scripts/",
+      "destination": "/var/vproxy/docker-network-plugin/post-scripts/",
+      "options": [ "rw", "rbind" ]
+    },
+    {
+      "name": "conf",
+      "description": "vproxy config auto-saving directory",
+      "source": "/var/vproxy/auto-save/",
+      "destination": "/conf",
+      "options": [ "rw", "rbind" ]
+    },
+    {
+      "name": "sys-netns",
+      "description": "the netns dir for ip netns command to use",
+      "source": "/var/run/netns/",
+      "destination": "/var/run/netns/",
+      "type": "bind",
+      "options": [ "rw", "rbind" ]
+    },
+    {
+      "name": "docker-netns",
+      "description": "the netns dir of docker",
+      "source": "/var/run/docker/netns/",
+      "destination": "/var/run/docker/netns/",
+      "type": "bind",
+      "options": [ "rw", "rbind" ]
+    }
+  ],
+  "linux": {
+    "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_ADMIN" ]
+  }
+}
