@@ -36,23 +36,28 @@
       "options": [ "rw", "rbind" ]
     },
     {
-      "name": "sys-netns",
-      "description": "the netns dir for ip netns command to use",
-      "source": "/var/run/netns/",
-      "destination": "/var/run/netns/",
-      "type": "bind",
-      "options": [ "rw", "rbind" ]
-    },
-    {
       "name": "docker-netns",
       "description": "the netns dir of docker",
       "source": "/var/run/docker/netns/",
       "destination": "/var/run/docker/netns/",
-      "type": "bind",
       "options": [ "rw", "rbind" ]
+    },
+    {
+      "name": "tuntap",
+      "description": "tuntap device",
+      "source": "/dev/net",
+      "destination": "/dev/net",
+      "options": [ "ro", "rbind" ]
     }
   ],
   "linux": {
-    "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_ADMIN" ]
+    "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_ADMIN" ],
+    "devices": [
+      {
+        "name": "tuntap",
+        "description": "tuntap device",
+        "path": "/dev/net/tun"
+      }
+    ]
   }
 }
