@@ -35,7 +35,8 @@ public class SelectorEventLoop {
     public final FDs fds;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
-    private final HandlerContext ctx = new HandlerContext(this); // always reuse the ctx object
+    private final HandlerContext ctxReuse0 = new HandlerContext(this); // always reuse the ctx object
+    private final HandlerContext ctxReuse1 = new HandlerContext(this);
     public volatile Thread runningThread;
 
     // these locks are a little tricky
@@ -134,12 +135,12 @@ public class SelectorEventLoop {
             FD channel = key.fd;
             Handler handler = registerData.handler;
 
-            ctx.channel = channel;
-            ctx.attachment = registerData.att;
+            ctxReuse0.channel = channel;
+            ctxReuse0.attachment = registerData.att;
 
             if (!channel.isOpen()) {
                 if (selector.isRegistered(channel)) {
-                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctx.attachment);
+                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctxReuse0.attachment);
                 } // else the channel is closed in another fd handler and removed from loop, this is ok and no need to report
             } else {
                 EventSet readyOps = key.ready;
@@ -148,13 +149,13 @@ public class SelectorEventLoop {
                     if (channel instanceof ServerSocketFD) {
                         // OP_ACCEPT
                         try {
-                            handler.accept(ctx);
+                            handler.accept(ctxReuse0);
                         } catch (Throwable t) {
                             Logger.error(LogType.IMPROPER_USE, "the accept callback got exception", t);
                         }
                     } else {
                         try {
-                            handler.readable(ctx);
+                            handler.readable(ctxReuse0);
                         } catch (Throwable t) {
                             Logger.error(LogType.IMPROPER_USE, "the readable callback got exception", t);
                         }
@@ -165,14 +166,14 @@ public class SelectorEventLoop {
                     if (channel instanceof SocketFD) {
                         if (registerData.connected) {
                             try {
-                                handler.writable(ctx);
+                                handler.writable(ctxReuse0);
                             } catch (Throwable t) {
                                 Logger.error(LogType.IMPROPER_USE, "the writable callback got exception", t);
                             }
                         } else {
                             registerData.connected = true;
                             try {
-                                handler.connected(ctx);
+                                handler.connected(ctxReuse0);
                             } catch (Throwable t) {
                                 Logger.error(LogType.IMPROPER_USE, "the connected callback got exception", t);
                             }
@@ -452,10 +453,10 @@ public class SelectorEventLoop {
     @SuppressWarnings("unchecked")
     private void triggerRemovedCallback(FD channel, RegisterData registerData) {
         assert registerData != null;
-        ctx.channel = channel;
-        ctx.attachment = registerData.att;
+        ctxReuse1.channel = channel;
+        ctxReuse1.attachment = registerData.att;
         try {
-            registerData.handler.removed(ctx);
+            registerData.handler.removed(ctxReuse1);
         } catch (Throwable t) {
             Logger.error(LogType.IMPROPER_USE, "the removed callback got exception", t);
         }
