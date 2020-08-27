@@ -92,4 +92,8 @@ public class PosixFDs implements FDs, FDsWithTap {
     public boolean tapNonBlockingSupported() throws IOException {
         return posix.tapNonBlockingSupported();
     }
+
+    public UnixDomainServerSocketFD openUnixDomainServerSocketFD() throws IOException {
+        return new UnixDomainServerSocketFD(posix);
+    }
 }

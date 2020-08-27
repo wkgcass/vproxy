@@ -1,6 +1,7 @@
 package vproxybase.connection;
 
 import vfd.*;
+import vfd.posix.PosixFDs;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.udp.ServerDatagramFD;
 import vproxybase.selector.wrap.udp.UDPBasedFDs;
@@ -9,7 +10,6 @@ import vproxybase.util.Logger;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.BindException;
 import java.net.StandardSocketOptions;
 import java.util.concurrent.atomic.LongAdder;
 
@@ -106,10 +106,33 @@ public class ServerSock implements NetFlowRecorder {
     }
 
     public static void checkBind(IPPort bindAddress) throws IOException {
+        if (bindAddress instanceof UDSPath) {
+            checkBindUDS((UDSPath) bindAddress);
+        }
+
         try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
             foo.bind(bindAddress);
-        } catch (BindException ex) {
-            throw new IOException("bind failed for " + bindAddress, ex);
+        }
+    }
+
+    private static void checkBindUDP(IPPort bindAddress) throws IOException {
+        try (DatagramFD foo = FDProvider.get().openDatagramFD()) {
+            foo.bind(bindAddress);
+        }
+    }
+
+    private static PosixFDs getFDsForUDS() throws IOException {
+        var fds = FDProvider.get().getProvided();
+        if (!(fds instanceof PosixFDs)) {
+            throw new IOException("unix domain socket is not supported by " + fds + ", use -Dvfd=posix");
+        }
+        return (PosixFDs) fds;
+    }
+
+    private static void checkBindUDS(UDSPath bindAddress) throws IOException {
+        var fds = getFDsForUDS();
+        try (var fd = fds.openUnixDomainServerSocketFD()) {
+            fd.bind(bindAddress);
         }
     }
 
@@ -117,11 +140,8 @@ public class ServerSock implements NetFlowRecorder {
         if (protocol == Protocol.TCP) {
             checkBind(bindAddress);
         } else {
-            try (DatagramFD foo = FDProvider.get().openDatagramFD()) {
-                foo.bind(bindAddress);
-            } catch (BindException ex) {
-                throw new IOException("bind failed for " + bindAddress, ex);
-            }
+            assert protocol == Protocol.UDP;
+            checkBindUDP(bindAddress);
         }
     }
 
@@ -150,8 +170,21 @@ public class ServerSock implements NetFlowRecorder {
     }
 
     public static ServerSock create(IPPort bindAddress, BindOptions opts) throws IOException {
-        ServerSocketFD channel = FDProvider.get().openServerSocketFD();
-        return create(channel, bindAddress, opts);
+        if (bindAddress instanceof UDSPath) {
+            return createUDS((UDSPath) bindAddress, opts);
+        } else {
+            ServerSocketFD channel = FDProvider.get().openServerSocketFD();
+            return create(channel, bindAddress, opts);
+        }
+    }
+
+    private static ServerSock createUDS(UDSPath path, BindOptions opts) throws IOException {
+        var fds = FDProvider.get().getProvided();
+        if (!(fds instanceof PosixFDs)) {
+            throw new IOException("unix domain socket is not supported by " + fds + ", use -Dvfd=posix");
+        }
+        var uds = ((PosixFDs) fds).openUnixDomainServerSocketFD();
+        return create(uds, path, opts);
     }
 
     // note: the input loop should be the same that would be added

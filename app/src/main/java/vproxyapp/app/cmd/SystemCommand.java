@@ -1,10 +1,13 @@
 package vproxyapp.app.cmd;
 
 import vfd.IPPort;
+import vfd.UDSPath;
 import vproxyapp.app.Application;
+import vproxyapp.app.DockerNetworkPluginControllerHolder;
 import vproxyapp.app.HttpControllerHolder;
 import vproxyapp.app.RESPControllerHolder;
 import vproxyapp.app.cmd.handle.param.AddrHandle;
+import vproxyapp.controller.DockerNetworkPluginController;
 import vproxyapp.controller.HttpController;
 import vproxyapp.controller.RESPController;
 import vproxyapp.controller.StdIOController;
@@ -35,13 +38,20 @@ public class SystemCommand {
         "\n                               address  ${bind addr}" +
         "\n                               password ${password}" +
         "\n        System call: remove resp-controller        stop resp controller" +
-        "\n                               ${name}" +
+        "\n                               ${alias}" +
         "\n        System call: list-detail resp-controller   check resp controller" +
         "\n        System call: add http-controller           start http controller" +
         "\n                               ${alias}" +
         "\n                               address ${bind addr}" +
         "\n        System call: remove http-controller        stop http controller" +
+        "\n                               ${alias}" +
         "\n        System call: list-detail http-controller   check http controller" +
+        "\n        System call: add docker-network-plugin-controller         start docker net plugin ctl" +
+        "\n                               ${alias}" +
+        "\n                               path ${unix domain socket path}" +
+        "\n        System call: remove docker-network-plugin-controller      stop docker net plugin ctl" +
+        "\n                               ${alias}" +
+        "\n        System call: list-detail docker-network-plugin-controller show docker net plugin ctl list" +
         "\n        System call: list config                   show current config";
 
     public static boolean allowNonStdIOController = false;
@@ -138,11 +148,19 @@ public class SystemCommand {
                                 handleAddController("resp", arr, cb);
                                 break outswitch;
                             }
+                            break;
                         case "http-controller":
                             if (arr.length == 5) {
                                 handleAddController("http", arr, cb);
                                 break outswitch;
                             }
+                            break;
+                        case "docker-network-plugin-controller":
+                            if (arr.length == 5) {
+                                handleAddController("docker-network-plugin", arr, cb);
+                                break outswitch;
+                            }
+                            break;
                     }
                 } else if (cmd.startsWith("remove ")) {
                     String[] arr = cmd.split(" ");
@@ -156,11 +174,19 @@ public class SystemCommand {
                                 handleRemoveRespController(arr, cb);
                                 break outswitch;
                             }
+                            break;
                         case "http-controller":
                             if (arr.length == 3) {
                                 handleRemoveHttpController(arr, cb);
                                 break outswitch;
                             }
+                            break;
+                        case "docker-network-plugin-controller":
+                            if (arr.length == 3) {
+                                handleRemoveDockerNetworkPluginController(arr, cb);
+                                break outswitch;
+                            }
+                            break;
                     }
                 } else if (cmd.startsWith("list ")) {
                     String[] arr = cmd.split(" ");
@@ -174,15 +200,25 @@ public class SystemCommand {
                                 handleListController("resp", false, cb);
                                 break outswitch;
                             }
+                            break;
                         case "http-controller":
                             if (arr.length == 2) {
                                 handleListController("http", false, cb);
+                                break outswitch;
                             }
+                            break;
+                        case "docker-network-plugin-controller":
+                            if (arr.length == 2) {
+                                handleListController("docker-network-plugin", false, cb);
+                                break outswitch;
+                            }
+                            break;
                         case "config":
                             if (arr.length == 2) {
                                 handleListConfig(cb);
                                 break outswitch;
                             }
+                            break;
                     }
                 } else if (cmd.startsWith("list-detail ")) {
                     String[] arr = cmd.split(" ");
@@ -196,11 +232,19 @@ public class SystemCommand {
                                 handleListController("resp", true, cb);
                                 break outswitch;
                             }
+                            break;
+                        case "docker-network-plugin-controller":
+                            if (arr.length == 2) {
+                                handleListController("docker-network-plugin", true, cb);
+                                break outswitch;
+                            }
+                            break;
                         case "http-controller":
                             if (arr.length == 2) {
                                 handleListController("http", true, cb);
                                 break outswitch;
                             }
+                            break;
                     }
                 }
                 cb.failed(new Exception("unknown or invalid system call `" + cmd + "`"));
@@ -221,9 +265,16 @@ public class SystemCommand {
             cb.failed(new Exception("invalid system call: " + Utils.formatErr(e)));
             return;
         }
-        if (!cmd.args.containsKey(Param.addr)) {
-            cb.failed(new Exception("missing address"));
-            return;
+        if (type.equals("docker-network-plugin")) {
+            if (!cmd.args.containsKey(Param.path)) {
+                cb.failed(new Exception("missing path"));
+                return;
+            }
+        } else {
+            if (!cmd.args.containsKey(Param.addr)) {
+                cb.failed(new Exception("missing address"));
+                return;
+            }
         }
         if (type.equals("resp")) {
             // resp-controller needs password
@@ -232,20 +283,26 @@ public class SystemCommand {
                 return;
             }
         }
-        try {
-            AddrHandle.check(cmd);
-        } catch (Exception e) {
-            cb.failed(new XException("invalid system call, address is invalid: " + Utils.formatErr(e)));
-            return;
+        if (!type.equals("docker-network-plugin")) {
+            try {
+                AddrHandle.check(cmd);
+            } catch (Exception e) {
+                cb.failed(new XException("invalid system call, address is invalid: " + Utils.formatErr(e)));
+                return;
+            }
         }
 
         IPPort addr;
-        try {
-            addr = AddrHandle.get(cmd);
-        } catch (Exception e) {
-            Logger.shouldNotHappen("it should have already been checked but still failed", e);
-            cb.failed(new Exception("invalid system call"));
-            return;
+        if (type.equals("docker-network-plugin")) {
+            addr = new UDSPath(cmd.args.get(Param.path));
+        } else {
+            try {
+                addr = AddrHandle.get(cmd);
+            } catch (Exception e) {
+                Logger.shouldNotHappen("it should have already been checked but still failed", e);
+                cb.failed(new Exception("invalid system call"));
+                return;
+            }
         }
         byte[] pass = null;
         if (type.equals("resp")) {
@@ -256,15 +313,17 @@ public class SystemCommand {
         try {
             if (type.equals("resp")) {
                 Application.get().respControllerHolder.add(cmd.resource.alias, addr, pass);
-            } else {
-                assert type.equals("http");
+            } else if (type.equals("http")) {
                 Application.get().httpControllerHolder.add(cmd.resource.alias, addr);
+            } else {
+                assert type.equals("docker-network-plugin");
+                Application.get().dockerNetworkPluginControllerHolder.add(cmd.resource.alias, (UDSPath) addr);
             }
         } catch (AlreadyExistException e) {
             cb.failed(new XException("the " + type.toUpperCase() + "Controller is already started"));
             return;
         } catch (IOException e) {
-            cb.failed(new Exception("got exception when starting " + type.toUpperCase() + "Controller: " + Utils.formatErr(e)));
+            cb.failed(new Exception("got exception when starting " + type + "-controller: " + Utils.formatErr(e)));
             return;
         }
         cb.succeeded(new CmdResult());
@@ -288,14 +347,26 @@ public class SystemCommand {
         cb.succeeded(new CmdResult());
     }
 
+    private static void handleRemoveDockerNetworkPluginController(String[] arr, Callback<CmdResult, ? super Exception> cb) {
+        try {
+            Application.get().dockerNetworkPluginControllerHolder.removeAndStop(arr[2]);
+        } catch (NotFoundException e) {
+            cb.failed(e);
+        }
+        cb.succeeded(new CmdResult());
+    }
+
     private static void handleListController(String type, boolean detail, Callback<CmdResult, ? super XException> cb) {
         List<String> names;
         if (type.equals("resp")) {
             RESPControllerHolder h = Application.get().respControllerHolder;
             names = h.names();
-        } else {
-            assert type.equals("http");
+        } else if (type.equals("http")) {
             HttpControllerHolder h = Application.get().httpControllerHolder;
+            names = h.names();
+        } else {
+            assert type.equals("docker-network-plugin");
+            DockerNetworkPluginControllerHolder h = Application.get().dockerNetworkPluginControllerHolder;
             names = h.names();
         }
         List<Object> controllers = new LinkedList<>();
@@ -319,9 +390,7 @@ public class SystemCommand {
                 if (detail) {
                     sb.append(" -> ").append(c.server.id());
                 }
-            } else {
-                //noinspection ConstantConditions
-                assert type.equals("http");
+            } else if (type.equals("http")) {
                 HttpController c;
                 try {
                     HttpControllerHolder h = Application.get().httpControllerHolder;
@@ -334,6 +403,22 @@ public class SystemCommand {
                 sb.append(c.alias);
                 if (detail) {
                     sb.append(" -> ").append(c.address.toInetSocketAddress());
+                }
+            } else {
+                //noinspection ConstantConditions
+                assert type.equals("docker-network-plugin");
+                DockerNetworkPluginController c;
+                try {
+                    DockerNetworkPluginControllerHolder h = Application.get().dockerNetworkPluginControllerHolder;
+                    c = h.get(name);
+                } catch (NotFoundException e) {
+                    // should not happen if no concurrency. just ignore
+                    continue;
+                }
+                controllers.add(c);
+                sb.append(c.alias);
+                if (detail) {
+                    sb.append(" -> ").append(c.path.path);
                 }
             }
         }

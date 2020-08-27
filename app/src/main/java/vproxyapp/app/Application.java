@@ -43,6 +43,7 @@ public class Application {
     public final EventLoopWrapper controlEventLoop;
     public final RESPControllerHolder respControllerHolder;
     public final HttpControllerHolder httpControllerHolder;
+    public final DockerNetworkPluginControllerHolder dockerNetworkPluginControllerHolder;
 
     private Application() throws IOException {
         this.version = Version.VERSION;
@@ -58,6 +59,7 @@ public class Application {
         this.respControllerHolder = new RESPControllerHolder();
         this.socks5ServerHolder = new Socks5ServerHolder();
         this.httpControllerHolder = new HttpControllerHolder();
+        this.dockerNetworkPluginControllerHolder = new DockerNetworkPluginControllerHolder();
         this.dnsServerHolder = new DNSServerHolder();
         this.switchHolder = new SwitchHolder();
     }

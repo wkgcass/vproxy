@@ -365,7 +365,9 @@ public class DNSServer {
     public void start() throws IOException {
         if (sock == null) { // udp sock not created yet
             // need to check whether it's bond
-            ServerSock.checkBind(bindAddress);
+            if (Config.checkBind) {
+                ServerSock.checkBind(bindAddress);
+            }
         }
         if (!needToStart) {
             try {

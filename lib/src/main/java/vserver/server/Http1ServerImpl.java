@@ -1,7 +1,9 @@
 package vserver.server;
 
 import vfd.IPPort;
+import vfd.UDSPath;
 import vjson.JSON;
+import vproxybase.Config;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.http.HttpContext;
@@ -84,7 +86,9 @@ public class Http1ServerImpl implements HttpServer {
         started = true;
         record(ALL_METHODS, Route.create("/*"), this::handle404);
 
-        ServerSock.checkBind(addr);
+        if (Config.checkBind) {
+            ServerSock.checkBind(addr);
+        }
 
         initLoop();
 

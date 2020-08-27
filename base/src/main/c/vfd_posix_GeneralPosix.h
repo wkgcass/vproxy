@@ -209,6 +209,14 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createIPv6UdpFD
 
 /*
  * Class:     vfd_posix_GeneralPosix
+ * Method:    createUnixDomainSocketFD
+ * Signature: ()I
+ */
+JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createUnixDomainSocketFD
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
  * Method:    bindIPv4
  * Signature: (III)V
  */
@@ -222,6 +230,14 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv4
  */
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv6
   (JNIEnv *, jobject, jint, jstring, jint);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
+ * Method:    bindUnixDomainSocket
+ * Signature: (ILjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindUnixDomainSocket
+  (JNIEnv *, jobject, jint, jstring);
 
 /*
  * Class:     vfd_posix_GeneralPosix
@@ -297,6 +313,22 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Remote
 
 /*
  * Class:     vfd_posix_GeneralPosix
+ * Method:    getUDSLocal
+ * Signature: (I)Lvfd/posix/VSocketAddress;
+ */
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getUDSLocal
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
+ * Method:    getUDSRemote
+ * Signature: (I)Lvfd/posix/VSocketAddress;
+ */
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getUDSRemote
+  (JNIEnv *, jobject, jint);
+
+/*
+ * Class:     vfd_posix_GeneralPosix
  * Method:    read
  * Signature: (ILjava/nio/ByteBuffer;II)I
  */
@@ -362,7 +394,7 @@ JNIEXPORT jboolean JNICALL Java_vfd_posix_GeneralPosix_tapNonBlockingSupported
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    createTapFD
- * Signature: (Ljava/lang/String;)Lvfd/posix/TapInfo;
+ * Signature: (Ljava/lang/String;)Lvfd/TapInfo;
  */
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
   (JNIEnv *, jobject, jstring);

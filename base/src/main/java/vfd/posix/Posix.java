@@ -56,9 +56,13 @@ public interface Posix {
 
     int createIPv6UdpFD() throws IOException;
 
+    int createUnixDomainSocketFD() throws IOException;
+
     void bindIPv4(int fd, int addrHostOrder, int port) throws IOException;
 
     void bindIPv6(int fd, String fullAddr, int port) throws IOException;
+
+    void bindUnixDomainSocket(int fd, String path) throws IOException;
 
     int accept(int fd) throws IOException;
 
@@ -77,6 +81,10 @@ public interface Posix {
     VSocketAddress getIPv4Remote(int fd) throws IOException;
 
     VSocketAddress getIPv6Remote(int fd) throws IOException;
+
+    VSocketAddress getUDSLocal(int fd) throws IOException;
+
+    VSocketAddress getUDSRemote(int fd) throws IOException;
 
     int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;
 

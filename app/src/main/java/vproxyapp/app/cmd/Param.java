@@ -43,6 +43,8 @@ public enum Param {
     mac("mac"),
     vni("vni"),
     postscript("post-script"),
+
+    path("path"),
     ;
     public final String fullname;
 

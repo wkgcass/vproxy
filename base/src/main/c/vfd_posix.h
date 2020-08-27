@@ -19,6 +19,7 @@
 
     #define V_AF_INET      AF_INET
     #define V_AF_INET6     AF_INET6
+    #define V_AF_UNIX      AF_UNIX
     #define V_SOCK_STREAM  SOCK_STREAM
     #define V_SOCK_DGRAM   SOCK_DGRAM
     #define V_SOL_SOCKET   SOL_SOCKET
@@ -96,6 +97,11 @@
     #endif
     typedef struct sockaddr_in  v_sockaddr_in;
     typedef struct sockaddr_in6 v_sockaddr_in6;
+    #include <sys/un.h>
+    typedef struct sockaddr_un  v_sockaddr_un;
+    #ifndef UNIX_PATH_MAX
+        #define UNIX_PATH_MAX 100
+    #endif
 
 
 

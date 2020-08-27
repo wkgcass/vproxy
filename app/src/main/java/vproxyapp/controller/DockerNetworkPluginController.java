@@ -1,13 +1,19 @@
 package vproxyapp.controller;
 
+import vfd.UDSPath;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
+import vproxyapp.app.Application;
+import vproxybase.Config;
+import vproxybase.connection.ServerSock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.Tool;
+import vserver.server.Http1ServerImpl;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.List;
@@ -16,11 +22,16 @@ public class DockerNetworkPluginController {
     private static final String dockerNetworkPluginBase = "/";
     private static final DockerNetworkDriver driver = new DockerNetworkDriverImpl();
 
-    static void init(HttpServer server) {
-        new DockerNetworkPluginController(server);
-    }
+    public final String alias;
+    public final UDSPath path;
+    private final HttpServer server;
 
-    private DockerNetworkPluginController(HttpServer server) {
+    public DockerNetworkPluginController(String alias, UDSPath path) throws IOException {
+        this.alias = alias;
+        this.path = path;
+        var loop = Application.get().controlEventLoop;
+        this.server = new Http1ServerImpl(loop);
+
         // see https://github.com/moby/libnetwork/blob/master/docs/remote.md
         server.pst(dockerNetworkPluginBase + "/*", Tool.bodyJsonHandler());
         server.pst(dockerNetworkPluginBase + "/Plugin.Activate", this::handshake);
@@ -34,6 +45,20 @@ public class DockerNetworkPluginController {
         server.pst(dockerNetworkPluginBase + "/NetworkDriver.Leave", this::leave);
         server.pst(dockerNetworkPluginBase + "/NetworkDriver.DiscoverNew", this::discoverNew);
         server.pst(dockerNetworkPluginBase + "/NetworkDriver.DiscoverDelete", this::discoverDelete);
+
+        // start
+        if (Config.checkBind) {
+            try {
+                Thread.sleep(1_000);
+                // sleep for a while, maybe the old process would exit
+            } catch (InterruptedException ignore) {
+            }
+        }
+        server.listen(path);
+    }
+
+    public void stop() {
+        server.close();
     }
 
     private void handshake(RoutingContext rctx) {

@@ -82,10 +82,16 @@ public class GeneralPosix implements Posix {
     native public int createIPv6UdpFD() throws IOException;
 
     @Override
+    native public int createUnixDomainSocketFD() throws IOException;
+
+    @Override
     native public void bindIPv4(int fd, int addrHostOrder, int port) throws IOException;
 
     @Override
     native public void bindIPv6(int fd, String fullAddr, int port) throws IOException;
+
+    @Override
+    native public void bindUnixDomainSocket(int fd, String path) throws IOException;
 
     @Override
     native public int accept(int fd) throws IOException;
@@ -113,6 +119,12 @@ public class GeneralPosix implements Posix {
 
     @Override
     native public VSocketAddress getIPv6Remote(int fd) throws IOException;
+
+    @Override
+    native public VSocketAddress getUDSLocal(int fd) throws IOException;
+
+    @Override
+    native public VSocketAddress getUDSRemote(int fd) throws IOException;
 
     @Override
     native public int read(int fd, ByteBuffer directBuffer, int off, int len) throws IOException;

@@ -302,6 +302,16 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createIPv6UdpFD
     return sockfd6;
 }
 
+JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_createUnixDomainSocketFD
+  (JNIEnv* env, jobject self) {
+    int uds = v_socket(V_AF_UNIX, V_SOCK_STREAM, 0);
+    if (uds < 0) {
+      throwIOExceptionBasedOnErrno(env);
+      return -1;
+    }
+    return uds;
+}
+
 void j2cSockAddrIPv4(v_sockaddr_in* name, jint addrHostOrder, jint port) {
     v_bzero(name, sizeof(v_sockaddr_in));
     name->sin_family = V_AF_INET;
@@ -367,6 +377,35 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindIPv6
         throwIOExceptionBasedOnErrno(env);
         return;
     }
+}
+
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_bindUnixDomainSocket
+  (JNIEnv* env, jobject self, jint fd, jstring path) {
+    const char* pathChars = (*env)->GetStringUTFChars(env, path, NULL);
+    if (strlen(pathChars) >= UNIX_PATH_MAX) {
+        (*env)->ReleaseStringUTFChars(env, path, pathChars);
+        throwIOException(env, "path too long");
+        return;
+    }
+
+    v_sockaddr_un uds_sockaddr;
+    memset(&uds_sockaddr, 0, sizeof(uds_sockaddr));
+    uds_sockaddr.sun_family = V_AF_UNIX;
+    strcpy(uds_sockaddr.sun_path, pathChars);
+
+    int res = v_bind(fd, (v_sockaddr*) &uds_sockaddr, sizeof(uds_sockaddr));
+    if (res < 0) {
+        (*env)->ReleaseStringUTFChars(env, path, pathChars);
+        throwIOExceptionBasedOnErrno(env);
+        return;
+    }
+    res = v_listen(fd, MAX_EVENTS);
+    if (res < 0) {
+        (*env)->ReleaseStringUTFChars(env, path, pathChars);
+        throwIOExceptionBasedOnErrno(env);
+        return;
+    }
+    (*env)->ReleaseStringUTFChars(env, path, pathChars);
 }
 
 JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_accept
@@ -470,6 +509,16 @@ jobject formatSocketAddressIPv6(JNIEnv* env, v_sockaddr_in6* addr) {
     return obj;
 }
 
+jobject formatSocketAddressUDS(JNIEnv* env, v_sockaddr_un* addr) {
+    char* path = addr->sun_path;
+    jstring strPath = (*env)->NewStringUTF(env, path);
+
+    jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressUDS");
+    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;)V");
+    jobject obj = (*env)->NewObject(env, sCls, constructor, strPath);
+    return obj;
+}
+
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv4Local
   (JNIEnv* env, jobject self, jint fd) {
     v_sockaddr_in name;
@@ -516,6 +565,32 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getIPv6Remote
         return NULL;
     }
     return formatSocketAddressIPv6(env, &name);
+}
+
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getUDSLocal
+  (JNIEnv* env, jobject self, jint fd) {
+    v_sockaddr_un name;
+    memset(&name, 0, sizeof(name));
+    unsigned int foo = sizeof(name);
+    int res = v_getsockname(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressUDS(env, &name);
+}
+
+JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_getUDSRemote
+  (JNIEnv* env, jobject self, jint fd) {
+    v_sockaddr_un name;
+    memset(&name, 0, sizeof(name));
+    unsigned int foo = sizeof(name);
+    int res = v_getpeername(fd, (v_sockaddr*) &name, &foo);
+    if (res < 0) {
+        throwIOExceptionBasedOnErrno(env);
+        return NULL;
+    }
+    return formatSocketAddressUDS(env, &name);
 }
 
 jint handleReadIOOperationResult(JNIEnv* env, int res) {
@@ -675,6 +750,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
       char tapFileName[16]; // usually /dev/tapX which is in minimum 5 + 4 chars and give it 16 would definitely be enough in normal cases
       int inputLen = strlen(devChars);
       if (inputLen > 10) { // 10 == 16 - 1 - 5
+        (*env)->ReleaseStringUTFChars(env, dev, devChars);
         throwIOException(env, "input dev name is too long");
         return NULL;
       }
@@ -699,6 +775,7 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
       // copy the dev name to return str
       strncpy(devName, devChars, IFNAMSIZ);
     #else
+      (*env)->ReleaseStringUTFChars(env, dev, devChars);
       throwIOException(env, "unsupported on current platform");
       return NULL;
     #endif
@@ -710,7 +787,7 @@ success:
       jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
       jobject ret = (*env)->NewObject(env, sCls, constructor, genDevName, fd);
 
-      (*env)->ReleaseStringUTFChars(env, genDevName, devChars);
+      (*env)->ReleaseStringUTFChars(env, dev, devChars);
       if (tmpFd > 0) {
           v_close(tmpFd);
       }

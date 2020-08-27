@@ -36,6 +36,9 @@ public class Main {
         "\n\t\t                                             be named as `resp-controller`" +
         "\n\t\thttp-controller ${address}                   Start the http-controller, will" +
         "\n\t\t                                             be named as `http-controller`" +
+        "\n\t\tdocker-network-plugin-controller ${path}     Start the docker-network-plugin-" +
+        "\n\t\t                                             controller, will be named as" +
+        "\n\t\t                                             `docker-network-plugin-controller`" +
         "\n\t\tallowSystemCallInNonStdIOController          Allow system call in all controllers" +
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
@@ -188,6 +191,7 @@ public class Main {
         ctx.addOp(new AllowSystemCallInNonStdIOControllerOp());
         ctx.addOp(new CheckOp());
         ctx.addOp(new HttpControllerOp());
+        ctx.addOp(new DockerNetworkPluginControllerOp());
         ctx.addOp(new LoadOp());
         ctx.addOp(new NoLoadLastOp());
         ctx.addOp(new NoSaveOp());
