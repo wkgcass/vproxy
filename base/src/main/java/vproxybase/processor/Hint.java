@@ -87,7 +87,7 @@ public class Hint {
         String annoUri = null;
 
         for (Map<String, String> a : annotations) {
-            if (a == null) {
+            if (a.isEmpty()) {
                 continue;
             }
             if (annoHost == null) {

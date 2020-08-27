@@ -340,7 +340,7 @@ public class ServerGroup {
     private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
     private final CopyOnWriteArraySet<ServerListener> serverListeners = new CopyOnWriteArraySet<>();
-    private Map<String, String> annotations = null;
+    private Map<String, String> annotations = Collections.emptyMap();
 
     // START fields for WRR
     static class WRR {
