@@ -13,7 +13,7 @@ import java.net.SocketTimeoutException;
 import java.nio.channels.ClosedChannelException;
 
 public class NetEventLoop {
-    private static final HandlerForTCPServer handlerForTPCServer = new HandlerForTCPServer();
+    private static final HandlerForTCPServer handlerForTCPServer = new HandlerForTCPServer();
     private static final HandlerForConnection handlerForConnection = new HandlerForConnection();
     private static final HandlerForConnectableConnection handlerForConnectableConnection = new HandlerForConnectableConnection();
 
@@ -39,7 +39,7 @@ public class NetEventLoop {
             server._eventLoop = this;
             selectorEventLoop.add(server.channel, EventSet.read(),
                 new ServerHandlerContext(this, server, attachment, handler),
-                handlerForTPCServer);
+                handlerForTCPServer);
         }
     }
 
