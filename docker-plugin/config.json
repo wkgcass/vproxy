@@ -36,10 +36,10 @@
       "options": [ "rw", "rbind" ]
     },
     {
-      "name": "docker-netns",
-      "description": "the netns dir of docker",
-      "source": "/var/run/docker/netns/",
-      "destination": "/var/run/docker/netns/",
+      "name": "docker-dir",
+      "description": "dir of docker, /var/run/docker/netns is required",
+      "source": "/var/run/docker/",
+      "destination": "/var/run/docker/",
       "options": [ "rw", "rbind" ]
     },
     {
