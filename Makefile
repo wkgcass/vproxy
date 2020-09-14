@@ -23,6 +23,14 @@ clean-docker-plugin-rootfs:
 jar:
 	./gradlew jar
 
+.PHONY: jlink
+jlink: jar
+	rm -rf ./build/image
+	jlink --add-modules jdk.unsupported,jdk.crypto.ec,jdk.crypto.cryptoki --output ./build/image
+	cp ./build/libs/vproxy.jar    ./build/image/lib/vproxy.jar
+	cp ./jlink-scripts/vproxy     ./build/image/bin/vproxy
+	cp ./jlink-scripts/vproxy.bat ./build/image/bin/vproxy.bat
+
 .PHONY: vfdposix
 vfdposix:
 	cd ./base/src/main/c && ./make-general.sh

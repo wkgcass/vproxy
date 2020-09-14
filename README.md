@@ -66,7 +66,7 @@ java -jar build/libs/vproxy.jar -Deploy=HelloWorld
 <br>
 
 ```
-./gradlew clean jlink
+make jlink
 ./build/image/bin/vproxy -Deploy=HelloWorld
 ```
 
