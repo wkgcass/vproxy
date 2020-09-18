@@ -50,6 +50,10 @@ public class SyntheticIpHolder {
         return ipMap.values();
     }
 
+    public Collection<MacAddress> allMac() {
+        return macMap.keySet();
+    }
+
     public void add(IP ip, MacAddress mac, Map<String, String> annotations) throws AlreadyExistException, XException {
         if (ip instanceof IPv4) {
             if (!allowedV4Network.contains(ip)) {

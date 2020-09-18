@@ -632,49 +632,6 @@ public class Shutdown {
                 }
                 commands.add(cmd);
 
-                // create users
-                Map<String, UserInfo> users = sw.getUsers();
-                for (var entry : users.entrySet()) {
-                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
-                    commands.add(cmd);
-                }
-                // create remote sw
-                for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof RemoteSwitchIface)) {
-                        continue;
-                    }
-                    var rsi = (RemoteSwitchIface) iface;
-                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + rsi.udpSockAddress.formatToIPPortString();
-                    if (!rsi.addSwitchFlag) {
-                        cmd += " no-switch-flag";
-                    }
-                    commands.add(cmd);
-                }
-                // create user-cli
-                for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof UserClientIface)) {
-                        continue;
-                    }
-                    var ucliIface = (UserClientIface) iface;
-                    cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
-                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remoteAddress.formatToIPPortString();
-                    commands.add(cmd);
-                }
-                // create tap
-                for (var iface : sw.getIfaces()) {
-                    if (!(iface instanceof TapIface)) {
-                        continue;
-                    }
-                    var tap = (TapIface) iface;
-                    cmd = "add tap " + tap.tap.getTap().dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
-                    if (tap.postScript != null && !tap.postScript.isBlank()) {
-                        cmd += " post-script " + tap.postScript;
-                    }
-                    if (!tap.annotations.isEmpty()) {
-                        cmd += " annotations " + toAnnotation(tap.annotations);
-                    }
-                    commands.add(cmd);
-                }
                 // create vpc
                 for (var entry : sw.getTables().entrySet()) {
                     int vpc = entry.getKey();
@@ -728,6 +685,49 @@ public class Shutdown {
                         }
                         commands.add(cmd);
                     }
+                }
+                // create users
+                Map<String, UserInfo> users = sw.getUsers();
+                for (var entry : users.entrySet()) {
+                    cmd = "add user " + entry.getKey() + " to switch " + sw.alias + " password " + entry.getValue().pass + " vni " + entry.getValue().vni;
+                    commands.add(cmd);
+                }
+                // create remote sw
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof RemoteSwitchIface)) {
+                        continue;
+                    }
+                    var rsi = (RemoteSwitchIface) iface;
+                    cmd = "add switch " + rsi.alias + " to switch " + sw.alias + " address " + rsi.udpSockAddress.formatToIPPortString();
+                    if (!rsi.addSwitchFlag) {
+                        cmd += " no-switch-flag";
+                    }
+                    commands.add(cmd);
+                }
+                // create user-cli
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof UserClientIface)) {
+                        continue;
+                    }
+                    var ucliIface = (UserClientIface) iface;
+                    cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
+                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remoteAddress.formatToIPPortString();
+                    commands.add(cmd);
+                }
+                // create tap
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof TapIface)) {
+                        continue;
+                    }
+                    var tap = (TapIface) iface;
+                    cmd = "add tap " + tap.tap.getTap().dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
+                    if (tap.postScript != null && !tap.postScript.isBlank()) {
+                        cmd += " post-script " + tap.postScript;
+                    }
+                    if (!tap.annotations.isEmpty()) {
+                        cmd += " annotations " + toAnnotation(tap.annotations);
+                    }
+                    commands.add(cmd);
                 }
             }
         }

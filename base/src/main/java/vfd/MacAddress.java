@@ -52,6 +52,10 @@ public class MacAddress {
         return isIpv4Multicast() || isIpv6Multicast();
     }
 
+    public boolean isUnicast() {
+        return !isBroadcast() && !isMulticast();
+    }
+
     private boolean isIpv4Multicast() {
         if (bytes.length() < 4) { // we need to check the first 25 bits
             // not a valid mac address, normally should be 6, so not multicast
