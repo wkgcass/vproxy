@@ -85,6 +85,8 @@ public class Ipv4Packet extends AbstractIpPacket {
         ByteArray bytesForPacket = bytes.sub(ihl * 4, totalLength - ihl * 4);
         if (protocol == Consts.IP_PROTOCOL_ICMP) {
             packet = new IcmpPacket(false);
+        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
+            packet = new TcpPacket();
         } else {
             packet = new PacketBytes();
         }

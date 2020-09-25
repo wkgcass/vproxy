@@ -169,6 +169,11 @@ public class ServerSock implements NetFlowRecorder {
         return create(bindAddress, new BindOptions());
     }
 
+    public static ServerSock create(IPPort bindAddress, FDs fds) throws IOException {
+        ServerSocketFD channel = fds.openServerSocketFD();
+        return create(channel, bindAddress, new BindOptions());
+    }
+
     public static ServerSock create(IPPort bindAddress, BindOptions opts) throws IOException {
         if (bindAddress instanceof UDSPath) {
             return createUDS((UDSPath) bindAddress, opts);

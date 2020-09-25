@@ -91,6 +91,10 @@ public interface ByteArray {
         return uint8(offset) << 24 | uint8(offset + 1) << 16 | uint8(offset + 2) << 8 | uint8(offset + 3);
     }
 
+    default long uint32(int offset) {
+        return (((long) uint8(offset)) << 24) | (((long) uint8(offset + 1)) << 16) | (((long) uint8(offset + 2)) << 8) | (((long) uint8(offset + 3)));
+    }
+
     default int uint16(int offset) {
         return uint8(offset) << 8 | uint8(offset + 1);
     }

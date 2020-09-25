@@ -2,6 +2,7 @@ package vproxybase.selector.wrap;
 
 import vfd.*;
 import vproxybase.util.Lock;
+import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 
 import java.io.IOException;
@@ -275,9 +276,14 @@ public class WrappedSelector implements FDSelector {
             throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
         if (!vfd.isOpen()) {
-            Logger.shouldNotHappen("fd " + vfd + " is not open, but still trying to register readable", new Throwable());
+            Logger.error(LogType.IMPROPER_USE, "fd " + vfd + " is not open, but still trying to register readable", new Throwable());
             return;
         }
+        if (!virtualSocketFDs.containsKey(vfd)) {
+            Logger.error(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector");
+            return;
+        }
+        assert Logger.lowLevelDebug("add virtual readable: " + vfd);
         readableFired.add(vfd);
 
         // check fired
@@ -299,7 +305,11 @@ public class WrappedSelector implements FDSelector {
             throw new ClosedSelectorExceptionWithInfo(this + " <- " + vfd);
         }
         if (!vfd.isOpen()) {
-            Logger.shouldNotHappen("fd " + vfd + " is not open, but still trying to register writable", new Throwable());
+            Logger.error(LogType.IMPROPER_USE, "fd " + vfd + " is not open, but still trying to register writable", new Throwable());
+            return;
+        }
+        if (!virtualSocketFDs.containsKey(vfd)) {
+            Logger.error(LogType.IMPROPER_USE, "cannot register writable for " + vfd + " when the fd not handled by this selector");
             return;
         }
         assert Logger.lowLevelDebug("add virtual writable: " + vfd);

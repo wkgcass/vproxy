@@ -87,6 +87,10 @@ public class Connection implements NetFlowRecorder {
                         // (since ringBuffer will not extend)
                         // (which is unnecessary for an lb)
                         _cctx.handler.writable(_cctx);
+                        if (closed || _eventLoop == null) {
+                            assert Logger.lowLevelDebug("the connection is closed or removed from event-loop");
+                            return;
+                        }
                     }
 
                     try {

@@ -90,6 +90,8 @@ public class Ipv6Packet extends AbstractIpPacket {
         }
         if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
             packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
+        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
+            packet = new TcpPacket();
         } else {
             packet = new PacketBytes();
         }

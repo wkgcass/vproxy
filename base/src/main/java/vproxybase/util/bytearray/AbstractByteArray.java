@@ -78,6 +78,6 @@ public abstract class AbstractByteArray implements ByteArray {
 
     @Override
     public String toString() {
-        return toHexString();
+        return new String(toJavaArray());
     }
 }

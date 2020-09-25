@@ -23,7 +23,7 @@ public class PosixFD extends AbstractBaseFD implements FD {
 
     protected void checkFD() throws IOException {
         if (fd == -1) {
-            throw new IOException("connect() not called");
+            throw new IOException("connect() or bind() not called");
         }
     }
 

@@ -6,6 +6,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Network;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.XException;
+import vpacket.conntrack.Conntrack;
 
 import java.util.Collections;
 import java.util.Map;
@@ -19,6 +20,8 @@ public class Table {
     public final SyntheticIpHolder ips;
     public final RouteTable routeTable;
     private Map<String, String> annotations;
+
+    public final Conntrack conntrack = new Conntrack();
 
     public Table(int vni, SelectorEventLoop loop,
                  Network v4network, Network v6network,

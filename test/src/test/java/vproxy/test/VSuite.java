@@ -20,6 +20,7 @@ import vproxy.test.cases.*;
     TestHealthCheck.class,
     TestPacket.class,
     TestRouteTable.class,
+    TestTCP.class,
 
     AfterAll.class
 })

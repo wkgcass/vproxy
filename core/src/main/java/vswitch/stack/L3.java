@@ -16,12 +16,12 @@ import java.util.Collections;
 public class L3 {
     private final SwitchContext swCtx;
     private final L2 L2;
-    private final L4 L4;
+    public final L4 L4;
 
     public L3(SwitchContext swCtx, L2 l2) {
         this.swCtx = swCtx;
         L2 = l2;
-        L4 = new L4(this);
+        L4 = new L4(swCtx, this);
     }
 
     public void input(InputPacketL3Context ctx) {
@@ -211,8 +211,8 @@ public class L3 {
                 return;
             }
         } else if (ipPkt.getProtocol() == Consts.IP_PROTOCOL_TCP || ipPkt.getProtocol() == Consts.IP_PROTOCOL_UDP || ipPkt.getProtocol() == Consts.IP_PROTOCOL_SCTP) {
-            if (L4.wantToHandle(ctx)) {
-                L4.input(new InputPacketL4Context(ctx));
+            var l4ctx = new InputPacketL4Context(ctx);
+            if (L4.input(l4ctx)) {
                 return;
             }
             respondIcmpPortUnreachable(ctx);
@@ -777,5 +777,46 @@ public class L3 {
             ctx.outputPacket.setDst(dstMac);
             directOutput(ctx);
         }
+    }
+
+    public void output(OutputPacketL3Context ctx) {
+        assert Logger.lowLevelDebug("L3.output(" + ctx + ")");
+
+        // assign mac to the packet
+        MacAddress srcMac = ctx.table.ips.lookup(ctx.outputPacket.getSrc());
+        if (srcMac == null) {
+            Logger.shouldNotHappen("cannot find synthetic ip for sending the output packet");
+            return;
+        }
+        MacAddress dstMac;
+
+        // check routing rule
+        var rule = ctx.table.routeTable.lookup(ctx.outputPacket.getDst());
+        if (rule == null || rule.toVni == ctx.table.vni) {
+            assert Logger.lowLevelDebug("no route rule or route to current network");
+
+            // try to find the mac address of the dst
+            dstMac = ctx.table.lookup(ctx.outputPacket.getDst());
+
+            if (dstMac == null) {
+                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot find dst mac for sending the packet");
+                broadcastArpOrNdp(ctx.handlingUUID, ctx.table, ctx.outputPacket.getDst());
+                return;
+            }
+        } else {
+            assert Logger.lowLevelDebug("need to do routing");
+            // the dstMac is not important, will be filled
+            dstMac = new MacAddress(ByteArray.from(new byte[6]));
+        }
+
+        // form a ethernet packet
+        EthernetPacket ether = new EthernetPacket();
+        ether.setDst(dstMac);
+        ether.setSrc(srcMac);
+        ether.setType((ctx.outputPacket instanceof Ipv4Packet) ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
+        ether.setPacket(ctx.outputPacket);
+
+        // route out
+        routeOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
     }
 }

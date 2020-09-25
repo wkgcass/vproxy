@@ -2,6 +2,7 @@ package vproxybase.util;
 
 import sun.misc.Unsafe;
 import vfd.FDProvider;
+import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
 
 import java.io.*;
@@ -487,6 +488,16 @@ public class Utils {
 
     public static void exit(int code) {
         System.exit(code);
+    }
+
+    public static ByteArray buildPseudoIPv4Header(Ipv4Packet ipv4, int upperType, int upperLength) {
+        ByteArray pseudoHeaderTail = ByteArray.allocate(8);
+        ByteArray pseudoHeader = ByteArray.from(ipv4.getSrc().getAddress())
+            .concat(ByteArray.from(ipv4.getDst().getAddress()))
+            .concat(pseudoHeaderTail);
+        pseudoHeaderTail.set(1, (byte) upperType);
+        pseudoHeaderTail.int16(2, upperLength);
+        return pseudoHeader;
     }
 
     public static ByteArray buildPseudoIPv6Header(Ipv6Packet ipv6, int upperType, int upperLength) {

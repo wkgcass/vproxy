@@ -1,7 +1,6 @@
 package vserver.server;
 
 import vfd.IPPort;
-import vfd.UDSPath;
 import vjson.JSON;
 import vproxybase.Config;
 import vproxybase.connection.NetEventLoop;
@@ -78,21 +77,21 @@ public class Http1ServerImpl implements HttpServer {
         return this;
     }
 
-    @Override
-    public void listen(IPPort addr) throws IOException {
+    private void preListen() {
         if (started) {
             throw new IllegalStateException("This http server is already started");
         }
         started = true;
         record(ALL_METHODS, Route.create("/*"), this::handle404);
+    }
 
-        if (Config.checkBind) {
-            ServerSock.checkBind(addr);
+    public void listen(ServerSock server) throws IOException {
+        if (loop == null) {
+            throw new IllegalStateException("loop not specified but listen(ServerSock) is called");
         }
 
-        initLoop();
+        preListen();
 
-        server = ServerSock.create(addr);
         ProtocolServerHandler.apply(loop, server,
             new ProtocolServerConfig().setInBufferSize(4096).setOutBufferSize(4096),
             new HttpProtocolHandler(true) {
@@ -101,6 +100,20 @@ public class Http1ServerImpl implements HttpServer {
                     handle(ctx);
                 }
             });
+    }
+
+    @Override
+    public void listen(IPPort addr) throws IOException {
+        if (Config.checkBind) {
+            ServerSock.checkBind(addr);
+        }
+
+        initLoop();
+
+        preListen();
+
+        server = ServerSock.create(addr);
+        listen(server);
     }
 
     @Override

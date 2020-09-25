@@ -58,6 +58,8 @@ module vproxy.base {
     exports vpacket;
     exports vmirror;
     exports com.twitter.hpack;
+    exports vpacket.conntrack.tcp;
+    exports vpacket.conntrack;
 
     uses vfd.FDs;
     uses vproxybase.processor.ProcessorRegistry;

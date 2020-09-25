@@ -51,6 +51,8 @@ public class Switch {
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
+    public final NetworkStack netStack = new NetworkStack();
+
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
                   int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws IOException, ClosedException {
         this.alias = alias;
@@ -194,12 +196,10 @@ public class Switch {
     }
 
     private void refreshArpCache(Table t, IP ip, MacAddress mac) {
-        var networkStack = (new NetworkStack() {
-        });
-        String handlingUUID = networkStack.newHandlingUUID();
+        String handlingUUID = netStack.newHandlingUUID();
         assert Logger.lowLevelDebug(handlingUUID + " trigger arp cache refresh for " + ip.formatToIPString() + " " + mac);
 
-        networkStack.L2.L3.resolve(handlingUUID, t, ip, mac);
+        netStack.L2.L3.resolve(handlingUUID, t, ip, mac);
     }
 
     public int getMacTableTimeout() {
@@ -566,11 +566,12 @@ public class Switch {
         return x.key;
     }
 
-    private abstract class NetworkStack {
-        protected final L2 L2 = new L2(new SwitchContext(
+    public class NetworkStack {
+        public final L2 L2 = new L2(new SwitchContext(
             this::sendPacket,
             Switch.this::getIfaces,
-            tables::get
+            tables::get,
+            () -> currentEventLoop.getSelectorEventLoop()
         ));
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
@@ -650,7 +651,7 @@ public class Switch {
         }
     }
 
-    private class PacketHandler extends NetworkStack implements Handler<DatagramFD> {
+    private class PacketHandler implements Handler<DatagramFD> {
         private static final int IFACE_TIMEOUT = 60 * 1000;
         private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
 
@@ -782,7 +783,7 @@ public class Switch {
                 byte[] bytes = rcvBuf.array();
                 ByteArray data = ByteArray.from(bytes).sub(0, rcvBuf.position());
 
-                String handlingUUID = newHandlingUUID();
+                String handlingUUID = netStack.newHandlingUUID();
 
                 var tuple = handleNetworkAndGetVXLanPacket(handlingUUID, ctx.getEventLoop(), remote, data);
                 if (tuple == null) {
@@ -795,7 +796,7 @@ public class Switch {
                     continue;
                 }
 
-                inputVXLan(handlingUUID, vxlan, iface);
+                netStack.inputVXLan(handlingUUID, vxlan, iface);
             }
         }
 
@@ -804,7 +805,7 @@ public class Switch {
             VProxyEncryptedPacket p = new VProxyEncryptedPacket(Switch.this::getKey);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
-            sendVProxyPacketTo(handlingUUID, iface, p);
+            netStack.sendVProxyPacketTo(handlingUUID, iface, p);
         }
 
         @Override

@@ -43,10 +43,17 @@ public class Consts {
 
     public static final ByteArray IPv6_Solicitation_Node_Multicast_Address = ByteArray.from(IP.parseIpString("ff02::1:ff00:0"));
 
-    public static final byte TCP_FLAGS_PSH = 0b1000;
-    public static final byte TCP_FLAGS_RST = 0b0100;
-    public static final byte TCP_FLAGS_SYN = 0b0010;
-    public static final byte TCP_FLAGS_FIN = 0b0001;
+    public static final byte TCP_OPTION_END = 0;
+    public static final byte TCP_OPTION_NOP = 1;
+    public static final byte TCP_OPTION_MSS = 2;
+    public static final byte TCP_OPTION_WINDOW_SCALE = 3;
+
+    public static final byte TCP_FLAGS_URG = 0b100000;
+    public static final byte TCP_FLAGS_ACK = 0b010000;
+    public static final byte TCP_FLAGS_PSH = 0b001000;
+    public static final byte TCP_FLAGS_RST = 0b000100;
+    public static final byte TCP_FLAGS_SYN = 0b000010;
+    public static final byte TCP_FLAGS_FIN = 0b000001;
 
     public static final int I_DETECTED_A_POSSIBLE_LOOP =
         0b00001000_00000000_00000000;
