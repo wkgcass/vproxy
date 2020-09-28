@@ -21,6 +21,16 @@ public class IPPort extends SockAddr {
         this.port = port;
     }
 
+    public IPPort(String ipport) {
+        if (!validL4AddrStr(ipport)) {
+            throw new IllegalArgumentException("input is not a valid ipport string");
+        }
+        int port = Integer.parseInt(ipport.substring(ipport.lastIndexOf(':') + 1));
+        String ip = ipport.substring(0, ipport.lastIndexOf(':'));
+        this.ip = IP.from(ip);
+        this.port = port;
+    }
+
     public static IPPort fromNullable(SocketAddress sockAddr) {
         if (sockAddr == null) {
             return null;

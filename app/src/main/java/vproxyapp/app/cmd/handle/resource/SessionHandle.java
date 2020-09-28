@@ -23,6 +23,8 @@ public class SessionHandle {
             TcpLBHandle.checkTcpLB(parent);
         } else if (parent.type == ResourceType.socks5) {
             Socks5ServerHandle.checkSocks5Server(parent);
+        } else if (parent.type == ResourceType.proxy) {
+            ProxyHandle.checkSwitchProxy(parent.parentResource);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.sess.fullname);
         }
@@ -33,10 +35,13 @@ public class SessionHandle {
             // get session count from tcp loadbalancer
             TcpLB lb = Application.get().tcpLBHolder.get(parent.alias);
             return lb.sessionCount();
-        } else {
-            assert parent.type == ResourceType.socks5;
+        } else if (parent.type == ResourceType.socks5) {
             Socks5Server socks5 = Application.get().socks5ServerHolder.get(parent.alias);
             return socks5.sessionCount();
+        } else {
+            assert parent.type == ResourceType.proxy;
+            var r = ProxyHandle.get(parent);
+            return r.proxy.sessionCount();
         }
     }
 
@@ -49,13 +54,21 @@ public class SessionHandle {
             lb.copySessions(sessions);
 
             return sessions;
-        } else {
-            assert parent.type == ResourceType.socks5;
+        } else if (parent.type == ResourceType.socks5) {
             Socks5Server socks5 = Application.get().socks5ServerHolder.get(parent.alias);
 
             // retrieve sessions
             List<Session> sessions = new LinkedList<>();
             socks5.copySessions(sessions);
+
+            return sessions;
+        } else {
+            assert parent.type == ResourceType.proxy;
+            var record = ProxyHandle.get(parent);
+
+            // retrieve sessions
+            List<Session> sessions = new LinkedList<>();
+            record.proxy.copySessions(sessions);
 
             return sessions;
         }

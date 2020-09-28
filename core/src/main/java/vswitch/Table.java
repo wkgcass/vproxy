@@ -2,6 +2,7 @@ package vswitch;
 
 import vfd.IP;
 import vfd.MacAddress;
+import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Network;
 import vproxybase.util.exception.AlreadyExistException;
@@ -18,12 +19,13 @@ public class Table {
     public final MacTable macTable;
     public final ArpTable arpTable;
     public final SyntheticIpHolder ips;
+    public final ProxyHolder proxies;
     public final RouteTable routeTable;
     private Map<String, String> annotations;
 
     public final Conntrack conntrack = new Conntrack();
 
-    public Table(int vni, SelectorEventLoop loop,
+    public Table(Switch sw, int vni, NetEventLoop loop,
                  Network v4network, Network v6network,
                  int macTableTimeout, int arpTableTimeout,
                  Map<String, String> annotations) {
@@ -35,9 +37,10 @@ public class Table {
         }
         this.annotations = annotations;
 
-        macTable = new MacTable(loop, macTableTimeout);
-        arpTable = new ArpTable(loop, arpTableTimeout);
+        macTable = new MacTable(loop.getSelectorEventLoop(), macTableTimeout);
+        arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
+        proxies = new ProxyHolder(loop, sw, this);
         routeTable = new RouteTable(this);
     }
 
@@ -69,10 +72,6 @@ public class Table {
             mac = ips.lookup(ip);
         }
         return mac;
-    }
-
-    public boolean macReachable(MacAddress mac) {
-        return macTable.lookup(mac) != null || ips.lookupByMac(mac) != null;
     }
 
     public Map<String, String> getAnnotations() {

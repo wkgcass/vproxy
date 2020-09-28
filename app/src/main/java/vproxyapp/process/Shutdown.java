@@ -685,6 +685,11 @@ public class Shutdown {
                         }
                         commands.add(cmd);
                     }
+                    // create proxy
+                    for (var r : table.proxies.listRecords()) {
+                        cmd = "add proxy " + r.listen.formatToIPPortString() + " to vpc " + vpc + " in switch " + sw.alias + " address " + r.target.formatToIPPortString();
+                        commands.add(cmd);
+                    }
                 }
                 // create users
                 Map<String, UserInfo> users = sw.getUsers();

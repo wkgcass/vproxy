@@ -7,8 +7,7 @@ import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vpacket.conntrack.tcp.*;
 
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class Conntrack {
     private final Map<IPPort, ListenEntry> listenEntries = new HashMap<>();
@@ -18,6 +17,30 @@ public class Conntrack {
 
     private static final IP ipv4BindAny = IP.from("0.0.0.0");
     private static final IP ipv6BindAny = IP.from("::");
+
+    public int countListenEntry() {
+        return listenEntries.size();
+    }
+
+    public Collection<ListenEntry> listListenEntries() {
+        return listenEntries.values();
+    }
+
+    public int countTcpEntries() {
+        int total = 0;
+        for (var map : connectionEntries.values()) {
+            total += map.size();
+        }
+        return total;
+    }
+
+    public Collection<TcpEntry> listTcpEntries() {
+        List<TcpEntry> ls = new LinkedList<>();
+        for (var map : connectionEntries.values()) {
+            ls.addAll(map.values());
+        }
+        return ls;
+    }
 
     public ListenEntry lookupListen(IPPort dst) {
         var ret = listenEntries.get(dst);

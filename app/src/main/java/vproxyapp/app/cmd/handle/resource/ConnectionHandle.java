@@ -1,5 +1,7 @@
 package vproxyapp.app.cmd.handle.resource;
 
+import vfd.IPPort;
+import vpacket.conntrack.tcp.TcpEntry;
 import vproxy.component.proxy.Session;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Resource;
@@ -8,8 +10,10 @@ import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.Connection;
 import vproxybase.util.exception.NotFoundException;
+import vswitch.Table;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.regex.Pattern;
@@ -29,12 +33,14 @@ public class ConnectionHandle {
             Socks5ServerHandle.checkSocks5Server(parent);
         } else if (parent.type == ResourceType.svr) {
             ServerHandle.checkServer(parent);
+        } else if (parent.type == ResourceType.vpc) {
+            VpcHandle.checkVpc(parent.parentResource);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.conn.fullname);
         }
     }
 
-    public static Connection get(Resource resource) throws Exception {
+    public static Conn get(Resource resource) throws Exception {
         return list(resource.parentResource)
             .stream()
             .filter(c -> c.id().equals(resource.alias))
@@ -62,12 +68,17 @@ public class ConnectionHandle {
             ServerGroup.ServerHandle h = ServerHandle.get(parent);
             return h.connectionCount();
 
+        } else if (parent.type == ResourceType.vpc) {
+
+            Table t = VpcHandle.get(parent);
+            return t.conntrack.countTcpEntries();
+
         } else
             throw new Exception("i don't think that " + parent.type + " contains connections");
     }
 
-    public static List<Connection> list(Resource parent) throws Exception {
-        List<Connection> connections;
+    public static List<Conn> list(Resource parent) throws Exception {
+        List<Conn> connections;
 
         if (parent.type == ResourceType.tl || parent.type == ResourceType.socks5) {
 
@@ -77,23 +88,41 @@ public class ConnectionHandle {
             // create a list of session size * 2 (for active and passive connections)
             connections = new ArrayList<>(sessions.size() * 2);
             for (Session s : sessions) {
-                connections.add(s.active);
-                connections.add(s.passive);
+                connections.add(new Conn(s.active, true));
+                connections.add(new Conn(s.passive, false));
             }
 
         } else if (parent.type == ResourceType.el) {
 
             // try to get connections from event loop
             EventLoopWrapper eventLoop = EventLoopHandle.get(parent);
-            connections = new LinkedList<>();
-            eventLoop.copyConnections(connections);
+            List<Connection> conns = new LinkedList<>();
+            eventLoop.copyConnections(conns);
+            connections = new ArrayList<>(conns.size());
+            for (var c : conns) {
+                connections.add(new Conn(c));
+            }
 
         } else if (parent.type == ResourceType.svr) {
 
             // try to get connections from server
             ServerGroup.ServerHandle h = ServerHandle.get(parent);
-            connections = new LinkedList<>();
-            h.copyConnections(connections);
+            List<Connection> conns = new LinkedList<>();
+            h.copyConnections(conns);
+            connections = new ArrayList<>(conns.size());
+            for (var c : conns) {
+                connections.add(new Conn(c));
+            }
+
+        } else if (parent.type == ResourceType.vpc) {
+
+            // try to get connections from switch-table
+            Table table = VpcHandle.get(parent);
+            Collection<TcpEntry> entries = table.conntrack.listTcpEntries();
+            connections = new ArrayList<>(entries.size());
+            for (var t : entries) {
+                connections.add(new Conn(t));
+            }
 
         } else
             throw new Exception("i don't think that " + parent.type + " contains connections");
@@ -101,13 +130,13 @@ public class ConnectionHandle {
     }
 
     public static void close(Command cmd) throws Exception {
-        List<Connection> connections = list(cmd.prepositionResource);
+        List<Conn> connections = list(cmd.prepositionResource);
         String pattern = cmd.resource.alias;
         Pattern p = null;
         if (pattern.startsWith("/") && pattern.endsWith("/")) {
             p = Pattern.compile(pattern.substring(1, pattern.length() - 1));
         }
-        for (Connection c : connections) {
+        for (Conn c : connections) {
             //noinspection Duplicates
             if (p == null) {
                 // directly compare
@@ -123,6 +152,70 @@ public class ConnectionHandle {
                     // then continue
                 }
             }
+        }
+    }
+
+    public static class Conn {
+        public final IPPort src;
+        public final IPPort dst;
+        public final String state;
+        private final Connection conn;
+
+        public Conn(TcpEntry tcp) {
+            this.src = tcp.source;
+            this.dst = tcp.destination;
+            this.state = tcp.getState().name();
+            this.conn = null;
+        }
+
+        public Conn(Connection conn) {
+            this(conn, false);
+        }
+
+        public Conn(Connection conn, boolean active) {
+            if (active) {
+                src = conn.getLocal();
+                dst = conn.remote;
+            } else {
+                src = conn.remote;
+                dst = conn.getLocal();
+            }
+            if (conn.isClosed()) {
+                state = "CLOSED";
+            } else if (conn.isRemoteClosed() && conn.isWriteClosed()) {
+                state = "CLOSING";
+            } else if (conn.isRemoteClosed()) {
+                state = "CLOSE_WAIT";
+            } else if (conn.isWriteClosed()) {
+                state = "FIN_WAIT_1";
+            } else {
+                state = "ESTABLISHED";
+            }
+            this.conn = conn;
+        }
+
+        @Override
+        public String toString() {
+            return src.formatToIPPortString() + "/" + dst.formatToIPPortString() + "[" + state + "]";
+        }
+
+        public String id() {
+            return src.formatToIPPortString() + "/" + dst.formatToIPPortString();
+        }
+
+        public void close() {
+            if (conn == null) {
+                throw new UnsupportedOperationException("");
+            }
+            conn.close();
+        }
+
+        public long getFromRemoteBytes() {
+            return conn == null ? 0 : conn.getFromRemoteBytes();
+        }
+
+        public long getToRemoteBytes() {
+            return conn == null ? 0 : conn.getToRemoteBytes();
         }
     }
 }

@@ -2,7 +2,6 @@ package vproxyapp.app.cmd.handle.resource;
 
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
-import vproxybase.connection.ServerSock;
 
 public class StatisticHandle {
     private StatisticHandle() {
@@ -31,7 +30,7 @@ public class StatisticHandle {
     }
 
     public static long acceptedConnCount(Resource parent) throws Exception {
-        ServerSock bs = ServerSockHandle.get(parent);
-        return bs.getHistoryAcceptedConnectionCount();
+        ServerSockHandle.ServerSock2 sock = ServerSockHandle.get(parent);
+        return sock.getHistoryAcceptedConnectionCount();
     }
 }

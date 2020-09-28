@@ -99,7 +99,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         if (entry.getState() == TcpState.ESTABLISHED) {
             entry.setState(TcpState.FIN_WAIT_1);
         } else if (entry.getState() == TcpState.CLOSE_WAIT) {
-            entry.setState(TcpState.LAST_ACK);
+            entry.setState(TcpState.CLOSING);
         } else {
             Logger.shouldNotHappen("should not reach here: " + entry.getState());
         }

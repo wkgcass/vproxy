@@ -388,7 +388,7 @@ public class Command {
                 // the handles are similar
                 // so put them together
                 // though there're still some logic branches
-                chnlsw:
+                switch1:
                 switch (cmd.action) {
                     case a:
                     case r:
@@ -401,14 +401,14 @@ public class Command {
                     case l:
                         switch (cmd.resource.type) {
                             case ss:
-                                ServerSockHandle.checkServerSock(cmd.resource);
-                                break chnlsw;
+                                ServerSockHandle.checkServerSock(targetResource);
+                                break switch1;
                             case conn:
                                 ConnectionHandle.checkConnection(targetResource);
-                                break chnlsw;
+                                break switch1;
                             case sess:
                                 SessionHandle.checkSession(targetResource);
-                                break chnlsw;
+                                break switch1;
                             // no need to add default here
                         }
                     default:
@@ -677,6 +677,7 @@ public class Command {
             case vpc:
             case route:
             case ip:
+            case proxy:
                 switch (cmd.action) {
                     case a:
                         if (cmd.resource.type == ResourceType.user) {
@@ -685,14 +686,18 @@ public class Command {
                             VpcHandle.checkCreateVpc(cmd);
                         } else if (cmd.resource.type == ResourceType.route) {
                             RouteHandle.checkCreateRoute(cmd);
-                        } else {
+                        } else if (cmd.resource.type == ResourceType.ip) {
                             IpHandle.checkCreateIp(cmd);
+                        } else {
+                            ProxyHandle.checkCreateSwitchProxy(cmd);
                         }
                     case r:
                     case R:
                         if (cmd.action == Action.r || cmd.action == Action.R) {
                             if (cmd.resource.type == ResourceType.ucli) {
                                 UserClientHandle.checkRemoveUserClient(cmd);
+                            } else if (cmd.resource.type == ResourceType.proxy) {
+                                ProxyHandle.checkRemoveSwitchProxy(cmd);
                             }
                         }
                     case L:
@@ -703,8 +708,10 @@ public class Command {
                             VpcHandle.checkVpc(targetResource);
                         } else if (cmd.resource.type == ResourceType.route) {
                             RouteHandle.checkRoute(targetResource);
-                        } else {
+                        } else if (cmd.resource.type == ResourceType.ip) {
                             IpHandle.checkIp(targetResource);
+                        } else {
+                            ProxyHandle.checkSwitchProxy(targetResource);
                         }
                         break;
                     default:
@@ -778,8 +785,8 @@ public class Command {
                         int connCount = ConnectionHandle.count(targetResource);
                         return new CmdResult(connCount, connCount, "" + connCount);
                     case L:
-                        List<Connection> connList = ConnectionHandle.list(targetResource);
-                        List<String> connStrList = connList.stream().map(Connection::id).collect(Collectors.toList());
+                        List<ConnectionHandle.Conn> connList = ConnectionHandle.list(targetResource);
+                        List<String> connStrList = connList.stream().map(ConnectionHandle.Conn::toString).collect(Collectors.toList());
                         return new CmdResult(connStrList, connStrList, utilJoinList(connList));
                     case R:
                         ConnectionHandle.close(this);
@@ -804,8 +811,8 @@ public class Command {
                         int bsCount = ServerSockHandle.count(targetResource);
                         return new CmdResult(bsCount, bsCount, "" + bsCount);
                     case L:
-                        List<ServerSock> bsList = ServerSockHandle.list(targetResource);
-                        List<String> bsStrList = bsList.stream().map(ServerSock::id).collect(Collectors.toList());
+                        List<ServerSockHandle.ServerSock2> bsList = ServerSockHandle.list(targetResource);
+                        List<String> bsStrList = bsList.stream().map(ServerSockHandle.ServerSock2::toString).collect(Collectors.toList());
                         return new CmdResult(bsList, bsStrList, utilJoinList(bsList));
                 }
             case bin:
@@ -1163,6 +1170,23 @@ public class Command {
                     case r:
                     case R:
                         RouteHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case proxy:
+                switch (action) {
+                    case l:
+                        var ipportls = ProxyHandle.names(targetResource);
+                        return new CmdResult(ipportls, ipportls, utilJoinList(ipportls));
+                    case L:
+                        var entries = ProxyHandle.list(targetResource);
+                        List<Object> strTuples = entries.stream().map(Object::toString).collect(Collectors.toList());
+                        return new CmdResult(entries, strTuples, utilJoinList(strTuples));
+                    case a:
+                        ProxyHandle.add(this);
+                        return new CmdResult();
+                    case r:
+                    case R:
+                        ProxyHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ck:

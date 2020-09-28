@@ -110,8 +110,6 @@ public class Http1ServerImpl implements HttpServer {
 
         initLoop();
 
-        preListen();
-
         server = ServerSock.create(addr);
         listen(server);
     }
