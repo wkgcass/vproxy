@@ -39,7 +39,7 @@ public class CertKeyHandle {
         return Application.get().certKeyHolder.names();
     }
 
-    public static void preCheck(Command cmd) throws Exception {
+    public static void preRemoveCheck(Command cmd) throws Exception {
         String toRemove = cmd.resource.alias;
         List<String> names = Application.get().tcpLBHolder.names();
         for (String name : names) {

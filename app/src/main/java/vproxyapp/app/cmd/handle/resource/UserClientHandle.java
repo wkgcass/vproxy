@@ -14,7 +14,7 @@ public class UserClientHandle {
     private UserClientHandle() {
     }
 
-    public static void checkUserClient(Resource parent) throws Exception {
+    public static void checkUserClientParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.ucli.fullname + " on top level");
         if (parent.type != ResourceType.sw)

@@ -37,7 +37,7 @@ public class EventLoopGroupHandle {
         Application.get().eventLoopGroupHolder.add(cmd.resource.alias);
     }
 
-    public static void preCheck(Command cmd) throws Exception {
+    public static void preRemoveCheck(Command cmd) throws Exception {
         String toRemoveName = cmd.resource.alias;
         EventLoopGroup g = Application.get().eventLoopGroupHolder.get(toRemoveName);
 

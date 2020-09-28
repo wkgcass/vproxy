@@ -12,7 +12,7 @@ public class IfaceHandle {
     private IfaceHandle() {
     }
 
-    public static void checkIface(Resource parent) throws Exception {
+    public static void checkIfaceParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.iface.fullname + " on top level");
         if (parent.type != ResourceType.sw)

@@ -16,14 +16,22 @@ public class ProxyHandle {
     private ProxyHandle() {
     }
 
-    public static void checkSwitchProxy(Resource parent) throws Exception {
+    public static void checkSwitchProxyParent(Resource parent) throws Exception {
         if (parent == null) {
             throw new Exception("cannot find " + ResourceType.proxy.fullname + " on top level");
         }
         if (parent.type != ResourceType.vpc) {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.proxy.fullname);
         }
-        VpcHandle.checkVpc(parent.parentResource);
+        VpcHandle.checkVpc(parent);
+    }
+
+    public static void checkSwitchProxy(Resource resource) throws Exception {
+        var name = resource.alias;
+        if (!IPPort.validL4AddrStr(name)) {
+            throw new XException("the resource alias is not ip:port format");
+        }
+        checkSwitchProxyParent(resource.parentResource);
     }
 
     public static void checkCreateSwitchProxy(Command cmd) throws Exception {
@@ -31,7 +39,7 @@ public class ProxyHandle {
         if (!IPPort.validL4AddrStr(name)) {
             throw new XException("the resource alias is not ip:port format");
         }
-        checkSwitchProxy(cmd.prepositionResource);
+        checkSwitchProxyParent(cmd.prepositionResource);
         AddrHandle.check(cmd);
     }
 
@@ -40,7 +48,7 @@ public class ProxyHandle {
         if (!IPPort.validL4AddrStr(name)) {
             throw new XException("the resource alias is not ip:port format");
         }
-        checkSwitchProxy(cmd.prepositionResource);
+        checkSwitchProxyParent(cmd.prepositionResource);
     }
 
     public static List<String> names(Resource parent) throws Exception {

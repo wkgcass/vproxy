@@ -24,7 +24,7 @@ public class SessionHandle {
         } else if (parent.type == ResourceType.socks5) {
             Socks5ServerHandle.checkSocks5Server(parent);
         } else if (parent.type == ResourceType.proxy) {
-            ProxyHandle.checkSwitchProxy(parent.parentResource);
+            ProxyHandle.checkSwitchProxy(parent);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.sess.fullname);
         }

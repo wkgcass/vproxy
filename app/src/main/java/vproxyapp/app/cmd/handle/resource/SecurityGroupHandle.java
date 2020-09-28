@@ -61,7 +61,7 @@ public class SecurityGroupHandle {
         }
     }
 
-    public static void preCheck(Command cmd) throws Exception {
+    public static void preRemoveCheck(Command cmd) throws Exception {
         for (TcpLBHandle.TcpLBRef ref : TcpLBHandle.details()) {
             if (ref.tcpLB.securityGroup.alias.equals(cmd.resource.alias)) {
                 throw new XException(ResourceType.secg.fullname + " " + cmd.resource.alias + " is used by " + ResourceType.tl.fullname + " " + ref.tcpLB.alias);

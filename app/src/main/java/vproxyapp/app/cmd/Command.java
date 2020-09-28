@@ -7,8 +7,6 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxyapp.app.Application;
 import vproxyapp.app.cmd.handle.resource.*;
 import vproxybase.Config;
-import vproxybase.connection.Connection;
-import vproxybase.connection.ServerSock;
 import vproxybase.dns.Cache;
 import vproxybase.util.Callback;
 import vproxybase.util.LogType;
@@ -401,10 +399,10 @@ public class Command {
                     case l:
                         switch (cmd.resource.type) {
                             case ss:
-                                ServerSockHandle.checkServerSock(targetResource);
+                                ServerSockHandle.checkServerSockParent(targetResource);
                                 break switch1;
                             case conn:
-                                ConnectionHandle.checkConnection(targetResource);
+                                ConnectionHandle.checkConnectionParent(targetResource);
                                 break switch1;
                             case sess:
                                 SessionHandle.checkSession(targetResource);
@@ -430,10 +428,10 @@ public class Command {
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
                         switch (targetResource.type) {
                             case ss:
-                                ServerSockHandle.checkServerSock(targetResource);
+                                ServerSockHandle.checkServerSockParent(targetResource);
                                 break bsw;
                             case conn:
-                                ConnectionHandle.checkConnection(targetResource);
+                                ConnectionHandle.checkConnectionParent(targetResource);
                                 break bsw;
                             case svr:
                                 ServerHandle.checkServer(targetResource);
@@ -457,7 +455,7 @@ public class Command {
                         // can be found in server-sock
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-                        ServerSockHandle.checkServerSock(targetResource);
+                        ServerSockHandle.checkServerSockParent(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -572,7 +570,7 @@ public class Command {
                     case R:
                     case L:
                     case l:
-                        DnsCacheHandle.checkDnsCache(targetResource);
+                        DnsCacheHandle.checkDnsCacheParent(targetResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
@@ -662,11 +660,11 @@ public class Command {
                     case L:
                     case l:
                         if (cmd.resource.type == ResourceType.arp) {
-                            ArpHandle.checkArp(targetResource);
+                            ArpHandle.checkArpParent(targetResource);
                         } else {
                             //noinspection ConstantConditions
                             assert cmd.resource.type == ResourceType.iface;
-                            IfaceHandle.checkIface(targetResource);
+                            IfaceHandle.checkIfaceParent(targetResource);
                         }
                         break;
                     default:
@@ -703,15 +701,15 @@ public class Command {
                     case L:
                     case l:
                         if (cmd.resource.type == ResourceType.user) {
-                            UserHandle.checkUser(targetResource);
+                            UserHandle.checkUserParent(targetResource);
                         } else if (cmd.resource.type == ResourceType.vpc) {
-                            VpcHandle.checkVpc(targetResource);
+                            VpcHandle.checkVpcParent(targetResource);
                         } else if (cmd.resource.type == ResourceType.route) {
-                            RouteHandle.checkRoute(targetResource);
+                            RouteHandle.checkRouteParent(targetResource);
                         } else if (cmd.resource.type == ResourceType.ip) {
-                            IpHandle.checkIp(targetResource);
+                            IpHandle.checkIpParent(targetResource);
                         } else {
-                            ProxyHandle.checkSwitchProxy(targetResource);
+                            ProxyHandle.checkSwitchProxyParent(targetResource);
                         }
                         break;
                     default:
@@ -735,9 +733,9 @@ public class Command {
                             }
                         }
                         if (cmd.resource.type == ResourceType.ucli) {
-                            UserClientHandle.checkUserClient(targetResource);
+                            UserClientHandle.checkUserClientParent(targetResource);
                         } else {
-                            TapHandle.checkTap(targetResource);
+                            TapHandle.checkTapParent(targetResource);
                         }
                         break;
                     default:
@@ -866,7 +864,7 @@ public class Command {
                         UpstreamHandle.add(this);
                         return new CmdResult();
                     case r:
-                        UpstreamHandle.preCheck(this);
+                        UpstreamHandle.preRemoveCheck(this);
                     case R:
                         UpstreamHandle.forceRemove(this);
                         return new CmdResult();
@@ -881,7 +879,7 @@ public class Command {
                         EventLoopGroupHandle.add(this);
                         return new CmdResult();
                     case r:
-                        EventLoopGroupHandle.preCheck(this);
+                        EventLoopGroupHandle.preRemoveCheck(this);
                     case R:
                         EventLoopGroupHandle.forceRemvoe(this);
                         return new CmdResult();
@@ -913,7 +911,7 @@ public class Command {
                         ServerGroupHandle.add(this);
                         return new CmdResult();
                     case r:
-                        ServerGroupHandle.preCheck(this);
+                        ServerGroupHandle.preRemoveCheck(this);
                     case R:
                         ServerGroupHandle.forceRemove(this);
                         return new CmdResult();
@@ -1021,7 +1019,7 @@ public class Command {
                         SecurityGroupHandle.update(this);
                         return new CmdResult();
                     case r:
-                        SecurityGroupHandle.preCheck(this);
+                        SecurityGroupHandle.preRemoveCheck(this);
                     case R:
                         SecurityGroupHandle.forceRemove(this);
                         return new CmdResult();
@@ -1196,7 +1194,7 @@ public class Command {
                         List<String> names = CertKeyHandle.names();
                         return new CmdResult(names, names, utilJoinList(names));
                     case r:
-                        CertKeyHandle.preCheck(this);
+                        CertKeyHandle.preRemoveCheck(this);
                     case R:
                         CertKeyHandle.forceRemove(this);
                         return new CmdResult();

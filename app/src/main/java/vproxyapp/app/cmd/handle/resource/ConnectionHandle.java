@@ -22,7 +22,7 @@ public class ConnectionHandle {
     private ConnectionHandle() {
     }
 
-    public static void checkConnection(Resource parent) throws Exception {
+    public static void checkConnectionParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.conn.fullname + " on top level");
         if (parent.type == ResourceType.el) {
@@ -34,7 +34,7 @@ public class ConnectionHandle {
         } else if (parent.type == ResourceType.svr) {
             ServerHandle.checkServer(parent);
         } else if (parent.type == ResourceType.vpc) {
-            VpcHandle.checkVpc(parent.parentResource);
+            VpcHandle.checkVpc(parent);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.conn.fullname);
         }

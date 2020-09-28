@@ -13,7 +13,7 @@ public class DnsCacheHandle {
     private DnsCacheHandle() {
     }
 
-    public static void checkDnsCache(Resource parent) throws Exception {
+    public static void checkDnsCacheParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.dnscache.fullname + " on top level");
         ResolverHandle.checkResolver(parent);

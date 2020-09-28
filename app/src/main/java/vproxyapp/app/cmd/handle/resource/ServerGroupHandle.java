@@ -179,7 +179,7 @@ public class ServerGroupHandle {
         }
     }
 
-    public static void preCheck(Command cmd) throws Exception {
+    public static void preRemoveCheck(Command cmd) throws Exception {
         if (cmd.prepositionResource != null)
             return; // it's ok to detach from upstream
         // remove top level server group

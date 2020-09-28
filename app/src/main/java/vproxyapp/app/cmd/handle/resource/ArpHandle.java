@@ -20,7 +20,7 @@ public class ArpHandle {
     private ArpHandle() {
     }
 
-    public static void checkArp(Resource parent) throws Exception {
+    public static void checkArpParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.arp.fullname + " on top level");
         if (parent.type != ResourceType.vpc) {
@@ -30,8 +30,7 @@ public class ArpHandle {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.arp.fullname);
         }
 
-        VpcHandle.checkVpc(parent.parentResource);
-        VpcHandle.checkVpcName(parent);
+        VpcHandle.checkVpc(parent);
     }
 
     public static int count(Resource parent) throws Exception {

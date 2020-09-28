@@ -31,7 +31,7 @@ public class UpstreamHandle {
         Application.get().upstreamHolder.add(cmd.resource.alias);
     }
 
-    public static void preCheck(Command cmd) throws Exception {
+    public static void preRemoveCheck(Command cmd) throws Exception {
         // whether used by lb ?
         Upstream groups = Application.get().upstreamHolder.get(cmd.resource.alias);
         List<String> lbNames = Application.get().tcpLBHolder.names();

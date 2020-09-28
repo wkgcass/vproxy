@@ -15,7 +15,7 @@ public class ServerSockHandle {
     private ServerSockHandle() {
     }
 
-    public static void checkServerSock(Resource parent) throws Exception {
+    public static void checkServerSockParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.ss.fullname + " on top level");
         if (parent.type == ResourceType.el) {
@@ -25,7 +25,7 @@ public class ServerSockHandle {
         } else if (parent.type == ResourceType.socks5) {
             Socks5ServerHandle.checkSocks5Server(parent);
         } else if (parent.type == ResourceType.vpc) {
-            VpcHandle.checkVpc(parent.parentResource);
+            VpcHandle.checkVpc(parent);
         } else {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ss.fullname);
         }

@@ -16,7 +16,7 @@ public class TapHandle {
     private TapHandle() {
     }
 
-    public static void checkTap(Resource parent) throws Exception {
+    public static void checkTapParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.tap.fullname + " on top level");
         if (parent.type != ResourceType.sw)

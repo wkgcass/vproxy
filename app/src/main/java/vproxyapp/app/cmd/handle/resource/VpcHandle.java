@@ -21,12 +21,17 @@ public class VpcHandle {
     private VpcHandle() {
     }
 
-    public static void checkVpc(Resource parent) throws Exception {
+    public static void checkVpcParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.vpc.fullname + " on top level");
         if (parent.type != ResourceType.sw)
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.vpc.fullname);
         SwitchHandle.checkSwitch(parent);
+    }
+
+    public static void checkVpc(Resource vpc) throws Exception {
+        checkVpcName(vpc);
+        checkVpcParent(vpc.parentResource);
     }
 
     public static void checkVpcName(Resource self) throws Exception {
@@ -45,7 +50,7 @@ public class VpcHandle {
     }
 
     public static void checkCreateVpc(Command cmd) throws Exception {
-        checkVpc(cmd.prepositionResource);
+        checkVpcParent(cmd.prepositionResource);
         checkVpcName(cmd.resource);
         if (!cmd.args.containsKey(Param.v4net)) {
             throw new Exception("missing argument " + Param.v4net);

@@ -18,7 +18,7 @@ public class IpHandle {
     private IpHandle() {
     }
 
-    public static void checkIp(Resource parent) throws Exception {
+    public static void checkIpParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.ip.fullname + " on top level");
         if (parent.type != ResourceType.vpc) {
@@ -28,8 +28,7 @@ public class IpHandle {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ip.fullname);
         }
 
-        VpcHandle.checkVpc(parent.parentResource);
-        VpcHandle.checkVpcName(parent);
+        VpcHandle.checkVpc(parent);
     }
 
     public static Collection<IP> names(Resource parent) throws Exception {

@@ -16,7 +16,7 @@ public class UserHandle {
     private UserHandle() {
     }
 
-    public static void checkUser(Resource parent) throws Exception {
+    public static void checkUserParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.user.fullname + " on top level");
         if (parent.type != ResourceType.sw)

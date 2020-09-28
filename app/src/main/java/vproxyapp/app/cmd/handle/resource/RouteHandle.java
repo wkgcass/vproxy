@@ -18,7 +18,7 @@ public class RouteHandle {
     private RouteHandle() {
     }
 
-    public static void checkRoute(Resource parent) throws Exception {
+    public static void checkRouteParent(Resource parent) throws Exception {
         if (parent == null)
             throw new Exception("cannot find " + ResourceType.route.fullname + " on top level");
         if (parent.type != ResourceType.vpc) {
@@ -28,8 +28,7 @@ public class RouteHandle {
             throw new Exception(parent.type.fullname + " does not contain " + ResourceType.route.fullname);
         }
 
-        VpcHandle.checkVpc(parent.parentResource);
-        VpcHandle.checkVpcName(parent);
+        VpcHandle.checkVpc(parent);
     }
 
     public static List<String> names(Resource parent) throws Exception {
