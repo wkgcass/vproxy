@@ -71,7 +71,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             fdHandler.watchInsideFDWritable();
         });
         // the fd is always writable when just constructed because writing queue is empty
-        this.fdHandler.setSelfFDWritable();
+        setSelfFDWritable();
 
         // mirrors
         this.readingMirrorDataFactory = new MirrorDataFactory("arq-udp",
@@ -193,7 +193,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
 
         checkException();
         if (readBufs.isEmpty() && !fdHandler.isInvalid()) {
-            selector.removeVirtualReadable(this);
+            cancelSelfFDReadable();
         }
         return ret;
     }
@@ -220,7 +220,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
         checkException();
         int writableLen = handler.writableLen();
         if (writableLen <= 0 || writableLen < n) {
-            fdHandler.cancelSelfFDWritable();
+            cancelSelfFDWritable();
             if (writableLen <= 0) {
                 return 0;
             }
@@ -285,6 +285,14 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
                 fdHandler.setError(e);
             }
         });
+
+        // register self fd events
+        if (selfFDReadable) {
+            setSelfFDReadable();
+        }
+        if (selfFDWritable) {
+            setSelfFDWritable();
+        }
     }
 
     @Override
@@ -294,6 +302,29 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             periodicEvent.cancel();
         }
         loop.remove(fd);
+    }
+
+    private boolean selfFDReadable = false;
+    private boolean selfFDWritable = false;
+
+    private void setSelfFDReadable() {
+        selfFDReadable = true;
+        selector.registerVirtualReadable(this);
+    }
+
+    private void setSelfFDWritable() {
+        selfFDWritable = true;
+        selector.registerVirtualWritable(this);
+    }
+
+    private void cancelSelfFDReadable() {
+        selfFDReadable = false;
+        selector.removeVirtualReadable(this);
+    }
+
+    private void cancelSelfFDWritable() {
+        selfFDWritable = false;
+        selector.removeVirtualWritable(this);
     }
 
     private class ArqUDPInsideFDHandler implements Handler<SocketFD> {
@@ -332,18 +363,6 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             } catch (CancelledKeyException ignore) {
                 // if it's cancelled, it's removed, so ignore the exception
             }
-        }
-
-        private void setSelfFDReadable() {
-            selector.registerVirtualReadable(ArqUDPSocketFD.this);
-        }
-
-        private void setSelfFDWritable() {
-            selector.registerVirtualWritable(ArqUDPSocketFD.this);
-        }
-
-        private void cancelSelfFDWritable() {
-            selector.removeVirtualWritable(ArqUDPSocketFD.this);
         }
 
         @Override
