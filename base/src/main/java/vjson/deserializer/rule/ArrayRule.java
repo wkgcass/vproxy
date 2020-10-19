@@ -10,14 +10,39 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package vjson.ex;
+package vjson.deserializer.rule;
 
-public class JsonParseException extends RuntimeException {
-    public JsonParseException(String msg) {
-        super(msg);
+import java.util.HashSet;
+import java.util.Set;
+import java.util.function.BiConsumer;
+import java.util.function.Supplier;
+
+public class ArrayRule<L, E> extends Rule<L> {
+    public final Supplier<L> construct;
+    public final BiConsumer<L, E> add;
+    public final Rule elementRule;
+
+    public ArrayRule(Supplier<L> construct, BiConsumer<L, E> add, Rule<E> elementRule) {
+        this.elementRule = elementRule;
+        this.add = add;
+        this.construct = construct;
     }
 
-    public JsonParseException(String msg, Throwable cause) {
-        super(msg, cause);
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        toString(sb, new HashSet<>());
+        return sb.toString();
+    }
+
+    @Override
+    void toString(StringBuilder sb, Set<Rule> processedListsOrObjects) {
+        if (!processedListsOrObjects.add(this)) {
+            sb.append("Array[...recursive...]");
+            return;
+        }
+        sb.append("Array[");
+        elementRule.toString(sb, processedListsOrObjects);
+        sb.append("]");
     }
 }

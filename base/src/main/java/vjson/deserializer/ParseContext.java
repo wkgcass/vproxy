@@ -10,14 +10,18 @@
  * THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
  */
 
-package vjson.ex;
+package vjson.deserializer;
 
-public class JsonParseException extends RuntimeException {
-    public JsonParseException(String msg) {
-        super(msg);
-    }
+import vjson.deserializer.rule.Rule;
 
-    public JsonParseException(String msg, Throwable cause) {
-        super(msg, cause);
+final class ParseContext {
+    final Rule rule;
+    final boolean isObject; // true for object, false for array
+    final Object object;
+
+    ParseContext(Rule rule, boolean isObject, Object object) {
+        this.rule = rule;
+        this.isObject = isObject;
+        this.object = object;
     }
 }

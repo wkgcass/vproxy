@@ -12,6 +12,10 @@
 
 package vjson;
 
+import vjson.deserializer.DeserializeParserListener;
+import vjson.deserializer.rule.Rule;
+import vjson.parser.ParserMode;
+import vjson.parser.ParserOptions;
 import vjson.parser.ParserUtils;
 
 import java.io.Serializable;
@@ -21,19 +25,31 @@ import java.util.List;
 import java.util.NoSuchElementException;
 
 public class JSON {
-    public static Instance parse(java.lang.String json) throws NullPointerException {
+    public static Instance parse(java.lang.String json) throws RuntimeException {
         return parse(CharStream.from(json));
     }
 
-    public static Instance parse(CharStream cs) throws NullPointerException {
+    public static Instance parse(CharStream cs) throws RuntimeException {
         return ParserUtils.buildFrom(cs);
     }
 
-    public static java.lang.Object parseToJavaObject(java.lang.String json) throws NullPointerException {
+    public static <T> T deserialize(java.lang.String json, Rule<T> rule) throws RuntimeException {
+        return deserialize(CharStream.from(json), rule);
+    }
+
+    public static <T> T deserialize(CharStream cs, Rule<T> rule) throws RuntimeException {
+        DeserializeParserListener<T> listener = new DeserializeParserListener<>(rule);
+        ParserUtils.buildFrom(cs, new ParserOptions().setListener(listener)
+            .setMode(ParserMode.JAVA_OBJECT)
+            .setNullArraysAndObjects(true));
+        return listener.get();
+    }
+
+    public static java.lang.Object parseToJavaObject(java.lang.String json) throws RuntimeException {
         return parseToJavaObject(CharStream.from(json));
     }
 
-    public static java.lang.Object parseToJavaObject(CharStream cs) throws NullPointerException {
+    public static java.lang.Object parseToJavaObject(CharStream cs) throws RuntimeException {
         return ParserUtils.buildJavaObject(cs);
     }
 

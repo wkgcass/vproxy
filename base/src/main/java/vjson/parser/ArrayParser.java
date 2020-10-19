@@ -46,7 +46,11 @@ public class ArrayParser extends CompositeParser implements Parser<JSON.Array> {
     public void reset() {
         state = 0;
         if (opts.getMode() == ParserMode.JAVA_OBJECT) {
-            javaList = new LinkedList<>();
+            if (opts.isNullArraysAndObjects()) {
+                javaList = null;
+            } else {
+                javaList = new LinkedList<>();
+            }
         } else {
             list = new LinkedList<>();
         }
@@ -74,7 +78,9 @@ public class ArrayParser extends CompositeParser implements Parser<JSON.Array> {
                 Object o = subParser.buildJavaObject(cs, isComplete);
                 if (subParser.completed()) {
                     state = 2;
-                    javaList.add(o);
+                    if (!opts.isNullArraysAndObjects()) {
+                        javaList.add(o);
+                    }
                     subParser = null; // clear the parser
                     opts.getListener().onArrayValueJavaObject(this, o);
                 }
@@ -90,7 +96,7 @@ public class ArrayParser extends CompositeParser implements Parser<JSON.Array> {
                 // otherwise exception would be thrown or cs.hasNext() would return false
             }
         } catch (JsonParseException e) {
-            throw new JsonParseException("invalid json array: failed when parsing element: (" + e.getMessage() + ")");
+            throw new JsonParseException("invalid json array: failed when parsing element: (" + e.getMessage() + ")", e);
         }
     }
 

@@ -39,7 +39,7 @@ public class ParserOptions {
     // features
     private boolean stringSingleQuotes;
     private boolean keyNoQuotes;
-    private boolean strict;
+    private boolean nullArraysAndObjects;
 
     public ParserOptions() {
         this.bufLen = 256;
@@ -50,6 +50,7 @@ public class ParserOptions {
         // features
         stringSingleQuotes = false;
         keyNoQuotes = false;
+        nullArraysAndObjects = false;
     }
 
     public ParserOptions(ParserOptions opts) {
@@ -61,6 +62,7 @@ public class ParserOptions {
         // features
         this.stringSingleQuotes = opts.stringSingleQuotes;
         this.keyNoQuotes = opts.keyNoQuotes;
+        this.nullArraysAndObjects = opts.nullArraysAndObjects;
     }
 
     public int getBufLen() {
@@ -121,6 +123,15 @@ public class ParserOptions {
 
     public ParserOptions setKeyNoQuotes(boolean keyNoQuotes) {
         this.keyNoQuotes = keyNoQuotes;
+        return this;
+    }
+
+    public boolean isNullArraysAndObjects() {
+        return nullArraysAndObjects;
+    }
+
+    public ParserOptions setNullArraysAndObjects(boolean nullArraysAndObjects) {
+        this.nullArraysAndObjects = nullArraysAndObjects;
         return this;
     }
 }

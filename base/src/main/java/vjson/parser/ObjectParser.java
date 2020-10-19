@@ -63,10 +63,14 @@ public class ObjectParser extends CompositeParser implements Parser<JSON.Object>
     public void reset() {
         state = 0;
         if (opts.getMode() == ParserMode.JAVA_OBJECT) {
-            if (javaMap == null) {
-                javaMap = new LinkedHashMap<>(16);
+            if (opts.isNullArraysAndObjects()) {
+                javaMap = null;
             } else {
-                javaMap = new LinkedHashMap<>(Math.max(16, javaMap.size()));
+                if (javaMap == null) {
+                    javaMap = new LinkedHashMap<>(16);
+                } else {
+                    javaMap = new LinkedHashMap<>(Math.max(16, javaMap.size()));
+                }
             }
         } else {
             map = new LinkedList<>();
@@ -138,7 +142,9 @@ public class ObjectParser extends CompositeParser implements Parser<JSON.Object>
                     String key = this.currentKey;
                     valueParser = null;
                     this.currentKey = null;
-                    javaMap.put(key, o);
+                    if (!opts.isNullArraysAndObjects()) {
+                        javaMap.put(key, o);
+                    }
                     opts.getListener().onObjectValueJavaObject(this, key, o);
                 }
                 // otherwise exception would be thrown or cs.hasNext() would return false
@@ -155,7 +161,7 @@ public class ObjectParser extends CompositeParser implements Parser<JSON.Object>
                 // otherwise exception would be thrown or cs.hasNext() would return false
             }
         } catch (JsonParseException e) {
-            throw new JsonParseException("invalid json object: failed when parsing value: (" + e.getMessage() + ")");
+            throw new JsonParseException("invalid json object: failed when parsing value: (" + e.getMessage() + ")", e);
         }
     }
 

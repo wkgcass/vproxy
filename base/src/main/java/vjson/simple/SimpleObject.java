@@ -24,11 +24,11 @@ public class SimpleObject extends AbstractSimpleInstance<LinkedHashMap<String, O
     private Map<String, JSON.Instance> fastSingleMap;
     private Map<String, List<JSON.Instance>> fastMultiMap;
 
-    public SimpleObject(Map<String, JSON.Instance> initMap) throws NullPointerException, IllegalArgumentException {
+    public SimpleObject(Map<String, ? extends JSON.Instance> initMap) throws NullPointerException, IllegalArgumentException {
         if (initMap == null) {
             throw new NullPointerException();
         }
-        for (Map.Entry<String, JSON.Instance> entry : initMap.entrySet()) {
+        for (Map.Entry<String, ? extends JSON.Instance> entry : initMap.entrySet()) {
             if (entry.getKey() == null) {
                 throw new IllegalArgumentException("key should not be null");
             }
@@ -37,7 +37,7 @@ public class SimpleObject extends AbstractSimpleInstance<LinkedHashMap<String, O
             }
         }
         this.map = new ArrayList<>(initMap.size());
-        for (Map.Entry<String, JSON.Instance> entry : initMap.entrySet()) {
+        for (Map.Entry<String, ? extends JSON.Instance> entry : initMap.entrySet()) {
             this.map.add(new SimpleObjectEntry<>(entry.getKey(), entry.getValue()));
         }
     }
