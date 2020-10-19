@@ -3,26 +3,28 @@ package vserver.util;
 import vjson.CharStream;
 import vproxybase.util.ByteArray;
 
+import java.nio.charset.Charset;
+
 public class ByteArrayCharStream implements CharStream {
-    private final ByteArray array;
+    private final char[] chars;
     private int idx = -1;
 
-    public ByteArrayCharStream(ByteArray array) {
-        this.array = array;
+    public ByteArrayCharStream(ByteArray data, Charset charset) {
+        this.chars = new String(data.toJavaArray(), charset).toCharArray();
     }
 
     @Override
     public boolean hasNext(int i) {
-        return idx + i < array.length();
+        return idx + i < chars.length;
     }
 
     @Override
     public char moveNextAndGet() {
-        return (char) array.get(++idx);
+        return chars[++idx];
     }
 
     @Override
     public char peekNext(int i) {
-        return (char) array.get(idx + i);
+        return chars[idx + i];
     }
 }
