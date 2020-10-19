@@ -54,7 +54,7 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
         }
         StreamedFD fd = acceptQueue.poll();
         if (fd == null) {
-            selector.removeVirtualReadable(this);
+            cancelSelfFDReadable();
         }
         return fd;
     }
@@ -68,8 +68,10 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
 
     @Override
     public void onRegister() {
-        // ignore
         assert Logger.lowLevelDebug("calling onRegister() on " + this);
+        if (selfFDReadable) {
+            setSelfFDReadable();
+        }
     }
 
     @Override
@@ -108,7 +110,19 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     void accepted(StreamedFD fd) {
         assert Logger.lowLevelDebug("accepted(" + fd + ") called on " + this);
         acceptQueue.add(fd);
+        setSelfFDReadable();
+    }
+
+    private boolean selfFDReadable = false;
+
+    private void setSelfFDReadable() {
+        selfFDReadable = true;
         selector.registerVirtualReadable(this);
+    }
+
+    private void cancelSelfFDReadable() {
+        selfFDReadable = false;
+        selector.removeVirtualReadable(this);
     }
 
     @Override

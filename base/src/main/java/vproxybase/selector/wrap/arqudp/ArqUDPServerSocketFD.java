@@ -38,7 +38,7 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
     public ArqUDPSocketFD accept() throws IOException {
         ServerDatagramFD.VirtualDatagramFD accepted = fd.accept();
         if (accepted == null) {
-            selector.removeVirtualReadable(this);
+            cancelSelfFDReadable();
             return null;
         }
         return new ArqUDPSocketFD(true, accepted, loop, handlerConstructorProvider.apply(accepted));
@@ -49,13 +49,28 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
         fd.bind(l4addr);
     }
 
+    private boolean selfFDReadable = false;
+
+    private void setSelfFDReadable() {
+        selfFDReadable = true;
+        selector.registerVirtualReadable(this);
+    }
+
+    private void cancelSelfFDReadable() {
+        selfFDReadable = false;
+        selector.removeVirtualReadable(this);
+    }
+
     @Override
     public void onRegister() {
+        if (selfFDReadable) {
+            setSelfFDReadable();
+        }
         try {
             loop.add(fd, EventSet.read(), null, new Handler<>() {
                 @Override
                 public void accept(HandlerContext<ServerDatagramFD> ctx) {
-                    selector.registerVirtualReadable(ArqUDPServerSocketFD.this);
+                    setSelfFDReadable();
                 }
 
                 @Override

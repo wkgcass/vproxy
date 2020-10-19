@@ -297,6 +297,7 @@ public class WrappedSelector implements FDSelector {
     }
 
     public void removeVirtualReadable(VirtualFD vfd) {
+        assert Logger.lowLevelDebug("remove virtual readable: " + vfd);
         readableFired.remove(vfd);
     }
 
