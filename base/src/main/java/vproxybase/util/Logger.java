@@ -70,11 +70,10 @@ public class Logger {
     }
 
     private static StackTraceElement getFirstElementOutOfLoggerLib() {
-        final String loggerClass = Logger.class.getName();
         var arr = Thread.currentThread().getStackTrace();
         boolean intoLoggerLib = false;
         for (StackTraceElement e : arr) {
-            if (e.getClassName().equals(loggerClass)) {
+            if (e.getClassName().matches("\\.Logger\\b")) {
                 intoLoggerLib = true;
             } else {
                 if (intoLoggerLib) {
