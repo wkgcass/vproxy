@@ -116,4 +116,24 @@ public class CryptoUtils {
         return bytes;
     }
 
+    public static long md5ToPositiveLong(byte[] bytes) {
+        MessageDigest md;
+        try {
+            md = MessageDigest.getInstance("MD5");
+        } catch (NoSuchAlgorithmException e) {
+            throw new RuntimeException(e);
+        }
+        byte[] mdResult = md.digest(bytes);
+        assert mdResult.length == 16;
+        byte[] longArr = new byte[8];
+        for (int i = 0; i < 8; ++i) {
+            longArr[i] = (byte) (mdResult[i] ^ mdResult[8 + i]);
+        }
+        long ret = 0;
+        for (int i = 0; i < 8; ++i) {
+            ret <<= 8;
+            ret |= (longArr[i] & 0xff);
+        }
+        return Math.abs(ret);
+    }
 }

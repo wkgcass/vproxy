@@ -7,6 +7,7 @@ import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
+import vproxybase.util.crypto.CryptoUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -15,7 +16,7 @@ public class DomainBinder {
     private final SelectorEventLoop loop;
     private final byte[] network;
     private final int ipLimit;
-    private int incr = 0;
+    private int incr = 1; // begin at 1 to skip the network address
     private final Lock lock = Lock.create();
     private final Map<IP, EntryWithTimeout> ipMap = new HashMap<>(1024);
     private final Map<String, EntryWithTimeout> domainMap = new HashMap<>(1024);
@@ -24,7 +25,8 @@ public class DomainBinder {
         this.loop = loop;
         this.network = IP.parseIpString(net.substring(0, net.indexOf("/")));
         int maskInt = Integer.parseInt(net.substring(net.indexOf("/") + 1));
-        ipLimit = (int) Math.pow(2, (network.length > 4 ? 128 : 32) - maskInt);
+        double ipLimitDouble = Math.pow(2, (network.length > 4 ? 128 : 32) - maskInt) - 2; // -2 to remove network and broadcast address
+        ipLimit = (ipLimitDouble > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) ipLimitDouble;
     }
 
     public IP assignForDomain(String domain, int timeout) {
@@ -46,11 +48,13 @@ public class DomainBinder {
 
     private IP assignNext(String domain) {
         // first use hash to try to keep the old ip
-        int hash = domain.hashCode();
+
+        long hash = CryptoUtils.md5ToPositiveLong(domain.getBytes());
+        Logger.alert("hash of domain " + domain + " is " + hash);
         if (hash < 0) {
             hash = -hash;
         }
-        int off = hash % ipLimit;
+        int off = (int) (hash % ipLimit) + 1; // +1 to skip the network address
         IP i = buildIPFromIncr(off);
         if (!ipMap.containsKey(i)) {
             return i;
@@ -62,20 +66,20 @@ public class DomainBinder {
             return i;
         }
         // not found, search again from the beginning
-        incr = 0;
+        incr = 1;
         i = assignNext0();
         if (i != null) {
             return i;
         }
         // still not found, reset the cursor and return null
-        incr = 0;
+        incr = 1;
         return null;
     }
 
     private IP assignNext0() {
         while (true) {
             ++incr;
-            if (incr >= ipLimit) {
+            if (incr > ipLimit) {
                 return null;
             }
             IP inet = buildIPFromIncr(incr);
@@ -85,6 +89,7 @@ public class DomainBinder {
             return inet;
         }
     }
+
     private IP buildIPFromIncr(int incr) {
         byte[] l3addr = new byte[network.length];
         System.arraycopy(network, 0, l3addr, 0, network.length);
