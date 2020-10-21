@@ -93,7 +93,7 @@ listen 443 auth alice:pasSw0rD,bob:PaSsw0Rd ssl \
 
 (可选) 配置文件的完整路径
 
-如果没有指定，那么应用将使用`~/vpws-agent.conf`作为配置文件。
+如果没有指定，那么应用将使用`~/.vproxy/vpws-agent.conf`作为配置文件。
 
 配置文件接口可以看[这里](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf)。
 

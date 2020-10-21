@@ -95,7 +95,7 @@ See [The Websocks Protocol](https://github.com/wkgcass/vproxy/blob/master/doc/we
 
 (optional) full path of the configuration file
 
-If not specified, the app will use `~/vpws-agent.conf` instead.
+If not specified, the app will use `~/.vproxy/vpws-agent.conf` instead.
 
 The config file structure can be found [here](https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf).
 

@@ -149,6 +149,6 @@ Save config:
 System call: save ~/vproxy.conf
 ```
 
-Except for saving by hand, the config can be automatically saved in `~/.vproxy.last` for every hour. And if it's terminated by `SIGINT` or `SIGHUP`, or manually shutdown, the config will also be saved.
+Except for saving by hand, the config can be automatically saved in `~/.vproxy/vproxy.last` for every hour. And if it's terminated by `SIGINT` or `SIGHUP`, or manually shutdown, the config will also be saved.
 
 And last saved config will be loaded if the start up arguments not containing any `load` command.

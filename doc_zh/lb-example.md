@@ -145,6 +145,6 @@ System call: list config
 System call: save ~/vproxy.conf
 ```
 
-除了手动保存外，vproxy每小时都会自动向`~/.vproxy.last`中保存配置。此外，如果程序通过`SIGINT`,`SIGHUP`停止或者手动关闭，配置文件都会自动保存。
+除了手动保存外，vproxy每小时都会自动向`~/.vproxy/vproxy.last`中保存配置。此外，如果程序通过`SIGINT`,`SIGHUP`停止或者手动关闭，配置文件都会自动保存。
 
 如果在启动参数中没有出现`load`命令，那么该进程将读取最后一次保存的配置。

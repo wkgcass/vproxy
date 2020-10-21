@@ -71,7 +71,7 @@ There are 3 ways of using a config file:
 
 #### 3.1. last auto saved config
 
-The vproxy instance saves current config to `~/.vproxy.last` for every hour.  
+The vproxy instance saves current config to `~/.vproxy/vproxy.last` for every hour.  
 The config will also be saved when the process got `sigint`, `sighup` or manually shutdown via controller.
 
 The vproxy will automatically load the last saved file on startup.
