@@ -134,7 +134,7 @@ public class CoreUtils {
         return key.toString();
     }
 
-    public static CertKey readFile(String alias, String[] certFilePathList, String keyFilePath) throws Exception {
+    public static CertKey readCertKeyFromFile(String alias, String[] certFilePathList, String keyFilePath) throws Exception {
         List<String> certs = new ArrayList<>();
         for (String certFilePath : certFilePathList) {
             certs.addAll(getCertsFrom(certFilePath));

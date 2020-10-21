@@ -232,7 +232,7 @@ public class WebSocksUtils {
             throw new Exception("ssl context already initiated");
         }
 
-        CertKey ck = CoreUtils.readFile("websocks-proxy-server-cert-key", certpem, keypem);
+        CertKey ck = CoreUtils.readCertKeyFromFile("websocks-proxy-server-cert-key", certpem, keypem);
 
         KeyStore ks = KeyStore.getInstance("JKS");
         ks.load(null);

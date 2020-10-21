@@ -22,7 +22,7 @@ public class CertKeyHolder {
         if (map.containsKey(alias)) {
             throw new AlreadyExistException("cert-key", alias);
         }
-        CertKey ck = CoreUtils.readFile(alias, certFilePathList, keyFilePath);
+        CertKey ck = CoreUtils.readCertKeyFromFile(alias, certFilePathList, keyFilePath);
         map.put(alias, ck);
     }
 

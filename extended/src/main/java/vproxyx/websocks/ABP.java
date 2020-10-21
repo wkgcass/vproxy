@@ -23,11 +23,17 @@ public class ABP {
         }
         add('.');
     }};
+    private final String abpSource;
     private final boolean defaultBlock;
     private final List<Function<String, Boolean>> checkers = new LinkedList<>();
 
-    public ABP(boolean defaultBlock) {
+    public ABP(String abpSource, boolean defaultBlock) {
+        this.abpSource = abpSource;
         this.defaultBlock = defaultBlock;
+    }
+
+    public String getAbpSource() {
+        return abpSource;
     }
 
     public boolean block(String input) {

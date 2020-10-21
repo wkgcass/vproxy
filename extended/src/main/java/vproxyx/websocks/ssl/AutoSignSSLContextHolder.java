@@ -154,7 +154,7 @@ public class AutoSignSSLContextHolder extends SSLContextHolder {
         File key = Path.of(workingDirectory.getAbsolutePath(), sni + ".key").toFile();
         CertKey ck;
         try {
-            ck = CoreUtils.readFile("agent.auto-sign." + sni, new String[]{crt.getAbsolutePath()}, key.getAbsolutePath());
+            ck = CoreUtils.readCertKeyFromFile("agent.auto-sign." + sni, new String[]{crt.getAbsolutePath()}, key.getAbsolutePath());
         } catch (Exception e) {
             Logger.error(LogType.FILE_ERROR, "reading crt and key failed: crt=" + crt + ", key=" + key, e);
             return null;
