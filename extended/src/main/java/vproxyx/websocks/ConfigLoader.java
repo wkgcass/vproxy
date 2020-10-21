@@ -177,6 +177,10 @@ public class ConfigLoader {
         return poolSize;
     }
 
+    public boolean isNoHealthCheck() {
+        return noHealthCheck;
+    }
+
     private ServerList getGroup(String alias) {
         if (alias == null) {
             alias = "DEFAULT";
