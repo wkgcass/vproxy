@@ -190,7 +190,7 @@ public class Shutdown {
     }
 
     public static String defaultFilePath() {
-        return Utils.homefile(".vproxy.last");
+        return Config.workingDirectoryFile("vproxy.last");
     }
 
     private static void backupAndRemove(String filepath) throws Exception {
@@ -207,7 +207,7 @@ public class Shutdown {
 
     public static void writePid(String filepath) throws Exception {
         if (filepath == null) {
-            filepath = Utils.homefile(".vproxy.pid");
+            filepath = Config.workingDirectoryFile("vproxy.pid");
         }
         filepath = Utils.filename(filepath);
 

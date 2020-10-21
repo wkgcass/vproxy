@@ -2,6 +2,7 @@ package vproxyapp.vproxyx;
 
 import vproxyapp.app.util.SignalHook;
 import vproxyapp.process.Shutdown;
+import vproxybase.Config;
 import vproxybase.connection.ServerSock;
 import vproxybase.util.*;
 
@@ -60,7 +61,7 @@ public class Daemon {
         // write pid
         String pidFilePath = System.getenv("PIDFILE");
         if (pidFilePath == null) {
-            pidFilePath = "~" + File.separator + ".vproxy.daemon.pid";
+            pidFilePath = Config.workingDirectoryFile("vproxy.daemon.pid");
         }
         Shutdown.writePid(pidFilePath);
 

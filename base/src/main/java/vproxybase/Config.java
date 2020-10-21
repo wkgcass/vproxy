@@ -4,6 +4,7 @@ import vproxybase.util.Logger;
 import vproxybase.util.OS;
 import vproxybase.util.Utils;
 
+import java.io.File;
 import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -59,10 +60,34 @@ public class Config {
     private static String workingDirectory = null;
 
     public static String getWorkingDirectory() {
+        String workingDirectory = Config.workingDirectory;
         if (workingDirectory == null) {
-            return Utils.homefile(".vproxy");
+            workingDirectory = Utils.homefile(".vproxy");
+        } else {
+            return workingDirectory;
+        }
+        synchronized (Config.class) {
+            if (Config.workingDirectory != null) {
+                return Config.workingDirectory;
+            }
+            File file = new File(workingDirectory);
+            File dir = file.getParentFile();
+            if (dir.exists()) {
+                if (!dir.isDirectory()) {
+                    throw new RuntimeException(dir + " exists but is not a directory");
+                }
+            } else {
+                if (!dir.mkdirs()) {
+                    throw new RuntimeException("creating vproxy dir " + dir + " failed");
+                }
+            }
+            Config.workingDirectory = workingDirectory;
         }
         return workingDirectory;
+    }
+
+    public static String workingDirectoryFile(String name) {
+        return getWorkingDirectory() + File.separator + name;
     }
 
     // -Deploy=xxx

@@ -7,6 +7,7 @@ import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.socks.Socks5ProxyProtocolHandler;
+import vproxybase.Config;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.connection.Connection;
 import vproxybase.connection.Connector;
@@ -39,7 +40,7 @@ public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vpws-agent.conf";
 
     public static void main0(String[] args) throws Exception {
-        String configFile = Utils.homefile(defaultConfigName);
+        String configFile = Config.workingDirectoryFile(defaultConfigName);
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
             System.out.println("If not specified, the config will be read from " + configFile);

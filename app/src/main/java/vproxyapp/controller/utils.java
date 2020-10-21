@@ -606,18 +606,6 @@ class utils {
 
     static void ensurePemDirectory() throws XException {
         String workDirPath = Config.getWorkingDirectory();
-        File workDir = new File(workDirPath);
-        if (workDir.exists()) {
-            if (!workDir.isDirectory()) {
-                Logger.error(LogType.IMPROPER_USE, "working directory " + workDirPath + " is not a directory");
-                throw new XException("vproxy working directory is not a directory");
-            }
-        } else {
-            if (!workDir.mkdirs()) {
-                Logger.error(LogType.IMPROPER_USE, "working directory " + workDirPath + " creation failed");
-                throw new XException("failed when creating the vproxy working directory");
-            }
-        }
         String pemDirPath = workDirPath + File.separator + "temp-pem";
         File pemDir = new File(pemDirPath);
         if (pemDir.exists()) {

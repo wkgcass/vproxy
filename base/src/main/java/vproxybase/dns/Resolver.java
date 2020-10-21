@@ -4,6 +4,7 @@ import vfd.IP;
 import vfd.IPPort;
 import vfd.IPv4;
 import vfd.IPv6;
+import vproxybase.Config;
 import vproxybase.util.*;
 
 import java.io.*;
@@ -81,7 +82,7 @@ public interface Resolver {
 
     private static File getNameServerFile() {
         // try ~/resolv.conf for customized resolve configuration
-        File f = new File(Utils.homefile("resolv.conf"));
+        File f = new File(Config.workingDirectoryFile("resolv.conf"));
         if (f.exists() && f.isFile()) {
             return f;
         }
@@ -152,7 +153,7 @@ public interface Resolver {
 
     static Map<String, IP> getHosts() {
         // try ~/hosts for customized host config
-        File f = new File(Utils.homefile("hosts"));
+        File f = new File(Config.workingDirectoryFile("hosts"));
         if (!f.exists() || !f.isFile()) { // try linux|bsd host file
             f = new File("/etc/hosts");
         }
