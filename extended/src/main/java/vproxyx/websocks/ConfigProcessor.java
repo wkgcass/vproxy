@@ -21,15 +21,14 @@ import java.nio.file.Path;
 import java.util.*;
 
 public class ConfigProcessor {
-    public final String fileName;
+    public final ConfigLoader configLoader;
     public final EventLoopGroup hcLoopGroup;
     public final EventLoopGroup workerLoopGroup;
-    private final ConfigLoader configLoader = new ConfigLoader();
     private final Map<String, ServerGroup> servers = new HashMap<>();
     private final List<CertKey> httpsSniErasureCertKeys = new ArrayList<>();
 
-    public ConfigProcessor(String fileName, EventLoopGroup hcLoopGroup, EventLoopGroup workerLoopGroup) {
-        this.fileName = fileName;
+    public ConfigProcessor(ConfigLoader configLoader, EventLoopGroup hcLoopGroup, EventLoopGroup workerLoopGroup) {
+        this.configLoader = configLoader;
         this.hcLoopGroup = hcLoopGroup;
         this.workerLoopGroup = workerLoopGroup;
     }
@@ -52,10 +51,6 @@ public class ConfigProcessor {
 
     public int getDnsListenPort() {
         return configLoader.getDnsListenPort();
-    }
-
-    public int getAdminListenPort() {
-        return configLoader.getAdminListenPort();
     }
 
     public boolean isGateway() {
@@ -160,7 +155,6 @@ public class ConfigProcessor {
     }
 
     public void parse() throws Exception {
-        configLoader.load(fileName);
         List<String> errList = configLoader.validate();
         if (!errList.isEmpty()) {
             StringBuilder sb = new StringBuilder();

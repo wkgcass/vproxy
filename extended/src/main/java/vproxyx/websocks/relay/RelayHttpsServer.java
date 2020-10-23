@@ -42,7 +42,7 @@ public class RelayHttpsServer {
         }
     }
 
-    public void launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
+    public ServerSock launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
         IPPort l4addr = new IPPort(IP.from("0.0.0.0"), 443);
         ServerSock.checkBind(l4addr);
 
@@ -61,6 +61,8 @@ public class RelayHttpsServer {
                 // when terminating, user should simply kill this process and won't close server
             });
         proxy.handle();
+
+        return server;
     }
 
     private class RelayHttpsConnectorGen implements ConnectorGen<RelayHttpsProtocolContext> {

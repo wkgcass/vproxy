@@ -40,7 +40,8 @@ public class DNSServer {
     public final Upstream rrsets;
     public final DNSClient client;
     private Map<String, IP> hosts;
-    private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+    private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+    private final ConcurrentHashSet<ResolvingInfoRecorder> resolvingInfoRecorders = new ConcurrentHashSet<>();
 
     private final Attach attach = new Attach();
     protected NetEventLoop loop = null;
@@ -81,6 +82,14 @@ public class DNSServer {
         public void onClose() {
             stop();
         }
+    }
+
+    public void addResolvingInfoRecorder(ResolvingInfoRecorder r) {
+        resolvingInfoRecorders.add(r);
+    }
+
+    public void removeResolvingInfoRecorder(ResolvingInfoRecorder r) {
+        resolvingInfoRecorders.remove(r);
     }
 
     private void handleRequest(DNSPacket p, IPPort remote) {
@@ -345,6 +354,10 @@ public class DNSServer {
         }
         if (len != sent) {
             Logger.error(LogType.CONN_ERROR, "sending dns response packet to " + remote + " failed, sent len = " + sent);
+            return;
+        }
+        for (var r : resolvingInfoRecorders) {
+            r.incSuccessfulResolvingCount();
         }
     }
 

@@ -6,6 +6,7 @@ import vfd.VFDConfig;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
+import vproxy.dns.DNSServer;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxybase.Config;
 import vproxybase.component.elgroup.EventLoopGroup;
@@ -18,7 +19,7 @@ import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
 import vproxybase.util.Logger;
-import vproxybase.util.Tuple3;
+import vproxybase.util.Tuple4;
 import vproxybase.util.Utils;
 import vproxyx.util.Browser;
 import vproxyx.websocks.*;
@@ -33,13 +34,27 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 @SuppressWarnings("unused")
 public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vpws-agent.conf";
 
-    public static void main0(String[] args) throws Exception {
+    public static ConfigLoader configLoader = null;
+
+    public static DNSServer dnsServer = null;
+    public static ServerSock socks5 = null;
+    public static ServerSock httpConnect = null;
+    public static ServerSock ss = null;
+    public static ServerSock relayHttps = null;
+    public static ServerSock relayAny = null;
+
+    private static void loadConfig(String[] args) throws Exception {
+        if (configLoader != null) {
+            return;
+        }
+
         String configFile = Config.workingDirectoryFile(defaultConfigName);
         if (args.length != 1 && args.length != 0) {
             System.out.println("You can only set config file path as the startup argument");
@@ -53,13 +68,11 @@ public class WebSocksProxyAgent {
             File file = new File(configFile);
             if (!file.exists()) {
                 System.out.println("Config file not found at " + configFile);
-                System.out.println("Please visit http://127.0.0.1:44380 to generate a config file");
+                System.out.println("Please visit https://vproxy-tools.github.io/vpwsui/index.html to generate a config file");
                 System.out.println("Or you may refer to the config file example https://github.com/wkgcass/vproxy/blob/master/doc/websocks-agent-example.conf");
 
-                var adminServer = new AdminServer();
-                adminServer.listen(44380);
-
-                Browser.open("http://127.0.0.1:44380/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
+                Browser.open("https://vproxy-tools.github.io/vpwsui/error-no-conf.html?configFile=" + URLEncoder.encode(configFile, StandardCharsets.UTF_8));
+                Utils.exit(1);
                 return;
             }
         } else {
@@ -68,6 +81,13 @@ public class WebSocksProxyAgent {
         configFile = Utils.filename(configFile);
         assert Logger.lowLevelDebug("config file path: " + configFile);
 
+        configLoader = new ConfigLoader();
+        configLoader.load(configFile);
+    }
+
+    @SuppressWarnings("rawtypes")
+    public static void main0(String[] args) throws Exception {
+        loadConfig(args);
         // get worker thread count
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
         if (VFDConfig.useFStack) {
@@ -88,7 +108,7 @@ public class WebSocksProxyAgent {
         }
 
         // parse config
-        ConfigProcessor configProcessor = new ConfigProcessor(configFile, worker, worker);
+        ConfigProcessor configProcessor = new ConfigProcessor(configLoader, worker, worker);
         configProcessor.parse();
 
         assert Logger.lowLevelDebug("socks5 listen on " + configProcessor.getSocks5ListenPort());
@@ -126,6 +146,7 @@ public class WebSocksProxyAgent {
             }
             var l4addr = new IPPort(IP.from("0.0.0.0"), port);
             WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", l4addr, worker, configProcessor, domainBinder);
+            dnsServer = WebSocksUtils.agentDNSServer;
             // may need to start dns server
             if (configProcessor.getDnsListenPort() != 0) {
                 assert Logger.lowLevelDebug("start dns server");
@@ -134,43 +155,37 @@ public class WebSocksProxyAgent {
             }
         }
 
-        // init admin server
-        {
-            int port = configProcessor.getAdminListenPort();
-            if (port != 0) {
-                var adminServer = new AdminServer();
-                adminServer.listen(port);
-            }
-        }
-
         // initiate pool (it's inside the connector provider)
         WebSocksProxyAgentConnectorProvider connectorProvider = new WebSocksProxyAgentConnectorProvider(configProcessor);
         // initiate the agent
-        // --------- port,   handler,         isGateway
-        List<Tuple3<Integer, ProtocolHandler, Boolean>> handlers = new LinkedList<>();
+        // --------- port,   handler,       isGateway, postConstruct()
+        List<Tuple4<Integer, ProtocolHandler, Boolean, Consumer<Proxy>>> handlers = new LinkedList<>();
         if (configProcessor.getSocks5ListenPort() != 0) {
-            handlers.add(new Tuple3<>(
+            handlers.add(new Tuple4<>(
                 configProcessor.getSocks5ListenPort(),
                 new Socks5ProxyProtocolHandler(connectorProvider),
-                configProcessor.isGateway()
+                configProcessor.isGateway(),
+                proxy -> socks5 = proxy.config.getServer()
             ));
         }
         if (configProcessor.getHttpConnectListenPort() != 0) {
-            handlers.add(new Tuple3<>(
+            handlers.add(new Tuple4<>(
                 configProcessor.getHttpConnectListenPort(),
                 new HttpConnectProtocolHandler(connectorProvider),
-                configProcessor.isGateway()
+                configProcessor.isGateway(),
+                proxy -> httpConnect = proxy.config.getServer()
             ));
         }
         if (configProcessor.getSsListenPort() != 0) {
-            handlers.add(new Tuple3<>(
+            handlers.add(new Tuple4<>(
                 configProcessor.getSsListenPort(),
                 new SSProtocolHandler(configProcessor.getSsPassword(), connectorProvider),
-                true
+                true,
+                proxy -> ss = proxy.config.getServer()
             ));
         }
 
-        for (Tuple3<Integer, ProtocolHandler, Boolean> tuple : handlers) {
+        for (Tuple4<Integer, ProtocolHandler, Boolean, Consumer<Proxy>> tuple : handlers) {
             int port = tuple._1;
             ProtocolHandler handler = tuple._2;
             ConnectorGen connGen = new ConnectorGen() {
@@ -214,6 +229,7 @@ public class WebSocksProxyAgent {
             // start the agent
             proxy.handle();
 
+            tuple._4.accept(proxy);
             Logger.alert("agent started on " + l3addr + ":" + port + " " + tuple._2.getClass().getSimpleName());
         }
 
@@ -240,12 +256,12 @@ public class WebSocksProxyAgent {
             assert Logger.lowLevelDebug("start relay server");
             RelayHttpServer.launch(worker);
             Logger.alert("http relay server started on 80");
-            new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
+            relayHttps = new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
             Logger.alert("https relay server started on 443");
             if (configProcessor.getDirectRelayIpRange() != null) {
                 IPPort listen = configProcessor.getDirectRelayListen();
                 String ipRange = configProcessor.getDirectRelayIpRange();
-                new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
+                relayAny = new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
                 Logger.alert("relay-bind-any-port-server started on " + listen.formatToIPPortString() + " which handles " + ipRange);
             }
         }
