@@ -2,6 +2,7 @@ package vproxy.test.cases;
 
 import org.junit.Test;
 import vfd.IPPort;
+import vpacket.conntrack.tcp.TcpState;
 import vproxybase.util.ByteArray;
 import vpacket.conntrack.tcp.Segment;
 import vpacket.conntrack.tcp.TcpEntry;
@@ -36,6 +37,7 @@ public class TestTCP {
             new IPPort("12.34.56.78", 1234),
             new IPPort("98.76.54.32", 5678),
             12345);
+        tcpEntry.setState(TcpState.ESTABLISHED);
         tcpEntry.sendingQueue.init(65535, 1360, 1);
 
         ByteArray bytes = randomPayload(16384);
@@ -75,7 +77,7 @@ public class TestTCP {
             new IPPort("12.34.56.78", 1234),
             new IPPort("98.76.54.32", 5678),
             12345);
-
+        tcpEntry.setState(TcpState.ESTABLISHED);
         tcpEntry.sendingQueue.init(128, 1360, 1);
 
         ByteArray bytes = randomPayload(32768);
@@ -109,6 +111,7 @@ public class TestTCP {
             new IPPort("12.34.56.78", 1234),
             new IPPort("98.76.54.32", 5678),
             seqInit);
+        tcpEntry.setState(TcpState.ESTABLISHED);
 
         ByteArray bytes1 = randomPayload(1280);
         Segment s1 = new Segment(seqInit + 1, bytes1);
