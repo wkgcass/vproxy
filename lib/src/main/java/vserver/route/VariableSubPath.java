@@ -1,19 +1,19 @@
 package vserver.route;
 
-import vserver.Route;
+import vserver.SubPath;
 import vserver.RoutingContext;
 
-public class VariableRoute implements Route {
-    private final Route next;
+public class VariableSubPath implements SubPath {
+    private final SubPath next;
     private final String variable;
 
-    public VariableRoute(Route next, String variable) {
+    public VariableSubPath(SubPath next, String variable) {
         this.next = next;
         this.variable = variable;
     }
 
     @Override
-    public Route next() {
+    public SubPath next() {
         return next;
     }
 
@@ -23,8 +23,8 @@ public class VariableRoute implements Route {
     }
 
     @Override
-    public boolean currentSame(Route r) {
-        return r instanceof VariableRoute && ((VariableRoute) r).variable.equals(variable);
+    public boolean currentSame(SubPath r) {
+        return r instanceof VariableSubPath && ((VariableSubPath) r).variable.equals(variable);
     }
 
     @Override

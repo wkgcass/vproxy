@@ -11,6 +11,10 @@ public abstract class Callback<T, E extends Throwable> {
         return called;
     }
 
+    public final void succeeded() {
+        succeeded(null);
+    }
+
     public final void succeeded(T value) {
         if (called) {
             Logger.error(LogType.IMPROPER_USE, "callback already called", new Exception("already called when getting result " + value));
@@ -27,5 +31,17 @@ public abstract class Callback<T, E extends Throwable> {
         }
         called = true;
         onFailed(err);
+    }
+
+    public final void finish(E err) {
+        finish(err, null);
+    }
+
+    public final void finish(E err, T value) {
+        if (err != null) {
+            failed(err);
+        } else {
+            succeeded(value);
+        }
     }
 }

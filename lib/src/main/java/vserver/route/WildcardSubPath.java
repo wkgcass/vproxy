@@ -1,17 +1,17 @@
 package vserver.route;
 
-import vserver.Route;
+import vserver.SubPath;
 import vserver.RoutingContext;
 
-public class WildcardRoute implements Route {
-    private final Route next;
+public class WildcardSubPath implements SubPath {
+    private final SubPath next;
 
-    public WildcardRoute(Route next) {
+    public WildcardSubPath(SubPath next) {
         this.next = next;
     }
 
     @Override
-    public Route next() {
+    public SubPath next() {
         return next;
     }
 
@@ -21,12 +21,11 @@ public class WildcardRoute implements Route {
     }
 
     @Override
-    public boolean currentSame(Route r) {
-        return r instanceof WildcardRoute;
+    public boolean currentSame(SubPath r) {
+        return r instanceof WildcardSubPath;
     }
 
     @Override
     public void fill(RoutingContext ctx, String route) {
-
     }
 }

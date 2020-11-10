@@ -1,19 +1,19 @@
 package vserver.route;
 
-import vserver.Route;
+import vserver.SubPath;
 import vserver.RoutingContext;
 
-public class FixedRoute implements Route {
-    private final Route next;
+public class FixedSubPath implements SubPath {
+    private final SubPath next;
     private final String route;
 
-    public FixedRoute(Route next, String route) {
+    public FixedSubPath(SubPath next, String route) {
         this.next = next;
         this.route = route;
     }
 
     @Override
-    public Route next() {
+    public SubPath next() {
         return next;
     }
 
@@ -23,8 +23,8 @@ public class FixedRoute implements Route {
     }
 
     @Override
-    public boolean currentSame(Route r) {
-        return r instanceof FixedRoute && ((FixedRoute) r).route.equals(route);
+    public boolean currentSame(SubPath r) {
+        return r instanceof FixedSubPath && ((FixedSubPath) r).route.equals(route);
     }
 
     @Override

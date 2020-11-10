@@ -21,6 +21,7 @@ import vproxy.test.cases.*;
     TestPacket.class,
     TestRouteTable.class,
     TestTCP.class,
+    TestHttpServer.class,
 
     AfterAll.class
 })

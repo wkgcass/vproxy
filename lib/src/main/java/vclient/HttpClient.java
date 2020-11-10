@@ -77,6 +77,10 @@ public interface HttpClient {
         return request(HttpMethod.POST, uri);
     }
 
+    default HttpRequest post(String uri) {
+        return pst(uri);
+    }
+
     default HttpRequest put(String uri) {
         return request(HttpMethod.PUT, uri);
     }

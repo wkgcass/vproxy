@@ -17,7 +17,7 @@ import vproxybase.protocol.ProtocolServerHandler;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vserver.*;
-import vserver.route.WildcardRoute;
+import vserver.route.WildcardSubPath;
 
 import java.io.IOException;
 import java.util.*;
@@ -28,7 +28,7 @@ import static vserver.HttpMethod.ALL_METHODS;
 public class Http1ServerImpl implements HttpServer {
     private boolean started = false;
     private boolean closed = false;
-    private final Map<HttpMethod, Tree<Route, RoutingHandler>> routes = new HashMap<>(HttpMethod.values().length) {{
+    private final Map<HttpMethod, Tree<SubPath, RoutingHandler>> routes = new HashMap<>(HttpMethod.values().length) {{
         for (HttpMethod m : HttpMethod.values()) {
             put(m, new Tree<>());
         }
@@ -46,30 +46,39 @@ public class Http1ServerImpl implements HttpServer {
         noInputLoop = loop == null;
     }
 
-    private void record(Tree<Route, RoutingHandler> tree, Route route, RoutingHandler handler) {
-        if (route == null) {
+    private void record(Tree<SubPath, RoutingHandler> tree, SubPath subpath, RoutingHandler handler) {
+        // null means this sub-path is '/' which is the end of this route
+        if (subpath == null) {
             tree.leaf(handler);
             return;
         }
+        // check the last branch
+        // note: here we only check the LAST branch because we need to preserve the handling order
+        // consider this situation:
+        // 1. handle(..., /a/b,  ...) registers /a/b
+        // 2. handle(..., /a/:x, ...) registers /a/:x
+        // 3. handle(..., /a/b,  ...) registers /a/b
+        // we must NOT add the 3rd path to the branch of the 1st path because if so we will get order 1st,3rd,2nd
+        // instead of the expected order 1st,2nd,3rd
         var last = tree.lastBranch();
-        if (last != null && last.data.currentSame(route)) {
+        if (last != null && last.data.currentSame(subpath)) {
             // can use the last node
-            record(last, route.next(), handler);
+            record(last, subpath.next(), handler);
             return;
         }
         // must be new route
-        var br = tree.branch(route);
-        record(br, route.next(), handler);
+        var br = tree.branch(subpath);
+        record(br, subpath.next(), handler);
     }
 
-    private void record(HttpMethod[] methods, Route route, RoutingHandler handler) {
+    private void record(HttpMethod[] methods, SubPath route, RoutingHandler handler) {
         for (HttpMethod m : methods) {
             record(routes.get(m), route, handler);
         }
     }
 
     @Override
-    public HttpServer handle(HttpMethod[] methods, Route route, RoutingHandler handler) {
+    public HttpServer handle(HttpMethod[] methods, SubPath route, RoutingHandler handler) {
         if (started) {
             throw new IllegalStateException("This http server is already started");
         }
@@ -82,7 +91,7 @@ public class Http1ServerImpl implements HttpServer {
             throw new IllegalStateException("This http server is already started");
         }
         started = true;
-        record(ALL_METHODS, Route.create("/*"), this::handle404);
+        record(ALL_METHODS, SubPath.create("/*"), this::handle404);
     }
 
     public void listen(ServerSock server) throws IOException {
@@ -287,7 +296,7 @@ public class Http1ServerImpl implements HttpServer {
             }
             { // response
                 response = new HttpResponse() {
-                    Response response = new Response();
+                    final Response response = new Response();
                     boolean isEnd = false;
                     boolean headersSent = false;
                     boolean allowChunked = false;
@@ -350,7 +359,7 @@ public class Http1ServerImpl implements HttpServer {
                     }
 
                     @Override
-                    public void end(JSON.Instance inst) {
+                    public void end(@SuppressWarnings("rawtypes") JSON.Instance inst) {
                         header("Content-Type", "application/json");
                         String ua = headers.get("user-agent");
                         if (ua != null && ua.startsWith("curl/")) {
@@ -440,48 +449,57 @@ public class Http1ServerImpl implements HttpServer {
 
     // return: list<tuple<list<preHandlers>, actualHandler>>
     // the preHandlers are constructed in this method, and actualHandlers are user defined
-    private List<Tuple<List<RoutingHandler>, RoutingHandler>> buildHandlerChain(Tree<Route, RoutingHandler> tree, List<String> paths) {
-        var ls = new LinkedList<Tuple<List<RoutingHandler>, RoutingHandler>>();
+    private List<Tuple<List<RoutingHandler>, RoutingHandler>> buildHandlerChain(Tree<SubPath, RoutingHandler> tree, List<String> paths) {
+        var ret = new LinkedList<Tuple<List<RoutingHandler>, RoutingHandler>>();
         var pre = Collections.<RoutingHandler>emptyList();
         if (paths.isEmpty()) {
             // special handling for paths.isEmpty condition
-            // which means the request path is `/`
+            // paths.isEmpty means the request path is `/`
+            // we need this special handling because
+            // the method buildHandlerChain(...) is iterated over paths list
+            // if the list is empty, the chain won't be built
+            // adding more modifications to method buildHandlerChain(...)
+            // will make things complex. we simply check paths.isEmpty here
+            // as the entry condition, things will be a lot easier.
+
             for (var h : tree.leafData()) {
                 // definitely no data to fill, so preHandlers can be empty
-                ls.add(new Tuple<>(Collections.emptyList(), h));
+                ret.add(new Tuple<>(Collections.emptyList(), h));
             }
             // also 404 should be added
-            ls.add(new Tuple<>(Collections.emptyList(), this::handle404));
+            ret.add(new Tuple<>(Collections.emptyList(), this::handle404));
         } else {
-            buildHandlerChain(ls, pre, tree, paths, 0);
+            buildHandlerChain(ret, pre, tree, paths, 0);
         }
-        assert !ls.isEmpty(); // 404 handler would had already been added
-        return ls;
+        assert !ret.isEmpty(); // 404 handler would had already been added
+        return ret;
     }
 
     private void buildHandlerChain(List<Tuple<List<RoutingHandler>, RoutingHandler>> ret,
                                    List<RoutingHandler> preHandlers,
-                                   Tree<Route, RoutingHandler> tree,
+                                   Tree<SubPath, RoutingHandler> tree,
                                    List<String> paths,
-                                   int pathIdx) {
+                                   final int pathIdx) {
         if (pathIdx >= paths.size()) {
-            return;
+            return; // iteration finishes
         }
         String path = paths.get(pathIdx);
         boolean isLast = pathIdx + 1 == paths.size();
         for (var br : tree.branches()) {
-            RoutingHandler preHandler = rctx -> br.data.fill(rctx, path);
-            if (br.data.match(path)) {
-                var newPathIdx = pathIdx + 1;
+            if (br.data.match(path)) { // may need to handle because sub-path matches
+                RoutingHandler preHandler = rctx -> br.data.fill(rctx, path);
                 var newPreHandlers = new AppendingList<>(preHandlers, preHandler);
 
-                if (isLast || br.data instanceof WildcardRoute) {
+                buildHandlerChain(ret, newPreHandlers, br, paths, pathIdx + 1);
+
+                if (isLast || br.data instanceof WildcardSubPath) {
+                    // isLast means in this branch until this tree node, data on these traversed nodes matched
+                    // so all leaf/leaves on current tree node should be added to the handler chain
+
                     for (var h : br.leafData()) {
                         ret.add(new Tuple<>(newPreHandlers, h));
                     }
                 }
-
-                buildHandlerChain(ret, newPreHandlers, br, paths, newPathIdx);
             }
         }
     }

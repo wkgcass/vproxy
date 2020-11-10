@@ -21,6 +21,10 @@ public interface HttpServer {
         return handle(HttpMethod.POST, route, handler);
     }
 
+    default HttpServer post(String route, RoutingHandler handler) {
+        return pst(route, handler);
+    }
+
     default HttpServer put(String route, RoutingHandler handler) {
         return handle(HttpMethod.PUT, route, handler);
     }
@@ -34,14 +38,14 @@ public interface HttpServer {
     }
 
     default HttpServer handle(HttpMethod method, String route, RoutingHandler handler) {
-        return handle(new HttpMethod[]{method}, Route.create(route), handler);
+        return handle(new HttpMethod[]{method}, SubPath.create(route), handler);
     }
 
     default HttpServer handle(HttpMethod[] methods, String route, RoutingHandler handler) {
-        return handle(methods, Route.create(route), handler);
+        return handle(methods, SubPath.create(route), handler);
     }
 
-    HttpServer handle(HttpMethod[] methods, Route route, RoutingHandler handler);
+    HttpServer handle(HttpMethod[] methods, SubPath route, RoutingHandler handler);
 
     default void listen(int port) throws IOException {
         listen(port, "0.0.0.0");
