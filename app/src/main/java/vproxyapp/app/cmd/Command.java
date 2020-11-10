@@ -455,7 +455,7 @@ public class Command {
                         // can be found in server-sock
                         if (targetResource == null)
                             throw new Exception("cannot find " + cmd.resource.type.fullname + " on top level");
-                        ServerSockHandle.checkServerSockParent(targetResource);
+                        ServerSockHandle.checkServerSockParent(targetResource.parentResource);
                         break;
                     default:
                         throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);

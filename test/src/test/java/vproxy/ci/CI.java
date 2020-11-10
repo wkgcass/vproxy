@@ -1290,9 +1290,9 @@ public class CI {
             connections.addAll(queryList(createReq(list_detail, "connection", "in", "el", "el10", "in", "elg", elg1)));
             connections.addAll(queryList(createReq(list_detail, "connection", "in", "el", "el11", "in", "elg", elg1)));
             assertEquals(6, connections.size());
-            assertTrue(connections.contains("127.0.0.1:" + sock1.localAddress().port() + "/127.0.0.1:" + port));
-            assertTrue(connections.contains("127.0.0.1:" + sock2.localAddress().port() + "/127.0.0.1:" + port));
-            assertTrue(connections.contains("127.0.0.1:" + sock3.localAddress().port() + "/127.0.0.1:" + port));
+            assertTrue(connections.contains("127.0.0.1:" + sock1.localAddress().port() + "/127.0.0.1:" + port + "[ESTABLISHED]"));
+            assertTrue(connections.contains("127.0.0.1:" + sock2.localAddress().port() + "/127.0.0.1:" + port + "[ESTABLISHED]"));
+            assertTrue(connections.contains("127.0.0.1:" + sock3.localAddress().port() + "/127.0.0.1:" + port + "[ESTABLISHED]"));
 
             // lb
             int countSessions = count(createReq(list, "session", "in", "tcp-lb", lbName));
@@ -1301,12 +1301,18 @@ public class CI {
             assertEquals(6, countConnections);
             connections = queryList(createReq(list_detail, "connection", "in", "tcp-lb", lbName));
             assertEquals(6, connections.size());
-            assertTrue(connections.contains("127.0.0.1:" + sock1.localAddress().port() + "/127.0.0.1:" + port));
-            assertTrue(connections.contains("127.0.0.1:" + sock2.localAddress().port() + "/127.0.0.1:" + port));
-            assertTrue(connections.contains("127.0.0.1:" + sock3.localAddress().port() + "/127.0.0.1:" + port));
+            assertTrue(connections.contains("127.0.0.1:" + port + "/127.0.0.1:" + sock1.localAddress().port() + "[ESTABLISHED]"));
+            assertTrue(connections.contains("127.0.0.1:" + port + "/127.0.0.1:" + sock2.localAddress().port() + "[ESTABLISHED]"));
+            assertTrue(connections.contains("127.0.0.1:" + port + "/127.0.0.1:" + sock3.localAddress().port() + "[ESTABLISHED]"));
             assertEquals(3, querySessions(createReq(list_detail, "session", "in", "tcp-lb", lbName)).size());
-            assertTrue(querySessions(createReq(list_detail, "session", "in", "tcp-lb", lbName))
-                .stream().flatMap(Collection::stream).collect(Collectors.toSet()).containsAll(connections));
+            var sessionsResult = querySessions(createReq(list_detail, "session", "in", "tcp-lb", lbName));
+            var connectionsResult = connections.stream().map(s -> s.substring(0, s.length() - "[ESTABLISHED]".length()))
+                .map(s -> {
+                    var split = s.split("/");
+                    return split[1] + "/" + split[0];
+                })
+                .collect(Collectors.toList());
+            assertTrue(sessionsResult.stream().flatMap(Collection::stream).collect(Collectors.toSet()).containsAll(connectionsResult));
 
             // server
             assertEquals(2, count(createReq(list, "connection", "in", "server", "sg7771", "in", "server-group", sg0)));
