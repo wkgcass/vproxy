@@ -797,7 +797,11 @@ public class Command {
                         return new CmdResult(sessCount, sessCount, "" + sessCount);
                     case L:
                         List<Session> sessList = SessionHandle.list(targetResource);
-                        List<List<String>> sessTupleList = sessList.stream().map(sess -> Arrays.asList(sess.active.id(), sess.passive.id())).collect(Collectors.toList());
+                        List<List<String>> sessTupleList = sessList.stream().map(sess ->
+                            Arrays.asList(
+                                new ConnectionHandle.Conn(sess.active, true).toString(),
+                                new ConnectionHandle.Conn(sess.passive, false).toString()
+                            )).collect(Collectors.toList());
                         return new CmdResult(sessList, sessTupleList, utilJoinList(sessList));
                     case R:
                         SessionHandle.close(this);

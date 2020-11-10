@@ -1306,13 +1306,7 @@ public class CI {
             assertTrue(connections.contains("127.0.0.1:" + port + "/127.0.0.1:" + sock3.localAddress().port() + "[ESTABLISHED]"));
             assertEquals(3, querySessions(createReq(list_detail, "session", "in", "tcp-lb", lbName)).size());
             var sessionsResult = querySessions(createReq(list_detail, "session", "in", "tcp-lb", lbName));
-            var connectionsResult = connections.stream().map(s -> s.substring(0, s.length() - "[ESTABLISHED]".length()))
-                .map(s -> {
-                    var split = s.split("/");
-                    return split[1] + "/" + split[0];
-                })
-                .collect(Collectors.toList());
-            assertTrue(sessionsResult.stream().flatMap(Collection::stream).collect(Collectors.toSet()).containsAll(connectionsResult));
+            assertTrue(sessionsResult.stream().flatMap(Collection::stream).collect(Collectors.toSet()).containsAll(connections));
 
             // server
             assertEquals(2, count(createReq(list, "connection", "in", "server", "sg7771", "in", "server-group", sg0)));
