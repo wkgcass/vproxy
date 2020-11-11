@@ -1310,7 +1310,7 @@ public class HttpController {
     }
 
     private void getAcceptedConnFromL4AddrTl(RoutingContext rctx, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
-        String tlStr = rctx.param("tlStr");
+        String tlStr = rctx.param("tl");
         String l4addrStr = rctx.param("l4addr");
         TcpLB tl = Application.get().tcpLBHolder.get(tlStr);
         utils.respondAcceptedConnFromL4AddrTl(l4addrStr, tl, cb);
