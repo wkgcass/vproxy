@@ -21,6 +21,9 @@ subprojects {
     apply plugin: 'java'
 
     sourceCompatibility = 11.0
+    targetCompatibility = 11.0
+    compileJava.options.encoding = "UTF-8"
+    compileTestJava.options.encoding = "UTF-8"
 
     repositories {
         mavenLocal()
