@@ -70,8 +70,7 @@ public class Config {
             if (Config.workingDirectory != null) {
                 return Config.workingDirectory;
             }
-            File file = new File(workingDirectory);
-            File dir = file.getParentFile();
+            File dir = new File(workingDirectory);
             if (dir.exists()) {
                 if (!dir.isDirectory()) {
                     throw new RuntimeException(dir + " exists but is not a directory");
