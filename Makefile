@@ -1,6 +1,8 @@
+SHELL := /bin/bash
 .DEFAULT: jar
 
 VERSION := $(shell cat base/src/main/java/vproxybase/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
+OS := $(shell uname)
 
 .PHONY: clean
 clean:
@@ -19,6 +21,9 @@ clean:
 clean-docker-plugin-rootfs:
 	rm -rf ./docker-plugin-rootfs
 
+.PHONY: all
+all: clean jar jlink vfdposix image docker-network-plugin
+
 .PHONY: jar
 jar:
 	./gradlew jar
@@ -36,9 +41,13 @@ vfdposix:
 	cd ./base/src/main/c && ./make-general.sh
 
 .PHONY: vfdposix-linux
+ifeq ($(OS),Linux)
+vfdposix-linux: vfdposix
+else
 vfdposix-linux:
 	docker run --rm -v /Users/wkgcass/Downloads/graalvm-ce-linux:/graalvm-ce -v $(shell pwd)/base/src/main/c:/output gcc \
 		bash -c -- 'cd /output && JAVA_HOME=/graalvm-ce ./make-general.sh'
+endif
 
 .PHONY: vfdwindows
 vfdwindows:
@@ -51,24 +60,35 @@ fstack:
 .PHONY: image
 image: jar
 	native-image -jar build/libs/vproxy.jar -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy
+ifeq ($(OS),Linux)
+	cp vproxy vproxy-linux
+endif
 
-# run native-image inside a container to build linux executable file in other platforms
 .PHONY: image-linux
+ifeq ($(OS),Linux)
+image-linux: image
+	cp vproxy vproxy-linux
+else
+# run native-image inside a container to build linux executable file in other platforms
 image-linux: jar
 	docker run --rm -v /Users/wkgcass/Downloads/graalvm-ce-linux:/graalvm-ce -v $(shell pwd):/output gcc \
 		/bin/bash -c "/graalvm-ce/bin/gu install native-image && /graalvm-ce/bin/native-image -jar /output/build/libs/vproxy.jar -H:ReflectionConfigurationFiles=/output/misc/graal-reflect.json -H:JNIConfigurationFiles=/output/misc/graal-jni.json --enable-all-security-services --no-fallback --no-server /output/vproxy-linux"
+endif
 
 vproxy-linux:
 	make image-linux
 
 # used for releasing
 .PHONY: release
+ifeq ($(OS),Darwin)
 release: clean jar image image-linux
 	cp vproxy vproxy-macos
 	cp build/libs/vproxy.jar ./vproxy-$(VERSION).jar
-
-.PHONY: all
-all: clean jar vfdposix image image-linux
+else
+release:
+	@echo "Please use macos to release"
+	@exit 1
+endif
 
 .PHONY: docker-network-plugin-rootfs
 docker-network-plugin-rootfs: vproxy-linux vfdposix-linux
@@ -88,15 +108,4 @@ docker-plugin-rootfs/rootfs:
 .PHONY: docker-network-plugin
 docker-network-plugin: docker-network-plugin-rootfs
 	cp docker-plugin/config.json ./docker-plugin-rootfs
-	docker plugin create vproxy:$(VERSION) ./docker-plugin-rootfs
-
-.PHONY: local-test-send-rootfs-to-vm
-local-test-send-rootfs-to-vm: docker-plugin-rootfs/rootfs
-	ssh root@100.64.0.4 docker plugin rm vproxy
-	cp docker-plugin/config.json ./docker-plugin-rootfs
-	tar zcf docker-plugin-rootfs.tar.gz ./docker-plugin-rootfs
-	scp docker-plugin-rootfs.tar.gz root@100.64.0.4:/data
-	ssh root@100.64.0.4 rm -rf /data/docker-plugin-rootfs
-	ssh root@100.64.0.4 'cd /data && tar zxf docker-plugin-rootfs.tar.gz'
-	ssh root@100.64.0.4 docker plugin create vproxy /data/docker-plugin-rootfs
-	ssh root@100.64.0.4 docker plugin enable vproxy
+	docker plugin create vproxy ./docker-plugin-rootfs

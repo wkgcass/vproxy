@@ -550,7 +550,7 @@ fi
 # compile
 cd vproxy
 echo "compiling ..."
-make clean jar vfdposix
+make jar vfdposix
 
 # vproxy
 export JAR="/vproxy/vproxy/build/libs/vproxy.jar"
