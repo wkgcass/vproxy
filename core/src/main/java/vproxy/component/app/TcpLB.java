@@ -221,7 +221,7 @@ public class TcpLB {
             }
 
             // check for binding
-            if (Config.checkBind) {
+            if (Config.checkBind && alreadyBondLoops.isEmpty()) { // if it's already bond, there's no need to check
                 ServerSock.checkBind(this.bindAddress);
             }
             for (EventLoopWrapper w : eventLoops) {

@@ -108,10 +108,10 @@ public class ServerSock implements NetFlowRecorder {
     public static void checkBind(IPPort bindAddress) throws IOException {
         if (bindAddress instanceof UDSPath) {
             checkBindUDS((UDSPath) bindAddress);
-        }
-
-        try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
-            foo.bind(bindAddress);
+        } else {
+            try (ServerSocketFD foo = FDProvider.get().openServerSocketFD()) {
+                foo.bind(bindAddress);
+            }
         }
     }
 
