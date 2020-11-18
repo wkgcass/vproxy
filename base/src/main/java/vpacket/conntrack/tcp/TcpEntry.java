@@ -64,6 +64,8 @@ public class TcpEntry {
     }
 
     public void destroy() {
+        state = TcpState.CLOSED;
+        retransmissionTimer.cancel();
         if (connectionHandler != null) {
             connectionHandler.destroy(this);
         }

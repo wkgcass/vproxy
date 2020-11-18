@@ -4,6 +4,7 @@ import vfd.*;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxybase.Config;
+import vproxybase.component.elgroup.EventLoopAttach;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.elgroup.EventLoopGroupAttach;
 import vproxybase.component.elgroup.EventLoopWrapper;
@@ -43,7 +44,8 @@ public class DNSServer {
     private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
     private final ConcurrentHashSet<ResolvingInfoRecorder> resolvingInfoRecorders = new ConcurrentHashSet<>();
 
-    private final Attach attach = new Attach();
+    private final ELGAttach elgAttach = new ELGAttach();
+    private final ELAttach elAttach = new ELAttach();
     protected NetEventLoop loop = null;
     private DatagramFD sock = null;
     private boolean needToStart = false;
@@ -61,7 +63,7 @@ public class DNSServer {
         this.securityGroup = securityGroup;
     }
 
-    class Attach implements EventLoopGroupAttach {
+    class ELGAttach implements EventLoopGroupAttach {
         @Override
         public String id() {
             return "DNSServer:" + alias;
@@ -81,6 +83,25 @@ public class DNSServer {
         @Override
         public void onClose() {
             stop();
+        }
+    }
+
+    class ELAttach implements EventLoopAttach {
+        @Override
+        public String id() {
+            return "DNSServer:" + alias;
+        }
+
+        @Override
+        public void onClose() {
+            Logger.error(LogType.IMPROPER_USE, "closing event loop which runs dns-server " + alias + ", the dns-server will be stopped");
+            stop();
+            // try to start again
+            try {
+                start();
+            } catch (IOException e) {
+                Logger.error(LogType.ALERT, "restarting dns server failed, wait for further operation", e);
+            }
         }
     }
 
@@ -384,7 +405,7 @@ public class DNSServer {
         }
         if (!needToStart) {
             try {
-                eventLoopGroup.attachResource(attach);
+                eventLoopGroup.attachResource(elgAttach);
             } catch (AlreadyExistException e) {
                 Logger.shouldNotHappen("adding attachment to event loop group failed", e);
                 throw new IOException("adding attachment to event loop group failed, should not happen, it's a bug");
@@ -402,6 +423,16 @@ public class DNSServer {
         if (sock != null) { // already started
             return;
         }
+
+        try {
+            ((EventLoopWrapper) loop).attachResource(elAttach);
+        } catch (AlreadyExistException e) {
+            Logger.shouldNotHappen("adding attachment to event loop failed", e);
+            throw new IOException("adding attachment to event loop failed, should not happen, it's a bug");
+        } catch (ClosedException e) {
+            throw new IOException("the event loop is already closed");
+        }
+
         Logger.alert("dns server " + alias + " " + bindAddress + " starts on loop " + ((EventLoopWrapper) loop).alias);
 
         sock = FDProvider.get().openDatagramFD();
@@ -498,8 +529,14 @@ public class DNSServer {
         needToStart = false;
 
         try {
-            eventLoopGroup.detachResource(attach);
+            eventLoopGroup.detachResource(elgAttach);
         } catch (NotFoundException ignore) {
+        }
+        if (loop instanceof EventLoopWrapper) {
+            try {
+                ((EventLoopWrapper) loop).detachResource(elAttach);
+            } catch (NotFoundException ignore) {
+            }
         }
 
         if (sock != null) {

@@ -37,7 +37,7 @@ public class Switch {
     public final String alias;
     public final IPPort vxlanBindingAddress;
     public final EventLoopGroup eventLoopGroup;
-    private NetEventLoop currentEventLoop;
+    private NetEventLoop eventLoop;
     private PeriodicEvent refreshCacheEvent;
     private int macTableTimeout;
     private int arpTableTimeout;
@@ -47,14 +47,14 @@ public class Switch {
     private boolean wantStart = false;
 
     private final Map<String, UserInfo> users = new HashMap<>();
-    private final DatagramFD sock;
+    private DatagramFD sock;
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
     public final NetworkStack netStack = new NetworkStack();
 
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
-                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws IOException, ClosedException {
+                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
@@ -62,23 +62,13 @@ public class Switch {
         this.arpTableTimeout = arpTableTimeout;
         this.bareVXLanAccess = bareVXLanAccess;
 
-        sock = FDProvider.get().openDatagramFD();
-        try {
-            sock.configureBlocking(false);
-            sock.bind(vxlanBindingAddress);
-        } catch (IOException e) {
-            releaseSock();
-            throw e;
-        }
-
         try {
             eventLoopGroup.attachResource(new SwitchEventLoopGroupAttach());
         } catch (AlreadyExistException e) {
-            Logger.shouldNotHappen("attaching resource to event loop group failed");
-            releaseSock();
-            throw new RuntimeException(e);
+            Logger.shouldNotHappen("attaching resource to event loop group failed", e);
+            throw e;
         } catch (ClosedException e) {
-            releaseSock();
+            Logger.error(LogType.IMPROPER_USE, "the event loop group is already closed", e);
             throw e;
         }
     }
@@ -87,6 +77,7 @@ public class Switch {
         if (sock != null) {
             try {
                 sock.close();
+                sock = null;
             } catch (IOException e) {
                 Logger.shouldNotHappen("closing sock " + sock + " failed", e);
             }
@@ -102,47 +93,24 @@ public class Switch {
         if (netLoop == null) {
             return;
         }
+
+        if (sock == null) {
+            sock = FDProvider.get().openDatagramFD();
+            try {
+                sock.configureBlocking(false);
+                sock.bind(vxlanBindingAddress);
+            } catch (IOException e) {
+                releaseSock();
+                throw e;
+            }
+        }
+
         var loop = netLoop.getSelectorEventLoop();
         loop.add(sock, EventSet.read(), null, new PacketHandler());
-        currentEventLoop = netLoop;
-        refreshCacheEvent = currentEventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
+        eventLoop = netLoop;
+        refreshCacheEvent = eventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
         tables.values().forEach(t -> t.setLoop(loop));
         started = true;
-
-        // handle additional operations
-        // if they fail, the started state won't rollback
-        {
-            List<UserClientIface> failedToInit = new ArrayList<>();
-            for (Iface iface : ifaces.keySet()) {
-                if (!(iface instanceof UserClientIface)) {
-                    continue;
-                }
-                var ucliIface = (UserClientIface) iface;
-                try {
-                    initUserClient(loop, ucliIface);
-                } catch (IOException e) {
-                    Logger.error(LogType.SYS_ERROR, "initiate user client " + iface + " failed", e);
-                    failedToInit.add(ucliIface);
-                }
-            }
-            if (!failedToInit.isEmpty()) {
-                throw new IOException("Some of the user-client ifaces failed to initiated. You have to delete the failed user-client add re-add them: " + failedToInit);
-            }
-        }
-    }
-
-    private void checkAndRestart() { // this method is only called when selected event loop closes, so no need to remove handler
-        started = false;
-        cancelEventLoop();
-        cancelAllIface();
-        if (!wantStart) {
-            return;
-        }
-        try {
-            start();
-        } catch (IOException e) {
-            Logger.error(LogType.SYS_ERROR, "starting Switch:" + alias + " failed", e);
-        }
     }
 
     private void cancelAllIface() {
@@ -151,10 +119,27 @@ public class Switch {
     }
 
     private void cancelEventLoop() {
-        currentEventLoop = null;
+        eventLoop = null;
         if (refreshCacheEvent != null) {
             refreshCacheEvent.cancel();
             refreshCacheEvent = null;
+        }
+    }
+
+    private void stopStack() {
+        stopTcp();
+    }
+
+    private void stopTcp() {
+        for (var tbl : tables.values()) {
+            for (var entry : tbl.conntrack.listListenEntries()) {
+                entry.destroy();
+                tbl.conntrack.removeListen(entry.listening);
+            }
+            for (var entry : tbl.conntrack.listTcpEntries()) {
+                entry.destroy();
+                tbl.conntrack.remove(entry.source, entry.destination);
+            }
         }
     }
 
@@ -163,6 +148,7 @@ public class Switch {
         if (!started) {
             return;
         }
+        stopStack();
         cancelEventLoop();
         cancelAllIface();
         for (var tbl : tables.values()) {
@@ -240,10 +226,10 @@ public class Switch {
         if (tables.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
-        if (currentEventLoop == null) {
+        if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        tables.computeIfAbsent(vni, n -> new Table(this, n, currentEventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
+        tables.computeIfAbsent(vni, n -> new Table(this, n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
     }
 
     public void delTable(int vni) throws NotFoundException {
@@ -259,18 +245,7 @@ public class Switch {
     }
 
     public void addUser(String user, String password, int vni) throws AlreadyExistException, XException {
-        char[] chars = user.toCharArray();
-        if (chars.length < 3 || chars.length > 8) {
-            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
-        }
-        for (char c : chars) {
-            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
-                throw new XException("invalid user, should only contain a-zA-Z0-9");
-            }
-        }
-        if (user.length() < 8) {
-            user += Consts.USER_PADDING.repeat(8 - user.length());
-        }
+        user = formatUserName(user);
 
         Aes256Key key = new Aes256Key(password);
         UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni));
@@ -291,7 +266,7 @@ public class Switch {
 
     // return created dev name
     public String addTap(String devPattern, int vni, String postScript, Map<String, String> annotations) throws XException, IOException {
-        NetEventLoop netEventLoop = currentEventLoop;
+        NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
         }
@@ -408,18 +383,7 @@ public class Switch {
     }
 
     public void addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, IOException, XException {
-        char[] chars = user.toCharArray();
-        if (chars.length < 3 || chars.length > 8) {
-            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
-        }
-        for (char c : chars) {
-            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
-                throw new XException("invalid user, should only contain a-zA-Z0-9");
-            }
-        }
-        if (user.length() < 8) {
-            user += Consts.USER_PADDING.repeat(8 - user.length());
-        }
+        user = formatUserName(user);
 
         for (Iface i : ifaces.keySet()) {
             if (!(i instanceof UserClientIface)) {
@@ -431,10 +395,7 @@ public class Switch {
             }
         }
 
-        SelectorEventLoop loop = null;
-        if (currentEventLoop != null) {
-            loop = currentEventLoop.getSelectorEventLoop();
-        }
+        SelectorEventLoop loop = eventLoop.getSelectorEventLoop();
 
         Aes256Key key = new Aes256Key(password);
         UserInfo info = new UserInfo(user, key, password, vni);
@@ -454,19 +415,33 @@ public class Switch {
             throw e;
         }
 
-        if (loop != null) {
+        try {
+            initUserClient(loop, iface);
+        } catch (IOException e) {
             try {
-                initUserClient(loop, iface);
-            } catch (IOException e) {
-                try {
-                    cliSock.close();
-                } catch (IOException t) {
-                    Logger.shouldNotHappen("close datagram sock when rolling back failed", t);
-                }
-                throw e;
+                cliSock.close();
+            } catch (IOException t) {
+                Logger.shouldNotHappen("close datagram sock when rolling back failed", t);
             }
+            throw e;
         }
         ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+    }
+
+    private String formatUserName(String user) throws XException {
+        char[] chars = user.toCharArray();
+        if (chars.length < 3 || chars.length > 8) {
+            throw new XException("invalid user, should be at least 3 chars and at most 8 chars");
+        }
+        for (char c : chars) {
+            if ((c < 'a' || c > 'z') && (c < 'A' || c > 'Z') && (c < '0' || c > '9')) {
+                throw new XException("invalid user, should only contain a-zA-Z0-9");
+            }
+        }
+        if (user.length() < 8) {
+            user += Consts.USER_PADDING.repeat(8 - user.length());
+        }
+        return user;
     }
 
     public void delUserClient(String user, IPPort remoteAddr) throws NotFoundException {
@@ -489,7 +464,7 @@ public class Switch {
     }
 
     public void addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
-        NetEventLoop netEventLoop = currentEventLoop;
+        NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
         }
@@ -571,7 +546,7 @@ public class Switch {
             this::sendPacket,
             Switch.this::getIfaces,
             tables::get,
-            () -> currentEventLoop.getSelectorEventLoop()
+            () -> eventLoop.getSelectorEventLoop()
         ));
         private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
 
@@ -815,8 +790,11 @@ public class Switch {
 
         @Override
         public void removed(HandlerContext<DatagramFD> ctx) {
-            assert Logger.lowLevelDebug("udp sock " + ctx.getChannel() + " removed from loop");
-            checkAndRestart();
+            Logger.error(LogType.IMPROPER_USE, "the udp sock " + ctx.getChannel() + " is removed from loop," +
+                "the loop is considered to be closed, it's required to terminate all ifaces");
+            boolean backupWantStart = wantStart;
+            stop();
+            wantStart = backupWantStart;
         }
     }
 
