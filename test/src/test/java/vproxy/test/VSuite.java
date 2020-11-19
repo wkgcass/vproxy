@@ -22,6 +22,8 @@ import vproxy.test.cases.*;
     TestRouteTable.class,
     TestTCP.class,
     TestHttpServer.class,
+    TestStreamServerClient.class,
+    TestConnTransfer.class,
 
     AfterAll.class
 })

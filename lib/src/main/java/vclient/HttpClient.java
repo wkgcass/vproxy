@@ -3,14 +3,21 @@ package vclient;
 import vclient.impl.Http1ClientImpl;
 import vfd.IP;
 import vfd.IPPort;
+import vproxybase.dns.Resolver;
 import vproxybase.util.ringbuffer.SSLUtils;
 import vserver.HttpMethod;
 
-import javax.net.ssl.SSLContext;
+import java.net.UnknownHostException;
 
-public interface HttpClient {
+public interface HttpClient extends GeneralClient {
     static HttpClient to(String host, int port) {
-        return to(IP.from(host), port);
+        IP ip;
+        try {
+            ip = Resolver.getDefault().blockResolve(host);
+        } catch (UnknownHostException e) {
+            throw new RuntimeException(e);
+        }
+        return to(ip, port);
     }
 
     static HttpClient to(IP l3addr, int port) {
@@ -21,7 +28,7 @@ public interface HttpClient {
         return to(l4addr, new Options());
     }
 
-    static HttpClient to(IPPort l4addr, Http1ClientImpl.Options opts) {
+    static HttpClient to(IPPort l4addr, Options opts) {
         return new Http1ClientImpl(l4addr, opts);
     }
 
@@ -91,23 +98,16 @@ public interface HttpClient {
 
     HttpRequest request(HttpMethod method, String uri);
 
-    void close();
-
-    class Options {
-        public SSLContext sslContext;
+    class Options extends GeneralClientOptions<Options> {
         public String host;
 
         public Options() {
+            super();
         }
 
         public Options(Options that) {
-            this.sslContext = that.sslContext;
+            super(that);
             this.host = that.host;
-        }
-
-        public Options setSSLContext(SSLContext sslContext) {
-            this.sslContext = sslContext;
-            return this;
         }
 
         public Options setHost(String host) {

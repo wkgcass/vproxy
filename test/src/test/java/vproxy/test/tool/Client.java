@@ -26,8 +26,12 @@ public class Client {
 
         while (true) {
             int len = socket.getInputStream().read(buf);
-            if (len == -1)
+            if (len == -1) {
+                if (recvLen <= 0) {
+                    return "";
+                }
                 throw new IOException("remote closed");
+            }
             String s = new String(buf, 0, len, StandardCharsets.UTF_8);
             sb.append(s);
             recvLen -= len;

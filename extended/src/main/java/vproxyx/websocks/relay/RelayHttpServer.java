@@ -5,7 +5,7 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.util.ErrorPages;
 import vserver.HttpServer;
 import vserver.RoutingHandler;
-import vserver.server.Http1ServerImpl;
+import vserver.impl.Http1ServerImpl;
 
 import java.io.IOException;
 

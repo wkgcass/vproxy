@@ -10,7 +10,6 @@ import vproxybase.http.HttpRespParser;
 import vproxybase.processor.http1.entity.Header;
 import vproxybase.processor.http1.entity.Request;
 import vproxybase.processor.http1.entity.Response;
-import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.SSLUtils;
@@ -25,47 +24,21 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 
-public class Http1ClientImpl implements HttpClient {
+public class Http1ClientImpl extends AbstractClient implements HttpClient {
     private final IPPort remote;
-    private final boolean noInputLoop;
-    private NetEventLoop loop;
-    private final int timeout;
     private final Options opts;
-    private boolean closed = false;
 
     public Http1ClientImpl(IPPort remote, Options opts) {
-        this(remote, null, 10_000, opts);
-    }
-
-    public Http1ClientImpl(IPPort remote, NetEventLoop loop, int timeout) {
-        this(remote, loop, timeout, new Options());
-    }
-
-    public Http1ClientImpl(IPPort remote, NetEventLoop loop, int timeout, Options opts) {
+        super(opts);
         this.remote = remote;
-        this.loop = loop;
-        this.timeout = timeout;
-        this.opts = opts;
-        noInputLoop = (loop == null);
-    }
-
-    private void initLoop() {
-        if (loop != null) {
-            return;
-        }
-        try {
-            loop = new NetEventLoop(SelectorEventLoop.open());
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
-        loop.getSelectorEventLoop().loop(Thread::new);
+        this.opts = new Options(opts);
     }
 
     @Override
     public HttpRequest request(HttpMethod method, String uri) {
         return new HttpRequest() {
-            private Request request = new Request();
-            private Map<String, String> headers = new HashMap<>();
+            private final Request request = new Request();
+            private final Map<String, String> headers = new HashMap<>();
             private boolean addUserAgent = true;
 
             {
@@ -107,7 +80,7 @@ public class Http1ClientImpl implements HttpClient {
                 ByteArray array = request.toByteArray();
                 ByteArrayChannel chnl = ByteArrayChannel.fromFull(array);
 
-                initLoop();
+                getLoop();
 
                 try {
                     RingBuffer in;
@@ -127,8 +100,8 @@ public class Http1ClientImpl implements HttpClient {
                         in = RingBuffer.allocate(1024);
                         out = RingBuffer.allocate(1024);
                     }
-                    loop.addConnectableConnection(
-                        ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(timeout), in, out),
+                    getLoop().addConnectableConnection(
+                        ConnectableConnection.create(remote, new ConnectionOpts().setTimeout(opts.timeout), in, out),
                         null,
                         new ConnectableConnectionHandler() {
                             private final HttpRespParser parser = new HttpRespParser(true);
@@ -214,23 +187,5 @@ public class Http1ClientImpl implements HttpClient {
                 }
             }
         };
-    }
-
-    @Override
-    public void close() {
-        if (closed) {
-            return;
-        }
-        closed = true;
-        if (noInputLoop) {
-            // should close the input loop because it's created by the lib
-            loop.getSelectorEventLoop().nextTick(() -> {
-                try {
-                    loop.getSelectorEventLoop().close();
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("got error when closing the event loop", e);
-                }
-            });
-        }
     }
 }

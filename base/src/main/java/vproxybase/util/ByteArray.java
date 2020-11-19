@@ -33,6 +33,10 @@ public interface ByteArray {
         return from(bytes);
     }
 
+    static ByteArray from(String str) {
+        return from(str.getBytes());
+    }
+
     byte get(int idx);
 
     ByteArray set(int idx, byte value);

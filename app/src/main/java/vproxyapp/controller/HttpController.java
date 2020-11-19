@@ -23,7 +23,7 @@ import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.RoutingHandler;
 import vserver.Tool;
-import vserver.server.Http1ServerImpl;
+import vserver.impl.Http1ServerImpl;
 
 import java.io.IOException;
 import java.util.Arrays;

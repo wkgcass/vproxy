@@ -1,5 +1,6 @@
 package vproxyx.websocks;
 
+import vclient.ClientContext;
 import vclient.HttpClient;
 import vclient.impl.Http1ClientImpl;
 import vfd.IP;
@@ -278,9 +279,13 @@ public class AgentDNSServer extends DNSServer {
         }
         // see ConfigProcessor.java
         SharedData data = (SharedData) svr.getData();
-        HttpClient cli = new Http1ClientImpl(svr.remote, eventLoopGroup.next(), 5_000, new HttpClient.Options().setSSLContext(
-            data.useSSL ? WebSocksUtils.getSslContext() : null
-        ));
+        HttpClient cli = new Http1ClientImpl(svr.remote,
+            new HttpClient.Options()
+                .setTimeout(5_000)
+                .setClientContext(new ClientContext(eventLoopGroup.next()))
+                .setSSLContext(
+                    data.useSSL ? WebSocksUtils.getSslContext() : null
+                ));
         cli.get("/tools/resolve?domain=" + domain).send((err, resp) -> {
             cli.close(); // close the cli on response
             if (err != null) {

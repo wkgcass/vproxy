@@ -12,7 +12,7 @@ import vproxybase.connection.ServerSock;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.ByteArray;
 import vproxybase.util.Network;
-import vserver.server.Http1ServerImpl;
+import vserver.impl.Http1ServerImpl;
 import vswitch.Switch;
 import vswitch.Table;
 import vswitch.stack.fd.VSwitchFDContext;

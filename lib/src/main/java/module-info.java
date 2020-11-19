@@ -5,7 +5,9 @@ module vproxy.lib {
     exports vserver;
     exports vserver.route;
     exports vserver.util;
-    exports vserver.server;
+    exports vserver.impl;
     exports vclient;
     exports vclient.impl;
+    exports vlibbase;
+    exports vlibbase.impl;
 }

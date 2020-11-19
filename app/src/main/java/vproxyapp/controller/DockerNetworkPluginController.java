@@ -5,13 +5,12 @@ import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxyapp.app.Application;
 import vproxybase.Config;
-import vproxybase.connection.ServerSock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vserver.HttpServer;
 import vserver.RoutingContext;
 import vserver.Tool;
-import vserver.server.Http1ServerImpl;
+import vserver.impl.Http1ServerImpl;
 
 import java.io.IOException;
 import java.util.HashMap;

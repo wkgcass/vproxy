@@ -1,8 +1,6 @@
-package vserver.server;
+package vserver.impl;
 
-import vfd.IPPort;
 import vjson.JSON;
-import vproxybase.Config;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.http.HttpContext;
@@ -14,7 +12,6 @@ import vproxybase.processor.http1.entity.Response;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
-import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vserver.*;
 import vserver.route.WildcardSubPath;
@@ -25,25 +22,19 @@ import java.util.stream.Collectors;
 
 import static vserver.HttpMethod.ALL_METHODS;
 
-public class Http1ServerImpl implements HttpServer {
+public class Http1ServerImpl extends AbstractServer implements HttpServer {
     private boolean started = false;
-    private boolean closed = false;
     private final Map<HttpMethod, Tree<SubPath, RoutingHandler>> routes = new HashMap<>(HttpMethod.values().length) {{
         for (HttpMethod m : HttpMethod.values()) {
             put(m, new Tree<>());
         }
     }};
-    private NetEventLoop loop;
-    private final boolean noInputLoop;
-    private ServerSock server;
 
     public Http1ServerImpl() {
-        this(null);
     }
 
     public Http1ServerImpl(NetEventLoop loop) {
-        this.loop = loop;
-        noInputLoop = loop == null;
+        super(loop);
     }
 
     private void record(Tree<SubPath, RoutingHandler> tree, SubPath subpath, RoutingHandler handler) {
@@ -111,52 +102,10 @@ public class Http1ServerImpl implements HttpServer {
             });
     }
 
-    @Override
-    public void listen(IPPort addr) throws IOException {
-        if (Config.checkBind) {
-            ServerSock.checkBind(addr);
-        }
-
-        initLoop();
-
-        server = ServerSock.create(addr);
-        listen(server);
-    }
-
-    @Override
-    public void close() {
-        if (closed) {
-            return;
-        }
-        closed = true;
-
-        if (noInputLoop) {
-            // should stop the event loop because it's created from inside
-            if (loop != null) {
-                try {
-                    loop.getSelectorEventLoop().close();
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("got error when closing the event loop", e);
-                }
-            }
-        }
-        if (server != null) {
-            server.close();
-        }
-    }
-
     private void handle404(RoutingContext ctx) {
         ctx.response()
             .status(404)
             .end(ByteArray.from(("Cannot " + ctx.method() + " " + ctx.uri() + "\r\n").getBytes()));
-    }
-
-    private void initLoop() throws IOException {
-        if (loop != null) {
-            return;
-        }
-        loop = new NetEventLoop(SelectorEventLoop.open());
-        loop.getSelectorEventLoop().loop(Thread::new);
     }
 
     private void sendResponse(ProtocolHandlerContext<HttpContext> _pctx, Response response) {
