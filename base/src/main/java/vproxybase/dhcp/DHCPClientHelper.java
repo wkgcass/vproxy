@@ -255,6 +255,9 @@ public class DHCPClientHelper {
                     @Override
                     public void readable(HandlerContext<DatagramFD> ctx) {
                         while (true) {
+                            // reset buf positions
+                            buf.position(0).limit(buf.capacity());
+
                             IPPort serverIPPort;
                             try {
                                 serverIPPort = sock.receive(buf);
