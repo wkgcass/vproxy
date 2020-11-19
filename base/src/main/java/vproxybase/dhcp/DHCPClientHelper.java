@@ -51,7 +51,7 @@ public class DHCPClientHelper {
             return;
         }
 
-        // local-mac, local-ip, remote-ip
+        // local-mac, remote-ip, local-ip
         List<Tuple3<MacAddress, IP, IP>> todo = new LinkedList<>();
 
         while (interfaces.hasMoreElements()) {
@@ -81,6 +81,7 @@ public class DHCPClientHelper {
                 }
                 var broadcastIp = IP.from(broadcast);
                 var localIP = IP.from(addr.getAddress());
+                //                local-mac, remote-ip, local-ip
                 todo.add(new Tuple3<>(mac, broadcastIp, localIP));
 
                 break;
@@ -96,9 +97,11 @@ public class DHCPClientHelper {
         //noinspection unchecked
         Set<IP>[] ipSetResults = new Set[todo.size()];
         IOException[] exceptions = new IOException[todo.size()];
-        for (int i = 0; i < todo.size(); i++) {
-            Tuple3<MacAddress, IP, IP> tup = todo.get(i);
-            final int ii = i;
+        int idx = 0;
+        for (Tuple3<MacAddress, IP, IP> tup : todo) {
+            final int ii = idx;
+            idx += 1;
+            //                    remote-ip, local-ip, local-mac
             getDomainNameServers(loop, tup._2, tup._3, tup._1, new Callback<>() {
                 @Override
                 protected void onSucceeded(Set<IP> value) {
