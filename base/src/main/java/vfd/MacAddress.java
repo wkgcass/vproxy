@@ -8,6 +8,10 @@ public class MacAddress {
     public final ByteArray bytes;
     private final int hashCode;
 
+    public MacAddress(byte[] bytes) {
+        this(ByteArray.from(bytes));
+    }
+
     public MacAddress(ByteArray bytes) {
         this.bytes = bytes.copy();
         this.hashCode = Objects.hashCode(bytes);

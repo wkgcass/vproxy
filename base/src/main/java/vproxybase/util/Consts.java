@@ -55,6 +55,28 @@ public class Consts {
     public static final byte TCP_FLAGS_SYN = 0b000010;
     public static final byte TCP_FLAGS_FIN = 0b000001;
 
+    // https://tools.ietf.org/html/rfc2131
+    public static final byte DHCP_OP_BOOTREQUEST = 1;
+    public static final byte DHCP_OP_BOOTREPLY = 2;
+    public static final byte DHCP_HTYPE_ETHERNET = 1;
+    public static final int DHCP_MAGIC_COOKIE = 0x63825363;
+
+    // https://tools.ietf.org/html/rfc2132
+    public static final byte DHCP_OPT_TYPE_END = (byte) 0xff;
+    public static final byte DHCP_OPT_TYPE_PAD = 0;
+    public static final byte DHCP_OPT_TYPE_DNS = 6;
+    public static final byte DHCP_OPT_TYPE_MSG_TYPE = 53;
+    public static final byte DHCP_OPT_TYPE_PARAM_REQ_LIST = 55;
+
+    public static final byte DHCP_MSG_TYPE_DHCPDISCOVER = 1;
+    public static final byte DHCP_MSG_TYPE_DHCPOFFER = 2;
+    public static final byte DHCP_MSG_TYPE_DHCPREQUEST = 3;
+    public static final byte DHCP_MSG_TYPE_DHCPDECLINE = 4;
+    public static final byte DHCP_MSG_TYPE_DHCPACK = 5;
+    public static final byte DHCP_MSG_TYPE_DHCPNAK = 6;
+    public static final byte DHCP_MSG_TYPE_DHCPRELEASE = 7;
+    public static final byte DHCP_MSG_TYPE_DHCPINFORM = 8;
+
     public static final int I_DETECTED_A_POSSIBLE_LOOP =
         0b00001000_00000000_00000000;
     public static final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN =

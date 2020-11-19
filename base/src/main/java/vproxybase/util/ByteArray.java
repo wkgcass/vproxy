@@ -25,6 +25,17 @@ public interface ByteArray {
         return new SimpleByteArray(array);
     }
 
+    static ByteArray from(ByteBuffer buf) {
+        int len = buf.limit() - buf.position();
+        if (buf.hasArray()) {
+            return from(buf.array()).sub(buf.position(), len);
+        } else {
+            byte[] array = new byte[len];
+            buf.get(array);
+            return from(array);
+        }
+    }
+
     static ByteArray from(int... array) {
         byte[] bytes = new byte[array.length];
         for (int i = 0; i < array.length; ++i) {

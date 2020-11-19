@@ -7,6 +7,10 @@ public abstract class Callback<T, E extends Throwable> {
 
     protected abstract void onFailed(E err);
 
+    protected void doFinally() {
+
+    }
+
     public final boolean isCalled() {
         return called;
     }
@@ -22,6 +26,7 @@ public abstract class Callback<T, E extends Throwable> {
         }
         called = true;
         onSucceeded(value);
+        doFinally();
     }
 
     public final void failed(E err) {
@@ -31,6 +36,7 @@ public abstract class Callback<T, E extends Throwable> {
         }
         called = true;
         onFailed(err);
+        doFinally();
     }
 
     public final void finish(E err) {
