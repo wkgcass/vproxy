@@ -47,6 +47,8 @@ module vproxy.base {
     exports vproxybase.redis.application;
     exports vproxybase.http;
     exports vproxybase.http.connect;
+    exports vproxybase.dhcp;
+    exports vproxybase.dhcp.options;
     exports vproxybase.dns;
     exports vproxybase.dns.rdata;
     exports tlschannel.impl;

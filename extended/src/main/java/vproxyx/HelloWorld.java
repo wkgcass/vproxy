@@ -6,12 +6,14 @@ import vfd.IPPort;
 import vfd.SocketFD;
 import vfd.VFDConfig;
 import vproxybase.connection.*;
+import vproxybase.dhcp.DHCPClientHelper;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vserver.HttpServer;
 
 import java.io.IOException;
+import java.util.Set;
 
 public class HelloWorld {
     public static void main0(@SuppressWarnings("unused") String[] args) throws Exception {
@@ -19,6 +21,22 @@ public class HelloWorld {
 
         SelectorEventLoop sLoop = SelectorEventLoop.open();
         NetEventLoop nLoop = new NetEventLoop(sLoop);
+
+        sLoop.loop(Thread::new);
+
+        if (VFDConfig.useFStack) {
+            Logger.warn(LogType.ALERT, "DHCP will not run when using FStack");
+        } else {
+            Logger.info(LogType.ALERT, "trying DHCP features by retrieving dns servers using DHCP ...");
+            BlockCallback<Set<IP>, IOException> cb = new BlockCallback<>();
+            DHCPClientHelper.getDomainNameServers(sLoop, 1, cb);
+            try {
+                var ips = cb.block();
+                Logger.alert("dhcp returns with dns servers: " + ips);
+            } catch (IOException e) {
+                Logger.warn(LogType.ALERT, "failed to retrieve dns servers from dhcp", e);
+            }
+        }
 
         final int listenPort = 8080;
 
@@ -179,7 +197,5 @@ public class HelloWorld {
                 }
             });
         }
-
-        sLoop.loop(Thread::new);
     }
 }

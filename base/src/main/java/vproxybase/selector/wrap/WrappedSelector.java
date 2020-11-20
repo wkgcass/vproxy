@@ -280,7 +280,8 @@ public class WrappedSelector implements FDSelector {
             return;
         }
         if (!virtualSocketFDs.containsKey(vfd)) {
-            Logger.error(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector");
+            Logger.warn(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector" +
+                " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
             return;
         }
         assert Logger.lowLevelDebug("add virtual readable: " + vfd);
@@ -310,7 +311,8 @@ public class WrappedSelector implements FDSelector {
             return;
         }
         if (!virtualSocketFDs.containsKey(vfd)) {
-            Logger.error(LogType.IMPROPER_USE, "cannot register writable for " + vfd + " when the fd not handled by this selector");
+            Logger.warn(LogType.IMPROPER_USE, "cannot register writable for " + vfd + " when the fd not handled by this selector." +
+                " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
             return;
         }
         assert Logger.lowLevelDebug("add virtual writable: " + vfd);
