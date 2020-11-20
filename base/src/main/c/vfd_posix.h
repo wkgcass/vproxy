@@ -27,6 +27,7 @@
     #define V_SO_REUSEPORT SO_REUSEPORT
     #define V_SO_REUSEADDR SO_REUSEADDR
     #define V_SO_RCVBUF    SO_RCVBUF
+    #define V_SO_BROADCAST SO_BROADCAST
     #define V_IPPROTO_TCP  IPPROTO_TCP
     #ifdef SOL_IP
         #define V_SOL_IP   SOL_IP

@@ -44,6 +44,8 @@ public interface Posix {
 
     void setTcpNoDelay(int fd, boolean v) throws IOException;
 
+    void setBroadcast(int fd, boolean v) throws IOException;
+
     void setIpTransparent(int fd, boolean v) throws IOException;
 
     void close(int fd) throws IOException;

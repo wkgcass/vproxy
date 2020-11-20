@@ -15,7 +15,8 @@ public class PosixFD extends AbstractBaseFD implements FD {
     private boolean closed = false;
     protected int fd = -1;
     private Boolean blocking = null;
-    private Map<SocketOption, Object> opts = new HashMap<>();
+    @SuppressWarnings("rawtypes")
+    private final Map<SocketOption, Object> opts = new HashMap<>();
 
     protected PosixFD(Posix posix) {
         this.posix = posix;
@@ -61,6 +62,7 @@ public class PosixFD extends AbstractBaseFD implements FD {
                 && name != StandardSocketOptions.SO_REUSEPORT
                 && name != StandardSocketOptions.TCP_NODELAY
                 && name != StandardSocketOptions.SO_RCVBUF
+                && name != StandardSocketOptions.SO_BROADCAST
                 && name != SocketOptions.IP_TRANSPARENT) {
                 throw new IOException("not supported " + name);
             }
@@ -74,6 +76,8 @@ public class PosixFD extends AbstractBaseFD implements FD {
                 posix.setRcvBuf(fd, (Integer) value);
             } else if (name == StandardSocketOptions.TCP_NODELAY) {
                 posix.setTcpNoDelay(fd, (Boolean) value);
+            } else if (name == StandardSocketOptions.SO_BROADCAST) {
+                posix.setBroadcast(fd, (Boolean) value);
             } else if (name == SocketOptions.IP_TRANSPARENT) {
                 posix.setIpTransparent(fd, (Boolean) value);
             } else {
