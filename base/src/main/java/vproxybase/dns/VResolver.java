@@ -6,6 +6,7 @@ import vproxybase.util.Callback;
 import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
@@ -37,7 +38,9 @@ public class VResolver extends AbstractResolver {
             sock = fds.openDatagramFD();
             sock.configureBlocking(false);
             sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0)); // bind any port
-            client = new DNSClient(loop.getSelectorEventLoop(), sock, Resolver.getNameServers(), DNS_REQ_TIMEOUT, MAX_RETRY);
+
+            // use empty nameserver list to construct the client, it will be filled later
+            client = new DNSClient(loop.getSelectorEventLoop(), sock, Collections.emptyList(), DNS_REQ_TIMEOUT, MAX_RETRY);
         } catch (IOException e) {
             try {
                 loop.getSelectorEventLoop().close();
@@ -61,14 +64,15 @@ public class VResolver extends AbstractResolver {
         this.sock = sock;
         this.client = client;
 
-        loop.getSelectorEventLoop().period(reloadConfigFilePeriod, () -> {
-            var nameServers = Resolver.getNameServers();
+        // assign nameservers on next tick
+        loop.getSelectorEventLoop().nextTick(() -> Resolver.getNameServers(this.client::setNameServers));
+        loop.getSelectorEventLoop().period(reloadConfigFilePeriod, () -> Resolver.getNameServers(nameServers -> {
             this.client.setNameServers(nameServers);
             var hosts = Resolver.getHosts();
             if (!hosts.isEmpty()) {
                 this.hosts = hosts;
             }
-        }); // no need to record the periodic event, when the resolver is shutdown, the loop would be shutdown as well
+        })); // no need to record the periodic event, when the resolver is shutdown, the loop would be shutdown as well
     }
 
     private IP[] listToArray(List<IP> list) {

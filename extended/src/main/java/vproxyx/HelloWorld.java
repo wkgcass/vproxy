@@ -5,6 +5,7 @@ import vfd.IP;
 import vfd.IPPort;
 import vfd.SocketFD;
 import vfd.VFDConfig;
+import vproxybase.Config;
 import vproxybase.connection.*;
 import vproxybase.dhcp.DHCPClientHelper;
 import vproxybase.selector.SelectorEventLoop;
@@ -26,10 +27,13 @@ public class HelloWorld {
 
         if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "DHCP will not run when using FStack");
+        } else if (System.getProperty("hcpNics", "").isBlank()) {
+            Logger.alert("System property -DhcpNics not set, DHCP features will not run.");
+            Logger.alert("You may set -DhcpNics=all or eth0,eth1,... to enable the DHCP features");
         } else {
-            Logger.info(LogType.ALERT, "trying DHCP features by retrieving dns servers using DHCP ...");
+            Logger.alert("trying DHCP features by retrieving dns servers using DHCP ...");
             BlockCallback<Set<IP>, IOException> cb = new BlockCallback<>();
-            DHCPClientHelper.getDomainNameServers(sLoop, 1, cb);
+            DHCPClientHelper.getDomainNameServers(sLoop, Config.dhcpNics, 1, cb);
             try {
                 var ips = cb.block();
                 Logger.alert("dhcp returns with dns servers: " + ips);

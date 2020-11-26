@@ -15,7 +15,7 @@ public class DHCPRetrieveDNSServer {
         SelectorEventLoop loop = SelectorEventLoop.open();
         loop.loop(Thread::new);
 
-        DHCPClientHelper.getDomainNameServers(loop, 1, new Callback<>() {
+        DHCPClientHelper.getDomainNameServers(loop, n -> true, 1, new Callback<>() {
             @Override
             protected void onSucceeded(Set<IP> value) {
                 Logger.alert("retrieved dns servers: " + value);

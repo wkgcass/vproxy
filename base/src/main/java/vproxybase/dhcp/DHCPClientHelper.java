@@ -15,6 +15,7 @@ import java.net.*;
 import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.Predicate;
 
 public class DHCPClientHelper {
     public static final int DHCP_CLIENT_PORT = 68;
@@ -23,8 +24,9 @@ public class DHCPClientHelper {
     private DHCPClientHelper() {
     }
 
-    public static void getDomainNameServers(SelectorEventLoop loop, int maxFailedRetry, Callback<Set<IP>, IOException> cb) {
-        getDomainNameServers(loop, new Callback<>() {
+    public static void getDomainNameServers(SelectorEventLoop loop, Predicate<String> nicTester,
+                                            int maxFailedRetry, Callback<Set<IP>, IOException> cb) {
+        getDomainNameServers(loop, nicTester, new Callback<>() {
             @Override
             protected void onSucceeded(Set<IP> value) {
                 cb.succeeded(value);
@@ -36,13 +38,13 @@ public class DHCPClientHelper {
                     cb.failed(err);
                 } else {
                     Logger.warn(LogType.ALERT, "getDomainNameServers failed, retries left " + maxFailedRetry, err);
-                    getDomainNameServers(loop, maxFailedRetry - 1, cb);
+                    getDomainNameServers(loop, nicTester, maxFailedRetry - 1, cb);
                 }
             }
         });
     }
 
-    public static void getDomainNameServers(SelectorEventLoop loop, Callback<Set<IP>, IOException> cb) {
+    public static void getDomainNameServers(SelectorEventLoop loop, Predicate<String> nicTester, Callback<Set<IP>, IOException> cb) {
         Enumeration<NetworkInterface> interfaces;
         try {
             interfaces = NetworkInterface.getNetworkInterfaces();
@@ -56,6 +58,11 @@ public class DHCPClientHelper {
 
         while (interfaces.hasMoreElements()) {
             var iface = interfaces.nextElement();
+            String nicName = iface.getDisplayName();
+            if (!nicTester.test(nicName)) {
+                assert Logger.lowLevelDebug("skipping nic " + nicName);
+                continue;
+            }
             byte[] hardwareAddress;
             try {
                 hardwareAddress = iface.getHardwareAddress();

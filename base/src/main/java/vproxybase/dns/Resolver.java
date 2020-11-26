@@ -5,11 +5,13 @@ import vfd.IPPort;
 import vfd.IPv4;
 import vfd.IPv6;
 import vproxybase.Config;
+import vproxybase.dhcp.DHCPClientHelper;
 import vproxybase.util.*;
 
 import java.io.*;
 import java.net.UnknownHostException;
 import java.util.*;
+import java.util.function.Consumer;
 import java.util.stream.Collectors;
 
 public interface Resolver {
@@ -47,14 +49,31 @@ public interface Resolver {
 
     void stop() throws IOException;
 
-    static List<IPPort> getNameServers() {
+    static void getNameServers(Consumer<List<IPPort>> cb) {
+        // ensure default resolver is running (will need an event loop)
+        Resolver defaultResolver = getDefault();
+
+        // use the callback util to execute callback on the caller event loop
+        Callback<List<IPPort>, Throwable> threadAwareCallback = new Callback<>() {
+            @Override
+            protected void onSucceeded(List<IPPort> value) {
+                cb.accept(value);
+            }
+
+            @Override
+            protected void onFailed(Throwable err) {
+                // will not happen
+            }
+        };
+
         File f = getNameServerFile();
-        boolean needLog = true;
+        boolean needLog;
         if (f == null) {
             if (AbstractResolver.fileNameServerUpdateTimestamp == -1) {
                 needLog = false;
             } else {
                 AbstractResolver.fileNameServerUpdateTimestamp = -1;
+                needLog = true;
             }
         } else {
             long lastUpdate = f.lastModified();
@@ -62,6 +81,7 @@ public interface Resolver {
                 needLog = false;
             } else {
                 AbstractResolver.fileNameServerUpdateTimestamp = lastUpdate;
+                needLog = true;
             }
         }
         List<IPPort> ret;
@@ -70,14 +90,31 @@ public interface Resolver {
         } else {
             ret = getNameServersFromFile(f, needLog);
         }
-        if (ret.isEmpty()) {
-            ret = new ArrayList<>(2);
-            if (needLog)
-                Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
-            ret.add(new IPPort(IP.from(new byte[]{8, 8, 8, 8}), 53));
-            ret.add(new IPPort(IP.from(new byte[]{8, 8, 4, 4}), 53));
+        if (!ret.isEmpty()) {
+            threadAwareCallback.succeeded(ret);
+            return;
         }
-        return ret;
+        DHCPClientHelper.getDomainNameServers(((AbstractResolver) defaultResolver).getLoop().getSelectorEventLoop(),
+            Config.dhcpNics, 1, new Callback<>() {
+                @Override
+                protected void onSucceeded(Set<IP> nameServerIPs) {
+                    threadAwareCallback.succeeded(nameServerIPs.stream().map(ip -> new IPPort(ip, 53)).collect(Collectors.toList()));
+                }
+
+                @Override
+                protected void onFailed(IOException err) {
+                    if (needLog) {
+                        Logger.error(LogType.ALERT, "failed retrieving dns servers from dhcp", err);
+                        Logger.alert("using 8.8.8.8 and 8.8.4.4 as name servers");
+                    }
+
+                    var ret = new ArrayList<IPPort>(2);
+                    ret.add(new IPPort(IP.from(new byte[]{8, 8, 8, 8}), 53));
+                    ret.add(new IPPort(IP.from(new byte[]{8, 8, 4, 4}), 53));
+
+                    threadAwareCallback.succeeded(ret);
+                }
+            });
     }
 
     private static File getNameServerFile() {

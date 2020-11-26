@@ -94,6 +94,10 @@ public abstract class AbstractResolver implements Resolver {
         // let's just handle it in the loop since it is created for resolving
     }
 
+    public NetEventLoop getLoop() {
+        return loop;
+    }
+
     @Override
     public void start() {
         loop.getSelectorEventLoop().loop(r -> new Thread(r, alias));

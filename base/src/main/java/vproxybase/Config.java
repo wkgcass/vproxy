@@ -7,6 +7,7 @@ import vproxybase.util.Utils;
 import java.io.File;
 import java.util.Arrays;
 import java.util.Set;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class Config {
@@ -107,6 +108,11 @@ public class Config {
     // -DmirrorConf=...
     public static final String mirrorConfigPath;
 
+    // the nics for dhcp to use
+    // -DhcpNics=all or eth0,eth1,... (split with ',')
+    public static final boolean dhcpNicsEnabled;
+    public static final Predicate<String> dhcpNics;
+
     static {
         appClass = System.getProperty("eploy"); // -Deploy
         String probeConf = System.getProperty("probe", "");
@@ -117,6 +123,19 @@ public class Config {
         }
         domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
         mirrorConfigPath = System.getProperty("mirrorConf", "");
+
+        String dhcpNicsString = System.getProperty("hcpNics", "");
+        if (dhcpNicsString.isBlank()) {
+            dhcpNicsEnabled = false;
+            dhcpNics = n -> false;
+        } else if (dhcpNicsString.trim().equals("all")) {
+            dhcpNicsEnabled = true;
+            dhcpNics = n -> true;
+        } else {
+            var set = Arrays.stream(dhcpNicsString.split(",")).map(String::trim).filter(n -> !n.isEmpty()).collect(Collectors.toSet());
+            dhcpNicsEnabled = true;
+            dhcpNics = set::contains;
+        }
     }
 
     public static boolean supportReusePortLB() {

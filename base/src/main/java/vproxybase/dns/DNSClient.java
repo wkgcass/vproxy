@@ -41,7 +41,7 @@ public class DNSClient {
 
     private final Map<Integer, Request> requests = new HashMap<>();
     private int nextId = 0;
-    private ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+    private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
 
     public DNSClient(SelectorEventLoop loop, DatagramFD sock, List<IPPort> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
         this.loop = loop;
@@ -137,8 +137,8 @@ public class DNSClient {
                 }
                 throw new RuntimeException(e);
             }
-            client.setNameServers(Resolver.getNameServers());
-            loop.period(60_000, () -> client.setNameServers(Resolver.getNameServers()));
+            Resolver.getNameServers(client::setNameServers);
+            loop.period(60_000, () -> Resolver.getNameServers(client::setNameServers));
             DEFAULT_INSTANCE = client;
         }
         return DEFAULT_INSTANCE;
