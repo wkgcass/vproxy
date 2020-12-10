@@ -73,7 +73,7 @@ public class Logger {
         var arr = Thread.currentThread().getStackTrace();
         boolean intoLoggerLib = false;
         for (StackTraceElement e : arr) {
-            if (e.getClassName().matches("\\.Logger\\b")) {
+            if (e.getClassName().matches(".*Logger\\b.*")) {
                 intoLoggerLib = true;
             } else {
                 if (intoLoggerLib) {
