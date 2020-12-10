@@ -143,6 +143,8 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             "ib=" + intermediateBufferCap() + "/" + intermediateBufferCount() +
             ";" +
             "e=" + getEncryptedBufferForOutputUsedSize() + "/" + getEncryptedBufferForOutputCap() +
+            ";" +
+            "seq=" + result.sequenceNumber() +
             ";";
     }
 

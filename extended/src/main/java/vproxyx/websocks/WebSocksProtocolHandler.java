@@ -14,6 +14,7 @@ import vproxybase.processor.http1.entity.Request;
 import vproxybase.processor.http1.entity.Response;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
+import vproxybase.protocol.SubProtocolHandlerContext;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ByteBufferRingBuffer;
@@ -87,7 +88,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                     // fall through
                 } else {
                     if (req.uri.contains("..")) {
-                        assert Logger.lowLevelDebug("the request wants to get upper level resources, which might be an attack");
+                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "the request " + req.uri + " wants to get upper level resources, which might be an attack");
                         // fall through
                     } else {
                         String uri = req.uri;
@@ -384,8 +385,8 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     public void init(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         initSSL(ctx); // init if it's ssl (or may simply do nothing if not ssl)
         ctx.data = new Tuple<>(new WebSocksProxyContext(
-            new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, httpProtocolHandler),
-            new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, socks5Handler)
+            new SubProtocolHandlerContext<>(ctx, ctx.connectionId, ctx.connection, ctx.loop, httpProtocolHandler),
+            new SubProtocolHandlerContext<>(ctx, ctx.connectionId, ctx.connection, ctx.loop, socks5Handler)
         ), null);
         ctx.data.left.step = 1;
         ctx.data.left.httpContext.data = new WebSocksHttpContext(ctx.data.left);

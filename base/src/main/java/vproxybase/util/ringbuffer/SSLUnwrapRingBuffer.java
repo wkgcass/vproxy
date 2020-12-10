@@ -238,6 +238,8 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             "ib=" + intermediateBufferCap() + "/" + intermediateBufferCount() +
             ";" +
             "p=" + getPlainBufferForApp().used() + "/" + getPlainBufferForApp().capacity() +
+            ";" +
+            "seq=" + result.sequenceNumber() +
             ";";
     }
 

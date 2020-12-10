@@ -348,6 +348,9 @@ class HandlerForConnection implements Handler<SocketFD> {
     @Override
     public void writable(HandlerContext<SocketFD> ctx) {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
+
+        assert Logger.lowLevelDebug("writable fired " + cctx.connection);
+
         if (cctx.connection.getOutBuffer().used() == 0) {
             // prepare for error message
             try {

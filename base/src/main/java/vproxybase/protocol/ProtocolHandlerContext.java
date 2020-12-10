@@ -35,6 +35,8 @@ public class ProtocolHandlerContext<T> {
     }
 
     void doWrite() {
+        assert Logger.lowLevelDebug("#" + hashCode() + " ::: doWrite with chnl=" + (chnl == null ? "null" : "used=" + chnl.used()) + ", bytesSeq.size=" + bytesSeq.size());
+
         // doWrite() should consider ET writable handler
 
         if (chnl != null && chnl.used() == 0)
@@ -60,13 +62,15 @@ public class ProtocolHandlerContext<T> {
             } // we should not use the `size` variable any more, so use a code block {} to prevent
 
             if (chnl != null && chnl.used() != 0) {
-                continue; // still have some bytes left, try to write again until write size equals 0
+                assert Logger.lowLevelDebug("still have some bytes left, try to write again until write size equals 0");
+                continue;
             }
             // otherwise,
             // this bytes array is already written
             // get another array
             byte[] bytes = bytesSeq.poll();
             if (bytes == null) {
+                assert Logger.lowLevelDebug("nothing to write both in chnl and bytesSeq");
                 chnl = null;
                 break; // no more data to write
             }
@@ -82,6 +86,7 @@ public class ProtocolHandlerContext<T> {
         }
         if (bytes.length == 0)
             return; // do not write if the input array is empty
+        assert Logger.lowLevelDebug("trying to write " + bytes.length + " in #" + hashCode());
         bytesSeq.add(bytes); // only record in this thread
         loop.runOnLoop(this::doWrite); // run write in loop thread
     }
