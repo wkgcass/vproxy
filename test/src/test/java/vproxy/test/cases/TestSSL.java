@@ -4,6 +4,7 @@ import io.vertx.core.Vertx;
 import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import org.junit.AfterClass;
+import org.junit.AssumptionViolatedException;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import vfd.IP;
@@ -125,7 +126,7 @@ public class TestSSL {
         } catch (UnknownHostException e) {
             System.out.println("we are not able to resolve the address, " +
                 "may be network is wrong, we ignore this case");
-            return;
+            throw new AssumptionViolatedException(e.getMessage());
         }
         var remote = new IPPort(inet, port);
         // make a socket to test whether it's accessible
@@ -135,7 +136,7 @@ public class TestSSL {
             } catch (IOException e) {
                 System.out.println("we cannot connect to the remote," +
                     "may be network is wrong, we ignore this case");
-                return;
+                throw new AssumptionViolatedException(e.getMessage());
             }
         }
 

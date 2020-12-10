@@ -2,17 +2,21 @@ package vproxybase.dns;
 
 import vfd.*;
 import vfd.jdk.ChannelFDs;
+import vproxybase.Config;
 import vproxybase.connection.NetEventLoop;
+import vproxybase.dns.dnsserverlistgetter.GetDnsServerListDefault;
+import vproxybase.dns.dnsserverlistgetter.GetDnsServerListFromConfigFile;
+import vproxybase.dns.dnsserverlistgetter.GetDnsServerListFromDhcp;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.Arrays;
-import java.util.Collection;
+import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
 import java.util.concurrent.CopyOnWriteArraySet;
+import java.util.function.Consumer;
 
 public abstract class AbstractResolver implements Resolver {
     static class ResolveTask {
@@ -32,8 +36,65 @@ public abstract class AbstractResolver implements Resolver {
 
     private static volatile AbstractResolver defaultResolver;
 
-    static long fileNameServerUpdateTimestamp = 0; // set this field to -1 to indicate that the file not exists
     static long fileHostUpdateTimestamp = 0;
+    static Map<String, IP> lastRetrievedHosts;
+
+    private static final List<DnsServerListGetter> dnsServerListGetters;
+    private static final boolean[] getDnsServerListLastResults; // results[index+1] <--> getters[index]
+
+    static {
+        if (Config.dhcpGetDnsListEnabled) {
+            dnsServerListGetters = Arrays.asList(new GetDnsServerListFromDhcp(), new GetDnsServerListFromConfigFile(), new GetDnsServerListDefault());
+        } else {
+            dnsServerListGetters = Arrays.asList(new GetDnsServerListFromConfigFile(), new GetDnsServerListDefault());
+        }
+        getDnsServerListLastResults = new boolean[dnsServerListGetters.size() + 1];
+        Arrays.fill(getDnsServerListLastResults, true);
+    }
+
+    static void getNameServers(Consumer<List<IPPort>> cb) {
+        // ensure default resolver is running (will need an event loop)
+        getDefault();
+
+        // use the callback util to execute callback on the caller event loop
+        Callback<List<IPPort>, Throwable> threadAwareCallback = new Callback<>() {
+            @Override
+            protected void onSucceeded(List<IPPort> value) {
+                cb.accept(value);
+            }
+
+            @Override
+            protected void onFailed(Throwable err) {
+                // will not happen
+            }
+        };
+
+        var ite = dnsServerListGetters.iterator();
+        recursiveRunGetNameServers(ite, 0, threadAwareCallback);
+    }
+
+    private static void recursiveRunGetNameServers(Iterator<DnsServerListGetter> ite, int index, Callback<List<IPPort>, Throwable> cb) {
+        // no need to check hasNext()
+        var getter = ite.next();
+        boolean firstRun = getDnsServerListLastResults[index];
+        getDnsServerListLastResults[index] = false; // last failed
+        getter.get(firstRun, new Callback<>() {
+            @Override
+            protected void onSucceeded(List<IPPort> value) {
+                if (value.isEmpty()) {
+                    recursiveRunGetNameServers(ite, index + 1, cb);
+                } else {
+                    getDnsServerListLastResults[index + 1] = true; // this succeeded
+                    cb.succeeded(value);
+                }
+            }
+
+            @Override
+            protected void onFailed(Throwable err) {
+                recursiveRunGetNameServers(ite, index + 1, cb);
+            }
+        });
+    }
 
     static Resolver getDefault() {
         if (defaultResolver != null)
@@ -56,6 +117,9 @@ public abstract class AbstractResolver implements Resolver {
                 throw new RuntimeException("create resolver failed");
             }
             defaultResolver.start();
+
+            // block current thread until name servers are set into the dns client
+            ((VResolver) defaultResolver).getClient().setNameServers(Resolver.blockGetNameServers());
 
             return defaultResolver;
         }

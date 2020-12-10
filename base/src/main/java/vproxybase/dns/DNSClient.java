@@ -22,10 +22,7 @@ import java.io.IOException;
 import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
@@ -42,6 +39,10 @@ public class DNSClient {
     private final Map<Integer, Request> requests = new HashMap<>();
     private int nextId = 0;
     private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+
+    public DNSClient(SelectorEventLoop loop, DatagramFD sock, int dnsReqTimeout, int maxRetry) throws IOException {
+        this(loop, sock, Collections.emptyList(), dnsReqTimeout, maxRetry);
+    }
 
     public DNSClient(SelectorEventLoop loop, DatagramFD sock, List<IPPort> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
         this.loop = loop;
@@ -137,7 +138,7 @@ public class DNSClient {
                 }
                 throw new RuntimeException(e);
             }
-            Resolver.getNameServers(client::setNameServers);
+            client.setNameServers(Resolver.blockGetNameServers());
             loop.period(60_000, () -> Resolver.getNameServers(client::setNameServers));
             DEFAULT_INSTANCE = client;
         }
@@ -197,7 +198,7 @@ public class DNSClient {
             if (nameServerIndex >= nameServers.size()) {
                 // all nameservers in the list are already tried
                 // check retry times
-                if (retry < maxRetry) {
+                if (retry < maxRetry && nameServers.size() > 0) {
                     ++retry;
                     nameServerIndex = 0;
                 } else {

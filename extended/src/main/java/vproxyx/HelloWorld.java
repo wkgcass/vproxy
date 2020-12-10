@@ -27,13 +27,13 @@ public class HelloWorld {
 
         if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "DHCP will not run when using FStack");
-        } else if (System.getProperty("hcpNics", "").isBlank()) {
-            Logger.alert("System property -DhcpNics not set, DHCP features will not run.");
-            Logger.alert("You may set -DhcpNics=all or eth0,eth1,... to enable the DHCP features");
+        } else if (!Config.dhcpGetDnsListEnabled) {
+            Logger.alert("Feature 'dhcp to get dns list' NOT enabled.");
+            Logger.alert("You may set -DhcpGetDnsListNics=all or eth0,eth1,... to enable the feature.");
         } else {
-            Logger.alert("trying DHCP features by retrieving dns servers using DHCP ...");
+            Logger.alert("Retrieving dns servers using DHCP ...");
             BlockCallback<Set<IP>, IOException> cb = new BlockCallback<>();
-            DHCPClientHelper.getDomainNameServers(sLoop, Config.dhcpNics, 1, cb);
+            DHCPClientHelper.getDomainNameServers(sLoop, Config.dhcpGetDnsListNics, 1, cb);
             try {
                 var ips = cb.block();
                 Logger.alert("dhcp returns with dns servers: " + ips);

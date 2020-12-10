@@ -109,9 +109,9 @@ public class Config {
     public static final String mirrorConfigPath;
 
     // the nics for dhcp to use
-    // -DhcpNics=all or eth0,eth1,... (split with ',')
-    public static final boolean dhcpNicsEnabled;
-    public static final Predicate<String> dhcpNics;
+    // -DhcpGetDnsListNics=all or eth0,eth1,... (split with ',')
+    public static final boolean dhcpGetDnsListEnabled;
+    public static final Predicate<String> dhcpGetDnsListNics;
 
     static {
         appClass = System.getProperty("eploy"); // -Deploy
@@ -124,17 +124,17 @@ public class Config {
         domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
         mirrorConfigPath = System.getProperty("mirrorConf", "");
 
-        String dhcpNicsString = System.getProperty("hcpNics", "");
-        if (dhcpNicsString.isBlank()) {
-            dhcpNicsEnabled = false;
-            dhcpNics = n -> false;
-        } else if (dhcpNicsString.trim().equals("all")) {
-            dhcpNicsEnabled = true;
-            dhcpNics = n -> true;
+        String dhcpGetDnsListNicsString = System.getProperty("hcpGetDnsListNics", "");
+        if (dhcpGetDnsListNicsString.isBlank()) {
+            dhcpGetDnsListEnabled = false;
+            dhcpGetDnsListNics = n -> false;
+        } else if (dhcpGetDnsListNicsString.trim().equals("all")) {
+            dhcpGetDnsListEnabled = true;
+            dhcpGetDnsListNics = n -> true;
         } else {
-            var set = Arrays.stream(dhcpNicsString.split(",")).map(String::trim).filter(n -> !n.isEmpty()).collect(Collectors.toSet());
-            dhcpNicsEnabled = true;
-            dhcpNics = set::contains;
+            var set = Arrays.stream(dhcpGetDnsListNicsString.split(",")).map(String::trim).filter(n -> !n.isEmpty()).collect(Collectors.toSet());
+            dhcpGetDnsListEnabled = true;
+            dhcpGetDnsListNics = set::contains;
         }
     }
 

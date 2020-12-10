@@ -12,7 +12,6 @@ import vproxybase.util.exception.NotFoundException;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
-import java.util.Collections;
 import java.util.HashSet;
 import java.util.List;
 import java.util.stream.Collectors;
@@ -22,7 +21,7 @@ public class ServerGroupDNSClient extends DNSClient {
     private final ServerListener serverListener;
 
     public ServerGroupDNSClient(SelectorEventLoop loop, DatagramFD sock, ServerGroup serverGroup, int dnsReqTimeout, int maxRetry) throws IOException {
-        super(loop, sock, Collections.emptyList(), dnsReqTimeout, maxRetry);
+        super(loop, sock, dnsReqTimeout, maxRetry);
         this.serverGroup = serverGroup;
         setHealthyServeList();
         serverListener = new ServerListener() {

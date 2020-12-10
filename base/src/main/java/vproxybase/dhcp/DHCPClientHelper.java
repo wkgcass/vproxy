@@ -272,7 +272,6 @@ public class DHCPClientHelper {
                                 cbFail(e);
                                 return;
                             }
-                            assert serverIPPort == null || Logger.lowLevelDebug("received dhcp message from " + serverIPPort);
                             buf.flip();
                             if (buf.limit() == 0) {
                                 buf.limit(buf.capacity());
@@ -285,6 +284,7 @@ public class DHCPClientHelper {
                                 cbFail(new IOException("failed parsing external packet", e));
                                 return;
                             }
+                            assert serverIPPort == null || Logger.lowLevelDebug("received dhcp message from " + serverIPPort + " " + result);
                             oneSuccess(serverIPPort, result);
                         }
                     }
