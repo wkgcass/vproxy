@@ -12,11 +12,17 @@ import java.nio.file.Path;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRootPageProvider implements PageProvider {
+    private static final int EXPIRE_DURATION = 2 * 3600 * 1000;
     private final String baseDir;
     private final String protocol;
     private final String domain;
     private final int port;
-    private final ConcurrentHashMap<String, Page> pages = new ConcurrentHashMap<>();
+    // pages1 and pages2 are used for expiration
+    // when request comes, the timestamp is checked
+    // pages1 might be cleared and all contents of pages2 will be set into pages1
+    private ConcurrentHashMap<String, Page> pages1 = new ConcurrentHashMap<>();
+    private ConcurrentHashMap<String, Page> pages2 = new ConcurrentHashMap<>();
+    private long lastExpiredTime = 0;
 
     private static class Page {
         final ByteArray content;
@@ -78,6 +84,15 @@ public class WebRootPageProvider implements PageProvider {
 
     @Override
     public PageResult getPage(String url) {
+        // first try to expire the pages
+        long current = System.currentTimeMillis();
+        if (current - lastExpiredTime > EXPIRE_DURATION) {
+            Logger.alert("page cache expires, " + pages1.size() + " pages cleared");
+            pages1 = pages2;
+            pages2 = new ConcurrentHashMap<>();
+            lastExpiredTime = current;
+        }
+
         if (!url.endsWith("/")) {
             // maybe url not ending with `/` but it's a directory
             // relative path may be wrong
@@ -104,15 +119,15 @@ public class WebRootPageProvider implements PageProvider {
         String mime = getMime(file);
         String key = file.getAbsolutePath();
         if (!file.exists() || file.isDirectory()) {
-            pages.remove(key);
+            removePageCache(key);
             return null;
         }
 
         long time = file.lastModified();
-        Page page = pages.get(key);
+        Page page = getCachedPage(key);
         if (page != null) {
             if (time != page.updateTime) {
-                pages.remove(key);
+                removePageCache(key);
                 page = null;
             }
         }
@@ -130,11 +145,28 @@ public class WebRootPageProvider implements PageProvider {
             }
             ByteArray content = ByteArray.from(baos.toByteArray());
             page = new Page(content, time);
-            pages.put(key, page);
+            recordPageCache(key, page);
             return new PageResult(mime, page.content);
         } catch (IOException e) {
             Logger.error(LogType.FILE_ERROR, "reading file " + key + " failed", e);
             return null;
         }
+    }
+
+    private void removePageCache(String key) {
+        pages1.remove(key);
+        pages2.remove(key);
+    }
+
+    private Page getCachedPage(String key) {
+        var ret = pages2.get(key);
+        if (ret != null) {
+            return ret;
+        }
+        return pages1.get(key);
+    }
+
+    private void recordPageCache(String key, Page page) {
+        pages2.put(key, page);
     }
 }
