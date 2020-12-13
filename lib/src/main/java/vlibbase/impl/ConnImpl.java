@@ -114,8 +114,8 @@ public class ConnImpl implements Conn {
     private class ConnectableConnHandler extends SimpleTcpConnHandler implements ConnectableConnectionHandler {
         @Override
         public void connected(ConnectableConnectionHandlerContext ctx) {
-            connectedCallbackForClient.accept(null, ConnImpl.this);
             connected = true;
+            connectedCallbackForClient.accept(null, ConnImpl.this);
         }
 
         @Override
@@ -166,9 +166,7 @@ public class ConnImpl implements Conn {
 
     @Override
     public Conn allWritten(Runnable handler) {
-        if (allWrittenHandler != null) {
-            throw new IllegalArgumentException("allWrittenHandler is already set");
-        }
+        // allow to set null values
         allWrittenHandler = handler;
         return this;
     }
@@ -196,10 +194,18 @@ public class ConnImpl implements Conn {
         }
         var data = dataToWrite.pollFirst();
         if (data == null) { // no data to write for now
+            allWrittenCallback();
             return;
         }
         chnl = ByteArrayChannel.fromFull(data);
         doWrite();
+    }
+
+    private void allWrittenCallback() {
+        var allWrittenHandler = this.allWrittenHandler;
+        if (allWrittenHandler != null) {
+            allWrittenHandler.run();
+        }
     }
 
     @Override

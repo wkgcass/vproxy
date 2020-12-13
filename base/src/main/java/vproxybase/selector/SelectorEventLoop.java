@@ -25,6 +25,18 @@ public class SelectorEventLoop {
         }
     }
 
+    static class AddFdData {
+        final FD channel;
+        final EventSet ops;
+        final RegisterData registerData;
+
+        AddFdData(FD channel, EventSet ops, RegisterData registerData) {
+            this.channel = channel;
+            this.ops = ops;
+            this.registerData = registerData;
+        }
+    }
+
     private static final ThreadLocal<SelectorEventLoop> loopThreadLocal = new ThreadLocal<>();
 
     public static SelectorEventLoop current() {
@@ -35,6 +47,11 @@ public class SelectorEventLoop {
     public final FDs fds;
     private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
+
+    private final Lock channelRegisteringLock = Lock.create();
+    private final ConcurrentLinkedQueue<AddFdData> channelsToBeRegisteredStep1 = new ConcurrentLinkedQueue<>();
+    private final ConcurrentLinkedQueue<AddFdData> channelsToBeRegisteredStep2 = new ConcurrentLinkedQueue<>();
+
     private final HandlerContext ctxReuse0 = new HandlerContext(this); // always reuse the ctx object
     private final HandlerContext ctxReuse1 = new HandlerContext(this);
     public volatile Thread runningThread;
@@ -101,8 +118,30 @@ public class SelectorEventLoop {
     }
 
     private void handleNonSelectEvents() {
+        handleAddingFdEvents();
         handleRunOnLoopEvents();
         handleTimeEvents();
+    }
+
+    private void handleAddingFdEvents() {
+        //noinspection unused
+        try (var x = channelRegisteringLock.lock()) {
+            AddFdData data;
+            // handle step2 first, because step1 will add elements into the step2 array
+            while ((data = channelsToBeRegisteredStep2.poll()) != null) {
+                assert Logger.lowLevelDebug("handling registering channel " + data.channel + " when looping");
+                try {
+                    selector.register(data.channel, data.ops, data.registerData);
+                } catch (Throwable t) {
+                    Logger.error(LogType.IMPROPER_USE, "the channel " + data.channel + " failed to be added into the event loop", t);
+                }
+            }
+
+            // handle step1 then
+            while ((data = channelsToBeRegisteredStep1.poll()) != null) {
+                channelsToBeRegisteredStep2.add(data);
+            }
+        }
     }
 
     private void handleRunOnLoopEvents() {
@@ -243,7 +282,9 @@ public class SelectorEventLoop {
             } else if (timeQueue.isEmpty() && runOnLoopEvents.isEmpty()) {
                 selected = selector.select(); // let it sleep
             } else if (!runOnLoopEvents.isEmpty()) {
-                selected = selector.selectNow(); // immediately return
+                selected = selector.selectNow(); // immediately return when tasks registered into the loop
+            } else if (!channelsToBeRegisteredStep1.isEmpty() || !channelsToBeRegisteredStep2.isEmpty()) {
+                selected = selector.selectNow(); // immediately return when channels are going to be registered
             } else {
                 int time = timeQueue.nextTime();
                 if (time == 0) {
@@ -321,14 +362,14 @@ public class SelectorEventLoop {
     @ThreadSafe
     public void nextTick(Runnable r) {
         runOnLoopEvents.add(r);
-        if (runningThread == null || Thread.currentThread() == runningThread)
+        if (!needWake())
             return; // we do not need to wakeup because it's not started or is already waken up
         wakeup(); // wake the selector because new event is added
     }
 
     @ThreadSafe
     public void runOnLoop(Runnable r) {
-        if (runningThread == null || Thread.currentThread() == runningThread) {
+        if (!needWake()) {
             tryRunnable(r); // directly run if is already on the loop thread
         } else {
             nextTick(r); // otherwise push into queue
@@ -380,14 +421,10 @@ public class SelectorEventLoop {
 
             assert Logger.lowLevelDebug("key already canceled, we register it on next tick after keys are handled");
 
-            nextTick(() -> nextTick(() -> {
-                try {
-                    selector.register(channel, ops, registerData);
-                } catch (ClosedChannelException e1) {
-                    // will not happen, if the channel is closed, this statement will not run
-                    throw new RuntimeException(e1);
-                }
-            }));
+            channelsToBeRegisteredStep1.add(new AddFdData(channel, ops, registerData));
+            if (needWake()) {
+                wakeup();
+            }
             return false;
         }
         return true;
@@ -422,11 +459,16 @@ public class SelectorEventLoop {
 
     @ThreadSafe
     public void remove(FD channel) {
+        //noinspection unused
+        try (var x = channelRegisteringLock.lock()) {
+            channelsToBeRegisteredStep1.removeIf(e -> e.channel == channel);
+            channelsToBeRegisteredStep2.removeIf(e -> e.channel == channel);
+        }
+
         RegisterData att;
 
         // synchronize the channel
         // to prevent it being canceled from multiple threads
-        //noinspection SynchronizationOnLocalVariableOrMethodParameter
         synchronized (channel) {
             if (!selector.isRegistered(channel))
                 return;

@@ -64,15 +64,22 @@ public class ConnRefPoolImpl implements ConnRefPool {
     private boolean isClosed = false;
 
     public ConnRefPoolImpl(int maxCount) {
+        this(maxCount, null);
+    }
+
+    public ConnRefPoolImpl(int maxCount, NetEventLoop loop) {
         this.maxCount = maxCount;
-        SelectorEventLoop sloop;
-        try {
-            sloop = SelectorEventLoop.open();
-        } catch (IOException e) {
-            throw new RuntimeException(e);
+        if (loop == null) {
+            SelectorEventLoop sloop;
+            try {
+                sloop = SelectorEventLoop.open();
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+            sloop.loop(Thread::new);
+            loop = new NetEventLoop(sloop);
         }
-        sloop.loop(Thread::new);
-        loop = new NetEventLoop(sloop);
+        this.loop = loop;
         connections = new ConcurrentLinkedDeque<>();
     }
 
@@ -88,6 +95,11 @@ public class ConnRefPoolImpl implements ConnRefPool {
             return Optional.empty();
         }
         return Optional.of(new SimpleConnRef(conn));
+    }
+
+    @Override
+    public boolean isClosed() {
+        return isClosed;
     }
 
     private Connection poll() {

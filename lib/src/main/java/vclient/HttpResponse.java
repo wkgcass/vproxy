@@ -43,4 +43,6 @@ public interface HttpResponse {
             return JSON.parse(new ByteArrayCharStream(body, charset));
         }
     }
+
+    HttpClientConn conn();
 }

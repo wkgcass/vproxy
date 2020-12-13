@@ -63,13 +63,19 @@ public class VResolver extends AbstractResolver {
         this.sock = sock;
         this.client = client;
 
-        loop.getSelectorEventLoop().period(reloadConfigFilePeriod, () -> Resolver.getNameServers(nameServers -> {
+        loop.getSelectorEventLoop().nextTick(this::updateNameServerList);
+        loop.getSelectorEventLoop().period(reloadConfigFilePeriod, this::updateNameServerList);
+        // no need to record the periodic event, when the resolver is shutdown, the loop would be shutdown as well
+    }
+
+    private void updateNameServerList() {
+        Resolver.getNameServers(nameServers -> {
             this.client.setNameServers(nameServers);
             var hosts = Resolver.getHosts();
             if (!hosts.isEmpty()) {
                 this.hosts = hosts;
             }
-        })); // no need to record the periodic event, when the resolver is shutdown, the loop would be shutdown as well
+        });
     }
 
     public DNSClient getClient() {

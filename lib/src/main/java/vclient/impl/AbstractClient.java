@@ -57,14 +57,16 @@ public abstract class AbstractClient implements GeneralClient {
         }
         closed = true;
         if (noInputLoop) {
-            // should close the input loop because it's created by the lib
-            loop.getSelectorEventLoop().nextTick(() -> {
-                try {
-                    loop.getSelectorEventLoop().close();
-                } catch (IOException e) {
-                    Logger.shouldNotHappen("got error when closing the event loop", e);
-                }
-            });
+            if (loop != null) {
+                // should close the input loop because it's created by the lib
+                loop.getSelectorEventLoop().nextTick(() -> {
+                    try {
+                        loop.getSelectorEventLoop().close();
+                    } catch (IOException e) {
+                        Logger.shouldNotHappen("got error when closing the event loop", e);
+                    }
+                });
+            }
         }
     }
 }

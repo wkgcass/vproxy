@@ -50,9 +50,11 @@ public class TestStreamServerClient {
                     sb.append(s);
                     conn.write(data);
                 }
-            }).closed(() ->
-                cb.failed(new IOException("closed before data fully read"))
-            );
+            }).closed(() -> {
+                if (!cb.isCalled()) {
+                    cb.failed(new IOException("closed before data fully read"));
+                }
+            });
         }).listen(listenPort);
 
         var client = new Client(listenPort);

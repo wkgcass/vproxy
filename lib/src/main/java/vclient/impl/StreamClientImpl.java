@@ -4,13 +4,12 @@ import vlibbase.Conn;
 import vclient.StreamClient;
 import vfd.IPPort;
 import vlibbase.ConnRef;
+import vlibbase.VProxyLibUtils;
 import vlibbase.impl.ConnImpl;
 import vproxybase.connection.ConnectableConnection;
 import vproxybase.connection.ConnectionOpts;
 import vproxybase.util.RingBuffer;
-import vproxybase.util.ringbuffer.SSLUtils;
 
-import javax.net.ssl.SSLEngine;
 import java.io.IOException;
 import java.util.function.BiConsumer;
 
@@ -30,16 +29,9 @@ public class StreamClientImpl extends AbstractClient implements StreamClient {
 
         RingBuffer in;
         RingBuffer out;
-        if (opts.sslContext != null) {
-            SSLEngine engine = opts.sslContext.createSSLEngine();
-            engine.setUseClientMode(true);
-            SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), remote);
-            in = pair.left;
-            out = pair.right;
-        } else {
-            in = RingBuffer.allocate(1024);
-            out = RingBuffer.allocate(1024);
-        }
+        var bufTup = VProxyLibUtils.buildBuffers(remote, opts);
+        in = bufTup.left;
+        out = bufTup.right;
 
         ConnectableConnection conn;
         try {
@@ -64,15 +56,7 @@ public class StreamClientImpl extends AbstractClient implements StreamClient {
 
     @Override
     public Conn receiveTransferredConnection0(ConnRef conn) throws IOException {
-        if (isClosed()) {
-            throw new IOException("the client is closed");
-        }
-        if (!conn.isTransferring()) {
-            throw new IllegalArgumentException("the connection " + conn + " is not transferring");
-        }
-        if (!conn.isValidRef()) {
-            throw new IllegalArgumentException("the connection " + conn + " is not valid");
-        }
+        VProxyLibUtils.checkTransfer(this, conn);
         getLoop();
 
         return new ConnImpl(getLoop(), conn.raw(), null);

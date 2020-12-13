@@ -13,5 +13,7 @@ public interface ConnRefPool extends ConnectionAware<Void> {
 
     Optional<ConnRef> get();
 
+    boolean isClosed();
+
     void close();
 }

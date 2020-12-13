@@ -1,5 +1,6 @@
 package vclient.impl;
 
+import vclient.HttpClientConn;
 import vclient.HttpResponse;
 import vproxybase.processor.http1.entity.Chunk;
 import vproxybase.processor.http1.entity.Header;
@@ -7,10 +8,12 @@ import vproxybase.processor.http1.entity.Response;
 import vproxybase.util.ByteArray;
 
 public class HttpResponseImpl implements HttpResponse {
+    private final HttpClientConn conn;
     private final Response response;
     private ByteArray generalBody;
 
-    public HttpResponseImpl(Response response) {
+    public HttpResponseImpl(HttpClientConn conn, Response response) {
+        this.conn = conn;
         this.response = response;
     }
 
@@ -54,6 +57,11 @@ public class HttpResponseImpl implements HttpResponse {
             }
         }
         return generalBody;
+    }
+
+    @Override
+    public HttpClientConn conn() {
+        return conn;
     }
 
     @Override

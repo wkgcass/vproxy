@@ -13,6 +13,9 @@ import java.util.function.BiConsumer;
 
 public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
     static StreamClient to(String host, int port) {
+        if (IP.isIpLiteral(host)) {
+            return to(IP.from(host), port);
+        }
         IP ip;
         try {
             ip = Resolver.getDefault().blockResolve(host);

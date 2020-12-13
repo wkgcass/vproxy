@@ -3,21 +3,25 @@ package vclient;
 import vclient.impl.Http1ClientImpl;
 import vfd.IP;
 import vfd.IPPort;
+import vlibbase.ConnectionAware;
 import vproxybase.dns.Resolver;
 import vproxybase.util.ringbuffer.SSLUtils;
 import vserver.HttpMethod;
 
 import java.net.UnknownHostException;
 
-public interface HttpClient extends GeneralClient {
+public interface HttpClient extends GeneralClient, ConnectionAware<HttpClientConn> {
     static HttpClient to(String host, int port) {
+        if (IP.isIpLiteral(host)) {
+            return to(IP.from(host), port);
+        }
         IP ip;
         try {
             ip = Resolver.getDefault().blockResolve(host);
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
-        return to(ip, port);
+        return to(new IPPort(ip, port), new Options().setHost(host));
     }
 
     static HttpClient to(IP l3addr, int port) {
@@ -99,7 +103,8 @@ public interface HttpClient extends GeneralClient {
     HttpRequest request(HttpMethod method, String uri);
 
     class Options extends GeneralClientOptions<Options> {
-        public String host;
+        public int poolSize = 10;
+        public boolean autoRelease = true;
 
         public Options() {
             super();
@@ -107,11 +112,17 @@ public interface HttpClient extends GeneralClient {
 
         public Options(Options that) {
             super(that);
-            this.host = that.host;
+            this.poolSize = that.poolSize;
+            this.autoRelease = that.autoRelease;
         }
 
-        public Options setHost(String host) {
-            this.host = host;
+        public Options setPoolSize(int poolSize) {
+            this.poolSize = poolSize;
+            return this;
+        }
+
+        public Options setAutoRelease(boolean autoRelease) {
+            this.autoRelease = autoRelease;
             return this;
         }
     }
