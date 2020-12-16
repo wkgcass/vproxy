@@ -1,6 +1,7 @@
 package vproxy.socks;
 
 import vproxybase.connection.Connector;
+import vproxybase.socks.AddressType;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.nio.ByteArrayChannel;
 

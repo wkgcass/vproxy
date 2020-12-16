@@ -7,7 +7,6 @@ import vjson.util.ObjectBuilder;
 import vmirror.Mirror;
 import vproxybase.dns.Resolver;
 import vproxybase.util.OS;
-import vproxybase.util.ringbuffer.SSLUtils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -63,7 +62,7 @@ public class TLSMirror {
         var l3addr = Resolver.getDefault().blockResolve("cip.cc");
         var cli = HttpClient.to(new IPPort(l3addr, 443), new HttpClient.Options()
             .setHost("cip.cc")
-            .setSSLContext(SSLUtils.getDefaultClientSSLContext()));
+            .setSSL(true));
         cli.get("/").header("User-Agent", "curl/vproxy").send((err, resp) -> {
             if (err != null) {
                 err.printStackTrace();

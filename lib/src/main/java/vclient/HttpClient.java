@@ -3,6 +3,7 @@ package vclient;
 import vclient.impl.Http1ClientImpl;
 import vfd.IP;
 import vfd.IPPort;
+import vlibbase.ConnRefPool;
 import vlibbase.ConnectionAware;
 import vproxybase.dns.Resolver;
 import vproxybase.util.ringbuffer.SSLUtils;
@@ -11,6 +12,7 @@ import vserver.HttpMethod;
 import java.net.UnknownHostException;
 
 public interface HttpClient extends GeneralClient, ConnectionAware<HttpClientConn> {
+    @SuppressWarnings("DuplicatedCode")
     static HttpClient to(String host, int port) {
         if (IP.isIpLiteral(host)) {
             return to(IP.from(host), port);
@@ -102,8 +104,8 @@ public interface HttpClient extends GeneralClient, ConnectionAware<HttpClientCon
 
     HttpRequest request(HttpMethod method, String uri);
 
-    class Options extends GeneralClientOptions<Options> {
-        public int poolSize = 10;
+    class Options extends GeneralSSLClientOptions<Options> {
+        public ConnRefPool.Options poolOptions;
         public boolean autoRelease = true;
 
         public Options() {
@@ -112,12 +114,12 @@ public interface HttpClient extends GeneralClient, ConnectionAware<HttpClientCon
 
         public Options(Options that) {
             super(that);
-            this.poolSize = that.poolSize;
+            this.poolOptions = that.poolOptions == null ? null : new ConnRefPool.Options(that.poolOptions);
             this.autoRelease = that.autoRelease;
         }
 
-        public Options setPoolSize(int poolSize) {
-            this.poolSize = poolSize;
+        public Options setPoolOptions(ConnRefPool.Options poolOptions) {
+            this.poolOptions = poolOptions;
             return this;
         }
 

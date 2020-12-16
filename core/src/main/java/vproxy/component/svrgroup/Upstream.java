@@ -197,11 +197,19 @@ public class Upstream {
         return lastMax;
     }
 
+    public Connector seek(IPPort source, Hint hint) {
+        ServerGroupHandle h = searchForGroup(hint);
+        if (h != null) {
+            return h.group.next(source);
+        }
+        return null;
+    }
+
     public Connector next(IPPort source, Hint hint) {
         if (hint != null) {
-            ServerGroupHandle h = searchForGroup(hint);
-            if (h != null) {
-                return h.group.next(source);
+            Connector connector = seek(source, hint);
+            if (connector != null) {
+                return connector;
             }
             // not found, use normal process
             // fall through

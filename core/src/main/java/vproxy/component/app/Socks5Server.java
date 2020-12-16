@@ -5,7 +5,7 @@ import vfd.IPPort;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.socks.Socks5ProxyContext;
 import vproxy.socks.Socks5ProxyProtocolHandler;
@@ -61,7 +61,7 @@ public class Socks5Server extends TcpLB {
             Upstream upstream = Socks5Server.super.backend;
             if (type == AddressType.domain && !IP.isIpLiteral(address) /*some implementation may always send domain socks5 request even if it's plain ip*/) {
                 Hint hint = new Hint(address, port);
-                Connector connector = upstream.next(accepted.remote, hint);
+                Connector connector = upstream.seek(accepted.remote, hint);
                 providedCallback.accept(connector);
                 return;
             } else {

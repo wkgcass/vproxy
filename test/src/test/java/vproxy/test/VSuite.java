@@ -9,6 +9,7 @@ import vproxy.test.cases.*;
     BeforeAll.class,
 
     TestTcpLB.class,
+    TestIpParser.class,
     TestNetMask.class,
     TestTimer.class,
     TestResolver.class,

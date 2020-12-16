@@ -6,7 +6,7 @@ import vfd.IPPort;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
 import vproxybase.Config;

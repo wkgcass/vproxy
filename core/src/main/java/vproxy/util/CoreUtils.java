@@ -3,7 +3,7 @@ package vproxy.util;
 import vfd.IP;
 import vfd.IPPort;
 import vproxy.component.ssl.CertKey;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxybase.connection.Connector;
 import vproxybase.dns.Resolver;
 import vproxybase.util.Callback;

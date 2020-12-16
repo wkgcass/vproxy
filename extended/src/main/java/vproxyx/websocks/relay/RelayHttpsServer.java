@@ -5,7 +5,7 @@ import vfd.IPPort;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.connection.*;
 import vproxybase.connection.util.SSLHandshakeDoneConnectableConnectionHandler;

@@ -4,6 +4,7 @@ import vfd.IP;
 import vproxybase.connection.Connection;
 import vproxybase.connection.Connector;
 import vproxybase.connection.ConnectorProvider;
+import vproxybase.socks.AddressType;
 
 import java.util.function.Consumer;
 

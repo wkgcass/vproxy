@@ -57,19 +57,16 @@ public class ConnRefPoolImpl implements ConnRefPool {
         }
     }
 
-    private final int maxCount;
+    private final Options opts;
     private final NetEventLoop loop;
     private final ConcurrentLinkedDeque<ConnRefHolder> connections;
 
     private boolean isClosed = false;
 
-    public ConnRefPoolImpl(int maxCount) {
-        this(maxCount, null);
-    }
-
-    public ConnRefPoolImpl(int maxCount, NetEventLoop loop) {
-        this.maxCount = maxCount;
-        if (loop == null) {
+    public ConnRefPoolImpl(Options opts) {
+        this.opts = new Options(opts);
+        NetEventLoop loop;
+        if (opts.loop == null) {
             SelectorEventLoop sloop;
             try {
                 sloop = SelectorEventLoop.open();
@@ -78,6 +75,8 @@ public class ConnRefPoolImpl implements ConnRefPool {
             }
             sloop.loop(Thread::new);
             loop = new NetEventLoop(sloop);
+        } else {
+            loop = opts.loop;
         }
         this.loop = loop;
         connections = new ConcurrentLinkedDeque<>();
@@ -137,7 +136,7 @@ public class ConnRefPoolImpl implements ConnRefPool {
             throw new IllegalStateException("conn " + conn + " is not valid");
         }
 
-        if (connections.size() >= maxCount) {
+        if (connections.size() >= opts.maxCount) {
             var polled = poll();
             if (polled != null) {
                 polled.close();
@@ -145,6 +144,7 @@ public class ConnRefPoolImpl implements ConnRefPool {
         }
 
         var raw = conn.raw();
+        raw.setTimeout(opts.idleTimeout);
         var holder = new ConnRefHolder(raw);
         try {
             loop.addConnection(raw, null, holder);

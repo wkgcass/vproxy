@@ -1,12 +1,21 @@
 package vlibbase;
 
 import vlibbase.impl.ConnRefPoolImpl;
+import vlibbase.impl.EmptyConnRefPool;
+import vproxybase.connection.NetEventLoop;
 
 import java.util.Optional;
 
 public interface ConnRefPool extends ConnectionAware<Void> {
     static ConnRefPool create(int maxCount) {
-        return new ConnRefPoolImpl(maxCount);
+        return create(new Options().setMaxCount(maxCount));
+    }
+
+    static ConnRefPool create(Options opts) {
+        if (opts.maxCount <= 0) {
+            return new EmptyConnRefPool();
+        }
+        return new ConnRefPoolImpl(opts);
     }
 
     int count();
@@ -16,4 +25,34 @@ public interface ConnRefPool extends ConnectionAware<Void> {
     boolean isClosed();
 
     void close();
+
+    class Options {
+        public int maxCount = 10;
+        public int idleTimeout = 10_000;
+        public NetEventLoop loop = null;
+
+        public Options() {
+        }
+
+        public Options(Options that) {
+            this.maxCount = that.maxCount;
+            this.idleTimeout = that.idleTimeout;
+            this.loop = that.loop;
+        }
+
+        public Options setMaxCount(int maxCount) {
+            this.maxCount = maxCount;
+            return this;
+        }
+
+        public Options setIdleTimeout(int idleTimeout) {
+            this.idleTimeout = idleTimeout;
+            return this;
+        }
+
+        public Options setLoop(NetEventLoop loop) {
+            this.loop = loop;
+            return this;
+        }
+    }
 }

@@ -12,6 +12,7 @@ import java.net.UnknownHostException;
 import java.util.function.BiConsumer;
 
 public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
+    @SuppressWarnings("DuplicatedCode")
     static StreamClient to(String host, int port) {
         if (IP.isIpLiteral(host)) {
             return to(IP.from(host), port);
@@ -22,7 +23,7 @@ public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
         } catch (UnknownHostException e) {
             throw new RuntimeException(e);
         }
-        return to(ip, port);
+        return to(new IPPort(ip, port), new Options().setHost(host));
     }
 
     static StreamClient to(IP l3addr, int port) {
@@ -39,7 +40,7 @@ public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
 
     void connect(BiConsumer<IOException, Conn> connectionCallback);
 
-    class Options extends GeneralClientOptions<Options> {
+    class Options extends GeneralSSLClientOptions<Options> {
         public Options() {
             super();
         }

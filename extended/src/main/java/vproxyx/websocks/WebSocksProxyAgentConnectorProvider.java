@@ -5,7 +5,7 @@ import vfd.IPPort;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
 import vproxy.pool.PoolCallback;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.CoreUtils;
 import vproxybase.component.svrgroup.ServerGroup;

@@ -173,8 +173,10 @@ public class Http1ClientConn implements HttpClientConn {
 
                             @Override
                             public void remoteClosed(ConnectionHandlerContext ctx) {
+                                if (!cb.isCalled()) {
+                                    cb.failed(new IOException("connection remote endpoint closed before receiving the response"));
+                                }
                                 ctx.connection.close();
-                                closed(ctx);
                             }
 
                             @Override
@@ -239,7 +241,10 @@ public class Http1ClientConn implements HttpClientConn {
 
         if (holdingClientPool == null || holdingClientPool.isClosed()) {
             assert Logger.lowLevelDebug("no holding client, close the connection");
+            var foo = tobeRemovedFromLoop;
+            tobeRemovedFromLoop = true;
             connection.close();
+            tobeRemovedFromLoop = foo;
         } else {
             assert Logger.lowLevelDebug("holding client exists, the connection will be stored into the pool");
             try {

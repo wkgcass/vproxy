@@ -1,10 +1,13 @@
 package vlibbase;
 
-import vclient.GeneralClientOptions;
+import vclient.GeneralSSLClientOptions;
 import vclient.impl.AbstractClient;
 import vfd.IPPort;
+import vproxybase.connection.Connection;
+import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Tuple;
+import vproxybase.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxybase.util.ringbuffer.SSLUtils;
 
 import javax.net.ssl.SNIHostName;
@@ -17,7 +20,7 @@ public class VProxyLibUtils {
     private VProxyLibUtils() {
     }
 
-    public static Tuple<RingBuffer, RingBuffer> buildBuffers(IPPort remote, GeneralClientOptions<?> opts) {
+    public static Tuple<RingBuffer, RingBuffer> buildBuffers(IPPort remote, GeneralSSLClientOptions<?> opts) {
         RingBuffer in;
         RingBuffer out;
         if (opts.sslContext != null) {
@@ -26,6 +29,9 @@ public class VProxyLibUtils {
             SSLParameters params = new SSLParameters();
             if (opts.host != null) {
                 params.setServerNames(Collections.singletonList(new SNIHostName(opts.host)));
+            }
+            if (opts.alpn != null && opts.alpn.length > 0) {
+                params.setApplicationProtocols(opts.alpn);
             }
             engine.setSSLParameters(params);
             SSLUtils.SSLBufferPair pair = SSLUtils.genbuf(engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576), remote);
@@ -48,5 +54,22 @@ public class VProxyLibUtils {
         if (!conn.isValidRef()) {
             throw new IllegalArgumentException("the connection " + conn + " is not valid");
         }
+    }
+
+    public static void switchBuffers(Connection raw, GeneralSSLClientOptions<?> opts) throws IOException {
+        if (opts == null || opts.sslContext == null) {
+            assert Logger.lowLevelDebug("opts not requiring ssl, directly switch");
+            return;
+        }
+        if (raw.getInBuffer() instanceof SSLUnwrapRingBuffer) {
+            assert Logger.lowLevelDebug("buffers are already ssl, nothing required to be done");
+            return;
+        }
+        assert Logger.lowLevelDebug("need to switch to ssl buffers");
+        var tup = buildBuffers(raw.remote, opts);
+        var in = tup.left;
+        var out = tup.right;
+
+        raw.UNSAFE_replaceBuffer(in, out);
     }
 }

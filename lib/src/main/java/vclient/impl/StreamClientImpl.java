@@ -59,6 +59,9 @@ public class StreamClientImpl extends AbstractClient implements StreamClient {
         VProxyLibUtils.checkTransfer(this, conn);
         getLoop();
 
-        return new ConnImpl(getLoop(), conn.raw(), null);
+        var raw = conn.raw();
+        raw.setTimeout(opts.timeout);
+        VProxyLibUtils.switchBuffers(raw, opts);
+        return new ConnImpl(getLoop(), raw, null);
     }
 }

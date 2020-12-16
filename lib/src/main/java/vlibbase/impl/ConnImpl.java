@@ -241,23 +241,33 @@ public class ConnImpl implements Conn {
     }
 
     @Override
-    public <T> T transferTo(ConnectionAware<T> client) throws IOException {
+    public Connection detach() {
         if (isTransferring) {
-            throw new IOException("this connection " + this + " is transferring");
+            throw new IllegalStateException("this connection " + this + " is transferring");
         }
         if (!holdingRef) {
-            throw new IOException("this Conn object " + this + " is not holding ConnRef anymore");
+            throw new IllegalStateException("this Conn object " + this + " is not holding ConnRef anymore");
         }
         if (!connected) {
             Logger.shouldNotHappen("the connection is not connected but retrieved by user: " + this);
-            throw new IOException("the connection is not connected yet");
+            throw new IllegalStateException("the connection is not connected yet");
         }
         if (conn.isClosed()) {
-            throw new IOException("the connection is already closed");
+            throw new IllegalStateException("the connection is already closed");
         }
         tobeRemovedFromLoop = true;
         loop.removeConnection(conn);
         isTransferring = true;
+        return conn;
+    }
+
+    @Override
+    public <T> T transferTo(ConnectionAware<T> client) throws IOException {
+        try {
+            detach();
+        } catch (IllegalStateException e) {
+            throw new IOException(e);
+        }
         T ret = client.receiveTransferredConnection0(this);
         holdingRef = false;
         isTransferring = false;

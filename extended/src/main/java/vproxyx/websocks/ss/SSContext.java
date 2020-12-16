@@ -1,6 +1,6 @@
 package vproxyx.websocks.ss;
 
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.nio.ByteArrayChannel;
 

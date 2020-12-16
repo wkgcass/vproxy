@@ -1,7 +1,7 @@
 package vproxy.test.tool;
 
 import vfd.IP;
-import vproxy.socks.AddressType;
+import vproxybase.socks.AddressType;
 
 import java.io.IOException;
 import java.io.InputStream;

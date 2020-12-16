@@ -4,6 +4,7 @@ import vfd.IP;
 import vproxybase.connection.Connector;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
+import vproxybase.socks.AddressType;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 

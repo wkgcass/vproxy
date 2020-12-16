@@ -147,7 +147,7 @@ public class Connection implements NetFlowRecorder {
     // fields for closing the connection
     TimerEvent closeTimeout; // the connection should be released after a few minutes if no data at all
     long lastTimestamp;
-    public final int timeout;
+    int timeout;
 
     // statistics fields
     // the connection is handled in a single thread, so no need to synchronize
@@ -356,6 +356,31 @@ public class Connection implements NetFlowRecorder {
 
     public NetEventLoop getEventLoop() {
         return _eventLoop;
+    }
+
+    public void setTimeout(int timeout) {
+        assert Logger.lowLevelDebug("setting timeout for conn " + this + " to " + timeout);
+        this.timeout = timeout;
+        var loop = _eventLoop;
+        if (loop != null) {
+            assert Logger.lowLevelDebug("the connection is registered inside an event loop");
+        } else {
+            assert Logger.lowLevelDebug("the connection is NOT registered inside any loop");
+        }
+        if (loop != null) {
+            loop.getSelectorEventLoop().runOnLoop(() -> {
+                var cctx = _cctx;
+                if (cctx != null) {
+                    assert Logger.lowLevelDebug("the connection is bond with a cctx");
+                } else {
+                    assert Logger.lowLevelDebug("the connection is NOT bond with a cctx");
+                    return;
+                }
+                NetEventLoopUtils.resetCloseTimeout(cctx);
+            });
+        } else {
+            assert Logger.lowLevelDebug("the connection is not registered into any event loop");
+        }
     }
 
     public String id() {

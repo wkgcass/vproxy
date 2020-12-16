@@ -24,11 +24,11 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
         this.opts = opts;
 
         getLoop();
-        streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setClientContext(getClientContext()));
-        if (opts.poolSize == 0) {
+        streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setAlpn(new String[]{"http/1.1"}).setClientContext(getClientContext()));
+        if (opts.poolOptions == null || opts.poolOptions.maxCount == 0) {
             pool = null;
         } else {
-            pool = new ConnRefPoolImpl(opts.poolSize, getLoop());
+            pool = new ConnRefPoolImpl(new ConnRefPool.Options(opts.poolOptions).setLoop(getLoop()));
         }
     }
 
@@ -101,6 +101,9 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
     public HttpClientConn receiveTransferredConnection0(ConnRef conn) throws IOException {
         VProxyLibUtils.checkTransfer(this, conn);
 
-        return new Http1ClientConn(conn.raw(), getLoop(), pool, opts);
+        var raw = conn.raw();
+        raw.setTimeout(opts.timeout);
+        VProxyLibUtils.switchBuffers(raw, opts);
+        return new Http1ClientConn(raw, getLoop(), pool, opts);
     }
 }

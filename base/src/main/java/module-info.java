@@ -19,6 +19,7 @@ module vproxy.base {
     exports vproxybase.selector.wrap.arqudp;
     exports vproxybase.selector.wrap.kcp;
     exports vproxybase.selector.wrap.kcp.mock;
+    exports vproxybase.socks;
     exports vproxybase.connection;
     exports vproxybase.connection.util;
     exports vproxybase.util;

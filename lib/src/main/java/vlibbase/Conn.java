@@ -1,5 +1,6 @@
 package vlibbase;
 
+import vproxybase.connection.Connection;
 import vproxybase.util.ByteArray;
 
 import java.io.IOException;
@@ -21,4 +22,6 @@ public interface Conn extends ConnRef {
     void closeWrite();
 
     void close();
+
+    Connection detach();
 }
