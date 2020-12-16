@@ -39,6 +39,7 @@ module vproxy.base {
     exports vproxybase.processor.common;
     exports vproxybase.processor.http;
     exports vproxybase.processor.dubbo;
+    exports vproxybase.prometheus;
     exports vproxybase.component.elgroup;
     exports vproxybase.component.svrgroup;
     exports vproxybase.component.check;

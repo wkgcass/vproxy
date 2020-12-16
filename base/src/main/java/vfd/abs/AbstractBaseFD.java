@@ -1,7 +1,7 @@
 package vfd.abs;
 
 import vfd.FD;
-import vproxybase.util.Utils;
+import vproxybase.util.DirectMemoryUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -12,22 +12,22 @@ public abstract class AbstractBaseFD implements FD {
 
     protected ByteBuffer getDirectBufferForReading(int len) {
         if (directBufferForReading != null && directBufferForReading.capacity() < len) {
-            Utils.clean(directBufferForReading);
+            DirectMemoryUtils.free(directBufferForReading);
             directBufferForReading = null;
         }
         if (directBufferForReading == null) {
-            directBufferForReading = ByteBuffer.allocateDirect(2 * len);
+            directBufferForReading = DirectMemoryUtils.allocateDirectBuffer(2 * len);
         }
         return directBufferForReading;
     }
 
     protected ByteBuffer getDirectBufferForWriting(int len) {
         if (directBufferForWriting != null && directBufferForWriting.capacity() < len) {
-            Utils.clean(directBufferForWriting);
+            DirectMemoryUtils.free(directBufferForWriting);
             directBufferForWriting = null;
         }
         if (directBufferForWriting == null) {
-            directBufferForWriting = ByteBuffer.allocateDirect(2 * len);
+            directBufferForWriting = DirectMemoryUtils.allocateDirectBuffer(2 * len);
         }
         return directBufferForWriting;
     }
@@ -49,10 +49,10 @@ public abstract class AbstractBaseFD implements FD {
     @Override
     public void close() throws IOException {
         if (directBufferForReading != null) {
-            Utils.clean(directBufferForReading);
+            DirectMemoryUtils.free(directBufferForReading);
         }
         if (directBufferForWriting != null) {
-            Utils.clean(directBufferForWriting);
+            DirectMemoryUtils.free(directBufferForWriting);
         }
     }
 

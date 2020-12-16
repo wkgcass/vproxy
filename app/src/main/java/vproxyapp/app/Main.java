@@ -1,5 +1,6 @@
 package vproxyapp.app;
 
+import vfd.IPPort;
 import vfd.VFDConfig;
 import vmirror.Mirror;
 import vproxy.fstack.FStackUtil;
@@ -75,6 +76,27 @@ public class Main {
             } catch (Exception e) {
                 Logger.fatal(LogType.INVALID_EXTERNAL_DATA, "initiate mirror failed", e);
                 Utils.exit(1);
+            }
+        }
+
+        {
+            String gi = System.getProperty("GlobalInspection");
+            if (gi != null && !gi.equals("disable") && !gi.equals("disabled")) {
+                IPPort ipport;
+                try {
+                    ipport = new IPPort(gi);
+                } catch (IllegalArgumentException e) {
+                    Logger.fatal(LogType.INVALID_EXTERNAL_DATA, "GlobalInspection should take an ip:port as the argument", e);
+                    Utils.exit(1);
+                    return;
+                }
+                try {
+                    GlobalInspectionHttpServerLauncher.launch(ipport);
+                } catch (IOException e) {
+                    Logger.fatal(LogType.ALERT, "launching global inspection http server failed", e);
+                    Utils.exit(1);
+                    return;
+                }
             }
         }
 

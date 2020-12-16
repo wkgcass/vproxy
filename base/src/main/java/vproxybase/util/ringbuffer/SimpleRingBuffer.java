@@ -1,9 +1,6 @@
 package vproxybase.util.ringbuffer;
 
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.RingBufferETHandler;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -47,7 +44,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
     public static SimpleRingBuffer allocateDirect(int cap) {
-        return new SimpleRingBuffer(true, ByteBuffer.allocateDirect(cap), 0, 0);
+        return new SimpleRingBuffer(true, DirectMemoryUtils.allocateDirectBuffer(cap), 0, 0);
     }
 
     public static SimpleRingBuffer allocate(int cap) {
@@ -196,7 +193,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             return;
         cleaned = true;
         if (isDirect) {
-            Utils.clean(buffer);
+            DirectMemoryUtils.free(buffer);
         }
     }
 
@@ -441,7 +438,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         // then we make a swap
         ByteBuffer newBuffer;
         if (isDirect) {
-            newBuffer = ByteBuffer.allocateDirect(cap);
+            newBuffer = DirectMemoryUtils.allocateDirectBuffer(cap);
         } else {
             newBuffer = ByteBuffer.allocate(cap);
         }
@@ -459,7 +456,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
 
         if (isDirect) {
-            Utils.clean(buffer); // clean the old buffer
+            DirectMemoryUtils.free(buffer); // clean the old buffer
         }
 
         sPos = 0;

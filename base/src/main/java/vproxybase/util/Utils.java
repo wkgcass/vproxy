@@ -177,29 +177,6 @@ public class Utils {
         return ls.toArray(new String[ls.size()]);
     }
 
-    private static Unsafe U;
-
-    static {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            U = (Unsafe) field.get(null);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            Logger.shouldNotHappen("Reflection failure: get unsafe failed " + e);
-            throw new RuntimeException(e);
-        }
-    }
-
-    public static void clean(ByteBuffer buffer) {
-        assert Logger.lowLevelDebug("run Utils.clean");
-        if (!buffer.getClass().getName().equals("java.nio.DirectByteBuffer")) {
-            assert Logger.lowLevelDebug("not direct buffer");
-            return;
-        }
-        assert Logger.lowLevelDebug("is direct buffer, do clean");
-        U.invokeCleaner(buffer);
-    }
-
     public static long currentMinute() {
         return
             (FDProvider.get().currentTimeMillis() / 60_000 // remove millis and seconds

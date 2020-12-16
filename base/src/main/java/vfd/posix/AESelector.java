@@ -1,8 +1,8 @@
 package vfd.posix;
 
 import vfd.*;
+import vproxybase.util.DirectMemoryUtils;
 import vproxybase.util.Logger;
-import vproxybase.util.Utils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,7 +30,7 @@ public class AESelector implements FDSelector {
         if (pipefd == null) {
             bufferForPipeFD = null;
         } else {
-            bufferForPipeFD = ByteBuffer.allocateDirect(8); // linux eventfd requires 8 bytes buffer
+            bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
             posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable, new Att(null, null));
         }
         onlySelectNow = posix.onlySelectNow();
@@ -229,7 +229,7 @@ public class AESelector implements FDSelector {
         closed = true;
         posix.aeDeleteEventLoop(ae);
         if (bufferForPipeFD != null) {
-            Utils.clean(bufferForPipeFD);
+            DirectMemoryUtils.free(bufferForPipeFD);
         }
         if (pipefd != null) {
             try {

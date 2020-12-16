@@ -599,7 +599,7 @@ public class Mirror {
         sendPacket(tap, Collections.singletonList(pkt));
     }
 
-    private final ByteBuffer writeBuffer = ByteBuffer.allocateDirect(2048);
+    private final ByteBuffer writeBuffer = DirectMemoryUtils.allocateDirectBuffer(2048);
 
     private void sendPacket(TapDatagramFD tap, List<? extends AbstractEthernetPacket> packets) {
         for (AbstractEthernetPacket pkt : packets) {
