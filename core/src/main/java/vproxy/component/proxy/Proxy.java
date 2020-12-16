@@ -25,7 +25,7 @@ import java.util.Collection;
 public class Proxy {
     private static void utilCloseConnection(Connection connection) {
         assert Logger.lowLevelDebug("close connection " + connection);
-        connection.close();
+        connection.closeKeepBuffers();
     }
 
     private static void utilCloseConnectionAndReleaseBuffers(Connection connection) {

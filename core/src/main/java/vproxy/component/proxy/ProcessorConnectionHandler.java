@@ -827,11 +827,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             BackendConnectionHandler be = conns[i];
             removeBackend(be);
             be.conn.close();
-            be.conn.getInBuffer().clean();
-            be.conn.getOutBuffer().clean();
         }
         frontendConnection.close();
-        frontendConnection.getInBuffer().clean();
-        frontendConnection.getOutBuffer().clean();
     }
 }

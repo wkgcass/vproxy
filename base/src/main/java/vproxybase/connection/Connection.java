@@ -296,13 +296,36 @@ public class Connection implements NetFlowRecorder {
         // here we do not release buffers
     }
 
-    // make it synchronized to prevent inside fields inconsistent
-    public synchronized void close() {
-        close(false);
+    public void close() {
+        if (closed) {
+            return;
+        }
+        close0(false, true);
+    }
+
+    public void closeKeepBuffers() {
+        if (closed) {
+            return;
+        }
+        close0(false, false);
+    }
+
+    public void close(boolean reset) {
+        if (closed) {
+            return;
+        }
+        close0(reset, true);
+    }
+
+    public void closeKeepBuffers(boolean reset) {
+        if (closed) {
+            return;
+        }
+        close0(reset, false);
     }
 
     // make it synchronized to prevent inside fields inconsistent
-    public synchronized void close(boolean reset) {
+    private synchronized void close0(boolean reset, boolean releaseBuffers) {
         if (closed)
             return; // do not close again if already closed
 
@@ -341,6 +364,14 @@ public class Connection implements NetFlowRecorder {
             channel.close();
         } catch (IOException e) {
             // we can do nothing about it
+        }
+
+        if (releaseBuffers) {
+            assert Logger.lowLevelDebug("buffers are released for conn " + this);
+            getInBuffer().clean();
+            getOutBuffer().clean();
+        } else {
+            assert Logger.lowLevelDebug("buffers are NOT released for conn " + this);
         }
     }
 
