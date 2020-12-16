@@ -1,5 +1,6 @@
 package vproxybase.util.ringbuffer;
 
+import vproxybase.GlobalInspection;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
@@ -39,9 +40,9 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private boolean notFirstOperator = false;
     private boolean operating = false;
     private boolean operatingBuffer = false;
-    private Set<RingBufferETHandler> handler = new HashSet<>();
-    private Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
-    private Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
+    private final Set<RingBufferETHandler> handler = new HashSet<>();
+    private final Set<RingBufferETHandler> handlerToAdd = new HashSet<>();
+    private final Set<RingBufferETHandler> handlerToRemove = new HashSet<>();
 
     public static SimpleRingBuffer allocateDirect(int cap) {
         return new SimpleRingBuffer(true, DirectMemoryUtils.allocateDirectBuffer(cap), 0, 0);
@@ -467,5 +468,14 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             ePosIsAfterSPos = false;
         }
         buffer = newBuffer;
+    }
+
+    @SuppressWarnings("deprecation")
+    @Override
+    protected void finalize() {
+        if (!isDirect || cleaned) {
+            return;
+        }
+        GlobalInspection.getInstance().directSimpleRingBufferFinalize(cap);
     }
 }

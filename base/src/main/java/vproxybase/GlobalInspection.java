@@ -22,6 +22,8 @@ public class GlobalInspection {
     private final Gauge directBufferBytes;
     private final Counter directBufferAllocateCount;
     private final Counter directBufferFreeCount;
+    private final Counter directSimpleRingBufferFinalizeBytesTotal;
+    private final Counter directSimpleRingBufferFinalizeCount;
 
     private GlobalInspection() {
         Map<String, String> extraLabels = getExtraLabels();
@@ -41,9 +43,19 @@ public class GlobalInspection {
             .appendAll(extraLabels));
         metrics.add(directBufferFreeCount);
 
+        directSimpleRingBufferFinalizeBytesTotal = new Counter("direct_memory_finalize_bytes_total", new AppendableMap<>()
+            .append("type", "simple_ring_buffer"));
+        metrics.add(directSimpleRingBufferFinalizeBytesTotal);
+
+        directSimpleRingBufferFinalizeCount = new Counter("direct_memory_finalize_count", new AppendableMap<>()
+            .append("type", "simple_ring_buffer"));
+        metrics.add(directSimpleRingBufferFinalizeCount);
+
         metrics.registerHelpMessage("direct_memory_bytes_current", "Current allocated direct memory in bytes");
         metrics.registerHelpMessage("direct_memory_allocate_count", "Total count of how many times the direct memory is allocated");
         metrics.registerHelpMessage("direct_memory_free_count", "Total count of how many times the direct memory is freed");
+        metrics.registerHelpMessage("direct_memory_finalize_bytes_total", "Total bytes for finalized direct memory");
+        metrics.registerHelpMessage("direct_memory_finalize_count", "Total count of how many times the direct memory is finalized");
     }
 
     private Map<String, String> getExtraLabels() {
@@ -85,6 +97,11 @@ public class GlobalInspection {
     public void directBufferFree(int size) {
         directBufferFreeCount.incr(1);
         directBufferBytes.decr(size);
+    }
+
+    public void directSimpleRingBufferFinalize(int size) {
+        directSimpleRingBufferFinalizeCount.incr(1);
+        directSimpleRingBufferFinalizeBytesTotal.incr(size);
     }
 
     public String toPrometheusString() {
