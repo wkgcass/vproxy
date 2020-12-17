@@ -1,19 +1,19 @@
 package vproxybase.util.ringbuffer;
 
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.RingBuffer;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 
 public interface ByteBufferRingBuffer extends RingBuffer {
     interface WriteOutOp {
-        void accept(ByteBuffer buffer) throws IOException;
+        void accept(ByteBufferEx buffer) throws IOException;
     }
 
     int operateOnByteBufferWriteOut(int maxBytesToWrite, WriteOutOp op) throws IOException;
 
     interface StoreInOp {
-        boolean test(ByteBuffer buffer) throws IOException;
+        boolean test(ByteBufferEx buffer) throws IOException;
     }
 
     int operateOnByteBufferStoreIn(StoreInOp op) throws IOException;

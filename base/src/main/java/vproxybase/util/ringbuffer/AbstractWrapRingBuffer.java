@@ -1,5 +1,6 @@
 package vproxybase.util.ringbuffer;
 
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.RingBufferETHandler;
@@ -198,7 +199,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         }
     }
 
-    abstract protected void handlePlainBuffer(ByteBuffer buf, boolean[] errored, IOException[] ex);
+    abstract protected void handlePlainBuffer(ByteBufferEx buf, boolean[] errored, IOException[] ex);
 
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
@@ -291,5 +292,10 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
         generalWrap();
 
         return this;
+    }
+
+    @Override
+    public boolean isParentOf(RingBuffer buf) {
+        return buf == this || buf == plainBufferForApp;
     }
 }

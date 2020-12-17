@@ -5,9 +5,10 @@ import vjson.JSON;
 import vpacket.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
+import vproxybase.util.direct.DirectByteBuffer;
+import vproxybase.util.direct.DirectMemoryUtils;
 
 import java.io.*;
-import java.nio.ByteBuffer;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Function;
@@ -599,7 +600,7 @@ public class Mirror {
         sendPacket(tap, Collections.singletonList(pkt));
     }
 
-    private final ByteBuffer writeBuffer = DirectMemoryUtils.allocateDirectBuffer(2048);
+    private final DirectByteBuffer writeBuffer = DirectMemoryUtils.allocateDirectBuffer(2048);
 
     private void sendPacket(TapDatagramFD tap, List<? extends AbstractEthernetPacket> packets) {
         for (AbstractEthernetPacket pkt : packets) {
@@ -607,7 +608,7 @@ public class Mirror {
                 writeBuffer.limit(writeBuffer.capacity()).position(0);
                 writeBuffer.put(pkt.getRawPacket().toJavaArray());
                 writeBuffer.flip();
-                tap.write(writeBuffer);
+                tap.write(writeBuffer.realBuffer());
                 // ignore write result
             } catch (Throwable t) {
                 Logger.error(LogType.CONN_ERROR, "sending mirror packet to " + tap + " failed");

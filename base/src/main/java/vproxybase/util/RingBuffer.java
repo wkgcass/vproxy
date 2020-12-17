@@ -95,4 +95,13 @@ public interface RingBuffer {
         // default: simply use the new buffer when need to switch
         return buf;
     }
+
+    default boolean isParentOf(RingBuffer buf) {
+        // default: no inside structures
+        return false;
+    }
+
+    static boolean haveRelationBetween(RingBuffer a, RingBuffer b) {
+        return a.isParentOf(b) || b.isParentOf(a);
+    }
 }

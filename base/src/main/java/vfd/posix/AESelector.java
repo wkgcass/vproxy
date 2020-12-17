@@ -1,11 +1,11 @@
 package vfd.posix;
 
 import vfd.*;
-import vproxybase.util.DirectMemoryUtils;
+import vproxybase.util.direct.DirectByteBuffer;
+import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.Logger;
 
 import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ClosedSelectorException;
 import java.util.*;
@@ -14,7 +14,7 @@ public class AESelector implements FDSelector {
     private final Posix posix;
     private final long ae;
     private final int[] pipefd; // null, or pipefd[read][write], might be the same if using linux eventfd
-    private final ByteBuffer bufferForPipeFD;
+    private final DirectByteBuffer bufferForPipeFD;
     private boolean closed = false;
 
     private final int aeReadable;
@@ -76,7 +76,7 @@ public class AESelector implements FDSelector {
             while (true) {
                 int x;
                 try {
-                    x = posix.read(pipefd[0], bufferForPipeFD, 0, 8);
+                    x = posix.read(pipefd[0], bufferForPipeFD.realBuffer(), 0, 8);
                 } catch (IOException e) {
                     Logger.shouldNotHappen("reading from read end of pipefd failed", e);
                     break;
@@ -151,7 +151,7 @@ public class AESelector implements FDSelector {
         checkOpen();
         bufferForPipeFD.limit(8).position(0).putLong(1L);
         try {
-            posix.write(pipefd[1], bufferForPipeFD, 0, 8);
+            posix.write(pipefd[1], bufferForPipeFD.realBuffer(), 0, 8);
         } catch (IOException e) {
             Logger.shouldNotHappen("writing to write end of pipefd[1] failed", e);
         }
@@ -229,7 +229,7 @@ public class AESelector implements FDSelector {
         closed = true;
         posix.aeDeleteEventLoop(ae);
         if (bufferForPipeFD != null) {
-            DirectMemoryUtils.free(bufferForPipeFD);
+            bufferForPipeFD.clean();
         }
         if (pipefd != null) {
             try {

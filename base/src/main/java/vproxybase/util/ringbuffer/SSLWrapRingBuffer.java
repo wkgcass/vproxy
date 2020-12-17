@@ -3,10 +3,7 @@ package vproxybase.util.ringbuffer;
 import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;
@@ -148,7 +145,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             ";";
     }
 
-    private void mirrorPlain(ByteBuffer plain, int posBefore, SSLEngineResult result) {
+    private void mirrorPlain(ByteBufferEx plain, int posBefore, SSLEngineResult result) {
         if (plain.position() == posBefore) {
             return; // nothing wrote, so do not mirror data out
         }
@@ -177,13 +174,13 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
     }
 
     @Override
-    protected void handlePlainBuffer(ByteBuffer bufferPlain, boolean[] errored, IOException[] ex) {
+    protected void handlePlainBuffer(ByteBufferEx bufferPlain, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = bufferPlain.position();
 
         ByteBuffer bufferEncrypted = getTemporaryBuffer(engine.getSession().getPacketBufferSize());
         SSLEngineResult result;
         try {
-            result = engine.wrap(bufferPlain, bufferEncrypted);
+            result = engine.wrap(bufferPlain.realBuffer(), bufferEncrypted);
         } catch (SSLException e) {
             Logger.error(LogType.SSL_ERROR, "got error when wrapping", e);
             errored[0] = true;
@@ -211,7 +208,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             assert Logger.lowLevelDebug("buffer overflow, so make a bigger buffer and try again");
             bufferEncrypted = ByteBuffer.allocate(engine.getSession().getPacketBufferSize());
             try {
-                result = engine.wrap(bufferPlain, bufferEncrypted);
+                result = engine.wrap(bufferPlain.realBuffer(), bufferEncrypted);
             } catch (SSLException e) {
                 Logger.error(LogType.SSL_ERROR, "got error when wrapping", e);
                 errored[0] = true;

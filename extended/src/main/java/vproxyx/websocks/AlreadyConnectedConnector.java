@@ -26,22 +26,14 @@ public class AlreadyConnectedConnector extends Connector {
         RingBuffer oldO = conn.getOutBuffer();
 
         if (oldI.used() == 0 && oldO.used() == 0) {
-            conn.UNSAFE_replaceBuffer(in, out);
-
-            if (conn.getInBuffer() != oldI) {
-                oldI.clean();
-            }
-            if (conn.getOutBuffer() != oldO) {
-                oldO.clean();
-            }
+            conn.UNSAFE_replaceBuffer(in, out, true);
         } else if (accepted.getInBuffer().used() == 0 && accepted.getOutBuffer().used() == 0) {
             // may try to replace the accepted connection buffers
-            accepted.UNSAFE_replaceBuffer(oldO, oldI);
-
-            if (accepted.getInBuffer() != out) {
+            accepted.UNSAFE_replaceBuffer(oldO, oldI, false);
+            if (!RingBuffer.haveRelationBetween(accepted.getInBuffer(), out)) {
                 out.clean();
             }
-            if (accepted.getOutBuffer() != in) {
+            if (!RingBuffer.haveRelationBetween(accepted.getOutBuffer(), in)) {
                 in.clean();
             }
         } else {

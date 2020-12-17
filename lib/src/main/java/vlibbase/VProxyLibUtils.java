@@ -70,6 +70,6 @@ public class VProxyLibUtils {
         var in = tup.left;
         var out = tup.right;
 
-        raw.UNSAFE_replaceBuffer(in, out);
+        raw.UNSAFE_replaceBuffer(in, out, true);
     }
 }

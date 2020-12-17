@@ -26,6 +26,7 @@ module vproxy.base {
     exports vproxybase.util.ringbuffer;
     exports vproxybase.util.ringbuffer.ssl;
     exports vproxybase.util.crypto;
+    exports vproxybase.util.direct;
     exports vproxybase.util.ex;
     exports vproxybase.util.io;
     exports vproxybase.util.bytearray;
