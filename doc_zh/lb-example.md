@@ -62,7 +62,7 @@ redis-cli -h 10.0.3.10 -p 16309 -a m1PasSw0rd
 
 ### 3. 线程
 
-该步骤可以葫芦。vproxy会自动创建一个acceptor线程组和一个worker线程组。  
+该步骤可以忽略。vproxy会自动创建一个acceptor线程组和一个worker线程组。  
 但是我决定还是把配置展示出来以便自行配置。
 
 创建两个EventLoopGroup（事件循环组）：一个用来接收连接，另一个用来处理流量。
