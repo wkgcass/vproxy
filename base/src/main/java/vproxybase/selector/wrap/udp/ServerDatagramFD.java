@@ -2,6 +2,8 @@ package vproxybase.selector.wrap.udp;
 
 import vfd.*;
 import vproxybase.Config;
+import vproxybase.GlobalInspection;
+import vproxybase.prometheus.GaugeF;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.VirtualFD;
 import vproxybase.selector.wrap.WrappedSelector;
@@ -18,6 +20,16 @@ import java.util.LinkedList;
 import java.util.Map;
 
 public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware {
+    private static final String server_datagram_fd_accept_queue_length_current = "server_datagram_fd_accept_queue_length_current";
+    private static final String server_datagram_fd_established_count_current = "server_datagram_fd_established_count_current";
+
+    static {
+        GlobalInspection.getInstance().registerHelpMessage(server_datagram_fd_accept_queue_length_current,
+            "The current accept queue length of virtual fds from server datagram fd");
+        GlobalInspection.getInstance().registerHelpMessage(server_datagram_fd_established_count_current,
+            "The current count of established virtual fds from server datagram fd");
+    }
+
     private final DatagramFD server;
     private final SelectorEventLoop loop;
     private final WrappedSelector selector;
@@ -26,6 +38,9 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     private final Deque<VirtualDatagramFD> acceptQ = new LinkedList<>();
     private final Map<IPPort, VirtualDatagramFD> acceptMap = new HashMap<>();
     private final Map<IPPort, VirtualDatagramFD> conns = new HashMap<>();
+
+    private GaugeF statisticsAcceptQueueLength;
+    private GaugeF statisticsEstablishedCount;
 
     public ServerDatagramFD(DatagramFD server, SelectorEventLoop loop) {
         this.server = server;
@@ -36,6 +51,15 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     @Override
     public void bind(IPPort l4addr) throws IOException {
         server.bind(l4addr);
+
+        // init statistics
+        String local = l4addr.formatToIPPortString();
+        statisticsAcceptQueueLength = GlobalInspection.getInstance().addMetric(server_datagram_fd_accept_queue_length_current,
+            Map.of("listen", local),
+            (m, l) -> new GaugeF(m, l, () -> (long) acceptMap.size()));
+        statisticsEstablishedCount = GlobalInspection.getInstance().addMetric(server_datagram_fd_established_count_current,
+            Map.of("listen", local),
+            (m, l) -> new GaugeF(m, l, () -> (long) conns.size()));
     }
 
     @Override
@@ -137,6 +161,13 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         }
         acceptMap.clear();
         conns.clear();
+
+        if (statisticsAcceptQueueLength != null) {
+            GlobalInspection.getInstance().removeMetric(statisticsAcceptQueueLength);
+        }
+        if (statisticsEstablishedCount != null) {
+            GlobalInspection.getInstance().removeMetric(statisticsEstablishedCount);
+        }
     }
 
     @Override

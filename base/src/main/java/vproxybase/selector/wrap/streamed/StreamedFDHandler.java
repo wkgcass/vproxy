@@ -6,6 +6,8 @@ import vfd.IPPort;
 import vfd.SocketFD;
 import vmirror.MirrorDataFactory;
 import vproxybase.Config;
+import vproxybase.GlobalInspection;
+import vproxybase.prometheus.GaugeF;
 import vproxybase.selector.Handler;
 import vproxybase.selector.HandlerContext;
 import vproxybase.selector.SelectorEventLoop;
@@ -28,6 +30,13 @@ import java.util.function.Predicate;
 
 @SuppressWarnings("UnusedReturnValue")
 public abstract class StreamedFDHandler implements Handler<SocketFD> {
+    private static final String streamed_fd_handler_fd_map_count_current = "streamed_fd_handler_fd_map_count_current";
+
+    static {
+        GlobalInspection.getInstance().registerHelpMessage(streamed_fd_handler_fd_map_count_current,
+            "The current count of fd map in streamed fd handler");
+    }
+
     private ArqUDPSocketFD fd;
     private SelectorEventLoop loop;
     private final boolean client;
@@ -37,6 +46,9 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     private Predicate<StreamedFD> acceptCallback;
 
     private TimerEvent handshakeTimeout = null;
+    private final Map<Integer, StreamedFD> fdMap = new HashMap<>();
+
+    private GaugeF statisticsFdMapCount;
 
     protected StreamedFDHandler(boolean client) {
         this.client = client;
@@ -67,6 +79,15 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             this.acceptCallback = acceptCallback;
         } else {
             this.acceptCallback = x -> false;
+        }
+        try {
+            this.statisticsFdMapCount = GlobalInspection.getInstance().addMetric(streamed_fd_handler_fd_map_count_current,
+                Map.of("base_remote", fd.getRemoteAddress().formatToIPPortString(),
+                    "base_local", fd.getLocalAddress().formatToIPPortString()),
+                (m, l) -> new GaugeF(m, l, () -> (long) fdMap.size()));
+        } catch (IOException e) {
+            Logger.shouldNotHappen("get remove address or local address from arq udp socket fd failed", e);
+            throw new RuntimeException(e);
         }
     }
 
@@ -484,8 +505,6 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         Logger.warn(LogType.IMPROPER_USE, "fd " + fd + " removed from loop, we have to invalid the fd");
         fail(new IOException("arq udp socket removed from loop: " + fd));
     }
-
-    private final Map<Integer, StreamedFD> fdMap = new HashMap<>();
 
     @MethodForImplementation
     protected final boolean hasStream(int streamId) {
@@ -939,6 +958,10 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         messagesToWrite.clear();
         fdMap.clear();
         keepaliveTimeouts.clear();
+        if (statisticsFdMapCount != null) {
+            GlobalInspection.getInstance().removeMetric(statisticsFdMapCount);
+            statisticsFdMapCount = null;
+        }
     }
 
     @MethodForStreamedFD
