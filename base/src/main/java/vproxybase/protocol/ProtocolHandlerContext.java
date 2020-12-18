@@ -1,7 +1,7 @@
 package vproxybase.protocol;
 
 import vproxybase.connection.Connection;
-import vproxybase.selector.SelectorEventLoop;
+import vproxybase.connection.NetEventLoop;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
@@ -19,13 +19,13 @@ public class ProtocolHandlerContext<T> {
     // make outBuffer private and handle the writings inside the lib
     private final RingBuffer outBuffer;
     // the loop that handles write process
-    public final SelectorEventLoop loop;
-    private final ProtocolHandler handler;
+    public final NetEventLoop loop;
+    public final ProtocolHandler<T> handler;
 
     // a field for user code to set data
     public T data;
 
-    public ProtocolHandlerContext(String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
+    public ProtocolHandlerContext(String connectionId, Connection connection, NetEventLoop loop, ProtocolHandler<T> handler) {
         this.connectionId = connectionId;
         this.connection = connection;
         this.inBuffer = connection.getInBuffer();
@@ -88,12 +88,12 @@ public class ProtocolHandlerContext<T> {
             return; // do not write if the input array is empty
         assert Logger.lowLevelDebug("trying to write " + bytes.length + " in #" + hashCode());
         bytesSeq.add(bytes); // only record in this thread
-        loop.runOnLoop(this::doWrite); // run write in loop thread
+        loop.getSelectorEventLoop().runOnLoop(this::doWrite); // run write in loop thread
     }
 
     @SuppressWarnings("unchecked")
     public void readable() {
-        loop.runOnLoop(() -> {
+        loop.getSelectorEventLoop().runOnLoop(() -> {
             if (inBuffer.used() == 0)
                 return; // do nothing if cannot read
             handler.readable(this);

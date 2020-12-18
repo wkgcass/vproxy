@@ -241,11 +241,11 @@ public class Connection implements NetFlowRecorder {
     }
 
     protected String genId() {
-        return remote.getAddress().formatToIPString() + ":" + remote.getPort()
+        return remote.formatToIPPortString()
             + "/"
             + (local == null ? "[unbound]" :
             (
-                local.getAddress().formatToIPString() + ":" + local.getPort()
+                local.formatToIPPortString()
             )
         );
     }

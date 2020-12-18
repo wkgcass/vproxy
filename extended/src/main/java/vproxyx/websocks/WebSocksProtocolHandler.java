@@ -5,6 +5,8 @@ import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxy.util.CoreUtils;
+import vproxybase.connection.ConnectableConnection;
+import vproxybase.connection.ConnectionOpts;
 import vproxybase.connection.Connector;
 import vproxybase.dns.Resolver;
 import vproxybase.http.HttpContext;
@@ -15,6 +17,7 @@ import vproxybase.processor.http1.entity.Response;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.protocol.SubProtocolHandlerContext;
+import vproxybase.selector.wrap.file.FileFD;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ByteBufferRingBuffer;
@@ -66,11 +69,12 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         }
     }
 
-    private final HttpProtocolHandler httpProtocolHandler = new WebSocksHttpProtocolHandler();
-
     class WebSocksHttpProtocolHandler extends HttpProtocolHandler {
-        protected WebSocksHttpProtocolHandler() {
+        private final Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter;
+
+        protected WebSocksHttpProtocolHandler(Supplier<ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>>> rootCtxGetter) {
             super(false);
+            this.rootCtxGetter = rootCtxGetter;
         }
 
         @Override
@@ -157,7 +161,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 byte[] foo = new byte[expectingLen];
                 wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
-            ctx.write(response(101, accept, ctx)); // respond to the client about the upgrading
+            response(101, accept, ctx); // respond to the client about the upgrading
         }
 
         // it's ordered with `-priority`, smaller the index is, higher priority it has
@@ -183,7 +187,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
         private void fail(ProtocolHandlerContext<HttpContext> ctx, int code, String msg) {
             assert Logger.lowLevelDebug("WebSocket handshake failed: " + msg);
             ctx.inBuffer.clear();
-            ctx.write(response(code, msg, ctx));
+            response(code, msg, ctx);
             // no need to tell the Proxy it fails
             // the client may make another http request
         }
@@ -271,7 +275,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             return resp.toByteArray().toJavaArray();
         }
 
-        private byte[] response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
+        private void response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
             // check whether the page exists when statusCode is 200
             PageProvider.PageResult page = null;
             if (statusCode == 200) {
@@ -293,6 +297,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             resp.headers = new LinkedList<>();
             resp.headers.add(new Header("Server", "vproxy/" + Version.VERSION));
             resp.headers.add(new Header("Date", new Date().toString()));
+            FileFD fileToSend = null;
             if (statusCode == 101) {
                 resp.headers.add(new Header("Upgrade", "websocket"));
                 resp.headers.add(new Header("Connection", "Upgrade"));
@@ -300,9 +305,16 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Sec-WebSocket-Protocol", "socks5"));
             } else if (statusCode == 200) {
                 resp.headers.add(new Header("Content-Type", page.mime));
-                assert page.content != null;
-                resp.headers.add(new Header("Content-Length", "" + page.content.length()));
-                resp.body = page.content;
+                assert page.content != null || page.file != null;
+                assert page.content == null || page.file == null;
+                if (page.file == null) {
+                    resp.headers.add(new Header("Content-Length", "" + page.content.length()));
+                    resp.body = page.content;
+                } else {
+                    resp.headers.add(new Header("Content-Length", "" + page.file.length()));
+                    resp.headers.add(new Header("Connection", "Close"));
+                    fileToSend = page.file;
+                }
             } else if (statusCode == 302) {
                 ByteArray body = ByteArray.from(("" +
                     "<html>\r\n" +
@@ -341,7 +353,28 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 resp.headers.add(new Header("Content-Length", "" + body.length()));
                 resp.body = body;
             }
-            return resp.toByteArray().toJavaArray();
+            ctx.write(resp.toByteArray().toJavaArray());
+            if (fileToSend != null) {
+                final FileFD file = fileToSend;
+                // the header is small, it should be directly flushed
+                // make sure this operation happen after the call of writing the header
+                ctx.loop.getSelectorEventLoop().runOnLoop(() -> ctx.loop.getSelectorEventLoop().runOnLoop(() -> {
+                    var rootCtx = rootCtxGetter.get();
+                    var cb = rootCtx.data.right;
+                    if (cb == null) {
+                        Logger.shouldNotHappen("the callback Callback<Connector, IOException> is null while trying to send file " + file);
+                        return;
+                    }
+                    // make a connector
+                    var conn = ConnectableConnection.wrap(file, file.getRemoteAddress(), ConnectionOpts.getDefault(),
+                        RingBuffer.allocate(0), RingBuffer.allocateDirect(0));
+                    var connector = new AlreadyConnectedConnector(file.getRemoteAddress(), conn, ctx.loop);
+                    String id = ctx.connection.remote + " <- " + connector.remote;
+                    Logger.alert("sending large file: " + id);
+                    rootCtx.data.left.step = 4; // large file
+                    cb.succeeded(connector);
+                }));
+            }
         }
     }
 
@@ -385,10 +418,10 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     public void init(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         initSSL(ctx); // init if it's ssl (or may simply do nothing if not ssl)
         ctx.data = new Tuple<>(new WebSocksProxyContext(
-            new SubProtocolHandlerContext<>(ctx, ctx.connectionId, ctx.connection, ctx.loop, httpProtocolHandler),
+            new SubProtocolHandlerContext<>(ctx, ctx.connectionId, ctx.connection, ctx.loop, new WebSocksHttpProtocolHandler(() -> ctx)),
             new SubProtocolHandlerContext<>(ctx, ctx.connectionId, ctx.connection, ctx.loop, socks5Handler)
         ), null);
-        ctx.data.left.step = 1;
+        ctx.data.left.step = 1; // http
         ctx.data.left.httpContext.data = new WebSocksHttpContext(ctx.data.left);
         socks5Handler.init(ctx.data.left.socks5Context);
         ctx.data.left.socks5Context.data = new Tuple<>(
@@ -413,7 +446,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     @Override
     public void readable(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         if (ctx.data.left.step == 1) { // http step
-            httpProtocolHandler.readable(ctx.data.left.httpContext);
+            ctx.data.left.httpContext.handler.readable(ctx.data.left.httpContext);
         } else if (ctx.data.left.step == 2) { // WebSocket
             handleWebSocket(ctx);
         } else { // socks5 step
@@ -475,8 +508,10 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
     public boolean closeOnRemoval(ProtocolHandlerContext<Tuple<WebSocksProxyContext, Callback<Connector, IOException>>> ctx) {
         if (ctx.data.left.step == 1 || ctx.data.left.step == 2) { // http step or WebSocket frame step
             return true; // proxy not established yet, so close the connection
-        } else { // socks5 step
+        } else if (ctx.data.left.step == 3) { // socks5 step
             return socks5Handler.closeOnRemoval(ctx.data.left.socks5Context);
+        } else { // large file
+            return false;
         }
     }
 }

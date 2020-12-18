@@ -1,5 +1,7 @@
 package vproxyx.websocks;
 
+import vproxybase.selector.SelectorEventLoop;
+import vproxybase.selector.wrap.file.FileFD;
 import vproxybase.util.ByteArray;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
@@ -9,10 +11,12 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
+import java.nio.file.StandardOpenOption;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRootPageProvider implements PageProvider {
     private static final int EXPIRE_DURATION = 2 * 3600 * 1000;
+    private static final long LARGE_FILE_THRESHOLD = 2 * 1024 * 1024; // 2M
     private final String baseDir;
     private final String protocol;
     private final String domain;
@@ -121,6 +125,24 @@ public class WebRootPageProvider implements PageProvider {
         if (!file.exists() || file.isDirectory()) {
             removePageCache(key);
             return null;
+        }
+
+        long fileLength = file.length();
+        if (fileLength > LARGE_FILE_THRESHOLD) {
+            Logger.alert("file " + key + " length " + fileLength + ", handled as a large file");
+            var currentLoop = SelectorEventLoop.current();
+            if (currentLoop == null) {
+                Logger.shouldNotHappen("the WebRootPageProvider should run on the event loop which is handling the request");
+                return null;
+            }
+            FileFD fileFD;
+            try {
+                fileFD = new FileFD(currentLoop, Path.of(key), StandardOpenOption.READ);
+            } catch (IOException e) {
+                Logger.shouldNotHappen("open FileFD " + key + " failed", e);
+                return null;
+            }
+            return new PageResult(mime, fileFD);
         }
 
         long time = file.lastModified();

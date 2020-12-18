@@ -14,6 +14,7 @@ module vproxy.base {
     exports vproxybase.selector.wrap;
     exports vproxybase.selector.wrap.streamed;
     exports vproxybase.selector.wrap.blocking;
+    exports vproxybase.selector.wrap.file;
     exports vproxybase.selector.wrap.udp;
     exports vproxybase.selector.wrap.h2streamed;
     exports vproxybase.selector.wrap.arqudp;

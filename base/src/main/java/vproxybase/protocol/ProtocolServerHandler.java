@@ -37,7 +37,7 @@ public class ProtocolServerHandler implements ServerHandler {
     @Override
     public void connection(ServerHandlerContext ctx, Connection connection) {
         ProtocolHandler handler = (ProtocolHandler) ctx.attachment;
-        ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, eventLoop.getSelectorEventLoop(), handler);
+        ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, eventLoop, handler);
         handler.init(pctx);
         // Proxy.java copies these codes:
         //noinspection Duplicates

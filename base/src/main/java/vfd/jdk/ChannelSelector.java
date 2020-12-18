@@ -138,7 +138,7 @@ public class ChannelSelector implements FDSelector {
 
         SelectionKey key = channel.keyFor(selector);
         if (key == null)
-            throw new IllegalArgumentException("channel is not registered with this selector");
+            throw new IllegalArgumentException("channel is not registered with this selector: " + fd);
         return key;
     }
 

@@ -60,6 +60,14 @@ public class ConnectableConnection extends Connection {
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 
+    public static ConnectableConnection wrap(SocketFD socketFD,
+                                             IPPort remote,
+                                             ConnectionOpts opts,
+                                             RingBuffer inBuffer,
+                                             RingBuffer outBuffer) {
+        return new ConnectableConnection(socketFD, remote, opts, inBuffer, outBuffer);
+    }
+
     private ConnectableConnection(SocketFD channel, IPPort remote,
                                   ConnectionOpts opts,
                                   RingBuffer inBuffer, RingBuffer outBuffer) {
