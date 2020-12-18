@@ -4,6 +4,7 @@ import vfd.*;
 import vproxybase.Config;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.*;
+import vproxybase.util.promise.Promise;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -29,11 +30,13 @@ public class SelectorEventLoop {
         final FD channel;
         final EventSet ops;
         final RegisterData registerData;
+        final Callback<FD, Throwable> callback;
 
-        AddFdData(FD channel, EventSet ops, RegisterData registerData) {
+        AddFdData(FD channel, EventSet ops, RegisterData registerData, Callback<FD, Throwable> callback) {
             this.channel = channel;
             this.ops = ops;
             this.registerData = registerData;
+            this.callback = callback;
         }
     }
 
@@ -134,7 +137,10 @@ public class SelectorEventLoop {
                     selector.register(data.channel, data.ops, data.registerData);
                 } catch (Throwable t) {
                     Logger.error(LogType.IMPROPER_USE, "the channel " + data.channel + " failed to be added into the event loop", t);
+                    data.callback.failed(t);
+                    continue;
                 }
+                data.callback.succeeded(data.channel);
             }
 
             // handle step1 then
@@ -368,6 +374,11 @@ public class SelectorEventLoop {
     }
 
     @ThreadSafe
+    public void doubleNextTick(Runnable r) {
+        nextTick(() -> nextTick(r));
+    }
+
+    @ThreadSafe
     public void runOnLoop(Runnable r) {
         if (!needWake()) {
             tryRunnable(r); // directly run if is already on the loop thread
@@ -392,23 +403,30 @@ public class SelectorEventLoop {
         return pe;
     }
 
+    // return null if it's directly added successfully
+    // otherwise it will be added nextTick(() -> nextTick(() -> {...here...}))
+    // the caller may need to handle this situation with the returned future object
     @ThreadSafe
     @SuppressWarnings("DuplicateThrows")
-    public <CHANNEL extends FD> void add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
+    public <CHANNEL extends FD> Promise<FD> add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
         channel.configureBlocking(false);
         RegisterData registerData = new RegisterData(handler, attachment);
         if (channel instanceof SocketFD) {
             registerData.connected = ((SocketFD) channel).isConnected();
         }
-        if (add0(channel, ops, registerData)) {
+        Promise<FD> addingPromise = add0(channel, ops, registerData);
+        if (addingPromise == null) {
             if (needWake()) {
                 wakeup();
             }
+            return null;
+        } else {
+            return addingPromise;
         }
     }
 
     // a helper function for adding a channel into the selector
-    private boolean add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
+    private Promise<FD> add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
         try {
             selector.register(channel, ops, registerData);
         } catch (CancelledKeyException e) {
@@ -421,13 +439,14 @@ public class SelectorEventLoop {
 
             assert Logger.lowLevelDebug("key already canceled, we register it on next tick after keys are handled");
 
-            channelsToBeRegisteredStep1.add(new AddFdData(channel, ops, registerData));
+            var tup = Promise.<FD>todo();
+            channelsToBeRegisteredStep1.add(new AddFdData(channel, ops, registerData, tup.right));
             if (needWake()) {
                 wakeup();
             }
-            return false;
+            return tup.left;
         }
-        return true;
+        return null;
     }
 
     private void doModify(FD fd, EventSet ops) {
@@ -522,7 +541,7 @@ public class SelectorEventLoop {
         try (var unused = CLOSE_LOCK.lock()) {
             Collection<RegisterEntry> keys = selector.entries();
             while (true) {
-                THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size() + channelsToBeRegisteredStep1.size() + channelsToBeRegisteredStep2.size());
                 try {
                     for (RegisterEntry key : keys) {
                         THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.fd, (RegisterData) key.attachment));
@@ -538,6 +557,13 @@ public class SelectorEventLoop {
                 // and usually we don't close a event loop
                 // re-try would be just fine
                 break;
+            }
+            AddFdData add;
+            while ((add = channelsToBeRegisteredStep1.poll()) != null) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(add.channel, add.registerData));
+            }
+            while ((add = channelsToBeRegisteredStep2.poll()) != null) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(add.channel, add.registerData));
             }
             selector.close();
         }

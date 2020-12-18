@@ -26,6 +26,7 @@ import vproxy.test.cases.*;
     TestStreamServerClient.class,
     TestConnTransfer.class,
     TestPrometheus.class,
+    TestPromise.class,
 
     AfterAll.class
 })

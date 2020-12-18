@@ -177,7 +177,7 @@ public class Proxy {
 
                 // handle like a normal proxy:
                 // next -> next tick to ensure that this connection is removed and adding it back will succeed
-                loop.getSelectorEventLoop().nextTick(() -> loop.getSelectorEventLoop().nextTick(() -> handleDirect(acceptLoop, active, connector)));
+                loop.getSelectorEventLoop().doubleNextTick(() -> handleDirect(acceptLoop, active, connector));
             }
 
             @Override
