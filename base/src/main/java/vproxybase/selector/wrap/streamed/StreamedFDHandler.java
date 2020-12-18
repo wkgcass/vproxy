@@ -824,6 +824,12 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
 
     @MethodForFDs
     final void keepalive() {
+        // check whether it's connected
+        if (state != 2) {
+            Logger.warn(LogType.ALERT, "handshake still done while keepalive event is triggered");
+            fail(new IOException("handshaking timeout"), false);
+            return;
+        }
         // only send keepalive message if it's in idle
         if (cachedMessageToWrite == null && messagesToWrite.isEmpty() && (Config.currentTimestamp - lastReadableTimestamp) > 5_000) {
             // send keepalive message
