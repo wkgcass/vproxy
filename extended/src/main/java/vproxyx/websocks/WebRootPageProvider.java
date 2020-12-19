@@ -81,6 +81,10 @@ public class WebRootPageProvider implements PageProvider {
             return "text/css";
         } else if (name.endsWith(".json")) {
             return "application/json";
+        } else if (name.endsWith(".jpg") || name.endsWith(".jpeg")) {
+            return "image/jpeg";
+        } else if (name.endsWith(".png")) {
+            return "image/png";
         } else {
             return "application/octet-stream";
         }
@@ -121,6 +125,7 @@ public class WebRootPageProvider implements PageProvider {
             return null;
         }
         String mime = getMime(file);
+        long cacheAge = getCacheAgeFromMime(mime);
         String key = file.getAbsolutePath();
         if (!file.exists() || file.isDirectory()) {
             removePageCache(key);
@@ -142,7 +147,7 @@ public class WebRootPageProvider implements PageProvider {
                 Logger.shouldNotHappen("open FileFD " + key + " failed", e);
                 return null;
             }
-            return new PageResult(mime, fileFD);
+            return new PageResult(mime, fileFD, cacheAge);
         }
 
         long time = file.lastModified();
@@ -155,7 +160,7 @@ public class WebRootPageProvider implements PageProvider {
         }
         if (page != null) {
             assert Logger.lowLevelDebug("using cached page: " + url);
-            return new PageResult(mime, page.content);
+            return new PageResult(mime, page.content, cacheAge);
         }
         assert Logger.lowLevelDebug("reading from disk: " + url);
         byte[] buf = new byte[1024];
@@ -168,11 +173,18 @@ public class WebRootPageProvider implements PageProvider {
             ByteArray content = ByteArray.from(baos.toByteArray());
             page = new Page(content, time);
             recordPageCache(key, page);
-            return new PageResult(mime, page.content);
+            return new PageResult(mime, page.content, cacheAge);
         } catch (IOException e) {
             Logger.error(LogType.FILE_ERROR, "reading file " + key + " failed", e);
             return null;
         }
+    }
+
+    private long getCacheAgeFromMime(String mime) {
+        if (mime != null && (mime.equals("text/html") || mime.equals("text/css") || mime.equals("text/javascript") || mime.startsWith("image/"))) {
+            return 60L * 60 * 24 * 7;
+        }
+        return 0L;
     }
 
     private void removePageCache(String key) {
