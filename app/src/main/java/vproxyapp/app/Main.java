@@ -20,6 +20,7 @@ import vproxyx.WebSocksProxyServer;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 public class Main {
@@ -144,20 +145,20 @@ public class Main {
     }
 
     private static String[] checkFlagDeployInArguments(String[] args) {
-        if (System.getProperty("eploy") != null) {
-            // do not modify if -Deploy is already set
-            return args;
-        }
+        String deploy = System.getProperty("eploy");
+        String dhcpGetDnsListNics = System.getProperty("hcpGetDnsListNics");
         List<String> returnArgs = new ArrayList<>(args.length);
-        boolean found = false;
         for (final var arg : args) {
             if (arg.startsWith("-Deploy=")) {
-                if (found) {
+                if (deploy != null) {
                     // should only appear once
                     throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
                 }
-                found = true;
-                System.setProperty("eploy", arg.substring("-Deploy=".length()));
+                deploy = arg.substring("-Deploy=".length());
+                System.setProperty("eploy", deploy);
+            } else if (arg.startsWith("-DhcpGetDnsListNics=")) {
+                dhcpGetDnsListNics = arg.substring("-DhcpGetDnsListNics=".length());
+                System.setProperty("hcpGetDnsListNics", dhcpGetDnsListNics);
             } else if (arg.startsWith("-D")) {
                 // other properties can be set freely
                 var kv = arg.substring("-D".length());
@@ -172,6 +173,17 @@ public class Main {
                 returnArgs.add(arg);
             } else {
                 returnArgs.add(arg);
+            }
+        }
+        // set dhcpGetDnsListNics if not specified in some conditions
+        if (dhcpGetDnsListNics == null) {
+            if (deploy != null) {
+                if (Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
+                    dhcpGetDnsListNics = "all";
+                }
+            }
+            if (dhcpGetDnsListNics != null) {
+                System.setProperty("hcpGetDnsListNics", dhcpGetDnsListNics);
             }
         }
         //noinspection ToArrayCallWithZeroLengthArrayArgument
