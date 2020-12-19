@@ -315,6 +315,9 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                     resp.headers.add(new Header("Connection", "Close"));
                     fileToSend = page.file;
                 }
+                if (page.cacheAge != 0L) {
+                    resp.headers.add(new Header("Cache-Control", "max-age=" + page.cacheAge));
+                }
             } else if (statusCode == 302) {
                 ByteArray body = ByteArray.from(("" +
                     "<html>\r\n" +
