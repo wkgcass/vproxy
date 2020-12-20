@@ -658,7 +658,8 @@ public class ConfigLoader {
                     }
                 }
                 BlockCallback<HttpResponse, IOException> cb = new BlockCallback<>();
-                HttpClient.to(protocolAndHostAndPort).get(uri).send((err, response) -> {
+                HttpClient cli = HttpClient.to(protocolAndHostAndPort);
+                cli.get(uri).send((err, response) -> {
                     if (err != null) {
                         cb.failed(err);
                     } else {
@@ -671,6 +672,7 @@ public class ConfigLoader {
                 } catch (IOException e) {
                     throw new IOException("requesting " + abpfile + " failed", e);
                 }
+                cli.close();
                 if (resp.status() != 200) {
                     throw new IOException("requesting " + abpfile + " failed, response status not 200: " + resp.status());
                 }

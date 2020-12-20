@@ -1,6 +1,7 @@
 package vproxyapp.process;
 
 import vjson.util.ObjectBuilder;
+import vmirror.Mirror;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.app.TcpLB;
 import vproxy.component.secure.SecurityGroup;
@@ -17,6 +18,8 @@ import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.dns.DNSClient;
+import vproxybase.dns.Resolver;
 import vproxybase.util.*;
 import vproxybase.util.exception.NotFoundException;
 import vswitch.RouteTable;
@@ -812,5 +815,14 @@ public class Shutdown {
                 cb.failed(err);
             }
         });
+    }
+
+    public static void releaseEverything() {
+        GlobalInspectionHttpServerLauncher.stop();
+        DNSClient.getDefault().close();
+        Resolver.stopDefault();
+        Mirror.destroy();
+        OOMHandler.stop();
+        // TODO add more in the future
     }
 }

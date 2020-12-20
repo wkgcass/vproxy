@@ -13,7 +13,7 @@ public class RelayHttpServer {
     private RelayHttpServer() {
     }
 
-    public static void launch(EventLoopGroup worker) throws IOException {
+    public static HttpServer launch(EventLoopGroup worker) throws IOException {
         HttpServer server = new Http1ServerImpl(worker.next());
         RoutingHandler handler = rctx -> {
             String host = rctx.header("host");
@@ -38,5 +38,6 @@ public class RelayHttpServer {
         server.get("/*", handler);
         server.get("/", handler);
         server.listen(80);
+        return server;
     }
 }

@@ -49,10 +49,13 @@ public class Mirror {
         mirror.enabled = false;
         mirror.conf = null;
         mirror.lastTimestamp = 0;
-        try {
-            mirror.loop.close();
-        } catch (IOException e) {
-            Logger.shouldNotHappen("closing selector event loop for mirror failed", e);
+        if (mirror.loop != null) {
+            try {
+                mirror.loop.close();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("closing selector event loop for mirror failed", e);
+            }
+            mirror.loop = null;
         }
         mirror.destroyTaps(mirror.mirrors);
         mirror.mirrors = Collections.emptyList();
