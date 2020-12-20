@@ -17,10 +17,7 @@ import vproxybase.processor.Hint;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Tuple4;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxyx.util.Browser;
 import vproxyx.websocks.*;
 import vproxyx.websocks.relay.DomainBinder;
@@ -273,7 +270,7 @@ public class WebSocksProxyAgent {
             Logger.alert("https relay server started on 443");
             if (configProcessor.getDirectRelayIpRange() != null) {
                 IPPort listen = configProcessor.getDirectRelayListen();
-                String ipRange = configProcessor.getDirectRelayIpRange();
+                Network ipRange = configProcessor.getDirectRelayIpRange();
                 relayAny = new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
                 Logger.alert("relay-bind-any-port-server started on " + listen.formatToIPPortString() + " which handles " + ipRange);
             }

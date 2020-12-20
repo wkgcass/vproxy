@@ -4,6 +4,8 @@ import vclient.HttpClient;
 import vclient.HttpResponse;
 import vfd.IP;
 import vfd.IPPort;
+import vjson.JSON;
+import vjson.util.ObjectBuilder;
 import vproxybase.util.BlockCallback;
 import vproxybase.util.Logger;
 import vproxybase.util.Network;
@@ -33,7 +35,7 @@ public class ConfigLoader {
     private File autoSignWorkingDirectory;
     private final List<List<String>> httpsSniErasureCertKeyFiles = new ArrayList<>();
     private boolean directRelay = false;
-    private String directRelayIpRange = null;
+    private Network directRelayIpRange = null;
     private IPPort directRelayListen = null;
     private int directRelayIpBondTimeout = 10_000;
     private String user;
@@ -116,7 +118,7 @@ public class ConfigLoader {
         return directRelayListen;
     }
 
-    public String getDirectRelayIpRange() {
+    public Network getDirectRelayIpRange() {
         return directRelayIpRange;
     }
 
@@ -304,7 +306,7 @@ public class ConfigLoader {
                     if (!Network.validNetworkStr(val)) {
                         throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
                     }
-                    directRelayIpRange = val;
+                    directRelayIpRange = new Network(val);
                 } else if (line.startsWith("agent.direct-relay.listen ")) {
                     String val = line.substring("agent.direct-relay.listen ".length()).trim();
                     if (!IPPort.validL4AddrStr(val)) {
@@ -631,7 +633,7 @@ public class ConfigLoader {
             String regexp = line.substring(1, line.length() - 1);
             return new DomainChecker.PatternDomainChecker(Pattern.compile(regexp));
         } else if (line.startsWith("[") && line.endsWith("]")) {
-            String abpfile = line.substring(1, line.length() - 1).trim();
+            final String abpfile = line.substring(1, line.length() - 1).trim();
             String content;
             if (abpfile.contains("://")) {
                 Logger.alert("getting abp from " + abpfile);
@@ -682,8 +684,8 @@ public class ConfigLoader {
                 content = new String(resp.body().toJavaArray());
                 content = Arrays.stream(content.split("\n")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.joining());
             } else {
-                abpfile = Utils.filename(abpfile);
-                try (FileReader fileABP = new FileReader(abpfile)) {
+                String filename = Utils.filename(abpfile);
+                try (FileReader fileABP = new FileReader(filename)) {
                     StringBuilder sb = new StringBuilder();
                     BufferedReader br2 = new BufferedReader(fileABP);
                     String line2;
@@ -700,5 +702,115 @@ public class ConfigLoader {
         } else {
             return new DomainChecker.SuffixDomainChecker(line);
         }
+    }
+
+    public JSON.Object toJson() {
+        var builder = new ObjectBuilder();
+        if (socks5ListenPort != 0) {
+            builder.putObject("socks5", o -> o
+                .put("enabled", true)
+                .put("listen", socks5ListenPort));
+        }
+        if (httpConnectListenPort != 0) {
+            builder.putObject("httpconnect", o -> o
+                .put("enabled", true)
+                .put("listen", httpConnectListenPort));
+        }
+        if (ssListenPort != 0) {
+            builder.putObject("ss", o -> o
+                .put("enabled", true)
+                .put("listen", ssListenPort)
+                .put("password", ssPassword));
+        }
+        if (dnsListenPort != 0) {
+            builder.putObject("dns", o -> o
+                .put("enabled", true)
+                .put("listen", dnsListenPort));
+        }
+        if (pacServerPort != 0) {
+            builder.putObject("pac", o -> o
+                .put("enabled", true)
+                .put("listen", pacServerPort));
+        }
+        if (gateway) {
+            builder.putObject("gateway", o -> o
+                .put("enabled", true));
+        }
+        if (autoSignCert != null) {
+            builder.putObject("autosign", o -> o
+                .put("enabled", true)
+                .put("cacert", autoSignCert)
+                .put("cakey", autoSignKey));
+        }
+        if (directRelay) {
+            builder.putObject("directrelay", o -> o
+                .put("enabled", true));
+        }
+        if (directRelayIpRange != null) {
+            builder.putObject("directrelayadvanced", o -> o
+                .put("enabled", true)
+                .put("network", directRelayIpRange.toString())
+                .put("listen", directRelayListen.formatToIPPortString())
+                .put("timeout", directRelayIpBondTimeout));
+        }
+        if (user != null) {
+            builder.put("serverUser", user);
+        }
+        if (pass != null) {
+            builder.put("serverPass", pass);
+        }
+        builder.putObject("hc", o -> o.put("enabled", !noHealthCheck));
+        builder.putObject("certauth", o -> o.put("enabled", verifyCert));
+        builder.putArray("serverGroupList", a -> {
+            for (var entry : servers.entrySet()) {
+                var groupName = entry.getKey();
+                var group = entry.getValue();
+                var domainList = getDomainList(groupName);
+                var noProxyList = getNoProxyDomainList(groupName);
+                var resolveList = getProxyResolveList(groupName);
+                a.addObject(sg -> sg
+                    .put("name", groupName)
+                    .putArray("serverList", ls -> {
+                        for (var server : group.getServers()) {
+                            ls.addObject(svr -> {
+                                if (server.useSSL) {
+                                    svr.put("protocol", "websockss");
+                                } else {
+                                    svr.put("protocol", "websocks");
+                                }
+                                svr.putObject("kcp", o -> o.put("enabled", server.useKCP));
+                                svr.put("ip", server.host);
+                                svr.put("port", server.port);
+                            });
+                        }
+                    })
+                    .putArray("proxyRuleList", rules -> {
+                        for (var domain : domainList) {
+                            rules.addObject(rule -> rule
+                                .put("rule", domain.serialize())
+                                .putObject("white", w -> w.put("enabled", false))
+                            );
+                        }
+                        for (var domain : noProxyList) {
+                            rules.addObject(rule -> rule
+                                .put("rule", domain.serialize())
+                                .putObject("white", w -> w.put("enabled", true)));
+                        }
+                    })
+                    .putArray("dnsRuleList", rules -> {
+                        for (var rule : resolveList) {
+                            rules.addObject(ruleO -> ruleO
+                                .put("rule", rule.serialize()));
+                        }
+                    }));
+            }
+        });
+        builder.putArray("httpsSniErasureRuleList", a -> {
+            for (var domain : httpsSniErasureDomains) {
+                a.addObject(o -> o
+                    .put("rule", domain.serialize()));
+            }
+        });
+        return builder.build();
     }
 }
