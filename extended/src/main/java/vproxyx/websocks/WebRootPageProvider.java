@@ -12,11 +12,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRootPageProvider implements PageProvider {
     private static final int EXPIRE_DURATION = 2 * 3600 * 1000;
     private static final long LARGE_FILE_THRESHOLD = 2 * 1024 * 1024; // 2M
+    private static final Set<String> CACHED_MIMES = Set.of("text/html", "text/css", "text/javascript", "image/png", "image/jpeg");
     private final String baseDir;
     private final String protocol;
     private final String domain;
@@ -181,8 +183,8 @@ public class WebRootPageProvider implements PageProvider {
     }
 
     private long getCacheAgeFromMime(String mime) {
-        if (mime != null && (mime.equals("text/html") || mime.equals("text/css") || mime.equals("text/javascript") || mime.startsWith("image/"))) {
-            return 60L * 60 * 24 * 7;
+        if ((CACHED_MIMES.contains(mime))) {
+            return 60L * 10; // 10 minutes
         }
         return 0L;
     }
