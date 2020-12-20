@@ -4,6 +4,7 @@ import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
 import vproxybase.util.ByteArray;
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.crypto.BlockCipherKey;
@@ -17,7 +18,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
     private final BlockCipherKey key;
 
     private int requiredIvLen;
-    private byte[] iv;
+    private final byte[] iv;
     private StreamingCFBCipher cipher;
 
     private final MirrorDataFactory mirrorDataFactory;
@@ -61,7 +62,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
     }
 
     @Override
-    protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored, IOException[] ex) {
+    protected void handleEncryptedBuffer(ByteBufferEx buf, boolean[] underflow, boolean[] errored, IOException[] ex) {
         if (requiredIvLen != 0) {
             readIv(buf);
             if (requiredIvLen == 0) {
@@ -73,7 +74,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
         }
     }
 
-    private void readIv(ByteBuffer buf) {
+    private void readIv(ByteBufferEx buf) {
         int len = requiredIvLen;
         int bufLen = buf.limit() - buf.position();
         if (len > bufLen) {
@@ -98,7 +99,7 @@ public class DecryptIVInDataUnwrapRingBuffer extends AbstractUnwrapByteBufferRin
             .mirror();
     }
 
-    private void readData(ByteBuffer input) {
+    private void readData(ByteBufferEx input) {
         int len = input.limit() - input.position();
         if (len == 0) {
             return;

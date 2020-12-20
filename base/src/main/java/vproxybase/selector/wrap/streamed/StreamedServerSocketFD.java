@@ -4,6 +4,8 @@ import vfd.FD;
 import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
+import vproxybase.GlobalInspection;
+import vproxybase.prometheus.GaugeF;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.VirtualFD;
 import vproxybase.selector.wrap.WrappedSelector;
@@ -14,9 +16,17 @@ import java.io.IOException;
 import java.net.SocketOption;
 import java.util.Deque;
 import java.util.LinkedList;
+import java.util.Map;
 
 public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
-    private final ServerSocketFD readFD;
+    private static final String streamed_server_socket_fd_accept_queue_length_current = "streamed_server_socket_fd_accept_queue_length_current";
+
+    static {
+        GlobalInspection.getInstance().registerHelpMessage(streamed_server_socket_fd_accept_queue_length_current,
+            "The current accept queue length of streamed fds from streamed server socket fd");
+    }
+
+    private final ServerSocketFD realFD;
     private final WrappedSelector selector;
     private final IPPort local;
     private final StreamedServerSocketFD[] serverPtr;
@@ -24,11 +34,13 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     private boolean isOpen = true;
     private final Deque<StreamedFD> acceptQueue = new LinkedList<>();
 
-    public StreamedServerSocketFD(ServerSocketFD readFD,
+    private final GaugeF statisticsAcceptQueueLength;
+
+    public StreamedServerSocketFD(ServerSocketFD realFD,
                                   SelectorEventLoop loop,
                                   IPPort local,
                                   StreamedServerSocketFD[] serverPtr) throws IOException {
-        this.readFD = readFD;
+        this.realFD = realFD;
         this.selector = loop.selector;
         this.local = local;
         this.serverPtr = serverPtr;
@@ -39,6 +51,10 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
             }
             this.serverPtr[0] = this;
         }
+
+        statisticsAcceptQueueLength = GlobalInspection.getInstance().addMetric(streamed_server_socket_fd_accept_queue_length_current,
+            Map.of("listen", local.formatToIPPortString()),
+            (m, l) -> new GaugeF(m, l, () -> (long) acceptQueue.size()));
     }
 
     @Override
@@ -91,7 +107,7 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
 
     @Override
     public FD real() {
-        return readFD;
+        return realFD;
     }
 
     @Override
@@ -105,6 +121,8 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
         synchronized (this.serverPtr) {
             this.serverPtr[0] = null;
         }
+
+        GlobalInspection.getInstance().removeMetric(statisticsAcceptQueueLength);
     }
 
     void accepted(StreamedFD fd) {

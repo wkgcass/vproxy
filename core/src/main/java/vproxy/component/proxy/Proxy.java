@@ -176,7 +176,8 @@ public class Proxy {
                 // will be checked in the following method
 
                 // handle like a normal proxy:
-                handleDirect(acceptLoop, active, connector);
+                // next -> next tick to ensure that this connection is removed and adding it back will succeed
+                loop.getSelectorEventLoop().nextTick(() -> loop.getSelectorEventLoop().nextTick(() -> handleDirect(acceptLoop, active, connector)));
             }
 
             @Override
@@ -203,7 +204,7 @@ public class Proxy {
             }
 
             // create a protocol context and init the handler
-            ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, loop.getSelectorEventLoop(), pHandler);
+            ProtocolHandlerContext pctx = new ProtocolHandlerContext(connection.id(), connection, loop, pHandler);
             pHandler.init(pctx);
 
             // set callback

@@ -299,6 +299,9 @@ class HandlerForConnection implements Handler<SocketFD> {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
 
         assert Logger.lowLevelDebug("readable fired " + cctx.connection);
+        if (cctx.connection.isClosed()) {
+            return; // prevent the condition that the connection closed during the handling of another event
+        }
         // reset close timer because now it's active (will read some data)
         NetEventLoopUtils.resetCloseTimeout(cctx);
 
@@ -350,6 +353,9 @@ class HandlerForConnection implements Handler<SocketFD> {
         ConnectionHandlerContext cctx = (ConnectionHandlerContext) ctx.getAttachment();
 
         assert Logger.lowLevelDebug("writable fired " + cctx.connection);
+        if (cctx.connection.isClosed()) {
+            return; // prevent the condition that the connection closed during the handling of another event
+        }
 
         if (cctx.connection.getOutBuffer().used() == 0) {
             // prepare for error message

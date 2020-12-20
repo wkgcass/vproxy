@@ -1,18 +1,21 @@
 package vfd.abs;
 
 import vfd.FD;
-import vproxybase.util.DirectMemoryUtils;
+import vproxybase.util.ByteBufferEx;
+import vproxybase.util.direct.DirectByteBuffer;
+import vproxybase.util.direct.DirectMemoryUtils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public abstract class AbstractBaseFD implements FD {
-    private ByteBuffer directBufferForReading = null;
-    private ByteBuffer directBufferForWriting = null;
+    private DirectByteBuffer directBufferForReading = null;
+    private DirectByteBuffer directBufferForWriting = null;
 
-    protected ByteBuffer getDirectBufferForReading(int len) {
+    @SuppressWarnings("DuplicatedCode")
+    protected ByteBufferEx getDirectBufferForReading(int len) {
         if (directBufferForReading != null && directBufferForReading.capacity() < len) {
-            DirectMemoryUtils.free(directBufferForReading);
+            directBufferForReading.clean();
             directBufferForReading = null;
         }
         if (directBufferForReading == null) {
@@ -21,9 +24,10 @@ public abstract class AbstractBaseFD implements FD {
         return directBufferForReading;
     }
 
-    protected ByteBuffer getDirectBufferForWriting(int len) {
+    @SuppressWarnings("DuplicatedCode")
+    protected ByteBufferEx getDirectBufferForWriting(int len) {
         if (directBufferForWriting != null && directBufferForWriting.capacity() < len) {
-            DirectMemoryUtils.free(directBufferForWriting);
+            directBufferForWriting.clean();
             directBufferForWriting = null;
         }
         if (directBufferForWriting == null) {
@@ -49,10 +53,10 @@ public abstract class AbstractBaseFD implements FD {
     @Override
     public void close() throws IOException {
         if (directBufferForReading != null) {
-            DirectMemoryUtils.free(directBufferForReading);
+            directBufferForReading.clean();
         }
         if (directBufferForWriting != null) {
-            DirectMemoryUtils.free(directBufferForWriting);
+            directBufferForWriting.clean();
         }
     }
 
@@ -70,7 +74,7 @@ public abstract class AbstractBaseFD implements FD {
             directBuffer = dst;
             off = dst.position();
         } else {
-            directBuffer = getDirectBufferForReading(len);
+            directBuffer = getDirectBufferForReading(len).realBuffer();
             needCopy = true;
         }
         int n = 0;
@@ -104,7 +108,7 @@ public abstract class AbstractBaseFD implements FD {
             directBuffer = src;
             off = src.position();
         } else {
-            directBuffer = getDirectBufferForWriting(len);
+            directBuffer = getDirectBufferForWriting(len).realBuffer();
             directBuffer.put(src);
             needCopy = true;
         }

@@ -1,13 +1,13 @@
 package vproxybase.protocol;
 
 import vproxybase.connection.Connection;
-import vproxybase.selector.SelectorEventLoop;
+import vproxybase.connection.NetEventLoop;
 import vproxybase.util.Logger;
 
 public class SubProtocolHandlerContext<T> extends ProtocolHandlerContext<T> {
     private final ProtocolHandlerContext<?> parent;
 
-    public SubProtocolHandlerContext(ProtocolHandlerContext<?> parent, String connectionId, Connection connection, SelectorEventLoop loop, ProtocolHandler handler) {
+    public SubProtocolHandlerContext(ProtocolHandlerContext<?> parent, String connectionId, Connection connection, NetEventLoop loop, ProtocolHandler<T> handler) {
         super(connectionId, connection, loop, handler);
         this.parent = parent;
     }

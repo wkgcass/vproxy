@@ -42,7 +42,8 @@ public class SSProtocolHandler implements ProtocolHandler<Tuple<SSContext, Callb
             // so we should safely replace the buffers
             ctx.connection.UNSAFE_replaceBuffer(
                 new DecryptIVInDataUnwrapRingBuffer((ByteBufferRingBuffer) in, key, ctx.connection.channel),
-                new EncryptIVInDataWrapRingBuffer((ByteBufferRingBuffer) out, key, ctx.connection.channel));
+                new EncryptIVInDataWrapRingBuffer((ByteBufferRingBuffer) out, key, ctx.connection.channel),
+                true);
         } catch (IOException e) {
             Logger.shouldNotHappen("got error when switching buffers", e);
             // raise error to let others handle the error

@@ -1,7 +1,8 @@
-package vproxybase.util;
+package vproxybase.util.direct;
 
 import sun.misc.Unsafe;
 import vproxybase.GlobalInspection;
+import vproxybase.util.Logger;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
@@ -23,13 +24,13 @@ public class DirectMemoryUtils {
         }
     }
 
-    public static ByteBuffer allocateDirectBuffer(int size) {
+    public static DirectByteBuffer allocateDirectBuffer(int size) {
         ByteBuffer buf = ByteBuffer.allocateDirect(size);
         GlobalInspection.getInstance().directBufferAllocate(buf.capacity());
-        return buf;
+        return new DirectByteBuffer(buf);
     }
 
-    public static void free(ByteBuffer buffer) {
+    static void free(ByteBuffer buffer) {
         assert Logger.lowLevelDebug("run Utils.clean");
         if (!buffer.getClass().getName().equals("java.nio.DirectByteBuffer")) {
             assert Logger.lowLevelDebug("not direct buffer");

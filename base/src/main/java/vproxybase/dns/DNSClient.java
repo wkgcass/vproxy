@@ -341,11 +341,11 @@ public class DNSClient {
 
         BiFunction<DNSPacket, IOException[], List<IP>> transform = (packet, errHolder) -> {
             if (packet.rcode != DNSPacket.RCode.NoError) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "the remote dns server respond with error: " + packet.rcode);
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "the remote dns server respond with error: " + packet.rcode + ", req domain is " + domain);
                 return null;
             }
             if (packet.tc) {
-                Logger.error(LogType.IMPROPER_USE, "we do not support truncation for now. packet is " + packet);
+                Logger.error(LogType.IMPROPER_USE, "we do not support truncation for now. packet is " + packet + ", req domain is " + domain);
                 return null;
             }
             if (packet.answers.isEmpty()) {

@@ -10,6 +10,7 @@ import vproxybase.util.Logger;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.function.BiFunction;
 
 public class GlobalInspection {
     private static final GlobalInspection inst = new GlobalInspection();
@@ -18,15 +19,16 @@ public class GlobalInspection {
         return inst;
     }
 
+    private final Map<String, String> extraLabels;
     private final Metrics metrics = new Metrics();
     private final Gauge directBufferBytes;
     private final Counter directBufferAllocateCount;
     private final Counter directBufferFreeCount;
-    private final Counter directSimpleRingBufferFinalizeBytesTotal;
-    private final Counter directSimpleRingBufferFinalizeCount;
+    private final Counter directBufferFinalizeBytesTotal;
+    private final Counter directBufferFinalizeCount;
 
     private GlobalInspection() {
-        Map<String, String> extraLabels = getExtraLabels();
+        extraLabels = getExtraLabels();
 
         directBufferBytes = new Gauge("direct_memory_bytes_current", new AppendableMap<>()
             .append("type", "buffer")
@@ -43,13 +45,13 @@ public class GlobalInspection {
             .appendAll(extraLabels));
         metrics.add(directBufferFreeCount);
 
-        directSimpleRingBufferFinalizeBytesTotal = new Counter("direct_memory_finalize_bytes_total", new AppendableMap<>()
-            .append("type", "simple_ring_buffer"));
-        metrics.add(directSimpleRingBufferFinalizeBytesTotal);
+        directBufferFinalizeBytesTotal = new Counter("direct_memory_finalize_bytes_total", new AppendableMap<>()
+            .append("type", "buffer"));
+        metrics.add(directBufferFinalizeBytesTotal);
 
-        directSimpleRingBufferFinalizeCount = new Counter("direct_memory_finalize_count", new AppendableMap<>()
-            .append("type", "simple_ring_buffer"));
-        metrics.add(directSimpleRingBufferFinalizeCount);
+        directBufferFinalizeCount = new Counter("direct_memory_finalize_count", new AppendableMap<>()
+            .append("type", "buffer"));
+        metrics.add(directBufferFinalizeCount);
 
         metrics.registerHelpMessage("direct_memory_bytes_current", "Current allocated direct memory in bytes");
         metrics.registerHelpMessage("direct_memory_allocate_count", "Total count of how many times the direct memory is allocated");
@@ -78,15 +80,24 @@ public class GlobalInspection {
             ret.put(key, value);
         }
         assert Logger.lowLevelDebug("reading GlobalInspectionPrometheusLabels=" + ret);
-        return ret;
+        return Collections.unmodifiableMap(ret);
     }
 
-    public void addMetric(Metric m) {
+    public <M extends Metric> M addMetric(String metric, Map<String, String> labels, BiFunction<String, Map<String, String>, M> constructor) {
+        Map<String, String> allLabels = new HashMap<>(labels.size() + extraLabels.size());
+        allLabels.putAll(labels);
+        allLabels.putAll(extraLabels);
+        M m = constructor.apply(metric, allLabels);
         metrics.add(m);
+        return m;
     }
 
     public void removeMetric(Metric m) {
         metrics.remove(m);
+    }
+
+    public void registerHelpMessage(String metric, String msg) {
+        metrics.registerHelpMessage(metric, msg);
     }
 
     public void directBufferAllocate(int size) {
@@ -99,9 +110,9 @@ public class GlobalInspection {
         directBufferBytes.decr(size);
     }
 
-    public void directSimpleRingBufferFinalize(int size) {
-        directSimpleRingBufferFinalizeCount.incr(1);
-        directSimpleRingBufferFinalizeBytesTotal.incr(size);
+    public void directBufferFinalize(int size) {
+        directBufferFinalizeCount.incr(1);
+        directBufferFinalizeBytesTotal.incr(size);
     }
 
     public String toPrometheusString() {

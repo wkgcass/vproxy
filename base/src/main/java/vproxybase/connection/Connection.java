@@ -241,11 +241,11 @@ public class Connection implements NetFlowRecorder {
     }
 
     protected String genId() {
-        return remote.getAddress().formatToIPString() + ":" + remote.getPort()
+        return remote.formatToIPPortString()
             + "/"
             + (local == null ? "[unbound]" :
             (
-                local.getAddress().formatToIPString() + ":" + local.getPort()
+                local.formatToIPPortString()
             )
         );
     }
@@ -425,7 +425,7 @@ public class Connection implements NetFlowRecorder {
 
     // UNSAFE
 
-    public void UNSAFE_replaceBuffer(RingBuffer in, RingBuffer out) throws IOException {
+    public void UNSAFE_replaceBuffer(RingBuffer in, RingBuffer out, boolean cleanBuffersIfNecessary) throws IOException {
         assert Logger.lowLevelDebug("UNSAFE_replaceBuffer()");
         // we should make sure that the buffers are empty
         if (getInBuffer().used() != 0 || getOutBuffer().used() != 0) {
@@ -445,6 +445,25 @@ public class Connection implements NetFlowRecorder {
         // add for new buffers
         in.addHandler(inBufferETHandler);
         out.addHandler(outBufferETHandler);
+
+        if (cleanBuffersIfNecessary) {
+            assert Logger.lowLevelDebug("cleanBuffersIfNecessary is true");
+            // clean old buffers
+            if (!RingBuffer.haveRelationBetween(this.inBuffer, in)) {
+                assert Logger.lowLevelDebug("do clean inBuffer: " + this.inBuffer + ", " + in);
+                this.inBuffer.clean();
+            } else {
+                assert Logger.lowLevelDebug("do NOT clean inBuffer: " + this.inBuffer + ", " + in);
+            }
+            if (!RingBuffer.haveRelationBetween(this.outBuffer, out)) {
+                assert Logger.lowLevelDebug("do clean outBuffer: " + this.outBuffer + ", " + out);
+                this.outBuffer.clean();
+            } else {
+                assert Logger.lowLevelDebug("do NOT clean outBuffer: " + this.outBuffer + ", " + out);
+            }
+        } else {
+            assert Logger.lowLevelDebug("cleanBuffersIfNecessary is false");
+        }
 
         // assign buffers
         this.inBuffer = in;

@@ -1,5 +1,6 @@
 package vproxybase.util.ringbuffer;
 
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.RingBufferETHandler;
@@ -206,7 +207,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         _generalUnwrap();
     }
 
-    abstract protected void handleEncryptedBuffer(ByteBuffer buf, boolean[] underflow, boolean[] errored, IOException[] exception);
+    abstract protected void handleEncryptedBuffer(ByteBufferEx buf, boolean[] underflow, boolean[] errored, IOException[] exception);
 
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
@@ -271,5 +272,10 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
         generalUnwrap();
 
         return this;
+    }
+
+    @Override
+    public boolean isParentOf(RingBuffer buf) {
+        return buf == this || buf == plainBufferForApp;
     }
 }

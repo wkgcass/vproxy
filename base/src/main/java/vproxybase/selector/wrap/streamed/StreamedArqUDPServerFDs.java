@@ -27,9 +27,9 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
     private final IPPort local;
 
     private ArqUDPServerSocketFD fd;
-    private Map<ArqUDPSocketFD, PeriodicEvent> keepaliveEvents = new HashMap<>();
-    private Map<ArqUDPSocketFD, StreamedFDHandler> currentHandlers = new HashMap<>();
-    private Supplier<StreamedFDHandler> handlerSupplier;
+    private final Map<ArqUDPSocketFD, PeriodicEvent> keepaliveEvents = new HashMap<>();
+    private final Map<ArqUDPSocketFD, StreamedFDHandler> currentHandlers = new HashMap<>();
+    private final Supplier<StreamedFDHandler> handlerSupplier;
 
     private final StreamedServerSocketFD[] serverPtr = new StreamedServerSocketFD[1];
 
@@ -126,16 +126,17 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                             } catch (IOException ex) {
                                 Logger.error(LogType.CONN_ERROR, "closing fd " + accepted + " failed", ex);
                             }
+                            return;
                         }
                         currentHandlers.put(accepted, handler);
+                        PeriodicEvent event = loop.period(30_000, handler::keepalive);
+                        keepaliveEvents.put(accepted, event);
                     }
                 }
 
                 private void ready(ArqUDPSocketFD fd) {
                     StreamedFDHandler h = currentHandlers.get(fd);
                     assert h != null;
-                    PeriodicEvent event = loop.period(30_000, h::keepalive);
-                    keepaliveEvents.put(fd, event);
                     Logger.alert("streamed arq udp is ready: " + h.getClass().getSimpleName() + "(" + fd + ")");
                 }
 
@@ -146,12 +147,16 @@ public class StreamedArqUDPServerFDs implements UDPBasedFDs {
                     } catch (IOException e) {
                         Logger.error(LogType.CONN_ERROR, "closing fd " + fd + " failed", e);
                     }
-                    StreamedFDHandler h = currentHandlers.get(fd);
-                    if (h != null) {
+                    StreamedFDHandler h = currentHandlers.remove(fd);
+                    if (h == null) {
+                        Logger.shouldNotHappen("currentHandlers map does not contain key fd " + fd);
+                    } else {
                         h.clear();
                     }
-                    PeriodicEvent e = keepaliveEvents.get(fd);
-                    if (e != null) {
+                    PeriodicEvent e = keepaliveEvents.remove(fd);
+                    if (e == null) {
+                        Logger.shouldNotHappen("keepaliveEvents map does not contain key fd " + fd);
+                    } else {
                         e.cancel();
                     }
                 }

@@ -4,6 +4,7 @@ import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
 import vproxybase.util.ByteArray;
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.crypto.BlockCipherKey;
@@ -16,7 +17,7 @@ import java.util.function.Supplier;
 
 public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implements RingBuffer {
     private boolean ivSent = false;
-    private StreamingCFBCipher cipher;
+    private final StreamingCFBCipher cipher;
     private final byte[] iv0;
 
     private final MirrorDataFactory mirrorDataFactory;
@@ -72,7 +73,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
         });
     }
 
-    private void mirror(ByteBuffer plain, int posBefore) {
+    private void mirror(ByteBufferEx plain, int posBefore) {
         // build meta message
         String meta = "iv=" + ByteArray.from(iv0).toHexString() +
             ";";
@@ -84,7 +85,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
     }
 
     @Override
-    protected void handlePlainBuffer(ByteBuffer input, boolean[] errored, IOException[] ex) {
+    protected void handlePlainBuffer(ByteBufferEx input, boolean[] errored, IOException[] ex) {
         final int plainInputPositionBefore = input.position();
 
         if (!ivSent) {

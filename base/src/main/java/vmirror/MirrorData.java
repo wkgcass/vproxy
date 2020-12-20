@@ -4,6 +4,7 @@ import vfd.IP;
 import vfd.IPPort;
 import vfd.MacAddress;
 import vproxybase.util.ByteArray;
+import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Consts;
 
 import java.nio.ByteBuffer;
@@ -146,6 +147,10 @@ public class MirrorData {
 
     public MirrorData setData(byte[] arr) {
         return setData(ByteArray.from(arr));
+    }
+
+    public MirrorData setDataAfter(ByteBufferEx buf, int posBefore) {
+        return setDataAfter(buf.realBuffer(), posBefore);
     }
 
     public MirrorData setDataAfter(ByteBuffer buf, int posBefore) {

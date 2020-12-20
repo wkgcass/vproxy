@@ -12,6 +12,10 @@ import java.io.IOException;
 
 public class WebSocksProxyContext {
     int step = 0;
+    // 1: http
+    // 2: websocks
+    // 3: socks5
+    // 4: large file
 
     final ProtocolHandlerContext<HttpContext> httpContext;
     ByteArrayChannel webSocketBytes;

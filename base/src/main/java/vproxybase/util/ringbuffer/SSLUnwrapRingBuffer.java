@@ -5,10 +5,7 @@ import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
 import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ssl.SSL;
 
@@ -254,7 +251,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             .mirror();
     }
 
-    private void mirrorEncrypted(ByteBuffer encrypted, int posBefore, SSLEngineResult result) {
+    private void mirrorEncrypted(ByteBufferEx encrypted, int posBefore, SSLEngineResult result) {
         if (encrypted.position() <= posBefore) {
             return;
         }
@@ -266,13 +263,13 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     }
 
     @Override
-    protected void handleEncryptedBuffer(ByteBuffer encryptedBuffer, boolean[] underflow, boolean[] errored, IOException[] ex) {
+    protected void handleEncryptedBuffer(ByteBufferEx encryptedBuffer, boolean[] underflow, boolean[] errored, IOException[] ex) {
         final int positionBeforeHandling = encryptedBuffer.position();
 
         ByteBuffer plainBuffer = getTemporaryBuffer(engine.getSession().getApplicationBufferSize());
         SSLEngineResult result;
         try {
-            result = engine.unwrap(encryptedBuffer, plainBuffer);
+            result = engine.unwrap(encryptedBuffer.realBuffer(), plainBuffer);
         } catch (SSLException e) {
             Logger.error(LogType.SSL_ERROR, "got error when unwrapping", e);
             errored[0] = true;
@@ -299,7 +296,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             Logger.shouldNotHappen("the unwrapping returned BUFFER_OVERFLOW, do retry");
             plainBuffer = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
             try {
-                result = engine.unwrap(encryptedBuffer, plainBuffer);
+                result = engine.unwrap(encryptedBuffer.realBuffer(), plainBuffer);
             } catch (SSLException e) {
                 Logger.error(LogType.SSL_ERROR, "got error when unwrapping", e);
                 errored[0] = true;

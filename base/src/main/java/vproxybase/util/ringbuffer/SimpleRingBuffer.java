@@ -1,7 +1,7 @@
 package vproxybase.util.ringbuffer;
 
-import vproxybase.GlobalInspection;
 import vproxybase.util.*;
+import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -31,7 +31,7 @@ import java.util.Set;
  */
 public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     private final boolean isDirect;
-    private /*may change after defragment*/ ByteBuffer buffer;
+    private /*may change after defragment*/ ByteBufferEx buffer;
     private int ePos; // end pos
     private int sPos; // start pos
     private final int cap;
@@ -49,14 +49,14 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     public static SimpleRingBuffer allocate(int cap) {
-        return new SimpleRingBuffer(false, ByteBuffer.allocate(cap), 0, 0);
+        return new SimpleRingBuffer(false, new ByteBufferEx(ByteBuffer.allocate(cap)), 0, 0);
     }
 
     public static SimpleRingBuffer wrap(ByteBuffer b) {
-        return new SimpleRingBuffer(false, b, b.position(), b.limit());
+        return new SimpleRingBuffer(false, new ByteBufferEx(b), b.position(), b.limit());
     }
 
-    private SimpleRingBuffer(boolean isDirect, ByteBuffer buffer, int sPos, int ePos) {
+    private SimpleRingBuffer(boolean isDirect, ByteBufferEx buffer, int sPos, int ePos) {
         this.isDirect = isDirect;
         this.buffer = buffer;
         this.cap = buffer.capacity();
@@ -95,7 +95,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
      */
     @Override
     public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
-        return operateOnByteBufferStoreIn(b -> channel.read(b) != -1);
+        return operateOnByteBufferStoreIn(b -> channel.read(b.realBuffer()) != -1);
     }
 
     private void resetCursors() {
@@ -107,7 +107,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
 
     @Override
     public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
-        return operateOnByteBufferWriteOut(maxBytesToWrite, channel::write);
+        return operateOnByteBufferWriteOut(maxBytesToWrite, buffer -> channel.write(buffer.realBuffer()));
     }
 
     @Override
@@ -194,7 +194,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             return;
         cleaned = true;
         if (isDirect) {
-            DirectMemoryUtils.free(buffer);
+            buffer.clean();
         }
     }
 
@@ -437,11 +437,11 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         // and store data into the new buffer
         //
         // then we make a swap
-        ByteBuffer newBuffer;
+        ByteBufferEx newBuffer;
         if (isDirect) {
             newBuffer = DirectMemoryUtils.allocateDirectBuffer(cap);
         } else {
-            newBuffer = ByteBuffer.allocate(cap);
+            newBuffer = new ByteBufferEx(ByteBuffer.allocate(cap));
         }
 
         if (ePosIsAfterSPos) {
@@ -457,7 +457,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         }
 
         if (isDirect) {
-            DirectMemoryUtils.free(buffer); // clean the old buffer
+            buffer.clean(); // clean the old buffer
         }
 
         sPos = 0;
@@ -468,14 +468,5 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
             ePosIsAfterSPos = false;
         }
         buffer = newBuffer;
-    }
-
-    @SuppressWarnings("deprecation")
-    @Override
-    protected void finalize() {
-        if (!isDirect || cleaned) {
-            return;
-        }
-        GlobalInspection.getInstance().directSimpleRingBufferFinalize(cap);
     }
 }
