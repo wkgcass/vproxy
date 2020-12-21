@@ -4,6 +4,7 @@ import tlschannel.impl.TlsExplorer;
 import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
+import vproxybase.GlobalInspection;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
@@ -351,12 +352,16 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 lastLoop = SelectorEventLoop.current();
                 assert Logger.lowLevelDebug("resumer not specified, so we use the current event loop: " + lastLoop);
             }
-            new Thread(() -> {
+            new VProxyThread(() -> {
                 assert Logger.lowLevelDebug("TASK begins");
                 Runnable r;
+                long begin = System.currentTimeMillis();
                 while ((r = engine.getDelegatedTask()) != null) {
                     r.run();
                 }
+                long end = System.currentTimeMillis();
+                GlobalInspection.getInstance().sslUnwrapTask(end - begin);
+
                 assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
                 if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                     resumeGeneralWrap();
@@ -367,7 +372,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 } else {
                     resumeGeneralUnwrap();
                 }
-            }).start();
+            }, "ssl-unwrap-task").start();
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {

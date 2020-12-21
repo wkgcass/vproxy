@@ -153,12 +153,12 @@ public class Daemon {
         var stdoutReader = new BufferedReader(new InputStreamReader(stdout));
         var stderrReader = new BufferedReader(new InputStreamReader(stderr));
 
-        printLoop(pid, stdoutReader, System.out);
-        printLoop(pid, stderrReader, System.err);
+        printLoop(pid, stdoutReader, System.out, "stdout");
+        printLoop(pid, stderrReader, System.err, "stderr");
     }
 
-    private static void printLoop(String pid, BufferedReader reader, PrintStream print) {
-        new Thread(() -> {
+    private static void printLoop(String pid, BufferedReader reader, PrintStream print, String descr) {
+        new VProxyThread(() -> {
             String line;
             try {
                 while ((line = reader.readLine()) != null) {
@@ -166,7 +166,7 @@ public class Daemon {
                 }
             } catch (IOException ignore) {
             }
-        }).start();
+        }, "printLoop-" + descr).start();
     }
 
     private static void join() throws Exception {

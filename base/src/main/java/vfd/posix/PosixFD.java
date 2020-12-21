@@ -22,6 +22,10 @@ public class PosixFD extends AbstractBaseFD implements FD {
         this.posix = posix;
     }
 
+    public int getFD() {
+        return fd;
+    }
+
     protected void checkFD() throws IOException {
         if (fd == -1) {
             throw new IOException("connect() or bind() not called");

@@ -22,6 +22,7 @@ import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
 import vproxybase.processor.ProcessorProvider;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.VProxyThread;
 
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -80,7 +81,7 @@ public class GrpcOverH2Proxy {
             server -> {
             });
         proxy.handle();
-        el.getSelectorEventLoop().loop(Thread::new);
+        el.getSelectorEventLoop().loop(r -> new VProxyThread(r, "proxy"));
 
         // client
         ManagedChannel channel = ManagedChannelBuilder.forAddress("127.0.0.1", 7890)

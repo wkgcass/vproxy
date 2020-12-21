@@ -164,7 +164,7 @@ public abstract class AbstractResolver implements Resolver {
 
     @Override
     public void start() {
-        loop.getSelectorEventLoop().loop(r -> new Thread(r, alias));
+        loop.getSelectorEventLoop().loop(r -> new VProxyThread(r, alias));
     }
 
     abstract protected void getAllByName(String domain, Callback<IP[], UnknownHostException> cb);

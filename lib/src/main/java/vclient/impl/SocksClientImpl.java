@@ -16,10 +16,12 @@ import java.io.IOException;
 import java.util.function.BiFunction;
 
 public class SocksClientImpl extends AbstractClient implements SocksClient {
+    private final IPPort remote;
     private final StreamClient streamClient;
 
     public SocksClientImpl(IPPort remote, SocksClient.Options opts) {
         super(opts);
+        this.remote = remote;
 
         getLoop();
         streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setClientContext(getClientContext()));
@@ -65,6 +67,11 @@ public class SocksClientImpl extends AbstractClient implements SocksClient {
                 raw.close();
             }
         });
+    }
+
+    @Override
+    protected String threadname() {
+        return "socks-client-" + remote;
     }
 
     private static class Socks5ClientConnectableConnectionHandler implements ConnectableConnectionHandler {

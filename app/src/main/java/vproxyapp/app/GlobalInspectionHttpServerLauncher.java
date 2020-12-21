@@ -7,7 +7,7 @@ import vserver.HttpServer;
 import java.io.IOException;
 
 public class GlobalInspectionHttpServerLauncher {
-    private static GlobalInspectionHttpServerLauncher instance = new GlobalInspectionHttpServerLauncher();
+    private static final GlobalInspectionHttpServerLauncher instance = new GlobalInspectionHttpServerLauncher();
 
     private GlobalInspectionHttpServerLauncher() {
     }
@@ -27,7 +27,9 @@ public class GlobalInspectionHttpServerLauncher {
             throw new IOException("GlobalInspectionHttpServer already started: " + app);
         }
         app = HttpServer.create();
-        app.get("/metrics", rctx -> rctx.response().end(GlobalInspection.getInstance().toPrometheusString()));
+        app.get("/metrics", rctx -> rctx.response().end(GlobalInspection.getInstance().getPrometheusString()));
+        app.get("/lsof", rctx -> GlobalInspection.getInstance().getOpenFDs(rctx.response()::end));
+        app.get("/jstack", rctx -> rctx.response().end(GlobalInspection.getInstance().getStackTraces()));
         app.listen(l4addr);
     }
 

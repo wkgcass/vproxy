@@ -2,6 +2,8 @@ package vproxybase.selector;
 
 import vfd.*;
 import vproxybase.Config;
+import vproxybase.GlobalInspection;
+import vproxybase.selector.wrap.FDInspection;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.*;
 import vproxybase.util.promise.Promise;
@@ -40,10 +42,8 @@ public class SelectorEventLoop {
         }
     }
 
-    private static final ThreadLocal<SelectorEventLoop> loopThreadLocal = new ThreadLocal<>();
-
     public static SelectorEventLoop current() {
-        return loopThreadLocal.get();
+        return VProxyThread.current().loop;
     }
 
     public final WrappedSelector selector;
@@ -57,7 +57,7 @@ public class SelectorEventLoop {
 
     private final HandlerContext ctxReuse0 = new HandlerContext(this); // always reuse the ctx object
     private final HandlerContext ctxReuse1 = new HandlerContext(this);
-    public volatile Thread runningThread;
+    private volatile Thread runningThread;
 
     // these locks are a little tricky
     // see comments in loop() and close()
@@ -71,11 +71,6 @@ public class SelectorEventLoop {
             CLOSE_LOCK = Lock.createMock();
         } else {
             CLOSE_LOCK = Lock.create();
-        }
-
-        // probe
-        if (Config.probe.contains("virtual-fd-event")) {
-            period(30_000, selector::probe);
         }
     }
 
@@ -238,7 +233,7 @@ public class SelectorEventLoop {
     }
 
     @Blocking // will block until the loop actually starts
-    public void loop(Function<Runnable, Thread> constructThread) {
+    public void loop(Function<Runnable, ? extends VProxyThread> constructThread) {
         if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
             // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
             return;
@@ -257,7 +252,7 @@ public class SelectorEventLoop {
     // do not use it anywhere else
     public void _bindThread0() {
         runningThread = Thread.currentThread();
-        loopThreadLocal.set(this);
+        VProxyThread.current().loop = this;
     }
 
     // return -1 for break
@@ -344,15 +339,17 @@ public class SelectorEventLoop {
 
         // set thread
         runningThread = Thread.currentThread();
-        loopThreadLocal.set(this);
+        GlobalInspection.getInstance().registerSelectorEventLoop(this);
+        VProxyThread.current().loop = this;
         // run
         while (selector.isOpen()) {
             if (-1 == onePoll()) {
                 break;
             }
         }
+        GlobalInspection.getInstance().deregisterSelectorEventLoop(this);
         runningThread = null; // it's not running now, set to null
-        loopThreadLocal.remove(); // remove from thread local
+        VProxyThread.current().loop = null; // remove from thread local
         // do the final release
         release();
     }
@@ -511,6 +508,10 @@ public class SelectorEventLoop {
         return ((RegisterData) selector.attachment(channel)).att;
     }
 
+    public Thread getRunningThread() {
+        return runningThread;
+    }
+
     @SuppressWarnings("unchecked")
     private void triggerRemovedCallback(FD channel, RegisterData registerData) {
         assert registerData != null;
@@ -577,5 +578,12 @@ public class SelectorEventLoop {
                 // ignore, we don't care
             }
         }
+    }
+
+    public void copyChannels(Collection<FDInspection> coll, Runnable cb) {
+        runOnLoop(() -> {
+            selector.copyFDEvents(coll);
+            cb.run();
+        });
     }
 }

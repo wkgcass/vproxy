@@ -333,7 +333,7 @@ public class WrappedSelector implements FDSelector {
         writableFired.remove(vfd);
     }
 
-    public void probe() {
+    public void copyFDEvents(Collection<FDInspection> coll) {
         for (Map.Entry<VirtualFD, REntry> entry : virtualSocketFDs.entrySet()) {
             var fd = entry.getKey();
             var watch = entry.getValue().watchedEvents;
@@ -344,19 +344,12 @@ public class WrappedSelector implements FDSelector {
             if (writableFired.contains(fd)) {
                 fire = fire.combine(EventSet.write());
             }
-            Logger.probe("virtual: " + fd + ", watch: " + watch + ", fire: " + fire);
+            coll.add(new FDInspection(fd, watch, fire));
         }
-        for (FD fd : readableFired) {
-            //noinspection SuspiciousMethodCalls
-            if (!virtualSocketFDs.containsKey(fd)) {
-                Logger.probe("extra readable: " + fd);
-            }
-        }
-        for (FD fd : writableFired) {
-            //noinspection SuspiciousMethodCalls
-            if (!virtualSocketFDs.containsKey(fd)) {
-                Logger.probe("extra writable: " + fd);
-            }
+        for (var entry : selector.entries()) {
+            var fd = entry.fd;
+            var watch = entry.eventSet;
+            coll.add(new FDInspection(fd, watch, null));
         }
     }
 }

@@ -10,6 +10,7 @@ import vproxybase.redis.RESPProtocolHandler;
 import vproxybase.redis.application.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Callback;
+import vproxybase.util.VProxyThread;
 
 import java.io.IOException;
 import java.util.Collections;
@@ -30,7 +31,7 @@ public class RESPApplicationServer {
             new RESPProtocolHandler(new RESPConfig().setMaxParseLen(16384),
                 new RESPApplicationHandler(new RESPApplicationConfig(), new MyRESPApplication())));
 
-        new Thread(loop::loop).start();
+        new VProxyThread(loop::loop, "resp-app").start();
 
         RedisIncBlockingClient.runBlock(16309, 60, false);
         loop.close();

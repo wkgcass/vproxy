@@ -14,6 +14,7 @@ import vproxybase.selector.wrap.kcp.KCPFDs;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.VProxyThread;
 import vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.io.IOException;
@@ -193,6 +194,6 @@ public class KcpTun {
                 // when terminating, user should simply kill this process and won't close server
             });
         proxy.handle();
-        sLoop.loop(n -> new Thread(n, "kcptun"));
+        sLoop.loop(n -> new VProxyThread(n, "kcptun"));
     }
 }

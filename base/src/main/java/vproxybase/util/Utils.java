@@ -351,34 +351,6 @@ public class Utils {
         T get() throws Exception;
     }
 
-    public static <T> T runBlockWithTimeout(int millis, UtilSupplier<T> f) throws Exception {
-        BlockCallback<T, Exception> cb = new BlockCallback<>();
-        new Thread(() -> {
-            T t;
-            try {
-                t = f.get();
-            } catch (Exception e) {
-                if (!cb.isCalled()) {
-                    cb.onFailed(e);
-                }
-                return;
-            }
-            if (!cb.isCalled()) {
-                cb.onSucceeded(t);
-            }
-        }).start();
-        new Thread(() -> {
-            try {
-                Thread.sleep(millis);
-            } catch (InterruptedException ignore) {
-            }
-            if (!cb.isCalled()) {
-                cb.onFailed(new TimeoutException("operation time out"));
-            }
-        }).start();
-        return cb.block();
-    }
-
     public static <T> T runAvoidNull(Supplier<T> f, T dft) {
         try {
             return f.get();
@@ -417,7 +389,12 @@ public class Utils {
     public static void pipeOutputOfSubProcess(Process p) {
         var stdout = p.getInputStream();
         var stderr = p.getErrorStream();
-        new Thread(() -> {
+        pipeOutputOfStream(stdout, "stdout");
+        pipeOutputOfStream(stderr, "stderr");
+    }
+
+    private static void pipeOutputOfStream(InputStream stdout, String descr) {
+        new VProxyThread(() -> {
             var br = new BufferedReader(new InputStreamReader(stdout));
             String x;
             try {
@@ -430,21 +407,7 @@ public class Utils {
                 stdout.close();
             } catch (Throwable ignore) {
             }
-        }).start();
-        new Thread(() -> {
-            var br = new BufferedReader(new InputStreamReader(stderr));
-            String x;
-            try {
-                while ((x = br.readLine()) != null) {
-                    System.out.println(x);
-                }
-            } catch (Throwable ignore) {
-            }
-            try {
-                stderr.close();
-            } catch (Throwable ignore) {
-            }
-        }).start();
+        }, "pipe-output-of-stream-" + descr).start();
     }
 
     // the returned array would be without getStackTrace() and this method

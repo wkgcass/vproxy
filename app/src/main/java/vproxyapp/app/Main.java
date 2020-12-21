@@ -351,7 +351,7 @@ public class Main {
         if (!ctx.get("noStdIOController", false)) {
             // start stdioController
             StdIOController controller = new StdIOController();
-            new Thread(controller::start, "StdIOControllerThread").start();
+            new VProxyThread(controller::start, "StdIOControllerThread").start();
         }
 
         // run main app

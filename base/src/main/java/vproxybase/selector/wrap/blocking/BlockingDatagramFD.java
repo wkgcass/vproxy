@@ -9,6 +9,7 @@ import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.VProxyThread;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -53,9 +54,9 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
         this.writeQByteLimit = writeQByteLimit;
         this.readBufPacketLimit = readBufPacketLimit;
 
-        readThread = new Thread(this::threadRead, "blocking-read-" + fd.toString());
+        readThread = new VProxyThread(this::threadRead, "blocking-read-" + fd.toString());
         readThread.start();
-        writeThread = new Thread(this::threadWrite, "blocking-write-" + fd.toString());
+        writeThread = new VProxyThread(this::threadWrite, "blocking-write-" + fd.toString());
         writeThread.start();
     }
 

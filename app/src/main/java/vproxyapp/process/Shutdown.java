@@ -86,7 +86,7 @@ public class Shutdown {
         } catch (Exception e) {
             System.err.println("SIGUSR2 not handled");
         }
-        new Thread(() -> {
+        new VProxyThread(() -> {
             while (true) {
                 sigIntTimes = 0;
                 try {
@@ -148,7 +148,7 @@ public class Shutdown {
             Logger.shouldNotHappen("removing servers failed", e);
         }
         Logger.alert("Waiting for connections to close");
-        new Thread(() -> {
+        new VProxyThread(() -> {
             var elgHolder = app.eventLoopGroupHolder;
             var elgList = new ArrayList<EventLoopGroup>(elgHolder.names().size());
             for (var name : elgHolder.names()) {
@@ -185,7 +185,7 @@ public class Shutdown {
             // use error to make log more obvious
             Logger.error(LogType.ALERT, "No connections, shutdown now");
             Utils.exit(exitCode);
-        }).start();
+        }, "wait-for-connections-to-close").start();
     }
 
     private static void end() {

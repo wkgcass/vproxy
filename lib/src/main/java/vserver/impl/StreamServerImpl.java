@@ -23,6 +23,11 @@ public class StreamServerImpl extends AbstractServer implements StreamServer {
     }
 
     @Override
+    protected String threadname() {
+        return "stream-server";
+    }
+
+    @Override
     public StreamServer accept(AcceptHandler handler) {
         if (acceptHandler != null) {
             throw new IllegalStateException("accept handler is already set");

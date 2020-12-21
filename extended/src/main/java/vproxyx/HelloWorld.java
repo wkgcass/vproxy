@@ -23,7 +23,7 @@ public class HelloWorld {
         SelectorEventLoop sLoop = SelectorEventLoop.open();
         NetEventLoop nLoop = new NetEventLoop(sLoop);
 
-        sLoop.loop(Thread::new);
+        sLoop.loop(r -> new VProxyThread(r, "hello-world-main"));
 
         if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "DHCP will not run when using FStack");

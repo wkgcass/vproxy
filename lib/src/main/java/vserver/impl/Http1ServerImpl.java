@@ -37,6 +37,11 @@ public class Http1ServerImpl extends AbstractServer implements HttpServer {
         super(loop);
     }
 
+    @Override
+    protected String threadname() {
+        return "http-1-server";
+    }
+
     private void record(Tree<SubPath, RoutingHandler> tree, SubPath subpath, RoutingHandler handler) {
         // null means this sub-path is '/' which is the end of this route
         if (subpath == null) {

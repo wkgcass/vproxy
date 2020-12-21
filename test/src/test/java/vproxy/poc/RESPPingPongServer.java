@@ -10,6 +10,7 @@ import vproxybase.redis.RESPHandler;
 import vproxybase.redis.RESPProtocolHandler;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Callback;
+import vproxybase.util.VProxyThread;
 
 import java.io.IOException;
 import java.util.List;
@@ -29,7 +30,7 @@ public class RESPPingPongServer {
             pconfig,
             new RESPProtocolHandler(rconfig, new MyRESPHandler()));
 
-        new Thread(selectorEventLoop::loop).start();
+        new VProxyThread(selectorEventLoop::loop, "resp-ping-pong-server").start();
 
         RedisPingPongBlockingClient.runBlock(16309, 60, false);
         selectorEventLoop.close();

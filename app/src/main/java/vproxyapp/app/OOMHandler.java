@@ -3,6 +3,7 @@ package vproxyapp.app;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
+import vproxybase.util.VProxyThread;
 
 public class OOMHandler {
     private static byte[] _512K;
@@ -27,7 +28,7 @@ public class OOMHandler {
         if (oomThread != null) {
             return;
         }
-        oomThread = new Thread(() -> {
+        oomThread = new VProxyThread(() -> {
             while (true) {
                 if (stop) {
                     return;

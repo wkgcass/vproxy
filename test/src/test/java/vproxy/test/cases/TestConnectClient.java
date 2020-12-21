@@ -12,6 +12,7 @@ import vproxybase.component.check.ConnectResult;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.BlockCallback;
+import vproxybase.util.VProxyThread;
 
 import java.io.IOException;
 import java.nio.channels.InterruptedByTimeoutException;
@@ -28,7 +29,7 @@ public class TestConnectClient {
     @BeforeClass
     public static void classSetUp() throws Exception {
         serverLoop = SelectorEventLoop.open();
-        serverLoop.loop(r -> new Thread(r, "serverLoop"));
+        serverLoop.loop(r -> new VProxyThread(r, "serverLoop"));
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
         new IdServer("0", serverNetLoop, normalServerPort);
         new SendOnConnectIdServer("abcdefghijklmn"/*make it long to fill the buffer*/, serverNetLoop, directWritePort);
@@ -37,7 +38,7 @@ public class TestConnectClient {
 
     @AfterClass
     public static void classTearDown() throws Exception {
-        Thread t = serverLoop.runningThread;
+        Thread t = serverLoop.getRunningThread();
         serverLoop.close();
         t.join();
     }
@@ -47,7 +48,7 @@ public class TestConnectClient {
     @Before
     public void setUp() throws Exception {
         netEventLoop = new NetEventLoop(SelectorEventLoop.open());
-        netEventLoop.getSelectorEventLoop().loop(r -> new Thread(r, "netEventLoop"));
+        netEventLoop.getSelectorEventLoop().loop(r -> new VProxyThread(r, "netEventLoop"));
     }
 
     @After

@@ -8,6 +8,7 @@ import vproxybase.connection.Connector;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.VProxyThread;
 
 import java.io.IOException;
 
@@ -36,7 +37,7 @@ public class ProxyEchoServer {
         // create proxy and start
         Proxy proxy = new Proxy(config, new MyProxyEventHandler());
         proxy.handle();
-        new Thread(selectorEventLoop::loop).start();
+        new VProxyThread(selectorEventLoop::loop, "proxy-echo").start();
 
         Thread.sleep(500);
         AlphabetBlockingClient.runBlock(18080, 10, false);

@@ -64,4 +64,9 @@ public class StreamClientImpl extends AbstractClient implements StreamClient {
         VProxyLibUtils.switchBuffers(raw, opts);
         return new ConnImpl(getLoop(), raw, null);
     }
+
+    @Override
+    protected String threadname() {
+        return "stream-client-" + remote.formatToIPPortString();
+    }
 }

@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Http1ClientImpl extends AbstractClient implements HttpClient {
+    private final IPPort remote;
     private final StreamClient streamClient;
     private final ConnRefPool pool;
     private final Options opts;
@@ -22,6 +23,7 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
     public Http1ClientImpl(IPPort remote, Options opts) {
         super(opts);
         this.opts = opts;
+        this.remote = remote;
 
         getLoop();
         streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setAlpn(new String[]{"http/1.1"}).setClientContext(getClientContext()));
@@ -30,6 +32,11 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
         } else {
             pool = new ConnRefPoolImpl(new ConnRefPool.Options(opts.poolOptions).setLoop(getLoop()));
         }
+    }
+
+    @Override
+    protected String threadname() {
+        return "http-1-client-" + remote.formatToIPPortString();
     }
 
     private class Http1ClientRequestImpl implements HttpRequest {
