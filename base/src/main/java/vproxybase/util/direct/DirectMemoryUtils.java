@@ -32,7 +32,7 @@ public class DirectMemoryUtils {
 
     static void free(ByteBuffer buffer) {
         assert Logger.lowLevelDebug("run Utils.clean");
-        if (!buffer.getClass().getName().equals("java.nio.DirectByteBuffer")) {
+        if (!buffer.isDirect()) {
             assert Logger.lowLevelDebug("not direct buffer");
             return;
         }
