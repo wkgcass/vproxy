@@ -1,5 +1,7 @@
 package vfd;
 
+import vproxybase.selector.SelectorEventLoop;
+
 import java.io.IOException;
 import java.net.SocketOption;
 import java.nio.channels.Channel;
@@ -13,4 +15,7 @@ public interface FD extends Channel {
      * @return the real fd object
      */
     FD real();
+
+    default void loopAware(SelectorEventLoop loop) {
+    }
 }

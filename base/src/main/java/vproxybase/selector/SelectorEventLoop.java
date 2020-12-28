@@ -186,6 +186,7 @@ public class SelectorEventLoop {
                 EventSet readyOps = key.ready;
                 // handle read first because it's most likely to happen
                 if (readyOps.have(Event.READABLE)) {
+                    assert Logger.lowLevelDebug("firing readable for " + channel);
                     if (channel instanceof ServerSocketFD) {
                         // OP_ACCEPT
                         try {
@@ -203,6 +204,7 @@ public class SelectorEventLoop {
                 }
                 // read and write may happen in the same loop round
                 if (readyOps.have(Event.WRITABLE)) {
+                    assert Logger.lowLevelDebug("firing writable for " + channel);
                     if (channel instanceof SocketFD) {
                         if (registerData.connected) {
                             try {
@@ -407,6 +409,7 @@ public class SelectorEventLoop {
     @SuppressWarnings("DuplicateThrows")
     public <CHANNEL extends FD> Promise<FD> add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
         channel.configureBlocking(false);
+        channel.loopAware(this);
         RegisterData registerData = new RegisterData(handler, attachment);
         if (channel instanceof SocketFD) {
             registerData.connected = ((SocketFD) channel).isConnected();

@@ -54,9 +54,11 @@ public abstract class AbstractBaseFD implements FD {
     public void close() throws IOException {
         if (directBufferForReading != null) {
             directBufferForReading.clean();
+            directBufferForReading = null;
         }
         if (directBufferForWriting != null) {
             directBufferForWriting.clean();
+            directBufferForWriting = null;
         }
     }
 

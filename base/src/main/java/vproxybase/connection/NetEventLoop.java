@@ -284,6 +284,11 @@ class NetEventLoopUtils {
 class HandlerForConnection implements Handler<SocketFD> {
     @Override
     public void accept(HandlerContext<SocketFD> ctx) {
+        if (ctx.getChannel() instanceof ServerSocketFD) {
+            Logger.lowLevelDebug("firing accept(), it's socket fd as well as server socket fd, do readable() here");
+            readable(ctx);
+            return;
+        }
         // will not fire
         Logger.shouldNotHappen("connection should not fire accept");
     }

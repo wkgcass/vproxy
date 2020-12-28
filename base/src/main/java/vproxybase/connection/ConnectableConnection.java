@@ -64,7 +64,10 @@ public class ConnectableConnection extends Connection {
                                              IPPort remote,
                                              ConnectionOpts opts,
                                              RingBuffer inBuffer,
-                                             RingBuffer outBuffer) {
+                                             RingBuffer outBuffer) throws IOException {
+        if (!socketFD.isConnected()) {
+            socketFD.connect(remote);
+        }
         return new ConnectableConnection(socketFD, remote, opts, inBuffer, outBuffer);
     }
 
