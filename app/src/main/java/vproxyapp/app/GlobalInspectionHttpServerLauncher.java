@@ -30,6 +30,7 @@ public class GlobalInspectionHttpServerLauncher {
         app.get("/metrics", rctx -> rctx.response().end(GlobalInspection.getInstance().getPrometheusString()));
         app.get("/lsof", rctx -> GlobalInspection.getInstance().getOpenFDs(rctx.response()::end));
         app.get("/jstack", rctx -> rctx.response().end(GlobalInspection.getInstance().getStackTraces()));
+        app.get("/cached/buffers", rctx -> rctx.response().end(GlobalInspection.getInstance().getCachedBuffers()));
         app.listen(l4addr);
     }
 

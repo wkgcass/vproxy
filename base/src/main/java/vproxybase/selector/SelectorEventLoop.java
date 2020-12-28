@@ -232,6 +232,8 @@ public class SelectorEventLoop {
             RegisterData att = tuple.right;
             triggerRemovedCallback(channel, att);
         }
+
+        VProxyThread.current().release();
     }
 
     @Blocking // will block until the loop actually starts

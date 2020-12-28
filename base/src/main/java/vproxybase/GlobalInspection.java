@@ -7,16 +7,12 @@ import vfd.SockAddr;
 import vfd.posix.PosixFD;
 import vjson.simple.SimpleString;
 import vjson.util.AppendableMap;
-import vproxybase.prometheus.Counter;
-import vproxybase.prometheus.Gauge;
-import vproxybase.prometheus.Metric;
-import vproxybase.prometheus.Metrics;
+import vproxybase.prometheus.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.FDInspection;
 import vproxybase.selector.wrap.VirtualFD;
-import vproxybase.util.ConcurrentHashSet;
-import vproxybase.util.Logger;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.*;
+import vproxybase.util.exception.NoException;
 import vproxybase.util.table.TR;
 import vproxybase.util.table.TableBuilder;
 
@@ -41,6 +37,7 @@ public class GlobalInspection {
     private final Counter sslUnwrapTaskCount;
     private final Counter sslUnwrapTaskTimeMillisTotal;
     private final Gauge threadNumberCurrent;
+    private final Gauge cachedDirectBufferBytes;
 
     private final ConcurrentHashSet<SelectorEventLoop> runningLoops = new ConcurrentHashSet<>();
     private final ConcurrentHashSet<VProxyThread> runningThreads = new ConcurrentHashSet<>();
@@ -85,6 +82,11 @@ public class GlobalInspection {
             .appendAll(extraLabels));
         metrics.add(threadNumberCurrent);
 
+        cachedDirectBufferBytes = new Gauge("cached_direct_memory_bytes_current", new AppendableMap<>()
+            .append("type", "buffer")
+            .appendAll(extraLabels));
+        metrics.add(cachedDirectBufferBytes);
+
         metrics.registerHelpMessage("direct_memory_bytes_current", "Current allocated direct memory in bytes");
         metrics.registerHelpMessage("direct_memory_allocate_count", "Total count of how many times the direct memory is allocated");
         metrics.registerHelpMessage("direct_memory_free_count", "Total count of how many times the direct memory is freed");
@@ -93,6 +95,7 @@ public class GlobalInspection {
         metrics.registerHelpMessage("ssl_unwrap_task_count", "Total count of how many times ssl unwrap requires executing a task");
         metrics.registerHelpMessage("ssl_unwrap_task_time_millis_total", "Total time cost for tasks required by ssl unwrapping");
         metrics.registerHelpMessage("thread_number_current", "The number of current running threads");
+        metrics.registerHelpMessage("cached_direct_memory_bytes_current", "Current cached direct memory in bytes");
     }
 
     private Map<String, String> getExtraLabels() {
@@ -143,6 +146,14 @@ public class GlobalInspection {
     public void directBufferFree(int size) {
         directBufferFreeCount.incr(1);
         directBufferBytes.decr(size);
+    }
+
+    public void directBufferCache(int size) {
+        cachedDirectBufferBytes.incr(size);
+    }
+
+    public void directBufferTakeFromCache(int size) {
+        cachedDirectBufferBytes.decr(size);
     }
 
     public void directBufferFinalize(int size) {
@@ -207,7 +218,17 @@ public class GlobalInspection {
         var tr = table.tr();
         tr.td("TID").td("WATCHED").td("FIRED").td("FD").td("VIRTUAL").td("LOCAL").td("REMOTE").td("REAL").td("REAL-VIRTUAL").td("REAL-LOCAL").td("REAL-REMOTE");
         var ite = loops.iterator();
-        recursiveGetOpenFds(ite, table, cb);
+        var callback = new RunOnLoopCallback<>(new Callback<String, NoException>() {
+            @Override
+            protected void onSucceeded(String value) {
+                cb.accept(value);
+            }
+
+            @Override
+            protected void onFailed(NoException err) {
+            }
+        });
+        recursiveGetOpenFds(ite, table, callback::succeeded);
     }
 
     private void recursiveGetOpenFds(Iterator<SelectorEventLoop> ite, TableBuilder table, Consumer<String> cb) {
@@ -299,5 +320,21 @@ public class GlobalInspection {
         } else {
             tr.td("-").td("-");
         }
+    }
+
+    public String getCachedBuffers() {
+        var threads = new HashSet<>(runningThreads);
+        TableBuilder table = new TableBuilder();
+        var tr = table.tr();
+        tr.td("TID")
+            .td("1").td("2").td("4").td("8")
+            .td("16").td("32").td("64")
+            .td("128").td("256").td("512")
+            .td("1K").td("2K").td("4K").td("8K")
+            .td("16K").td("24K").td("32K").td("64K");
+        for (var t : threads) {
+            t.getVariable().inspectCachedBuffers(table.tr().td("" + t.getId()));
+        }
+        return table.toString();
     }
 }
