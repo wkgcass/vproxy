@@ -104,7 +104,6 @@ public class Http1ClientConn implements HttpClientConn {
                 ByteArray array = request.toByteArray();
                 ByteArrayChannel chnl = ByteArrayChannel.fromFull(array);
 
-                System.out.println(connection.getEventLoop());
                 try {
                     loop.addConnectableConnection(
                         (ConnectableConnection) connection,
