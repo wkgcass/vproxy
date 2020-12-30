@@ -20,5 +20,5 @@ import java.lang.annotation.Target;
     ElementType.TYPE_USE,
 })
 public @interface Comment {
-    String value() default "";
+    String[] value() default {""};
 }
