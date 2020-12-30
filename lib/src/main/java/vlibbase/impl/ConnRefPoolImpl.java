@@ -126,6 +126,11 @@ public class ConnRefPoolImpl implements ConnRefPool {
     }
 
     @Override
+    public NetEventLoop getLoop() {
+        return loop;
+    }
+
+    @Override
     public Void receiveTransferredConnection0(ConnRef conn) throws IOException {
         if (isClosed) {
             throw new IllegalStateException("the pool is already closed");

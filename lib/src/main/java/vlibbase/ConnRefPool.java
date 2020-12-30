@@ -13,7 +13,7 @@ public interface ConnRefPool extends ConnectionAware<Void> {
 
     static ConnRefPool create(Options opts) {
         if (opts.maxCount <= 0) {
-            return new EmptyConnRefPool();
+            return new EmptyConnRefPool(opts.loop);
         }
         return new ConnRefPoolImpl(opts);
     }
@@ -25,6 +25,8 @@ public interface ConnRefPool extends ConnectionAware<Void> {
     boolean isClosed();
 
     void close();
+
+    NetEventLoop getLoop();
 
     class Options {
         public int maxCount = 10;
