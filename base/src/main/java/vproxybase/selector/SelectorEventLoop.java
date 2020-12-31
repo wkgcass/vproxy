@@ -410,8 +410,10 @@ public class SelectorEventLoop {
     @ThreadSafe
     @SuppressWarnings("DuplicateThrows")
     public <CHANNEL extends FD> Promise<FD> add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
+        if (!channel.loopAware(this)) {
+            throw new IOException("channel " + channel + " rejects to be attached to current event loop");
+        }
         channel.configureBlocking(false);
-        channel.loopAware(this);
         RegisterData registerData = new RegisterData(handler, attachment);
         if (channel instanceof SocketFD) {
             registerData.connected = ((SocketFD) channel).isConnected();

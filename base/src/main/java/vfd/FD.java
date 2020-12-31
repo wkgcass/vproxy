@@ -16,6 +16,11 @@ public interface FD extends Channel {
      */
     FD real();
 
-    default void loopAware(SelectorEventLoop loop) {
+    /**
+     * @param loop the loop which this fd is attaching to
+     * @return true if the fd allows attaching, false otherwise
+     */
+    default boolean loopAware(SelectorEventLoop loop) {
+        return true;
     }
 }
