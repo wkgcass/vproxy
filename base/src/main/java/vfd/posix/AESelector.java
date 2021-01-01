@@ -4,6 +4,8 @@ import vfd.*;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.CursorList;
+import vproxybase.util.objectpool.PrototypeObjectPool;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -11,6 +13,9 @@ import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class AESelector implements FDSelector {
+    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
+    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
+
     private final Posix posix;
     private final long ae;
     private final int[] pipefd; // null, or pipefd[read][write], might be the same if using linux eventfd
@@ -90,19 +95,21 @@ public class AESelector implements FDSelector {
     }
 
     private Collection<SelectedEntry> handleSelectResult(FDInfo[] results) {
-        clearPipeFD();
         if (results.length == 0) {
             return Collections.emptyList();
         }
-        List<SelectedEntry> ret = new ArrayList<>(results.length);
+        clearPipeFD();
+        selectedEntryPool.release(selectResultReusedList.size());
+        selectResultReusedList.clear();
+
         for (FDInfo res : results) {
             Att att = (Att) res.attachment;
             if (att.fd == null) // for the internal pipe fds
                 continue;
             int ev = res.events;
-            ret.add(new SelectedEntry(att.fd, getJavaEvents(ev), att.att));
+            selectResultReusedList.add(selectedEntryPool.poll().set(att.fd, getJavaEvents(ev), att.att));
         }
-        return ret;
+        return selectResultReusedList;
     }
 
     private void checkOpen() {

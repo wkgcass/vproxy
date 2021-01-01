@@ -4,6 +4,8 @@ import vfd.*;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.CursorList;
+import vproxybase.util.objectpool.PrototypeObjectPool;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -11,6 +13,8 @@ import java.util.*;
 
 public class WrappedSelector implements FDSelector {
     private final FDSelector selector;
+    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
+    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
 
     private static class REntry {
         EventSet watchedEvents;
@@ -50,8 +54,7 @@ public class WrappedSelector implements FDSelector {
         return selector.isOpen();
     }
 
-    private Set<SelectedEntry> calcVirtual() {
-        Set<SelectedEntry> ret = new HashSet<>();
+    private void calcVirtual() {
         //noinspection unused
         try (var unused = VIRTUAL_LOCK.lock()) {
             for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
@@ -83,18 +86,17 @@ public class WrappedSelector implements FDSelector {
                     eventSet = null;
                 }
                 if (eventSet != null) {
-                    ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+                    selectResultReusedList.add(selectedEntryPool.poll().set(fd, eventSet, entry.attachment));
                 }
             }
         }
-        return ret;
     }
 
     private Collection<SelectedEntry> handleRealSelect(Collection<SelectedEntry> entries) {
         for (SelectedEntry entry : entries) {
-            if (entry.fd instanceof WritableAware) {
-                if (entry.ready.have(Event.WRITABLE)) {
-                    ((WritableAware) entry.fd).writable();
+            if (entry.fd() instanceof WritableAware) {
+                if (entry.ready().have(Event.WRITABLE)) {
+                    ((WritableAware) entry.fd()).writable();
                 }
             }
         }
@@ -103,30 +105,39 @@ public class WrappedSelector implements FDSelector {
 
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        var set = calcVirtual();
-        if (set.isEmpty()) {
+        selectedEntryPool.release(selectResultReusedList.size());
+        selectResultReusedList.clear();
+
+        calcVirtual();
+        if (selectResultReusedList.isEmpty()) {
             return handleRealSelect(selector.select());
         } else {
-            set.addAll(handleRealSelect(selector.selectNow()));
-            return set;
+            selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
+            return selectResultReusedList;
         }
     }
 
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        var set = calcVirtual();
-        set.addAll(handleRealSelect(selector.selectNow()));
-        return set;
+        selectedEntryPool.release(selectResultReusedList.size());
+        selectResultReusedList.clear();
+
+        calcVirtual();
+        selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
+        return selectResultReusedList;
     }
 
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        var set = calcVirtual();
-        if (set.isEmpty()) {
+        selectedEntryPool.release(selectResultReusedList.size());
+        selectResultReusedList.clear();
+
+        calcVirtual();
+        if (selectResultReusedList.isEmpty()) {
             return handleRealSelect(selector.select(millis));
         } else {
-            set.addAll(handleRealSelect(selector.selectNow()));
-            return set;
+            selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
+            return selectResultReusedList;
         }
     }
 

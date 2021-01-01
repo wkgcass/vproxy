@@ -3,14 +3,30 @@ package vfd;
 import java.util.Objects;
 
 public class SelectedEntry {
-    public final FD fd;
-    public final EventSet ready;
-    public final Object attachment;
+    private FD fd;
+    private EventSet ready;
+    private Object attachment;
 
-    public SelectedEntry(FD fd, EventSet ready, Object attachment) {
+    public SelectedEntry() {
+    }
+
+    public SelectedEntry set(FD fd, EventSet ready, Object attachment) {
         this.fd = fd;
         this.ready = ready;
         this.attachment = attachment;
+        return this;
+    }
+
+    public FD fd() {
+        return fd;
+    }
+
+    public EventSet ready() {
+        return ready;
+    }
+
+    public Object attachment() {
+        return attachment;
     }
 
     @Override

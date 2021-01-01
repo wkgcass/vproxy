@@ -2,6 +2,8 @@ package vfd.jdk;
 
 import vfd.*;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.CursorList;
+import vproxybase.util.objectpool.PrototypeObjectPool;
 
 import java.io.IOException;
 import java.nio.channels.*;
@@ -18,6 +20,9 @@ public class ChannelSelector implements FDSelector {
         }
     }
 
+    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
+    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
+
     private final Selector selector;
 
     public ChannelSelector(Selector selector) {
@@ -32,7 +37,8 @@ public class ChannelSelector implements FDSelector {
     private Collection<SelectedEntry> getSelectionEntries(int cnt) {
         if (cnt == 0) return Collections.emptySet();
 
-        Set<SelectedEntry> ret = new HashSet<>(cnt);
+        selectedEntryPool.release(selectResultReusedList.size());
+        selectResultReusedList.clear();
 
         Set<SelectionKey> set = selector.selectedKeys();
         Iterator<SelectionKey> keys = set.iterator();
@@ -45,9 +51,9 @@ public class ChannelSelector implements FDSelector {
             }
 
             Att att = (Att) key.attachment();
-            ret.add(new SelectedEntry(att.fd, events(key.readyOps()), att.att));
+            selectResultReusedList.add(selectedEntryPool.poll().set(att.fd, events(key.readyOps()), att.att));
         }
-        return ret;
+        return selectResultReusedList;
     }
 
     @Override

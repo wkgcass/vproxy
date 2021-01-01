@@ -170,9 +170,9 @@ public class SelectorEventLoop {
         while (keys.hasNext()) {
             SelectedEntry key = keys.next();
 
-            RegisterData registerData = (RegisterData) key.attachment;
+            RegisterData registerData = (RegisterData) key.attachment();
 
-            FD channel = key.fd;
+            FD channel = key.fd();
             Handler handler = registerData.handler;
 
             ctxReuse0.channel = channel;
@@ -180,10 +180,10 @@ public class SelectorEventLoop {
 
             if (!channel.isOpen()) {
                 if (selector.isRegistered(channel)) {
-                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctxReuse0.attachment);
+                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready() + ", attachment = " + ctxReuse0.attachment);
                 } // else the channel is closed in another fd handler and removed from loop, this is ok and no need to report
             } else {
-                EventSet readyOps = key.ready;
+                EventSet readyOps = key.ready();
                 // handle read first because it's most likely to happen
                 if (readyOps.have(Event.READABLE)) {
                     assert Logger.lowLevelDebug("firing readable for " + channel);
