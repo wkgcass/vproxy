@@ -1,5 +1,7 @@
 package vproxybase.http.connect;
 
+import vfd.IP;
+import vfd.IPPort;
 import vproxybase.connection.Connector;
 import vproxybase.connection.ConnectorProvider;
 import vproxybase.http.HttpContext;
@@ -8,6 +10,7 @@ import vproxybase.processor.http1.entity.Request;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.util.*;
+import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 
@@ -30,7 +33,7 @@ public class HttpConnectProtocolHandler
             @Override
             protected void request(ProtocolHandlerContext<HttpContext> ctx) {
                 // fetch data from method and url
-                // it should be CONNECT host:port
+                // it should be CONNECT host:port or METHOD http://host[:port] VERSION
                 Request req = ctx.data.result;
                 String url = req.uri;
 
@@ -90,24 +93,99 @@ public class HttpConnectProtocolHandler
                     outCtx.data.left.port = port;
                     outCtx.write("HTTP/1.0 200 Connection established\r\n\r\n".getBytes());
                 } else {
-                    assert Logger.lowLevelDebug("client is sending raw http request");
-                    String msg = "only \"connect\" proxy requests are supported";
-                    String rebuiltUrl = "https://" + url.substring("http://".length());
-                    String respBody = ErrorPages.build("VPROXY ERROR PAGE", msg, "you may try to request via https", rebuiltUrl, rebuiltUrl);
-                    String resp = "" +
-                        "HTTP/1.0 400 Bad Request\r\n" +
-                        "Connection: Close\r\n" +
-                        "Content-Length: " + respBody.getBytes().length + "\r\n" +
-                        "\r\n" +
-                        respBody;
-                    outCtx.write(resp.getBytes());
-                    outCtx.data.right.failed(new IOException(msg));
+                    assert Logger.lowLevelDebug("client is sending raw http request: " + req);
+                    String target = req.uri;
+                    assert target.startsWith("http://");
+                    target = target.substring("http://".length());
+                    String formattedUri;
+                    if (target.contains("/")) {
+                        formattedUri = target.substring(target.indexOf("/"));
+                        target = target.substring(0, target.indexOf("/"));
+                    } else {
+                        formattedUri = "/";
+                    }
+                    assert Logger.lowLevelDebug("proxy target string is " + target + ", the formatted uri is " + formattedUri);
+                    // maybe ip:port, domain:port, ip[:80], domain[:80]
+                    if (IPPort.validL4AddrStr(target)) {
+                        IPPort targetL4Addr = new IPPort(target);
+                        assert Logger.lowLevelDebug("proxy target is " + targetL4Addr);
+                        directHttpProxy(outCtx, hcctx, ctx, targetL4Addr, formattedUri);
+                    } else if (IP.isIpLiteral(target)) {
+                        IPPort targetL4Addr = new IPPort(IP.from(target), 80);
+                        assert Logger.lowLevelDebug("proxy target is " + targetL4Addr);
+                        directHttpProxy(outCtx, hcctx, ctx, targetL4Addr, formattedUri);
+                    } else if (target.contains(":")) {
+                        String portStr = target.substring(target.lastIndexOf(":") + 1);
+                        String domain = target.substring(0, target.lastIndexOf(":"));
+                        int port;
+                        try {
+                            port = Integer.parseInt(portStr);
+                        } catch (NumberFormatException e) {
+                            Logger.error(LogType.INVALID_EXTERNAL_DATA, "port number is not valid: " + portStr);
+                            outCtx.data.right.failed(new IOException("invalid port number " + portStr));
+                            return;
+                        }
+                        assert Logger.lowLevelDebug("proxy target is " + domain + ":" + port);
+                        directHttpProxy(outCtx, hcctx, ctx, domain, port, formattedUri);
+                    } else {
+                        //noinspection UnnecessaryLocalVariable
+                        String domain = target;
+                        int port = 80;
+                        assert Logger.lowLevelDebug("proxy target is " + domain + ":" + port);
+                        directHttpProxy(outCtx, hcctx, ctx, domain, port, formattedUri);
+                    }
                 }
             }
         };
         hcctx.handlerCtx = new ProtocolHandlerContext<>(ctx.connectionId, ctx.connection, ctx.loop, hcctx.handler);
         hcctx.handler.init(hcctx.handlerCtx);
         ctx.data = new Tuple<>(hcctx, null);
+    }
+
+    private boolean failedStoringFormattedRequestBackToInBuffer(ProtocolHandlerContext<Tuple<HttpConnectContext, Callback<Connector, IOException>>> outCtx,
+                                                                ProtocolHandlerContext<HttpContext> ctx,
+                                                                String formattedUri) {
+        ctx.data.result.uri = formattedUri;
+        ByteArray reqBytes = ctx.data.result.toByteArray();
+        ByteArrayChannel chnl = ByteArrayChannel.fromFull(reqBytes);
+        int stored = ctx.connection.getInBuffer().storeBytesFrom(chnl); // is expected to be fully stored
+        if (stored != reqBytes.length()) {
+            Logger.error(LogType.ALERT, "the formatted request (" + reqBytes.length() + " bytes) is not fully stored back into the inBuffer");
+            outCtx.data.right.failed(new IOException("request too long"));
+            return true;
+        }
+        assert Logger.lowLevelDebug("the request is fully stored back into the inBuffer:\n" + new String(reqBytes.toJavaArray()));
+        return false;
+    }
+
+    private void directHttpProxy(ProtocolHandlerContext<Tuple<HttpConnectContext, Callback<Connector, IOException>>> outCtx,
+                                 HttpConnectContext hcctx,
+                                 ProtocolHandlerContext<HttpContext> ctx,
+                                 IPPort remote, String formattedUri) {
+        if (failedStoringFormattedRequestBackToInBuffer(outCtx, ctx, formattedUri)) {
+            return; // error would already be logged and callback would already be called
+        }
+        // mark handshake done
+        hcctx.handshakeDone = true;
+        outCtx.data.left.host = remote.getAddress().formatToIPString();
+        outCtx.data.left.port = remote.getPort();
+        readable(outCtx);
+    }
+
+    private void directHttpProxy(ProtocolHandlerContext<Tuple<HttpConnectContext, Callback<Connector, IOException>>> outCtx,
+                                 HttpConnectContext hcctx,
+                                 ProtocolHandlerContext<HttpContext> ctx,
+                                 String domain,
+                                 int port,
+                                 String formattedUri) {
+        if (failedStoringFormattedRequestBackToInBuffer(outCtx, ctx, formattedUri)) {
+            return; // error would already be logged and callback would already be called
+        }
+        // mark handshake done
+        hcctx.handshakeDone = true;
+        outCtx.data.left.host = domain;
+        outCtx.data.left.port = port;
+        readable(outCtx);
     }
 
     @Override
