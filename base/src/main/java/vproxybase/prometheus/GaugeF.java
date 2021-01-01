@@ -6,8 +6,8 @@ import java.util.function.Supplier;
 public class GaugeF extends Metric {
     private final Supplier<Long> dataFunc;
 
-    public GaugeF(String msg, Map<String, String> labels, Supplier<Long> dataFunc) {
-        super(msg, labels);
+    public GaugeF(String metric, Map<String, String> labels, Supplier<Long> dataFunc) {
+        super(metric, labels);
         this.dataFunc = dataFunc;
     }
 
