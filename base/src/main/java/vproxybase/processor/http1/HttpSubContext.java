@@ -518,6 +518,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             }
         }
         if (proxyLen == 0) {
+            buf = null;
             // the method will not be called if it's using the Proxy lib
             // so proxyDone will not be called either
             // we call it manually here
@@ -608,13 +609,26 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     private void state15(ByteArray data) {
         assert data.length() <= proxyLen;
+        int contentLength = proxyLen;
         proxyLen -= data.length();
-        if (chunk.content == null) {
-            chunk.content = data;
+        if (parserMode) {
+            if (chunk.content == null) {
+                buf = new byte[contentLength];
+                bufOffset = 0;
+                chunk.content = ByteArray.from(buf);
+            }
+            for (int i = 0; i < data.length(); ++i) {
+                buf[bufOffset++] = data.get(i);
+            }
         } else {
-            chunk.content = chunk.content.concat(data);
+            if (chunk.content == null) {
+                chunk.content = data;
+            } else {
+                chunk.content = chunk.content.concat(data);
+            }
         }
         if (proxyLen == 0) {
+            buf = null;
             // this method will not be called if using the Proxy lib
             // and proxyDone will not be called as well
             // so call it manually here
