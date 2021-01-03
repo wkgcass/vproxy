@@ -147,6 +147,10 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         if (dst.limit() == dst.position()) {
             return 0; // empty dst
         }
+        if (noDataToRead()) {
+            cancelReadable();
+            return 0;
+        }
         int ret = doRead(dst);
         if (noDataToRead()) {
             cancelReadable();
@@ -161,6 +165,10 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
     public void setEof() {
         this.eof = true;
         setReadable();
+    }
+
+    protected boolean isEof() {
+        return eof;
     }
 
     @Override
@@ -179,13 +187,17 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
 
     protected abstract int doWrite(ByteBuffer src) throws IOException;
 
-    protected void raiseError(IOException err) {
+    protected void raiseError(Throwable err) {
         if (closed) {
             assert Logger.lowLevelDebug("got new error, but the fd is already closed, error " + err + " will not raise");
             return;
         }
         assert Logger.lowLevelDebug("got new error: " + err);
-        error = err;
+        if (err instanceof IOException) {
+            error = (IOException) err;
+        } else {
+            error = new IOException(err);
+        }
         if (loop == null) {
             setReadable();
             setWritable();

@@ -1,15 +1,16 @@
 package vproxybase.selector.wrap.file;
 
-import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.selector.wrap.AbstractBaseVirtualSocketFD;
 import vproxybase.selector.wrap.VirtualFD;
+import vproxybase.util.LogType;
+import vproxybase.util.Logger;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
 
 import java.io.IOException;
-import java.net.SocketOption;
 import java.nio.ByteBuffer;
 import java.nio.channels.AsynchronousFileChannel;
 import java.nio.channels.CompletionHandler;
@@ -18,24 +19,43 @@ import java.nio.file.Path;
 import java.util.Arrays;
 import java.util.List;
 
-public class FileFD implements VirtualFD, SocketFD {
-    private final SelectorEventLoop loop;
-    private final FilePath filepath;
+public class FileFD extends AbstractBaseVirtualSocketFD implements VirtualFD, SocketFD {
     private final List<OpenOption> openOptions;
-    private final AsynchronousFileChannel asyncFile;
-    private final long length;
-
-    private boolean closed = false;
+    private String filepath;
+    private AsynchronousFileChannel asyncFile;
+    private long length;
 
     private long readPosition = 0;
     private final DirectByteBuffer readBuffer;
     private final DirectByteBuffer writeBuffer;
 
-    public FileFD(SelectorEventLoop loop, Path filePath, OpenOption... options) throws IOException {
-        this.loop = loop;
-        this.filepath = new FilePath(filePath.toAbsolutePath().toString());
+    public FileFD(SelectorEventLoop loop, OpenOption... options) {
+        super(false, null, null);
         this.openOptions = Arrays.asList(options);
-        this.asyncFile = AsynchronousFileChannel.open(filePath, options);
+
+        this.readBuffer = DirectMemoryUtils.allocateDirectBuffer(8192);
+        this.writeBuffer = DirectMemoryUtils.allocateDirectBuffer(8192);
+
+        loopAware(loop);
+    }
+
+    public long length() {
+        return length;
+    }
+
+    @Override
+    public void connect(IPPort l4addr) throws IOException {
+        super.connect(l4addr);
+
+        if (!(l4addr instanceof FilePath)) {
+            throw new IOException("unsupported address type: " + l4addr + " is not FilePath");
+        }
+
+        Path path = Path.of(((FilePath) l4addr).filepath);
+        this.filepath = path.toAbsolutePath().toString();
+        OpenOption[] options = new OpenOption[openOptions.size()];
+        openOptions.toArray(options);
+        this.asyncFile = AsynchronousFileChannel.open(path, options);
         try {
             this.length = asyncFile.size();
         } catch (IOException e) {
@@ -45,84 +65,9 @@ public class FileFD implements VirtualFD, SocketFD {
             }
             throw e;
         }
-
-        this.readBuffer = DirectMemoryUtils.allocateDirectBuffer(8192);
-        this.writeBuffer = DirectMemoryUtils.allocateDirectBuffer(8192);
-
+        alertConnected(l4addr);
+        // start reading
         asyncRead();
-    }
-
-    public long length() {
-        return length;
-    }
-
-    @Override
-    public void connect(IPPort l4addr) {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isConnected() {
-        return asyncFile.isOpen();
-    }
-
-    @Override
-    public void shutdownOutput() {
-        // not supported but do not raise exceptions
-    }
-
-    @Override
-    public boolean finishConnect() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public IPPort getLocalAddress() {
-        return filepath;
-    }
-
-    @Override
-    public IPPort getRemoteAddress() {
-        return filepath;
-    }
-
-    private boolean readable = false;
-    private boolean writable = false;
-    private boolean eof = false;
-    private Throwable exception;
-
-    private void checkClosed() throws IOException {
-        if (closed) throw new IOException(this + " is already closed");
-    }
-
-    private void checkException() throws IOException {
-        if (exception != null) {
-            if (exception instanceof IOException) {
-                throw (IOException) exception;
-            } else {
-                throw new IOException(exception);
-            }
-        }
-    }
-
-    private void setReadable() {
-        readable = true;
-        loop.selector.registerVirtualReadable(this);
-    }
-
-    private void setWritable() {
-        writable = true;
-        loop.selector.registerVirtualWritable(this);
-    }
-
-    private void cancelReadable() {
-        readable = false;
-        loop.selector.removeVirtualReadable(this);
-    }
-
-    private void cancelWritable() {
-        writable = false;
-        loop.selector.removeVirtualWritable(this);
     }
 
     private boolean isReading = false;
@@ -131,7 +76,7 @@ public class FileFD implements VirtualFD, SocketFD {
         if (isReading) {
             return;
         }
-        if (eof) {
+        if (isEof()) {
             return;
         }
         isReading = true;
@@ -141,10 +86,10 @@ public class FileFD implements VirtualFD, SocketFD {
         asyncFile.read(readBuffer.realBuffer(), readPosition, null, new CompletionHandler<>() {
             @Override
             public void completed(Integer result, Object attachment) {
-                loop.runOnLoop(() -> {
+                getLoop().runOnLoop(() -> {
                     int read = result;
                     if (read == -1) {
-                        eof = true;
+                        setEof();
                     } else {
                         readPosition += read;
                         readBuffer.flip();
@@ -158,34 +103,21 @@ public class FileFD implements VirtualFD, SocketFD {
 
             @Override
             public void failed(Throwable exc, Object attachment) {
-                loop.runOnLoop(() -> {
-                    exception = exc;
+                getLoop().runOnLoop(() -> {
+                    raiseError(exc);
                     isReading = false;
-                    setReadable();
-                    setWritable();
                 });
             }
         });
     }
 
     @Override
-    public int read(ByteBuffer dst) throws IOException {
-        checkClosed();
-        checkException();
-        if (eof) {
-            return -1; // eof
-        }
-        if (dst.limit() == dst.position()) {
-            return 0; // the dst is full
-        }
-        if (isReading) {
-            cancelReadable();
-            return 0;
-        }
-        if (readBuffer.limit() == readBuffer.position()) {
-            asyncRead();
-            return 0;
-        }
+    protected boolean noDataToRead() {
+        return isReading || (readBuffer.limit() - readBuffer.position() == 0);
+    }
+
+    @Override
+    protected int doRead(ByteBuffer dst) {
         int read;
         if (dst.limit() - dst.position() >= readBuffer.limit() - readBuffer.position()) {
             // dst is capable of storing all data
@@ -207,61 +139,28 @@ public class FileFD implements VirtualFD, SocketFD {
     }
 
     @Override
-    public int write(ByteBuffer src) throws IOException {
-        checkClosed();
-        checkException();
-        cancelWritable(); // TODO not supported yet
-        return 0;
+    protected boolean noSpaceToWrite() {
+        return true; // TODO writing is not supported yet
     }
 
     @Override
-    public void onRegister() {
-        if (readable) {
-            setReadable();
+    protected int doWrite(ByteBuffer src) {
+        return 0; // TODO writing is not supported yet
+    }
+
+    @Override
+    protected void doClose(boolean reset) {
+        try {
+            asyncFile.close();
+        } catch (IOException e) {
+            Logger.error(LogType.FILE_ERROR, "closing asyncFile " + asyncFile + " failed", e);
         }
-        if (writable) {
-            setWritable();
-        }
-    }
-
-    @Override
-    public void onRemove() {
-        // do nothing
-    }
-
-    @Override
-    public void configureBlocking(boolean b) {
-        if (b) throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public <T> void setOption(SocketOption<T> name, T value) {
-        // unsupported, but do not raise exceptions
-    }
-
-    @Override
-    public FD real() {
-        throw new UnsupportedOperationException();
-    }
-
-    @Override
-    public boolean isOpen() {
-        return !closed;
-    }
-
-    @Override
-    public void close() throws IOException {
-        if (closed) {
-            return;
-        }
-        closed = true;
-        asyncFile.close();
         readBuffer.clean();
         writeBuffer.clean();
     }
 
     @Override
-    public String toString() {
+    protected String formatToString() {
         return "FileFD(" + filepath + " ::: " + openOptions + ")";
     }
 }

@@ -1,6 +1,7 @@
 package vproxyx.websocks;
 
 import vfd.IP;
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.socks.Socks5ProxyProtocolHandler;
@@ -366,14 +367,16 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 }
                 // make a connector
                 ConnectableConnection conn;
+                IPPort remote;
                 try {
-                    conn = ConnectableConnection.wrap(fileToSend, fileToSend.getRemoteAddress(), ConnectionOpts.getDefault(),
+                    remote = fileToSend.getRemoteAddress();
+                    conn = ConnectableConnection.wrap(fileToSend, remote, ConnectionOpts.getDefault(),
                         RingBuffer.allocate(0), RingBuffer.allocateDirect(0));
                 } catch (IOException e) {
                     Logger.error(LogType.CONN_ERROR, "wrap " + fileToSend + " into ConnectableConnection failed", e);
                     return;
                 }
-                var connector = new AlreadyConnectedConnector(fileToSend.getRemoteAddress(), conn, ctx.loop);
+                var connector = new AlreadyConnectedConnector(remote, conn, ctx.loop);
                 String id = ctx.connection.remote + " <- " + connector.remote;
                 Logger.alert("sending large file: " + id);
                 rootCtx.data.left.step = 4; // large file

@@ -2,6 +2,7 @@ package vproxyx.websocks;
 
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.file.FileFD;
+import vproxybase.selector.wrap.file.FilePath;
 import vproxybase.util.ByteArray;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
@@ -142,11 +143,17 @@ public class WebRootPageProvider implements PageProvider {
                 Logger.shouldNotHappen("the WebRootPageProvider should run on the event loop which is handling the request");
                 return null;
             }
-            FileFD fileFD;
+            FileFD fileFD = new FileFD(currentLoop, StandardOpenOption.READ);
             try {
-                fileFD = new FileFD(currentLoop, Path.of(key), StandardOpenOption.READ);
+                fileFD.connect(new FilePath(key));
             } catch (IOException e) {
-                Logger.shouldNotHappen("open FileFD " + key + " failed", e);
+                Logger.error(LogType.FILE_ERROR, "call connect(...) on FileFD " + key + " failed", e);
+                return null;
+            }
+            try {
+                fileFD.finishConnect();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("call finishConnect() on FileFD " + key + " failed", e);
                 return null;
             }
             return new PageResult(mime, fileFD, cacheAge);
