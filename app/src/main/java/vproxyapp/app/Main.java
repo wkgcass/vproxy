@@ -19,9 +19,7 @@ import vproxyx.WebSocksProxyServer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
+import java.util.*;
 
 public class Main {
     private static final String _HELP_STR_ = "" +
@@ -145,40 +143,48 @@ public class Main {
     }
 
     private static String[] checkFlagDeployInArguments(String[] args) {
-        String deploy = System.getProperty("eploy");
-        String dhcpGetDnsListNics = System.getProperty("hcpGetDnsListNics");
-        List<String> returnArgs = new ArrayList<>(args.length);
-        for (final var arg : args) {
-            if (arg.startsWith("-Deploy=")) {
-                if (deploy != null) {
-                    // should only appear once
-                    throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
-                }
-                deploy = arg.substring("-Deploy=".length());
-                System.setProperty("eploy", deploy);
-            } else if (arg.startsWith("-DhcpGetDnsListNics=")) {
-                dhcpGetDnsListNics = arg.substring("-DhcpGetDnsListNics=".length());
-                System.setProperty("hcpGetDnsListNics", dhcpGetDnsListNics);
-            } else if (arg.startsWith("-D")) {
-                // other properties can be set freely
-                var kv = arg.substring("-D".length());
-                if (kv.contains("=")) {
-                    var k = kv.substring(0, kv.indexOf("=")).trim();
-                    var v = kv.substring(kv.indexOf("=") + "=".length()).trim();
-                    if (!k.isEmpty() && !v.isEmpty()) {
-                        System.setProperty(k, v);
-                        continue;
-                    }
-                }
-                returnArgs.add(arg);
-            } else {
-                returnArgs.add(arg);
+        Map<String, String> specialHandles = new HashMap<>();
+        specialHandles.put("eploy", null);
+        specialHandles.put("hcpGetDnsListNics", null);
+
+        for (String key : specialHandles.keySet()) {
+            String value = System.getProperty(key);
+            if (value != null) {
+                specialHandles.put(key, value);
             }
         }
+
+        List<String> returnArgs = new ArrayList<>(args.length);
+        for (final var arg : args) {
+            if (!arg.startsWith("-D")) {
+                returnArgs.add(arg);
+                continue;
+            }
+            String kv = arg.substring("-D".length());
+            if (!kv.contains("=")) {
+                // not valid -Dkey=value format
+                returnArgs.add(arg);
+                continue;
+            }
+            String key = kv.substring(0, kv.indexOf("="));
+            String value = kv.substring(kv.indexOf("=") + 1);
+
+            if (System.getProperty(key) != null) {
+                throw new IllegalArgumentException("Cannot set -D" + key + " both in system properties " +
+                    "and in program arguments");
+            }
+
+            if (specialHandles.containsKey(key)) {
+                specialHandles.put(key, value);
+            }
+            System.setProperty(key, value);
+        }
         // set dhcpGetDnsListNics if not specified in some conditions
+        String deploy = specialHandles.get("eploy");
+        String dhcpGetDnsListNics = specialHandles.get("hcpGetDnsListNics");
         if (dhcpGetDnsListNics == null) {
             if (deploy != null) {
-                if (Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
+                if (OS.isWindows() && Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
                     dhcpGetDnsListNics = "all";
                 }
             }
