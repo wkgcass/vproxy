@@ -1,6 +1,6 @@
 package vclient;
 
-import vclient.impl.StreamClientImpl;
+import vclient.impl.NetClientImpl;
 import vfd.IP;
 import vfd.IPPort;
 import vlibbase.Conn;
@@ -11,9 +11,9 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.function.BiConsumer;
 
-public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
+public interface NetClient extends GeneralClient, ConnectionAware<Conn> {
     @SuppressWarnings("DuplicatedCode")
-    static StreamClient to(String host, int port) {
+    static NetClient to(String host, int port) {
         if (IP.isIpLiteral(host)) {
             return to(IP.from(host), port);
         }
@@ -26,16 +26,16 @@ public interface StreamClient extends GeneralClient, ConnectionAware<Conn> {
         return to(new IPPort(ip, port), new Options().setHost(host));
     }
 
-    static StreamClient to(IP l3addr, int port) {
+    static NetClient to(IP l3addr, int port) {
         return to(new IPPort(l3addr, port));
     }
 
-    static StreamClient to(IPPort l4addr) {
+    static NetClient to(IPPort l4addr) {
         return to(l4addr, new Options());
     }
 
-    static StreamClient to(IPPort l4addr, Options opts) {
-        return new StreamClientImpl(l4addr, opts);
+    static NetClient to(IPPort l4addr, Options opts) {
+        return new NetClientImpl(l4addr, opts);
     }
 
     void connect(BiConsumer<IOException, Conn> connectionCallback);

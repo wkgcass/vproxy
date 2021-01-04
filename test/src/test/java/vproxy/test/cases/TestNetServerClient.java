@@ -4,11 +4,11 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import vlibbase.Conn;
-import vclient.StreamClient;
+import vclient.NetClient;
 import vproxy.test.tool.Client;
 import vproxybase.util.BlockCallback;
 import vproxybase.util.ByteArray;
-import vserver.StreamServer;
+import vserver.NetServer;
 
 import java.io.IOException;
 import java.util.Arrays;
@@ -18,15 +18,15 @@ import java.util.concurrent.TimeUnit;
 
 import static org.junit.Assert.assertEquals;
 
-public class TestStreamServerClient {
-    private StreamServer server;
-    private StreamClient client;
+public class TestNetServerClient {
+    private NetServer server;
+    private NetClient client;
     private static final int listenPort = 30080;
 
     @Before
     public void setUp() {
-        server = StreamServer.create();
-        client = StreamClient.to("127.0.0.1", listenPort);
+        server = NetServer.create();
+        client = NetClient.to("127.0.0.1", listenPort);
     }
 
     @After
