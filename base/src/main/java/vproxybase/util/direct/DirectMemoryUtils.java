@@ -2,13 +2,14 @@ package vproxybase.util.direct;
 
 import sun.misc.Unsafe;
 import vproxybase.GlobalInspection;
+import vproxybase.prometheus.Counter;
 import vproxybase.prometheus.GaugeF;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.ConcurrentObjectPool;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Map;
-import java.util.concurrent.ConcurrentLinkedQueue;
 
 public class DirectMemoryUtils {
     private DirectMemoryUtils() {
@@ -28,26 +29,59 @@ public class DirectMemoryUtils {
     }
 
     private static final int BUF_POOL_SIZE = 128;
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _1 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _2 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _4 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _8 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _16 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _32 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _64 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _128 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _256 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _512 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _1024 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _2048 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _4096 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _8192 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _16384 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _24576 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _32768 = new ConcurrentLinkedQueue<>();
-    private static final ConcurrentLinkedQueue<DirectByteBuffer> _65536 = new ConcurrentLinkedQueue<>();
+    private static final ConcurrentObjectPool<DirectByteBuffer> _1 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _2 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _4 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _8 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _16 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _32 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _64 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _128 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _256 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _512 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _1024 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _2048 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _4096 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _8192 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _16384 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _24576 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _32768 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+    private static final ConcurrentObjectPool<DirectByteBuffer> _65536 = new ConcurrentObjectPool<>(BUF_POOL_SIZE);
+
+    private static final Counter directMemoryCacheMissCount = GlobalInspection.getInstance().addMetric(
+        "direct_memory_cache_miss_count_total",
+        Map.of("type", "buffer"),
+        Counter::new);
+    private static final Counter directMemoryCacheHitCount = GlobalInspection.getInstance().addMetric(
+        "direct_memory_cache_hit_count_total",
+        Map.of("type", "buffer"),
+        Counter::new);
+    private static final Counter directMemoryCacheFailedStoringCount = GlobalInspection.getInstance().addMetric(
+        "direct_memory_cache_failed_storing_count_total",
+        Map.of("type", "buffer"),
+        Counter::new);
+    private static final Counter directMemoryCacheStoredCount = GlobalInspection.getInstance().addMetric(
+        "direct_memory_cache_stored_count_total",
+        Map.of("type", "buffer"),
+        Counter::new);
 
     static {
+        GlobalInspection.getInstance().registerHelpMessage(
+            "direct_memory_cache_miss_count_total",
+            "Total cache miss of direct memory"
+        );
+        GlobalInspection.getInstance().registerHelpMessage(
+            "direct_memory_cache_hit_count_total",
+            "Total cache hit of direct memory"
+        );
+        GlobalInspection.getInstance().registerHelpMessage(
+            "direct_memory_cache_failed_storing_count_total",
+            "Total failed storing direct memory cache times"
+        );
+        GlobalInspection.getInstance().registerHelpMessage(
+            "direct_memory_cache_stored_count_total",
+            "Total stored direct memory cache times"
+        );
         GlobalInspection.getInstance().registerHelpMessage(
             "cached_direct_memory_count_current",
             "Current cached direct memory in bytes");
@@ -186,8 +220,14 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static DirectByteBuffer getBufferCache(ConcurrentLinkedQueue<DirectByteBuffer> buffers) {
-        return buffers.poll();
+    private static DirectByteBuffer getBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers) {
+        DirectByteBuffer buf = buffers.poll();
+        if (buf == null) {
+            directMemoryCacheMissCount.incr(1);
+        } else {
+            directMemoryCacheHitCount.incr(1);
+        }
+        return buf;
     }
 
     private static boolean releaseBufferCache(DirectByteBuffer buf) {
@@ -233,12 +273,14 @@ public class DirectMemoryUtils {
         }
     }
 
-    private static boolean releaseBufferCache(ConcurrentLinkedQueue<DirectByteBuffer> buffers, DirectByteBuffer buf) {
-        if (buffers.size() >= BUF_POOL_SIZE) {
-            return false;
+    private static boolean releaseBufferCache(ConcurrentObjectPool<DirectByteBuffer> buffers, DirectByteBuffer buf) {
+        boolean ret = buffers.add(buf);
+        if (ret) {
+            directMemoryCacheStoredCount.incr(1);
+        } else {
+            directMemoryCacheFailedStoringCount.incr(1);
         }
-        buffers.add(buf);
-        return true;
+        return ret;
     }
 
     public static DirectByteBuffer allocateDirectBuffer(int size) {

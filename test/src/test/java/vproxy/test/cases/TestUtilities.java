@@ -1,10 +1,13 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vproxybase.util.objectpool.ConcurrentObjectPool;
 import vproxybase.util.objectpool.CursorList;
 import vproxybase.util.objectpool.PrototypeObjectPool;
 
+import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
 
@@ -73,5 +76,28 @@ public class TestUtilities {
 
         assertEquals(4, pool.poll().intValue());
         assertEquals(4, count[0]);
+    }
+
+    @Test
+    public void concurrentObjectPool() throws Exception {
+        ConcurrentObjectPool<Integer> pool = new ConcurrentObjectPool<>(128);
+        AtomicInteger atomicInteger = new AtomicInteger(0);
+        List<Thread> threads = new LinkedList<>();
+        for (int i = 0; i < 256; ++i) {
+            Thread t = new Thread(() -> {
+                if (atomicInteger.getAndIncrement() % 2 == 0) {
+                    pool.add(1);
+                } else {
+                    pool.poll();
+                }
+            });
+            threads.add(t);
+        }
+        for (Thread t : threads) {
+            t.start();
+        }
+        for (Thread t : threads) {
+            t.join();
+        }
     }
 }
