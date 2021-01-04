@@ -19,11 +19,17 @@ public class TestUtilities {
         list.add(2);
         list.add(3);
         assertEquals(List.of(1, 2, 3), list);
+        assertEquals(list, List.of(1, 2, 3));
         assertEquals(4, list.currentCapacity());
         assertEquals(3, list.total());
+        int idx = 0;
+        for (int i : list) {
+            assertEquals(++idx, i);
+        }
 
         list.remove(2);
         assertEquals(List.of(1, 2), list);
+        assertEquals(list, List.of(1, 2));
         assertEquals(3, list.total());
 
         CursorList<Integer> list2 = new CursorList<>();
@@ -31,27 +37,38 @@ public class TestUtilities {
         list2.add(8);
         list2.add(9);
         assertEquals(List.of(7, 8, 9), list2);
+        assertEquals(list2, List.of(7, 8, 9));
         assertEquals(16, list2.currentCapacity());
 
         list.addAll(list2);
         assertEquals(List.of(1, 2, 7, 8, 9), list);
+        assertEquals(list, List.of(1, 2, 7, 8, 9));
         assertEquals(15, list.currentCapacity());
         assertEquals(5, list.total());
 
         assertEquals(9, list.remove(4).intValue());
         assertEquals(8, list.remove(3).intValue());
         assertEquals(List.of(1, 2, 7), list);
+        assertEquals(list, List.of(1, 2, 7));
         assertEquals(5, list.total());
 
         list.setSize(5);
         assertEquals(List.of(1, 2, 7, 8, 9), list);
+        assertEquals(list, List.of(1, 2, 7, 8, 9));
         assertEquals(5, list.total());
 
         list.store(10);
         assertEquals(6, list.total());
         assertEquals(List.of(1, 2, 7, 8, 9), list);
+        assertEquals(list, List.of(1, 2, 7, 8, 9));
         list.setSize(6);
-        assertEquals(List.of(1, 2, 7, 8, 9, 10), list);
+        List<Integer> expected = List.of(1, 2, 7, 8, 9, 10);
+        assertEquals(expected, list);
+        assertEquals(list, expected);
+        idx = 0;
+        for (int i : list) {
+            assertEquals(expected.get(idx++).intValue(), i);
+        }
     }
 
     @Test

@@ -1,12 +1,12 @@
 package vproxybase.util.objectpool;
 
-import java.util.AbstractList;
-import java.util.RandomAccess;
+import java.util.*;
 
 public class CursorList<E> extends AbstractList<E> implements RandomAccess {
     private Object[] elementData;
     private int size = 0;
     private int total = 0;
+    private final ReusedIterator iterator = new ReusedIterator();
 
     public CursorList() {
         this(16);
@@ -93,5 +93,49 @@ public class CursorList<E> extends AbstractList<E> implements RandomAccess {
     @Override
     public void clear() {
         size = 0;
+    }
+
+    @Override
+    public Iterator<E> iterator() {
+        iterator.reset();
+        return iterator;
+    }
+
+    @Override
+    public boolean equals(Object o) {
+        if (this == o) return true;
+        if (!(o instanceof List)) return false;
+        if (!super.equals(o)) return false;
+        List<?> that = (List<?>) o;
+        if (size != that.size()) return false;
+        Iterator iteThis = iterator();
+        Iterator iteThat = that.iterator();
+        while (iteThis.hasNext() && iteThat.hasNext()) {
+            Object oThis = iteThis.next();
+            Object oThat = iteThat.next();
+            if (oThis == oThat) continue;
+            if (oThis == null || oThat == null) return false;
+            if (!oThis.equals(oThat)) return false;
+        }
+        return true;
+    }
+
+    private class ReusedIterator implements Iterator<E> {
+        private int cursor;
+
+        @Override
+        public boolean hasNext() {
+            return cursor < size;
+        }
+
+        @Override
+        public E next() {
+            //noinspection unchecked
+            return (E) elementData[cursor++];
+        }
+
+        void reset() {
+            cursor = 0;
+        }
     }
 }
