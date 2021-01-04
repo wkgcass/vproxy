@@ -4,7 +4,7 @@ import vproxybase.processor.Processor;
 import vproxybase.processor.ProcessorProvider;
 import vproxybase.processor.http1.HttpSubContext;
 import vproxybase.processor.http1.entity.Request;
-import vproxybase.util.AbstractParser;
+import vproxybase.util.codec.AbstractParser;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 
@@ -14,7 +14,7 @@ import java.util.HashSet;
 
 public class HttpReqParser extends AbstractParser<Request> {
     private final boolean parseBody;
-    private HttpSubContext ctx;
+    private final HttpSubContext ctx;
 
     public HttpReqParser(boolean parseBody) {
         super(new HashSet<>(Arrays.asList(1, 2)), Collections.singleton(2));

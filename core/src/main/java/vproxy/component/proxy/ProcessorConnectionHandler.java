@@ -3,10 +3,7 @@ package vproxy.component.proxy;
 import vproxybase.connection.*;
 import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
-import vproxybase.util.ByteArray;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
+import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ProxyOutputRingBuffer;
 
@@ -15,7 +12,7 @@ import java.util.*;
 
 @SuppressWarnings("unchecked")
 class ProcessorConnectionHandler implements ConnectionHandler {
-    private ProxyNetConfig config;
+    private final ProxyNetConfig config;
     private final Processor processor;
     private final Processor.Context topCtx;
     private final Connection frontendConnection;
@@ -290,43 +287,31 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     proxyToFrontend(len);
                 }
             } else {
+                assert mode == Processor.Mode.handle;
+
+                ByteArray data = null; // data to feed into processor
                 if (chnl == null) {
                     int len = processor.len(topCtx, subCtx);
                     assert Logger.lowLevelDebug("the expected message length is " + len);
                     if (len == 0) { // if nothing to read, then directly feed empty data to the processor
-                        try {
-                            processor.feed(topCtx, subCtx, ByteArray.from(new byte[0]));
-                        } catch (Exception e) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
-                            frontendConnection.close(true);
-                            return;
-                        }
-                        // check data to write back
-                        {
-                            ByteArray writeBackBytes = processor.produce(topCtx, subCtx);
-                            if (writeBackBytes != null && writeBackBytes.length() != 0) {
-                                assert Logger.lowLevelDebug("got data to write back, len = " + writeBackBytes.length() + ", conn = " + conn);
-                                writeToBackend(writeBackBytes);
-                            }
-                        }
-                        readBackend(); // recursively handle more data
-                        return;
-                    }
-                    if (len < 0) {
+                        data = ByteArray.allocate(0);
+                    } else if (len < 0) {
                         chnl = ByteArrayChannel.fromEmpty(conn.getInBuffer().used()); // consume all data
                     } else {
                         chnl = ByteArrayChannel.fromEmpty(len);
                     }
                 }
-                conn.getInBuffer().writeTo(chnl);
-                if (chnl.free() != 0) {
-                    assert Logger.lowLevelDebug("not fulfilled yet, expecting " + chnl.free() + " length of data");
-                    // expecting more data
-                    return;
+                if (data == null) {
+                    conn.getInBuffer().writeTo(chnl);
+                    if (chnl.free() != 0) {
+                        assert Logger.lowLevelDebug("not fulfilled yet, expecting " + chnl.free() + " length of data");
+                        // expecting more data
+                        return;
+                    }
+                    assert Logger.lowLevelDebug("the message is totally read, feeding to processor");
+                    data = chnl.getArray();
+                    chnl = null;
                 }
-                assert Logger.lowLevelDebug("the message is totally read, feeding to processor");
-                ByteArray data = chnl.getArray();
-                chnl = null;
                 ByteArray dataToSend;
                 try {
                     dataToSend = processor.feed(topCtx, subCtx, data);
@@ -366,7 +351,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
+            String errMsg = "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection;
+            if (Utils.isTerminatedIOException(err)) {
+                assert Logger.lowLevelDebug(errMsg + ", " + err);
+            } else {
+                Logger.error(LogType.CONN_ERROR, errMsg, err);
+            }
             frontendConnection.close(true);
             closeAll();
         }
@@ -413,7 +403,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     private boolean frontendIsHandlingConnection = false; // true: consider handlingConnection, false: consider frontendByteFlow
     private BackendConnectionHandler handlingConnection;
-    private FrontendByteFlow frontendByteFlow = new FrontendByteFlow();
+    private final FrontendByteFlow frontendByteFlow = new FrontendByteFlow();
 
     class FrontendByteFlow {
         class Segment {
@@ -561,7 +551,9 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     private ByteArrayChannel chnl = null;
 
     void readFrontend() {
-        if (frontendConnection.getInBuffer().used() == 0) {
+        if (frontendConnection.getInBuffer().used() == 0
+            // if returned len == 0, the process.feed should be called without any data
+            && processor.len(topCtx, frontendSubCtx) != 0) {
             return; // do nothing if the in buffer is empty
         }
 
@@ -592,47 +584,35 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         } else {
             assert mode == Processor.Mode.handle;
 
+            ByteArray data = null; // data to feed into processor
             if (chnl == null) {
                 int len = processor.len(topCtx, frontendSubCtx);
                 assert Logger.lowLevelDebug("expecting message with the length of " + len);
                 if (len == 0) { // if the length is 0, directly feed data to the processor
-                    try {
-                        processor.feed(topCtx, frontendSubCtx, ByteArray.from(new byte[0]));
-                    } catch (Exception e) {
-                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
-                        frontendConnection.close(true);
-                        return;
-                    }
-                    {
-                        ByteArray producedBytes = processor.produce(topCtx, frontendSubCtx);
-                        if (producedBytes != null && producedBytes.length() != 0) {
-                            frontendByteFlow.write(producedBytes);
-                        }
-                    }
-                    readFrontend(); // recursively try to handle more data
-                    return;
-                }
-                if (len < 0) {
+                    data = ByteArray.allocate(0);
+                } else if (len < 0) {
                     chnl = ByteArrayChannel.fromEmpty(frontendConnection.getInBuffer().used()); // consume all data
                 } else {
                     chnl = ByteArrayChannel.fromEmpty(len);
                 }
             }
-            frontendConnection.getInBuffer().writeTo(chnl);
-            if (chnl.free() != 0) {
-                // want to read more data
-                assert Logger.lowLevelDebug("not fulfilled yet, waiting for data of length " + chnl.free());
-                return;
+            if (data == null) {
+                frontendConnection.getInBuffer().writeTo(chnl);
+                if (chnl.free() != 0) {
+                    // want to read more data
+                    assert Logger.lowLevelDebug("not fulfilled yet, waiting for data of length " + chnl.free());
+                    return;
+                }
+                assert Logger.lowLevelDebug("data reading is done now");
+                data = chnl.getArray();
+                chnl = null;
             }
-            assert Logger.lowLevelDebug("data reading is done now");
-            ByteArray data = chnl.getArray();
-            chnl = null;
             // handle the data
             ByteArray bytesToSend;
             try {
                 bytesToSend = processor.feed(topCtx, frontendSubCtx, data);
             } catch (Exception e) {
-                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
+                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=", e);
                 frontendConnection.close(true);
                 return;
             }
@@ -643,17 +623,17 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
             }
 
+            if (bytesToSend == null || (bytesToSend.length() == 0 && bytesToSend != Processor.REQUIRE_CONNECTION)) {
+                readFrontend();
+                return;
+            }
+
             int connId = processor.connection(topCtx, frontendSubCtx);
             Hint hint = processor.connectionHint(topCtx, frontendSubCtx);
-            assert Logger.lowLevelDebug("the processor return data of length " + (bytesToSend == null ? "null" : bytesToSend.length()) + ", sending to connId=" + connId + ", hint=" + hint);
+            assert Logger.lowLevelDebug("the processor return data of length " + bytesToSend.length() + ", sending to connId=" + connId + ", hint=" + hint);
             if (connId == 0) {
-                if (bytesToSend == null || bytesToSend.length() == 0) {
-                    readFrontend();
-                    return;
-                } else {
-                    Logger.error(LogType.IMPROPER_USE, "When you return connection()==0, you must guarantee that the former feed() calling result was null or an array with length 0");
-                    // ignore and fall through
-                }
+                Logger.error(LogType.IMPROPER_USE, "When you return connection()==0, you must guarantee that the former feed() calling result was null or an array with length 0");
+                // ignore and fall through
             }
             BackendConnectionHandler backend = getConnection(connId, hint);
             if (backend == null) {
@@ -661,7 +641,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
                 frontendConnection.close(true);
             } else {
-                if (bytesToSend == null || bytesToSend.length() == 0) {
+                if (bytesToSend.length() == 0) {
                     readFrontend(); // recursively call to handle more data
                 } else {
                     backend.writeToBackend(bytesToSend);
@@ -747,7 +727,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
-        Logger.error(LogType.CONN_ERROR, "connection got exception", err);
+        String errMsg = "connection got exception";
+        if (Utils.isTerminatedIOException(err)) {
+            assert Logger.lowLevelDebug(errMsg + ": " + err);
+        } else {
+            Logger.error(LogType.CONN_ERROR, errMsg, err);
+        }
         closeAll();
     }
 

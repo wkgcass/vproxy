@@ -1,5 +1,6 @@
-package vproxybase.util;
+package vproxybase.util.codec;
 
+import vproxybase.util.RingBuffer;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.util.Set;

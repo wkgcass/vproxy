@@ -28,7 +28,7 @@ public class Config {
 
     // the recommended min payload length
     // also, see Processor.PROXY_ZERO_COPY_THRESHOLD
-    public static final int recommendedMinPayloadLength = 1400;
+    public static final int recommendedMinPayloadLength = 1200;
     // usually mtu is set to 1500, but some routers might set the value to 1480, 1440 or lower
     // we use 1400 here
 

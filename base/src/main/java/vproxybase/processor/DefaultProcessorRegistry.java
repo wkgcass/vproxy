@@ -4,7 +4,8 @@ import vproxybase.processor.common.CommonInt32FramedProcessor;
 import vproxybase.processor.dubbo.DubboProcessor;
 import vproxybase.processor.http.GeneralHttpProcessor;
 import vproxybase.processor.http1.HttpProcessor;
-import vproxybase.processor.http2.Http2Processor;
+import vproxybase.processor.httpbin.BinaryHttpProcessor;
+import vproxybase.processor.httpbin.HttpVersion;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -12,10 +13,10 @@ import java.util.Map;
 public class DefaultProcessorRegistry implements ProcessorRegistry {
     public static final DefaultProcessorRegistry instance = new DefaultProcessorRegistry();
 
-    private Map<String, Processor> registry = new HashMap<>();
+    private final Map<String, Processor> registry = new HashMap<>();
 
     private DefaultProcessorRegistry() {
-        register(new Http2Processor());
+        register(new BinaryHttpProcessor(HttpVersion.HTTP2));
         register(new CommonInt32FramedProcessor());
         register(new DubboProcessor());
         register(new HttpProcessor());

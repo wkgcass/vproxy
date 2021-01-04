@@ -101,6 +101,13 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     ByteArray feed(CTX ctx, SUB sub, ByteArray data) throws Exception;
 
     /**
+     * if {@link #feed(Context, SubContext, ByteArray)} return this byte array,
+     * the lib will still try to find a connection though it's empty.<br>
+     * also, {@link #connection(Context, SubContext)} should return -1 to let it happen.
+     */
+    ByteArray REQUIRE_CONNECTION = ByteArray.from(new byte[0]);
+
+    /**
      * produce some data to the connection represented by the sub context<br>
      * this method will be checked after `feed` is called
      *

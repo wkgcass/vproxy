@@ -4,7 +4,7 @@ import vproxybase.processor.Processor;
 import vproxybase.processor.ProcessorProvider;
 import vproxybase.processor.http1.HttpSubContext;
 import vproxybase.processor.http1.entity.Response;
-import vproxybase.util.AbstractParser;
+import vproxybase.util.codec.AbstractParser;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 

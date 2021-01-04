@@ -30,7 +30,7 @@ public class Logger {
 
         {
             String debug = System.getProperty("javax.net.debug");
-            lowLevelNetDebugOn = "all".equals(debug) || "vproxybase".equals(debug);
+            lowLevelNetDebugOn = "all".equals(debug) || "vproxy".equals(debug);
         }
 
         {

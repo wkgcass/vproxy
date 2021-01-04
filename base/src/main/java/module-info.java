@@ -32,6 +32,7 @@ module vproxy.base {
     exports vproxybase.util.io;
     exports vproxybase.util.bytearray;
     exports vproxybase.util.nio;
+    exports vproxybase.util.codec;
     exports vproxybase.util.promise;
     exports vproxybase.util.exception;
     exports vproxybase.util.table;

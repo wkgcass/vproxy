@@ -4,13 +4,15 @@ import vfd.IPPort;
 import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
 import vproxybase.processor.http1.HttpProcessor;
-import vproxybase.processor.http2.Http2Processor;
-import vproxybase.processor.http2.Http2SubContext;
+import vproxybase.processor.httpbin.BinaryHttpProcessor;
+import vproxybase.processor.httpbin.BinaryHttpSubContext;
+import vproxybase.processor.httpbin.HttpVersion;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Logger;
 
 public class GeneralHttpProcessor implements Processor<GeneralHttpContext, GeneralHttpSubContext> {
     private final HttpProcessor httpProcessor = new HttpProcessor();
-    private final Http2Processor http2Processor = new Http2Processor();
+    private final BinaryHttpProcessor http2Processor = new BinaryHttpProcessor(HttpVersion.HTTP2);
 
     @Override
     public String name() {
@@ -63,7 +65,7 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
         if (ctx.useHttp2) return http2Processor.len(ctx.http2Context, subCtx.http2SubContext);
         if (ctx.willUseHttp2) {
             // NOTE: this is the same as (Http2SubContext#len when state == 0) - (the bytes to determine h1/h2);
-            return Http2SubContext.SEQ_PREFACE_MAGIC.length() + Http2SubContext.LEN_FRAME_HEAD - 2;
+            return BinaryHttpSubContext.H2_PREFACE.length() - 2;
         }
         return 2; // we only need two bytes to determine whether its h2 or h1
     }
@@ -74,21 +76,17 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
         if (ctx.useHttp2) return http2Processor.feed(ctx.http2Context, subCtx.http2SubContext, data);
         if (ctx.willUseHttp2) {
             ctx.useHttp2 = true;
-            ByteArray ret = http2Processor.feed(ctx.http2Context, subCtx.http2SubContext, ByteArray.from("PR".getBytes()).concat(data));
-            http2Processor.chosen(ctx.http2Context, subCtx.http2SubContext, ctx.chosen.http2SubContext);
-            ctx.chosen = null; // release the context, make it possible for gc to process
-            return ret;
+            return http2Processor.feed(ctx.http2Context, subCtx.http2SubContext, ByteArray.from("PR".getBytes()).concat(data));
         }
         if (data.get(0) == 'P' && data.get(1) == 'R') {
             ctx.willUseHttp2 = true;
-            return null;
         } else {
             ctx.useHttp = true;
             // feed the h1 processor with these two bytes
             ByteArray ret = httpProcessor.feed(ctx.httpContext, subCtx.httpSubContext, data);
             assert ret == null; // the data would be cached inside the processor
-            return null;
         }
+        return null;
     }
 
     @Override
@@ -101,25 +99,29 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
 
     @Override
     public void proxyDone(GeneralHttpContext ctx, GeneralHttpSubContext subCtx) {
-        if (ctx.useHttp) httpProcessor.proxyDone(ctx.httpContext, subCtx.httpSubContext);
-        if (ctx.useHttp2) http2Processor.proxyDone(ctx.http2Context, subCtx.http2SubContext);
-        // will not happen when not protocol not learned
+        if (ctx.useHttp) {
+            httpProcessor.proxyDone(ctx.httpContext, subCtx.httpSubContext);
+            return;
+        }
+        if (ctx.useHttp2) {
+            http2Processor.proxyDone(ctx.http2Context, subCtx.http2SubContext);
+            return;
+        }
+        shouldNotCall("proxyDone");
     }
 
     @Override
     public int connection(GeneralHttpContext ctx, GeneralHttpSubContext subCtx) {
         if (ctx.useHttp) return httpProcessor.connection(ctx.httpContext, subCtx.httpSubContext);
         if (ctx.useHttp2) return http2Processor.connection(ctx.http2Context, subCtx.http2SubContext);
-        // if (ctx.willUseHttp2)
-        return ctx.chosen == null ? -1 : ctx.chosen.connId;
+        return shouldNotCall("connection");
     }
 
     @Override
     public Hint connectionHint(GeneralHttpContext ctx, GeneralHttpSubContext subCtx) {
         if (ctx.useHttp) return httpProcessor.connectionHint(ctx.httpContext, subCtx.httpSubContext);
         if (ctx.useHttp2) return http2Processor.connectionHint(ctx.http2Context, subCtx.http2SubContext);
-        // if (ctx.willUseHttp2)
-        return null;
+        return shouldNotCall("connectionHint");
     }
 
     @Override
@@ -132,8 +134,7 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
             http2Processor.chosen(ctx.http2Context, front.http2SubContext, subCtx.http2SubContext);
             return;
         }
-        // if (ctx.willUseHttp2)
-        ctx.chosen = subCtx;
+        shouldNotCall("chosen");
     }
 
     @Override
@@ -142,5 +143,11 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
         if (ctx.useHttp2) return http2Processor.connected(ctx.http2Context, subCtx.http2SubContext);
         // if (ctx.willUseHttp2)
         return null;
+    }
+
+    private <T> T shouldNotCall(String methodName) {
+        String errMsg = "should not call " + methodName + "() when h1/h2 not determined";
+        Logger.shouldNotHappen(errMsg);
+        throw new RuntimeException(errMsg);
     }
 }

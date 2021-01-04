@@ -48,6 +48,10 @@ public interface ByteArray {
         return from(str.getBytes());
     }
 
+    static ByteArray fromHexString(String str) throws IllegalArgumentException {
+        return from(Utils.hexToBytes(str));
+    }
+
     byte get(int idx);
 
     ByteArray set(int idx, byte value);

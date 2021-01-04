@@ -301,6 +301,34 @@ public class Utils {
         return new String(hexChars);
     }
 
+    public static byte[] hexToBytes(String hex) {
+        char[] chars = hex.toCharArray();
+        if (chars.length % 2 != 0) throw new IllegalArgumentException("invalid hex string");
+        byte[] ret = new byte[chars.length / 2];
+        for (int i = 0; i < chars.length; i += 2) {
+            char m = chars[i];
+            char n = chars[i + 1];
+            byte b = (byte) ((parseHexChar(m) << 4) | parseHexChar(n));
+            ret[i / 2] = b;
+        }
+        return ret;
+    }
+
+    private static byte parseHexChar(char c) {
+        if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
+            throw new IllegalArgumentException("char `" + c + "' cannot bev hex");
+        }
+        //noinspection ConstantConditions
+        if ('0' <= c && c <= '9') {
+            return (byte) (c - '0');
+        }
+        //noinspection ConstantConditions
+        if ('a' <= c && c <= 'z') {
+            return (byte) (c - 'a' + 10);
+        }
+        return (byte) (c - 'A' + 10);
+    }
+
     public static boolean debug(Runnable r) {
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage
         assert ((BooleanSupplier) () -> {
