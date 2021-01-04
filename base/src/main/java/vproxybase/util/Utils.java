@@ -1,12 +1,10 @@
 package vproxybase.util;
 
-import sun.misc.Unsafe;
 import vfd.FDProvider;
 import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +12,6 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -22,7 +19,10 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class Utils {
-    public static final String RESET_MSG = "Connection reset by peer";
+    public static final List<String> RESET_MSG = Arrays.asList(
+        "Connection reset by peer",
+        "Connection reset"
+    );
     public static final String BROKEN_PIPE_MSG = "Broken pipe";
     public static final String SSL_ENGINE_CLOSED_MSG = "SSLEngine closed";
     public static final String HOST_IS_DOWN_MSG = "Host is down";
@@ -193,7 +193,7 @@ public class Utils {
     }
 
     public static boolean isReset(IOException t) {
-        return RESET_MSG.equals(t.getMessage());
+        return RESET_MSG.contains(t.getMessage());
     }
 
     public static boolean isBrokenPipe(IOException t) {

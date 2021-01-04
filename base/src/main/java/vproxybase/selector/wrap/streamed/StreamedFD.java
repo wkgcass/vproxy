@@ -129,7 +129,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
 
     private void checkState() throws IOException {
         if (rst) {
-            throw new IOException(Utils.RESET_MSG);
+            throw new IOException(Utils.RESET_MSG.get(0));
         }
         if (state == State.dead) {
             throw new IOException(Utils.BROKEN_PIPE_MSG);
