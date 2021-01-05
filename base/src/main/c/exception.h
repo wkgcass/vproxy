@@ -5,20 +5,24 @@
 #include <errno.h>
 #include <string.h>
 
-#include <assert.h>
-
-void throwException(JNIEnv* env, char* className, char* message) {
-    jclass exClass = (*env)->FindClass(env, className);
-    assert(exClass != NULL);
-    (*env)->ThrowNew(env, exClass, message);
-}
+jclass UnsupportedOperationException;
 
 void throwUnsupportedOperationException(JNIEnv* env, char* message) {
-    throwException(env, "java/lang/UnsupportedOperationException", message);
+    if (UnsupportedOperationException == NULL) {
+        jclass exClass = (*env)->FindClass(env, "java/lang/UnsupportedOperationException");
+        UnsupportedOperationException = (jclass)(*env)->NewGlobalRef(env, (jobject)exClass);
+    }
+    (*env)->ThrowNew(env, UnsupportedOperationException, message);
 }
 
+jclass IOException;
+
 void throwIOException(JNIEnv* env, char* message) {
-    throwException(env, "java/io/IOException", message);
+    if (IOException == NULL) {
+        jclass exClass = (*env)->FindClass(env, "java/io/IOException");
+        IOException = (jclass)(*env)->NewGlobalRef(env, (jobject)exClass);
+    }
+    (*env)->ThrowNew(env, IOException, message);
 }
 
 void throwIOExceptionBasedOnErrno(JNIEnv* env) {

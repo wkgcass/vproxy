@@ -58,18 +58,18 @@ JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_aeCreateEventLoop
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    aeApiPoll
- * Signature: (JJ)[Lvfd/posix/FDInfo;
+ * Signature: (JJLvfd/posix/FDInfoPrototypeObjectList;)V
  */
-JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeApiPoll
-  (JNIEnv *, jobject, jlong, jlong);
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeApiPoll
+  (JNIEnv *, jobject, jlong, jlong, jobject);
 
 /*
  * Class:     vfd_posix_GeneralPosix
  * Method:    aeAllFDs
- * Signature: (J)[Lvfd/posix/FDInfo;
+ * Signature: (JLvfd/posix/FDInfoPrototypeObjectList;)V
  */
-JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeAllFDs
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeAllFDs
+  (JNIEnv *, jobject, jlong, jobject);
 
 /*
  * Class:     vfd_posix_GeneralPosix

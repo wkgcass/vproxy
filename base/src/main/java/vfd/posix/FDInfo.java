@@ -1,14 +1,27 @@
 package vfd.posix;
 
 public class FDInfo {
-    public final int fd;
-    public final int events;
-    public final Object attachment;
+    private int fd;
+    private int events;
+    private Object attachment;
 
-    public FDInfo(int fd, int events, Object attachment) {
+    public FDInfo set(int fd, int events, Object attachment) {
         this.fd = fd;
         this.events = events;
         this.attachment = attachment;
+        return this;
+    }
+
+    public int fd() {
+        return fd;
+    }
+
+    public int events() {
+        return events;
+    }
+
+    public Object attachment() {
+        return attachment;
     }
 
     @Override

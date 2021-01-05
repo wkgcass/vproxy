@@ -25,10 +25,10 @@ public class GeneralPosix implements Posix {
     native public long aeCreateEventLoop(int setsize) throws IOException;
 
     @Override
-    native public FDInfo[] aeApiPoll(long ae, long wait) throws IOException;
+    native public void aeApiPoll(long ae, long wait, FDInfoPrototypeObjectList fdInfoList) throws IOException;
 
     @Override
-    native public FDInfo[] aeAllFDs(long ae);
+    native public void aeAllFDs(long ae, FDInfoPrototypeObjectList fdInfoList);
 
     @Override
     native public void aeCreateFileEvent(long ae, int fd, int mask, Object clientData);
