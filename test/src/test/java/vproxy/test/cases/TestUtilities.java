@@ -3,7 +3,7 @@ package vproxy.test.cases;
 import org.junit.Test;
 import vproxybase.util.objectpool.ConcurrentObjectPool;
 import vproxybase.util.objectpool.CursorList;
-import vproxybase.util.objectpool.PrototypeObjectPool;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -74,24 +74,18 @@ public class TestUtilities {
     @Test
     public void prototypeObjectPool() {
         int[] count = new int[]{0};
-        PrototypeObjectPool<Integer> pool = new PrototypeObjectPool<>(4, () -> ++count[0]);
-        assertEquals(1, pool.poll().intValue());
-        assertEquals(2, pool.poll().intValue());
-        assertEquals(3, pool.poll().intValue());
+        PrototypeObjectList<Integer> pool = new PrototypeObjectList<>(4, () -> ++count[0]);
+        assertEquals(1, pool.add().intValue());
+        assertEquals(2, pool.add().intValue());
+        assertEquals(3, pool.add().intValue());
         assertEquals(3, count[0]);
-        pool.release(3);
-        assertEquals(3, pool.poll().intValue());
-        assertEquals(2, pool.poll().intValue());
-        assertEquals(1, pool.poll().intValue());
-        assertEquals(3, count[0]);
-
-        pool.release(4); // will have the same effect as releasing 3
-        assertEquals(3, pool.poll().intValue());
-        assertEquals(2, pool.poll().intValue());
-        assertEquals(1, pool.poll().intValue());
+        pool.clear();
+        assertEquals(1, pool.add().intValue());
+        assertEquals(2, pool.add().intValue());
+        assertEquals(3, pool.add().intValue());
         assertEquals(3, count[0]);
 
-        assertEquals(4, pool.poll().intValue());
+        assertEquals(4, pool.add().intValue());
         assertEquals(4, count[0]);
     }
 

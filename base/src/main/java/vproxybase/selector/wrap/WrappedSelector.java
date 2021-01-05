@@ -4,8 +4,8 @@ import vfd.*;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
-import vproxybase.util.objectpool.CursorList;
-import vproxybase.util.objectpool.PrototypeObjectPool;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -13,8 +13,7 @@ import java.util.*;
 
 public class WrappedSelector implements FDSelector {
     private final FDSelector selector;
-    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
-    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
 
     private static class REntry {
         EventSet watchedEvents;
@@ -86,59 +85,59 @@ public class WrappedSelector implements FDSelector {
                     eventSet = null;
                 }
                 if (eventSet != null) {
-                    selectResultReusedList.add(selectedEntryPool.poll().set(fd, eventSet, entry.attachment));
+                    selectedEntryList.add().set(fd, eventSet, entry.attachment);
                 }
             }
         }
     }
 
-    private Collection<SelectedEntry> handleRealSelect(Collection<SelectedEntry> entries) {
+    private void handleRealSelect(Collection<SelectedEntry> entries) {
         for (SelectedEntry entry : entries) {
             if (entry.fd() instanceof WritableAware) {
                 if (entry.ready().have(Event.WRITABLE)) {
                     ((WritableAware) entry.fd()).writable();
                 }
             }
+            selectedEntryList.add().set(entry.fd(), entry.ready(), entry.attachment());
         }
-        return entries;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        selectedEntryPool.release(selectResultReusedList.size());
-        selectResultReusedList.clear();
+        selectedEntryList.clear();
 
         calcVirtual();
-        if (selectResultReusedList.isEmpty()) {
-            return handleRealSelect(selector.select());
+        if (selectedEntryList.isEmpty()) {
+            handleRealSelect(selector.select());
         } else {
-            selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
-            return selectResultReusedList;
+            handleRealSelect(selector.selectNow());
         }
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        selectedEntryPool.release(selectResultReusedList.size());
-        selectResultReusedList.clear();
+        selectedEntryList.clear();
 
         calcVirtual();
-        selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
-        return selectResultReusedList;
+        handleRealSelect(selector.selectNow());
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        selectedEntryPool.release(selectResultReusedList.size());
-        selectResultReusedList.clear();
+        selectedEntryList.clear();
 
         calcVirtual();
-        if (selectResultReusedList.isEmpty()) {
-            return handleRealSelect(selector.select(millis));
+        if (selectedEntryList.isEmpty()) {
+            handleRealSelect(selector.select(millis));
         } else {
-            selectResultReusedList.addAll(handleRealSelect(selector.selectNow()));
-            return selectResultReusedList;
+            handleRealSelect(selector.selectNow());
         }
+        return selectedEntryList;
     }
 
     @Override

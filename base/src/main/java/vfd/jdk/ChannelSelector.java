@@ -2,8 +2,8 @@ package vfd.jdk;
 
 import vfd.*;
 import vproxybase.util.Logger;
-import vproxybase.util.objectpool.CursorList;
-import vproxybase.util.objectpool.PrototypeObjectPool;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.*;
@@ -20,8 +20,7 @@ public class ChannelSelector implements FDSelector {
         }
     }
 
-    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
-    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
 
     private final Selector selector;
 
@@ -37,8 +36,7 @@ public class ChannelSelector implements FDSelector {
     private Collection<SelectedEntry> getSelectionEntries(int cnt) {
         if (cnt == 0) return Collections.emptySet();
 
-        selectedEntryPool.release(selectResultReusedList.size());
-        selectResultReusedList.clear();
+        selectedEntryList.clear();
 
         Set<SelectionKey> set = selector.selectedKeys();
         Iterator<SelectionKey> keys = set.iterator();
@@ -51,23 +49,26 @@ public class ChannelSelector implements FDSelector {
             }
 
             Att att = (Att) key.attachment();
-            selectResultReusedList.add(selectedEntryPool.poll().set(att.fd, events(key.readyOps()), att.att));
+            selectedEntryList.add().set(att.fd, events(key.readyOps()), att.att);
         }
-        return selectResultReusedList;
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         int n = selector.select();
         return getSelectionEntries(n);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         int n = selector.selectNow();
         return getSelectionEntries(n);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
         int n = selector.select(millis);

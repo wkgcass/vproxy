@@ -4,8 +4,8 @@ import vfd.*;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.Logger;
-import vproxybase.util.objectpool.CursorList;
-import vproxybase.util.objectpool.PrototypeObjectPool;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -13,8 +13,7 @@ import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class AESelector implements FDSelector {
-    private final PrototypeObjectPool<SelectedEntry> selectedEntryPool = new PrototypeObjectPool<>(128, SelectedEntry::new);
-    private final CursorList<SelectedEntry> selectResultReusedList = new CursorList<>(128);
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
 
     private final Posix posix;
     private final long ae;
@@ -99,17 +98,16 @@ public class AESelector implements FDSelector {
             return Collections.emptyList();
         }
         clearPipeFD();
-        selectedEntryPool.release(selectResultReusedList.size());
-        selectResultReusedList.clear();
+        selectedEntryList.clear();
 
         for (FDInfo res : results) {
             Att att = (Att) res.attachment;
             if (att.fd == null) // for the internal pipe fds
                 continue;
             int ev = res.events;
-            selectResultReusedList.add(selectedEntryPool.poll().set(att.fd, getJavaEvents(ev), att.att));
+            selectedEntryList.add().set(att.fd, getJavaEvents(ev), att.att);
         }
-        return selectResultReusedList;
+        return selectedEntryList;
     }
 
     private void checkOpen() {
@@ -118,6 +116,7 @@ public class AESelector implements FDSelector {
         }
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         if (onlySelectNow) {
@@ -128,6 +127,7 @@ public class AESelector implements FDSelector {
         return handleSelectResult(res);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
@@ -135,6 +135,7 @@ public class AESelector implements FDSelector {
         return handleSelectResult(res);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
         if (onlySelectNow) {
