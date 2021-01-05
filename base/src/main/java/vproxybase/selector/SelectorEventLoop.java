@@ -7,6 +7,7 @@ import vproxybase.selector.wrap.FDInspection;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.*;
 import vproxybase.util.promise.Promise;
+import vproxybase.util.time.TimeQueue;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -48,7 +49,7 @@ public class SelectorEventLoop {
 
     public final WrappedSelector selector;
     public final FDs fds;
-    private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
+    private final TimeQueue<Runnable> timeQueue = TimeQueue.create();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
 
     private final Lock channelRegisteringLock = Lock.create();
@@ -156,8 +157,8 @@ public class SelectorEventLoop {
 
     private void handleTimeEvents() {
         List<Runnable> toRun = new LinkedList<>();
-        while (timeQueue.nextTime() == 0) {
-            Runnable r = timeQueue.pop();
+        while (timeQueue.nextTime(Config.currentTimestamp) == 0) {
+            Runnable r = timeQueue.poll();
             toRun.add(r);
         }
         for (Runnable r : toRun) {
@@ -289,7 +290,7 @@ public class SelectorEventLoop {
             } else if (!channelsToBeRegisteredStep1.isEmpty() || !channelsToBeRegisteredStep2.isEmpty()) {
                 selected = selector.selectNow(); // immediately return when channels are going to be registered
             } else {
-                int time = timeQueue.nextTime();
+                int time = timeQueue.nextTime(Config.currentTimestamp);
                 if (time == 0) {
                     selected = selector.selectNow(); // immediately return
                 } else {
@@ -391,7 +392,7 @@ public class SelectorEventLoop {
         TimerEvent e = new TimerEvent(this);
         // timeQueue is not thread safe
         // modify it in the event loop's thread
-        nextTick(() -> e.setEvent(timeQueue.push(timeout, r)));
+        nextTick(() -> e.setEvent(timeQueue.add(Config.currentTimestamp, timeout, r)));
         return e;
     }
 

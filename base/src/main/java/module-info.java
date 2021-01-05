@@ -35,6 +35,7 @@ module vproxy.base {
     exports vproxybase.util.promise;
     exports vproxybase.util.exception;
     exports vproxybase.util.table;
+    exports vproxybase.util.time;
     exports vproxybase.util.objectpool;
     exports vproxybase.processor;
     exports vproxybase.processor.http1;
