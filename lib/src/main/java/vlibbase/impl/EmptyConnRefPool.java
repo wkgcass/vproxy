@@ -5,7 +5,7 @@ import vlibbase.ConnRefPool;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Logger;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -21,7 +21,7 @@ public class EmptyConnRefPool implements ConnRefPool {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            sLoop.loop(r -> new VProxyThread(r, "empty-conn-ref-pool"));
+            sLoop.loop(r -> VProxyThread.create(r, "empty-conn-ref-pool"));
             loop = new NetEventLoop(sLoop);
         }
         this.loop = loop;

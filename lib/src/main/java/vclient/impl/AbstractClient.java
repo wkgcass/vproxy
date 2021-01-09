@@ -6,7 +6,7 @@ import vclient.GeneralClientOptions;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Logger;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -34,7 +34,7 @@ public abstract class AbstractClient implements GeneralClient {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        loop.getSelectorEventLoop().loop(r -> new VProxyThread(r, threadname()));
+        loop.getSelectorEventLoop().loop(r -> VProxyThread.create(r, threadname()));
         return loop;
     }
 

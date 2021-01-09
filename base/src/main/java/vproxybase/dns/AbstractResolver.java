@@ -9,6 +9,7 @@ import vproxybase.dns.dnsserverlistgetter.GetDnsServerListFromConfigFile;
 import vproxybase.dns.dnsserverlistgetter.GetDnsServerListFromDhcp;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -164,7 +165,7 @@ public abstract class AbstractResolver implements Resolver {
 
     @Override
     public void start() {
-        loop.getSelectorEventLoop().loop(r -> new VProxyThread(r, alias));
+        loop.getSelectorEventLoop().loop(r -> VProxyThread.create(r, alias));
     }
 
     abstract protected void getAllByName(String domain, Callback<IP[], UnknownHostException> cb);

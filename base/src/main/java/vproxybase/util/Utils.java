@@ -3,6 +3,7 @@ package vproxybase.util;
 import vfd.FDProvider;
 import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -394,7 +395,7 @@ public class Utils {
     }
 
     private static void pipeOutputOfStream(InputStream stdout, String descr) {
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
             var br = new BufferedReader(new InputStreamReader(stdout));
             String x;
             try {

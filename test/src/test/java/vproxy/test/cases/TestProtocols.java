@@ -37,7 +37,7 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.AnnotationKeys;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 
 import java.util.Map;
 import java.util.function.Consumer;
@@ -360,7 +360,7 @@ public class TestProtocols {
             serverArgs.protocolFactory(new TBinaryProtocol.Factory());
             serverArgs.transportFactory(new TFastFramedTransport.Factory());
             server1 = new TSimpleServer(serverArgs);
-            new VProxyThread(server1::serve, "server1").start();
+            VProxyThread.create(server1::serve, "server1").start();
         }
         TServer server2;
         // server
@@ -373,7 +373,7 @@ public class TestProtocols {
             serverArgs.protocolFactory(new TBinaryProtocol.Factory());
             serverArgs.transportFactory(new TFastFramedTransport.Factory());
             server2 = new TSimpleServer(serverArgs);
-            new VProxyThread(server2::serve, "server2").start();
+            VProxyThread.create(server2::serve, "server2").start();
         }
 
         // lb

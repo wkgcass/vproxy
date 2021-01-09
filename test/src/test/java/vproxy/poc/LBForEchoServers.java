@@ -10,7 +10,7 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 
@@ -48,10 +48,10 @@ public class LBForEchoServers {
         // print
         SelectorEventLoop delayPrintLoop = SelectorEventLoop.open();
         runTimer(delayPrintLoop, lb, grp1, grp2);
-        new VProxyThread(delayPrintLoop::loop, "delayPrintLoop").start();
+        VProxyThread.create(delayPrintLoop::loop, "delayPrintLoop").start();
 
         // start client in another thread
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
             try {
                 AlphabetBlockingClient.runBlock(18080, 60, true);
             } catch (Exception e) {
@@ -68,8 +68,8 @@ public class LBForEchoServers {
         SelectorEventLoop echo1 = SelectorEventLoopEchoServer.createServer(19080);
         SelectorEventLoop echo2 = SelectorEventLoopEchoServer.createServer(19081);
 
-        new VProxyThread(echo1::loop, "echo1").start();
-        new VProxyThread(echo2::loop, "echo2").start();
+        VProxyThread.create(echo1::loop, "echo1").start();
+        VProxyThread.create(echo2::loop, "echo2").start();
 
         System.out.println("\033[1;30m--------------------all servers started now----------------\033[0m");
         System.out.println("\033[1;30m--------------------stop echo1 in 10 seconds---------------\033[0m");

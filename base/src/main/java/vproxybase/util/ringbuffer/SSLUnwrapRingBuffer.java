@@ -10,6 +10,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ssl.SSL;
+import vproxybase.util.thread.VProxyThread;
 
 import javax.net.ssl.*;
 import java.io.IOException;
@@ -352,7 +353,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 lastLoop = SelectorEventLoop.current();
                 assert Logger.lowLevelDebug("resumer not specified, so we use the current event loop: " + lastLoop);
             }
-            new VProxyThread(() -> {
+            VProxyThread.create(() -> {
                 assert Logger.lowLevelDebug("TASK begins");
                 Runnable r;
                 long begin = System.currentTimeMillis();

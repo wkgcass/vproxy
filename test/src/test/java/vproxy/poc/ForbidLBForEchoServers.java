@@ -14,7 +14,7 @@ import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.Protocol;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Network;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 import vproxybase.util.exception.NotFoundException;
@@ -49,7 +49,7 @@ public class ForbidLBForEchoServers {
         grp2.add("s2", new IPPort("127.0.0.1", 19081), 10);
 
         // start client in another thread
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
             try {
                 AlphabetBlockingClient.runBlock(18080, 40, true);
             } catch (Exception e) {
@@ -66,8 +66,8 @@ public class ForbidLBForEchoServers {
         SelectorEventLoop echo1 = SelectorEventLoopEchoServer.createServer(19080);
         SelectorEventLoop echo2 = SelectorEventLoopEchoServer.createServer(19081);
 
-        new VProxyThread(echo1::loop, "echo1").start();
-        new VProxyThread(echo2::loop, "echo2").start();
+        VProxyThread.create(echo1::loop, "echo1").start();
+        VProxyThread.create(echo2::loop, "echo2").start();
 
         System.out.println("\033[1;30m--------------------all servers started now----------------\033[0m");
         Thread.sleep(10000);

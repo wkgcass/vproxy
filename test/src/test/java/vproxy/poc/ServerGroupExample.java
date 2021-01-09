@@ -10,7 +10,7 @@ import vproxybase.connection.Connection;
 import vproxybase.connection.Connector;
 import vproxybase.connection.ServerSock;
 import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 import vproxybase.util.exception.NotFoundException;
@@ -34,7 +34,7 @@ public class ServerGroupExample {
         // create a event loop only for checking
         SelectorEventLoop eventLoop = SelectorEventLoop.open();
         runTimer(eventLoop, eventLoopGroup, serverGroup);
-        new VProxyThread(eventLoop::loop, "for-checking").start();
+        VProxyThread.create(eventLoop::loop, "for-checking").start();
 
         eventLoopGroup.add("my loop 1"); // re-dispatch to all threads (currently 1 thread ),
         // cursor = 1 use = 0
@@ -46,12 +46,12 @@ public class ServerGroupExample {
         Thread.sleep(5000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------create serverA on " + portA + "----------\033[0m");
         SelectorEventLoop serverA = SelectorEventLoopEchoServer.createServer(portA);
-        new VProxyThread(serverA::loop, "serverA Event Loop Thread").start();
+        VProxyThread.create(serverA::loop, "serverA Event Loop Thread").start();
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m--------------------------------------------------------------------------------------------create serverB on " + portB + "----------\033[0m");
         SelectorEventLoop serverB = SelectorEventLoopEchoServer.createServer(portB);
-        new VProxyThread(serverB::loop, "serverB Event Loop Thread").start();
+        VProxyThread.create(serverB::loop, "serverB Event Loop Thread").start();
 
         Thread.sleep(20000);
         System.out.println("\033[1;30m---------------------------------------------------------------------------------------------let's remove serverA from group---------\033[0m");

@@ -6,7 +6,7 @@ import vproxybase.connection.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Tuple;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -24,7 +24,7 @@ public class NetEventLoopSplitBuffersEchoServer {
         // register the server into event loop
         eventLoop.addServer(server, null, new My2ServerHandler());
         // start loop in another thread
-        new VProxyThread(selectorEventLoop::loop, "EventLoopThread").start();
+        VProxyThread.create(selectorEventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
         AlphabetBlockingClient.runBlock(18080, 10, false);

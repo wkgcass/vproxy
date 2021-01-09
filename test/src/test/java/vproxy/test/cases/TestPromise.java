@@ -4,7 +4,7 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.promise.Promise;
 
 import static org.junit.Assert.assertEquals;
@@ -15,7 +15,7 @@ public class TestPromise {
     @Before
     public void setUp() throws Exception {
         loop = SelectorEventLoop.open();
-        loop.loop(r -> new VProxyThread(r, "test-promise-loop"));
+        loop.loop(r -> VProxyThread.create(r, "test-promise-loop"));
     }
 
     @After

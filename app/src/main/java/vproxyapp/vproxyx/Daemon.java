@@ -5,6 +5,7 @@ import vproxyapp.process.Shutdown;
 import vproxybase.Config;
 import vproxybase.connection.ServerSock;
 import vproxybase.util.*;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.*;
 import java.util.ArrayList;
@@ -158,7 +159,7 @@ public class Daemon {
     }
 
     private static void printLoop(String pid, BufferedReader reader, PrintStream print, String descr) {
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
             String line;
             try {
                 while ((line = reader.readLine()) != null) {

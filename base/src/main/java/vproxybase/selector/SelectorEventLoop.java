@@ -7,6 +7,7 @@ import vproxybase.selector.wrap.FDInspection;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.*;
 import vproxybase.util.promise.Promise;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.time.TimeQueue;
 
 import java.io.IOException;

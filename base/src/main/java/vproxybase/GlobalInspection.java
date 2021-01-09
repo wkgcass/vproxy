@@ -15,6 +15,7 @@ import vproxybase.util.*;
 import vproxybase.util.exception.NoException;
 import vproxybase.util.table.TR;
 import vproxybase.util.table.TableBuilder;
+import vproxybase.util.thread.VProxyThread;
 
 import java.util.*;
 import java.util.function.BiFunction;
@@ -181,12 +182,12 @@ public class GlobalInspection {
         var threads = new HashSet<>(runningThreads);
         StringBuilder sb = new StringBuilder();
         for (var vt : threads) {
-            var name = new SimpleString(vt.getName()).stringify();
-            var tid = vt.getId();
-            var state = vt.getState().name();
+            var name = new SimpleString(vt.thread().getName()).stringify();
+            var tid = vt.thread().getId();
+            var state = vt.thread().getState().name();
             sb.append(name).append(" ").append("tid=").append(tid).append("\n")
                 .append("   java.lang.Thread.State: ").append(state).append("\n");
-            var stacks = vt.getStackTrace();
+            var stacks = vt.thread().getStackTrace();
             if (stacks.length != 0) {
                 for (var s : stacks) {
                     sb.append("\tat ").append(s).append("\n");

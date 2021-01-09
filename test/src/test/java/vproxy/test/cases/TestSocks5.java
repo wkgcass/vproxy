@@ -17,7 +17,7 @@ import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.AnnotationKeys;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -43,7 +43,7 @@ public class TestSocks5 {
     @BeforeClass
     public static void classSetUp() throws Exception {
         serverLoop = SelectorEventLoop.open();
-        serverLoop.loop(r -> new VProxyThread(r, "serverLoop"));
+        serverLoop.loop(r -> VProxyThread.create(r, "serverLoop"));
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
         new IdServer("0", serverNetLoop, 19080);
         new IdServer("1", serverNetLoop, 19081, "::1");

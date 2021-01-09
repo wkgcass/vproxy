@@ -22,6 +22,7 @@ import vproxybase.dns.DNSClient;
 import vproxybase.dns.Resolver;
 import vproxybase.util.*;
 import vproxybase.util.exception.NotFoundException;
+import vproxybase.util.thread.VProxyThread;
 import vswitch.RouteTable;
 import vswitch.Switch;
 import vswitch.iface.RemoteSwitchIface;
@@ -86,7 +87,8 @@ public class Shutdown {
         } catch (Exception e) {
             System.err.println("SIGUSR2 not handled");
         }
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
+            //noinspection InfiniteLoopStatement
             while (true) {
                 sigIntTimes = 0;
                 try {
@@ -148,7 +150,7 @@ public class Shutdown {
             Logger.shouldNotHappen("removing servers failed", e);
         }
         Logger.alert("Waiting for connections to close");
-        new VProxyThread(() -> {
+        VProxyThread.create(() -> {
             var elgHolder = app.eventLoopGroupHolder;
             var elgList = new ArrayList<EventLoopGroup>(elgHolder.names().size());
             for (var name : elgHolder.names()) {

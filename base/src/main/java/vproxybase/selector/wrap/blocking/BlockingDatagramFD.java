@@ -11,7 +11,7 @@ import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -32,13 +32,13 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
 
     private final Lock readQLock = Lock.create();
     private final LinkedList<ByteBuffer> readQueue = new LinkedList<>();
-    private final Thread readThread;
+    private final VProxyThread readThread;
     private IOException lastReadException = null;
     private volatile boolean isReading = false;
 
     private final Lock writeQLock = Lock.create();
     private final LinkedList<ByteBuffer> writeQueue = new LinkedList<>();
-    private final Thread writeThread;
+    private final VProxyThread writeThread;
     private int currentWriteQueueBytes = 0;
     private IOException lastWriteException = null;
     private volatile boolean isWriting = false;
@@ -56,9 +56,9 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
         this.writeQByteLimit = writeQByteLimit;
         this.readBufPacketLimit = readBufPacketLimit;
 
-        readThread = new VProxyThread(this::threadRead, "blocking-read-" + fd.toString());
+        readThread = VProxyThread.create(this::threadRead, "blocking-read-" + fd.toString());
         readThread.start();
-        writeThread = new VProxyThread(this::threadWrite, "blocking-write-" + fd.toString());
+        writeThread = VProxyThread.create(this::threadWrite, "blocking-write-" + fd.toString());
         writeThread.start();
     }
 

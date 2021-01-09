@@ -7,6 +7,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.*;
 import java.util.*;
@@ -38,7 +39,7 @@ public class Mirror {
             throw new IllegalStateException("cannot initialize twice");
         mirror.conf = conf;
         mirror.loop = SelectorEventLoop.open();
-        mirror.loop.loop(r -> new VProxyThread(r, "mirror"));
+        mirror.loop.loop(r -> VProxyThread.create(r, "mirror"));
         mirror.initialized = true;
         mirror.loadConfig();
         mirror.loop.delay(LOAD_CONFIG_SUCCESS_WAIT_INTERVAL, mirror::loadConfigAndSetTimer);

@@ -9,7 +9,7 @@ import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.RingBuffer;
-import vproxybase.util.VProxyThread;
+import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -56,7 +56,7 @@ public class EchoProtocolServer {
                 }
             });
 
-        new VProxyThread(selectorEventLoop::loop, "echo-protocol-server").start();
+        VProxyThread.create(selectorEventLoop::loop, "echo-protocol-server").start();
 
         Thread.sleep(500);
         AlphabetBlockingClient.runBlock(18080, 10, false);

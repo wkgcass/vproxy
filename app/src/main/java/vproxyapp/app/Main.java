@@ -12,6 +12,7 @@ import vproxyapp.vproxyx.Simple;
 import vproxybase.Config;
 import vproxybase.dns.Resolver;
 import vproxybase.util.*;
+import vproxybase.util.thread.VProxyThread;
 import vproxyx.HelloWorld;
 import vproxyx.KcpTun;
 import vproxyx.WebSocksProxyAgent;
@@ -357,7 +358,7 @@ public class Main {
         if (!ctx.get("noStdIOController", false)) {
             // start stdioController
             StdIOController controller = new StdIOController();
-            new VProxyThread(controller::start, "StdIOControllerThread").start();
+            VProxyThread.create(controller::start, "StdIOControllerThread").start();
         }
 
         // run main app
