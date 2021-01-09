@@ -3,6 +3,8 @@ package vproxybase.selector.wrap.streamed;
 import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vmirror.MirrorDataFactory;
 import vproxybase.selector.wrap.VirtualFD;
 import vproxybase.selector.wrap.WrappedSelector;
@@ -329,9 +331,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         if (state == State.real_closed) {
-            return;
+            return FDCloseReturn.nothing(req);
         }
         setState(State.real_closed);
         if (state != State.dead && soLinger0) {
@@ -341,6 +343,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         }
         handler.removeStreamedFD(this);
         release();
+        return FDCloseReturn.nothing(req);
     }
 
     private void release() {

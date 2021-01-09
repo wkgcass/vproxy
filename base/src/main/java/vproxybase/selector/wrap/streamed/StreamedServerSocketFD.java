@@ -4,6 +4,8 @@ import vfd.FD;
 import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vproxybase.GlobalInspection;
 import vproxybase.prometheus.GaugeF;
 import vproxybase.selector.SelectorEventLoop;
@@ -116,13 +118,19 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public void close() {
+    public void close() throws IOException {
+        FDCloseReq.inst().wrapClose(this::close);
+    }
+
+    @Override
+    public FDCloseReturn close(FDCloseReq req) {
         isOpen = false;
         synchronized (this.serverPtr) {
             this.serverPtr[0] = null;
         }
 
         GlobalInspection.getInstance().removeMetric(statisticsAcceptQueueLength);
+        return FDCloseReturn.nothing(req);
     }
 
     void accepted(StreamedFD fd) {

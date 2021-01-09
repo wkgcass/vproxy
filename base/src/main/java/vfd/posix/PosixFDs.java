@@ -60,7 +60,7 @@ public class PosixFDs implements FDs, FDsWithTap {
         }
         long ae;
         try {
-            ae = posix.aeCreateEventLoop(1024 * 1024);
+            ae = posix.aeCreateEventLoop(VFDConfig.aesetsize);
         } catch (IOException e) {
             if (pipeFd != null) {
                 try {

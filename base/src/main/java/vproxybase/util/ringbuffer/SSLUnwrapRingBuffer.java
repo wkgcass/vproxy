@@ -3,6 +3,7 @@ package vproxybase.util.ringbuffer;
 import tlschannel.impl.TlsExplorer;
 import vfd.IPPort;
 import vfd.NetworkFD;
+import vfd.ReadableByteStream;
 import vmirror.MirrorDataFactory;
 import vproxybase.GlobalInspection;
 import vproxybase.selector.SelectorEventLoop;
@@ -13,7 +14,6 @@ import vproxybase.util.ringbuffer.ssl.SSL;
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -158,7 +158,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     }
 
     @Override
-    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+    public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         int n = 0;
         if (engine == null) {
             n += createSSLEngine(channel);
@@ -166,7 +166,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         return n + super.storeBytesFrom(channel);
     }
 
-    private int createSSLEngine(ReadableByteChannel channel) throws IOException {
+    private int createSSLEngine(ReadableByteStream channel) throws IOException {
         ByteBuffer buf = ByteBuffer.allocate(16384); // should be enough for CLIENT_HELLO message
         int n = channel.read(buf);
         buf.flip();

@@ -1,6 +1,8 @@
 package vproxybase.selector.wrap.udp;
 
 import vfd.*;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vproxybase.Config;
 import vproxybase.GlobalInspection;
 import vproxybase.prometheus.GaugeF;
@@ -145,7 +147,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         server.close();
         for (VirtualDatagramFD fd : conns.values()) {
             // the fd is accepted by user code
@@ -168,6 +170,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         if (statisticsEstablishedCount != null) {
             GlobalInspection.getInstance().removeMetric(statisticsEstablishedCount);
         }
+        return FDCloseReturn.nothing(req);
     }
 
     @Override
@@ -305,6 +308,11 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public void close() {
+            FDCloseReq.inst().wrapClose(this::close);
+        }
+
+        @Override
+        public FDCloseReturn close(FDCloseReq req) {
             release();
             bufs.clear();
             conns.values().remove(this);
@@ -313,6 +321,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
             if (x != null) {
                 acceptQ.remove(this);
             }
+            return FDCloseReturn.nothing(req);
         }
 
         @Override

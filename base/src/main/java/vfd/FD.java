@@ -1,15 +1,42 @@
 package vfd;
 
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vproxybase.selector.SelectorEventLoop;
 
+import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketOption;
-import java.nio.channels.Channel;
 
-public interface FD extends Channel {
+public interface FD extends Closeable {
+    boolean isOpen();
+
     void configureBlocking(boolean b) throws IOException;
 
     <T> void setOption(SocketOption<T> name, T value) throws IOException;
+
+    /**
+     * Close the fd.
+     * This method signature ensures that the implementations always call <code>super.close(req)</code>.
+     *
+     * @param req close request
+     * @return close result
+     * @throws IOException any exception raised
+     */
+    FDCloseReturn close(FDCloseReq req) throws IOException;
+
+    /**
+     * Implementations are not recommended to override this method.
+     * If you have to, do call {@link #close(FDCloseReq)} and make sure the result is valid yourself.
+     *
+     * @throws IOException any exception raised
+     */
+    default void close() throws IOException {
+        FDCloseReturn ret = close(FDCloseReq.inst());
+        if (ret == null) {
+            throw new IOException("IMPLEMENTATION ERROR!!! the close(x) method must return a CloseReturn object");
+        }
+    }
 
     /**
      * @return the real fd object

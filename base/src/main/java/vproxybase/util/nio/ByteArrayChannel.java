@@ -1,12 +1,12 @@
 package vproxybase.util.nio;
 
+import vfd.ReadableByteStream;
+import vfd.WritableByteStream;
 import vproxybase.util.ByteArray;
 
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
-public class ByteArrayChannel implements ReadableByteChannel, WritableByteChannel {
+public class ByteArrayChannel implements ReadableByteStream, WritableByteStream {
     private final ByteArray arr;
     private int writeOff; // the current write offset
     private int writeLen; // free space left for writing into arr
@@ -124,16 +124,6 @@ public class ByteArrayChannel implements ReadableByteChannel, WritableByteChanne
         writeOff += writeBytes;
         writeLen -= writeBytes;
         return writeBytes;
-    }
-
-    @Override
-    public boolean isOpen() {
-        return true;
-    }
-
-    @Override
-    public void close() {
-        // we do not close this channel
     }
 
     public int free() {

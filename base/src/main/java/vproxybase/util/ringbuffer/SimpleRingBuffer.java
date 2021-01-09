@@ -1,13 +1,13 @@
 package vproxybase.util.ringbuffer;
 
+import vfd.ReadableByteStream;
+import vfd.WritableByteStream;
 import vproxybase.util.*;
 import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.HashSet;
 import java.util.Set;
@@ -94,7 +94,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
      * @return may return -1 for EOF
      */
     @Override
-    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+    public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         return operateOnByteBufferStoreIn(b -> channel.read(b.realBuffer()) != -1);
     }
 
@@ -106,7 +106,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     @Override
-    public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+    public int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException {
         return operateOnByteBufferWriteOut(maxBytesToWrite, buffer -> channel.write(buffer.realBuffer()));
     }
 

@@ -64,6 +64,7 @@ module vproxy.base {
     exports vfd.posix;
     exports vfd.jdk;
     exports vfd.abs;
+    exports vfd.type;
     exports vfd.windows;
     exports vpacket;
     exports vmirror;

@@ -1,6 +1,8 @@
 package vproxybase.selector.wrap.arqudp;
 
 import vfd.*;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vproxybase.selector.Handler;
 import vproxybase.selector.HandlerContext;
 import vproxybase.selector.SelectorEventLoop;
@@ -125,8 +127,9 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         fd.close();
+        return FDCloseReturn.nothing(req);
     }
 
     @Override

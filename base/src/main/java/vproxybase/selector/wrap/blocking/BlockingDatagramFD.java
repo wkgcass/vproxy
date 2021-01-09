@@ -3,6 +3,8 @@ package vproxybase.selector.wrap.blocking;
 import vfd.AbstractDatagramFD;
 import vfd.FD;
 import vfd.SockAddr;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.VirtualFD;
 import vproxybase.selector.wrap.WrappedSelector;
@@ -241,15 +243,16 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         if (isClosed) {
             fd.close(); // still proxy the call to fd
-            return;
+            return FDCloseReturn.nothing(req);
         }
         isClosed = true;
         fd.close();
         readThread.interrupt();
         writeThread.interrupt();
+        return FDCloseReturn.nothing(req);
     }
 
     private void threadRead() {

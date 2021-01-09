@@ -1,6 +1,8 @@
 package vfd.jdk;
 
 import vfd.FD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -19,9 +21,30 @@ public class ChannelFD implements FD {
         return channel.isOpen();
     }
 
-    @Override
-    public void close() throws IOException {
+    @SuppressWarnings("unused")
+    protected class ChannelFDCloseReturn extends FDCloseReturn {
+        protected ChannelFDCloseReturn(FDCloseReq req, DummyCall unused) throws IOException {
+            super(req, dummyCall());
+        }
+
+        protected ChannelFDCloseReturn(FDCloseReq req, RealCall unused) throws IOException {
+            super(req, dummyCall());
+            close0(req);
+        }
+
+        protected ChannelFDCloseReturn(FDCloseReq req, SuperCall unused) throws IOException {
+            super(req, realCall());
+        }
+    }
+
+    private ChannelFDCloseReturn close0(FDCloseReq req) throws IOException {
         channel.close();
+        return req.superClose(ChannelFDCloseReturn::new);
+    }
+
+    @Override
+    public ChannelFDCloseReturn close(FDCloseReq req) throws IOException {
+        return close0(req);
     }
 
     @Override

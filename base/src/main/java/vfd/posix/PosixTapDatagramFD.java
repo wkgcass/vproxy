@@ -3,6 +3,7 @@ package vfd.posix;
 import vfd.NoSockAddr;
 import vfd.TapDatagramFD;
 import vfd.TapInfo;
+import vfd.type.FDCloseReq;
 import vproxybase.util.OS;
 
 import java.io.IOException;
@@ -53,7 +54,7 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
     }
 
     @Override
-    public void close() throws IOException {
+    public PosixFDCloseReturn close(FDCloseReq req) throws IOException {
         if (isOpen()) {
             if (OS.isMac()) { // hack on mac
                 // the kernel extension will block forever if the tap is not assigned with any ip
@@ -69,7 +70,7 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
                 }
             }
         }
-        super.close();
+        return super.close(req);
     }
 
     @Override

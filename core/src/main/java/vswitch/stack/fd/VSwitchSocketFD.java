@@ -2,6 +2,8 @@ package vswitch.stack.fd;
 
 import vfd.IPPort;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vpacket.conntrack.tcp.TcpEntry;
 import vpacket.conntrack.tcp.TcpState;
 import vproxybase.util.ByteArray;
@@ -211,15 +213,20 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
     @Override
     public void close() {
+        FDCloseReq.inst().wrapClose(this::close);
+    }
+
+    @Override
+    public FDCloseReturn close(FDCloseReq req) {
         if (closed) {
-            return;
+            return FDCloseReturn.nothing(req);
         }
         closed = true;
 
         cancelReadable();
         cancelWritable();
         if (entry == null) {
-            return;
+            return FDCloseReturn.nothing(req);
         }
 
         if (entry.sendingQueue.hasMoreData()) {
@@ -231,6 +238,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
             // send reset
             ctx.L4.resetTcpConnection(getUUID(), ctx.table, entry);
         }
+        return FDCloseReturn.nothing(req);
     }
 
     @Override

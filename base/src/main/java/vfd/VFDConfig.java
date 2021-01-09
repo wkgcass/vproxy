@@ -18,6 +18,10 @@ public class VFDConfig {
     // -Dvfdtrace=1
     public static final boolean vfdtrace;
 
+    // -Daesetsize=131072
+    // the setsize for each libae aeEventLoop
+    public static final int aesetsize;
+
     static {
         fstack = System.getProperty("fstack", "");
         useFStack = !fstack.isBlank();
@@ -36,5 +40,8 @@ public class VFDConfig {
 
         String vfdtraceConf = System.getProperty("vfdtrace", "0");
         vfdtrace = !vfdtraceConf.equals("0");
+
+        String aesetsizeStr = System.getProperty("aesetsize", "" + (128 * 1024));
+        aesetsize = Integer.parseInt(aesetsizeStr);
     }
 }

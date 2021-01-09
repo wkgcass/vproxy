@@ -4,6 +4,8 @@ import vfd.EventSet;
 import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vmirror.MirrorDataFactory;
 import vproxybase.Config;
 import vproxybase.selector.Handler;
@@ -261,8 +263,9 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         fd.close();
+        return FDCloseReturn.nothing(req);
     }
 
     @Override

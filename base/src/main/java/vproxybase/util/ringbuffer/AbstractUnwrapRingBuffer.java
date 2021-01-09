@@ -1,5 +1,7 @@
 package vproxybase.util.ringbuffer;
 
+import vfd.ReadableByteStream;
+import vfd.WritableByteStream;
 import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
@@ -7,8 +9,6 @@ import vproxybase.util.RingBufferETHandler;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.Deque;
 import java.util.LinkedList;
 
@@ -53,7 +53,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     }
 
     @Override
-    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+    public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         checkException();
         int len = 0;
         while (true) {
@@ -210,7 +210,7 @@ public abstract class AbstractUnwrapRingBuffer extends AbstractRingBuffer {
     abstract protected void handleEncryptedBuffer(ByteBufferEx buf, boolean[] underflow, boolean[] errored, IOException[] exception);
 
     @Override
-    public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+    public int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException {
         checkException();
         // proxy the operation from plain buffer
         int bytes = 0;

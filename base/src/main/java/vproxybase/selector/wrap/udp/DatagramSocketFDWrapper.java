@@ -4,6 +4,8 @@ import vfd.DatagramFD;
 import vfd.FD;
 import vfd.IPPort;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -79,8 +81,9 @@ public final class DatagramSocketFDWrapper implements SocketFD {
     }
 
     @Override
-    public void close() throws IOException {
+    public FDCloseReturn close(FDCloseReq req) throws IOException {
         fd.close();
+        return FDCloseReturn.nothing(req);
     }
 
     @Override
