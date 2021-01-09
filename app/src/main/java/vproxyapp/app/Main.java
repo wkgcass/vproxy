@@ -2,6 +2,7 @@ package vproxyapp.app;
 
 import vfd.IPPort;
 import vfd.VFDConfig;
+import vjson.parser.ParserUtils;
 import vmirror.Mirror;
 import vproxy.fstack.FStackUtil;
 import vproxyapp.app.args.*;
@@ -13,6 +14,7 @@ import vproxybase.Config;
 import vproxybase.dns.Resolver;
 import vproxybase.util.*;
 import vproxybase.util.thread.VProxyThread;
+import vproxybase.util.thread.VProxyThreadJsonParserCacheHolder;
 import vproxyx.HelloWorld;
 import vproxyx.KcpTun;
 import vproxyx.WebSocksProxyAgent;
@@ -60,6 +62,7 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
+        ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());
         OOMHandler.handleOOM();
         if (VFDConfig.useFStack) {
             try {

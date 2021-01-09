@@ -1,5 +1,8 @@
 package vproxybase.util.thread;
 
+import vjson.parser.ArrayParser;
+import vjson.parser.ObjectParser;
+import vjson.parser.StringParser;
 import vproxybase.selector.SelectorEventLoop;
 
 public interface VProxyThread {
@@ -42,5 +45,12 @@ public interface VProxyThread {
 
     class VProxyThreadVariable {
         public SelectorEventLoop loop;
+
+        public ArrayParser threadLocalArrayParser;
+        public ObjectParser threadLocalObjectParser;
+        public StringParser threadLocalStringParser;
+        public ArrayParser threadLocalArrayParserJavaObject;
+        public ObjectParser threadLocalObjectParserJavaObject;
+        public StringParser threadLocalStringParserJavaObject;
     }
 }
