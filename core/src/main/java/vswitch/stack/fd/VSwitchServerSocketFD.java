@@ -3,6 +3,8 @@ package vswitch.stack.fd;
 import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vfd.SocketFD;
+import vfd.type.FDCloseReq;
+import vfd.type.FDCloseReturn;
 import vpacket.conntrack.tcp.ListenEntry;
 import vpacket.conntrack.tcp.TcpEntry;
 import vpacket.conntrack.tcp.TcpUtils;
@@ -84,15 +86,20 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
     }
 
     @Override
-    public void close() throws IOException {
+    public void close() {
+        FDCloseReq.inst().wrapClose(this::close);
+    }
+
+    @Override
+    public FDCloseReturn close(FDCloseReq req) {
         if (closed) {
-            return;
+            return FDCloseReturn.nothing(req);
         }
         closed = true;
 
         cancelReadable();
         if (entry == null) {
-            return;
+            return FDCloseReturn.nothing(req);
         }
         for (var e : entry.synBacklog) {
             ctx.L4.output(new OutputPacketL3Context(
@@ -108,6 +115,7 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
         }
         ctx.conntrack.removeListen(local);
         entry.destroy();
+        return FDCloseReturn.nothing(req);
     }
 
     private class ListenHandler implements vpacket.conntrack.tcp.ListenHandler {

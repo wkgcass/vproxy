@@ -19,9 +19,21 @@ import vjson.ex.JsonParseException;
 
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 
 public class ParserUtils {
     private ParserUtils() {
+    }
+
+    private static ParserCacheHolder holder = new DefaultParserCacheHolder();
+
+    public static void setParserCacheHolder(ParserCacheHolder parserCacheHolder) throws IllegalStateException {
+        if (!(ParserUtils.holder instanceof DefaultParserCacheHolder) ||
+            ((DefaultParserCacheHolder) ParserUtils.holder).isStarted()) {
+            throw new IllegalStateException("parser cache holder already set");
+        }
+        Objects.requireNonNull(parserCacheHolder);
+        ParserUtils.holder = parserCacheHolder;
     }
 
     public static boolean isWhiteSpace(char c) {
@@ -60,14 +72,6 @@ public class ParserUtils {
         return new ParserOptions(opts).setEnd(false);
     }
 
-    private static final ThreadLocal<ArrayParser> threadLocalArrayParser = new ThreadLocal<>();
-    private static final ThreadLocal<ObjectParser> threadLocalObjectParser = new ThreadLocal<>();
-    private static final ThreadLocal<StringParser> threadLocalStringParser = new ThreadLocal<>();
-
-    private static final ThreadLocal<ArrayParser> threadLocalArrayParserJavaObject = new ThreadLocal<>();
-    private static final ThreadLocal<ObjectParser> threadLocalObjectParserJavaObject = new ThreadLocal<>();
-    private static final ThreadLocal<StringParser> threadLocalStringParserJavaObject = new ThreadLocal<>();
-
     public static JSON.Instance buildFrom(CharStream cs) throws NullPointerException, JsonParseException {
         ParserOptions opts = ParserOptions.DEFAULT;
         cs.skipBlank();
@@ -77,10 +81,10 @@ public class ParserUtils {
         char first = cs.peekNext();
         switch (first) {
             case '{': {
-                ObjectParser p = threadLocalObjectParser.get();
+                ObjectParser p = holder.threadLocalObjectParser();
                 if (p == null) {
                     p = new ObjectParser(opts);
-                    threadLocalObjectParser.set(p);
+                    holder.threadLocalObjectParser(p);
                 }
                 JSON.Object ret;
                 try {
@@ -91,10 +95,10 @@ public class ParserUtils {
                 return ret;
             }
             case '[': {
-                ArrayParser p = threadLocalArrayParser.get();
+                ArrayParser p = holder.threadLocalArrayParser();
                 if (p == null) {
                     p = new ArrayParser(opts);
-                    threadLocalArrayParser.set(p);
+                    holder.threadLocalArrayParser(p);
                 }
                 JSON.Array ret;
                 try {
@@ -107,10 +111,10 @@ public class ParserUtils {
             case '\'':
                 throw new JsonParseException("not valid json string: stringSingleQuotes not enabled");
             case '"': {
-                StringParser p = threadLocalStringParser.get();
+                StringParser p = holder.threadLocalStringParser();
                 if (p == null) {
                     p = new StringParser(opts);
-                    threadLocalStringParser.set(p);
+                    holder.threadLocalStringParser(p);
                 }
                 JSON.String ret;
                 try {
@@ -144,10 +148,10 @@ public class ParserUtils {
         char first = cs.peekNext();
         switch (first) {
             case '{': {
-                ObjectParser p = threadLocalObjectParserJavaObject.get();
+                ObjectParser p = holder.threadLocalObjectParserJavaObject();
                 if (p == null) {
                     p = new ObjectParser(opts);
-                    threadLocalObjectParserJavaObject.set(p);
+                    holder.threadLocalObjectParserJavaObject(p);
                 }
                 Map ret;
                 try {
@@ -158,10 +162,10 @@ public class ParserUtils {
                 return ret;
             }
             case '[': {
-                ArrayParser p = threadLocalArrayParserJavaObject.get();
+                ArrayParser p = holder.threadLocalArrayParserJavaObject();
                 if (p == null) {
                     p = new ArrayParser(opts);
-                    threadLocalArrayParserJavaObject.set(p);
+                    holder.threadLocalArrayParserJavaObject(p);
                 }
                 List ret;
                 try {
@@ -174,10 +178,10 @@ public class ParserUtils {
             case '\'':
                 throw new JsonParseException("not valid json string: stringSingleQuotes not enabled");
             case '"': {
-                StringParser p = threadLocalStringParserJavaObject.get();
+                StringParser p = holder.threadLocalStringParserJavaObject();
                 if (p == null) {
                     p = new StringParser(opts);
-                    threadLocalStringParserJavaObject.set(p);
+                    holder.threadLocalStringParserJavaObject(p);
                 }
                 String ret;
                 try {

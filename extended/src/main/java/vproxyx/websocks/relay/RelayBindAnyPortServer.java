@@ -13,6 +13,7 @@ import vproxybase.processor.Hint;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.util.Callback;
+import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.Tuple;
 import vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
@@ -33,7 +34,7 @@ public class RelayBindAnyPortServer {
         this.bindAddress = bindAddress;
     }
 
-    public ServerSock launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
+    public Proxy launch(EventLoopGroup acceptor, EventLoopGroup worker) throws IOException {
         ServerSock.checkBind(bindAddress);
 
         ServerSock server = ServerSock.create(bindAddress, new ServerSock.BindOptions().setTransparent(true));
@@ -47,12 +48,12 @@ public class RelayBindAnyPortServer {
                 .setServer(server)
                 .setConnGen(new RelayBindAnyPortServerConnectorGen()),
             s -> {
-                // do nothing, won't happen
-                // when terminating, user should simply kill this process and won't close server
+                Logger.warn(LogType.ALERT, "closing server " + bindAddress);
+                server.close();
             });
         proxy.handle();
 
-        return server;
+        return proxy;
     }
 
     private class RelayBindAnyPortServerConnectorGen implements ConnectorGen<Void> {

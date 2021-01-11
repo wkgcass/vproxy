@@ -2,6 +2,8 @@ package vfd.jdk;
 
 import vfd.*;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.*;
@@ -18,6 +20,8 @@ public class ChannelSelector implements FDSelector {
         }
     }
 
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+
     private final Selector selector;
 
     public ChannelSelector(Selector selector) {
@@ -32,7 +36,7 @@ public class ChannelSelector implements FDSelector {
     private Collection<SelectedEntry> getSelectionEntries(int cnt) {
         if (cnt == 0) return Collections.emptySet();
 
-        Set<SelectedEntry> ret = new HashSet<>(cnt);
+        selectedEntryList.clear();
 
         Set<SelectionKey> set = selector.selectedKeys();
         Iterator<SelectionKey> keys = set.iterator();
@@ -45,23 +49,26 @@ public class ChannelSelector implements FDSelector {
             }
 
             Att att = (Att) key.attachment();
-            ret.add(new SelectedEntry(att.fd, events(key.readyOps()), att.att));
+            selectedEntryList.add().set(att.fd, events(key.readyOps()), att.att);
         }
-        return ret;
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         int n = selector.select();
         return getSelectionEntries(n);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         int n = selector.selectNow();
         return getSelectionEntries(n);
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
         int n = selector.select(millis);

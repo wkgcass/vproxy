@@ -5,6 +5,7 @@ import vfd.NoSockAddr;
 import vfd.TapDatagramFD;
 import vfd.TapInfo;
 import vfd.abs.AbstractBaseFD;
+import vfd.type.FDCloseReq;
 import vproxybase.util.Logger;
 
 import java.io.IOException;
@@ -113,9 +114,9 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
     }
 
     @Override
-    public void close() throws IOException {
+    public AbstractBaseFDCloseReturn close(FDCloseReq req) throws IOException {
         if (closed) {
-            return;
+            return super.close(req);
         }
         if (!handleClosed) {
             windows.closeHandle(handle);
@@ -129,7 +130,9 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
             windows.releaseOverlapped(writeOverlapped);
             writeOverlappedReleased = true;
         }
+        var closeReturn = super.close(req);
         closed = true;
+        return closeReturn;
     }
 
     @Override

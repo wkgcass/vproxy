@@ -1,7 +1,7 @@
 package vproxybase.selector;
 
 import vproxybase.util.ThreadSafe;
-import vproxybase.util.TimeElem;
+import vproxybase.util.time.TimeElem;
 
 public class TimerEvent {
     private TimeElem event;

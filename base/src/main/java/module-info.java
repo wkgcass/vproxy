@@ -32,7 +32,12 @@ module vproxy.base {
     exports vproxybase.util.io;
     exports vproxybase.util.bytearray;
     exports vproxybase.util.nio;
+    exports vproxybase.util.promise;
     exports vproxybase.util.exception;
+    exports vproxybase.util.table;
+    exports vproxybase.util.thread;
+    exports vproxybase.util.time;
+    exports vproxybase.util.objectpool;
     exports vproxybase.processor;
     exports vproxybase.processor.http1;
     exports vproxybase.processor.http1.entity;
@@ -60,6 +65,7 @@ module vproxy.base {
     exports vfd.posix;
     exports vfd.jdk;
     exports vfd.abs;
+    exports vfd.type;
     exports vfd.windows;
     exports vpacket;
     exports vmirror;

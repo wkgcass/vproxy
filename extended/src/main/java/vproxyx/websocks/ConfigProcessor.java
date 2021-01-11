@@ -15,6 +15,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.h2streamed.H2StreamedClientFDs;
 import vproxybase.selector.wrap.kcp.KCPFDs;
 import vproxybase.util.BlockCallback;
+import vproxybase.util.Network;
 
 import java.io.*;
 import java.nio.file.Path;
@@ -81,7 +82,7 @@ public class ConfigProcessor {
         return configLoader.getDirectRelayListen();
     }
 
-    public String getDirectRelayIpRange() {
+    public Network getDirectRelayIpRange() {
         return configLoader.getDirectRelayIpRange();
     }
 

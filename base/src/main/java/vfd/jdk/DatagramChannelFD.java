@@ -72,11 +72,6 @@ public class DatagramChannelFD extends ChannelFD implements DatagramFD {
     }
 
     @Override
-    public void close() throws IOException {
-        channel.close();
-    }
-
-    @Override
     public DatagramChannel getChannel() {
         return channel;
     }

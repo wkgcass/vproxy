@@ -3,10 +3,7 @@ package vproxyx.websocks.relay;
 import vfd.IP;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.TimerEvent;
-import vproxybase.util.Lock;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxybase.util.crypto.CryptoUtils;
 
 import java.util.HashMap;
@@ -21,10 +18,10 @@ public class DomainBinder {
     private final Map<IP, EntryWithTimeout> ipMap = new HashMap<>(1024);
     private final Map<String, EntryWithTimeout> domainMap = new HashMap<>(1024);
 
-    public DomainBinder(SelectorEventLoop loop, String net) {
+    public DomainBinder(SelectorEventLoop loop, Network net) {
         this.loop = loop;
-        this.network = IP.parseIpString(net.substring(0, net.indexOf("/")));
-        int maskInt = Integer.parseInt(net.substring(net.indexOf("/") + 1));
+        this.network = net.getIp().getAddress();
+        int maskInt = net.getMask();
         double ipLimitDouble = Math.pow(2, (network.length > 4 ? 128 : 32) - maskInt) - 2; // -2 to remove network and broadcast address
         ipLimit = (ipLimitDouble > Integer.MAX_VALUE) ? Integer.MAX_VALUE : (int) ipLimitDouble;
     }

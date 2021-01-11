@@ -8,22 +8,27 @@ import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Tuple;
-import vserver.StreamServer;
+import vserver.NetServer;
 
 import java.io.IOException;
 
-public class StreamServerImpl extends AbstractServer implements StreamServer {
+public class NetServerImpl extends AbstractServer implements NetServer {
     private AcceptHandler acceptHandler;
 
-    public StreamServerImpl() {
+    public NetServerImpl() {
     }
 
-    public StreamServerImpl(NetEventLoop loop) {
+    public NetServerImpl(NetEventLoop loop) {
         super(loop);
     }
 
     @Override
-    public StreamServer accept(AcceptHandler handler) {
+    protected String threadname() {
+        return "stream-server";
+    }
+
+    @Override
+    public NetServer accept(AcceptHandler handler) {
         if (acceptHandler != null) {
             throw new IllegalStateException("accept handler is already set");
         }

@@ -5,6 +5,7 @@ import vfd.SockAddr;
 import vproxybase.component.check.*;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -38,13 +39,13 @@ public class HealthCheckClientExample {
             }
         });
         client.start();
-        new Thread(loop::loop, "ClientEventLoop").start();
+        VProxyThread.create(loop::loop, "ClientEventLoop").start();
 
         System.out.println("\033[1;30m-------------------wait for 5 seconds then start server-------------------\033[0;30m");
         Thread.sleep(5000);
         System.out.println("\033[1;30m-----------------------------start server---------------------------------\033[0;30m");
         SelectorEventLoop[] serverLoop = {SelectorEventLoopEchoServer.createServer(18080)};
-        new Thread(() -> serverLoop[0].loop(), "ServerEventLoop").start();
+        VProxyThread.create(() -> serverLoop[0].loop(), "ServerEventLoop").start();
 
         Thread.sleep(5000);
         System.out.println("\033[1;30m-----------------------------stop server----------------------------------\033[0;30m");
@@ -54,12 +55,12 @@ public class HealthCheckClientExample {
         System.out.println("\033[1;30m--------let's see what happen if server starts and closes rapidly---------\033[0;30m");
 
         serverLoop[0] = SelectorEventLoopEchoServer.createServer(18080);
-        new Thread(() -> serverLoop[0].loop(), "ServerEventLoop").start();
+        VProxyThread.create(() -> serverLoop[0].loop(), "ServerEventLoop").start();
         Thread.sleep(2000);
         serverLoop[0].close();
         Thread.sleep(3000);
         serverLoop[0] = SelectorEventLoopEchoServer.createServer(18080);
-        new Thread(() -> serverLoop[0].loop(), "ServerEventLoop").start();
+        VProxyThread.create(() -> serverLoop[0].loop(), "ServerEventLoop").start();
         Thread.sleep(2000);
         serverLoop[0].close();
 

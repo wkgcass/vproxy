@@ -16,6 +16,7 @@ import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
 import vproxybase.processor.ProcessorProvider;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -90,7 +91,7 @@ public class Http2Proxy {
             });
         proxy.handle();
 
-        el.getSelectorEventLoop().loop(Thread::new);
+        el.getSelectorEventLoop().loop(r -> VProxyThread.create(r, "proxy"));
 
         int[] steps = {0};
 

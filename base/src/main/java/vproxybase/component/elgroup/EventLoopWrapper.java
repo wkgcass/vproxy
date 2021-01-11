@@ -8,6 +8,7 @@ import vproxybase.util.*;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 import vproxybase.util.exception.NotFoundException;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.util.Collection;
@@ -206,13 +207,13 @@ public class EventLoopWrapper extends NetEventLoop {
             // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
             return;
         }
-        if (getSelectorEventLoop().runningThread != null) {
+        if (getSelectorEventLoop().getRunningThread() != null) {
             throw new IllegalStateException();
         }
         // no need to set thread to null in the new thread
         // the loop will exit only when selector is closed
         // and the selector will not be able to open again
-        this.selectorEventLoop.loop(r -> new Thread(() -> {
+        this.selectorEventLoop.loop(r -> VProxyThread.create(() -> {
             r.run();
             removeResources();
         }, "EventLoopThread:" + alias));

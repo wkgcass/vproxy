@@ -3,10 +3,13 @@ package vproxyapp.app;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
+import vproxybase.util.thread.VProxyThread;
 
 public class OOMHandler {
     private static byte[] _512K;
     private static byte[] _512K_2;
+    private static VProxyThread oomThread;
+    private static volatile boolean stop = false;
 
     private OOMHandler() {
     }
@@ -22,8 +25,14 @@ public class OOMHandler {
     }
 
     public static void handleOOM() {
-        new Thread(() -> {
+        if (oomThread != null) {
+            return;
+        }
+        oomThread = VProxyThread.create(() -> {
             while (true) {
+                if (stop) {
+                    return;
+                }
                 try {
                     Thread.sleep(60_000);
                     byte[] b = _512K;
@@ -37,6 +46,15 @@ public class OOMHandler {
                 }
             }
             Utils.exit(137);
-        }, "oom-handler").start();
+        }, "oom-handler");
+        oomThread.start();
+    }
+
+    public static void stop() {
+        stop = true;
+        if (oomThread != null) {
+            oomThread.interrupt();
+            oomThread = null;
+        }
     }
 }

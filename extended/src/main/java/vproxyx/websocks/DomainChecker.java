@@ -5,6 +5,8 @@ import java.util.regex.Pattern;
 public interface DomainChecker {
     boolean needProxy(String domain, int port);
 
+    String serialize();
+
     class SuffixDomainChecker implements DomainChecker {
         public final String suffix;
 
@@ -15,6 +17,11 @@ public interface DomainChecker {
         @Override
         public boolean needProxy(String domain, int port) {
             return domain.endsWith(suffix);
+        }
+
+        @Override
+        public String serialize() {
+            return suffix;
         }
     }
 
@@ -29,6 +36,11 @@ public interface DomainChecker {
         public boolean needProxy(String domain, int port) {
             return pattern.matcher(domain).matches();
         }
+
+        @Override
+        public String serialize() {
+            return "/" + pattern + "/";
+        }
     }
 
     class ABPDomainChecker implements DomainChecker {
@@ -42,6 +54,11 @@ public interface DomainChecker {
         public boolean needProxy(String domain, int port) {
             return abp.block(domain);
         }
+
+        @Override
+        public String serialize() {
+            return "[" + abp.getAbpSource() + "]";
+        }
     }
 
     class PortChecker implements DomainChecker {
@@ -54,6 +71,11 @@ public interface DomainChecker {
         @Override
         public boolean needProxy(String domain, int port) {
             return port == this.port;
+        }
+
+        @Override
+        public String serialize() {
+            return ":" + port;
         }
     }
 

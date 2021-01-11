@@ -9,6 +9,7 @@ import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -73,7 +74,7 @@ public class ConnRefPoolImpl implements ConnRefPool {
             } catch (IOException e) {
                 throw new RuntimeException(e);
             }
-            sloop.loop(Thread::new);
+            sloop.loop(r -> VProxyThread.create(r, "conn-ref-pool"));
             loop = new NetEventLoop(sloop);
         } else {
             loop = opts.loop;
@@ -122,6 +123,11 @@ public class ConnRefPoolImpl implements ConnRefPool {
         } catch (IOException e) {
             Logger.shouldNotHappen("closing event loop failed", e);
         }
+    }
+
+    @Override
+    public NetEventLoop getLoop() {
+        return loop;
     }
 
     @Override

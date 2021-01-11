@@ -6,6 +6,7 @@ import vproxybase.connection.NetEventLoop;
 import vproxybase.connection.ServerSock;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Logger;
+import vproxybase.util.thread.VProxyThread;
 import vserver.GeneralServer;
 
 import java.io.IOException;
@@ -37,12 +38,14 @@ public abstract class AbstractServer implements GeneralServer {
         listen(server);
     }
 
+    protected abstract String threadname();
+
     private void initLoop() throws IOException {
         if (loop != null) {
             return;
         }
         loop = new NetEventLoop(SelectorEventLoop.open());
-        loop.getSelectorEventLoop().loop(Thread::new);
+        loop.getSelectorEventLoop().loop(r -> VProxyThread.create(r, threadname()));
     }
 
     abstract public void listen(ServerSock server) throws IOException;

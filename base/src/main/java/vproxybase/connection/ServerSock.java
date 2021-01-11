@@ -183,6 +183,10 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
+    public static ServerSock wrap(ServerSocketFD fd, IPPort bindAddress, BindOptions opts) throws IOException {
+        return create(fd, bindAddress, opts);
+    }
+
     private static ServerSock createUDS(UDSPath path, BindOptions opts) throws IOException {
         var fds = FDProvider.get().getProvided();
         if (!(fds instanceof PosixFDs)) {

@@ -1,7 +1,7 @@
 package vclient.impl;
 
 import vclient.SocksClient;
-import vclient.StreamClient;
+import vclient.NetClient;
 import vfd.IPPort;
 import vlibbase.ConnRef;
 import vlibbase.Handler;
@@ -16,13 +16,15 @@ import java.io.IOException;
 import java.util.function.BiFunction;
 
 public class SocksClientImpl extends AbstractClient implements SocksClient {
-    private final StreamClient streamClient;
+    private final IPPort remote;
+    private final NetClient netClient;
 
     public SocksClientImpl(IPPort remote, SocksClient.Options opts) {
         super(opts);
+        this.remote = remote;
 
         getLoop();
-        streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setClientContext(getClientContext()));
+        netClient = new NetClientImpl(remote, new NetClient.Options().fill(opts).setClientContext(getClientContext()));
     }
 
     @Override
@@ -36,7 +38,7 @@ public class SocksClientImpl extends AbstractClient implements SocksClient {
     }
 
     private void proxySocks5(BiFunction<Connection, Callback<Void, IOException>, Socks5ClientHandshake> f, Handler<ConnRef> cb) {
-        streamClient.connect((err, conn) -> {
+        netClient.connect((err, conn) -> {
             if (err != null) {
                 cb.accept(err);
                 return;
@@ -65,6 +67,11 @@ public class SocksClientImpl extends AbstractClient implements SocksClient {
                 raw.close();
             }
         });
+    }
+
+    @Override
+    protected String threadname() {
+        return "socks-client-" + remote;
     }
 
     private static class Socks5ClientConnectableConnectionHandler implements ConnectableConnectionHandler {

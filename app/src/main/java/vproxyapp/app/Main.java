@@ -2,6 +2,7 @@ package vproxyapp.app;
 
 import vfd.IPPort;
 import vfd.VFDConfig;
+import vjson.parser.ParserUtils;
 import vmirror.Mirror;
 import vproxy.fstack.FStackUtil;
 import vproxyapp.app.args.*;
@@ -12,6 +13,8 @@ import vproxyapp.vproxyx.Simple;
 import vproxybase.Config;
 import vproxybase.dns.Resolver;
 import vproxybase.util.*;
+import vproxybase.util.thread.VProxyThread;
+import vproxybase.util.thread.VProxyThreadJsonParserCacheHolder;
 import vproxyx.HelloWorld;
 import vproxyx.KcpTun;
 import vproxyx.WebSocksProxyAgent;
@@ -19,8 +22,7 @@ import vproxyx.WebSocksProxyServer;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
+import java.util.*;
 
 public class Main {
     private static final String _HELP_STR_ = "" +
@@ -60,6 +62,7 @@ public class Main {
     private static boolean exitAfterLoading = false;
 
     private static void beforeStart() {
+        ParserUtils.setParserCacheHolder(new VProxyThreadJsonParserCacheHolder());
         OOMHandler.handleOOM();
         if (VFDConfig.useFStack) {
             try {
@@ -144,34 +147,53 @@ public class Main {
     }
 
     private static String[] checkFlagDeployInArguments(String[] args) {
-        if (System.getProperty("eploy") != null) {
-            // do not modify if -Deploy is already set
-            return args;
+        Map<String, String> specialHandles = new HashMap<>();
+        specialHandles.put("eploy", null);
+        specialHandles.put("hcpGetDnsListNics", null);
+
+        for (String key : specialHandles.keySet()) {
+            String value = System.getProperty(key);
+            if (value != null) {
+                specialHandles.put(key, value);
+            }
         }
+
         List<String> returnArgs = new ArrayList<>(args.length);
-        boolean found = false;
         for (final var arg : args) {
-            if (arg.startsWith("-Deploy=")) {
-                if (found) {
-                    // should only appear once
-                    throw new IllegalArgumentException("Cannot set multiple -Deploy= to run.");
-                }
-                found = true;
-                System.setProperty("eploy", arg.substring("-Deploy=".length()));
-            } else if (arg.startsWith("-D")) {
-                // other properties can be set freely
-                var kv = arg.substring("-D".length());
-                if (kv.contains("=")) {
-                    var k = kv.substring(0, kv.indexOf("=")).trim();
-                    var v = kv.substring(kv.indexOf("=") + "=".length()).trim();
-                    if (!k.isEmpty() && !v.isEmpty()) {
-                        System.setProperty(k, v);
-                        continue;
-                    }
-                }
+            if (!arg.startsWith("-D")) {
                 returnArgs.add(arg);
-            } else {
+                continue;
+            }
+            String kv = arg.substring("-D".length());
+            if (!kv.contains("=")) {
+                // not valid -Dkey=value format
                 returnArgs.add(arg);
+                continue;
+            }
+            String key = kv.substring(0, kv.indexOf("="));
+            String value = kv.substring(kv.indexOf("=") + 1);
+
+            if (System.getProperty(key) != null) {
+                throw new IllegalArgumentException("Cannot set -D" + key + " both in system properties " +
+                    "and in program arguments");
+            }
+
+            if (specialHandles.containsKey(key)) {
+                specialHandles.put(key, value);
+            }
+            System.setProperty(key, value);
+        }
+        // set dhcpGetDnsListNics if not specified in some conditions
+        String deploy = specialHandles.get("eploy");
+        String dhcpGetDnsListNics = specialHandles.get("hcpGetDnsListNics");
+        if (dhcpGetDnsListNics == null) {
+            if (deploy != null) {
+                if (OS.isWindows() && Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
+                    dhcpGetDnsListNics = "all";
+                }
+            }
+            if (dhcpGetDnsListNics != null) {
+                System.setProperty("hcpGetDnsListNics", dhcpGetDnsListNics);
             }
         }
         //noinspection ToArrayCallWithZeroLengthArrayArgument
@@ -339,7 +361,7 @@ public class Main {
         if (!ctx.get("noStdIOController", false)) {
             // start stdioController
             StdIOController controller = new StdIOController();
-            new Thread(controller::start, "StdIOControllerThread").start();
+            VProxyThread.create(controller::start, "StdIOControllerThread").start();
         }
 
         // run main app

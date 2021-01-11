@@ -135,11 +135,11 @@ public final class EventSet {
     @Override
     public String toString() {
         if (e1 == null) {
-            return "EventSet()";
+            return "N";
         } else if (e2 != null) {
-            return "EventSet(" + e1 + ", " + e2 + ")";
+            return e1 + "" + e2;
         } else {
-            return "EventSet(" + e1 + ")";
+            return e1.toString();
         }
     }
 }

@@ -6,6 +6,7 @@ import org.junit.Test;
 import vproxybase.selector.PeriodicEvent;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.TimerEvent;
+import vproxybase.util.thread.VProxyThread;
 
 import static org.junit.Assert.*;
 
@@ -15,7 +16,7 @@ public class TestTimer {
     @Before
     public void setUp() throws Exception {
         loop = SelectorEventLoop.open();
-        loop.loop(r -> new Thread(r, "EventLoop"));
+        loop.loop(r -> VProxyThread.create(r, "EventLoop"));
     }
 
     @After

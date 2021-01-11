@@ -19,7 +19,7 @@ import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.BlockCallback;
 import vproxybase.util.ByteArray;
 import vserver.HttpServer;
-import vserver.StreamServer;
+import vserver.NetServer;
 
 import java.io.IOException;
 import java.util.Map;
@@ -32,8 +32,8 @@ public class TestConnTransfer {
     private static final int httpServer1Port = 33080;
 
     private ConnRefPool pool;
-    private StreamClient client;
-    private StreamServer server;
+    private NetClient client;
+    private NetServer server;
 
     private Socks5Server socks5Server;
     private HttpServer httpServer1;
@@ -44,8 +44,8 @@ public class TestConnTransfer {
     @Before
     public void setUp() throws Exception {
         pool = ConnRefPool.create(10);
-        client = StreamClient.to("127.0.0.1", tcpPort);
-        server = StreamServer.create();
+        client = NetClient.to("127.0.0.1", tcpPort);
+        server = NetServer.create();
         EventLoopGroup elg = new EventLoopGroup("elg");
         elg.add("el");
         Upstream ups = new Upstream("ups");

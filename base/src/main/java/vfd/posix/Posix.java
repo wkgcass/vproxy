@@ -18,9 +18,9 @@ public interface Posix {
 
     long aeCreateEventLoop(int setsize) throws IOException;
 
-    FDInfo[] aeApiPoll(long ae, long wait) throws IOException;
+    void aeApiPoll(long ae, long wait, FDInfoPrototypeObjectList fdInfoList) throws IOException;
 
-    FDInfo[] aeAllFDs(long ae);
+    void aeAllFDs(long ae, FDInfoPrototypeObjectList fdInfoList);
 
     void aeCreateFileEvent(long ae, int fd, int mask, Object clientData);
 

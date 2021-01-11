@@ -6,6 +6,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Callback;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.util.Set;
@@ -13,7 +14,7 @@ import java.util.Set;
 public class DHCPRetrieveDNSServer {
     public static void main(String[] args) throws Exception {
         SelectorEventLoop loop = SelectorEventLoop.open();
-        loop.loop(Thread::new);
+        loop.loop(r -> VProxyThread.create(r, "dhcp"));
 
         DHCPClientHelper.getDomainNameServers(loop, n -> true, 1, new Callback<>() {
             @Override

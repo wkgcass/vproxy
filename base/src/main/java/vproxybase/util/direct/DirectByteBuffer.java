@@ -22,11 +22,14 @@ public class DirectByteBuffer extends ByteBufferEx {
 
     @Override
     public void clean() {
+        clean(true);
+    }
+
+    public void clean(boolean tryCache) {
         if (cleaned) {
             return;
         }
-        cleaned = true;
-        DirectMemoryUtils.free(buffer);
+        cleaned = DirectMemoryUtils.free(this, tryCache);
     }
 
     @SuppressWarnings("deprecation")

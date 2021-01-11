@@ -1,6 +1,7 @@
 package vproxyapp.process;
 
 import vjson.util.ObjectBuilder;
+import vmirror.Mirror;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.app.TcpLB;
 import vproxy.component.secure.SecurityGroup;
@@ -17,8 +18,11 @@ import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.dns.DNSClient;
+import vproxybase.dns.Resolver;
 import vproxybase.util.*;
 import vproxybase.util.exception.NotFoundException;
+import vproxybase.util.thread.VProxyThread;
 import vswitch.RouteTable;
 import vswitch.Switch;
 import vswitch.iface.RemoteSwitchIface;
@@ -83,7 +87,8 @@ public class Shutdown {
         } catch (Exception e) {
             System.err.println("SIGUSR2 not handled");
         }
-        new Thread(() -> {
+        VProxyThread.create(() -> {
+            //noinspection InfiniteLoopStatement
             while (true) {
                 sigIntTimes = 0;
                 try {
@@ -145,7 +150,7 @@ public class Shutdown {
             Logger.shouldNotHappen("removing servers failed", e);
         }
         Logger.alert("Waiting for connections to close");
-        new Thread(() -> {
+        VProxyThread.create(() -> {
             var elgHolder = app.eventLoopGroupHolder;
             var elgList = new ArrayList<EventLoopGroup>(elgHolder.names().size());
             for (var name : elgHolder.names()) {
@@ -182,7 +187,7 @@ public class Shutdown {
             // use error to make log more obvious
             Logger.error(LogType.ALERT, "No connections, shutdown now");
             Utils.exit(exitCode);
-        }).start();
+        }, "wait-for-connections-to-close").start();
     }
 
     private static void end() {
@@ -812,5 +817,14 @@ public class Shutdown {
                 cb.failed(err);
             }
         });
+    }
+
+    public static void releaseEverything() {
+        GlobalInspectionHttpServerLauncher.stop();
+        DNSClient.getDefault().close();
+        Resolver.stopDefault();
+        Mirror.destroy();
+        OOMHandler.stop();
+        // TODO add more in the future
     }
 }

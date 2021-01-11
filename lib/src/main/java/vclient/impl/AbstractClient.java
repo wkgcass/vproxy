@@ -6,6 +6,7 @@ import vclient.GeneralClientOptions;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Logger;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -19,6 +20,8 @@ public abstract class AbstractClient implements GeneralClient {
         this.noInputLoop = (loop == null);
     }
 
+    protected abstract String threadname();
+
     protected NetEventLoop getLoop() {
         if (closed) {
             throw new IllegalStateException("the client is closed");
@@ -31,7 +34,7 @@ public abstract class AbstractClient implements GeneralClient {
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
-        loop.getSelectorEventLoop().loop(Thread::new);
+        loop.getSelectorEventLoop().loop(r -> VProxyThread.create(r, threadname()));
         return loop;
     }
 

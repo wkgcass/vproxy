@@ -2,7 +2,6 @@ package vproxyx;
 
 import vfd.IP;
 import vfd.IPPort;
-import vfd.VFDConfig;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
@@ -18,9 +17,7 @@ import vproxybase.processor.Hint;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
-import vproxybase.util.Logger;
-import vproxybase.util.Tuple4;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxyx.util.Browser;
 import vproxyx.websocks.*;
 import vproxyx.websocks.relay.DomainBinder;
@@ -28,6 +25,7 @@ import vproxyx.websocks.relay.RelayBindAnyPortServer;
 import vproxyx.websocks.relay.RelayHttpServer;
 import vproxyx.websocks.relay.RelayHttpsServer;
 import vproxyx.websocks.ss.SSProtocolHandler;
+import vserver.HttpServer;
 
 import java.io.File;
 import java.net.URLEncoder;
@@ -41,16 +39,25 @@ import java.util.stream.Collectors;
 public class WebSocksProxyAgent {
     private static final String defaultConfigName = "vpws-agent.conf";
 
-    public static ConfigLoader configLoader = null;
+    public static void main0(String[] args) throws Exception {
+        new WebSocksProxyAgent().launch(args);
+    }
 
-    public static DNSServer dnsServer = null;
-    public static ServerSock socks5 = null;
-    public static ServerSock httpConnect = null;
-    public static ServerSock ss = null;
-    public static ServerSock relayHttps = null;
-    public static ServerSock relayAny = null;
+    private ConfigLoader configLoader = null;
+    private ConfigProcessor configProcessor;
+    private EventLoopGroup acceptor;
+    private EventLoopGroup worker;
 
-    private static void loadConfig(String[] args) throws Exception {
+    private DNSServer dnsServer = null;
+    private Proxy socks5 = null;
+    private Proxy httpConnect = null;
+    private Proxy ss = null;
+    private ServerSock pacServer = null;
+    private HttpServer relayHttp = null;
+    private Proxy relayHttps = null;
+    private Proxy relayAny = null;
+
+    private void loadConfig(String[] args) throws Exception {
         if (configLoader != null) {
             return;
         }
@@ -85,30 +92,31 @@ public class WebSocksProxyAgent {
         configLoader.load(configFile);
     }
 
+    public void launch() throws Exception {
+        launch(new String[0]);
+    }
+
     @SuppressWarnings("rawtypes")
-    public static void main0(String[] args) throws Exception {
+    private void launch(String[] args) throws Exception {
         loadConfig(args);
         // get worker thread count
         int threads = Math.min(4, Runtime.getRuntime().availableProcessors());
-        if (VFDConfig.useFStack) {
-            threads = 1;
-        }
         int workers = threads;
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors
         }
 
         // initiate the acceptor event loop(s)
-        EventLoopGroup acceptor = new EventLoopGroup("acceptor-group");
+        acceptor = new EventLoopGroup("acceptor-group");
         acceptor.add("acceptor-loop");
         // initiate the worker event loop(s)
-        EventLoopGroup worker = new EventLoopGroup("worker-group");
+        worker = new EventLoopGroup("worker-group");
         for (int i = 0; i < workers; ++i) {
             worker.add("worker-loop-" + i);
         }
 
         // parse config
-        ConfigProcessor configProcessor = new ConfigProcessor(configLoader, worker, worker);
+        configProcessor = new ConfigProcessor(configLoader, worker, worker);
         configProcessor.parse();
 
         assert Logger.lowLevelDebug("socks5 listen on " + configProcessor.getSocks5ListenPort());
@@ -165,7 +173,7 @@ public class WebSocksProxyAgent {
                 configProcessor.getSocks5ListenPort(),
                 new Socks5ProxyProtocolHandler(connectorProvider),
                 configProcessor.isGateway(),
-                proxy -> socks5 = proxy.config.getServer()
+                proxy -> socks5 = proxy
             ));
         }
         if (configProcessor.getHttpConnectListenPort() != 0) {
@@ -173,7 +181,7 @@ public class WebSocksProxyAgent {
                 configProcessor.getHttpConnectListenPort(),
                 new HttpConnectProtocolHandler(connectorProvider),
                 configProcessor.isGateway(),
-                proxy -> httpConnect = proxy.config.getServer()
+                proxy -> httpConnect = proxy
             ));
         }
         if (configProcessor.getSsListenPort() != 0) {
@@ -181,7 +189,7 @@ public class WebSocksProxyAgent {
                 configProcessor.getSsListenPort(),
                 new SSProtocolHandler(configProcessor.getSsPassword(), connectorProvider),
                 true,
-                proxy -> ss = proxy.config.getServer()
+                proxy -> ss = proxy
             ));
         }
 
@@ -222,8 +230,9 @@ public class WebSocksProxyAgent {
                     .setServer(server)
                     .setConnGen(connGen),
                 s -> {
-                    // do nothing, won't happen
-                    // when terminating, user should simply kill this process and won't close server
+                    // close corresponding server
+                    Logger.warn(LogType.ALERT, "closing server " + server.bind);
+                    server.close();
                 });
 
             // start the agent
@@ -249,21 +258,141 @@ public class WebSocksProxyAgent {
                     configProcessor.getHttpConnectListenPort() // this port is http connect port
                 ));
             Logger.alert("pac server started on " + configProcessor.getPacServerPort());
+            pacServer = lsn;
         }
 
         // maybe we can start the relay servers
         if (configProcessor.isDirectRelay()) {
             assert Logger.lowLevelDebug("start relay server");
-            RelayHttpServer.launch(worker);
+            relayHttp = RelayHttpServer.launch(worker);
             Logger.alert("http relay server started on 80");
             relayHttps = new RelayHttpsServer(connectorProvider, configProcessor).launch(acceptor, worker);
             Logger.alert("https relay server started on 443");
             if (configProcessor.getDirectRelayIpRange() != null) {
                 IPPort listen = configProcessor.getDirectRelayListen();
-                String ipRange = configProcessor.getDirectRelayIpRange();
+                Network ipRange = configProcessor.getDirectRelayIpRange();
                 relayAny = new RelayBindAnyPortServer(connectorProvider, domainBinder, listen).launch(acceptor, worker);
                 Logger.alert("relay-bind-any-port-server started on " + listen.formatToIPPortString() + " which handles " + ipRange);
             }
         }
+    }
+
+    @SuppressWarnings("DuplicatedCode")
+    public void stop() {
+        // stop all running instances
+        if (dnsServer != null) {
+            Logger.warn(LogType.ALERT, "stopping dnsServer: " + dnsServer.bindAddress);
+            dnsServer.stop();
+            dnsServer = null;
+        }
+        if (socks5 != null) {
+            Logger.warn(LogType.ALERT, "stopping socks5: " + socks5.config.getServer().bind);
+            socks5.stop();
+            socks5 = null;
+        }
+        if (httpConnect != null) {
+            Logger.warn(LogType.ALERT, "stopping httpConnect: " + httpConnect.config.getServer().bind);
+            httpConnect.stop();
+            httpConnect = null;
+        }
+        if (ss != null) {
+            Logger.warn(LogType.ALERT, "stopping ss: " + ss.config.getServer().bind);
+            ss.stop();
+            ss = null;
+        }
+        if (pacServer != null) {
+            Logger.warn(LogType.ALERT, "stopping pacServer: " + pacServer.bind);
+            pacServer.close();
+            pacServer = null;
+        }
+        if (relayHttp != null) {
+            Logger.warn(LogType.ALERT, "stopping replayHttp: " + relayHttp);
+            relayHttp.close();
+            relayHttp = null;
+        }
+        if (relayHttps != null) {
+            Logger.warn(LogType.ALERT, "stopping relayHttps: " + relayHttps.config.getServer().bind);
+            relayHttps.stop();
+            relayHttps = null;
+        }
+        if (relayAny != null) {
+            Logger.warn(LogType.ALERT, "stopping relayAny: " + relayAny.config.getServer().bind);
+            relayAny.stop();
+            relayAny = null;
+        }
+        // release configProcessor
+        // stop health check
+        if (configProcessor != null) {
+            var servers = configProcessor.getServers();
+            for (var server : servers.values()) {
+                Logger.warn(LogType.ALERT, "stopping server group: " + server.alias);
+                server.clear();
+            }
+        }
+        configProcessor = null;
+        // terminate threads
+        if (acceptor != null) {
+            Logger.warn(LogType.ALERT, "terminating acceptor loops");
+            acceptor.close();
+            acceptor = null;
+        }
+        if (worker != null) {
+            Logger.warn(LogType.ALERT, "terminating worker loops");
+            worker.close();
+            worker = null;
+        }
+        // release WebSocksUtils
+        if (WebSocksUtils.agentDNSServer != null) {
+            Logger.warn(LogType.ALERT, "stopping agentDNS");
+            WebSocksUtils.agentDNSServer.stop();
+            WebSocksUtils.agentDNSServer = null;
+        }
+        // clear config loader
+        Logger.warn(LogType.ALERT, "clearing configLoader");
+        configLoader = null;
+    }
+
+    public ConfigLoader getConfigLoader() {
+        return configLoader;
+    }
+
+    public void setConfigLoader(ConfigLoader configLoader) {
+        this.configLoader = configLoader;
+    }
+
+    public ConfigProcessor getConfigProcessor() {
+        return configProcessor;
+    }
+
+    public DNSServer getDnsServer() {
+        return dnsServer;
+    }
+
+    public Proxy getSocks5() {
+        return socks5;
+    }
+
+    public Proxy getHttpConnect() {
+        return httpConnect;
+    }
+
+    public Proxy getSs() {
+        return ss;
+    }
+
+    public ServerSock getPacServer() {
+        return pacServer;
+    }
+
+    public HttpServer getRelayHttp() {
+        return relayHttp;
+    }
+
+    public Proxy getRelayHttps() {
+        return relayHttps;
+    }
+
+    public Proxy getRelayAny() {
+        return relayAny;
     }
 }

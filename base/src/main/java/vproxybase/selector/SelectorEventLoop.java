@@ -2,8 +2,13 @@ package vproxybase.selector;
 
 import vfd.*;
 import vproxybase.Config;
+import vproxybase.GlobalInspection;
+import vproxybase.selector.wrap.FDInspection;
 import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.*;
+import vproxybase.util.promise.Promise;
+import vproxybase.util.thread.VProxyThread;
+import vproxybase.util.time.TimeQueue;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;
@@ -29,23 +34,23 @@ public class SelectorEventLoop {
         final FD channel;
         final EventSet ops;
         final RegisterData registerData;
+        final Callback<FD, Throwable> callback;
 
-        AddFdData(FD channel, EventSet ops, RegisterData registerData) {
+        AddFdData(FD channel, EventSet ops, RegisterData registerData, Callback<FD, Throwable> callback) {
             this.channel = channel;
             this.ops = ops;
             this.registerData = registerData;
+            this.callback = callback;
         }
     }
 
-    private static final ThreadLocal<SelectorEventLoop> loopThreadLocal = new ThreadLocal<>();
-
     public static SelectorEventLoop current() {
-        return loopThreadLocal.get();
+        return VProxyThread.current().loop;
     }
 
     public final WrappedSelector selector;
     public final FDs fds;
-    private final TimeQueue<Runnable> timeQueue = new TimeQueue<>();
+    private final TimeQueue<Runnable> timeQueue = TimeQueue.create();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
 
     private final Lock channelRegisteringLock = Lock.create();
@@ -54,7 +59,7 @@ public class SelectorEventLoop {
 
     private final HandlerContext ctxReuse0 = new HandlerContext(this); // always reuse the ctx object
     private final HandlerContext ctxReuse1 = new HandlerContext(this);
-    public volatile Thread runningThread;
+    private volatile Thread runningThread;
 
     // these locks are a little tricky
     // see comments in loop() and close()
@@ -68,11 +73,6 @@ public class SelectorEventLoop {
             CLOSE_LOCK = Lock.createMock();
         } else {
             CLOSE_LOCK = Lock.create();
-        }
-
-        // probe
-        if (Config.probe.contains("virtual-fd-event")) {
-            period(30_000, selector::probe);
         }
     }
 
@@ -134,7 +134,10 @@ public class SelectorEventLoop {
                     selector.register(data.channel, data.ops, data.registerData);
                 } catch (Throwable t) {
                     Logger.error(LogType.IMPROPER_USE, "the channel " + data.channel + " failed to be added into the event loop", t);
+                    data.callback.failed(t);
+                    continue;
                 }
+                data.callback.succeeded(data.channel);
             }
 
             // handle step1 then
@@ -155,8 +158,8 @@ public class SelectorEventLoop {
 
     private void handleTimeEvents() {
         List<Runnable> toRun = new LinkedList<>();
-        while (timeQueue.nextTime() == 0) {
-            Runnable r = timeQueue.pop();
+        while (timeQueue.nextTime(Config.currentTimestamp) == 0) {
+            Runnable r = timeQueue.poll();
             toRun.add(r);
         }
         for (Runnable r : toRun) {
@@ -169,9 +172,9 @@ public class SelectorEventLoop {
         while (keys.hasNext()) {
             SelectedEntry key = keys.next();
 
-            RegisterData registerData = (RegisterData) key.attachment;
+            RegisterData registerData = (RegisterData) key.attachment();
 
-            FD channel = key.fd;
+            FD channel = key.fd();
             Handler handler = registerData.handler;
 
             ctxReuse0.channel = channel;
@@ -179,12 +182,13 @@ public class SelectorEventLoop {
 
             if (!channel.isOpen()) {
                 if (selector.isRegistered(channel)) {
-                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready + ", attachment = " + ctxReuse0.attachment);
+                    Logger.error(LogType.CONN_ERROR, "channel is closed but still firing: fd = " + channel + ", event = " + key.ready() + ", attachment = " + ctxReuse0.attachment);
                 } // else the channel is closed in another fd handler and removed from loop, this is ok and no need to report
             } else {
-                EventSet readyOps = key.ready;
+                EventSet readyOps = key.ready();
                 // handle read first because it's most likely to happen
                 if (readyOps.have(Event.READABLE)) {
+                    assert Logger.lowLevelDebug("firing readable for " + channel);
                     if (channel instanceof ServerSocketFD) {
                         // OP_ACCEPT
                         try {
@@ -202,6 +206,7 @@ public class SelectorEventLoop {
                 }
                 // read and write may happen in the same loop round
                 if (readyOps.have(Event.WRITABLE)) {
+                    assert Logger.lowLevelDebug("firing writable for " + channel);
                     if (channel instanceof SocketFD) {
                         if (registerData.connected) {
                             try {
@@ -232,7 +237,7 @@ public class SelectorEventLoop {
     }
 
     @Blocking // will block until the loop actually starts
-    public void loop(Function<Runnable, Thread> constructThread) {
+    public void loop(Function<Runnable, ? extends VProxyThread> constructThread) {
         if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
             // f-stack programs should have only one thread and let ff_loop run the callback instead of running loop ourselves
             return;
@@ -251,7 +256,7 @@ public class SelectorEventLoop {
     // do not use it anywhere else
     public void _bindThread0() {
         runningThread = Thread.currentThread();
-        loopThreadLocal.set(this);
+        VProxyThread.current().loop = this;
     }
 
     // return -1 for break
@@ -286,7 +291,7 @@ public class SelectorEventLoop {
             } else if (!channelsToBeRegisteredStep1.isEmpty() || !channelsToBeRegisteredStep2.isEmpty()) {
                 selected = selector.selectNow(); // immediately return when channels are going to be registered
             } else {
-                int time = timeQueue.nextTime();
+                int time = timeQueue.nextTime(Config.currentTimestamp);
                 if (time == 0) {
                     selected = selector.selectNow(); // immediately return
                 } else {
@@ -338,15 +343,17 @@ public class SelectorEventLoop {
 
         // set thread
         runningThread = Thread.currentThread();
-        loopThreadLocal.set(this);
+        GlobalInspection.getInstance().registerSelectorEventLoop(this);
+        VProxyThread.current().loop = this;
         // run
         while (selector.isOpen()) {
             if (-1 == onePoll()) {
                 break;
             }
         }
+        GlobalInspection.getInstance().deregisterSelectorEventLoop(this);
         runningThread = null; // it's not running now, set to null
-        loopThreadLocal.remove(); // remove from thread local
+        VProxyThread.current().loop = null; // remove from thread local
         // do the final release
         release();
     }
@@ -368,6 +375,11 @@ public class SelectorEventLoop {
     }
 
     @ThreadSafe
+    public void doubleNextTick(Runnable r) {
+        nextTick(() -> nextTick(r));
+    }
+
+    @ThreadSafe
     public void runOnLoop(Runnable r) {
         if (!needWake()) {
             tryRunnable(r); // directly run if is already on the loop thread
@@ -381,7 +393,7 @@ public class SelectorEventLoop {
         TimerEvent e = new TimerEvent(this);
         // timeQueue is not thread safe
         // modify it in the event loop's thread
-        nextTick(() -> e.setEvent(timeQueue.push(timeout, r)));
+        nextTick(() -> e.setEvent(timeQueue.add(Config.currentTimestamp, timeout, r)));
         return e;
     }
 
@@ -392,23 +404,33 @@ public class SelectorEventLoop {
         return pe;
     }
 
+    // return null if it's directly added successfully
+    // otherwise it will be added nextTick(() -> nextTick(() -> {...here...}))
+    // the caller may need to handle this situation with the returned future object
     @ThreadSafe
     @SuppressWarnings("DuplicateThrows")
-    public <CHANNEL extends FD> void add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
+    public <CHANNEL extends FD> Promise<FD> add(CHANNEL channel, EventSet ops, Object attachment, Handler<CHANNEL> handler) throws ClosedChannelException, IOException {
+        if (!channel.loopAware(this)) {
+            throw new IOException("channel " + channel + " rejects to be attached to current event loop");
+        }
         channel.configureBlocking(false);
         RegisterData registerData = new RegisterData(handler, attachment);
         if (channel instanceof SocketFD) {
             registerData.connected = ((SocketFD) channel).isConnected();
         }
-        if (add0(channel, ops, registerData)) {
+        Promise<FD> addingPromise = add0(channel, ops, registerData);
+        if (addingPromise == null) {
             if (needWake()) {
                 wakeup();
             }
+            return null;
+        } else {
+            return addingPromise;
         }
     }
 
     // a helper function for adding a channel into the selector
-    private boolean add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
+    private Promise<FD> add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
         try {
             selector.register(channel, ops, registerData);
         } catch (CancelledKeyException e) {
@@ -421,13 +443,14 @@ public class SelectorEventLoop {
 
             assert Logger.lowLevelDebug("key already canceled, we register it on next tick after keys are handled");
 
-            channelsToBeRegisteredStep1.add(new AddFdData(channel, ops, registerData));
+            var tup = Promise.<FD>todo();
+            channelsToBeRegisteredStep1.add(new AddFdData(channel, ops, registerData, tup.right));
             if (needWake()) {
                 wakeup();
             }
-            return false;
+            return tup.left;
         }
-        return true;
+        return null;
     }
 
     private void doModify(FD fd, EventSet ops) {
@@ -492,6 +515,10 @@ public class SelectorEventLoop {
         return ((RegisterData) selector.attachment(channel)).att;
     }
 
+    public Thread getRunningThread() {
+        return runningThread;
+    }
+
     @SuppressWarnings("unchecked")
     private void triggerRemovedCallback(FD channel, RegisterData registerData) {
         assert registerData != null;
@@ -522,7 +549,7 @@ public class SelectorEventLoop {
         try (var unused = CLOSE_LOCK.lock()) {
             Collection<RegisterEntry> keys = selector.entries();
             while (true) {
-                THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size());
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE = new ArrayList<>(keys.size() + channelsToBeRegisteredStep1.size() + channelsToBeRegisteredStep2.size());
                 try {
                     for (RegisterEntry key : keys) {
                         THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(key.fd, (RegisterData) key.attachment));
@@ -539,6 +566,13 @@ public class SelectorEventLoop {
                 // re-try would be just fine
                 break;
             }
+            AddFdData add;
+            while ((add = channelsToBeRegisteredStep1.poll()) != null) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(add.channel, add.registerData));
+            }
+            while ((add = channelsToBeRegisteredStep2.poll()) != null) {
+                THE_KEY_SET_BEFORE_SELECTOR_CLOSE.add(new Tuple<>(add.channel, add.registerData));
+            }
             selector.close();
         }
         // wakeup();
@@ -551,5 +585,12 @@ public class SelectorEventLoop {
                 // ignore, we don't care
             }
         }
+    }
+
+    public void copyChannels(Collection<FDInspection> coll, Runnable cb) {
+        runOnLoop(() -> {
+            selector.copyFDEvents(coll);
+            cb.run();
+        });
     }
 }

@@ -7,6 +7,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.*;
 import java.util.*;
@@ -38,7 +39,7 @@ public class Mirror {
             throw new IllegalStateException("cannot initialize twice");
         mirror.conf = conf;
         mirror.loop = SelectorEventLoop.open();
-        mirror.loop.loop(r -> new Thread(r, "mirror"));
+        mirror.loop.loop(r -> VProxyThread.create(r, "mirror"));
         mirror.initialized = true;
         mirror.loadConfig();
         mirror.loop.delay(LOAD_CONFIG_SUCCESS_WAIT_INTERVAL, mirror::loadConfigAndSetTimer);
@@ -49,10 +50,13 @@ public class Mirror {
         mirror.enabled = false;
         mirror.conf = null;
         mirror.lastTimestamp = 0;
-        try {
-            mirror.loop.close();
-        } catch (IOException e) {
-            Logger.shouldNotHappen("closing selector event loop for mirror failed", e);
+        if (mirror.loop != null) {
+            try {
+                mirror.loop.close();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("closing selector event loop for mirror failed", e);
+            }
+            mirror.loop = null;
         }
         mirror.destroyTaps(mirror.mirrors);
         mirror.mirrors = Collections.emptyList();

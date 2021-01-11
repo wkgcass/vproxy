@@ -3,16 +3,18 @@ package vproxybase.util.ringbuffer;
 import tlschannel.impl.TlsExplorer;
 import vfd.IPPort;
 import vfd.NetworkFD;
+import vfd.ReadableByteStream;
 import vmirror.MirrorDataFactory;
+import vproxybase.GlobalInspection;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ssl.SSL;
+import vproxybase.util.thread.VProxyThread;
 
 import javax.net.ssl.*;
 import java.io.IOException;
 import java.nio.ByteBuffer;
-import java.nio.channels.ReadableByteChannel;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 
@@ -157,7 +159,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     }
 
     @Override
-    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+    public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         int n = 0;
         if (engine == null) {
             n += createSSLEngine(channel);
@@ -165,7 +167,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
         return n + super.storeBytesFrom(channel);
     }
 
-    private int createSSLEngine(ReadableByteChannel channel) throws IOException {
+    private int createSSLEngine(ReadableByteStream channel) throws IOException {
         ByteBuffer buf = ByteBuffer.allocate(16384); // should be enough for CLIENT_HELLO message
         int n = channel.read(buf);
         buf.flip();
@@ -351,12 +353,16 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 lastLoop = SelectorEventLoop.current();
                 assert Logger.lowLevelDebug("resumer not specified, so we use the current event loop: " + lastLoop);
             }
-            new Thread(() -> {
+            VProxyThread.create(() -> {
                 assert Logger.lowLevelDebug("TASK begins");
                 Runnable r;
+                long begin = System.currentTimeMillis();
                 while ((r = engine.getDelegatedTask()) != null) {
                     r.run();
                 }
+                long end = System.currentTimeMillis();
+                GlobalInspection.getInstance().sslUnwrapTask(end - begin);
+
                 assert Logger.lowLevelDebug("ssl engine returns " + engine.getHandshakeStatus() + " after task");
                 if (engine.getHandshakeStatus() == SSLEngineResult.HandshakeStatus.NEED_WRAP) {
                     resumeGeneralWrap();
@@ -367,7 +373,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
                 } else {
                     resumeGeneralUnwrap();
                 }
-            }).start();
+            }, "ssl-unwrap-task").start();
             return;
         }
         if (status == SSLEngineResult.HandshakeStatus.NEED_WRAP) {

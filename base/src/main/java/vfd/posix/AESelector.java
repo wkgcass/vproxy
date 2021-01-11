@@ -4,6 +4,8 @@ import vfd.*;
 import vproxybase.util.direct.DirectByteBuffer;
 import vproxybase.util.direct.DirectMemoryUtils;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -11,6 +13,9 @@ import java.nio.channels.ClosedSelectorException;
 import java.util.*;
 
 public class AESelector implements FDSelector {
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
+    private final FDInfoPrototypeObjectList fdInfoList = new FDInfoPrototypeObjectList(128, FDInfo::new);
+
     private final Posix posix;
     private final long ae;
     private final int[] pipefd; // null, or pipefd[read][write], might be the same if using linux eventfd
@@ -89,20 +94,21 @@ public class AESelector implements FDSelector {
         }
     }
 
-    private Collection<SelectedEntry> handleSelectResult(FDInfo[] results) {
-        clearPipeFD();
-        if (results.length == 0) {
+    private Collection<SelectedEntry> handleSelectResult() {
+        if (fdInfoList.isEmpty()) {
             return Collections.emptyList();
         }
-        List<SelectedEntry> ret = new ArrayList<>(results.length);
-        for (FDInfo res : results) {
-            Att att = (Att) res.attachment;
+        clearPipeFD();
+        selectedEntryList.clear();
+
+        for (FDInfo res : fdInfoList) {
+            Att att = (Att) res.attachment();
             if (att.fd == null) // for the internal pipe fds
                 continue;
-            int ev = res.events;
-            ret.add(new SelectedEntry(att.fd, getJavaEvents(ev), att.att));
+            int ev = res.events();
+            selectedEntryList.add().set(att.fd, getJavaEvents(ev), att.att);
         }
-        return ret;
+        return selectedEntryList;
     }
 
     private void checkOpen() {
@@ -111,31 +117,37 @@ public class AESelector implements FDSelector {
         }
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
         if (onlySelectNow) {
             throw new UnsupportedOperationException("only selectNow supported");
         }
         checkOpen();
-        var res = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000);
-        return handleSelectResult(res);
+        fdInfoList.clear();
+        posix.aeApiPoll(ae, 24 * 60 * 60 * 1000, fdInfoList);
+        return handleSelectResult();
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
-        var res = posix.aeApiPoll(ae, 0);
-        return handleSelectResult(res);
+        fdInfoList.clear();
+        posix.aeApiPoll(ae, 0, fdInfoList);
+        return handleSelectResult();
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
         if (onlySelectNow) {
             throw new UnsupportedOperationException("only selectNow supported");
         }
         checkOpen();
-        var res = posix.aeApiPoll(ae, millis);
-        return handleSelectResult(res);
+        fdInfoList.clear();
+        posix.aeApiPoll(ae, millis, fdInfoList);
+        return handleSelectResult();
     }
 
     @Override
@@ -210,13 +222,13 @@ public class AESelector implements FDSelector {
     @Override
     public Collection<RegisterEntry> entries() {
         checkOpen();
-        FDInfo[] fds = posix.aeAllFDs(ae);
-        List<RegisterEntry> ret = new ArrayList<>(fds.length);
-        for (FDInfo fd : fds) {
-            var att = (Att) fd.attachment;
+        posix.aeAllFDs(ae, fdInfoList);
+        List<RegisterEntry> ret = new ArrayList<>(fdInfoList.size());
+        for (FDInfo fd : fdInfoList) {
+            var att = (Att) fd.attachment();
             if (att.fd == null) // for the internal pipe fds
                 continue;
-            ret.add(new RegisterEntry(att.fd, getJavaEvents(fd.events), att.att));
+            ret.add(new RegisterEntry(att.fd, getJavaEvents(fd.events()), att.att));
         }
         return ret;
     }

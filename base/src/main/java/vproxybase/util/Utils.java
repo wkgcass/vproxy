@@ -1,12 +1,11 @@
 package vproxybase.util;
 
-import sun.misc.Unsafe;
 import vfd.FDProvider;
 import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.*;
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -14,7 +13,6 @@ import java.util.Arrays;
 import java.util.Deque;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.TimeoutException;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -22,7 +20,10 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class Utils {
-    public static final String RESET_MSG = "Connection reset by peer";
+    public static final List<String> RESET_MSG = Arrays.asList(
+        "Connection reset by peer",
+        "Connection reset"
+    );
     public static final String BROKEN_PIPE_MSG = "Broken pipe";
     public static final String SSL_ENGINE_CLOSED_MSG = "SSLEngine closed";
     public static final String HOST_IS_DOWN_MSG = "Host is down";
@@ -193,7 +194,7 @@ public class Utils {
     }
 
     public static boolean isReset(IOException t) {
-        return RESET_MSG.equals(t.getMessage());
+        return RESET_MSG.contains(t.getMessage());
     }
 
     public static boolean isBrokenPipe(IOException t) {
@@ -351,34 +352,6 @@ public class Utils {
         T get() throws Exception;
     }
 
-    public static <T> T runBlockWithTimeout(int millis, UtilSupplier<T> f) throws Exception {
-        BlockCallback<T, Exception> cb = new BlockCallback<>();
-        new Thread(() -> {
-            T t;
-            try {
-                t = f.get();
-            } catch (Exception e) {
-                if (!cb.isCalled()) {
-                    cb.onFailed(e);
-                }
-                return;
-            }
-            if (!cb.isCalled()) {
-                cb.onSucceeded(t);
-            }
-        }).start();
-        new Thread(() -> {
-            try {
-                Thread.sleep(millis);
-            } catch (InterruptedException ignore) {
-            }
-            if (!cb.isCalled()) {
-                cb.onFailed(new TimeoutException("operation time out"));
-            }
-        }).start();
-        return cb.block();
-    }
-
     public static <T> T runAvoidNull(Supplier<T> f, T dft) {
         try {
             return f.get();
@@ -417,7 +390,12 @@ public class Utils {
     public static void pipeOutputOfSubProcess(Process p) {
         var stdout = p.getInputStream();
         var stderr = p.getErrorStream();
-        new Thread(() -> {
+        pipeOutputOfStream(stdout, "stdout");
+        pipeOutputOfStream(stderr, "stderr");
+    }
+
+    private static void pipeOutputOfStream(InputStream stdout, String descr) {
+        VProxyThread.create(() -> {
             var br = new BufferedReader(new InputStreamReader(stdout));
             String x;
             try {
@@ -430,21 +408,7 @@ public class Utils {
                 stdout.close();
             } catch (Throwable ignore) {
             }
-        }).start();
-        new Thread(() -> {
-            var br = new BufferedReader(new InputStreamReader(stderr));
-            String x;
-            try {
-                while ((x = br.readLine()) != null) {
-                    System.out.println(x);
-                }
-            } catch (Throwable ignore) {
-            }
-            try {
-                stderr.close();
-            } catch (Throwable ignore) {
-            }
-        }).start();
+        }, "pipe-output-of-stream-" + descr).start();
     }
 
     // the returned array would be without getStackTrace() and this method

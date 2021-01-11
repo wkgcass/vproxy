@@ -23,6 +23,7 @@ import vproxybase.connection.Protocol;
 import vproxybase.connection.ServerSock;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.Network;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 import java.util.LinkedList;
@@ -40,7 +41,7 @@ public class TestTcpLB {
     @BeforeClass
     public static void classSetUp() throws Exception {
         serverLoop = SelectorEventLoop.open();
-        serverLoop.loop(r -> new Thread(r, "serverLoop"));
+        serverLoop.loop(r -> VProxyThread.create(r, "serverLoop"));
         new EchoServer(serverLoop, 20080); // no need to record the echo server
         NetEventLoop serverNetLoop = new NetEventLoop(serverLoop);
         new IdServer("0", serverNetLoop, 19080);
@@ -56,7 +57,7 @@ public class TestTcpLB {
 
     @AfterClass
     public static void classTearDown() throws Exception {
-        Thread t = serverLoop.runningThread;
+        Thread t = serverLoop.getRunningThread();
         serverLoop.close();
         t.join();
     }
@@ -106,7 +107,7 @@ public class TestTcpLB {
 
         loop = SelectorEventLoop.open();
 
-        loop.loop(r -> new Thread(r, "Test"));
+        loop.loop(r -> VProxyThread.create(r, "Test"));
     }
 
     @After

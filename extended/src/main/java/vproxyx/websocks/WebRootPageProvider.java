@@ -2,6 +2,7 @@ package vproxyx.websocks;
 
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.file.FileFD;
+import vproxybase.selector.wrap.file.FilePath;
 import vproxybase.util.ByteArray;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
@@ -12,11 +13,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class WebRootPageProvider implements PageProvider {
     private static final int EXPIRE_DURATION = 2 * 3600 * 1000;
     private static final long LARGE_FILE_THRESHOLD = 2 * 1024 * 1024; // 2M
+    private static final Set<String> CACHED_MIMES = Set.of("text/html", "text/css", "text/javascript", "image/png", "image/jpeg");
     private final String baseDir;
     private final String protocol;
     private final String domain;
@@ -140,11 +143,17 @@ public class WebRootPageProvider implements PageProvider {
                 Logger.shouldNotHappen("the WebRootPageProvider should run on the event loop which is handling the request");
                 return null;
             }
-            FileFD fileFD;
+            FileFD fileFD = new FileFD(currentLoop, StandardOpenOption.READ);
             try {
-                fileFD = new FileFD(currentLoop, Path.of(key), StandardOpenOption.READ);
+                fileFD.connect(new FilePath(key));
             } catch (IOException e) {
-                Logger.shouldNotHappen("open FileFD " + key + " failed", e);
+                Logger.error(LogType.FILE_ERROR, "call connect(...) on FileFD " + key + " failed", e);
+                return null;
+            }
+            try {
+                fileFD.finishConnect();
+            } catch (IOException e) {
+                Logger.shouldNotHappen("call finishConnect() on FileFD " + key + " failed", e);
                 return null;
             }
             return new PageResult(mime, fileFD, cacheAge);
@@ -181,8 +190,8 @@ public class WebRootPageProvider implements PageProvider {
     }
 
     private long getCacheAgeFromMime(String mime) {
-        if (mime != null && (mime.equals("text/html") || mime.equals("text/css") || mime.equals("text/javascript") || mime.startsWith("image/"))) {
-            return 60L * 60 * 24 * 7;
+        if ((CACHED_MIMES.contains(mime))) {
+            return 60L * 10; // 10 minutes
         }
         return 0L;
     }

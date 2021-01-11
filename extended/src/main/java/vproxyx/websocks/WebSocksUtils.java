@@ -72,7 +72,7 @@ public class WebSocksUtils {
     public static AgentDNSServer agentDNSServer = null;
 
     public static void sendWebSocketFrame(RingBuffer outBuffer) {
-        //noinspection ConstantConditions,TrivialFunctionalExpressionUsage,AssertWithSideEffects
+        // noinspection TrivialFunctionalExpressionUsage
         assert ((Predicate<Void>) v -> {
             // for debug purpose
             // we set the 3rd to 10th byte to 0....3
@@ -255,7 +255,12 @@ public class WebSocksUtils {
 
     public static void initSslContext(String path, String pass, String format, boolean isServer, boolean needVerify) throws Exception {
         if (sslContext != null) {
-            throw new Exception("ssl context already initiated");
+            if (isServer) {
+                throw new Exception("ssl context already initiated");
+            } else {
+                Logger.alert("ssl context already initiated");
+                return;
+            }
         }
 
         KeyManager[] kms = null;
@@ -297,7 +302,8 @@ public class WebSocksUtils {
 
     public static void initHttpsSniErasureContext(ConfigProcessor config) throws Exception {
         if (httpsSniErasureSSLContext != null) {
-            throw new Exception("ssl context already initiated");
+            Logger.alert("https sni erasure ssl context already initiated");
+            return;
         }
 
         List<CertKey> cks = config.getHttpsSniErasureRelayCertKeys();

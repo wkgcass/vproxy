@@ -82,9 +82,10 @@ JNIEXPORT jlong JNICALL Java_vfd_posix_GeneralPosix_aeCreateEventLoop
     return (jlong)ae;
 }
 
-// return FDInfo[]
-JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeApiPoll
-  (JNIEnv* env, jobject self, jlong aex, jlong wait) {
+jmethodID FDInfoPrototypeObjectList_add = NULL;
+
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeApiPoll
+  (JNIEnv* env, jobject self, jlong aex, jlong wait, jobject fdInfoList) {
     aeEventLoop* ae = (aeEventLoop*) aex;
     v_timeval tv;
     v_timeval* tvp = &tv;
@@ -92,25 +93,23 @@ JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeApiPoll
     tvp->tv_usec = (wait % 1000)*1000;
     int numevents = aePoll(ae, tvp);
 
-    jclass fdInfoCls = (*env)->FindClass(env, "vfd/posix/FDInfo");
-    jmethodID constructor = (*env)->GetMethodID(env, fdInfoCls, "<init>", "(IILjava/lang/Object;)V");
+    if (FDInfoPrototypeObjectList_add == NULL) {
+      jclass fdInfoListCls = (*env)->FindClass(env, "vfd/posix/FDInfoPrototypeObjectList");
+      FDInfoPrototypeObjectList_add = (*env)->GetMethodID(env, fdInfoListCls, "add", "(IILjava/lang/Object;)V");
+    }
 
-    jobjectArray ret = (*env)->NewObjectArray(env, numevents, fdInfoCls, NULL);
     for (int j = 0; j < numevents; j++) {
       aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
       int mask = ae->fired[j].mask;
       int fd = ae->fired[j].fd;
       void* clientData = fe->clientData;
 
-      jobject obj = (*env)->NewObject(env, fdInfoCls, constructor, fd, mask, (jobject) clientData);
-      (*env)->SetObjectArrayElement(env, ret, j, obj);
+      (*env)->CallVoidMethod(env, fdInfoList, FDInfoPrototypeObjectList_add, fd, mask, (jobject) clientData);
     }
-    return ret;
 }
 
-// return FDInfo[]
-JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeAllFDs
-  (JNIEnv* env, jobject self, jlong aex) {
+JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeAllFDs
+  (JNIEnv* env, jobject self, jlong aex, jobject fdInfoList) {
     aeEventLoop* ae = (aeEventLoop*) aex;
     int cnt = 0;
     for (int i = 0; i < ae->maxfd; ++i) {
@@ -118,20 +117,18 @@ JNIEXPORT jobjectArray JNICALL Java_vfd_posix_GeneralPosix_aeAllFDs
         ++cnt;
       }
     }
-    jclass fdInfoCls = (*env)->FindClass(env, "vfd/posix/FDInfo");
-    jmethodID constructor = (*env)->GetMethodID(env, fdInfoCls, "<init>", "(IILjava/lang/Object;)V");
 
-    jobjectArray ret = (*env)->NewObjectArray(env, cnt, fdInfoCls, NULL);
-    cnt = 0;
+    if (FDInfoPrototypeObjectList_add == NULL) {
+      jclass fdInfoListCls = (*env)->FindClass(env, "vfd/posix/FDInfoPrototypeObjectList");
+      FDInfoPrototypeObjectList_add = (*env)->GetMethodID(env, fdInfoListCls, "add", "(IILjava/lang/Object;)V");
+    }
+
     for (int fd = 0; fd < ae->maxfd; ++fd) {
       aeFileEvent* fe = &(ae->events[fd]);
       if (fe->clientData != NULL) {
-        jobject obj = (*env)->NewObject(env, fdInfoCls, constructor, fd, fe->mask, (jobject) fe->clientData);
-        (*env)->SetObjectArrayElement(env, ret, cnt, obj);
-        ++cnt;
+        (*env)->CallVoidMethod(env, fdInfoList, FDInfoPrototypeObjectList_add, fd, fe->mask, (jobject) fe->clientData);
       }
     }
-    return ret;
 }
 
 JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_aeCreateFileEvent
@@ -489,14 +486,25 @@ JNIEXPORT void JNICALL Java_vfd_posix_GeneralPosix_shutdownOutput
     }
 }
 
+jclass SocketAddressIPv4 = NULL;
+jmethodID SocketAddressIPv4_init = NULL;
+
 jobject formatSocketAddressIPv4(JNIEnv* env, v_sockaddr_in* addr) {
     jint ip = v_ntohl(addr->sin_addr.s_addr);
     jint port = v_ntohs(addr->sin_port);
-    jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressIPv4");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(II)V");
-    jobject obj = (*env)->NewObject(env, sCls, constructor, ip, port);
+    if (SocketAddressIPv4 == NULL) {
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressIPv4");
+      SocketAddressIPv4 = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+    }
+    if (SocketAddressIPv4_init == NULL) {
+      SocketAddressIPv4_init = (*env)->GetMethodID(env, SocketAddressIPv4, "<init>", "(II)V");
+    }
+    jobject obj = (*env)->NewObject(env, SocketAddressIPv4, SocketAddressIPv4_init, ip, port);
     return obj;
 }
+
+jclass SocketAddressIPv6 = NULL;
+jmethodID SocketAddressIPv6_init = NULL;
 
 jobject formatSocketAddressIPv6(JNIEnv* env, v_sockaddr_in6* addr) {
     // build ip string
@@ -511,20 +519,33 @@ jobject formatSocketAddressIPv6(JNIEnv* env, v_sockaddr_in6* addr) {
     jint port = v_ntohs(addr->sin6_port);
 
     // build result
-    jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressIPv6");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
+    if (SocketAddressIPv6 == NULL) {
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressIPv6");
+      SocketAddressIPv6 = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+    }
+    if (SocketAddressIPv6_init == NULL) {
+      SocketAddressIPv6_init = (*env)->GetMethodID(env, SocketAddressIPv6, "<init>", "(Ljava/lang/String;I)V");
+    }
 
-    jobject obj = (*env)->NewObject(env, sCls, constructor, strIp, port);
+    jobject obj = (*env)->NewObject(env, SocketAddressIPv6, SocketAddressIPv6_init, strIp, port);
     return obj;
 }
+
+jclass SocketAddressUDS = NULL;
+jmethodID SocketAddressUDS_init = NULL;
 
 jobject formatSocketAddressUDS(JNIEnv* env, v_sockaddr_un* addr) {
     char* path = addr->sun_path;
     jstring strPath = (*env)->NewStringUTF(env, path);
 
-    jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressUDS");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;)V");
-    jobject obj = (*env)->NewObject(env, sCls, constructor, strPath);
+    if (SocketAddressUDS == NULL) {
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/SocketAddressUDS");
+      SocketAddressUDS = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+    }
+    if (SocketAddressUDS_init == NULL) {
+      SocketAddressUDS_init = (*env)->GetMethodID(env, SocketAddressUDS, "<init>", "(Ljava/lang/String;)V");
+    }
+    jobject obj = (*env)->NewObject(env, SocketAddressUDS, SocketAddressUDS_init, strPath);
     return obj;
 }
 
@@ -663,6 +684,9 @@ JNIEXPORT jint JNICALL Java_vfd_posix_GeneralPosix_sendtoIPv6
     return handleWriteIOOperationResult(env, res);
 }
 
+jclass UDPRecvResult = NULL;
+jmethodID UDPRecvResult_init = NULL;
+
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
   (JNIEnv* env, jobject self, jint fd, jobject directBuffer, jint off, jint len) {
     if (len == 0) {
@@ -678,9 +702,14 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv4
     }
     jobject retAddr = formatSocketAddressIPv4(env, &name);
 
-    jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
-    jobject ret = (*env)->NewObject(env, sCls, constructor, retAddr, retLen);
+    if (UDPRecvResult == NULL) {
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
+      UDPRecvResult = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+    }
+    if (UDPRecvResult_init == NULL) {
+      UDPRecvResult_init = (*env)->GetMethodID(env, UDPRecvResult, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
+    }
+    jobject ret = (*env)->NewObject(env, UDPRecvResult, UDPRecvResult_init, retAddr, retLen);
     return ret;
 }
 
@@ -702,9 +731,14 @@ JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_recvfromIPv6
         return NULL;
     }
 
-    jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
-    jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
-    jobject ret = (*env)->NewObject(env, sCls, constructor, retAddr, retLen);
+    if (UDPRecvResult == NULL) {
+      jclass sCls = (*env)->FindClass(env, "vfd/posix/UDPRecvResult");
+      UDPRecvResult = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+    }
+    if (UDPRecvResult_init == NULL) {
+      UDPRecvResult_init = (*env)->GetMethodID(env, UDPRecvResult, "<init>", "(Lvfd/posix/VSocketAddress;I)V");
+    }
+    jobject ret = (*env)->NewObject(env, UDPRecvResult, UDPRecvResult_init, retAddr, retLen);
     return ret;
 }
 
@@ -725,6 +759,9 @@ JNIEXPORT jboolean JNICALL Java_vfd_posix_GeneralPosix_tapNonBlockingSupported
       throwIOException(env, "unsupported on current platform");
     #endif
 }
+
+jclass TapInfo = NULL;
+jmethodID TapInfo_init = NULL;
 
 JNIEXPORT jobject JNICALL Java_vfd_posix_GeneralPosix_createTapFD
   (JNIEnv* env, jobject self, jstring dev) {
@@ -792,9 +829,14 @@ success:
       devName[IFNAMSIZ] = '\0'; // make sure the last byte is 0
       jstring genDevName = (*env)->NewStringUTF(env, devName);
 
-      jclass sCls = (*env)->FindClass(env, "vfd/TapInfo");
-      jmethodID constructor = (*env)->GetMethodID(env, sCls, "<init>", "(Ljava/lang/String;I)V");
-      jobject ret = (*env)->NewObject(env, sCls, constructor, genDevName, fd);
+      if (TapInfo == NULL) {
+        jclass sCls = (*env)->FindClass(env, "vfd/TapInfo");
+        TapInfo = (jclass)(*env)->NewGlobalRef(env, (jobject)sCls);
+      }
+      if (TapInfo_init == NULL) {
+        TapInfo_init = (*env)->GetMethodID(env, TapInfo, "<init>", "(Ljava/lang/String;I)V");
+      }
+      jobject ret = (*env)->NewObject(env, TapInfo, TapInfo_init, genDevName, fd);
 
       (*env)->ReleaseStringUTFChars(env, dev, devChars);
       if (tmpFd > 0) {

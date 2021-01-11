@@ -1,11 +1,11 @@
 package vproxybase.util;
 
+import vfd.ReadableByteStream;
+import vfd.WritableByteStream;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.SimpleRingBuffer;
 
 import java.io.IOException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 import java.util.Set;
 
 public interface RingBuffer {
@@ -21,29 +21,29 @@ public interface RingBuffer {
 
     default int storeBytesFrom(ByteArrayChannel channel) {
         try {
-            return storeBytesFrom((ReadableByteChannel) channel);
+            return storeBytesFrom((ReadableByteStream) channel);
         } catch (IOException e) {
             // it's memory operation, should not happen
             throw new RuntimeException(e);
         }
     }
 
-    int storeBytesFrom(ReadableByteChannel channel) throws IOException;
+    int storeBytesFrom(ReadableByteStream channel) throws IOException;
 
     default int writeTo(ByteArrayChannel channel) {
         try {
-            return writeTo((WritableByteChannel) channel);
+            return writeTo((WritableByteStream) channel);
         } catch (IOException e) {
             // it's memory operation, should not raise error
             throw new RuntimeException(e);
         }
     }
 
-    default int writeTo(WritableByteChannel channel) throws IOException {
+    default int writeTo(WritableByteStream channel) throws IOException {
         return writeTo(channel, Integer.MAX_VALUE);
     }
 
-    int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException;
+    int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException;
 
     default int writeTo(RingBuffer buffer, int maxBytesToWrite) {
         // NOTE: the default implementation of this method is general but with low efficiency

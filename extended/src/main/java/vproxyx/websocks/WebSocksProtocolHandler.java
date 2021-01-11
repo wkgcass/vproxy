@@ -1,6 +1,7 @@
 package vproxyx.websocks;
 
 import vfd.IP;
+import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vproxy.socks.Socks5ProxyProtocolHandler;
@@ -358,25 +359,28 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             }
             ctx.write(resp.toByteArray().toJavaArray());
             if (fileToSend != null) {
-                final FileFD file = fileToSend;
-                // the header is small, it should be directly flushed
-                // make sure this operation happen after the call of writing the header
-                ctx.loop.getSelectorEventLoop().runOnLoop(() -> ctx.loop.getSelectorEventLoop().runOnLoop(() -> {
-                    var rootCtx = rootCtxGetter.get();
-                    var cb = rootCtx.data.right;
-                    if (cb == null) {
-                        Logger.shouldNotHappen("the callback Callback<Connector, IOException> is null while trying to send file " + file);
-                        return;
-                    }
-                    // make a connector
-                    var conn = ConnectableConnection.wrap(file, file.getRemoteAddress(), ConnectionOpts.getDefault(),
+                var rootCtx = rootCtxGetter.get();
+                var cb = rootCtx.data.right;
+                if (cb == null) {
+                    Logger.shouldNotHappen("the callback Callback<Connector, IOException> is null while trying to send file " + fileToSend);
+                    return;
+                }
+                // make a connector
+                ConnectableConnection conn;
+                IPPort remote;
+                try {
+                    remote = fileToSend.getRemoteAddress();
+                    conn = ConnectableConnection.wrap(fileToSend, remote, ConnectionOpts.getDefault(),
                         RingBuffer.allocate(0), RingBuffer.allocateDirect(0));
-                    var connector = new AlreadyConnectedConnector(file.getRemoteAddress(), conn, ctx.loop);
-                    String id = ctx.connection.remote + " <- " + connector.remote;
-                    Logger.alert("sending large file: " + id);
-                    rootCtx.data.left.step = 4; // large file
-                    cb.succeeded(connector);
-                }));
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "wrap " + fileToSend + " into ConnectableConnection failed", e);
+                    return;
+                }
+                var connector = new AlreadyConnectedConnector(remote, conn, ctx.loop);
+                String id = ctx.connection.remote + " <- " + connector.remote;
+                Logger.alert("sending large file: " + id);
+                rootCtx.data.left.step = 4; // large file
+                cb.succeeded(connector);
             }
         }
     }

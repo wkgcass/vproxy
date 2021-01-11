@@ -7,6 +7,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.wrap.udp.UDPBasedFDs;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Tuple;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -36,7 +37,7 @@ public class NetEventLoopEchoServer {
         // register the server into event loop
         eventLoop.addServer(server, null, new MyServerHandler());
         // start loop in another thread
-        new Thread(selectorEventLoop::loop, "EventLoopThread").start();
+        VProxyThread.create(selectorEventLoop::loop, "EventLoopThread").start();
 
         return eventLoop;
     }

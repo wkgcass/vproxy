@@ -796,7 +796,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     protected final void keepaliveReceived(long kId, boolean isAck) {
         if (isAck) {
             // cancel the timer
-            TimerEvent te = keepaliveTimeouts.get(kId);
+            TimerEvent te = keepaliveTimeouts.remove(kId);
             if (te == null) {
                 Logger.warn(LogType.ALERT, "the timer is already canceled or missing 0x" + Long.toHexString(kId) + " in " + fd);
                 return;
@@ -826,7 +826,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
     final void keepalive() {
         // check whether it's connected
         if (state != 2) {
-            Logger.warn(LogType.ALERT, "handshake still done while keepalive event is triggered");
+            Logger.warn(LogType.ALERT, "handshake is not done while keepalive event is triggered");
             fail(new IOException("handshaking timeout"), false);
             return;
         }
@@ -840,6 +840,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
                     fail(new IOException("keepalive response timeout"));
                 }
                 --keepaliveSuccessCount;
+                keepaliveTimeouts.remove(kId);
             }));
             // add to the first of the queue
             pushMessageToWrite(keepaliveMessage(kId, false));

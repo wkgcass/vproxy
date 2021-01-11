@@ -6,6 +6,7 @@ import vfd.IPPort;
 import vfd.ServerSocketFD;
 import vproxy.test.tool.EchoServerHandler;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
 
@@ -14,7 +15,7 @@ public class SelectorEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
         SelectorEventLoop eventLoop = createServer(18080);
         // start loop in another thread
-        new Thread(eventLoop::loop, "EventLoopThread").start();
+        VProxyThread.create(eventLoop::loop, "EventLoopThread").start();
 
         Thread.sleep(500);
         AlphabetBlockingClient.runBlock(18080, 10, false);

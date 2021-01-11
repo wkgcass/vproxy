@@ -1,7 +1,7 @@
 package vclient.impl;
 
 import vlibbase.Conn;
-import vclient.StreamClient;
+import vclient.NetClient;
 import vfd.IPPort;
 import vlibbase.ConnRef;
 import vlibbase.VProxyLibUtils;
@@ -13,11 +13,11 @@ import vproxybase.util.RingBuffer;
 import java.io.IOException;
 import java.util.function.BiConsumer;
 
-public class StreamClientImpl extends AbstractClient implements StreamClient {
+public class NetClientImpl extends AbstractClient implements NetClient {
     private final IPPort remote;
     private final Options opts;
 
-    public StreamClientImpl(IPPort remote, Options opts) {
+    public NetClientImpl(IPPort remote, Options opts) {
         super(opts);
         this.remote = remote;
         this.opts = new Options(opts);
@@ -63,5 +63,10 @@ public class StreamClientImpl extends AbstractClient implements StreamClient {
         raw.setTimeout(opts.timeout);
         VProxyLibUtils.switchBuffers(raw, opts);
         return new ConnImpl(getLoop(), raw, null);
+    }
+
+    @Override
+    protected String threadname() {
+        return "stream-client-" + remote.formatToIPPortString();
     }
 }

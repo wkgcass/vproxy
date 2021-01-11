@@ -15,21 +15,28 @@ import java.util.Map;
 import java.util.Optional;
 
 public class Http1ClientImpl extends AbstractClient implements HttpClient {
-    private final StreamClient streamClient;
+    private final IPPort remote;
+    private final NetClient netClient;
     private final ConnRefPool pool;
     private final Options opts;
 
     public Http1ClientImpl(IPPort remote, Options opts) {
         super(opts);
         this.opts = opts;
+        this.remote = remote;
 
         getLoop();
-        streamClient = new StreamClientImpl(remote, new StreamClient.Options().fill(opts).setAlpn(new String[]{"http/1.1"}).setClientContext(getClientContext()));
+        netClient = new NetClientImpl(remote, new NetClient.Options().fill(opts).setAlpn(new String[]{"http/1.1"}).setClientContext(getClientContext()));
         if (opts.poolOptions == null || opts.poolOptions.maxCount == 0) {
             pool = null;
         } else {
             pool = new ConnRefPoolImpl(new ConnRefPool.Options(opts.poolOptions).setLoop(getLoop()));
         }
+    }
+
+    @Override
+    protected String threadname() {
+        return "http-1-client-" + remote.formatToIPPortString();
     }
 
     private class Http1ClientRequestImpl implements HttpRequest {
@@ -66,7 +73,7 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
                 doSend(body, handler);
                 return;
             }
-            streamClient.connect((err, conn) -> {
+            netClient.connect((err, conn) -> {
                 if (err != null) {
                     handler.accept(err, null);
                     return;
@@ -75,7 +82,7 @@ public class Http1ClientImpl extends AbstractClient implements HttpClient {
                 try {
                     h1conn = conn.transferTo(Http1ClientImpl.this);
                 } catch (IOException e) {
-                    Logger.shouldNotHappen("transferring conn from stream client " + streamClient + " to http1client " + Http1ClientImpl.this + " failed", e);
+                    Logger.shouldNotHappen("transferring conn from stream client " + netClient + " to http1client " + Http1ClientImpl.this + " failed", e);
                     throw new RuntimeException(e);
                 }
                 this.conn = h1conn;

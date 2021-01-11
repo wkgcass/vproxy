@@ -11,6 +11,7 @@ import vproxybase.dhcp.DHCPClientHelper;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
+import vproxybase.util.thread.VProxyThread;
 import vserver.HttpServer;
 
 import java.io.IOException;
@@ -23,7 +24,7 @@ public class HelloWorld {
         SelectorEventLoop sLoop = SelectorEventLoop.open();
         NetEventLoop nLoop = new NetEventLoop(sLoop);
 
-        sLoop.loop(Thread::new);
+        sLoop.loop(r -> VProxyThread.create(r, "hello-world-main"));
 
         if (VFDConfig.useFStack) {
             Logger.warn(LogType.ALERT, "DHCP will not run when using FStack");

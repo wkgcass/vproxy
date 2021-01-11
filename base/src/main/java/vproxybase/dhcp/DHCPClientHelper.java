@@ -145,7 +145,7 @@ public class DHCPClientHelper {
                             } else {
                                 errors.append("\n");
                             }
-                            errors.append(tup).append(err.getMessage());
+                            errors.append(tup).append(" ").append(err.getMessage());
                         }
                         cb.failed(new IOException(errors.toString()));
                     } else {

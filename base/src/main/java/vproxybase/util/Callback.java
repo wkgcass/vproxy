@@ -1,6 +1,7 @@
 package vproxybase.util;
 
-public abstract class Callback<T, E extends Throwable> {
+public abstract class
+Callback<T, E extends Throwable> {
     private boolean called = false;
 
     protected abstract void onSucceeded(T value);

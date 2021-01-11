@@ -4,6 +4,8 @@ import vfd.*;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.objectpool.GarbageFree;
+import vproxybase.util.objectpool.PrototypeObjectList;
 
 import java.io.IOException;
 import java.nio.channels.ClosedChannelException;
@@ -11,6 +13,7 @@ import java.util.*;
 
 public class WrappedSelector implements FDSelector {
     private final FDSelector selector;
+    private final PrototypeObjectList<SelectedEntry> selectedEntryList = new PrototypeObjectList<>(128, SelectedEntry::new);
 
     private static class REntry {
         EventSet watchedEvents;
@@ -50,8 +53,7 @@ public class WrappedSelector implements FDSelector {
         return selector.isOpen();
     }
 
-    private Set<SelectedEntry> calcVirtual() {
-        Set<SelectedEntry> ret = new HashSet<>();
+    private void calcVirtual() {
         //noinspection unused
         try (var unused = VIRTUAL_LOCK.lock()) {
             for (Map.Entry<VirtualFD, REntry> e : virtualSocketFDs.entrySet()) {
@@ -83,51 +85,59 @@ public class WrappedSelector implements FDSelector {
                     eventSet = null;
                 }
                 if (eventSet != null) {
-                    ret.add(new SelectedEntry(fd, eventSet, entry.attachment));
+                    selectedEntryList.add().set(fd, eventSet, entry.attachment);
                 }
             }
         }
-        return ret;
     }
 
-    private Collection<SelectedEntry> handleRealSelect(Collection<SelectedEntry> entries) {
+    private void handleRealSelect(Collection<SelectedEntry> entries) {
         for (SelectedEntry entry : entries) {
-            if (entry.fd instanceof WritableAware) {
-                if (entry.ready.have(Event.WRITABLE)) {
-                    ((WritableAware) entry.fd).writable();
+            if (entry.fd() instanceof WritableAware) {
+                if (entry.ready().have(Event.WRITABLE)) {
+                    ((WritableAware) entry.fd()).writable();
                 }
             }
+            selectedEntryList.add().set(entry.fd(), entry.ready(), entry.attachment());
         }
-        return entries;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
-        var set = calcVirtual();
-        if (set.isEmpty()) {
-            return handleRealSelect(selector.select());
+        selectedEntryList.clear();
+
+        calcVirtual();
+        if (selectedEntryList.isEmpty()) {
+            handleRealSelect(selector.select());
         } else {
-            set.addAll(handleRealSelect(selector.selectNow()));
-            return set;
+            handleRealSelect(selector.selectNow());
         }
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> selectNow() throws IOException {
-        var set = calcVirtual();
-        set.addAll(handleRealSelect(selector.selectNow()));
-        return set;
+        selectedEntryList.clear();
+
+        calcVirtual();
+        handleRealSelect(selector.selectNow());
+        return selectedEntryList;
     }
 
+    @GarbageFree
     @Override
     public Collection<SelectedEntry> select(long millis) throws IOException {
-        var set = calcVirtual();
-        if (set.isEmpty()) {
-            return handleRealSelect(selector.select(millis));
+        selectedEntryList.clear();
+
+        calcVirtual();
+        if (selectedEntryList.isEmpty()) {
+            handleRealSelect(selector.select(millis));
         } else {
-            set.addAll(handleRealSelect(selector.selectNow()));
-            return set;
+            handleRealSelect(selector.selectNow());
         }
+        return selectedEntryList;
     }
 
     @Override
@@ -333,7 +343,7 @@ public class WrappedSelector implements FDSelector {
         writableFired.remove(vfd);
     }
 
-    public void probe() {
+    public void copyFDEvents(Collection<FDInspection> coll) {
         for (Map.Entry<VirtualFD, REntry> entry : virtualSocketFDs.entrySet()) {
             var fd = entry.getKey();
             var watch = entry.getValue().watchedEvents;
@@ -344,19 +354,12 @@ public class WrappedSelector implements FDSelector {
             if (writableFired.contains(fd)) {
                 fire = fire.combine(EventSet.write());
             }
-            Logger.probe("virtual: " + fd + ", watch: " + watch + ", fire: " + fire);
+            coll.add(new FDInspection(fd, watch, fire));
         }
-        for (FD fd : readableFired) {
-            //noinspection SuspiciousMethodCalls
-            if (!virtualSocketFDs.containsKey(fd)) {
-                Logger.probe("extra readable: " + fd);
-            }
-        }
-        for (FD fd : writableFired) {
-            //noinspection SuspiciousMethodCalls
-            if (!virtualSocketFDs.containsKey(fd)) {
-                Logger.probe("extra writable: " + fd);
-            }
+        for (var entry : selector.entries()) {
+            var fd = entry.fd;
+            var watch = entry.eventSet;
+            coll.add(new FDInspection(fd, watch, null));
         }
     }
 }

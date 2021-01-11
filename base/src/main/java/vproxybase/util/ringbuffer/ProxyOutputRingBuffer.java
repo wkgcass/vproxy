@@ -1,12 +1,12 @@
 package vproxybase.util.ringbuffer;
 
+import vfd.ReadableByteStream;
+import vfd.WritableByteStream;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.RingBufferETHandler;
 
 import java.io.IOException;
-import java.nio.channels.ReadableByteChannel;
-import java.nio.channels.WritableByteChannel;
 
 public class ProxyOutputRingBuffer extends AbstractRingBuffer {
     private class DefaultBufferETHandler implements RingBufferETHandler {
@@ -86,14 +86,14 @@ public class ProxyOutputRingBuffer extends AbstractRingBuffer {
     }
 
     @Override
-    public int storeBytesFrom(ReadableByteChannel channel) throws IOException {
+    public int storeBytesFrom(ReadableByteStream channel) throws IOException {
         if (proxied != null)
             throw new IllegalStateException("has a proxied buffer, with proxyLen = " + proxyLen);
         return defaultBuffer.storeBytesFrom(channel);
     }
 
     @Override
-    public int writeTo(WritableByteChannel channel, int maxBytesToWrite) throws IOException {
+    public int writeTo(WritableByteStream channel, int maxBytesToWrite) throws IOException {
         if (isProxy) {
             int toWrite = Math.min(maxBytesToWrite, proxyLen);
             int wrote = proxied.writeTo(channel, toWrite);
