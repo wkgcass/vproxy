@@ -3,6 +3,7 @@ package vproxybase.util;
 import vproxybase.util.bytearray.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("UnusedReturnValue")
@@ -173,5 +174,11 @@ public interface ByteArray {
 
     default String toHexString() {
         return Utils.bytesToHex(toJavaArray());
+    }
+
+    default byte[] toGZipJavaByteArray() {
+        byte[] dataToCompress = toJavaArray();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        return Utils.gzipCompress(out, dataToCompress);
     }
 }
