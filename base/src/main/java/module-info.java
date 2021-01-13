@@ -43,7 +43,10 @@ module vproxy.base {
     exports vproxybase.processor.http1;
     exports vproxybase.processor.http1.entity;
     exports vproxybase.processor.http1.builder;
-    exports vproxybase.processor.http2;
+    exports vproxybase.processor.httpbin;
+    exports vproxybase.processor.httpbin.entity;
+    exports vproxybase.processor.httpbin.frame;
+    exports vproxybase.processor.httpbin.hpack;
     exports vproxybase.processor.common;
     exports vproxybase.processor.http;
     exports vproxybase.processor.dubbo;
