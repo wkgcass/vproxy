@@ -120,6 +120,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             handlePendingFrame(data);
             return returnDataToProxy();
         }
+        if (!parserMode) {
+            streamHolder.removeEndStreams();
+        }
 
         assert Logger.lowLevelDebug("state before handling frames: " + state);
 
@@ -426,6 +429,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
                     determineProxiedConnection();
                     handleCommonHeaders();
                     HeadersFrame headersFrame = (HeadersFrame) parsingFrame;
+                    if (headersFrame.endStream) {
+                        handleHeadersEndStream();
+                    }
                     if (headersFrame.endHeaders) {
                         handleEndHeaders();
                     }
@@ -574,6 +580,15 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         }
     }
 
+    private void handleHeadersEndStream() {
+        var headersFrame = (HeadersFrame) parsingFrame;
+        Stream stream = streamHolder.get(headersFrame.streamId);
+        if (stream != null) {
+            assert Logger.lowLevelDebug("end stream when headers end");
+            stream.endWhenHeadersTransmitted = true;
+        }
+    }
+
     private void handleEndHeaders() {
         var headers = ((WithHeaders) parsingFrame).headers();
 
@@ -585,6 +600,13 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             Stream s = streamHolder.get(parsingFrame.streamId);
             if (s != null) {
                 ctx.currentHint = s.generateHint();
+            }
+        }
+
+        Stream stream = streamHolder.get(parsingFrame.streamId);
+        if (stream != null) {
+            if (stream.endWhenHeadersTransmitted) {
+                streamHolder.endStream(stream.streamId);
             }
         }
     }
@@ -671,6 +693,7 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             return;
         }
         determineProxiedConnection();
+        streamHolder.resetStream(parsingFrame.streamId);
         serializeToProxy(false);
     }
 
@@ -706,6 +729,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         if (state == STATE_DATA_FRAME) {
             assert Logger.lowLevelDebug("data frame proxy done");
             DataFrame data = (DataFrame) parsingFrame;
+            if (data.endStream) {
+                streamHolder.endStream(data.streamId);
+            }
             decreaseReceivingWindow(data.streamId, data.length);
             state = STATE_FRAME_HEADER;
             expectNewFrame = true;

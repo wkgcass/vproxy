@@ -9,6 +9,9 @@ public class Stream {
     private StreamSession session;
     public int sendingWindow;
     public int receivingWindow;
+    public boolean end;
+    public boolean endWhenHeadersTransmitted; // set by headers frame, checked by headers/continuation frames
+    public long removeTime; // the timestamp when this stream will be removed
 
     private String path;
     private String host;

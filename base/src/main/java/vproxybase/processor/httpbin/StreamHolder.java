@@ -1,14 +1,19 @@
 package vproxybase.processor.httpbin;
 
+import vproxybase.Config;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Map;
 
 public class StreamHolder {
+    private static final int CLOSED_SESSION_HELD_TIME = 10_000;
+
     private final BinaryHttpSubContext ctx;
     private final Map<Long, Stream> streams = new HashMap<>();
+    private final LinkedList<Stream> streamsToBeRemoved = new LinkedList<>();
     // for http/2:
     private int lastClientStreamId = 0;
     private int lastServerStreamId = 0;
@@ -67,12 +72,62 @@ public class StreamHolder {
         return stream;
     }
 
-    public void terminate(long streamId) {
+    public void endStream(long streamId) {
         assert Logger.lowLevelDebug("terminating stream " + streamId + " of conn " + ctx.connId);
-        Stream stream = streams.remove(streamId);
+        Stream stream = streams.get(streamId);
         if (stream == null) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                 "cannot terminate stream " + streamId + " of conn " + ctx.connId + ": not found");
+            return;
+        }
+        stream.end = true;
+        var session = stream.getSession();
+        if (session != null) {
+            var another = session.another(stream);
+            if (another.end) {
+                assert Logger.lowLevelDebug("session another stream also ends: " + another.streamId);
+                long removeTime = Config.currentTimestamp + CLOSED_SESSION_HELD_TIME;
+                stream.removeTime = removeTime;
+                another.removeTime = removeTime;
+                streamsToBeRemoved.add(stream);
+                another.ctx.streamHolder.streamsToBeRemoved.add(another);
+            }
+        }
+    }
+
+    public void resetStream(long streamId) {
+        assert Logger.lowLevelDebug("resetting stream " + streamId + " of conn " + ctx.connId);
+        Stream stream = streams.get(streamId);
+        if (stream == null) {
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA,
+                "cannot reset stream " + streamId + " of conn " + ctx.connId + ": not found");
+            return;
+        }
+        long removeTime = Config.currentTimestamp + CLOSED_SESSION_HELD_TIME;
+        stream.end = true;
+        stream.removeTime = removeTime;
+        streamsToBeRemoved.add(stream);
+
+        var session = stream.getSession();
+        if (session != null) {
+            var another = session.another(stream);
+            another.end = true;
+            another.removeTime = removeTime;
+            another.ctx.streamHolder.streamsToBeRemoved.add(another);
+        }
+    }
+
+    public void removeEndStreams() {
+        long ts = Config.currentTimestamp;
+
+        Stream stream;
+        while ((stream = streamsToBeRemoved.peekFirst()) != null) {
+            if (stream.removeTime > ts) {
+                break;
+            }
+            assert Logger.lowLevelDebug("remove stream from holder: " + stream.streamId + "/" + ctx.connId);
+            streamsToBeRemoved.pollFirst();
+            streams.remove(stream.streamId);
         }
     }
 }
