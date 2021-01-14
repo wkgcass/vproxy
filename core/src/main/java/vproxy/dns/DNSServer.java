@@ -114,19 +114,19 @@ public class DNSServer {
     }
 
     private void handleRequest(DNSPacket p, IPPort remote) {
-        Map<String, Map<DNSType, List<Record>>> addresses = new LinkedHashMap<>();
+        Map<String, Map<DNSType, List<DNSRecord>>> addresses = new LinkedHashMap<>();
         for (DNSQuestion q : p.questions) {
             String domain = q.qname;
-            Map<DNSType, List<Record>> domainMap = addresses.computeIfAbsent(domain, k -> new LinkedHashMap<>());
+            Map<DNSType, List<DNSRecord>> domainMap = addresses.computeIfAbsent(domain, k -> new LinkedHashMap<>());
             switch (q.qtype) {
                 case AAAA:
                 case A:
                 case SRV:
-                    List<Record> records = domainMap.computeIfAbsent(q.qtype, k -> new ArrayList<>());
+                    List<DNSRecord> records = domainMap.computeIfAbsent(q.qtype, k -> new ArrayList<>());
 
                     IP hostResult = hosts.get(domain);
                     if (hostResult != null) {
-                        records.add(new Record(hostResult));
+                        records.add(new DNSRecord(hostResult));
                         break;
                     }
 
@@ -144,11 +144,11 @@ public class DNSServer {
                                 (q.qtype == DNSType.AAAA && l3addr instanceof IPv6)
                                 ||
                                 q.qtype == DNSType.SRV) {
-                                records.add(new Record(l3addr));
+                                records.add(new DNSRecord(l3addr));
                             }
                             continue;
                         } else if (domain.endsWith(".vproxy.local")) {
-                            List<Record> res = runInternal(domain.substring(0, domain.length() - ".vproxy.local".length()), remote);
+                            List<DNSRecord> res = runInternal(domain.substring(0, domain.length() - ".vproxy.local".length()), remote);
                             if (res != null && !res.isEmpty()) {
                                 records.addAll(res);
                             }
@@ -170,7 +170,7 @@ public class DNSServer {
                             if (!svr.healthy) {
                                 continue;
                             }
-                            records.add(new Record(svr.server.getAddress(), svr.server.getPort(), svr.getWeight(), svr.hostName));
+                            records.add(new DNSRecord(svr.server.getAddress(), svr.server.getPort(), svr.getWeight(), svr.hostName));
                         }
                     } else {
                         Connector connector;
@@ -185,7 +185,7 @@ public class DNSServer {
                             assert Logger.lowLevelDebug("no active server for " + domain);
                             continue;
                         }
-                        records.add(new Record(connector.remote));
+                        records.add(new DNSRecord(connector.remote));
                     }
                     break;
                 default:
@@ -208,11 +208,11 @@ public class DNSServer {
         resp.ra = true;
         resp.rcode = DNSPacket.RCode.NoError;
         resp.questions.addAll(p.questions);
-        for (Map.Entry<String, Map<DNSType, List<Record>>> entry : addresses.entrySet()) {
-            Map<DNSType, List<Record>> map = entry.getValue();
-            for (Map.Entry<DNSType, List<Record>> entry2 : map.entrySet()) {
+        for (Map.Entry<String, Map<DNSType, List<DNSRecord>>> entry : addresses.entrySet()) {
+            Map<DNSType, List<DNSRecord>> map = entry.getValue();
+            for (Map.Entry<DNSType, List<DNSRecord>> entry2 : map.entrySet()) {
                 DNSType type = entry2.getKey();
-                for (Record record : entry2.getValue()) {
+                for (DNSRecord record : entry2.getValue()) {
                     DNSResource r = new DNSResource();
                     r.name = entry.getKey();
                     r.clazz = DNSClass.IN;
@@ -336,13 +336,13 @@ public class DNSServer {
         return result;
     }
 
-    protected List<Record> runInternal(String domain, IPPort remote) {
+    protected List<DNSRecord> runInternal(String domain, IPPort remote) {
         if (domain.equals("who.am.i")) {
-            return Collections.singletonList(new Record(remote.getAddress()));
+            return Collections.singletonList(new DNSRecord(remote.getAddress()));
         } else if (domain.equals("who.are.you")) {
             IP l3addr = getLocalAddressFor(remote);
             if (l3addr != null) {
-                return Collections.singletonList(new Record(getLocalAddressFor(remote)));
+                return Collections.singletonList(new DNSRecord(getLocalAddressFor(remote)));
             }
         }
         return null;
