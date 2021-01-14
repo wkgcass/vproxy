@@ -117,6 +117,26 @@ java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.ja
 
 </details>
 
+<details><summary>test</summary>
+
+Run test cases:
+
+```
+./gradlew runTest
+```
+
+Test vswitch, docker network plugin, vpctl, k8s controller:
+
+```shell
+# requires virtualbox installed
+
+cd ./misc/auto-setup/
+./auto-setup.sh
+./auto-verify.sh
+```
+
+</details>
+
 ## Aim
 
 * Zero dependency: no dependency other than java standard library, and no jni extensions.

@@ -117,6 +117,24 @@ java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.ja
 
 </details>
 
+<details><summary>测试功能</summary>
+
+执行测试用例:
+
+```
+./gradlew runTest
+```
+
+测试vswitch, docker network plugin, vpctl, k8s controller:
+
+```shell
+# 需要事先安装virtualbox
+
+cd ./misc/auto-setup/
+./auto-setup.sh
+./auto-verify.sh
+```
+
 ## 目标
 
 * 零依赖: 除了java标准库外不加任何依赖，也不使用jni扩展。

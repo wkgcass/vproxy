@@ -87,6 +87,11 @@ project(':test') {
         testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
         testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
     }
+
+    task runTest(type: Test) {
+        include '**/VSuite.class'
+        include '**/CI.class'
+    }
 }
 
 dependencies {
