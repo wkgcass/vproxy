@@ -351,7 +351,7 @@ public class TestHttp2Decoder {
     private static HttpServer vertxHttpServer;
 
     @BeforeClass
-    public static void beforeClass() {
+    public static void beforeClass() throws Throwable {
         vertx = Vertx.vertx();
         vertxHttpServer = vertx.createHttpServer();
         vertxHttpServer.requestHandler(req -> {
@@ -370,7 +370,15 @@ public class TestHttp2Decoder {
                 req.bodyHandler(buf -> req.response().end(req.method() + " " + req.uri() + ": " + buf.toString()));
             }
         });
-        vertxHttpServer.listen(vertxListenPort);
+        BlockCallback<Void, Throwable> listenCB = new BlockCallback<>();
+        vertxHttpServer.listen(vertxListenPort, r -> {
+            if (r.succeeded()) {
+                listenCB.succeeded();
+            } else {
+                listenCB.failed(r.cause());
+            }
+        });
+        listenCB.block();
     }
 
     @AfterClass

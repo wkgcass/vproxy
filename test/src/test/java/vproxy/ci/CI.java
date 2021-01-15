@@ -163,7 +163,7 @@ public class CI {
             if (strPort == null)
                 strPort = System.getenv("vproxy_http_port");
             if (strPort == null)
-                strPort = "18080";
+                strPort = "18880";
             port = Integer.parseInt(strPort);
             vproxyHTTPPort = port;
         }

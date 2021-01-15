@@ -115,7 +115,7 @@ public class TestSSL {
 
     @Test
     public void requestSite() throws Exception {
-        String url = "https://myip.ipip.net";
+        String url = "https://www.baidu.com";
         String host = url.substring("https://".length());
         int port = 443;
         BlockCallback<IP, UnknownHostException> cb = new BlockCallback<>();
@@ -174,7 +174,7 @@ public class TestSSL {
         MySSLConnectableConnectionHandler() {
             chnl = ByteArrayChannel.fromFull(("" +
                 "GET / HTTP/1.1\r\n" +
-                "Host: myip.ipip.net\r\n" +
+                "Host: www.baidu.com\r\n" +
                 "User-Agent: curl/vproxy\r\n" + // add curl agent to get json response
                 "\r\n").getBytes());
             parser = new HttpRespParser(true);
