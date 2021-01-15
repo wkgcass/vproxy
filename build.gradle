@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
     id 'application'
     id 'idea'
@@ -88,9 +90,36 @@ project(':test') {
         testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
     }
 
-    task runTest(type: Test) {
+    task runSuite(type: Test) {
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+
         include '**/VSuite.class'
+    }
+
+    task runCI(type: Test) {
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+
         include '**/CI.class'
+    }
+
+    task runTest {
+        dependsOn clean
+        dependsOn runSuite
+        dependsOn runCI
     }
 }
 
