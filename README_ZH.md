@@ -1,5 +1,7 @@
 # vproxy
 
+[![Build Status](https://travis-ci.com/wkgcass/vproxy.svg?branch=dev)](https://travis-ci.com/wkgcass/vproxy)
+
 ## 简介
 
 VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 11即可运行。

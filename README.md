@@ -1,5 +1,7 @@
 # vproxy
 
+[![Build Status](https://travis-ci.com/wkgcass/vproxy.svg?branch=dev)](https://travis-ci.com/wkgcass/vproxy)
+
 [中文文档](https://github.com/wkgcass/vproxy/blob/master/README_ZH.md)
 
 ## Intro
