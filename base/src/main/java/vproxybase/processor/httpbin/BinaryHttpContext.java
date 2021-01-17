@@ -13,6 +13,10 @@ public class BinaryHttpContext extends OOContext<BinaryHttpSubContext> {
     // proxy settings
     Stream currentProxyTarget;
     Hint currentHint = null;
+    // set $willUpgradeConnection on request
+    boolean willUpgradeConnection = false;
+    // set $upgradedConnection when response returned
+    boolean upgradedConnection = false;
 
     public BinaryHttpContext(IPPort clientAddress) {
         this.clientAddress = clientAddress;

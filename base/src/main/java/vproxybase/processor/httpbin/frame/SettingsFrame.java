@@ -34,6 +34,9 @@ public class SettingsFrame extends HttpFrame {
     public int maxHeaderListSize;
     public boolean maxHeaderListSizeSet;
 
+    public int enableConnectProtocol;
+    public boolean enableConnectProtocolSet;
+
     public List<Setting> otherSettings;
 
     public SettingsFrame() {
@@ -75,6 +78,8 @@ public class SettingsFrame extends HttpFrame {
         settings.maxFrameSizeSet = true;
         // settings.maxHeaderListSize = unlimited;
         settings.maxHeaderListSizeSet = false; // unlimited
+        settings.enableConnectProtocolSet = true;
+        settings.enableConnectProtocol = 1;
         return settings;
     }
 
@@ -124,6 +129,10 @@ public class SettingsFrame extends HttpFrame {
                     maxHeaderListSize = value;
                     maxHeaderListSizeSet = true;
                     break;
+                case Setting.SETTINGS_ENABLE_CONNECT_PROTOCOL:
+                    enableConnectProtocol = value;
+                    enableConnectProtocolSet = true;
+                    break;
                 default:
                     settings.add(new Setting(id, value));
                     break;
@@ -163,6 +172,9 @@ public class SettingsFrame extends HttpFrame {
         if (maxHeaderListSizeSet) {
             ret = append(ret, Setting.SETTINGS_MAX_HEADER_LIST_SIZE, maxHeaderListSize);
         }
+        if (enableConnectProtocolSet) {
+            ret = append(ret, Setting.SETTINGS_ENABLE_CONNECT_PROTOCOL, enableConnectProtocol);
+        }
         if (otherSettings != null) {
             for (Setting s : otherSettings) {
                 ret = append(ret, s.identifier, s.value);
@@ -199,6 +211,9 @@ public class SettingsFrame extends HttpFrame {
         }
         if (maxHeaderListSizeSet) {
             sb.append(",").append("maxHeaderListSize=").append(maxHeaderListSize);
+        }
+        if (enableConnectProtocolSet) {
+            sb.append(",").append("enableConnectProtocol=").append(enableConnectProtocol);
         }
         sb.append(",").append("otherSettings=").append(otherSettings);
     }

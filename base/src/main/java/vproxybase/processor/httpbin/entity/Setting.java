@@ -8,6 +8,9 @@ public class Setting {
     public static final int SETTINGS_MAX_FRAME_SIZE = 0x5;
     public static final int SETTINGS_MAX_HEADER_LIST_SIZE = 0x6;
 
+    // https://tools.ietf.org/html/rfc8441
+    public static final int SETTINGS_ENABLE_CONNECT_PROTOCOL = 0x8;
+
     public final int identifier;
     public final int value;
 

@@ -87,6 +87,24 @@ public class TestHttp2Decoder {
             binCheckCases.add(aCase);
         }
         {
+            SettingsFrame settings = new SettingsFrame();
+            settings.headerTableSize = 4096;
+            settings.headerTableSizeSet = true;
+            settings.maxConcurrentStreams = 128;
+            settings.maxConcurrentStreamsSet = true;
+            settings.initialWindowSize = 65535;
+            settings.initialWindowSizeSet = true;
+            settings.maxFrameSize = 16384;
+            settings.maxFrameSizeSet = true;
+            settings.enableConnectProtocol = 1;
+            settings.enableConnectProtocolSet = true;
+            binCheckCases.add(new BinCheckCase(
+                "settings-3",
+                settings,
+                "00001e04000000000000010000100000030000008000040000ffff000500004000000800000001"
+            ));
+        }
+        {
             HeadersFrame headers = new HeadersFrame();
             headers.endHeaders = true;
             headers.streamId = 1;

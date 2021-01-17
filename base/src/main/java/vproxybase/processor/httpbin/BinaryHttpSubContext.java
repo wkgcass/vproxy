@@ -74,6 +74,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
 
     @Override
     public Processor.Mode mode() {
+        if (ctx.upgradedConnection) {
+            return Processor.Mode.proxy;
+        }
         if (state == STATE_DATA_FRAME) {
             return Processor.Mode.proxy;
         }
@@ -84,6 +87,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
 
     @Override
     public boolean expectNewFrame() {
+        if (ctx.upgradedConnection) {
+            return false;
+        }
         return expectNewFrame;
     }
 
@@ -92,6 +98,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
 
     @Override
     public int len() {
+        if (ctx.upgradedConnection) {
+            return 0x00ffffff; // use max uint24 to prevent some possible overflow
+        }
         if (dataPendingToBeProxied) {
             return 0; // the lib should directly call feed
         } else {
@@ -565,6 +574,15 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
                     path = new String(h.value);
                 } else if (h.keyStr.equalsIgnoreCase("host")) {
                     host = new String(h.value);
+                } else if (!parserMode &&
+                    h.keyStr.equalsIgnoreCase(":method") && ByteArray.from(h.value).equals(ByteArray.from("CONNECT"))) {
+                    // https://tools.ietf.org/html/rfc8441
+                    ctx.willUpgradeConnection = true;
+                }
+            } else { // connId != 0
+                if (!parserMode && ctx.willUpgradeConnection && // will upgrade
+                    h.keyStr.equalsIgnoreCase(":status") && ByteArray.from(h.value).equals(ByteArray.from("200"))) {
+                    ctx.upgradedConnection = true;
                 }
             }
         }
@@ -726,6 +744,9 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
 
     @Override
     public void proxyDone() {
+        if (ctx.upgradedConnection) {
+            return;
+        }
         if (state == STATE_DATA_FRAME) {
             assert Logger.lowLevelDebug("data frame proxy done");
             DataFrame data = (DataFrame) parsingFrame;
