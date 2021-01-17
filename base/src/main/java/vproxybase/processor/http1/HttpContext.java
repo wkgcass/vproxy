@@ -9,6 +9,7 @@ public class HttpContext extends OOContext<HttpSubContext> {
     final String clientPort;
 
     int currentBackend = -1;
+    boolean upgradedConnection = false;
 
     public HttpContext(IPPort clientSock) {
         clientAddress = clientSock == null ? null : clientSock.getAddress().formatToIPString();

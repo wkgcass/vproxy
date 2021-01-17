@@ -141,6 +141,9 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     @Override
     public Processor.Mode mode() {
+        if (ctx.upgradedConnection) {
+            return Processor.Mode.proxy;
+        }
         switch (state) {
             case 0:
             case 1:
@@ -175,11 +178,17 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     @Override
     public boolean expectNewFrame() {
+        if (ctx.upgradedConnection) {
+            return false;
+        }
         return state == 0;
     }
 
     @Override
     public int len() {
+        if (ctx.upgradedConnection) {
+            return 0x00ffffff; // use max uint24 to prevent some possible overflow
+        }
         // when proxyLen == -1, do feed, and -1 means feed any data into the processor
         return proxyLen;
     }
@@ -292,6 +301,9 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     @Override
     public void proxyDone() {
+        if (ctx.upgradedConnection) {
+            return;
+        }
         proxyLen = -1;
         if (state == 10) {
             end(); // done when body ends
@@ -453,8 +465,8 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             return;
         }
         for (var h : headers) {
-            String hdr = h.key.toString().trim().toLowerCase();
-            if (hdr.equals("content-length")) {
+            String hdr = h.key.toString().trim();
+            if (hdr.equalsIgnoreCase("content-length")) {
                 String len = h.value.toString().trim();
                 assert Logger.lowLevelDebug("found Content-Length: " + len);
                 int intLen = Integer.parseInt(len);
@@ -465,13 +477,20 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     proxyLen = intLen;
                 }
                 return;
-            } else if (hdr.equals("transfer-encoding")) {
+            } else if (hdr.equalsIgnoreCase("transfer-encoding")) {
                 String encoding = h.value.toString().trim().toLowerCase();
                 assert Logger.lowLevelDebug("found Transfer-Encoding: " + encoding);
                 if (encoding.equals("chunked")) {
                     state = 11;
                 }
                 return;
+            } else if (hdr.equalsIgnoreCase("upgrade")) {
+                if (!parserMode && connId != 0) { // will fallback to raw tcp proxying if the connection is upgraded
+                    assert Logger.lowLevelDebug("found upgrade header: " + h.value);
+                    ctx.upgradedConnection = true;
+                    proxyLen = 0x00ffffff; // use max uint24 to prevent some possible overflow
+                    return;
+                }
             }
         }
         assert Logger.lowLevelDebug("Content-Length and Transfer-Encoding both not found");
