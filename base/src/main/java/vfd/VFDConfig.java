@@ -1,5 +1,7 @@
 package vfd;
 
+import vproxybase.util.Utils;
+
 public class VFDConfig {
     private VFDConfig() {
     }
@@ -23,9 +25,9 @@ public class VFDConfig {
     public static final int aesetsize;
 
     static {
-        fstack = System.getProperty("fstack", "");
+        fstack = Utils.getSystemProperty("fstack", "");
         useFStack = !fstack.isBlank();
-        vfdImpl = useFStack ? "posix" : System.getProperty("vfd", "provided");
+        vfdImpl = useFStack ? "posix" : Utils.getSystemProperty("vfd", "provided");
         if (!vfdImpl.equals("provided")) {
             if (vfdImpl.equals("posix")) {
                 if (useFStack) {
@@ -38,10 +40,10 @@ public class VFDConfig {
             }
         }
 
-        String vfdtraceConf = System.getProperty("vfdtrace", "0");
+        String vfdtraceConf = Utils.getSystemProperty("vfd_trace", "0");
         vfdtrace = !vfdtraceConf.equals("0");
 
-        String aesetsizeStr = System.getProperty("aesetsize", "" + (128 * 1024));
+        String aesetsizeStr = Utils.getSystemProperty("ae_setsize", "" + (128 * 1024));
         aesetsize = Integer.parseInt(aesetsizeStr);
     }
 }

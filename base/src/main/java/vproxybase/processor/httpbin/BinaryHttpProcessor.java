@@ -4,6 +4,7 @@ import vfd.IPPort;
 import vproxybase.Config;
 import vproxybase.processor.OOProcessor;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHttpSubContext> {
     private final HttpVersion httpVersion;
@@ -39,7 +40,7 @@ public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHt
     static {
         // this is only for debug purpose
         {
-            String thresholdStr = System.getProperty("HTTP_BIN_ZERO_COPY_THRESHOLD");
+            String thresholdStr = Utils.getSystemProperty("http_bin_zero_copy_threshold");
             if (thresholdStr == null) {
                 HTTP_BIN_ZERO_COPY_THRESHOLD = Config.recommendedMinPayloadLength;
             } else {

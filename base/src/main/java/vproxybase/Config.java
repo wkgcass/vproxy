@@ -114,17 +114,17 @@ public class Config {
     public static final Predicate<String> dhcpGetDnsListNics;
 
     static {
-        appClass = System.getProperty("eploy"); // -Deploy
-        String probeConf = System.getProperty("probe", "");
+        appClass = Utils.getSystemProperty("deploy");
+        String probeConf = Utils.getSystemProperty("probe", "");
         if (probeConf.equals("all")) {
             probe = Set.of("virtual-fd-event", "streamed-arq-udp-event", "streamed-arq-udp-record");
         } else {
             probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
         }
-        domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
-        mirrorConfigPath = System.getProperty("mirrorConf", "");
+        domainWhichShouldResolve = Utils.getSystemProperty("domain_which_should_resolve", "www.qq.com");
+        mirrorConfigPath = Utils.getSystemProperty("mirror_conf", "");
 
-        String dhcpGetDnsListNicsString = System.getProperty("hcpGetDnsListNics", "");
+        String dhcpGetDnsListNicsString = Utils.getSystemProperty("dhcp_get_dns_list_nics", "");
         if (dhcpGetDnsListNicsString.isBlank()) {
             dhcpGetDnsListEnabled = false;
             dhcpGetDnsListNics = n -> false;

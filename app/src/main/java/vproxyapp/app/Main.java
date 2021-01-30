@@ -83,7 +83,7 @@ public class Main {
         }
 
         {
-            String gi = System.getProperty("GlobalInspection");
+            String gi = Utils.getSystemProperty("global_inspection");
             if (gi != null && !gi.equals("disable") && !gi.equals("disabled")) {
                 IPPort ipport;
                 try {
@@ -148,11 +148,11 @@ public class Main {
 
     private static String[] checkFlagDeployInArguments(String[] args) {
         Map<String, String> specialHandles = new HashMap<>();
-        specialHandles.put("eploy", null);
-        specialHandles.put("hcpGetDnsListNics", null);
+        specialHandles.put("deploy", null);
+        specialHandles.put("dhcp_get_dns_list_nics", null);
 
         for (String key : specialHandles.keySet()) {
-            String value = System.getProperty(key);
+            String value = Utils.getSystemProperty(key);
             if (value != null) {
                 specialHandles.put(key, value);
             }
@@ -173,7 +173,7 @@ public class Main {
             String key = kv.substring(0, kv.indexOf("="));
             String value = kv.substring(kv.indexOf("=") + 1);
 
-            if (System.getProperty(key) != null) {
+            if (Utils.getSystemProperty(key) != null) {
                 throw new IllegalArgumentException("Cannot set -D" + key + " both in system properties " +
                     "and in program arguments");
             }

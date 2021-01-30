@@ -10,10 +10,7 @@ import java.io.*;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -529,5 +526,148 @@ public class Utils {
         }
         md.update(input);
         return md.digest();
+    }
+
+    public static String getSystemProperty(String key) {
+        return getSystemProperty(key, null);
+    }
+
+    public static String getSystemProperty(String pattern, String defaultValue) {
+        String[] split = pattern.split("_");
+        Set<String> results = new HashSet<>();
+
+        String ret;
+
+        // -Dvproxy.AbcDef
+        ret = System.getProperty("vproxy." + namingConventionPascal(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dvproxy_abc_def
+        ret = System.getProperty("vproxy_" + namingConventionUnderline(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DVPROXY_ABC_DEF
+        ret = System.getProperty("VPROXY_" + namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        // env: VPROXY_ABC_DEF
+        ret = System.getenv("VPROXY_" + namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        // use properties with prefix first
+        ret = exactlyOneProperty(results);
+        if (ret != null) {
+            return ret;
+        }
+        results.clear();
+
+        if (split[0].startsWith("d")) {
+            // -Deploy=xxx
+            ret = System.getProperty(namingConventionPascal(split).substring(1));
+            if (ret != null) {
+                results.add(ret);
+            }
+        }
+        // -DAbcDef
+        ret = System.getProperty(namingConventionPascal(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DabcDef
+        ret = System.getProperty(namingConventionCamel(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dabc_def
+        ret = System.getProperty(namingConventionUnderline(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DABC_DEF
+        ret = System.getProperty(namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dabcdef
+        ret = System.getProperty(namingConventionJoin(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DABCDEF
+        ret = System.getProperty(namingConventionJoin(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        ret = exactlyOneProperty(results);
+        if (ret != null) {
+            return ret;
+        }
+
+        return defaultValue;
+    }
+
+    private static String exactlyOneProperty(Set<String> results) {
+        if (results.size() > 1)
+            throw new IllegalStateException(
+                "multiple keys with different patterns set for the same property");
+        if (results.isEmpty()) {
+            return null;
+        }
+        return results.iterator().next();
+    }
+
+    private static String namingConventionPascal(String[] split) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(split[0].substring(0, 1).toUpperCase());
+        sb.append(split[0].substring(1));
+        for (int i = 1; i < split.length; ++i) {
+            sb.append(split[i].substring(0, 1).toUpperCase());
+            sb.append(split[i].substring(1));
+        }
+        return sb.toString();
+    }
+
+    private static String namingConventionCamel(String[] split) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(split[0]);
+        for (int i = 1; i < split.length; ++i) {
+            sb.append(split[i].substring(0, 1).toUpperCase());
+            sb.append(split[i].substring(1));
+        }
+        return sb.toString();
+    }
+
+    private static String namingConventionUnderline(String[] split, boolean upper) {
+        if (upper) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < split.length; ++i) {
+                if (i != 0) {
+                    sb.append("_");
+                }
+                sb.append(split[i].toUpperCase());
+            }
+            return sb.toString();
+        } else {
+            return String.join("_", split);
+        }
+    }
+
+    private static String namingConventionJoin(String[] split, boolean upper) {
+        if (upper) {
+            StringBuilder sb = new StringBuilder();
+            for (String s : split) {
+                sb.append(s.toUpperCase());
+            }
+            return sb.toString();
+        } else {
+            return String.join("", split);
+        }
     }
 }

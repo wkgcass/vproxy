@@ -60,7 +60,7 @@ public class Daemon {
         }
 
         // write pid
-        String pidFilePath = System.getenv("PIDFILE");
+        String pidFilePath = Utils.getSystemProperty("pid_file");
         if (pidFilePath == null) {
             pidFilePath = Config.workingDirectoryFile("vproxy.daemon.pid");
         }
