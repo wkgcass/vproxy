@@ -187,7 +187,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             int newPos = dst.position();
             dst.position(oldPos);
             int n = newPos - oldPos;
-            byte[] content = new byte[n];
+            byte[] content = Utils.allocateByteArray(n);
             dst.get(content);
             assert Logger.lowLevelDebug("read " + n + " bytes from " + this);
             assert Logger.lowLevelNetDebugPrintBytes(content);
@@ -228,7 +228,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
             }
         }
         n = Math.min(writableLen, n);
-        byte[] copy = new byte[n];
+        byte[] copy = Utils.allocateByteArray(n);
         src.get(copy);
 
         if (writingMirrorDataFactory.isEnabled()) {
@@ -331,7 +331,7 @@ public class ArqUDPSocketFD implements SocketFD, VirtualFD {
     }
 
     private class ArqUDPInsideFDHandler implements Handler<SocketFD> {
-        private final ByteBuffer tmpBuffer = ByteBuffer.allocate(Config.udpMtu);
+        private final ByteBuffer tmpBuffer = Utils.allocateByteBuffer(Config.udpMtu);
         private IOException error = null;
         private boolean invalid = false;
 

@@ -255,7 +255,7 @@ public class Logger {
 
     public static void printBytes(byte[] array, int off, int end) {
         {
-            byte[] tmp = new byte[end - off];
+            byte[] tmp = Utils.allocateByteArray(end - off);
             System.arraycopy(array, off, tmp, 0, end - off);
             array = tmp;
         }
@@ -268,9 +268,9 @@ public class Logger {
         int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
         byte[][] linesArray = new byte[lines][];
         for (int i = 0; i < linesArray.length - 1; ++i) {
-            linesArray[i] = new byte[bytesPerLine];
+            linesArray[i] = Utils.allocateByteArray(bytesPerLine);
         }
-        linesArray[linesArray.length - 1] = new byte[lastLine];
+        linesArray[linesArray.length - 1] = Utils.allocateByteArray(lastLine);
 
         for (int i = 0; i < array.length; ++i) {
             int idx0 = i / bytesPerLine;

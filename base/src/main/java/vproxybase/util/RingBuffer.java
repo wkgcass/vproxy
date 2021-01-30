@@ -59,7 +59,7 @@ public interface RingBuffer {
             return 0; // nothing to write for now
         }
 
-        ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(new byte[len]);
+        ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(Utils.allocateByteArray(len));
         int n = writeTo(chnl);
         buffer.storeBytesFrom(chnl);
         return n;

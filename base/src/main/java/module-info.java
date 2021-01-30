@@ -34,6 +34,7 @@ module vproxy.base {
     exports vproxybase.util.ex;
     exports vproxybase.util.io;
     exports vproxybase.util.bytearray;
+    exports vproxybase.util.unsafe;
     exports vproxybase.util.time;
     exports vproxybase.util.time.impl;
     exports vproxybase.util.table;

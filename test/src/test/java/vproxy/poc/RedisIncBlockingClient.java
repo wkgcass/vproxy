@@ -2,6 +2,7 @@ package vproxy.poc;
 
 import vproxybase.redis.RESPParser;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -32,7 +33,7 @@ public class RedisIncBlockingClient {
 
         String key = "the-key";
         RingBuffer rb = RingBuffer.allocate(64);
-        byte[] buffer = new byte[64];
+        byte[] buffer = Utils.allocateByteArrayInitZero(64);
         for (int i = 0; i < times; ++i) { // demonstrate for 10 times
             RESPParser parser = new RESPParser(64);
             double rand = Math.random();
@@ -80,7 +81,7 @@ public class RedisIncBlockingClient {
                 }
                 if (l == 0)
                     continue;
-                byte[] buf = new byte[l];
+                byte[] buf = Utils.allocateByteArray(l);
                 System.arraycopy(buffer, 0, buf, 0, l);
                 ByteArrayChannel chnl = ByteArrayChannel.fromFull(buf);
                 rb.storeBytesFrom(chnl);

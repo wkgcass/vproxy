@@ -548,7 +548,7 @@ public class Switch {
             tables::get,
             () -> eventLoop.getSelectorEventLoop()
         ));
-        private final ByteBuffer sndBuf = ByteBuffer.allocate(2048);
+        private final ByteBuffer sndBuf = Utils.allocateByteBuffer(2048);
 
         protected NetworkStack() {
         }
@@ -628,7 +628,7 @@ public class Switch {
 
     private class PacketHandler implements Handler<DatagramFD> {
         private static final int IFACE_TIMEOUT = 60 * 1000;
-        private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
+        private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(2048);
 
         @Override
         public void accept(HandlerContext<DatagramFD> ctx) {
@@ -844,7 +844,7 @@ public class Switch {
         private final TapIface iface;
         private final TapDatagramFD tapDatagramFD;
 
-        private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
+        private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(2048);
 
         private TapHandler(TapIface iface, TapDatagramFD tapDatagramFD) {
             this.iface = iface;
@@ -916,7 +916,7 @@ public class Switch {
     }
 
     private class UserClientHandler extends NetworkStack implements Handler<DatagramFD> {
-        private final ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
+        private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(2048);
         private final UserClientIface iface;
 
         private ConnectedToSwitchTimer connectedToSwitchTimer = null;

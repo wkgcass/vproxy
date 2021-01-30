@@ -2,6 +2,7 @@ package vproxybase.util.crypto;
 
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;
@@ -17,7 +18,7 @@ public class StreamingCFBCipher {
     private final BlockCipherKey key;
     private final boolean encrypting;
     private final byte[] iv;
-    private final byte[] buffer = new byte[16384];
+    private final byte[] buffer = Utils.allocateByteArray(16384);
     private int oldLen = 0;
 
     private Cipher cipher;
@@ -56,7 +57,7 @@ public class StreamingCFBCipher {
         if (inputLen < 0 || inputOff + inputLen > input.length)
             throw new IllegalArgumentException("len is wrong");
         if (inputLen == 0) {
-            return new byte[0];
+            return Utils.getZeroLengthByteArray();
         }
 
         int newLen; // data read from input
@@ -77,7 +78,7 @@ public class StreamingCFBCipher {
                     if (buf.position() == 0 && buf.limit() == buf.capacity()) {
                         return buf.array();
                     }
-                    byte[] ret = new byte[buf.limit() - buf.position()];
+                    byte[] ret = Utils.allocateByteArray(buf.limit() - buf.position());
                     buf.get(ret);
                     return ret;
                 }
@@ -86,7 +87,7 @@ public class StreamingCFBCipher {
                 for (ByteBuffer b : result) {
                     total += (b.limit() - b.position());
                 }
-                byte[] ret = new byte[total];
+                byte[] ret = Utils.allocateByteArray(total);
                 int offset = 0;
                 for (ByteBuffer b : result) {
                     int len = (b.limit() - b.position());

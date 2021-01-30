@@ -219,7 +219,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int posAfter = dst.position();
         int lim = dst.limit();
 
-        byte[] arr = new byte[posAfter - posBefore];
+        byte[] arr = Utils.allocateByteArray(posAfter - posBefore);
         if (arr.length == 0) { // nothing read
             return;
         }
@@ -263,7 +263,7 @@ public class StreamedFD implements SocketFD, VirtualFD {
         int posAfter = src.position();
         int lim = src.limit();
 
-        byte[] arr = new byte[posAfter - posBefore];
+        byte[] arr = Utils.allocateByteArray(posAfter - posBefore);
         if (arr.length == 0) { // nothing read
             return;
         }

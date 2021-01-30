@@ -153,7 +153,7 @@ public class Socks5ClientHandshake {
                 Logger.shouldNotHappen("should not reach here, unsupported addressType: " + addressType);
                 throw new IllegalArgumentException("" + addressType);
         }
-        byte[] toSend = new byte[len];
+        byte[] toSend = Utils.allocateByteArray(len);
         toSend[0] = 5; // version
         toSend[1] = 1; // connect
         toSend[2] = 0; // preserved

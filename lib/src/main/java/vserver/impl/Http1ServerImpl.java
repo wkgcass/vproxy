@@ -365,7 +365,7 @@ public class Http1ServerImpl extends AbstractServer implements HttpServer {
     private static String unescape(String uri) {
         byte[] input = uri.getBytes();
         int idx = 0;
-        byte[] result = new byte[input.length];
+        byte[] result = Utils.allocateByteArray(input.length);
         int state = 0; // 0 -> normal, 1 -> %[x]x, 2 -> %x[x]
         int a = 0;
         for (byte b : input) {

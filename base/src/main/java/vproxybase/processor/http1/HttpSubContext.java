@@ -10,6 +10,7 @@ import vproxybase.processor.http1.entity.Request;
 import vproxybase.processor.http1.entity.Response;
 import vproxybase.util.ByteArray;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -504,7 +505,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         if (frontend) {
             if (parserMode) { // use a byte array buffer to hold the data
                 if (req.body == null) {
-                    buf = new byte[contentLength];
+                    buf = Utils.allocateByteArray(contentLength);
                     bufOffset = 0;
                     req.body = ByteArray.from(buf);
                 }
@@ -521,7 +522,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         } else {
             if (parserMode) {
                 if (resp.body == null) {
-                    buf = new byte[contentLength];
+                    buf = Utils.allocateByteArray(contentLength);
                     bufOffset = 0;
                     resp.body = ByteArray.from(buf);
                 }
@@ -632,7 +633,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         proxyLen -= data.length();
         if (parserMode) {
             if (chunk.content == null) {
-                buf = new byte[contentLength];
+                buf = Utils.allocateByteArray(contentLength);
                 bufOffset = 0;
                 chunk.content = ByteArray.from(buf);
             }

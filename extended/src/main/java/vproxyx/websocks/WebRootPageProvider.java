@@ -6,6 +6,7 @@ import vproxybase.selector.wrap.file.FilePath;
 import vproxybase.util.ByteArray;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -172,7 +173,7 @@ public class WebRootPageProvider implements PageProvider {
             return new PageResult(mime, page.content, cacheAge);
         }
         assert Logger.lowLevelDebug("reading from disk: " + url);
-        byte[] buf = new byte[1024];
+        byte[] buf = Utils.allocateByteArray(1024);
         try (FileInputStream fis = new FileInputStream(file)) {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
             int r;

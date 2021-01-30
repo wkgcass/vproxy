@@ -49,7 +49,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     }
 
     public static SimpleRingBuffer allocate(int cap) {
-        return new SimpleRingBuffer(false, new ByteBufferEx(ByteBuffer.allocate(cap)), 0, 0);
+        return new SimpleRingBuffer(false, new ByteBufferEx(Utils.allocateByteBuffer(cap)), 0, 0);
     }
 
     public static SimpleRingBuffer wrap(ByteBuffer b) {
@@ -134,7 +134,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         ensureBufferAvailable();
 
         int len = used();
-        byte[] arr = new byte[len];
+        byte[] arr = Utils.allocateByteArray(len);
         if (len == 0)
             return arr;
         int lim = retrieveLimit();
@@ -209,7 +209,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
     public void clear() {
         ensureBufferAvailable();
 
-        byte[] b = new byte[capacity()];
+        byte[] b = Utils.allocateByteArray(capacity());
         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
 
         // use a while loop because data may be read into buffer
@@ -441,7 +441,7 @@ public class SimpleRingBuffer implements RingBuffer, ByteBufferRingBuffer {
         if (isDirect) {
             newBuffer = DirectMemoryUtils.allocateDirectBuffer(cap);
         } else {
-            newBuffer = new ByteBufferEx(ByteBuffer.allocate(cap));
+            newBuffer = new ByteBufferEx(Utils.allocateByteBuffer(cap));
         }
 
         if (ePosIsAfterSPos) {

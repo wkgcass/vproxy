@@ -1,6 +1,7 @@
 package vfd;
 
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 
 import java.util.Objects;
 
@@ -25,7 +26,7 @@ public class MacAddress {
         if (split.length != 6) {
             throw new IllegalArgumentException();
         }
-        byte[] bytes = new byte[6];
+        byte[] bytes = Utils.allocateByteArrayInitZero(6);
         for (int i = 0; i < 6; i++) {
             String s = split[i];
             if (s.length() != 2) {

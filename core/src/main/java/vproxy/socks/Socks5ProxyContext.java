@@ -3,6 +3,7 @@ package vproxy.socks;
 import vproxybase.connection.Connector;
 import vproxybase.socks.AddressType;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.util.Arrays;
@@ -44,12 +45,12 @@ public class Socks5ProxyContext {
     int addressLeft; // first set to 4(ipv4)or16(ipv6)or user specific(domain), then self decrease until 0
     byte[] address;
     int portLeft = 2;
-    byte[] portBytes = new byte[2];
+    byte[] portBytes = Utils.allocateByteArrayInitZero(2);
     int port;
     Connector connector;
 
     final RingBuffer inBuffer;
-    private final byte[] b = new byte[1];
+    private final byte[] b = Utils.allocateByteArrayInitZero(1);
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
 
     public Socks5ProxyContext(RingBuffer inBuffer) {

@@ -1,6 +1,7 @@
 package vproxybase.util.codec;
 
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.util.Set;
@@ -10,7 +11,7 @@ public abstract class AbstractParser<T> {
     protected T result;
     protected String errorMessage;
 
-    private final byte[] bytes = new byte[1];
+    private final byte[] bytes = Utils.allocateByteArrayInitZero(1);
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
     private final Set<Integer> terminateStates;
     private final Set<Integer> terminateRegardlessOfInputStates;

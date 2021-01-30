@@ -2,6 +2,7 @@ package vproxy.poc;
 
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.crypto.Aes256Key;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
@@ -46,7 +47,7 @@ public class EncryptDecrypt {
                         }
                         continue;
                     }
-                    byte[] arr = new byte[len];
+                    byte[] arr = Utils.allocateByteArray(len);
                     plain.writeTo(ByteArrayChannel.fromEmpty(arr));
 
                     Logger.printBytes(arr);
@@ -63,7 +64,7 @@ public class EncryptDecrypt {
             var plain2 = RingBuffer.allocate(2048);
             var encryptBuf = new EncryptIVInDataWrapRingBuffer(plain2, key, hexStringToByteArray(toDecrypt[0]));
             plain2.storeBytesFrom(ByteArrayChannel.fromFull(plain.getBytes()));
-            byte[] encryptedArray = new byte[encryptBuf.used()];
+            byte[] encryptedArray = Utils.allocateByteArray(encryptBuf.used());
             encryptBuf.writeTo(ByteArrayChannel.fromEmpty(encryptedArray));
 
             Logger.printBytes(encryptedArray);
@@ -77,7 +78,7 @@ public class EncryptDecrypt {
 
     public static byte[] hexStringToByteArray(String s) {
         int len = s.length();
-        byte[] data = new byte[len / 2];
+        byte[] data = Utils.allocateByteArray(len / 2);
         for (int i = 0; i < len; i += 2) {
             data[i / 2] = (byte) ((Character.digit(s.charAt(i), 16) << 4)
                 + Character.digit(s.charAt(i + 1), 16));

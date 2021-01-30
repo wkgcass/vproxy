@@ -88,7 +88,7 @@ public class DomainBinder {
     }
 
     private IP buildIPFromIncr(int incr) {
-        byte[] l3addr = new byte[network.length];
+        byte[] l3addr = Utils.allocateByteArray(network.length);
         System.arraycopy(network, 0, l3addr, 0, network.length);
         byte[] sub = Utils.long2bytes(incr);
         for (int i = 0; i < sub.length; ++i) {

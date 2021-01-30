@@ -11,6 +11,7 @@ import vproxybase.selector.wrap.WrappedSelector;
 import vproxybase.util.Lock;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
@@ -160,7 +161,7 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
                 Logger.warn(LogType.BUFFER_INSUFFICIENT, "cannot store bytes into the write queue: current: " + currentWriteQueueBytes + ", input: " + srcLen + ", limit: " + writeQByteLimit);
                 return 0;
             }
-            var copy = ByteBuffer.allocate(srcLen);
+            var copy = Utils.allocateByteBuffer(srcLen);
             copy.put(src);
             copy.flip();
             writeQueue.add(copy);
@@ -284,7 +285,7 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
             }
         }
 
-        var buf = ByteBuffer.allocate(readBufSize);
+        var buf = Utils.allocateByteBuffer(readBufSize);
         try {
             fd.read(buf);
         } catch (IOException e) {

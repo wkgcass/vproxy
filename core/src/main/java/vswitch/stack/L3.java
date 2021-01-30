@@ -806,7 +806,7 @@ public class L3 {
         } else {
             assert Logger.lowLevelDebug("need to do routing");
             // the dstMac is not important, will be filled
-            dstMac = new MacAddress(ByteArray.from(new byte[6]));
+            dstMac = new MacAddress(ByteArray.allocate(6));
         }
 
         // form a ethernet packet

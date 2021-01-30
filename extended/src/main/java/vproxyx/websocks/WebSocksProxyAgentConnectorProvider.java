@@ -226,7 +226,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     sendSocks5AuthMethodExchange(ctx);
                 }
                 step = 3;
-                byte[] ex = new byte[2];
+                byte[] ex = Utils.allocateByteArrayInitZero(2);
                 socks5AuthMethodExchange = ByteArrayChannel.fromEmpty(ex);
             } else if (step == 3) {
                 // socks5 auth method respond
@@ -273,7 +273,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             // prepare for web socket recv
             step = 2;
             // expecting to read the exactly same data as sent
-            byte[] bytes = new byte[WebSocksUtils.bytesToSendForWebSocketFrame.length];
+            byte[] bytes = Utils.allocateByteArray(WebSocksUtils.bytesToSendForWebSocketFrame.length);
             webSocketFrame = ByteArrayChannel.fromEmpty(bytes);
 
             // send WebSocket frame:
@@ -336,7 +336,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     utilAlertFail(ctx);
                     return;
             }
-            byte[] toSend = new byte[len];
+            byte[] toSend = Utils.allocateByteArray(len);
             toSend[0] = 5; // version
             toSend[1] = 1; // connect
             toSend[2] = 0; // preserved
@@ -397,7 +397,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
             // make buffer for incoming data
             step = 5;
-            byte[] connect5Bytes = new byte[5];
+            byte[] connect5Bytes = Utils.allocateByteArrayInitZero(5);
             // we only need 2 bytes to check whether connection established successfully
             // and read another THREE bytes to know how long this message is
             socks5ConnectResult = ByteArrayChannel.fromEmpty(connect5Bytes);
@@ -440,7 +440,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             } else if (ctx.connection.getInBuffer().used() < leftLen) {
                 // read more data
                 step = 6;
-                byte[] foo = new byte[leftLen];
+                byte[] foo = Utils.allocateByteArray(leftLen);
                 socks5ConnectResult = ByteArrayChannel.fromEmpty(foo);
             } else {
                 // more than leftLen, which is invalid

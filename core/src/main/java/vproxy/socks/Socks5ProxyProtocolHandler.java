@@ -98,7 +98,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
             return -1;
         }
         pctx.clientMethodLeft = count;
-        pctx.clientSupportedMethods = new byte[count];
+        pctx.clientSupportedMethods = Utils.allocateByteArray(count);
         return 2; // methods
     }
 
@@ -171,16 +171,16 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         if (pctx.address == null) {
             if (pctx.reqType == AddressType.ipv4) {
                 // ipv4
-                pctx.address = new byte[4];
+                pctx.address = Utils.allocateByteArrayInitZero(4);
                 pctx.addressLeft = 4;
             } else if (pctx.reqType == AddressType.domain) {
                 byte blen = pctx.next(); // read first byte as the length of domain string
                 int len = Utils.positive(blen);
-                pctx.address = new byte[len];
+                pctx.address = Utils.allocateByteArray(len);
                 pctx.addressLeft = len;
             } else if (pctx.reqType == AddressType.ipv6) {
                 // ipv6
-                pctx.address = new byte[16];
+                pctx.address = Utils.allocateByteArrayInitZero(16);
                 pctx.addressLeft = 16;
             } else {
                 pctx.errType = Socks5ProxyContext.ADDRESS_TYPE_NOT_SUPPORTED;
@@ -308,7 +308,7 @@ public class Socks5ProxyProtocolHandler implements ProtocolHandler<Tuple<Socks5P
         assert Logger.lowLevelDebug("socks5 failed " + ctx.connectionId + " state = " + pctx.state + " err = " + pctx.errType);
         // clear buffer
         if (pctx.inBuffer.used() > 0) {
-            byte[] x = new byte[pctx.inBuffer.used()];
+            byte[] x = Utils.allocateByteArray(pctx.inBuffer.used());
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(x);
             while (pctx.inBuffer.used() > 0) {
                 chnl.reset();

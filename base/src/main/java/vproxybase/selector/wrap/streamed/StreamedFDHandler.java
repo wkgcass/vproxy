@@ -13,10 +13,7 @@ import vproxybase.selector.HandlerContext;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.selector.TimerEvent;
 import vproxybase.selector.wrap.arqudp.ArqUDPSocketFD;
-import vproxybase.util.ByteArray;
-import vproxybase.util.Consts;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
+import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -202,7 +199,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
         watchReadable();
     }
 
-    private final ByteBuffer readBuf = ByteBuffer.allocate(1024);
+    private final ByteBuffer readBuf = Utils.allocateByteBuffer(1024);
 
     private ByteArray read0() {
         ByteArray array = null;
@@ -745,7 +742,7 @@ public abstract class StreamedFDHandler implements Handler<SocketFD> {
             checkAndCancelWritable();
             return 0;
         }
-        byte[] data = new byte[len];
+        byte[] data = Utils.allocateByteArray(len);
         src.get(data);
         // append to the last of the queue
         addMessageToWrite(formatPSH(fd.streamId, ByteArray.from(data)));

@@ -26,6 +26,7 @@ import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.BlockCallback;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.RingBufferETHandler;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.SSLUnwrapRingBuffer;
 import vproxybase.util.ringbuffer.SSLUtils;
@@ -251,7 +252,7 @@ public class TestSSL {
     SSLWrapRingBuffer clientWrap;
     SSLUnwrapRingBuffer clientUnwrap;
 
-    byte[] tmp = new byte[16384];
+    byte[] tmp = Utils.allocateByteArray(16384);
     ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(tmp);
 
     int serverTotalData;

@@ -15,6 +15,8 @@
  */
 package vproxybase.util.crypto;
 
+import vproxybase.util.Utils;
+
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -28,9 +30,9 @@ public class CryptoUtils {
      */
     private static byte[][] EVP_BytesToKey(int key_len, int iv_len, MessageDigest md, byte[] salt, byte[] data, int count) {
         byte[][] both = new byte[2][];
-        byte[] key = new byte[key_len];
+        byte[] key = Utils.allocateByteArray(key_len);
         int key_ix = 0;
-        byte[] iv = new byte[iv_len];
+        byte[] iv = Utils.allocateByteArray(iv_len);
         int iv_ix = 0;
         both[0] = key;
         both[1] = iv;
@@ -111,7 +113,7 @@ public class CryptoUtils {
     }
 
     public static byte[] randomBytes(int size) {
-        byte[] bytes = new byte[size];
+        byte[] bytes = Utils.allocateByteArray(size);
         new SecureRandom().nextBytes(bytes);
         return bytes;
     }
@@ -125,7 +127,7 @@ public class CryptoUtils {
         }
         byte[] mdResult = md.digest(bytes);
         assert mdResult.length == 16;
-        byte[] longArr = new byte[8];
+        byte[] longArr = Utils.allocateByteArrayInitZero(8);
         for (int i = 0; i < 8; ++i) {
             longArr[i] = (byte) (mdResult[i] ^ mdResult[8 + i]);
         }

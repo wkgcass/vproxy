@@ -4,6 +4,7 @@ import vfd.FDProvider;
 import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
 import vproxybase.util.thread.VProxyThread;
+import vproxybase.util.unsafe.JDKUnsafe;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -112,7 +113,7 @@ public class Utils {
             bytes.addFirst(b);
             v = v >> 8;
         }
-        byte[] ret = new byte[bytes.size()];
+        byte[] ret = allocateByteArray(bytes.size());
         int idx = 0;
         for (byte b : bytes) {
             ret[idx] = b;
@@ -304,7 +305,7 @@ public class Utils {
     public static byte[] hexToBytes(String hex) {
         char[] chars = hex.toCharArray();
         if (chars.length % 2 != 0) throw new IllegalArgumentException("invalid hex string");
-        byte[] ret = new byte[chars.length / 2];
+        byte[] ret = allocateByteArray(chars.length / 2);
         for (int i = 0; i < chars.length; i += 2) {
             char m = chars[i];
             char n = chars[i + 1];
@@ -355,7 +356,7 @@ public class Utils {
     public static byte[] gzipDecompress(ByteArrayOutputStream baos, byte[] compressed) {
         ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
         try (GZIPInputStream gzip = new GZIPInputStream(bais)) {
-            byte[] buf = new byte[1024];
+            byte[] buf = allocateByteArray(1024);
             int n;
             while ((n = gzip.read(buf, 0, buf.length)) >= 0) {
                 baos.write(buf, 0, n);
@@ -374,6 +375,28 @@ public class Utils {
         } catch (AssertionError ignore) {
             return true;
         }
+    }
+
+    private static final int UNINITIALIZED_BYTE_ARRAY_THRESHOLD = 512;
+
+    public static byte[] allocateByteArray(int len) {
+        if (len < UNINITIALIZED_BYTE_ARRAY_THRESHOLD)
+            return allocateByteArrayInitZero(len);
+        return JDKUnsafe.allocateUninitializedByteArray(len);
+    }
+
+    public static byte[] allocateByteArrayInitZero(int len) {
+        return new byte[len];
+    }
+
+    private static final byte[] ZERO_LENGTH_BYTE_ARRAY = new byte[0];
+
+    public static byte[] getZeroLengthByteArray() {
+        return ZERO_LENGTH_BYTE_ARRAY;
+    }
+
+    public static ByteBuffer allocateByteBuffer(int cap) {
+        return ByteBuffer.wrap(allocateByteArray(cap));
     }
 
     public interface UtilSupplier<T> {

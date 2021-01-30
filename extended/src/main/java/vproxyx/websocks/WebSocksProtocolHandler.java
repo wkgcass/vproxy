@@ -159,7 +159,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 WebSocksHttpContext wrapCtx = (WebSocksHttpContext) ctx.data;
                 wrapCtx.webSocksProxyContext.step = 2; // next step is WebSocket
                 int expectingLen = WebSocksUtils.bytesToSendForWebSocketFrame.length;
-                byte[] foo = new byte[expectingLen];
+                byte[] foo = Utils.allocateByteArray(expectingLen);
                 wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
             response(101, accept, ctx); // respond to the client about the upgrading

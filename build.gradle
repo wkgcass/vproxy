@@ -39,6 +39,8 @@ repositories {
 }
 
 project(':base') {
+    compileJava.options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=vproxy.base'
+
     dependencies {
     }
 }
@@ -91,6 +93,8 @@ project(':test') {
     }
 
     task runSuite(type: Test) {
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
         testLogging {
             events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
             maxGranularity 100
@@ -104,6 +108,8 @@ project(':test') {
     }
 
     task runCI(type: Test) {
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
         testLogging {
             events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
             maxGranularity 100

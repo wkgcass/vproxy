@@ -103,10 +103,10 @@ public class Network {
             throw new IllegalArgumentException("unknown mask " + mask);
         } else if (mask > 32) {
             // ipv6
-            return getMask(new byte[16], mask);
+            return getMask(Utils.allocateByteArrayInitZero(16), mask);
         } else {
             // ipv4
-            return getMask(new byte[4], mask);
+            return getMask(Utils.allocateByteArrayInitZero(4), mask);
         }
         // maybe the mask <= 32 but is for ipv6
         // in this case, we handle it as an ipv4 mask

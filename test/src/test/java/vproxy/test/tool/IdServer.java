@@ -7,6 +7,7 @@ import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
@@ -41,7 +42,7 @@ public class IdServer {
         @Override
         public void readable(ProtocolHandlerContext<Object> ctx) {
             int size = ctx.inBuffer.used();
-            byte[] empty = new byte[size];
+            byte[] empty = Utils.allocateByteArray(size);
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(empty);
             ctx.inBuffer.writeTo(chnl);
             inBytes.addAndGet(size);

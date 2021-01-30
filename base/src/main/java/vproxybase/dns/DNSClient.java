@@ -38,7 +38,7 @@ public class DNSClient {
 
     private final Map<Integer, Request> requests = new HashMap<>();
     private int nextId = 0;
-    private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+    private final ByteBuffer buffer = Utils.allocateByteBuffer(Config.udpMtu);
 
     public DNSClient(SelectorEventLoop loop, DatagramFD sock, int dnsReqTimeout, int maxRetry) throws IOException {
         this(loop, sock, Collections.emptyList(), dnsReqTimeout, maxRetry);
@@ -279,7 +279,7 @@ public class DNSClient {
                     return;
                 }
                 buffer.flip();
-                byte[] bytes = new byte[read];
+                byte[] bytes = Utils.allocateByteArray(read);
                 buffer.get(bytes);
                 ByteArray array = ByteArray.from(bytes);
 

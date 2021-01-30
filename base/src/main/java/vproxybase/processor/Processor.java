@@ -105,7 +105,7 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * the lib will still try to find a connection though it's empty.<br>
      * also, {@link #connection(Context, SubContext)} should return -1 to let it happen.
      */
-    ByteArray REQUIRE_CONNECTION = ByteArray.from(new byte[0]);
+    ByteArray REQUIRE_CONNECTION = ByteArray.allocate(0).copy();
 
     /**
      * produce some data to the connection represented by the sub context<br>

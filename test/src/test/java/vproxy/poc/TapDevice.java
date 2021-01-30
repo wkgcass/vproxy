@@ -6,6 +6,7 @@ import vfd.FDsWithTap;
 import vfd.TapDatagramFD;
 import vpacket.EthernetPacket;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -20,7 +21,7 @@ public class TapDevice {
         TapDatagramFD fd = tapFDs.openTap("tap1");
         System.out.println("Tap fd opened: " + fd);
         System.out.println("Supports non-blocking: " + tapFDs.tapNonBlockingSupported());
-        ByteBuffer buf = ByteBuffer.allocate(2048); // should always be enough for a network packet
+        ByteBuffer buf = Utils.allocateByteBuffer(2048); // should always be enough for a network packet
         //noinspection InfiniteLoopStatement
         while (true) {
             buf.limit(buf.capacity()).position(0);

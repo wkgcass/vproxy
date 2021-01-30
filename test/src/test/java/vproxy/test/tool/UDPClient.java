@@ -1,6 +1,7 @@
 package vproxy.test.tool;
 
 import vfd.IP;
+import vproxybase.util.Utils;
 
 import java.io.IOException;
 import java.net.DatagramPacket;
@@ -23,7 +24,7 @@ public class UDPClient {
     public String sendAndRecv(String data) throws IOException {
         byte[] bytes = data.getBytes();
         socket.send(new DatagramPacket(bytes, 0, bytes.length));
-        byte[] buf = new byte[2048];
+        byte[] buf = Utils.allocateByteArray(2048);
         DatagramPacket p = new DatagramPacket(buf, 0, buf.length);
         socket.receive(p);
         return new String(buf, 0, p.getLength(), StandardCharsets.UTF_8);

@@ -41,7 +41,7 @@ public class DNSServer {
     public final Upstream rrsets;
     public final DNSClient client;
     private Map<String, IP> hosts;
-    private final ByteBuffer buffer = ByteBuffer.allocate(Config.udpMtu);
+    private final ByteBuffer buffer = Utils.allocateByteBuffer(Config.udpMtu);
     private final ConcurrentHashSet<ResolvingInfoRecorder> resolvingInfoRecorders = new ConcurrentHashSet<>();
 
     private final ELGAttach elgAttach = new ELGAttach();
@@ -475,7 +475,7 @@ public class DNSServer {
                         return;
                     }
                     buffer.flip();
-                    byte[] bytes = new byte[read];
+                    byte[] bytes = Utils.allocateByteArray(read);
                     buffer.get(bytes);
                     ByteArray array = ByteArray.from(bytes);
 

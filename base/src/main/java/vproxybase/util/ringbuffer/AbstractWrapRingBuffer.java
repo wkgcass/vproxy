@@ -2,10 +2,7 @@ package vproxybase.util.ringbuffer;
 
 import vfd.ReadableByteStream;
 import vfd.WritableByteStream;
-import vproxybase.util.ByteBufferEx;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.RingBufferETHandler;
+import vproxybase.util.*;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -85,7 +82,7 @@ public abstract class AbstractWrapRingBuffer extends AbstractRingBuffer implemen
             temporaryBuffer.limit(temporaryBuffer.capacity()).position(0);
             return temporaryBuffer;
         }
-        temporaryBuffer = ByteBuffer.allocate(cap);
+        temporaryBuffer = Utils.allocateByteBuffer(cap);
         return temporaryBuffer;
     }
 

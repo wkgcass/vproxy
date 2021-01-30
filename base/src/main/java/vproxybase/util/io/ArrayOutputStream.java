@@ -23,7 +23,7 @@ public class ArrayOutputStream extends OutputStream {
 
     public ByteArray get() {
         if (curosr == 0)
-            return ByteArray.from(new byte[0]);
+            return ByteArray.allocate(0);
         ByteArray ret = array.sub(0, curosr).copy();
         curosr = 0;
         return ret;

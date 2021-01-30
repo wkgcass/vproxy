@@ -9,6 +9,7 @@ import vproxybase.protocol.ProtocolServerConfig;
 import vproxybase.protocol.ProtocolServerHandler;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.nio.ByteArrayChannel;
 
@@ -36,7 +37,7 @@ public class EchoProtocolServer {
                 public void readable(ProtocolHandlerContext ctx) {
                     RingBuffer inBuffer = ctx.inBuffer;
                     int len = inBuffer.used();
-                    byte[] bytes = new byte[len];
+                    byte[] bytes = Utils.allocateByteArray(len);
                     ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
                     inBuffer.writeTo(chnl);
                     // the bytes array is filled with all bytes in inBuffer

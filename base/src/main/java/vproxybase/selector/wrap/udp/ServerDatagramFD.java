@@ -36,7 +36,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     private final SelectorEventLoop loop;
     private final WrappedSelector selector;
 
-    private final ByteBuffer buf = ByteBuffer.allocate(Config.udpMtu); // enough for any udp packet
+    private final ByteBuffer buf = Utils.allocateByteBuffer(Config.udpMtu); // enough for any udp packet
     private final Deque<VirtualDatagramFD> acceptQ = new LinkedList<>();
     private final Map<IPPort, VirtualDatagramFD> acceptMap = new HashMap<>();
     private final Map<IPPort, VirtualDatagramFD> conns = new HashMap<>();
@@ -99,7 +99,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
                     acceptQ.add(fd);
                 }
                 // append to fd
-                ByteBuffer b = ByteBuffer.allocate(buf.limit() - buf.position());
+                ByteBuffer b = Utils.allocateByteBuffer(buf.limit() - buf.position());
                 b.put(buf);
                 b.flip();
                 fd.bufs.add(b);

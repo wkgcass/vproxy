@@ -1,6 +1,7 @@
 package vfd;
 
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;
@@ -45,7 +46,7 @@ public class TraceInvocationHandler implements InvocationHandler {
                     len = 32;
                     printFull = false;
                 }
-                byte[] holder = new byte[len];
+                byte[] holder = Utils.allocateByteArray(len);
                 buf.get(holder);
                 buf.position(pos);
 
