@@ -2,6 +2,7 @@ package vswitch;
 
 import vfd.IP;
 import vfd.MacAddress;
+import vproxybase.util.Annotations;
 
 import java.util.Collections;
 import java.util.Map;
@@ -10,15 +11,16 @@ import java.util.Objects;
 public class IPMac {
     public final IP ip;
     public final MacAddress mac;
-    public final Map<String, String> annotations;
+    public final Annotations annotations;
 
-    IPMac(IP ip, MacAddress mac, Map<String, String> annotations) {
+    IPMac(IP ip, MacAddress mac, Annotations annotations) {
         this.ip = ip;
         this.mac = mac;
+        //noinspection ReplaceNullCheck
         if (annotations == null) {
-            this.annotations = Collections.emptyMap();
+            this.annotations = new Annotations();
         } else {
-            this.annotations = Collections.unmodifiableMap(annotations);
+            this.annotations = annotations;
         }
     }
 

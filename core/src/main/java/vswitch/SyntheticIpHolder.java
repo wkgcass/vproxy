@@ -3,6 +3,7 @@ package vswitch;
 import vfd.IP;
 import vfd.IPv4;
 import vfd.MacAddress;
+import vproxybase.util.Annotations;
 import vproxybase.util.ConcurrentHashSet;
 import vproxybase.util.Network;
 import vproxybase.util.exception.AlreadyExistException;
@@ -10,7 +11,6 @@ import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
 
 import java.util.Collection;
-import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.stream.Collectors;
@@ -54,7 +54,7 @@ public class SyntheticIpHolder {
         return macMap.keySet();
     }
 
-    public void add(IP ip, MacAddress mac, Map<String, String> annotations) throws AlreadyExistException, XException {
+    public void add(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
         if (ip instanceof IPv4) {
             if (!allowedV4Network.contains(ip)) {
                 throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV4Network);

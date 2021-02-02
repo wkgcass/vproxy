@@ -7,6 +7,7 @@ import vproxyapp.app.cmd.Param;
 import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
 import vproxyapp.app.cmd.handle.param.AnnotationsHandle;
+import vproxybase.util.Annotations;
 import vproxybase.util.exception.XException;
 import vswitch.IPMac;
 import vswitch.Table;
@@ -64,7 +65,7 @@ public class IpHandle {
             throw new XException("invalid mac address: " + mac);
         }
 
-        Map<String, String> anno = null;
+        Annotations anno = null;
         if (cmd.args.containsKey(Param.anno)) {
             anno = AnnotationsHandle.get(cmd);
         }

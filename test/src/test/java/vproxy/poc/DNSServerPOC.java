@@ -10,6 +10,7 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.AnnotationKeys;
+import vproxybase.util.Annotations;
 
 import java.util.Map;
 
@@ -19,7 +20,7 @@ public class DNSServerPOC {
         ServerGroup group = new ServerGroup("sg0",
             elg, new HealthCheckConfig(0, 5000, 1, 1, CheckProtocol.none),
             Method.wrr);
-        group.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "example.com"));
+        group.setAnnotations(new Annotations(Map.of(AnnotationKeys.ServerGroup_HintHost.name, "example.com")));
         group.add("svr1", new IPPort("192.168.3.4", 80), 10);
         group.add("svr2", new IPPort("192.168.2.1", 80), 10);
         group.add("svr3", new IPPort("10.1.2.3", 80), 10);

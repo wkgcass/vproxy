@@ -222,7 +222,7 @@ public class Switch {
         return t;
     }
 
-    public void addTable(int vni, Network v4network, Network v6network, Map<String, String> annotations) throws AlreadyExistException, XException {
+    public void addTable(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
         if (tables.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
@@ -265,7 +265,7 @@ public class Switch {
     }
 
     // return created dev name
-    public String addTap(String devPattern, int vni, String postScript, Map<String, String> annotations) throws XException, IOException {
+    public String addTap(String devPattern, int vni, String postScript, Annotations annotations) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");

@@ -4,6 +4,7 @@ import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.util.Annotations;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.ClosedException;
 import vproxybase.util.exception.NotFoundException;
@@ -24,7 +25,7 @@ public class ServerGroupHolder {
                            EventLoopGroup eventLoopGroup,
                            HealthCheckConfig healthCheckConfig,
                            Method method,
-                           Map<String, String> annotations) throws AlreadyExistException, ClosedException {
+                           Annotations annotations) throws AlreadyExistException, ClosedException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("server-group", alias);
         ServerGroup serverGroup = new ServerGroup(alias, eventLoopGroup, healthCheckConfig, method);

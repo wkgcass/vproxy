@@ -42,13 +42,13 @@ public class HttpContext extends OOContext<HttpSubContext> {
             return null;
         } else if (host == null) {
             // assert uri != null;
-            return new Hint(null, uri);
+            return Hint.ofUri(uri);
         } else if (uri == null) {
             // assert host != null;
-            return new Hint(host);
+            return Hint.ofHost(host);
         } else {
             // assert host != null && uri != null;
-            return new Hint(host, uri);
+            return Hint.ofHostUri(host, uri);
         }
     }
 

@@ -39,6 +39,7 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.AnnotationKeys;
+import vproxybase.util.Annotations;
 import vproxybase.util.thread.VProxyThread;
 
 import java.util.HashSet;
@@ -70,16 +71,16 @@ public class TestProtocols {
 
         ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg1.setAnnotations(Map.of(
-            AnnotationKeys.ServerGroup_HintHost, "s1.test.com",
-            AnnotationKeys.ServerGroup_HintUri, "/a"));
+        sg1.setAnnotations(new Annotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost.name, "s1.test.com",
+            AnnotationKeys.ServerGroup_HintUri.name, "/a")));
         sg1.add("svr1", new IPPort(IP.from("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg2.setAnnotations(Map.of(
-            AnnotationKeys.ServerGroup_HintHost, "s2.test.com",
-            AnnotationKeys.ServerGroup_HintUri, "/b"
-        ));
+        sg2.setAnnotations(new Annotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost.name, "s2.test.com",
+            AnnotationKeys.ServerGroup_HintUri.name, "/b"
+        )));
         sg2.add("svr2", new IPPort(IP.from("127.0.0.1"), port2), 10);
 
         // set to up

@@ -15,6 +15,7 @@ import vproxyapp.app.cmd.handle.param.WeightHandle;
 import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.util.Annotations;
 import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
 
@@ -163,7 +164,7 @@ public class ServerGroupHandle {
             String eventLoopGroupName = cmd.args.get(Param.elg);
             EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);
             HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
-            Map<String, String> anno = null;
+            Annotations anno = null;
             if (cmd.args.containsKey(Param.anno)) {
                 anno = AnnotationsHandle.get(cmd);
             }
@@ -257,7 +258,7 @@ public class ServerGroupHandle {
         }
 
         private String formatAnno() {
-            Map<String, String> annos;
+            Annotations annos;
             if (h == null) {
                 annos = g.getAnnotations();
             } else {
@@ -265,7 +266,7 @@ public class ServerGroupHandle {
             }
 
             ObjectBuilder ob = new ObjectBuilder();
-            for (Map.Entry<String, String> entry : annos.entrySet()) {
+            for (Map.Entry<String, String> entry : annos.getRaw().entrySet()) {
                 ob.put(entry.getKey(), entry.getValue());
             }
             return ob.build().stringify();

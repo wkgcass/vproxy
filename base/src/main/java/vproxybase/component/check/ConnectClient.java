@@ -174,28 +174,28 @@ public class ConnectClient {
                 closeAndCallFail(ctx, "unexpected http response status " + status);
                 return;
             }
-            String expectedStatus = annotatedHcConfig.getHttpStatus();
+            boolean[] expectedStatus = annotatedHcConfig.getHttpStatus();
             if (status < 200) {
-                if (expectedStatus.contains("1xx")) {
+                if (expectedStatus[1]) {
                     closeAndCallSucc(ctx);
                     return;
                 }
             } else if (status < 300) {
-                if (expectedStatus.contains("2xx")) {
+                if (expectedStatus[2]){
                     closeAndCallSucc(ctx);
                     return;
                 }
             } else if (status < 400) {
-                if (expectedStatus.contains("3xx")) {
+                if (expectedStatus[3]) {
                     closeAndCallSucc(ctx);
                     return;
                 }
             } else if (status < 500) {
-                if (expectedStatus.contains("4xx")) {
+                if (expectedStatus[4]) {
                     closeAndCallSucc(ctx);
                 }
             } else {
-                if (expectedStatus.contains("5xx")) {
+                if (expectedStatus[5]) {
                     closeAndCallSucc(ctx);
                 }
             }

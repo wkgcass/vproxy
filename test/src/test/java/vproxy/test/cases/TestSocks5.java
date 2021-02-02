@@ -17,6 +17,7 @@ import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.AnnotationKeys;
+import vproxybase.util.Annotations;
 import vproxybase.util.thread.VProxyThread;
 
 import java.util.LinkedList;
@@ -38,7 +39,7 @@ public class TestSocks5 {
     private ServerGroup domainDotComGroup;
     private Socks5Server socks5;
 
-    private List<Socks5Client> clients = new LinkedList<>();
+    private final List<Socks5Client> clients = new LinkedList<>();
 
     @BeforeClass
     public static void classSetUp() throws Exception {
@@ -71,7 +72,7 @@ public class TestSocks5 {
             h.healthy = true;
         }
         domainDotComGroup = new ServerGroup("test-domain", elg0, new HealthCheckConfig(400, /* disable health check */24 * 60 * 60 * 1000, 2, 3), Method.wrr);
-        domainDotComGroup.setAnnotations(Map.of(AnnotationKeys.ServerGroup_HintHost, "domain.com", AnnotationKeys.ServerGroup_HintPort, "80"));
+        domainDotComGroup.setAnnotations(new Annotations(Map.of(AnnotationKeys.ServerGroup_HintHost.name, "domain.com", AnnotationKeys.ServerGroup_HintPort.name, "80")));
         domainDotComGroup.add("svr2", new IPPort("127.0.0.1", 19082), 10);
         domainDotComGroup.add("svr3", new IPPort("127.0.0.1", 19083), 10);
         // manually set to healthy
@@ -105,6 +106,7 @@ public class TestSocks5 {
     public void requestIpv4() throws Exception {
         for (int i = 0; i < 100; ++i) {
             Socks5Client client = new Socks5Client(lbPort);
+            clients.add(client);
             client.connect(AddressType.ipv4, "127.0.0.1", 19080);
             String res = client.sendAndRecv("anything", 1);
             assertEquals("the result will always be 0", "0", res);
@@ -116,6 +118,7 @@ public class TestSocks5 {
     public void requestIpv6() throws Exception {
         for (int i = 0; i < 100; ++i) {
             Socks5Client client = new Socks5Client(lbPort);
+            clients.add(client);
             client.connect(AddressType.ipv6, "::1", 19081);
             String res = client.sendAndRecv("anything", 1);
             assertEquals("the result will always be 1", "1", res);
@@ -129,6 +132,7 @@ public class TestSocks5 {
         int three = 0;
         for (int i = 0; i < 100; ++i) {
             Socks5Client client = new Socks5Client(lbPort);
+            clients.add(client);
             client.connect(AddressType.domain, "domain.com", 80);
             String res = client.sendAndRecv("anything", 1);
             assertTrue("result is two or three", res.equals("2") || res.equals("3"));

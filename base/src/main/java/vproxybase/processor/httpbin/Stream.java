@@ -47,7 +47,7 @@ public class Stream {
     }
 
     public Hint generateHint() {
-        return new Hint(host, path);
+        return Hint.ofHostUri(host, path);
     }
 
     @Override

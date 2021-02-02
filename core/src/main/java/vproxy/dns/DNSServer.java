@@ -133,7 +133,7 @@ public class DNSServer {
                     if (domain.endsWith(".")) { // remove tailing dot by convention
                         domain = domain.substring(0, domain.length() - 1);
                     }
-                    Upstream.ServerGroupHandle gh = rrsets.searchForGroup(new Hint(domain));
+                    Upstream.ServerGroupHandle gh = rrsets.searchForGroup(Hint.ofHost(domain));
                     if (gh == null) {
                         // not found in user defined rrsets
                         // try some internal queries
