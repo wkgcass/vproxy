@@ -22,6 +22,10 @@ public class StreamHolder {
         this.ctx = ctx;
     }
 
+    public boolean isEmpty() {
+        return streams.isEmpty();
+    }
+
     public Stream register(long streamId, int sendingWindow, int receivingWindow) {
         assert Logger.lowLevelDebug("registering stream " + streamId + " of conn " + ctx.connId);
         if (streams.containsKey(streamId)) {
@@ -127,6 +131,14 @@ public class StreamHolder {
             }
             assert Logger.lowLevelDebug("remove stream from holder: " + stream.streamId + "/" + ctx.connId);
             streamsToBeRemoved.pollFirst();
+            streams.remove(stream.streamId);
+        }
+    }
+
+    public void flush() {
+        Stream stream;
+        while ((stream = streamsToBeRemoved.pollFirst()) != null) {
+            assert Logger.lowLevelDebug("flushing stream from holder: " + stream.streamId + "/" + ctx.connId);
             streams.remove(stream.streamId);
         }
     }

@@ -1,5 +1,6 @@
 package vproxybase.processor.httpbin;
 
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.ExceptionWithoutStackTrace;
 import vproxybase.processor.OOSubContext;
 import vproxybase.processor.Processor;
@@ -53,8 +54,8 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
     private int initialSendingWindow = connectionSendingWindow;
     private final int initialReceivingWindow = connectionReceivingWindow; // will not modify
 
-    public BinaryHttpSubContext(BinaryHttpContext binaryHttpContext, int connId) {
-        super(binaryHttpContext, connId);
+    public BinaryHttpSubContext(BinaryHttpContext binaryHttpContext, int connId, ConnectionDelegate delegate) {
+        super(binaryHttpContext, connId, delegate);
         if (connId == 0) { // frontend
             ctx.frontend = this;
         } else { // backend
@@ -802,6 +803,25 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             sendInitialFrame();
         }
         return produce();
+    }
+
+    @Override
+    public ByteArray remoteClosed() {
+        return null; // nothing to be sent to frontend
+    }
+
+    @Override
+    public boolean disconnected(boolean exception) {
+        // check streams owned by this connection
+        // if all streams have been closed, it's safe to close this connection
+        streamHolder.flush();
+        if (streamHolder.isEmpty()) {
+            assert Logger.lowLevelDebug("no active streams in this connection, close silently");
+            return true;
+        } else {
+            assert Logger.lowLevelDebug("still has streams in this connection, close all");
+            return false;
+        }
     }
 
     // fields and methods for parserMode

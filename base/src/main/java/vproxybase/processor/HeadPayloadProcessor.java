@@ -27,8 +27,8 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
     }
 
     @Override
-    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, IPPort ignore) {
-        return new HeadPayloadSubContext(headPayloadContext, id, head, off, len, maxLen);
+    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, ConnectionDelegate delegate) {
+        return new HeadPayloadSubContext(headPayloadContext, id, delegate, head, off, len, maxLen);
     }
 
     @Override
@@ -66,9 +66,9 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
         private boolean expectingHead = true;
         private int parsedLength = 0;
 
-        public HeadPayloadSubContext(HeadPayloadContext headPayloadContext, int connId,
+        public HeadPayloadSubContext(HeadPayloadContext headPayloadContext, int connId, ConnectionDelegate delegate,
                                      int head, int off, int len, int maxLen) {
-            super(headPayloadContext, connId);
+            super(headPayloadContext, connId, delegate);
             this.off = off;
             this.len = len;
             this.maxLen = maxLen;
@@ -146,6 +146,16 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
         @Override
         public ByteArray connected() {
             return null; // send nothing when connected
+        }
+
+        @Override
+        public ByteArray remoteClosed() {
+            return null; // return nothing
+        }
+
+        @Override
+        public boolean disconnected(boolean exception) {
+            return false; // unable to handle this condition
         }
     }
 }

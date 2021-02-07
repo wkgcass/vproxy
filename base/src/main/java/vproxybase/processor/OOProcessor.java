@@ -49,6 +49,16 @@ public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubC
     }
 
     @Override
+    public ByteArray remoteClosed(CTX ctx, SUB sub) {
+        return sub.remoteClosed();
+    }
+
+    @Override
+    public boolean disconnected(CTX ctx, SUB sub, boolean exception) {
+        return sub.disconnected(exception);
+    }
+
+    @Override
     public ByteArray connected(CTX ctx, SUB sub) {
         return sub.connected();
     }

@@ -1,6 +1,7 @@
 package vproxy.component.proxy;
 
 import vproxybase.connection.*;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
 import vproxybase.util.*;
@@ -25,6 +26,10 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     private final BackendConnectionHandler[] conns = new BackendConnectionHandler[1024 + 1];
     // [0] will not be used
     // I believe that 1024 connections should be enough
+
+    // the reading will be paused if this field is set to true
+    // this field only works for the frontend connection
+    private volatile boolean paused = false;
 
     public ProcessorConnectionHandler(ProxyNetConfig config, NetEventLoop loop, Connection frontendConnection, Processor processor, Processor.Context topCtx, Processor.SubContext frontendSubCtx) {
         this.config = config;
@@ -191,6 +196,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         private final BackendConnectionHandler.ByteFlow backendByteFlow = new BackendConnectionHandler.ByteFlow();
         private final BackendConnectionHandler.ByteFlow frontendByteFlow = new BackendConnectionHandler.ByteFlow();
 
+        // reading will be paused if this field is set to true
+        private volatile boolean paused = false;
+        // set to true when processor.disconnected(...) is called, this prevents being called multiple times in exception()/closed()/removed() event handlers
+        private boolean disconnectedCalled = false;
+
         BackendConnectionHandler(Processor.SubContext subCtx, ConnectableConnection conn) {
             this.subCtx = subCtx;
             this.conn = conn;
@@ -268,6 +278,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         void readBackend() {
+            if (paused) {
+                assert Logger.lowLevelDebug("backend " + conn + " is paused, so read nothing");
+                return;
+            }
+
             if (conn.getInBuffer().used() == 0)
                 return; // ignore the event if got nothing to read
 
@@ -339,6 +354,30 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             }
         }
 
+        @ThreadSafe
+        public void pause() {
+            if (paused) {
+                assert Logger.lowLevelDebug("backend conn " + conn + " already paused");
+                return;
+            }
+            assert Logger.lowLevelDebug("pausing backend conn " + conn);
+            paused = true;
+        }
+
+        @ThreadSafe
+        public void resume() {
+            boolean old = paused;
+            paused = false;
+            loop.getSelectorEventLoop().nextTick(() -> {
+                if (old) {
+                    assert Logger.lowLevelDebug("resuming backend conn " + conn);
+                    readFrontend();
+                } else {
+                    assert Logger.lowLevelDebug("backend conn " + conn + " is not paused");
+                }
+            });
+        }
+
         @Override
         public void readable(ConnectionHandlerContext ctx) {
             readBackend();
@@ -351,6 +390,18 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
+            if (disconnectedCalled) {
+                assert Logger.lowLevelDebug("disconnected already called");
+                return;
+            }
+            disconnectedCalled = true;
+            boolean silent = processor.disconnected(topCtx, subCtx, true);
+            if (silent) {
+                assert Logger.lowLevelDebug("silently close the backend");
+                ctx.connection.close();
+                return;
+            }
+
             String errMsg = "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection;
             if (Utils.isTerminatedIOException(err)) {
                 assert Logger.lowLevelDebug(errMsg + ", " + err);
@@ -383,6 +434,18 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            if (disconnectedCalled) {
+                assert Logger.lowLevelDebug("disconnected already called");
+                return;
+            }
+            disconnectedCalled = true;
+            boolean silent = processor.disconnected(topCtx, subCtx, false);
+            if (silent) {
+                assert Logger.lowLevelDebug("silently close the backend");
+                ctx.connection.close();
+                return;
+            }
+
             if (frontendConnection.isClosed()) {
                 assert Logger.lowLevelDebug("backend connection " + ctx.connection + " closed, corresponding frontend is " + frontendConnection);
             } else {
@@ -551,6 +614,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     private ByteArrayChannel chnl = null;
 
     void readFrontend() {
+        if (paused) {
+            assert Logger.lowLevelDebug("frontend " + frontendConnection + " is paused, so read nothing");
+            return;
+        }
+
         if (frontendConnection.getInBuffer().used() == 0
             // if returned len == 0, the process.feed should be called without any data
             && processor.len(topCtx, frontendSubCtx) != 0) {
@@ -650,6 +718,30 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
     }
 
+    @ThreadSafe
+    public void pause() {
+        if (paused) {
+            assert Logger.lowLevelDebug("frontend conn " + frontendConnection + " already paused");
+            return;
+        }
+        assert Logger.lowLevelDebug("pausing frontend conn " + frontendConnection);
+        paused = true;
+    }
+
+    @ThreadSafe
+    public void resume() {
+        boolean old = paused;
+        paused = false;
+        loop.getSelectorEventLoop().nextTick(() -> {
+            if (old) {
+                assert Logger.lowLevelDebug("resuming frontend conn " + frontendConnection);
+                readFrontend();
+            } else {
+                assert Logger.lowLevelDebug("frontend conn " + frontendConnection + " is not paused");
+            }
+        });
+    }
+
     @Override
     public void readable(ConnectionHandlerContext ctx) {
         readFrontend();
@@ -694,8 +786,23 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         // record in collections
         int newConnId = ++cursor;
-        BackendConnectionHandler bh =
-            new BackendConnectionHandler(processor.initSub(topCtx, newConnId, connector.remote), connectableConnection);
+        BackendConnectionHandler[] handlerPtr = new BackendConnectionHandler[]{null};
+        //noinspection DuplicatedCode
+        Processor.SubContext subCtx = processor.initSub(topCtx, newConnId, new ConnectionDelegate(connector.remote) {
+            @Override
+            public void pause() {
+                assert handlerPtr[0] != null;
+                handlerPtr[0].pause();
+            }
+
+            @Override
+            public void resume() {
+                assert handlerPtr[0] != null;
+                handlerPtr[0].resume();
+            }
+        });
+        BackendConnectionHandler bh = new BackendConnectionHandler(subCtx, connectableConnection);
+        handlerPtr[0] = bh;
         recordBackend(bh, newConnId);
         // register
         try {

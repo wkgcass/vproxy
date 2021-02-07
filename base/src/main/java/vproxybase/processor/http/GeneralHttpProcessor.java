@@ -1,6 +1,7 @@
 package vproxybase.processor.http;
 
 import vfd.IPPort;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
 import vproxybase.processor.http1.HttpProcessor;
@@ -35,11 +36,11 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
     }
 
     @Override
-    public GeneralHttpSubContext initSub(GeneralHttpContext ctx, int id, IPPort associatedAddress) {
+    public GeneralHttpSubContext initSub(GeneralHttpContext ctx, int id, ConnectionDelegate delegate) {
         return new GeneralHttpSubContext(
             id,
-            httpProcessor.initSub(ctx.httpContext, id, associatedAddress),
-            http2Processor.initSub(ctx.http2Context, id, associatedAddress)
+            httpProcessor.initSub(ctx.httpContext, id, delegate),
+            http2Processor.initSub(ctx.http2Context, id, delegate)
         );
     }
 
@@ -143,6 +144,22 @@ public class GeneralHttpProcessor implements Processor<GeneralHttpContext, Gener
         if (ctx.useHttp2) return http2Processor.connected(ctx.http2Context, subCtx.http2SubContext);
         // if (ctx.willUseHttp2)
         return null;
+    }
+
+    @Override
+    public ByteArray remoteClosed(GeneralHttpContext ctx, GeneralHttpSubContext subCtx) {
+        if (ctx.useHttp) return httpProcessor.remoteClosed(ctx.httpContext, subCtx.httpSubContext);
+        if (ctx.useHttp2) return http2Processor.remoteClosed(ctx.http2Context, subCtx.http2SubContext);
+        // if (ctx.willUseHttp2)
+        return null;
+    }
+
+    @Override
+    public boolean disconnected(GeneralHttpContext ctx, GeneralHttpSubContext subCtx, boolean exception) {
+        if (ctx.useHttp) return httpProcessor.disconnected(ctx.httpContext, subCtx.httpSubContext, exception);
+        if (ctx.useHttp2) return http2Processor.disconnected(ctx.http2Context, subCtx.http2SubContext, exception);
+        // if (ctx.willUseHttp2)
+        return false;
     }
 
     private <T> T shouldNotCall(String methodName) {

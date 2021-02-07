@@ -1,5 +1,6 @@
 package vproxybase.processor.http1;
 
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.OOSubContext;
 import vproxybase.processor.Processor;
 import vproxybase.processor.http1.builder.ChunkBuilder;
@@ -12,12 +13,13 @@ import vproxybase.util.ByteArray;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.LinkedList;
 import java.util.List;
 
 @SuppressWarnings("StatementWithEmptyBody")
 public class HttpSubContext extends OOSubContext<HttpContext> {
-    private final boolean frontend;
     private int state = 0;
     /*
      * 0 => idle ~> 1 (if request) or -> 22 (if response)
@@ -77,7 +79,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     };
 
     interface Handler {
-        void handle(ByteArray b) throws Exception;
+        void handle(byte b) throws Exception;
     }
 
     private byte[] buf;
@@ -95,29 +97,40 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     // value of the uri
     // would be used as the hint
     String theUri = null;
-    // value of the Host: header
+    // value of the 'Host: xxx' header
     // would be used as the hint
     // only accessed when it's a frontend sub context
     // if it's a backend sub context, the field might be set but never used
-    // when this field is set to a value, it will not be set to null again
-    // because normally a client will not request different hosts in the same connection
     String theHostHeader = null;
-    // set this field to true to respond data to the processor lib, otherwise data would be cached
-    // only accessed when it's a frontend sub context
-    // if it's a backend sub context, the field will be set but never used
-    // when this field is set to true, it will not be set to false again
-    boolean hostHeaderRetrieved;
-    boolean parserMode;
+    // all these endHeaders fields will set to true in state9 (end-all-headers)
+    // if there's no body and chunk, the [0] will be set to false because statm will call end() to reset states
+    // otherwise [0] will remain to be true until the body/chunk is properly handled
+    // however [1] will always be set to false after state9 finishes in the feed(...) loop
+    // and [2] will remain to be true after [0] is set to false in the feed(...) loop
+    // to separate these fields is because we need to alert the feed(...) method when the headers end
+    // and also we need to know whether we can safely return bytes in the feed(...) method
+    //
+    // the first line and the headers are deserialized and may be modified before responding
+    // so the raw bytes for the headers must not be returned from feed(...).
+    //
+    // generally:
+    // endHeaders[0] means the state machine thinks the headers are ended for current parsing process
+    // endHeaders[1] means the headers bytes is going to be serialized
+    // endHeaders[2] means the data in method feed(...) can be returned
+    private final boolean[] endHeaders = new boolean[]{false, false, false};
+    private boolean parserMode;
+    // bytes consumed via feed(...) but paused before handling
+    ByteArray storedBytesForProcessing = null;
 
-    public HttpSubContext(HttpContext httpContext, int connId) {
-        super(httpContext, connId);
-        frontend = connId == 0;
-        hostHeaderRetrieved = !frontend;
+    public HttpSubContext(HttpContext httpContext, int connId, ConnectionDelegate delegate) {
+        super(httpContext, connId, delegate);
+        if (isFrontend()) {
+            ctx.frontendSubContext = this;
+        }
     }
 
     public void setParserMode() {
         this.parserMode = true;
-        this.hostHeaderRetrieved = true; // set this field to true to let feed() respond bytes
     }
 
     public RequestBuilder getParsingReq() {
@@ -194,12 +207,18 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return proxyLen;
     }
 
-    private boolean passParam_TryFillAdditionalHeaders = false;
-    private ByteArray storedBytes = null;
-
     @Override
     public ByteArray feed(ByteArray data) throws Exception {
+        if (!ctx.frontendExpectingResponse && isFrontend() && data.length() > 0) {
+            // the frontend is expecting to receiving response when receiving headers,
+            // regardless of whether the request is completely received
+            ctx.frontendExpectingResponse = true;
+        }
         boolean isIdleBeforeFeeding = state == 0;
+        if (storedBytesForProcessing != null) {
+            data = storedBytesForProcessing.concat(data);
+            storedBytesForProcessing = null;
+        }
         ByteArray ret = feed1(data);
         boolean isIdleAfterFeeding = state == 0;
         if (isFrontend() && isIdleBeforeFeeding && isIdleAfterFeeding) {
@@ -210,52 +229,27 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     private ByteArray feed1(ByteArray data) throws Exception {
         int consumedBytes = 0;
+        ByteArray headersBytes = null;
         while (consumedBytes < data.length()) {
             feed(data.get(consumedBytes++));
-
-            if (passParam_TryFillAdditionalHeaders) {
-                boolean noForwardedFor = true;
-                boolean noClientPort = true;
-
-                for (HeaderBuilder h : headers) {
-                    String hv = h.key.toString().trim();
-                    if (hv.equalsIgnoreCase("x-forwarded-for")) {
-                        noForwardedFor = false;
-                    } else if (hv.equalsIgnoreCase("x-client-port")) {
-                        noClientPort = false;
-                    }
-                    if (!noForwardedFor && !noClientPort) {
-                        break;
-                    }
-                }
-                ByteArray appendData = null;
-                if (noForwardedFor) {
-                    ByteArray b = ByteArray.from(("" +
-                        "x-forwarded-for: " + ctx.clientAddress + "\r\n" +
-                        "").getBytes());
-                    assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
-                    appendData = b;
-                }
-                if (noClientPort) {
-                    ByteArray b = ByteArray.from(("" +
-                        "x-client-port: " + ctx.clientPort + "\r\n" +
-                        "").getBytes());
-                    assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
-                    if (appendData == null) {
-                        appendData = b;
-                    } else {
-                        appendData = appendData.concat(b);
-                    }
-                }
-                if (appendData != null) {
-                    // insert the appendData into data
-                    data = data.sub(0, consumedBytes - 1)
-                        .concat(appendData)
-                        .concat(data.sub(consumedBytes - 1, data.length() - (consumedBytes - 1)));
-                    consumedBytes += appendData.length();
-                }
-                passParam_TryFillAdditionalHeaders = false;
+            if (parserMode) { // headers manipulation is skipped in parser mode
+                continue;
             }
+
+            if (endHeaders[1]) {
+                if (isFrontend()) {
+                    headersBytes = req.build().toByteArray();
+                } else {
+                    headersBytes = resp.build().toByteArray();
+                }
+                // cut the headers part from data
+                data = data.sub(consumedBytes, data.length() - consumedBytes);
+                consumedBytes = 0;
+                // unset the field
+                endHeaders[1] = false;
+            }
+
+            // handle byte to be proxied but consumed via feed(...)
             if (proxyLen > 0) {
                 // need to do proxy
                 int originalCursor = consumedBytes;
@@ -265,26 +259,44 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     // so still need to do proxy later
                     consumedBytes = data.length();
                 }
+                // need to feed to update the state machine
                 for (int i = originalCursor; i < consumedBytes; ++i) {
                     feed(data.get(i));
                 }
             }
+
+            // check whether request handling is done
+            if (isFrontend() && state == 0 /*idle*/) {
+                break;
+            }
         }
-        if (hostHeaderRetrieved) {
-            if (storedBytes == null) {
-                return data;
+        if (parserMode) { // ignore pipeline disabling in parser mode
+            return data;
+        }
+
+        // there might be bytes not processed yet, cut the bytes
+        if (consumedBytes < data.length()) {
+            storedBytesForProcessing = data.sub(consumedBytes, data.length() - consumedBytes);
+            data = data.sub(0, consumedBytes);
+        }
+        if (!endHeaders[2]) { // return nothing because the headers are not ended yet
+            return null;
+        }
+        if (!endHeaders[0]) {
+            endHeaders[2] = false; // processing finished
+            if (isFrontend()) {
+                delegate.pause(); // pause the requests, will be resumed when response finishes
+            }
+        }
+        // return
+        if (headersBytes != null) {
+            if (data.length() == 0) {
+                return headersBytes;
             } else {
-                ByteArray arr = storedBytes;
-                storedBytes = null;
-                return arr.concat(data);
+                return headersBytes.concat(data);
             }
         } else {
-            if (storedBytes == null) {
-                storedBytes = data;
-            } else {
-                storedBytes = storedBytes.concat(data);
-            }
-            return null;
+            return data;
         }
     }
 
@@ -292,7 +304,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         if (state < 0 || state >= handlers.length) {
             throw new IllegalStateException("BUG: unexpected state " + state);
         }
-        handlers[state].handle(ByteArray.from(b));
+        handlers[state].handle(b);
     }
 
     @Override
@@ -300,16 +312,27 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return null; // never produce data
     }
 
+    private void _proxyDone() {
+        proxyLen = -1;
+        if (state == 10) {
+            end(); // done when body ends
+            if (isFrontend()) {
+                ctx.currentBackend = -1; // clear backend
+            }
+        } else if (state == 15) {
+            state = 16;
+        }
+    }
+
     @Override
     public void proxyDone() {
         if (ctx.upgradedConnection) {
             return;
         }
-        proxyLen = -1;
+        int state = this.state;
+        _proxyDone();
         if (state == 10) {
-            end(); // done when body ends
-        } else if (state == 15) {
-            state = 16;
+            endHeaders[2] = false; // it should be set in feed(...) but there's no chance that feed(...) can be called, so set to false here
         }
     }
 
@@ -318,26 +341,50 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return null; // never respond when connected
     }
 
+    @Override
+    public ByteArray remoteClosed() {
+        return null; // TODO handle http/1.0 without content-length and not chunked
+    }
+
+    @Override
+    public boolean disconnected(boolean exception) {
+        if (!ctx.frontendExpectingResponse) {
+            assert Logger.lowLevelDebug("not expecting response, so backend disconnecting is fine");
+            return true;
+        }
+        if (ctx.frontendExpectingResponseFrom != connId) {
+            assert Logger.lowLevelDebug("the disconnected connection is not response connection");
+            return true;
+        }
+        assert Logger.lowLevelDebug("it's expecting response from the disconnected backend, which is invalid");
+        return false;
+    }
+
     // start handler methods
 
     private void end() {
         state = 0;
-    }
 
-    private void state0(ByteArray data) {
-        if (frontend) {
-            req = new RequestBuilder();
-            state = 1;
-            state1(data);
-        } else {
-            resp = new ResponseBuilder();
-            state = 22;
-            state22(data);
+        headers = null;
+        endHeaders[0] = false;
+        if (!isFrontend()) {
+            ctx.clearFrontendExpectingResponse(this);
         }
     }
 
-    private void state1(ByteArray data) {
-        int b = data.uint8(0);
+    private void state0(byte b) {
+        if (isFrontend()) {
+            req = new RequestBuilder();
+            state = 1;
+            state1(b);
+        } else {
+            resp = new ResponseBuilder();
+            state = 22;
+            state22(b);
+        }
+    }
+
+    private void state1(byte b) {
         if (b == ' ') {
             state = 2;
         } else {
@@ -345,8 +392,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state2(ByteArray data) {
-        int b = data.uint8(0);
+    private void state2(byte b) {
         if (b == ' ') {
             theUri = req.uri.toString();
             state = 3;
@@ -360,8 +406,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state3(ByteArray data) {
-        int b = data.uint8(0);
+    private void state3(byte b) {
         if (b == '\r') {
             // do nothing
         } else if (b == '\n') {
@@ -374,8 +419,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state4(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state4(byte b) throws Exception {
         if (b == '\r') {
             // do nothing
         } else if (b == '\n') {
@@ -383,26 +427,24 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             state9(null);
         } else {
             state = 5;
-            state5(data);
+            state5(b);
         }
     }
 
-    private void state5(ByteArray data) throws Exception {
+    private void state5(byte b) throws Exception {
         if (header == null) {
             header = new HeaderBuilder();
         }
 
-        int b = data.uint8(0);
         if (b == ':') {
             state = 6;
-            state6(data);
+            state6(b);
         } else {
             header.key.append((char) b);
         }
     }
 
-    private void state6(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state6(byte b) throws Exception {
         if (b == ':') {
             state = 7;
         } else {
@@ -410,8 +452,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state7(ByteArray data) {
-        int b = data.uint8(0);
+    private void state7(byte b) {
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
@@ -423,44 +464,81 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state8(ByteArray data) throws Exception {
+    private void state8(byte b) throws Exception {
         if (headers == null) {
             headers = new LinkedList<>();
-            if (frontend) {
+            if (isFrontend()) {
                 req.headers = headers;
             } else {
                 resp.headers = headers;
             }
         }
         if (header != null) {
-            headers.add(header);
             assert Logger.lowLevelDebug("received header " + header);
-            String k = header.key.toString();
-            if (k.trim().equalsIgnoreCase("host")) {
-                theHostHeader = header.value.toString().trim();
-                hostHeaderRetrieved = true;
+            boolean addHeader = true;
+            if (isFrontend()) { // only modify headers if it's frontend
+                String k = header.key.toString().trim().toLowerCase();
+                switch (k) {
+                    case "host":
+                        theHostHeader = header.value.toString().trim();
+                        break;
+                    case "x-forwarded-for":
+                    case "x-client-port":
+                        // we remove these headers from request
+                        addHeader = false;
+                        break;
+                }
+            }
+            if (addHeader) {
+                headers.add(header);
             }
             header = null;
         }
 
-        int b = data.uint8(0);
         if (b == '\r') {
             // ignore
-            passParam_TryFillAdditionalHeaders = frontend; // only add header if it's from frontend
         } else if (b == '\n') {
             state = 9;
             state9(null);
         } else {
             state = 5;
-            state5(data);
+            state5(b);
+        }
+    }
+
+    private void addAdditionalHeaders() {
+        if (parserMode) { // headers manipulation is skipped in parser mode
+            return;
+        }
+        if (headers == null) {
+            headers = new ArrayList<>(2);
+            req.headers = headers;
+        }
+        // x-forwarded-for
+        {
+            HeaderBuilder h = new HeaderBuilder();
+            h.key.append("x-forwarded-for");
+            h.value.append(ctx.clientAddress);
+            headers.add(h);
+            assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
+        }
+        // x-client-port
+        {
+            HeaderBuilder h = new HeaderBuilder();
+            h.key.append("x-client-port");
+            h.value.append(ctx.clientPort);
+            headers.add(h);
+            assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
         }
     }
 
     // this method should be called before entering state 9
     // it's for state transferring
-    private void state9(@SuppressWarnings("unused") ByteArray data) {
-        // ignore the data
-        hostHeaderRetrieved = true;
+    private void state9(@SuppressWarnings("unused") Byte b) {
+        Arrays.fill(endHeaders, true);
+        if (isFrontend()) {
+            addAdditionalHeaders(); // add additional headers
+        }
         if (headers == null) {
             end();
             return;
@@ -498,27 +576,18 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         end();
     }
 
-    private void state10(ByteArray data) {
-        assert data.length() <= proxyLen;
+    private void state10(byte b) {
         int contentLength = proxyLen;
-        proxyLen -= data.length();
-        if (frontend) {
+        --proxyLen;
+        if (isFrontend()) {
             if (parserMode) { // use a byte array buffer to hold the data
                 if (req.body == null) {
                     buf = Utils.allocateByteArray(contentLength);
                     bufOffset = 0;
                     req.body = ByteArray.from(buf);
                 }
-                for (int i = 0; i < data.length(); ++i) {
-                    buf[bufOffset++] = data.get(i);
-                }
-            } else {
-                if (req.body == null) {
-                    req.body = data;
-                } else {
-                    req.body = req.body.concat(data);
-                }
-            }
+                buf[bufOffset++] = b;
+            } // else do nothing
         } else {
             if (parserMode) {
                 if (resp.body == null) {
@@ -526,31 +595,20 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     bufOffset = 0;
                     resp.body = ByteArray.from(buf);
                 }
-                for (int i = 0; i < data.length(); ++i) {
-                    buf[bufOffset++] = data.get(i);
-                }
-            } else {
-                if (resp.body == null) {
-                    resp.body = data;
-                } else {
-                    resp.body = resp.body.concat(data);
-                }
-            }
+                buf[bufOffset++] = b;
+            } // else do nothing
         }
         if (proxyLen == 0) {
             buf = null;
-            // the method will not be called if it's using the Proxy lib
-            // so proxyDone will not be called either
-            // we call it manually here
-            proxyDone();
+            // call proxyDone to generalize the 'handle' mode and 'proxy' mode for the body
+            _proxyDone();
         }
     }
 
-    private void state11(ByteArray data) throws Exception {
+    private void state11(byte b) throws Exception {
         if (chunk == null) {
             chunk = new ChunkBuilder();
         }
-        int b = data.uint8(0);
         if (b == ';') {
             state = 12;
         } else if (b == '\r') {
@@ -563,8 +621,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state12(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state12(byte b) throws Exception {
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
@@ -579,8 +636,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state13(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state13(byte b) throws Exception {
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
@@ -593,27 +649,26 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     // this method may be called before entering state 9
     // it's for state transferring
-    private void state14(ByteArray data) throws Exception {
+    private void state14(Byte b) throws Exception {
         int size = chunk == null ? 0 : Integer.parseInt(chunk.size.toString().trim(), 16);
         if (size != 0) {
             state = 15;
             proxyLen = size;
         } else {
-            if (data == null) { // called from other states
+            if (b == null) { // called from other states
                 // end chunk
                 if (chunks == null) {
                     chunks = new LinkedList<>();
                 }
                 chunks.add(chunk);
                 chunk = null;
-                if (frontend) {
+                if (isFrontend()) {
                     req.chunks = chunks;
                 } else {
                     resp.chunks = chunks;
                 }
                 chunks = null;
             } else {
-                int b = data.uint8(0);
                 if (b == '\r') {
                     // ignore
                 } else if (b == '\n') {
@@ -621,42 +676,31 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     state21(null);
                 } else {
                     state = 17;
-                    state17(data);
+                    state17(b);
                 }
             }
         }
     }
 
-    private void state15(ByteArray data) {
-        assert data.length() <= proxyLen;
+    private void state15(byte b) {
         int contentLength = proxyLen;
-        proxyLen -= data.length();
+        --proxyLen;
         if (parserMode) {
             if (chunk.content == null) {
                 buf = Utils.allocateByteArray(contentLength);
                 bufOffset = 0;
                 chunk.content = ByteArray.from(buf);
             }
-            for (int i = 0; i < data.length(); ++i) {
-                buf[bufOffset++] = data.get(i);
-            }
-        } else {
-            if (chunk.content == null) {
-                chunk.content = data;
-            } else {
-                chunk.content = chunk.content.concat(data);
-            }
-        }
+            buf[bufOffset++] = b;
+        } // else do nothing
         if (proxyLen == 0) {
             buf = null;
-            // this method will not be called if using the Proxy lib
-            // and proxyDone will not be called as well
-            // so call it manually here
-            proxyDone();
+            // call proxyDone to generalize the 'handle' mode and 'proxy' mode for the chunk
+            _proxyDone();
         }
     }
 
-    private void state16(ByteArray data) throws Exception {
+    private void state16(byte b) throws Exception {
         if (chunks == null) {
             chunks = new LinkedList<>();
         }
@@ -665,7 +709,6 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             chunk = null;
         }
 
-        int b = data.uint8(0);
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
@@ -675,22 +718,20 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state17(ByteArray data) throws Exception {
+    private void state17(byte b) throws Exception {
         if (trailer == null) {
             trailer = new HeaderBuilder();
         }
 
-        int b = data.uint8(0);
         if (b == ':') {
             state = 18;
-            state18(data);
+            state18(b);
         } else {
             trailer.key.append((char) b);
         }
     }
 
-    private void state18(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state18(byte b) throws Exception {
         if (b == ':') {
             state = 19;
         } else {
@@ -698,8 +739,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state19(ByteArray data) {
-        int b = data.uint8(0);
+    private void state19(byte b) {
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
@@ -711,7 +751,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state20(ByteArray data) throws Exception {
+    private void state20(byte b) throws Exception {
         if (trailers == null) {
             trailers = new LinkedList<>();
         }
@@ -721,12 +761,11 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             trailer = null;
         }
 
-        int b = data.uint8(0);
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {
             state = 21;
-            if (frontend) {
+            if (isFrontend()) {
                 req.trailers = trailers;
             } else {
                 resp.trailers = trailers;
@@ -735,18 +774,17 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             state21(null);
         } else {
             state = 17;
-            state17(data);
+            state17(b);
         }
     }
 
     // this method should be called before entering state 9
     // it's for state transferring
-    private void state21(@SuppressWarnings("unused") ByteArray data) {
+    private void state21(@SuppressWarnings("unused") Byte b) {
         end();
     }
 
-    private void state22(ByteArray data) {
-        int b = data.uint8(0);
+    private void state22(byte b) {
         if (b == ' ') {
             state = 23;
         } else {
@@ -754,8 +792,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state23(ByteArray data) throws Exception {
-        int b = data.uint8(0);
+    private void state23(byte b) throws Exception {
         if (b == ' ') {
             state = 24;
         } else {
@@ -766,8 +803,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    private void state24(ByteArray data) {
-        int b = data.uint8(0);
+    private void state24(byte b) {
         if (b == '\r') {
             // ignore
         } else if (b == '\n') {

@@ -44,12 +44,12 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     /**
      * create a sub context object
      *
-     * @param ctx               context
-     * @param id                connection id attached to the sub context, 0 for the frontend connection
-     * @param associatedAddress associated address, frontend address for frontend, backend address for backend
+     * @param ctx                context
+     * @param id                 connection id attached to the sub context, 0 for the frontend connection
+     * @param connectionDelegate {@link ConnectionDelegate}
      * @return the sub context
      */
-    SUB initSub(CTX ctx, int id, IPPort associatedAddress);
+    SUB initSub(CTX ctx, int id, ConnectionDelegate connectionDelegate);
 
     enum Mode {
         /**
@@ -162,6 +162,26 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * Note: should return null for sub context with connId = 0
      */
     ByteArray connected(CTX ctx, SUB sub);
+
+    /**
+     * the remote side closed the connection. this method will only be called for a backend connection.
+     *
+     * @param ctx context
+     * @param sub backend sub context
+     * @return data to send to frontend, or null to send nothing
+     */
+    ByteArray remoteClosed(CTX ctx, SUB sub);
+
+    /**
+     * connection disconnected. This will only be invoked when backend connections terminate. If the frontend connection
+     * is closed, the lib will close all related backend connections.
+     *
+     * @param ctx       context
+     * @param sub       backend sub context
+     * @param exception the connection disconnects with an exception
+     * @return true if the disconnecting event is properly handled, other connections won't be affected, or false to close all connections
+     */
+    boolean disconnected(CTX ctx, SUB sub, boolean exception);
 
     /**
      * zero copy is not free.

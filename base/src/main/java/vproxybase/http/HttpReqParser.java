@@ -1,5 +1,6 @@
 package vproxybase.http;
 
+import vproxybase.processor.DummyConnectionDelegate;
 import vproxybase.processor.Processor;
 import vproxybase.processor.ProcessorProvider;
 import vproxybase.processor.http1.HttpSubContext;
@@ -24,7 +25,7 @@ public class HttpReqParser extends AbstractParser<Request> {
         Processor p = ProcessorProvider.getInstance().get("http/1.x");
         Processor.Context c = p.init(null);
         //noinspection unchecked
-        Processor.SubContext s = p.initSub(c, 0, null);
+        Processor.SubContext s = p.initSub(c, 0, DummyConnectionDelegate.getInstance());
         ctx = (HttpSubContext) s;
         ctx.setParserMode();
     }

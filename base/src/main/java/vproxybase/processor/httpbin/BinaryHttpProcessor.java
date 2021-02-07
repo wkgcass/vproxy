@@ -2,6 +2,7 @@ package vproxybase.processor.httpbin;
 
 import vfd.IPPort;
 import vproxybase.Config;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.OOProcessor;
 import vproxybase.util.Logger;
 import vproxybase.util.Utils;
@@ -31,8 +32,8 @@ public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHt
     }
 
     @Override
-    public BinaryHttpSubContext initSub(BinaryHttpContext binaryHttpContext, int id, IPPort associatedAddress) {
-        return new BinaryHttpSubContext(binaryHttpContext, id);
+    public BinaryHttpSubContext initSub(BinaryHttpContext binaryHttpContext, int id, ConnectionDelegate delegate) {
+        return new BinaryHttpSubContext(binaryHttpContext, id, delegate);
     }
 
     private static final int HTTP_BIN_ZERO_COPY_THRESHOLD;
