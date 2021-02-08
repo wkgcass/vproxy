@@ -3,6 +3,10 @@ package vproxybase.processor;
 import vfd.IPPort;
 import vproxybase.Config;
 import vproxybase.util.ByteArray;
+import vproxybase.util.functional.FunctionEx;
+
+import java.util.function.Consumer;
+import java.util.function.Supplier;
 
 public interface Processor<CTX extends Processor.Context, SUB extends Processor.SubContext> {
     class Context {
@@ -51,6 +55,41 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      */
     SUB initSub(CTX ctx, int id, ConnectionDelegate connectionDelegate);
 
+    class ProcessorTODO {
+        /**
+         * current wanted length, -1 for want independent length of bytes, 0 for directly trigger
+         */
+        public int len;
+        public Mode mode;
+        /**
+         * the function used to consume data and process the input bytes
+         * must be non-null in 'handle' mode
+         */
+        public FunctionEx<ByteArray, HandleTODO, Exception> feed;
+        /**
+         * the proxy instructions
+         * must be non-null in 'proxy' mode
+         */
+        public ProxyTODO proxyTODO;
+
+        private ProcessorTODO() {
+        }
+
+        public static ProcessorTODO create() {
+            return new ProcessorTODO();
+        }
+
+        public static ProcessorTODO createProxy() {
+            ProcessorTODO ret = create();
+            ret.mode = Mode.proxy;
+            ret.proxyTODO = ProxyTODO.create();
+            return ret;
+        }
+    }
+
+    /**
+     * handling mode: to process the bytes or to proxy the bytes
+     */
     enum Mode {
         /**
          * take data and produce data to send to backend
@@ -63,114 +102,152 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
     }
 
     /**
-     * get current proxy mode for connection
-     *
-     * @param ctx context
-     * @param sub sub context
-     * @return the current proxy mode
+     * the connection representation
      */
-    Mode mode(CTX ctx, SUB sub);
+    class ConnectionTODO {
+        /**
+         * connection id for the lib to send data to, or -1 to let the lib choose or create a connection
+         */
+        public int connId;
+        /**
+         * the hint for retrieving new connection
+         */
+        public Hint hint;
+        /**
+         * the callback function when a connection is chosen
+         */
+        public Consumer<SubContext> chosen;
+
+        private ConnectionTODO() {
+        }
+
+        public static ConnectionTODO create() {
+            return new ConnectionTODO();
+        }
+    }
 
     /**
-     * expecting new frame
-     *
-     * @param ctx context
-     * @param sub sub context
-     * @return true if it's expecting a new frame
+     * the 'handle' result
      */
-    boolean expectNewFrame(CTX ctx, SUB sub);
+    class HandleTODO {
+        /**
+         * can be null if send is null or of length 0 (except the ref {@link #REQUIRE_CONNECTION})
+         */
+        public ConnectionTODO connTODO;
+        /**
+         * data to send. may be length zero or null
+         */
+        public ByteArray send;
+        /**
+         * data produced to the connection which triggers the event
+         */
+        public ByteArray produce;
+        /**
+         * current frame ends
+         */
+        public boolean frameEnds;
+
+        private HandleTODO() {
+        }
+
+        public static HandleTODO create() {
+            return new HandleTODO();
+        }
+    }
 
     /**
-     * get current wanted length
-     *
-     * @param ctx context
-     * @param sub sub context
-     * @return the current wanted length
+     * the proxy handing
      */
-    int len(CTX ctx, SUB sub);
+    class ProxyTODO {
+        public ConnectionTODO connTODO;
+        /**
+         * the callback function to run when proxy is done
+         */
+        public Supplier<ProxyDoneTODO> proxyDone;
+
+        private ProxyTODO() {
+        }
+
+        public static ProxyTODO create() {
+            return new ProxyTODO();
+        }
+    }
+
+    class ProxyDoneTODO {
+        /**
+         * current frame ends
+         */
+        public boolean frameEnds;
+
+        private ProxyDoneTODO() {
+        }
+
+        public static ProxyDoneTODO create() {
+            return new ProxyDoneTODO();
+        }
+
+        public static ProxyDoneTODO createFrameEnds() {
+            ProxyDoneTODO ret = create();
+            ret.frameEnds = true;
+            return ret;
+        }
+    }
 
     /**
-     * feed data to the processor and get data to send
-     *
-     * @param ctx  context
-     * @param sub  sub context
-     * @param data feed data
-     * @return data to send, or null if nothing to send
-     * @throws Exception raise exception if handling failed
+     * the disconnecting handling
      */
-    ByteArray feed(CTX ctx, SUB sub, ByteArray data) throws Exception;
+    class DisconnectTODO {
+        /**
+         * true if the disconnecting event is properly handled, other connections won't be affected,
+         * or false to close all connections
+         */
+        public boolean silent;
+
+        private DisconnectTODO() {
+        }
+
+        public static DisconnectTODO create() {
+            return new DisconnectTODO();
+        }
+
+        public static DisconnectTODO createSilent() {
+            DisconnectTODO ret = create();
+            ret.silent = true;
+            return ret;
+        }
+    }
 
     /**
-     * if {@link #feed(Context, SubContext, ByteArray)} return this byte array,
-     * the lib will still try to find a connection though it's empty.<br>
-     * also, {@link #connection(Context, SubContext)} should return -1 to let it happen.
+     * if {@link HandleTODO#send} value equals this byte array,
+     * the lib will still try to find a connection even though it's empty.<br>
+     * also, {@link ConnectionTODO#connId} should be -1 to let it happen.
      */
     ByteArray REQUIRE_CONNECTION = ByteArray.allocate(0).copy();
 
     /**
-     * produce some data to the connection represented by the sub context<br>
-     * this method will be checked after `feed` is called
+     * The entrance of the processor lib
      *
-     * @param ctx context
-     * @param sub sub context
-     * @return data to send, or null if got nothing to send
+     * @return a non-null {@link ProcessorTODO} object which informs the lib how the protocol should be processed
      */
-    ByteArray produce(CTX ctx, SUB sub);
-
-    /**
-     * the mode used to be `proxy` and now proxy handling is done
-     *
-     * @param ctx context
-     * @param sub sub context
-     */
-    void proxyDone(CTX ctx, SUB sub);
-
-    /**
-     * retrieve the connection id to proxy data to
-     *
-     * @param ctx   context
-     * @param front frontend sub context
-     * @return connection id, -1 for creating new connections or connection reuse
-     * 0 means do not create connection for now, and the feed() result should be null or length == 0, otherwise it's invalid
-     */
-    int connection(CTX ctx, SUB front);
-
-    /**
-     * retrieve the connection hint when the lib tries to create a new connection or reuse one
-     *
-     * @param ctx   context
-     * @param front frontend sub context
-     * @return a string for connection hint, or null when no hint is available
-     */
-    Hint connectionHint(CTX ctx, SUB front);
-
-    /**
-     * after the `connection` method return -1, the lib will choose a connection and
-     * let the user code know through this method
-     *
-     * @param ctx context
-     * @param sub the chosen sub context
-     */
-    void chosen(CTX ctx, SUB front, SUB sub);
+    ProcessorTODO process(CTX ctx, SUB sub);
 
     /**
      * new connection connected
      *
      * @param ctx context
      * @param sub sub context
-     * @return data to send when connected, or null if nothing to send.
-     * Note: should return null for sub context with connId = 0
+     * @return null, or data produced, the {@link HandleTODO#send} from the return value won't be used for now
      */
-    ByteArray connected(CTX ctx, SUB sub);
+    HandleTODO connected(CTX ctx, SUB sub);
 
     /**
-     * the remote side closed the connection. this method will only be called for a backend connection.
+     * the remote side closed the connection.
      *
      * @param ctx context
      * @param sub backend sub context
-     * @return data to send to frontend, or null to send nothing
+     * @return null, or data produced, the {@link HandleTODO#send} from the return value won't be used for now
      */
-    ByteArray remoteClosed(CTX ctx, SUB sub);
+    HandleTODO remoteClosed(CTX ctx, SUB sub);
 
     /**
      * connection disconnected. This will only be invoked when backend connections terminate. If the frontend connection
@@ -179,9 +256,9 @@ public interface Processor<CTX extends Processor.Context, SUB extends Processor.
      * @param ctx       context
      * @param sub       backend sub context
      * @param exception the connection disconnects with an exception
-     * @return true if the disconnecting event is properly handled, other connections won't be affected, or false to close all connections
+     * @return null or a {@link DisconnectTODO} object which informs the lib how to handle the connections
      */
-    boolean disconnected(CTX ctx, SUB sub, boolean exception);
+    DisconnectTODO disconnected(CTX ctx, SUB sub, boolean exception);
 
     /**
      * zero copy is not free.

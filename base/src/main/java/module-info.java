@@ -31,6 +31,7 @@ module vproxy.base {
     exports vproxybase.util.direct;
     exports vproxybase.util.objectpool;
     exports vproxybase.util.codec;
+    exports vproxybase.util.functional;
     exports vproxybase.util.ex;
     exports vproxybase.util.io;
     exports vproxybase.util.bytearray;

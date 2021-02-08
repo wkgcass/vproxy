@@ -257,8 +257,20 @@ public class Proxy {
                 }
             });
             {
-                ByteArray data = processor.connected(topCtx, frontendSubCtx);
-                assert data == null || data.length() == 0; // nothing should be directly written to the frontend
+                Processor.HandleTODO todo = processor.connected(topCtx, frontendSubCtx);
+                // currently we do not support sending nor producing when frontend connection is connected
+                if (todo != null) {
+                    if (todo.send != null) {
+                        if (todo.send.length() > 0 || todo.send == Processor.REQUIRE_CONNECTION) {
+                            Logger.warn(LogType.IMPROPER_USE, "currently we not support sending when frontend connection is connected");
+                        }
+                    }
+                    if (todo.produce != null) {
+                        if (todo.produce.length() > 0) {
+                            Logger.warn(LogType.IMPROPER_USE, "currently we not support producing when frontend connection is connected");
+                        }
+                    }
+                }
             }
 
             // initiate the handler
