@@ -16,7 +16,7 @@ import vproxybase.util.nio.ByteArrayChannel;
 import java.util.*;
 import java.util.function.Supplier;
 
-public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
+public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> implements BinaryHttpSubContextCaster {
     public static final ByteArray H2_PREFACE = ByteArray.from("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n");
     public static final int H2_HEADER_SIZE = 3 + 1 + 1 + 4; // header length: len+type+flags+streamId
     private static final ByteArray SERVER_SETTINGS = SettingsFrame.newServerSettings().serializeH2(null).arrange();
@@ -65,6 +65,51 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         init();
     }
 
+    @Override
+    public Processor.ProcessorTODO process() {
+        if (ctx.upgradedConnection) {
+            return processorTODOProxy();
+        }
+        if (state == STATE_DATA_FRAME) {
+            return processorTODOProxy();
+        }
+        return processorTODOHandle();
+    }
+
+    private boolean expectNewFrame = true; // initially expect new frame
+    private boolean dataPendingToBeSent = false;
+    private int len;
+
+    private Processor.ProcessorTODO processorTODOProxy() {
+        int len;
+        if (ctx.upgradedConnection) {
+            len = 0x00ffffffff;
+        } else {
+            len = this.len;
+        }
+        Processor.ProcessorTODO ret = Processor.ProcessorTODO.createProxy();
+        ret.len = len;
+        ret.proxyTODO.proxyDone = this::proxyDone;
+        if (isFrontend()) {
+            ret.proxyTODO.connTODO = ctx.connection();
+        }
+        return ret;
+    }
+
+    private Processor.ProcessorTODO processorTODOHandle() {
+        int len;
+        if (dataPendingToBeSent) {
+            len = 0; // the lib should directly call feed
+        } else {
+            len = this.len;
+        }
+        Processor.ProcessorTODO ret = Processor.ProcessorTODO.create();
+        ret.mode = Processor.Mode.handle;
+        ret.len = len;
+        ret.feed = this::feed0;
+        return ret;
+    }
+
     private void init() {
         if (state == STATE_FIRST_SETTINGS_FRAME_HEADER) {
             setLen(H2_HEADER_SIZE);
@@ -73,40 +118,11 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         }
     }
 
-    @Override
-    public Processor.Mode mode() {
-        if (ctx.upgradedConnection) {
-            return Processor.Mode.proxy;
-        }
-        if (state == STATE_DATA_FRAME) {
-            return Processor.Mode.proxy;
-        }
-        return Processor.Mode.handle;
-    }
-
-    private boolean expectNewFrame = true; // initially expect new frame
-
-    @Override
-    public boolean expectNewFrame() {
+    private boolean expectNewFrame() {
         if (ctx.upgradedConnection) {
             return false;
         }
         return expectNewFrame;
-    }
-
-    private boolean dataPendingToBeProxied = false;
-    private int len;
-
-    @Override
-    public int len() {
-        if (ctx.upgradedConnection) {
-            return 0x00ffffff; // use max uint24 to prevent some possible overflow
-        }
-        if (dataPendingToBeProxied) {
-            return 0; // the lib should directly call feed
-        } else {
-            return len; // normal return
-        }
     }
 
     private void setLen(int len) {
@@ -124,9 +140,21 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         return dataToProxy;
     }
 
-    @Override
-    public ByteArray feed(ByteArray data) throws Exception {
-        if (dataPendingToBeProxied) {
+    private Processor.HandleTODO feed0(ByteArray data) throws Exception {
+        ByteArray send = feed(data);
+        Processor.HandleTODO ret = Processor.HandleTODO.create();
+        ret.send = send;
+        if (isFrontend() && (
+            (send != null && send.length() > 0) || send == Processor.REQUIRE_CONNECTION)) {
+            ret.connTODO = ctx.connection();
+        }
+        ret.frameEnds = expectNewFrame();
+        ret.produce = produce();
+        return ret;
+    }
+
+    private ByteArray feed(ByteArray data) throws Exception {
+        if (dataPendingToBeSent) {
             handlePendingFrame(data);
             return returnDataToProxy();
         }
@@ -174,7 +202,7 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
         }
         assert Logger.lowLevelDebug("proxy pending frame: " + parsingFrame);
         serializeToProxy(false);
-        dataPendingToBeProxied = false; // un-setting must be after serialization done
+        dataPendingToBeSent = false; // un-setting must be after serialization done
         assert Logger.lowLevelNetDebug("dataPendingToBeProxied of feed(): " + dataToProxy.toHexString());
     }
 
@@ -513,12 +541,12 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
                 throw new Exception(err);
             } else {
                 assert Logger.lowLevelDebug("session not established yet, hold for now");
-                if (dataPendingToBeProxied) {
+                if (dataPendingToBeSent) {
                     String err = "cannot proxy frame " + frame + " because the target stream is not established";
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, err);
                     throw new Exception(err);
                 }
-                dataPendingToBeProxied = true;
+                dataPendingToBeSent = true;
                 dataToProxy = Processor.REQUIRE_CONNECTION;
                 return;
             }
@@ -736,17 +764,15 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
 
     private ByteArray produced;
 
-    @Override
-    public ByteArray produce() {
+    private ByteArray produce() {
         ByteArray produced = this.produced;
         this.produced = null;
         return produced;
     }
 
-    @Override
-    public void proxyDone() {
+    private Processor.ProxyDoneTODO proxyDone() {
         if (ctx.upgradedConnection) {
-            return;
+            return null;
         }
         if (state == STATE_DATA_FRAME) {
             assert Logger.lowLevelDebug("data frame proxy done");
@@ -756,10 +782,11 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             }
             decreaseReceivingWindow(data.streamId, data.length);
             state = STATE_FRAME_HEADER;
-            expectNewFrame = true;
             setLen(H2_HEADER_SIZE);
+            return Processor.ProxyDoneTODO.createFrameEnds();
         } else {
             Logger.shouldNotHappen("not expecting proxyDone called in state " + state);
+            return null;
         }
     }
 
@@ -798,29 +825,33 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
     }
 
     @Override
-    public ByteArray connected() {
-        if (connId != 0) { // backend connections
-            sendInitialFrame();
+    public Processor.HandleTODO connected() {
+        if (connId == 0) {
+            return null;
         }
-        return produce();
+        // backend connections
+        sendInitialFrame();
+        Processor.HandleTODO ret = Processor.HandleTODO.create();
+        ret.produce = produce();
+        return ret;
     }
 
     @Override
-    public ByteArray remoteClosed() {
-        return null; // nothing to be sent to frontend
+    public Processor.HandleTODO remoteClosed() {
+        return null; // nothing to be sent
     }
 
     @Override
-    public boolean disconnected(boolean exception) {
+    public Processor.DisconnectTODO disconnected(boolean exception) {
         // check streams owned by this connection
         // if all streams have been closed, it's safe to close this connection
         streamHolder.flush();
         if (streamHolder.isEmpty()) {
             assert Logger.lowLevelDebug("no active streams in this connection, close silently");
-            return true;
+            return Processor.DisconnectTODO.createSilent();
         } else {
             assert Logger.lowLevelDebug("still has streams in this connection, close all");
-            return false;
+            return null;
         }
     }
 
@@ -873,5 +904,10 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> {
             parsingFrame = null; // the frame is not fully read yet
         }
         return null;
+    }
+
+    @Override
+    public BinaryHttpSubContext castToBinaryHttpSubContext() {
+        return this;
     }
 }
