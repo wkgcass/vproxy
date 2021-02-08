@@ -102,6 +102,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
     // only accessed when it's a frontend sub context
     // if it's a backend sub context, the field might be set but never used
     String theHostHeader = null;
+    private StringBuilder theConnectionHeader = null;
     // all these endHeaders fields will set to true in state9 (end-all-headers)
     // if there's no body and chunk, the [0] will be set to false because statm will call end() to reset states
     // otherwise [0] will remain to be true until the body/chunk is properly handled
@@ -383,6 +384,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         state = 0;
 
         headers = null;
+        theConnectionHeader = null;
         endHeaders[0] = false;
         if (!isFrontend() && !parserMode) {
             ctx.clearFrontendExpectingResponse(this);
@@ -499,8 +501,16 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     case "host":
                         theHostHeader = header.value.toString().trim();
                         break;
+                    case "connection":
+                        if (!header.value.toString().trim().equalsIgnoreCase("close")) {
+                            theConnectionHeader = header.value;
+                            // keep the Connection: xxx header if it's not 'close'
+                            break;
+                        }
+                        // fall through
                     case "x-forwarded-for":
                     case "x-client-port":
+                    case "keep-alive":
                         // we remove these headers from request
                         addHeader = false;
                         break;
@@ -537,7 +547,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             h.key.append("x-forwarded-for");
             h.value.append(ctx.clientAddress);
             headers.add(h);
-            assert Logger.lowLevelDebug("add header x-forwarded-for: " + ctx.clientAddress);
+            assert Logger.lowLevelDebug("add header " + h);
         }
         // x-client-port
         {
@@ -545,7 +555,15 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             h.key.append("x-client-port");
             h.value.append(ctx.clientPort);
             headers.add(h);
-            assert Logger.lowLevelDebug("add header x-client-port: " + ctx.clientPort);
+            assert Logger.lowLevelDebug("add header " + h);
+        }
+        // connection
+        if (theConnectionHeader == null) {
+            HeaderBuilder h = new HeaderBuilder();
+            h.key.append("Connection");
+            h.value.append("Keep-Alive");
+            headers.add(h);
+            assert Logger.lowLevelDebug("add header " + h);
         }
     }
 
@@ -585,7 +603,6 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
                     assert Logger.lowLevelDebug("found upgrade header: " + h.value);
                     ctx.upgradedConnection = true;
                     proxyLen = 0x00ffffff; // use max uint24 to prevent some possible overflow
-                    return;
                 }
             }
         }
