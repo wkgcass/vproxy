@@ -37,22 +37,6 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
     }
 
     public static class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
-        int nextConnId = -1;
-
-        @Override
-        public int connection(HeadPayloadSubContext front) {
-            return nextConnId;
-        }
-
-        @Override
-        public Hint connectionHint(HeadPayloadSubContext front) {
-            return null; // we do not choose backend by protocol
-        }
-
-        @Override
-        public void chosen(HeadPayloadSubContext front, HeadPayloadSubContext subCtx) {
-            nextConnId = subCtx.connId;
-        }
     }
 
     public static class HeadPayloadSubContext extends OOSubContext<HeadPayloadContext> {
@@ -63,8 +47,7 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
         private final int handleLen;
         private final int proxyBaseLen;
 
-        private boolean expectingHead = true;
-        private int parsedLength = 0;
+        private ProcessorTODO nextProcessorTODO;
 
         public HeadPayloadSubContext(HeadPayloadContext headPayloadContext, int connId, ConnectionDelegate delegate,
                                      int head, int off, int len, int maxLen) {
@@ -75,26 +58,41 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
 
             handleLen = off + len;
             proxyBaseLen = head - handleLen;
+
+            initProcessorTODO();
+        }
+
+        private void initProcessorTODO() {
+            nextProcessorTODO = ProcessorTODO.create();
+            nextProcessorTODO.len = handleLen;
+            nextProcessorTODO.mode = Mode.handle;
+            nextProcessorTODO.feed = this::feed;
         }
 
         @Override
-        public Processor.Mode mode() {
-            return expectingHead ? Processor.Mode.handle : Processor.Mode.proxy;
+        public ProcessorTODO process() {
+            return nextProcessorTODO;
         }
 
-        @Override
-        public boolean expectNewFrame() {
-            // proxy length 0 also means that the previous frame is finished
-            return expectingHead || (proxyBaseLen + parsedLength == 0);
+        private HandleTODO buildFeedResult(ByteArray data, int parsedLength) {
+            nextProcessorTODO = ProcessorTODO.createProxy();
+            nextProcessorTODO.len = proxyBaseLen + parsedLength;
+            nextProcessorTODO.proxyTODO.proxyDone = this::proxyDone;
+
+            HandleTODO handleTODO = HandleTODO.create();
+            handleTODO.send = data;
+            if (isFrontend()) {
+                nextProcessorTODO.proxyTODO.connTODO = ConnectionTODO.create();
+
+                handleTODO.connTODO = ConnectionTODO.create();
+                handleTODO.connTODO.connId = -1;
+                handleTODO.connTODO.chosen = subCtx -> nextProcessorTODO.proxyTODO.connTODO.connId = subCtx.connId;
+            }
+            return handleTODO;
         }
 
-        @Override
-        public int len() {
-            return expectingHead ? handleLen : proxyBaseLen + parsedLength;
-        }
-
-        @Override
-        public ByteArray feed(ByteArray data) throws Exception {
+        private HandleTODO feed(ByteArray data) throws Exception {
+            int parsedLength;
             if (len < 5) { // 1,2,3,4
                 if (len == 1) {
                     parsedLength = data.uint8(off);
@@ -106,8 +104,7 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
                     assert len == 4;
                     parsedLength = data.int32(off);
                 }
-                expectingHead = false;
-                return data;
+                return buildFeedResult(data, parsedLength);
             }
 
             int n = 0;
@@ -127,35 +124,27 @@ public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProces
             if (n > maxLen)
                 throw new Exception("unsupported length: " + n + " > " + maxLen);
             parsedLength = n;
-            expectingHead = false;
-            return data;
+            return buildFeedResult(data, parsedLength);
+        }
+
+        private ProxyDoneTODO proxyDone() {
+            initProcessorTODO();
+            return ProxyDoneTODO.createFrameEnds();
         }
 
         @Override
-        public ByteArray produce() {
-            return null; // always produce nothing
-        }
-
-        @Override
-        public void proxyDone() {
-            if (connId == 0)
-                ctx.nextConnId = -1;
-            expectingHead = true;
-        }
-
-        @Override
-        public ByteArray connected() {
+        public HandleTODO connected() {
             return null; // send nothing when connected
         }
 
         @Override
-        public ByteArray remoteClosed() {
+        public HandleTODO remoteClosed() {
             return null; // return nothing
         }
 
         @Override
-        public boolean disconnected(boolean exception) {
-            return false; // unable to handle this condition
+        public DisconnectTODO disconnected(boolean exception) {
+            return null; // unable to handle this condition
         }
     }
 }
