@@ -167,11 +167,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             private final LinkedList<Segment> sendingQueue = new LinkedList<>();
             boolean frameEnds; // in the frontendByteFlow, if it's set to true, another backend will be able to respond to the frontend
             //                    this field is ignored when it's in backendByteFlow
+            public boolean closed; // only work in backendByteFlow, if it's set to true, the connection will be closed after all data flushed
 
             void pollSendingQueue() {
                 Segment seg = sendingQueue.poll();
                 if (seg == null) {
                     currentSegment = null;
+                    if (closed) {
+                        closed(null);
+                    }
                     return;
                 }
                 if (seg.isProxy && seg.proxyTODO == null) { // a special segment indicating the frame ends
@@ -227,6 +231,13 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     frameEnds = false;
                 }
             }
+
+            void informClose() {
+                closed = true;
+                if (currentSegment == null) {
+                    closed(null);
+                }
+            }
         }
 
         private final Processor.SubContext subCtx;
@@ -257,6 +268,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             doBackendWrite();
         }
 
+        void informCloseToBackend() {
+            assert Logger.lowLevelDebug("informCloseToBackend");
+            backendByteFlow.informClose();
+            if (backendByteFlow.currentSegment != null) doBackendWrite();
+        }
+
         void writeToFrontend(ByteArray data, boolean frameEndsAfterSending) {
             frontendByteFlow.write(data, frameEndsAfterSending);
             frontendWrite(this);
@@ -265,6 +282,11 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         void proxyToFrontend(int len, Processor.ProxyTODO proxyTODO) {
             frontendByteFlow.proxy(len, proxyTODO);
             frontendWrite(this);
+        }
+
+        void informFrameEndsToFrontend() {
+            frontendByteFlow.informFrameEnds();
+            if (frontendByteFlow.currentSegment != null) frontendWrite(this);
         }
 
         private boolean isWritingBackend = false;
@@ -343,7 +365,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 if (len == 0) { // 0 bytes to proxy, so it's already done
                     Processor.ProxyDoneTODO proxyDone = processorTODO.proxyTODO.proxyDone.get();
                     if (proxyDone != null && proxyDone.frameEnds) {
-                        frontendByteFlow.informFrameEnds();
+                        informFrameEndsToFrontend();
                     }
                     readBackend(); // recursively call to handle more input data
                 } else {
@@ -398,7 +420,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 if (dataToSend == null || dataToSend.length() == 0) {
                     // nothing written, we have to check whether the frame ends
                     if (handleTODO != null && handleTODO.frameEnds) {
-                        frontendByteFlow.informFrameEnds();
+                        informFrameEndsToFrontend();
                     }
 
                     readBackend(); // recursively call to handle more data
@@ -468,22 +490,18 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
-            assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed, send FIN to frontend");
+            assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed");
             // backend FIN
-            // we should send FIN to frontend
-            frontendConnection.closeWrite();
-            // check whether we should close the session now
-            if (frontendConnection.getOutBuffer().used() == 0) {
-                if (frontendConnection.isRemoteClosed()) {
-                    // frontend data already flushed
-                    // and is already closed
-                    // so no data will be received from frontend
-                    // it's safe to close the session now
-                    assert Logger.lowLevelDebug("frontend data flushed and remote closed, close the session");
-                    ctx.connection.close();
-                    closed(ctx);
+            Processor.HandleTODO handleTODO = processor.remoteClosed(topCtx, subCtx);
+            if (handleTODO != null) {
+                if (handleTODO.send != null) {
+                    writeToFrontend(handleTODO.send, true /* no more packets will be received from the connection, so always set this to true */);
+                }
+                if (handleTODO.produce != null) {
+                    writeToBackend(handleTODO.produce);
                 }
             }
+            informCloseToBackend();
         }
 
         @Override
@@ -496,23 +514,24 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             Processor.DisconnectTODO disconnectTODO = processor.disconnected(topCtx, subCtx, false);
             if (disconnectTODO != null && disconnectTODO.silent) {
                 assert Logger.lowLevelDebug("silently close the backend");
-                ctx.connection.close();
+                conn.close();
                 return;
             }
 
             if (frontendConnection.isClosed()) {
-                assert Logger.lowLevelDebug("backend connection " + ctx.connection + " closed, corresponding frontend is " + frontendConnection);
+                assert Logger.lowLevelDebug("backend connection " + conn + " closed, corresponding frontend is " + frontendConnection);
             } else {
-                Logger.warn(LogType.CONN_ERROR, "backend connection " + ctx.connection + " closed before frontend connection " + frontendConnection);
+                Logger.warn(LogType.CONN_ERROR, "backend connection " + conn + " closed before frontend connection " + frontendConnection);
             }
             closeAll();
         }
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
-            if (!ctx.connection.isClosed())
+            if (!ctx.connection.isClosed()) {
                 Logger.error(LogType.IMPROPER_USE, "backend connection " + ctx.connection + " removed from event loop " + loop);
-            closeAll();
+                closeAll();
+            }
         }
     }
     // --- END backend handler ---
