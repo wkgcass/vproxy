@@ -15,7 +15,6 @@ public class HttpContext extends OOContext<HttpSubContext> {
     int currentBackend = -1;
     boolean upgradedConnection = false;
 
-    HttpSubContext frontendSubContext;
     boolean frontendExpectingResponse = false;
     int frontendExpectingResponseFrom = -1; // backend connId
 
@@ -24,10 +23,9 @@ public class HttpContext extends OOContext<HttpSubContext> {
         clientPort = clientSock == null ? null : "" + clientSock.getPort();
     }
 
-    @Override
-    public int connection(HttpSubContext front) {
+    Processor.ConnectionTODO connection() {
         int returnConnId;
-        if (front.isIdle()) {
+        if (frontendSubCtx.isIdle()) {
             // the state may turn to idle after calling feed()
             // the connection() will be called after calling feed()
             // so here we should return the last recorded backend id
@@ -45,13 +43,18 @@ public class HttpContext extends OOContext<HttpSubContext> {
             frontendExpectingResponseFrom = returnConnId;
         }
 
-        return returnConnId;
+        Processor.ConnectionTODO connectionTODO = Processor.ConnectionTODO.create();
+        connectionTODO.connId = returnConnId;
+        if (returnConnId == -1) {
+            connectionTODO.hint = connectionHint();
+            connectionTODO.chosen = this::chosen;
+        }
+        return connectionTODO;
     }
 
-    @Override
-    public Hint connectionHint(HttpSubContext front) {
-        String uri = front.theUri;
-        String host = front.theHostHeader;
+    private Hint connectionHint() {
+        String uri = frontendSubCtx.theUri;
+        String host = frontendSubCtx.theHostHeader;
 
         if (host == null && uri == null) {
             return null;
@@ -67,8 +70,7 @@ public class HttpContext extends OOContext<HttpSubContext> {
         }
     }
 
-    @Override
-    public void chosen(HttpSubContext front, HttpSubContext subCtx) {
+    private void chosen(Processor.SubContext subCtx) {
         currentBackend = subCtx.connId;
         // backend chosen, so response is expected to be from that backend
         frontendExpectingResponseFrom = currentBackend;
@@ -86,10 +88,10 @@ public class HttpContext extends OOContext<HttpSubContext> {
         frontendExpectingResponseFrom = -1;
         frontendExpectingResponse = false;
 
-        frontendSubContext.delegate.resume();
-        if (frontendSubContext.storedBytesForProcessing != null) {
+        frontendSubCtx.delegate.resume();
+        if (frontendSubCtx.storedBytesForProcessing != null) {
             try {
-                frontendSubContext.feed(ByteArray.allocate(0));
+                frontendSubCtx.feed(ByteArray.allocate(0));
             } catch (Exception e) {
                 assert Logger.lowLevelDebug("feed return error: " + e);
             }

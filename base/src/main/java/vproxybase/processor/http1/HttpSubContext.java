@@ -124,9 +124,36 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
     public HttpSubContext(HttpContext httpContext, int connId, ConnectionDelegate delegate) {
         super(httpContext, connId, delegate);
-        if (isFrontend()) {
-            ctx.frontendSubContext = this;
+    }
+
+    @Override
+    public Processor.ProcessorTODO process() {
+        Processor.ProcessorTODO ret;
+        if (mode() == Processor.Mode.handle) {
+            ret = Processor.ProcessorTODO.create();
+            ret.mode = Processor.Mode.handle;
+            ret.len = len();
+            ret.feed = this::processorFeed;
+        } else {
+            ret = Processor.ProcessorTODO.createProxy();
+            ret.len = len();
+            ret.proxyTODO.proxyDone = this::proxyDone;
+            if (isFrontend()) {
+                ret.proxyTODO.connTODO = ctx.connection();
+            }
         }
+        return ret;
+    }
+
+    public int len() {
+        if (mode() == Processor.Mode.handle) {
+            // do feed, and -1 means feed any data into the processor
+            return -1;
+        }
+        if (ctx.upgradedConnection) {
+            return 0x00ffffff; // use max uint24 to prevent some possible overflow
+        }
+        return proxyLen;
     }
 
     public void setParserMode() {
@@ -153,8 +180,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return state == 10 || state == 11;
     }
 
-    @Override
-    public Processor.Mode mode() {
+    private Processor.Mode mode() {
         if (ctx.upgradedConnection) {
             return Processor.Mode.proxy;
         }
@@ -190,25 +216,17 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         throw new IllegalStateException("BUG: unexpected state " + state);
     }
 
-    @Override
-    public boolean expectNewFrame() {
-        if (ctx.upgradedConnection) {
-            return false;
+    public Processor.HandleTODO processorFeed(ByteArray data) throws Exception {
+        Processor.HandleTODO handleTODO = Processor.HandleTODO.create();
+        handleTODO.send = feedWithStored(data);
+        handleTODO.frameEnds = state == 0;
+        if (isFrontend()) {
+            handleTODO.connTODO = ctx.connection();
         }
-        return state == 0;
+        return handleTODO;
     }
 
-    @Override
-    public int len() {
-        if (ctx.upgradedConnection) {
-            return 0x00ffffff; // use max uint24 to prevent some possible overflow
-        }
-        // when proxyLen == -1, do feed, and -1 means feed any data into the processor
-        return proxyLen;
-    }
-
-    @Override
-    public ByteArray feed(ByteArray data) throws Exception {
+    private ByteArray feedWithStored(ByteArray data) throws Exception {
         if (!ctx.frontendExpectingResponse && isFrontend() && data.length() > 0) {
             // the frontend is expecting to receiving response when receiving headers,
             // regardless of whether the request is completely received
@@ -219,7 +237,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
             data = storedBytesForProcessing.concat(data);
             storedBytesForProcessing = null;
         }
-        ByteArray ret = feed1(data);
+        ByteArray ret = feed(data);
         boolean isIdleAfterFeeding = state == 0;
         if (isFrontend() && isIdleBeforeFeeding && isIdleAfterFeeding) {
             ctx.currentBackend = -1;
@@ -227,7 +245,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         return ret;
     }
 
-    private ByteArray feed1(ByteArray data) throws Exception {
+    public ByteArray feed(ByteArray data) throws Exception {
         int consumedBytes = 0;
         ByteArray headersBytes = null;
         while (consumedBytes < data.length()) {
@@ -307,11 +325,6 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         handlers[state].handle(b);
     }
 
-    @Override
-    public ByteArray produce() {
-        return null; // never produce data
-    }
-
     private void _proxyDone() {
         proxyLen = -1;
         if (state == 10) {
@@ -324,40 +337,44 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
         }
     }
 
-    @Override
-    public void proxyDone() {
+    private Processor.ProxyDoneTODO proxyDone() {
         if (ctx.upgradedConnection) {
-            return;
+            return null;
         }
-        int state = this.state;
+        int stateWas = this.state;
         _proxyDone();
-        if (state == 10) {
+        if (stateWas == 10) {
             endHeaders[2] = false; // it should be set in feed(...) but there's no chance that feed(...) can be called, so set to false here
+        }
+        if (state == 0) {
+            return Processor.ProxyDoneTODO.createFrameEnds();
+        } else {
+            return null;
         }
     }
 
     @Override
-    public ByteArray connected() {
+    public Processor.HandleTODO connected() {
         return null; // never respond when connected
     }
 
     @Override
-    public ByteArray remoteClosed() {
+    public Processor.HandleTODO remoteClosed() {
         return null; // TODO handle http/1.0 without content-length and not chunked
     }
 
     @Override
-    public boolean disconnected(boolean exception) {
+    public Processor.DisconnectTODO disconnected(boolean exception) {
         if (!ctx.frontendExpectingResponse) {
             assert Logger.lowLevelDebug("not expecting response, so backend disconnecting is fine");
-            return true;
+            return Processor.DisconnectTODO.createSilent();
         }
         if (ctx.frontendExpectingResponseFrom != connId) {
             assert Logger.lowLevelDebug("the disconnected connection is not response connection");
-            return true;
+            return Processor.DisconnectTODO.createSilent();
         }
         assert Logger.lowLevelDebug("it's expecting response from the disconnected backend, which is invalid");
-        return false;
+        return null;
     }
 
     // start handler methods
@@ -367,7 +384,7 @@ public class HttpSubContext extends OOSubContext<HttpContext> {
 
         headers = null;
         endHeaders[0] = false;
-        if (!isFrontend()) {
+        if (!isFrontend() && !parserMode) {
             ctx.clearFrontendExpectingResponse(this);
         }
     }
