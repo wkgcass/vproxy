@@ -36,7 +36,7 @@ public class TXT implements RData {
     @Override
     public ByteArray toByteArray() {
         if (texts.isEmpty()) {
-            return ByteArray.from(new byte[0]);
+            return ByteArray.allocate(0);
         }
         ByteArray ret = Formatter.formatString(texts.get(0));
         for (int i = 1; i < texts.size(); ++i) {

@@ -110,16 +110,16 @@ public class SSProtocolHandler implements ProtocolHandler<Tuple<SSContext, Callb
         if (pctx.address == null) {
             if (pctx.reqType == AddressType.ipv4) {
                 // ipv4
-                pctx.address = new byte[4];
+                pctx.address = Utils.allocateByteArrayInitZero(4);
                 pctx.addressLeft = 4;
             } else if (pctx.reqType == AddressType.domain) {
                 byte blen = pctx.next(); // read first byte as the length of domain string
                 int len = Utils.positive(blen);
-                pctx.address = new byte[len];
+                pctx.address = Utils.allocateByteArray(len);
                 pctx.addressLeft = len;
             } else if (pctx.reqType == AddressType.ipv6) {
                 // ipv6
-                pctx.address = new byte[16];
+                pctx.address = Utils.allocateByteArrayInitZero(16);
                 pctx.addressLeft = 16;
             } else {
                 assert Logger.lowLevelDebug("invalid reqType " + pctx.reqType);

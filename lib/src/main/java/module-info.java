@@ -3,11 +3,11 @@ module vproxy.lib {
     requires vproxy.core;
 
     exports vserver;
+    exports vserver.impl;
     exports vserver.route;
     exports vserver.util;
-    exports vserver.impl;
-    exports vclient;
-    exports vclient.impl;
     exports vlibbase;
     exports vlibbase.impl;
+    exports vclient;
+    exports vclient.impl;
 }

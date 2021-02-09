@@ -168,7 +168,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
     }
 
     private int createSSLEngine(ReadableByteStream channel) throws IOException {
-        ByteBuffer buf = ByteBuffer.allocate(16384); // should be enough for CLIENT_HELLO message
+        ByteBuffer buf = Utils.allocateByteBuffer(16384); // should be enough for CLIENT_HELLO message
         int n = channel.read(buf);
         buf.flip();
         SNIServerName sni;
@@ -296,7 +296,7 @@ public class SSLUnwrapRingBuffer extends AbstractUnwrapByteBufferRingBuffer impl
             // reset the position in case it's modified
             encryptedBuffer.position(positionBeforeHandling);
             Logger.shouldNotHappen("the unwrapping returned BUFFER_OVERFLOW, do retry");
-            plainBuffer = ByteBuffer.allocate(engine.getSession().getApplicationBufferSize());
+            plainBuffer = Utils.allocateByteBuffer(engine.getSession().getApplicationBufferSize());
             try {
                 result = engine.unwrap(encryptedBuffer.realBuffer(), plainBuffer);
             } catch (SSLException e) {

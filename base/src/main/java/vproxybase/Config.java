@@ -28,7 +28,7 @@ public class Config {
 
     // the recommended min payload length
     // also, see Processor.PROXY_ZERO_COPY_THRESHOLD
-    public static final int recommendedMinPayloadLength = 1400;
+    public static final int recommendedMinPayloadLength = 1200;
     // usually mtu is set to 1500, but some routers might set the value to 1480, 1440 or lower
     // we use 1400 here
 
@@ -114,17 +114,17 @@ public class Config {
     public static final Predicate<String> dhcpGetDnsListNics;
 
     static {
-        appClass = System.getProperty("eploy"); // -Deploy
-        String probeConf = System.getProperty("probe", "");
+        appClass = Utils.getSystemProperty("deploy");
+        String probeConf = Utils.getSystemProperty("probe", "");
         if (probeConf.equals("all")) {
             probe = Set.of("virtual-fd-event", "streamed-arq-udp-event", "streamed-arq-udp-record");
         } else {
             probe = Arrays.stream(probeConf.split(",")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toUnmodifiableSet());
         }
-        domainWhichShouldResolve = System.getProperty("omainWhichShouldResolve", "www.qq.com");
-        mirrorConfigPath = System.getProperty("mirrorConf", "");
+        domainWhichShouldResolve = Utils.getSystemProperty("domain_which_should_resolve", "www.qq.com");
+        mirrorConfigPath = Utils.getSystemProperty("mirror_conf", "");
 
-        String dhcpGetDnsListNicsString = System.getProperty("hcpGetDnsListNics", "");
+        String dhcpGetDnsListNicsString = Utils.getSystemProperty("dhcp_get_dns_list_nics", "");
         if (dhcpGetDnsListNicsString.isBlank()) {
             dhcpGetDnsListEnabled = false;
             dhcpGetDnsListNics = n -> false;

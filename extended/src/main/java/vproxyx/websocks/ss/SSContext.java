@@ -2,6 +2,7 @@ package vproxyx.websocks.ss;
 
 import vproxybase.socks.AddressType;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 public class SSContext {
@@ -15,11 +16,11 @@ public class SSContext {
     int addressLeft; // first set to 4(ipv4)or16(ipv6)or user specific(domain), then self decrease until 0
     byte[] address;
     int portLeft = 2;
-    byte[] portBytes = new byte[2];
+    byte[] portBytes = Utils.allocateByteArrayInitZero(2);
     int port;
 
     final RingBuffer inBuffer;
-    private final byte[] b = new byte[1];
+    private final byte[] b = Utils.allocateByteArrayInitZero(1);
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(b);
 
     public SSContext(RingBuffer inBuffer) {

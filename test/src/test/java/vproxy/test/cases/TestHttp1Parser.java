@@ -7,11 +7,16 @@ import vproxybase.processor.Processor;
 import vproxybase.processor.http1.HttpContext;
 import vproxybase.processor.http1.HttpProcessor;
 import vproxybase.processor.http1.HttpSubContext;
+import vproxybase.processor.http1.entity.Header;
 import vproxybase.processor.http1.entity.Request;
 import vproxybase.processor.http1.entity.Response;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 
+import java.io.ByteArrayOutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
+import java.util.LinkedList;
 import java.util.Objects;
 
 import static org.junit.Assert.*;
@@ -568,5 +573,71 @@ public class TestHttp1Parser {
         assertEquals("value1", resp.trailers.get(0).value);
         assertEquals("B-Trail", resp.trailers.get(1).key);
         assertEquals("value2", resp.trailers.get(1).value);
+    }
+
+    @Test
+    public void gZipResponse() throws Exception {
+        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
+        HttpContext ctx = p.init(null);
+        HttpSubContext backend = p.initSub(ctx, 1, null);
+        backend.setParserMode();
+
+        Response originResponse = new Response();
+        originResponse.version = "HTTP/1.1";
+        originResponse.statusCode = 200;
+        originResponse.reason = "OK";
+        originResponse.isPlain = true;
+        LinkedList<Header> headers = new LinkedList<>();
+        headers.add(new Header("Content-Type", "text/plain; charset=UTF-8"));
+        headers.add(new Header("Content-Encoding", "gzip"));
+        originResponse.headers = headers;
+        String s = "Hello, world!";
+        originResponse.body = ByteArray.from(s.getBytes(StandardCharsets.UTF_8));
+        ByteArray originResponseBytes = originResponse.toByteArray();
+
+        backend.feed(originResponseBytes);
+        Response newResponse = backend.getResp();
+
+        assertEquals("HTTP/1.1", newResponse.version);
+        assertEquals(200, newResponse.statusCode);
+        assertEquals("OK", newResponse.reason);
+        assertEquals("Content-Type", newResponse.headers.get(0).key);
+        assertEquals("text/plain; charset=UTF-8", newResponse.headers.get(0).value);
+        assertEquals("Content-Encoding", newResponse.headers.get(1).key);
+        assertEquals("gzip", newResponse.headers.get(1).value);
+        assertEquals("Content-Length", newResponse.headers.get(2).key);
+        assertEquals("33", newResponse.headers.get(2).value);
+
+        assertArrayEquals(originResponse.body.toGZipJavaByteArray(), newResponse.body.toJavaArray());
+        assertArrayEquals(originResponseBytes.toJavaArray(), newResponse.toByteArray().toJavaArray());
+
+        assertTrue(backend.isIdle());
+    }
+
+    @Test
+    public void gZipRequest() throws Exception {
+        Processor<HttpContext, HttpSubContext> p = new HttpProcessor();
+        HttpContext ctx = p.init(address);
+        HttpSubContext front = p.initSub(ctx, 0, null);
+        front.setParserMode();
+
+        Request originRequest = new Request();
+        originRequest.method = "POST";
+        originRequest.uri = "/user/1";
+        originRequest.version = "HTTP/1.1";
+        String s = "{\"username\":\"admin\"}";
+        originRequest.body = ByteArray.from(s.getBytes(StandardCharsets.UTF_8));
+        LinkedList<Header> headers = new LinkedList<>();
+        headers.add(new Header("Host", "www.example.com"));
+        headers.add(new Header("Content-Encoding", "gzip"));
+        headers.add(new Header("Content-Type", "application/json"));
+        originRequest.headers = headers;
+        originRequest.isPlain = true;
+        ByteArray originRequestBytes = originRequest.toByteArray();
+
+        front.feed(originRequestBytes);
+        Request newRequest = front.getReq();
+        assertArrayEquals(newRequest.body.toJavaArray(), originRequest.body.toGZipJavaByteArray());
+        assertArrayEquals(newRequest.toByteArray().toJavaArray(), originRequest.toByteArray().toJavaArray());
     }
 }

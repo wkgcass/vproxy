@@ -8,6 +8,7 @@ import vproxyapp.app.cmd.Resource;
 import vproxyapp.app.cmd.ResourceType;
 import vproxyapp.app.cmd.handle.param.AnnotationsHandle;
 import vproxyapp.app.cmd.handle.param.NetworkHandle;
+import vproxybase.util.Annotations;
 import vproxybase.util.Network;
 import vswitch.Switch;
 import vswitch.Table;
@@ -82,7 +83,7 @@ public class VpcHandle {
         if (cmd.args.containsKey(Param.v6net)) {
             v6net = NetworkHandle.get(cmd.args.get(Param.v6net));
         }
-        Map<String, String> annotations = null;
+        Annotations annotations = null;
         if (cmd.args.containsKey(Param.anno)) {
             annotations = AnnotationsHandle.get(cmd);
         }
@@ -110,9 +111,9 @@ public class VpcHandle {
         public final int vpc;
         public final Network v4network;
         public final Network v6network;
-        public final Map<String, String> annotations;
+        public final Annotations annotations;
 
-        public VpcEntry(int vpc, Network v4network, Network v6network, Map<String, String> annotations) {
+        public VpcEntry(int vpc, Network v4network, Network v6network, Annotations annotations) {
             this.vpc = vpc;
             this.v4network = v4network;
             this.v6network = v6network;

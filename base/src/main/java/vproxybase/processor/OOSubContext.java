@@ -1,28 +1,26 @@
 package vproxybase.processor;
 
-import vproxybase.util.ByteArray;
-
 public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubContext {
     public final CTX ctx;
     public final int connId;
+    public final ConnectionDelegate delegate;
 
-    public OOSubContext(CTX ctx, int connId) {
+    public OOSubContext(CTX ctx, int connId, ConnectionDelegate delegate) {
         super(connId);
         this.ctx = ctx;
         this.connId = connId;
+        this.delegate = delegate;
+
+        if (connId == 0) {
+            ctx.frontendSubCtx = this;
+        }
     }
 
-    public abstract Processor.Mode mode();
+    public abstract Processor.ProcessorTODO process();
 
-    public abstract boolean expectNewFrame();
+    public abstract Processor.HandleTODO connected();
 
-    public abstract int len();
+    public abstract Processor.HandleTODO remoteClosed();
 
-    public abstract ByteArray feed(ByteArray data) throws Exception;
-
-    public abstract ByteArray produce();
-
-    public abstract void proxyDone();
-
-    public abstract ByteArray connected();
+    public abstract Processor.DisconnectTODO disconnected(boolean exception);
 }

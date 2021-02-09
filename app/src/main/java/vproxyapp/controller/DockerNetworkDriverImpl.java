@@ -5,6 +5,7 @@ import vproxy.component.secure.SecurityGroup;
 import vproxyapp.app.Application;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.util.AnnotationKeys;
+import vproxybase.util.Annotations;
 import vproxybase.util.Logger;
 import vproxybase.util.Network;
 import vproxybase.util.exception.NotFoundException;
@@ -20,15 +21,15 @@ import java.util.Map;
 
 public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String SWITCH_NAME = "DockerNetworkDriverSW";
-    private static final String TABLE_NETWORK_ID_ANNOTATION = AnnotationKeys.SWTable_DockerNetworkDriverNetworkId;
+    private static final String TABLE_NETWORK_ID_ANNOTATION = AnnotationKeys.SWTable_DockerNetworkDriverNetworkId.name;
     private static final MacAddress GATEWAY_MAC_ADDRESS = new MacAddress("02:00:00:00:00:20");
-    private static final String GATEWAY_IP_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewayIp;
+    private static final String GATEWAY_IP_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewayIp.name;
     private static final String GATEWAY_IPv4_FLAG_VALUE = "gateway-ipv4";
     private static final String GATEWAY_IPv6_FLAG_VALUE = "gateway-ipv6";
-    private static final String TAP_ENDPOINT_ID_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointId;
-    private static final String TAP_ENDPOINT_IPv4_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv4;
-    private static final String TAP_ENDPOINT_IPv6_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv6;
-    private static final String TAP_ENDPOINT_MAC_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointMac;
+    private static final String TAP_ENDPOINT_ID_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointId.name;
+    private static final String TAP_ENDPOINT_IPv4_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv4.name;
+    private static final String TAP_ENDPOINT_IPv6_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointIpv6.name;
+    private static final String TAP_ENDPOINT_MAC_ANNOTATION = AnnotationKeys.SWTap_DockerNetworkDriverEndpointMac.name;
     private static final String POST_SCRIPT_BASE_DIRECTORY = "/var/vproxy/docker-network-plugin/post-scripts/";
 
     @Override
@@ -138,10 +139,10 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         if (!req.ipv6Data.isEmpty()) {
             v6net = new Network(req.ipv6Data.get(0).pool);
         }
-        sw.addTable(n, v4net, v6net, Collections.singletonMap(TABLE_NETWORK_ID_ANNOTATION, req.networkId));
+        sw.addTable(n, v4net, v6net, new Annotations(Collections.singletonMap(TABLE_NETWORK_ID_ANNOTATION, req.networkId)));
         Logger.alert("table added: vni=" + n + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
         Table tbl = sw.getTable(n);
-        if (!req.networkId.equals(tbl.getAnnotations().get(TABLE_NETWORK_ID_ANNOTATION))) {
+        if (!req.networkId.equals(tbl.getAnnotations().other.get(TABLE_NETWORK_ID_ANNOTATION))) {
             Logger.shouldNotHappen("adding table failed, maybe concurrent modification");
             throw new Exception("unexpected state");
         }
@@ -150,7 +151,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         {
             var gateway = IP.from(req.ipv4Data.get(0).__transformedGateway);
             var mac = GATEWAY_MAC_ADDRESS;
-            tbl.addIp(gateway, mac, Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE));
+            tbl.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE)));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
 
@@ -158,7 +159,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             // add ipv6 gateway ip
             var gateway = IP.from(req.ipv6Data.get(0).__transformedGateway);
             var mac = GATEWAY_MAC_ADDRESS;
-            tbl.addIp(gateway, mac, Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE));
+            tbl.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE)));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
     }
@@ -191,7 +192,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var tables = sw.getTables();
         for (var entry : tables.entrySet()) {
             var tbl = entry.getValue();
-            var netId = tbl.getAnnotations().get(TABLE_NETWORK_ID_ANNOTATION);
+            var netId = tbl.getAnnotations().other.get(TABLE_NETWORK_ID_ANNOTATION);
             if (netId != null && netId.equals(networkId)) {
                 return tbl;
             }
@@ -237,7 +238,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         ensurePostScript(req.endpointId, "");
 
         String nameSuffix = req.endpointId.substring(0, 12);
-        String tapName = sw.addTap("tap" + nameSuffix, tbl.vni, POST_SCRIPT_BASE_DIRECTORY + req.endpointId, anno);
+        String tapName = sw.addTap("tap" + nameSuffix, tbl.vni, POST_SCRIPT_BASE_DIRECTORY + req.endpointId, new Annotations(anno));
         Logger.alert("tap added: " + tapName + ", vni=" + tbl.vni
             + ", endpointId=" + req.endpointId
             + ", ipv4=" + anno.get(TAP_ENDPOINT_IPv4_ANNOTATION)
@@ -279,7 +280,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         for (var iface : ifaces) {
             if (iface instanceof TapIface) {
                 var tap = (TapIface) iface;
-                var epId = tap.annotations.get(TAP_ENDPOINT_ID_ANNOTATION);
+                var epId = tap.annotations.other.get(TAP_ENDPOINT_ID_ANNOTATION);
                 if (epId != null && epId.equals(endpointId)) {
                     return tap;
                 }
@@ -308,9 +309,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var tbl = findNetwork(sw, networkId);
         var tap = findEndpoint(sw, endpointId);
         var tapName = tap.tap.getTap().dev;
-        var ipv4 = tap.annotations.get(TAP_ENDPOINT_IPv4_ANNOTATION);
-        var ipv6 = tap.annotations.get(TAP_ENDPOINT_IPv6_ANNOTATION);
-        var mac = tap.annotations.get(TAP_ENDPOINT_MAC_ANNOTATION);
+        var ipv4 = tap.annotations.other.get(TAP_ENDPOINT_IPv4_ANNOTATION);
+        var ipv6 = tap.annotations.other.get(TAP_ENDPOINT_IPv6_ANNOTATION);
+        var mac = tap.annotations.other.get(TAP_ENDPOINT_MAC_ANNOTATION);
 
         if (tbl.v6network == null && ipv6 != null) {
             throw new Exception("internal error: should not reach here: " +
@@ -320,7 +321,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         String gatewayV4 = null;
         String gatewayV6 = null;
         for (var info : tbl.ips.entries()) {
-            var value = info.annotations.get(GATEWAY_IP_ANNOTATION);
+            var value = info.annotations.other.get(GATEWAY_IP_ANNOTATION);
             if (value != null) {
                 if (value.equals(GATEWAY_IPv4_FLAG_VALUE)) {
                     gatewayV4 = info.ip.formatToIPString();

@@ -33,7 +33,7 @@ public class ClasspathResourceHolder {
         }
         ByteArray ret = null;
         final int BUF_LEN = 2048;
-        byte[] buf = new byte[BUF_LEN];
+        byte[] buf = Utils.allocateByteArray(BUF_LEN);
         int len;
         try {
             while ((len = inputStream.read(buf)) > 0) {

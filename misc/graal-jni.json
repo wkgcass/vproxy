@@ -9,10 +9,10 @@
 		]
 	},
 	{
-		"name": "vfd.posix.FDInfo",
+		"name": "vfd.posix.FDInfoPrototypeObjectList",
 		"methods": [
 			{
-				"name": "<init>",
+				"name": "add",
 				"parameterTypes": [ "int", "int", "java.lang.Object" ]
 			}
 		]

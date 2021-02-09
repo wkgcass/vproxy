@@ -2,6 +2,7 @@ package vproxy.component.proxy;
 
 import vfd.SocketFD;
 import vproxybase.connection.*;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.Processor;
 import vproxybase.protocol.ProtocolConnectionHandler;
 import vproxybase.protocol.ProtocolHandler;
@@ -235,19 +236,45 @@ public class Proxy {
 
         @SuppressWarnings("unchecked")
         private void handleProcessor(NetEventLoop acceptLoop, Connection frontendConnection) {
-            Processor processor = config.connGen.processor();
-            Processor.Context topCtx = processor.init(frontendConnection.remote);
-            Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0, frontendConnection.remote);
-            {
-                ByteArray data = processor.connected(topCtx, frontendSubCtx);
-                assert data == null || data.length() == 0; // nothing should be directly written to the frontend
-            }
-
             // retrieve an event loop
             NetEventLoop loop = config.handleLoopProvider.getHandleLoop(acceptLoop);
 
+            Processor processor = config.connGen.processor();
+            Processor.Context topCtx = processor.init(frontendConnection.remote);
+            ProcessorConnectionHandler[] handlerPtr = new ProcessorConnectionHandler[]{null};
+            //noinspection DuplicatedCode
+            Processor.SubContext frontendSubCtx = processor.initSub(topCtx, 0, new ConnectionDelegate(frontendConnection.remote) {
+                @Override
+                public void pause() {
+                    assert handlerPtr[0] != null;
+                    handlerPtr[0].pause();
+                }
+
+                @Override
+                public void resume() {
+                    assert handlerPtr[0] != null;
+                    handlerPtr[0].resume();
+                }
+            });
+            {
+                Processor.HandleTODO todo = processor.connected(topCtx, frontendSubCtx);
+                // currently we do not support sending nor producing when frontend connection is connected
+                if (todo != null) {
+                    if (todo.send != null) {
+                        if (todo.send.length() > 0 || todo.send == Processor.REQUIRE_CONNECTION) {
+                            Logger.warn(LogType.IMPROPER_USE, "currently we not support sending when frontend connection is connected");
+                        }
+                    }
+                    if (todo.produce != null) {
+                        if (todo.produce.length() > 0) {
+                            Logger.warn(LogType.IMPROPER_USE, "currently we not support producing when frontend connection is connected");
+                        }
+                    }
+                }
+            }
+
             // initiate the handler
-            ConnectionHandler handler =
+            handlerPtr[0] =
                 new ProcessorConnectionHandler(
                     config,
                     loop,
@@ -257,7 +284,7 @@ public class Proxy {
                     frontendSubCtx
                 );
             try {
-                loop.addConnection(frontendConnection, null, handler);
+                loop.addConnection(frontendConnection, null, handlerPtr[0]);
             } catch (IOException e) {
                 // and do some log
                 Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "add new connection into loop failed", e);

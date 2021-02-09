@@ -94,7 +94,7 @@ public class GlobalInspection {
 
     private Map<String, String> getExtraLabels() {
         // -DGlobalInspectionPrometheusLabels=key1=value1,key2=value2
-        String labels = System.getProperty("GlobalInspectionPrometheusLabels");
+        String labels = Utils.getSystemProperty("global_inspection_prometheus_labels");
         if (labels == null || labels.isBlank()) {
             return Collections.emptyMap();
         }

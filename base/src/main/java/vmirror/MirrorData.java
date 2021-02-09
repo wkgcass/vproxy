@@ -6,6 +6,7 @@ import vfd.MacAddress;
 import vproxybase.util.ByteArray;
 import vproxybase.util.ByteBufferEx;
 import vproxybase.util.Consts;
+import vproxybase.util.Utils;
 
 import java.nio.ByteBuffer;
 
@@ -160,7 +161,7 @@ public class MirrorData {
         if (posBefore >= posAfter) { // nothing to mirror
             return this;
         }
-        byte[] arr = new byte[posAfter - posBefore];
+        byte[] arr = Utils.allocateByteArray(posAfter - posBefore);
         buf.limit(posAfter).position(posBefore);
         buf.get(arr);
         buf.limit(lim).position(posAfter);

@@ -5,6 +5,7 @@ import vproxybase.selector.TimerEvent;
 import vproxybase.util.ByteArray;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;
@@ -164,7 +165,7 @@ public class TcpEntry {
             if (len <= 0) {
                 return 0;
             }
-            byte[] bytes = new byte[len];
+            byte[] bytes = Utils.allocateByteArray(len);
             buffer.get(bytes);
             var data = ByteArray.from(bytes);
 

@@ -23,6 +23,7 @@ import vproxybase.connection.ServerSock;
 import vproxybase.util.AnnotationKeys;
 import vproxybase.util.Logger;
 import vproxybase.util.Tuple;
+import vproxybase.util.Utils;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -151,30 +152,22 @@ public class CI {
     @BeforeClass
     public static void setUpClass() throws Exception {
         {
-            String strPort = System.getProperty("vproxy_port");
-            if (strPort == null)
-                strPort = System.getenv("vproxy_port");
-            if (strPort == null)
-                strPort = "16309";
+            String strPort = Utils.getSystemProperty("vproxy_port", "16309");
             int port = Integer.parseInt(strPort);
             vproxyRESPPort = port;
 
-            strPort = System.getProperty("vproxy_http_port");
-            if (strPort == null)
-                strPort = System.getenv("vproxy_http_port");
-            if (strPort == null)
-                strPort = "18080";
+            strPort = Utils.getSystemProperty("vproxy_http_port", "18880");
             port = Integer.parseInt(strPort);
             vproxyHTTPPort = port;
         }
 
-        String password = System.getProperty("vproxy_password");
+        String password = Utils.getSystemProperty("vproxy_password");
         if (password == null)
-            password = System.getenv("vproxy_password");
+            password = Utils.getSystemProperty("vproxy_password");
         if (password == null)
             password = "123456";
 
-        if (System.getProperty("vproxy_exists") == null && System.getenv("vproxy_exists") == null) {
+        if (Utils.getSystemProperty("vproxy_exists") == null) {
             vproxyapp.app.Main.main(new String[]{
                 "resp-controller", "localhost:" + vproxyRESPPort, password,
                 "http-controller", "localhost:" + vproxyHTTPPort,

@@ -1,0 +1,36 @@
+language: java
+os: linux
+dist: focal
+# use lxd to enable local ipv6 support
+arch: arm64
+virt: lxd
+
+jdk:
+  - openjdk11
+
+script:
+  - ./gradlew --stop
+  # print ip, hosts, dns, listening ports, processes in logs
+  - ip a
+  - cat /etc/hosts
+  - cat /etc/resolv.conf
+  - sudo lsof -n -P | grep LISTEN
+  - sudo ps aux
+  - ./gradlew --no-daemon clean runTest
+
+before_install:
+  - sudo apt-get -y install iproute2 lsof procps
+
+before_cache:
+  - rm -f  $HOME/.gradle/caches/modules-2/modules-2.lock
+  - rm -fr $HOME/.gradle/caches/*/plugin-resolution/
+
+cache:
+  directories:
+    - $HOME/.gradle/caches/
+    - $HOME/.gradle/wrapper/
+
+branches:
+  only:
+    - master
+    - dev

@@ -1,16 +1,60 @@
 package vproxybase.processor;
 
 import vfd.IP;
-import vproxybase.util.AnnotationKeys;
-
-import java.util.Map;
+import vproxybase.util.Annotations;
 
 public class Hint {
     private final String host;
-    private final String port;
+    private final int port;
     private final String uri;
 
-    private String formatHost(String s) {
+    private Hint(String host, int port, String uri) {
+        this.host = host;
+        this.port = port;
+        this.uri = uri;
+    }
+
+    public static Hint ofHost(String host) {
+        return new Hint(
+            formatHost(host),
+            0,
+            null
+        );
+    }
+
+    public static Hint ofHostPort(String host, int port) {
+        return new Hint(
+            formatHost(host),
+            port,
+            null
+        );
+    }
+
+    public static Hint ofHostUri(String host, String uri) {
+        return new Hint(
+            formatHost(host),
+            0,
+            formatUri(uri)
+        );
+    }
+
+    public static Hint ofHostPortUri(String host, int port, String uri) {
+        return new Hint(
+            formatHost(host),
+            port,
+            formatUri(uri)
+        );
+    }
+
+    public static Hint ofUri(String uri) {
+        return new Hint(
+            null,
+            0,
+            formatUri(uri)
+        );
+    }
+
+    private static String formatHost(String s) {
         if (s == null) {
             return null;
         }
@@ -28,19 +72,7 @@ public class Hint {
         return s;
     }
 
-    public Hint(String host) {
-        this.host = formatHost(host);
-        this.port = null;
-        this.uri = null;
-    }
-
-    public Hint(String host, int port) {
-        this.host = formatHost(host);
-        this.port = "" + port;
-        this.uri = null;
-    }
-
-    private String formatUri(String s) {
+    private static String formatUri(String s) {
         if (s == null) {
             return null;
         }
@@ -57,18 +89,6 @@ public class Hint {
         return s;
     }
 
-    public Hint(String host, String uri) {
-        this.host = formatHost(host);
-        this.port = null;
-        this.uri = formatUri(uri);
-    }
-
-    public Hint(String host, int port, String uri) {
-        this.host = formatHost(host);
-        this.port = "" + port;
-        this.uri = formatUri(uri);
-    }
-
     private static final int HOST_SHIFT = 10;
     private static final int HOST_EXACT_MATCH = 3;
     private static final int HOST_SUFFIX_MATCH = 2;
@@ -77,36 +97,32 @@ public class Hint {
     private static final int URI_MAX_MATCH = 1023;
     private static final int URI_WILDCARD_MATCH = 1;
 
-    @SuppressWarnings("unchecked")
-    public int matchLevel(Map<String, String>... annotations) {
-        if (annotations == null) {
+    public int matchLevel(Annotations... annosArray) {
+        if (annosArray == null) {
             return 0;
         }
         String annoHost = null;
-        String annoPort = null;
+        int annoPort = 0;
         String annoUri = null;
 
-        for (Map<String, String> a : annotations) {
-            if (a.isEmpty()) {
-                continue;
-            }
+        for (Annotations a : annosArray) {
             if (annoHost == null) {
-                annoHost = a.get(AnnotationKeys.ServerGroup_HintHost);
+                annoHost = a.ServerGroup_HintHost;
             }
-            if (annoPort == null) {
-                annoPort = a.get(AnnotationKeys.ServerGroup_HintPort);
+            if (annoPort == 0) {
+                annoPort = a.ServerGroup_HintPort;
             }
             if (annoUri == null) {
-                annoUri = a.get(AnnotationKeys.ServerGroup_HintUri);
+                annoUri = a.ServerGroup_HintUri;
             }
         }
 
-        if (annoHost == null && annoPort == null && annoUri == null) {
+        if (annoHost == null && annoPort == 0 && annoUri == null) {
             return 0;
         }
 
-        if (port != null && annoPort != null) {
-            if (!this.port.equals(annoPort)) { // port not matched, so nothing matches
+        if (port != 0 && annoPort != 0) {
+            if (this.port != annoPort) { // port not matched, so nothing matches
                 return 0;
             }
         }

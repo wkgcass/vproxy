@@ -3,6 +3,7 @@ package vproxyapp.app.cmd.handle.param;
 import vjson.JSON;
 import vproxyapp.app.cmd.Command;
 import vproxyapp.app.cmd.Param;
+import vproxybase.util.Annotations;
 import vproxybase.util.exception.XException;
 
 import java.util.Map;
@@ -11,7 +12,7 @@ public class AnnotationsHandle {
     private AnnotationsHandle() {
     }
 
-    public static Map<String, String> get(Command cmd) throws Exception {
+    public static Annotations get(Command cmd) throws Exception {
         String anno = cmd.args.get(Param.anno);
         JSON.Object o;
         try {
@@ -24,10 +25,9 @@ public class AnnotationsHandle {
                 throw new XException("values of annotations must be string");
             }
         }
-        //noinspection UnnecessaryLocalVariable
         Map m = o.toJavaObject();
         //noinspection unchecked
-        return m;
+        return new Annotations(m);
     }
 
     public static void check(Command cmd) throws Exception {

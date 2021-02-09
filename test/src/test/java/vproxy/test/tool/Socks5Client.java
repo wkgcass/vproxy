@@ -2,6 +2,7 @@ package vproxy.test.tool;
 
 import vfd.IP;
 import vproxybase.socks.AddressType;
+import vproxybase.util.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,15 +21,15 @@ public class Socks5Client {
         os.write(new byte[]{5, 1, 0});
         int replyLen = 0;
         InputStream is = client.socket.getInputStream();
-        byte[] buf = new byte[32];
+        byte[] buf = Utils.allocateByteArrayInitZero(32);
         //noinspection StatementWithEmptyBody
         while ((replyLen += is.read(buf)) < 2) {
         }
         if (buf[1] != 0)
             throw new RuntimeException("buf[1] != 0");
-        byte[] toWrite = new byte[1 + 1 + 1 + 1
+        byte[] toWrite = Utils.allocateByteArrayInitZero(1 + 1 + 1 + 1
             + (addressType == AddressType.domain ? (1 + addr.length()) : (addressType == AddressType.ipv4 ? 4 : 16))
-            + 2];
+            + 2);
         toWrite[0] = 5;
         toWrite[1] = 1;
         toWrite[2] = 0;

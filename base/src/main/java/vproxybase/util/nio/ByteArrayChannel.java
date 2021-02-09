@@ -3,6 +3,7 @@ package vproxybase.util.nio;
 import vfd.ReadableByteStream;
 import vfd.WritableByteStream;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 
 import java.nio.ByteBuffer;
 
@@ -34,7 +35,7 @@ public class ByteArrayChannel implements ReadableByteStream, WritableByteStream 
     }
 
     private ByteArrayChannel() {
-        this.arr = ByteArray.from(new byte[0]);
+        this.arr = ByteArray.allocate(0);
         this.initialWriteOff = 0;
         this.initialWriteLen = 0;
         this.initialReadOff = 0;
@@ -117,7 +118,7 @@ public class ByteArrayChannel implements ReadableByteStream, WritableByteStream 
         }
 
         int writeBytes = Math.min(writeLen, len);
-        ByteBuffer tmp = ByteBuffer.allocate(len);
+        ByteBuffer tmp = Utils.allocateByteBuffer(len);
         src.read(tmp);
         tmp.flip();
         arr.byteBufferGet(tmp, writeOff, writeBytes);

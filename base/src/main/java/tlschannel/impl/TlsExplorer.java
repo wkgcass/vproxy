@@ -24,6 +24,8 @@ SOFTWARE.
 
 package tlschannel.impl;
 
+import vproxybase.util.Utils;
+
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;
 import javax.net.ssl.SSLProtocolException;
@@ -216,7 +218,7 @@ public final class TlsExplorer {
                 int snLen = getInt16(input); // length field of server name
                 if (snLen > remains)
                     throw new SSLProtocolException("Not enough data to fill declared vector size");
-                byte[] encoded = new byte[snLen];
+                byte[] encoded = Utils.allocateByteArray(snLen);
                 input.get(encoded);
                 SNIServerName serverName;
                 switch (code) {

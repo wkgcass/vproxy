@@ -18,6 +18,7 @@ import vproxy.test.cases.*;
     TestSSL.class,
     TestProtocols.class,
     TestHttp1Parser.class,
+    TestHttp2Decoder.class,
     TestHealthCheck.class,
     TestPacket.class,
     TestRouteTable.class,

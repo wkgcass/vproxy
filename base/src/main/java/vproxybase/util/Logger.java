@@ -24,20 +24,20 @@ public class Logger {
 
     static {
         {
-            String debug = System.getProperty("vproxy.debug");
+            String debug = Utils.getSystemProperty("debug");
             lowLevelDebugOn = !"off".equals(debug);
         }
 
         {
             String debug = System.getProperty("javax.net.debug");
-            lowLevelNetDebugOn = "all".equals(debug) || "vproxybase".equals(debug);
+            lowLevelNetDebugOn = "all".equals(debug) || "vproxy".equals(debug);
         }
 
         {
             if (lowLevelDebugOn && Utils.assertOn()) {
                 stackTraceOn = true;
             } else {
-                String stackTrace = System.getProperty("vproxy.stacktrace", "off");
+                String stackTrace = Utils.getSystemProperty("stacktrace", "off");
                 stackTraceOn = !"off".equals(stackTrace);
             }
         }
@@ -255,7 +255,7 @@ public class Logger {
 
     public static void printBytes(byte[] array, int off, int end) {
         {
-            byte[] tmp = new byte[end - off];
+            byte[] tmp = Utils.allocateByteArray(end - off);
             System.arraycopy(array, off, tmp, 0, end - off);
             array = tmp;
         }
@@ -268,9 +268,9 @@ public class Logger {
         int lines = array.length / bytesPerLine + (lastLine != bytesPerLine ? 1 : 0);
         byte[][] linesArray = new byte[lines][];
         for (int i = 0; i < linesArray.length - 1; ++i) {
-            linesArray[i] = new byte[bytesPerLine];
+            linesArray[i] = Utils.allocateByteArray(bytesPerLine);
         }
-        linesArray[linesArray.length - 1] = new byte[lastLine];
+        linesArray[linesArray.length - 1] = Utils.allocateByteArray(lastLine);
 
         for (int i = 0; i < array.length; ++i) {
             int idx0 = i / bytesPerLine;

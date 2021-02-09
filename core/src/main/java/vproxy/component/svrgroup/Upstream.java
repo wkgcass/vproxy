@@ -4,6 +4,7 @@ import vfd.IPPort;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.Connector;
 import vproxybase.processor.Hint;
+import vproxybase.util.Annotations;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.NotFoundException;
 
@@ -16,7 +17,7 @@ public class Upstream {
         public final String alias;
         public final ServerGroup group;
         private int weight;
-        private Map<String, String> annotations = Collections.emptyMap();
+        private Annotations annotations = new Annotations();
 
         public ServerGroupHandle(ServerGroup group, int weight) {
             this.alias = group.alias;
@@ -33,13 +34,13 @@ public class Upstream {
             recalculateWRR();
         }
 
-        public Map<String, String> getAnnotations() {
+        public Annotations getAnnotations() {
             return annotations;
         }
 
-        public void setAnnotations(Map<String, String> annotations) {
+        public void setAnnotations(Annotations annotations) {
             if (annotations == null) {
-                annotations = Collections.emptyMap();
+                annotations = new Annotations();
             }
             this.annotations = annotations;
         }
@@ -187,7 +188,6 @@ public class Upstream {
         int level = 0;
         ServerGroupHandle lastMax = null;
         for (ServerGroupHandle h : serverGroupHandles) {
-            //noinspection unchecked
             int l = hint.matchLevel(h.annotations, h.group.getAnnotations());
             if (l > level) {
                 level = l;

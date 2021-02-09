@@ -2,17 +2,21 @@ package vproxybase.processor.http;
 
 import vproxybase.processor.Processor;
 import vproxybase.processor.http1.HttpSubContext;
-import vproxybase.processor.http2.Http2SubContext;
+import vproxybase.processor.httpbin.BinaryHttpSubContext;
+import vproxybase.processor.httpbin.BinaryHttpSubContextCaster;
 
-public class GeneralHttpSubContext extends Processor.SubContext {
-    final int connId;
+public class GeneralHttpSubContext extends Processor.SubContext implements BinaryHttpSubContextCaster {
     final HttpSubContext httpSubContext;
-    final Http2SubContext http2SubContext;
+    final BinaryHttpSubContext http2SubContext;
 
-    public GeneralHttpSubContext(int connId, HttpSubContext httpSubContext, Http2SubContext http2SubContext) {
+    public GeneralHttpSubContext(int connId, HttpSubContext httpSubContext, BinaryHttpSubContext http2SubContext) {
         super(connId);
-        this.connId = connId;
         this.httpSubContext = httpSubContext;
         this.http2SubContext = http2SubContext;
+    }
+
+    @Override
+    public BinaryHttpSubContext castToBinaryHttpSubContext() {
+        return http2SubContext;
     }
 }

@@ -135,7 +135,7 @@ public class TestConnectClient {
     @Test
     public void connectionFailWithUnreachable() throws Exception {
         try {
-            doConnect("127.1.2.3", CheckProtocol.tcp, 22222);
+            doConnect("1.1.1.1", CheckProtocol.tcp, 22222);
             fail();
         } catch (IOException e) {
             assertTrue(e instanceof InterruptedByTimeoutException);
@@ -145,7 +145,7 @@ public class TestConnectClient {
     @Test
     public void connectionWithDelayFailWithUnreachable() throws Exception {
         try {
-            doConnect("127.1.2.3", CheckProtocol.tcpDelay, 22222);
+            doConnect("1.1.1.1", CheckProtocol.tcpDelay, 22222);
             fail();
         } catch (IOException e) {
             assertTrue(e instanceof InterruptedByTimeoutException);

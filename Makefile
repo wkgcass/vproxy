@@ -59,7 +59,7 @@ fstack:
 
 .PHONY: image
 image: jar
-	native-image -jar build/libs/vproxy.jar -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy
+	native-image -jar build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy
 ifeq ($(OS),Linux)
 	cp vproxy vproxy-linux
 endif
@@ -72,7 +72,7 @@ else
 # run native-image inside a container to build linux executable file in other platforms
 image-linux: jar
 	docker run --rm -v /Users/wkgcass/Downloads/graalvm-ce-linux:/graalvm-ce -v $(shell pwd):/output gcc \
-		/bin/bash -c "/graalvm-ce/bin/gu install native-image && /graalvm-ce/bin/native-image -jar /output/build/libs/vproxy.jar -H:ReflectionConfigurationFiles=/output/misc/graal-reflect.json -H:JNIConfigurationFiles=/output/misc/graal-jni.json --enable-all-security-services --no-fallback --no-server /output/vproxy-linux"
+		/bin/bash -c "/graalvm-ce/bin/gu install native-image && /graalvm-ce/bin/native-image -jar /output/build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=/output/misc/graal-reflect.json -H:JNIConfigurationFiles=/output/misc/graal-jni.json --enable-all-security-services --no-fallback --no-server /output/vproxy-linux"
 endif
 
 vproxy-linux:

@@ -81,7 +81,7 @@ public abstract class IP {
     }
 
     public byte[] getAddress() {
-        byte[] ret = new byte[bytes.length];
+        byte[] ret = Utils.allocateByteArray(bytes.length);
         System.arraycopy(bytes, 0, ret, 0, ret.length);
         return ret;
     }
@@ -118,7 +118,7 @@ public abstract class IP {
 
     // return null if not ipv4
     public static byte[] parseIpv4String(String ipv4) {
-        byte[] ipBytes = new byte[4];
+        byte[] ipBytes = Utils.allocateByteArrayInitZero(4);
         if (parseIpv4String(ipv4, ipBytes, 0) == -1) {
             return null; // wrong len or parse fail
         } else {
@@ -179,7 +179,7 @@ public abstract class IP {
                 colonAndDot = ipv6.substring(idx + "::".length());
             }
         }
-        byte[] ipBytes = new byte[16];
+        byte[] ipBytes = Utils.allocateByteArrayInitZero(16);
         int consumed = parseIpv6ColonPart(colonOnly, ipBytes, 0);
         if (consumed == -1)
             return null; // parse failed
@@ -280,7 +280,7 @@ public abstract class IP {
                 if ((byte) 0xFF != v6[i])
                     return null;
             }
-            byte[] v4 = new byte[4];
+            byte[] v4 = Utils.allocateByteArrayInitZero(4);
             System.arraycopy(v6, 12, v4, 0, 4);
             return v4;
         }
@@ -478,7 +478,7 @@ public abstract class IP {
     }
 
     public static byte[] ipv4Int2Bytes(int ip) {
-        byte[] ret = new byte[4];
+        byte[] ret = Utils.allocateByteArrayInitZero(4);
         ret[0] = (byte) ((ip >> 24) & 0xff);
         ret[1] = (byte) ((ip >> 16) & 0xff);
         ret[2] = (byte) ((ip >> 8) & 0xff);

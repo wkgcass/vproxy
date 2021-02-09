@@ -20,7 +20,6 @@ import vswitch.stack.fd.VSwitchFDs;
 
 import java.io.File;
 import java.io.FileOutputStream;
-import java.util.Collections;
 
 public class SwitchTCP {
     public static void main(String[] args) throws Exception {
@@ -45,11 +44,11 @@ public class SwitchTCP {
         //noinspection ResultOfMethodCallIgnored
         f.setExecutable(true);
 
-        sw.addTable(3, new Network("172.16.3.0/24"), new Network("[fd00::300]/120"), Collections.emptyMap());
-        sw.addTap("tap1", 3, f.getAbsolutePath(), Collections.emptyMap());
+        sw.addTable(3, new Network("172.16.3.0/24"), new Network("[fd00::300]/120"), null);
+        sw.addTap("tap1", 3, f.getAbsolutePath(), null);
 
         Table table = sw.getTable(3);
-        table.addIp(IP.from("172.16.3.254"), new MacAddress("00:00:00:00:03:04"), Collections.emptyMap());
+        table.addIp(IP.from("172.16.3.254"), new MacAddress("00:00:00:00:03:04"), null);
 
         FDs fds = new VSwitchFDs(new VSwitchFDContext(sw, table, loop.selector));
         ServerSock serverSock = ServerSock.create(new IPPort("0.0.0.0", 80), fds);

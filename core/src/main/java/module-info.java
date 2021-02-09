@@ -17,4 +17,6 @@ module vproxy.core {
     exports vswitch;
     exports vswitch.util;
     exports vswitch.iface;
+    exports vswitch.stack;
+    exports vswitch.stack.fd;
 }

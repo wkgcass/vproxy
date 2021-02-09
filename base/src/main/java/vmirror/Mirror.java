@@ -158,7 +158,7 @@ public class Mirror {
                 macDst = new MacAddress("ff:ff:ff:ff:ff:ff");
             }
             // get default ip if not present
-            byte[] b = new byte[16];
+            byte[] b = Utils.allocateByteArrayInitZero(16);
             b[0] = (byte) 0xfd;
             if (ipSrc == null) {
                 ipSrc = IP.fromIPv6(b);
@@ -294,7 +294,7 @@ public class Mirror {
     private static IPv6 getIpv6FromIpv4(IP ipSrc) {
         if (ipSrc instanceof IPv4) {
             byte[] v4 = ipSrc.getAddress();
-            byte[] v6 = new byte[16];
+            byte[] v6 = Utils.allocateByteArrayInitZero(16);
             v6[10] = (byte) 0xff;
             v6[11] = (byte) 0xff;
             v6[12] = v4[0];

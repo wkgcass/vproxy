@@ -4,13 +4,11 @@ import vfd.IP;
 import vfd.MacAddress;
 import vproxybase.connection.NetEventLoop;
 import vproxybase.selector.SelectorEventLoop;
+import vproxybase.util.Annotations;
 import vproxybase.util.Network;
 import vproxybase.util.exception.AlreadyExistException;
 import vproxybase.util.exception.XException;
 import vpacket.conntrack.Conntrack;
-
-import java.util.Collections;
-import java.util.Map;
 
 public class Table {
     public final int vni;
@@ -21,19 +19,19 @@ public class Table {
     public final SyntheticIpHolder ips;
     public final ProxyHolder proxies;
     public final RouteTable routeTable;
-    private Map<String, String> annotations;
+    private Annotations annotations;
 
     public final Conntrack conntrack = new Conntrack();
 
     public Table(Switch sw, int vni, NetEventLoop loop,
                  Network v4network, Network v6network,
                  int macTableTimeout, int arpTableTimeout,
-                 Map<String, String> annotations) {
+                 Annotations annotations) {
         this.vni = vni;
         this.v4network = v4network;
         this.v6network = v6network;
         if (annotations == null) {
-            annotations = Collections.emptyMap();
+            annotations = new Annotations();
         }
         this.annotations = annotations;
 
@@ -52,7 +50,7 @@ public class Table {
         arpTable.setTimeout(arpTableTimeout);
     }
 
-    public void addIp(IP ip, MacAddress mac, Map<String, String> annotations) throws AlreadyExistException, XException {
+    public void addIp(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
         ips.add(ip, mac, annotations);
     }
 
@@ -74,13 +72,13 @@ public class Table {
         return mac;
     }
 
-    public Map<String, String> getAnnotations() {
-        return Collections.unmodifiableMap(annotations);
+    public Annotations getAnnotations() {
+        return annotations;
     }
 
-    public void setAnnotations(Map<String, String> annotations) {
+    public void setAnnotations(Annotations annotations) {
         if (annotations == null) {
-            annotations = Collections.emptyMap();
+            annotations = new Annotations();
         }
         this.annotations = annotations;
     }

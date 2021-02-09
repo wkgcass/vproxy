@@ -1,6 +1,7 @@
 package vproxybase.processor.http1;
 
 import vfd.IPPort;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.OOProcessor;
 
 public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
@@ -20,7 +21,7 @@ public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     }
 
     @Override
-    public HttpSubContext initSub(HttpContext httpContext, int id, IPPort associatedAddress) {
-        return new HttpSubContext(httpContext, id);
+    public HttpSubContext initSub(HttpContext httpContext, int id, ConnectionDelegate delegate) {
+        return new HttpSubContext(httpContext, id, delegate);
     }
 }

@@ -206,7 +206,7 @@ public class SSLWrapRingBuffer extends AbstractWrapByteBufferRingBuffer implemen
             bufferPlain.position(positionBeforeHandling);
 
             assert Logger.lowLevelDebug("buffer overflow, so make a bigger buffer and try again");
-            bufferEncrypted = ByteBuffer.allocate(engine.getSession().getPacketBufferSize());
+            bufferEncrypted = Utils.allocateByteBuffer(engine.getSession().getPacketBufferSize());
             try {
                 result = engine.wrap(bufferPlain.realBuffer(), bufferEncrypted);
             } catch (SSLException e) {

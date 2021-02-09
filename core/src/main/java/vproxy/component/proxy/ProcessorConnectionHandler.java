@@ -1,21 +1,20 @@
 package vproxy.component.proxy;
 
 import vproxybase.connection.*;
+import vproxybase.processor.ConnectionDelegate;
 import vproxybase.processor.Hint;
 import vproxybase.processor.Processor;
-import vproxybase.util.ByteArray;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
+import vproxybase.util.*;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.ProxyOutputRingBuffer;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.function.Consumer;
 
 @SuppressWarnings("unchecked")
 class ProcessorConnectionHandler implements ConnectionHandler {
-    private ProxyNetConfig config;
+    private final ProxyNetConfig config;
     private final Processor processor;
     private final Processor.Context topCtx;
     private final Connection frontendConnection;
@@ -28,6 +27,10 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     private final BackendConnectionHandler[] conns = new BackendConnectionHandler[1024 + 1];
     // [0] will not be used
     // I believe that 1024 connections should be enough
+
+    // the reading will be paused if this field is set to true
+    // this field only works for the frontend connection
+    private volatile boolean paused = false;
 
     public ProcessorConnectionHandler(ProxyNetConfig config, NetEventLoop loop, Connection frontendConnection, Processor processor, Processor.Context topCtx, Processor.SubContext frontendSubCtx) {
         this.config = config;
@@ -54,17 +57,15 @@ class ProcessorConnectionHandler implements ConnectionHandler {
      * @param flow             the target flow
      * @param sourceConnection source connection when proxying
      * @param targetConnection target connection when proxying
-     * @param subCtx           sub context of the source connection
      */
     void utilWriteData(BackendConnectionHandler.ByteFlow flow,
                        Connection sourceConnection,
                        Connection targetConnection,
-                       Processor.SubContext subCtx,
                        Runnable onZeroCopyProxyDone) {
         assert Logger.lowLevelDebug("calling utilWriteData, writing from " + sourceConnection + " to " + targetConnection);
 
         if (flow.currentSegment == null) {
-            flow.currentSegment = flow.sendingQueue.poll();
+            flow.pollSendingQueue();
         }
         if (flow.currentSegment == null) {
             return; // still null, which means no data to write now
@@ -88,12 +89,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     .proxy(
                         sourceConnection.getInBuffer(),
                         flow.currentSegment.bytesToProxy, () -> {
-                            // -----the code is copied -------1
-                            assert Logger.lowLevelDebug("proxy done");
-                            flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
-                            processor.proxyDone(topCtx, subCtx);
-                            // -----the code is copied -------1
-
+                            backendProxyDone(flow);
                             onZeroCopyProxyDone.run();
                         });
             } else {
@@ -108,11 +104,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 assert flow.currentSegment.bytesToProxy >= 0;
                 // proxy is done
                 if (flow.currentSegment.bytesToProxy == 0) {
-                    // -----the code is copied -------1
-                    assert Logger.lowLevelDebug("proxy done");
-                    flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
-                    processor.proxyDone(topCtx, subCtx);
-                    // -----the code is copied -------1
+                    backendProxyDone(flow);
                 }
             }
         } else {
@@ -123,9 +115,20 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             // check whether this batch sending is done
             assert Logger.lowLevelDebug("now flow.chnl.used == " + flow.currentSegment.chnl.used());
             if (flow.currentSegment.chnl.used() == 0) {
-                flow.currentSegment = flow.sendingQueue.poll(); // poll for the next segment
+                flow.frameEnds = flow.currentSegment.frameEndsAfterSending;
+                flow.pollSendingQueue(); // poll for the next segment
             }
         }
+    }
+
+    private void backendProxyDone(BackendConnectionHandler.ByteFlow flow) {
+        assert Logger.lowLevelDebug("proxy done");
+        assert flow.currentSegment.proxyTODO != null;
+        Processor.ProxyDoneTODO proxyDoneTODO = flow.currentSegment.proxyTODO.proxyDone.get();
+        if (proxyDoneTODO != null) {
+            flow.frameEnds = proxyDoneTODO.frameEnds;
+        }
+        flow.pollSendingQueue(); // poll for the next segment
     }
 
     // -----------------------------
@@ -140,33 +143,66 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 // true = already called, false = not called yet
                 boolean calledProxyOnBuffer = false;
                 final ByteArrayChannel chnl;
+                final boolean frameEndsAfterSending;
                 int bytesToProxy;
+                final Processor.ProxyTODO proxyTODO;
 
-                Segment(ByteArray byteArray) {
+                Segment(ByteArray byteArray, boolean frameEndsAfterSending) {
                     this.isProxy = false;
                     this.chnl = byteArray.toFullChannel();
-                    this.bytesToProxy = 0;
+                    this.frameEndsAfterSending = frameEndsAfterSending;
+                    this.proxyTODO = null;
                 }
 
-                Segment(int bytesToProxy) {
+                Segment(int bytesToProxy, Processor.ProxyTODO proxyTODO) {
                     this.isProxy = true;
                     this.chnl = null;
+                    this.frameEndsAfterSending = false;
                     this.bytesToProxy = bytesToProxy;
+                    this.proxyTODO = proxyTODO;
                 }
             }
 
             Segment currentSegment = null;
-            final LinkedList<Segment> sendingQueue = new LinkedList<>();
+            private final LinkedList<Segment> sendingQueue = new LinkedList<>();
+            boolean frameEnds; // in the frontendByteFlow, if it's set to true, another backend will be able to respond to the frontend
+            //                    this field is ignored when it's in backendByteFlow
+            public boolean closed; // only work in backendByteFlow, if it's set to true, the connection will be closed after all data flushed
 
-            void write(ByteArray data) {
-                if (currentSegment == null) {
-                    currentSegment = new Segment(data);
-                } else {
-                    sendingQueue.add(new Segment(data));
+            void pollSendingQueue() {
+                Segment seg = sendingQueue.poll();
+                if (seg == null) {
+                    currentSegment = null;
+                    if (closed) {
+                        closed(null);
+                    }
+                    return;
                 }
+                if (seg.isProxy && seg.proxyTODO == null) { // a special segment indicating the frame ends
+                    if (sendingQueue.isEmpty()) {
+                        frameEnds = true;
+                        currentSegment = null;
+                        return;
+                    }
+                    // poll recursively to get the next element
+                    pollSendingQueue();
+                    return;
+                }
+                currentSegment = seg;
+                frameEnds = false;
             }
 
-            void proxy(int len) {
+            void write(ByteArray data, boolean frameEndsAfterSending) {
+                Segment seg = new Segment(data, frameEndsAfterSending);
+                if (currentSegment == null) {
+                    currentSegment = seg;
+                } else {
+                    sendingQueue.add(seg);
+                }
+                frameEnds = false;
+            }
+
+            void proxy(int len, Processor.ProxyTODO proxyTODO) {
                 {
                     // this method might be called for the same bunch of data to be proxied
                     // so it should not attach any proxy segment here
@@ -178,10 +214,28 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                             return;
                     }
                 }
+                Segment seg = new Segment(len, proxyTODO);
                 if (currentSegment == null) {
-                    currentSegment = new Segment(len);
+                    currentSegment = seg;
                 } else {
-                    sendingQueue.add(new Segment(len));
+                    sendingQueue.add(seg);
+                }
+                frameEnds = false;
+            }
+
+            void informFrameEnds() {
+                if (currentSegment == null) {
+                    frameEnds = true;
+                } else {
+                    sendingQueue.add(new Segment(0, null));
+                    frameEnds = false;
+                }
+            }
+
+            void informClose() {
+                closed = true;
+                if (currentSegment == null) {
+                    closed(null);
                 }
             }
         }
@@ -194,29 +248,45 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         private final BackendConnectionHandler.ByteFlow backendByteFlow = new BackendConnectionHandler.ByteFlow();
         private final BackendConnectionHandler.ByteFlow frontendByteFlow = new BackendConnectionHandler.ByteFlow();
 
+        // reading will be paused if this field is set to true
+        private volatile boolean paused = false;
+        // set to true when processor.disconnected(...) is called, this prevents being called multiple times in exception()/closed()/removed() event handlers
+        private boolean disconnectedCalled = false;
+
         BackendConnectionHandler(Processor.SubContext subCtx, ConnectableConnection conn) {
             this.subCtx = subCtx;
             this.conn = conn;
         }
 
         void writeToBackend(ByteArray data) {
-            backendByteFlow.write(data);
+            backendByteFlow.write(data, false /*no frame slicing check when writing to backend, so set to false is fine*/);
             doBackendWrite();
         }
 
-        void proxyToBackend(int len) {
-            backendByteFlow.proxy(len);
+        void proxyToBackend(int len, Processor.ProxyTODO proxyTODO) {
+            backendByteFlow.proxy(len, proxyTODO);
             doBackendWrite();
         }
 
-        void writeToFrontend(ByteArray data) {
-            frontendByteFlow.write(data);
+        void informCloseToBackend() {
+            assert Logger.lowLevelDebug("informCloseToBackend");
+            backendByteFlow.informClose();
+            if (backendByteFlow.currentSegment != null) doBackendWrite();
+        }
+
+        void writeToFrontend(ByteArray data, boolean frameEndsAfterSending) {
+            frontendByteFlow.write(data, frameEndsAfterSending);
             frontendWrite(this);
         }
 
-        void proxyToFrontend(int len) {
-            frontendByteFlow.proxy(len);
+        void proxyToFrontend(int len, Processor.ProxyTODO proxyTODO) {
+            frontendByteFlow.proxy(len, proxyTODO);
             frontendWrite(this);
+        }
+
+        void informFrameEndsToFrontend() {
+            frontendByteFlow.informFrameEnds();
+            if (frontendByteFlow.currentSegment != null) frontendWrite(this);
         }
 
         private boolean isWritingBackend = false;
@@ -245,7 +315,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
 
                 //noinspection Convert2MethodRef
-                utilWriteData(backendByteFlow, frontendConnection, conn, frontendSubCtx, () -> readFrontend());
+                utilWriteData(backendByteFlow, frontendConnection, conn, () -> readFrontend());
 
                 // if it's running proxy and already called proxy on buffer, end the method
                 // NOTE: this must be check AFTER the utilWriteData because the buffer should be alerted of the proxied data input
@@ -271,75 +341,76 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
 
         void readBackend() {
-            if (conn.getInBuffer().used() == 0)
+            if (paused) {
+                assert Logger.lowLevelDebug("backend " + conn + " is paused, so read nothing");
+                return;
+            }
+
+            Processor.ProcessorTODO processorTODO = processor.process(topCtx, subCtx);
+            if (conn.getInBuffer().used() == 0
+                // if returned len == 0, the process.feed should be called without any data
+                && processorTODO.len != 0) {
                 return; // ignore the event if got nothing to read
+            }
 
             assert Logger.lowLevelDebug("calling readBackend() of " + conn);
 
             // check whether to proxy the data or to receive the data
-            Processor.Mode mode = processor.mode(topCtx, subCtx);
+            Processor.Mode mode = processorTODO.mode;
             assert Logger.lowLevelDebug("the current mode is " + mode);
 
             if (mode == Processor.Mode.proxy) {
-                int len = processor.len(topCtx, subCtx);
+                int len = processorTODO.len;
                 assert Logger.lowLevelDebug("the proxy length is " + len);
                 if (len == 0) { // 0 bytes to proxy, so it's already done
-                    processor.proxyDone(topCtx, subCtx);
+                    Processor.ProxyDoneTODO proxyDone = processorTODO.proxyTODO.proxyDone.get();
+                    if (proxyDone != null && proxyDone.frameEnds) {
+                        informFrameEndsToFrontend();
+                    }
                     readBackend(); // recursively call to handle more input data
                 } else {
-                    proxyToFrontend(len);
+                    proxyToFrontend(len, processorTODO.proxyTODO);
                 }
             } else {
+                assert mode == Processor.Mode.handle;
+
+                ByteArray data = null; // data to feed into processor
                 if (chnl == null) {
-                    int len = processor.len(topCtx, subCtx);
+                    int len = processorTODO.len;
                     assert Logger.lowLevelDebug("the expected message length is " + len);
                     if (len == 0) { // if nothing to read, then directly feed empty data to the processor
-                        try {
-                            processor.feed(topCtx, subCtx, ByteArray.from(new byte[0]));
-                        } catch (Exception e) {
-                            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
-                            frontendConnection.close(true);
-                            return;
-                        }
-                        // check data to write back
-                        {
-                            ByteArray writeBackBytes = processor.produce(topCtx, subCtx);
-                            if (writeBackBytes != null && writeBackBytes.length() != 0) {
-                                assert Logger.lowLevelDebug("got data to write back, len = " + writeBackBytes.length() + ", conn = " + conn);
-                                writeToBackend(writeBackBytes);
-                            }
-                        }
-                        readBackend(); // recursively handle more data
-                        return;
-                    }
-                    if (len < 0) {
+                        data = ByteArray.allocate(0);
+                    } else if (len < 0) {
                         chnl = ByteArrayChannel.fromEmpty(conn.getInBuffer().used()); // consume all data
                     } else {
                         chnl = ByteArrayChannel.fromEmpty(len);
                     }
                 }
-                conn.getInBuffer().writeTo(chnl);
-                if (chnl.free() != 0) {
-                    assert Logger.lowLevelDebug("not fulfilled yet, expecting " + chnl.free() + " length of data");
-                    // expecting more data
-                    return;
+                if (data == null) {
+                    conn.getInBuffer().writeTo(chnl);
+                    if (chnl.free() != 0) {
+                        assert Logger.lowLevelDebug("not fulfilled yet, expecting " + chnl.free() + " length of data");
+                        // expecting more data
+                        return;
+                    }
+                    assert Logger.lowLevelDebug("the message is totally read, feeding to processor");
+                    data = chnl.getArray();
+                    chnl = null;
                 }
-                assert Logger.lowLevelDebug("the message is totally read, feeding to processor");
-                ByteArray data = chnl.getArray();
-                chnl = null;
-                ByteArray dataToSend;
+                Processor.HandleTODO handleTODO;
                 try {
-                    dataToSend = processor.feed(topCtx, subCtx, data);
+                    handleTODO = processorTODO.feed.apply(data);
                 } catch (Exception e) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + conn + ", which corresponds to " + frontendConnection + ".", e);
                     frontendConnection.close();
                     return;
                 }
+                ByteArray dataToSend = handleTODO == null ? null : handleTODO.send;
                 assert Logger.lowLevelDebug("the processor return a message of length " + (dataToSend == null ? "null" : dataToSend.length()));
 
                 // check data to write back
                 {
-                    ByteArray writeBackBytes = processor.produce(topCtx, subCtx);
+                    ByteArray writeBackBytes = handleTODO == null ? null : handleTODO.produce;
                     if (writeBackBytes != null && writeBackBytes.length() != 0) {
                         assert Logger.lowLevelDebug("got bytes to write back, len = " + writeBackBytes.length() + ", conn = " + conn);
                         writeToBackend(writeBackBytes);
@@ -347,11 +418,40 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
 
                 if (dataToSend == null || dataToSend.length() == 0) {
+                    // nothing written, we have to check whether the frame ends
+                    if (handleTODO != null && handleTODO.frameEnds) {
+                        informFrameEndsToFrontend();
+                    }
+
                     readBackend(); // recursively call to handle more data
                 } else {
-                    writeToFrontend(dataToSend);
+                    writeToFrontend(dataToSend, handleTODO.frameEnds);
                 }
             }
+        }
+
+        @ThreadSafe
+        public void pause() {
+            if (paused) {
+                assert Logger.lowLevelDebug("backend conn " + conn + " already paused");
+                return;
+            }
+            assert Logger.lowLevelDebug("pausing backend conn " + conn);
+            paused = true;
+        }
+
+        @ThreadSafe
+        public void resume() {
+            boolean old = paused;
+            paused = false;
+            loop.getSelectorEventLoop().nextTick(() -> {
+                if (old) {
+                    assert Logger.lowLevelDebug("resuming backend conn " + conn);
+                    readFrontend();
+                } else {
+                    assert Logger.lowLevelDebug("backend conn " + conn + " is not paused");
+                }
+            });
         }
 
         @Override
@@ -366,46 +466,72 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         @Override
         public void exception(ConnectionHandlerContext ctx, IOException err) {
-            Logger.error(LogType.CONN_ERROR, "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection, err);
+            if (disconnectedCalled) {
+                assert Logger.lowLevelDebug("disconnected already called");
+                return;
+            }
+            disconnectedCalled = true;
+            Processor.DisconnectTODO disconnectTODO = processor.disconnected(topCtx, subCtx, true);
+            if (disconnectTODO != null && disconnectTODO.silent) {
+                assert Logger.lowLevelDebug("silently close the backend");
+                ctx.connection.close();
+                return;
+            }
+
+            String errMsg = "got exception when handling backend connection " + conn + ", closing frontend " + frontendConnection;
+            if (Utils.isTerminatedIOException(err)) {
+                assert Logger.lowLevelDebug(errMsg + ", " + err);
+            } else {
+                Logger.error(LogType.CONN_ERROR, errMsg, err);
+            }
             frontendConnection.close(true);
             closeAll();
         }
 
         @Override
         public void remoteClosed(ConnectionHandlerContext ctx) {
-            assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed, send FIN to frontend");
+            assert Logger.lowLevelDebug("backend connection " + ctx.connection + " remoteClosed");
             // backend FIN
-            // we should send FIN to frontend
-            frontendConnection.closeWrite();
-            // check whether we should close the session now
-            if (frontendConnection.getOutBuffer().used() == 0) {
-                if (frontendConnection.isRemoteClosed()) {
-                    // frontend data already flushed
-                    // and is already closed
-                    // so no data will be received from frontend
-                    // it's safe to close the session now
-                    assert Logger.lowLevelDebug("frontend data flushed and remote closed, close the session");
-                    ctx.connection.close();
-                    closed(ctx);
+            Processor.HandleTODO handleTODO = processor.remoteClosed(topCtx, subCtx);
+            if (handleTODO != null) {
+                if (handleTODO.send != null) {
+                    writeToFrontend(handleTODO.send, true /* no more packets will be received from the connection, so always set this to true */);
+                }
+                if (handleTODO.produce != null) {
+                    writeToBackend(handleTODO.produce);
                 }
             }
+            informCloseToBackend();
         }
 
         @Override
         public void closed(ConnectionHandlerContext ctx) {
+            if (disconnectedCalled) {
+                assert Logger.lowLevelDebug("disconnected already called");
+                return;
+            }
+            disconnectedCalled = true;
+            Processor.DisconnectTODO disconnectTODO = processor.disconnected(topCtx, subCtx, false);
+            if (disconnectTODO != null && disconnectTODO.silent) {
+                assert Logger.lowLevelDebug("silently close the backend");
+                conn.close();
+                return;
+            }
+
             if (frontendConnection.isClosed()) {
-                assert Logger.lowLevelDebug("backend connection " + ctx.connection + " closed, corresponding frontend is " + frontendConnection);
+                assert Logger.lowLevelDebug("backend connection " + conn + " closed, corresponding frontend is " + frontendConnection);
             } else {
-                Logger.warn(LogType.CONN_ERROR, "backend connection " + ctx.connection + " closed before frontend connection " + frontendConnection);
+                Logger.warn(LogType.CONN_ERROR, "backend connection " + conn + " closed before frontend connection " + frontendConnection);
             }
             closeAll();
         }
 
         @Override
         public void removed(ConnectionHandlerContext ctx) {
-            if (!ctx.connection.isClosed())
+            if (!ctx.connection.isClosed()) {
                 Logger.error(LogType.IMPROPER_USE, "backend connection " + ctx.connection + " removed from event loop " + loop);
-            closeAll();
+                closeAll();
+            }
         }
     }
     // --- END backend handler ---
@@ -413,7 +539,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     private boolean frontendIsHandlingConnection = false; // true: consider handlingConnection, false: consider frontendByteFlow
     private BackendConnectionHandler handlingConnection;
-    private FrontendByteFlow frontendByteFlow = new FrontendByteFlow();
+    private final FrontendByteFlow frontendByteFlow = new FrontendByteFlow();
 
     class FrontendByteFlow {
         class Segment {
@@ -484,7 +610,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                     return; // cannot handle for now, end the method
                 }
 
-                utilWriteData(flow, handlingConnection.conn, frontendConnection, handlingConnection.subCtx, () -> handlingConnection.readBackend());
+                utilWriteData(flow, handlingConnection.conn, frontendConnection, () -> handlingConnection.readBackend());
 
                 // if writing done:
                 if (flow.currentSegment == null) {
@@ -500,7 +626,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
                 }
             }
             // now nothing to be handled for this connection
-            if (processor.expectNewFrame(topCtx, handlingConnection.subCtx)) {
+            if (handlingConnection.frontendByteFlow.frameEnds) {
                 handlingConnection = null; // is done, set to null and go on
             } else {
                 return; // no data for now, exit the method
@@ -561,107 +687,103 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     private ByteArrayChannel chnl = null;
 
     void readFrontend() {
-        if (frontendConnection.getInBuffer().used() == 0) {
+        if (paused) {
+            assert Logger.lowLevelDebug("frontend " + frontendConnection + " is paused, so read nothing");
+            return;
+        }
+
+        Processor.ProcessorTODO processorTODO = processor.process(topCtx, frontendSubCtx);
+        if (frontendConnection.getInBuffer().used() == 0
+            // if returned len == 0, the process.feed should be called without any data
+            && processorTODO.len != 0) {
             return; // do nothing if the in buffer is empty
         }
 
         assert Logger.lowLevelDebug("calling readFrontend()");
 
         // check whether to proxy the data or to receive the data
-        Processor.Mode mode = processor.mode(topCtx, frontendSubCtx);
-        assert Logger.lowLevelDebug("the current mode is " + mode);
+        assert Logger.lowLevelDebug("the current mode is " + processorTODO.mode);
 
-        if (mode == Processor.Mode.proxy) {
-            int bytesToProxy = processor.len(topCtx, frontendSubCtx);
-            int connId = processor.connection(topCtx, frontendSubCtx);
-            Hint connHint = processor.connectionHint(topCtx, frontendSubCtx);
+        if (processorTODO.mode == Processor.Mode.proxy) {
+            int bytesToProxy = processorTODO.len;
+            int connId = processorTODO.proxyTODO.connTODO.connId;
+            Hint connHint = processorTODO.proxyTODO.connTODO.hint;
             assert Logger.lowLevelDebug("the bytesToProxy is " + bytesToProxy + ", connId is " + connId + ", hint is " + connHint);
-            BackendConnectionHandler backend = getConnection(connId, connHint);
+            BackendConnectionHandler backend = getConnection(connId, connHint, processorTODO.proxyTODO.connTODO.chosen);
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
                 frontendConnection.close(true);
             } else {
                 if (bytesToProxy == 0) { // 0 bytes to proxy, so it's already done
-                    processor.proxyDone(topCtx, frontendSubCtx);
+                    processorTODO.proxyTODO.proxyDone.get(); // return value is ignored for frontend
                     readFrontend(); // recursively call to read more data
                 } else {
-                    backend.proxyToBackend(bytesToProxy);
+                    backend.proxyToBackend(bytesToProxy, processorTODO.proxyTODO);
                 }
             }
         } else {
-            assert mode == Processor.Mode.handle;
+            assert processorTODO.mode == Processor.Mode.handle;
 
+            ByteArray data = null; // data to feed into processor
             if (chnl == null) {
-                int len = processor.len(topCtx, frontendSubCtx);
+                int len = processorTODO.len;
                 assert Logger.lowLevelDebug("expecting message with the length of " + len);
                 if (len == 0) { // if the length is 0, directly feed data to the processor
-                    try {
-                        processor.feed(topCtx, frontendSubCtx, ByteArray.from(new byte[0]));
-                    } catch (Exception e) {
-                        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
-                        frontendConnection.close(true);
-                        return;
-                    }
-                    {
-                        ByteArray producedBytes = processor.produce(topCtx, frontendSubCtx);
-                        if (producedBytes != null && producedBytes.length() != 0) {
-                            frontendByteFlow.write(producedBytes);
-                        }
-                    }
-                    readFrontend(); // recursively try to handle more data
-                    return;
-                }
-                if (len < 0) {
+                    data = ByteArray.allocate(0);
+                } else if (len < 0) {
                     chnl = ByteArrayChannel.fromEmpty(frontendConnection.getInBuffer().used()); // consume all data
                 } else {
                     chnl = ByteArrayChannel.fromEmpty(len);
                 }
             }
-            frontendConnection.getInBuffer().writeTo(chnl);
-            if (chnl.free() != 0) {
-                // want to read more data
-                assert Logger.lowLevelDebug("not fulfilled yet, waiting for data of length " + chnl.free());
-                return;
+            if (data == null) {
+                frontendConnection.getInBuffer().writeTo(chnl);
+                if (chnl.free() != 0) {
+                    // want to read more data
+                    assert Logger.lowLevelDebug("not fulfilled yet, waiting for data of length " + chnl.free());
+                    return;
+                }
+                assert Logger.lowLevelDebug("data reading is done now");
+                data = chnl.getArray();
+                chnl = null;
             }
-            assert Logger.lowLevelDebug("data reading is done now");
-            ByteArray data = chnl.getArray();
-            chnl = null;
             // handle the data
-            ByteArray bytesToSend;
+            Processor.HandleTODO handleTODO;
             try {
-                bytesToSend = processor.feed(topCtx, frontendSubCtx, data);
+                handleTODO = processorTODO.feed.apply(data);
             } catch (Exception e) {
-                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=" + e);
+                Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user code cannot handle data from " + frontendConnection + ". err=", e);
                 frontendConnection.close(true);
                 return;
             }
+            ByteArray bytesToSend = handleTODO == null ? null : handleTODO.send;
             {
-                ByteArray produced = processor.produce(topCtx, frontendSubCtx);
+                ByteArray produced = handleTODO == null ? null : handleTODO.produce;
                 if (produced != null && produced.length() != 0) {
                     frontendByteFlow.write(produced);
                 }
             }
 
-            int connId = processor.connection(topCtx, frontendSubCtx);
-            Hint hint = processor.connectionHint(topCtx, frontendSubCtx);
-            assert Logger.lowLevelDebug("the processor return data of length " + (bytesToSend == null ? "null" : bytesToSend.length()) + ", sending to connId=" + connId + ", hint=" + hint);
-            if (connId == 0) {
-                if (bytesToSend == null || bytesToSend.length() == 0) {
-                    readFrontend();
-                    return;
-                } else {
-                    Logger.error(LogType.IMPROPER_USE, "When you return connection()==0, you must guarantee that the former feed() calling result was null or an array with length 0");
-                    // ignore and fall through
-                }
+            if (bytesToSend == null || (bytesToSend.length() == 0 && bytesToSend != Processor.REQUIRE_CONNECTION)) {
+                readFrontend();
+                return;
             }
-            BackendConnectionHandler backend = getConnection(connId, hint);
+
+            int connId = handleTODO.connTODO.connId;
+            Hint hint = handleTODO.connTODO.hint;
+            assert Logger.lowLevelDebug("the processor return data of length " + bytesToSend.length() + ", sending to connId=" + connId + ", hint=" + hint);
+            if (connId == 0) {
+                Logger.error(LogType.IMPROPER_USE, "When you return connection()==0, you must guarantee that the former feed() calling result was null or an array with length 0");
+                // ignore and fall through
+            }
+            BackendConnectionHandler backend = getConnection(connId, hint, handleTODO.connTODO.chosen);
             if (backend == null) {
                 // for now, we simply close the whole connection when a backend is missing
                 Logger.error(LogType.CONN_ERROR, "failed to retrieve the backend connection for " + frontendConnection + "/" + connId);
                 frontendConnection.close(true);
             } else {
-                if (bytesToSend == null || bytesToSend.length() == 0) {
+                if (bytesToSend.length() == 0) {
                     readFrontend(); // recursively call to handle more data
                 } else {
                     backend.writeToBackend(bytesToSend);
@@ -670,12 +792,36 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         }
     }
 
+    @ThreadSafe
+    public void pause() {
+        if (paused) {
+            assert Logger.lowLevelDebug("frontend conn " + frontendConnection + " already paused");
+            return;
+        }
+        assert Logger.lowLevelDebug("pausing frontend conn " + frontendConnection);
+        paused = true;
+    }
+
+    @ThreadSafe
+    public void resume() {
+        boolean old = paused;
+        paused = false;
+        loop.getSelectorEventLoop().nextTick(() -> {
+            if (old) {
+                assert Logger.lowLevelDebug("resuming frontend conn " + frontendConnection);
+                readFrontend();
+            } else {
+                assert Logger.lowLevelDebug("frontend conn " + frontendConnection + " is not paused");
+            }
+        });
+    }
+
     @Override
     public void readable(ConnectionHandlerContext ctx) {
         readFrontend();
     }
 
-    private BackendConnectionHandler getConnection(int connId, Hint hint) {
+    private BackendConnectionHandler getConnection(int connId, Hint hint, Consumer<Processor.SubContext> chosen) {
         if (connId > 0 && conns[connId] != null)
             return conns[connId]; // get connection if it already exists
 
@@ -696,7 +842,7 @@ class ProcessorConnectionHandler implements ConnectionHandler {
         for (int existingConnId : conn2intMap.values()) {
             if (conns[existingConnId].conn.remote.equals(connector.remote)) {
                 BackendConnectionHandler bh = conns[existingConnId];
-                processor.chosen(topCtx, frontendSubCtx, bh.subCtx);
+                chosen.accept(bh.subCtx);
                 return bh;
             }
         }
@@ -714,8 +860,23 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
         // record in collections
         int newConnId = ++cursor;
-        BackendConnectionHandler bh =
-            new BackendConnectionHandler(processor.initSub(topCtx, newConnId, connector.remote), connectableConnection);
+        BackendConnectionHandler[] handlerPtr = new BackendConnectionHandler[]{null};
+        //noinspection DuplicatedCode
+        Processor.SubContext subCtx = processor.initSub(topCtx, newConnId, new ConnectionDelegate(connector.remote) {
+            @Override
+            public void pause() {
+                assert handlerPtr[0] != null;
+                handlerPtr[0].pause();
+            }
+
+            @Override
+            public void resume() {
+                assert handlerPtr[0] != null;
+                handlerPtr[0].resume();
+            }
+        });
+        BackendConnectionHandler bh = new BackendConnectionHandler(subCtx, connectableConnection);
+        handlerPtr[0] = bh;
         recordBackend(bh, newConnId);
         // register
         try {
@@ -730,11 +891,16 @@ class ProcessorConnectionHandler implements ConnectionHandler {
             return null;
         }
 
-        ByteArray bytes = processor.connected(topCtx, bh.subCtx);
-        processor.chosen(topCtx, frontendSubCtx, bh.subCtx);
+        Processor.HandleTODO handleTODO = processor.connected(topCtx, bh.subCtx);
+        chosen.accept(bh.subCtx);
 
-        if (bytes != null && bytes.length() > 0) {
-            bh.writeToBackend(bytes);
+        if (handleTODO != null) {
+            if (handleTODO.produce != null && handleTODO.produce.length() > 0) {
+                bh.writeToBackend(handleTODO.produce);
+            }
+            if (handleTODO.send != null && handleTODO.send.length() > 0) {
+                Logger.warn(LogType.IMPROPER_USE, "currently we do not support sending data to frontend when backend connection establishes");
+            }
         }
 
         return bh;
@@ -747,7 +913,12 @@ class ProcessorConnectionHandler implements ConnectionHandler {
 
     @Override
     public void exception(ConnectionHandlerContext ctx, IOException err) {
-        Logger.error(LogType.CONN_ERROR, "connection got exception", err);
+        String errMsg = "connection got exception";
+        if (Utils.isTerminatedIOException(err)) {
+            assert Logger.lowLevelDebug(errMsg + ": " + err);
+        } else {
+            Logger.error(LogType.CONN_ERROR, errMsg, err);
+        }
         closeAll();
     }
 
@@ -755,48 +926,26 @@ class ProcessorConnectionHandler implements ConnectionHandler {
     public void remoteClosed(ConnectionHandlerContext ctx) {
         assert Logger.lowLevelDebug("frontend connection " + ctx.connection + " remoteClosed");
         // frontend FIN
-        // we should send FIN to current backend
-        int connId = processor.connection(topCtx, frontendSubCtx);
-        if (connId == -1) {
-            assert Logger.lowLevelDebug("" +
-                "no current backend connection, " +
-                "send FIN to all backend");
+        // we should send FIN to all backends
+        assert Logger.lowLevelDebug("send FIN to all backend");
 
-            List<Integer> ints = new ArrayList<>(conn2intMap.values());
-            boolean allBackendRemoteClosed = true;
-            for (int i : ints) {
-                BackendConnectionHandler be = conns[i];
-                be.conn.closeWrite();
-                if (be.conn.getOutBuffer().used() != 0 || !be.conn.isRemoteClosed()) {
-                    allBackendRemoteClosed = false;
-                }
-            }
-            if (allBackendRemoteClosed) {
-                assert Logger.lowLevelDebug("" +
-                    "all backend remote closed, " +
-                    "and no current backend, " +
-                    "so close the session");
-                // close the session
-                ctx.connection.close();
-                closed(ctx);
-            }
-        } else {
-            assert Logger.lowLevelDebug("" +
-                "current connId=" + connId + ", " +
-                "only send FIN to the selected backend");
-            BackendConnectionHandler be = conns[connId];
+        List<Integer> ints = new ArrayList<>(conn2intMap.values());
+        boolean allBackendRemoteClosed = true;
+        for (int i : ints) {
+            BackendConnectionHandler be = conns[i];
             be.conn.closeWrite();
-            if (be.conn.getOutBuffer().used() == 0) {
-                if (be.conn.isRemoteClosed()) {
-                    assert Logger.lowLevelDebug("selected backend is closed and data flushed, close session");
-                    // all data flushed to the selected backend
-                    // and the backend is remote closed
-                    // so no data will be written to the frontend
-                    // it's safe to close the session
-                    ctx.connection.close();
-                    closed(ctx);
-                }
+            if (be.conn.getOutBuffer().used() != 0 || !be.conn.isRemoteClosed()) {
+                allBackendRemoteClosed = false;
             }
+        }
+        if (allBackendRemoteClosed) {
+            assert Logger.lowLevelDebug("" +
+                "all backend remote closed, " +
+                "and no current backend, " +
+                "so close the session");
+            // close the session
+            ctx.connection.close();
+            closed(ctx);
         }
     }
 

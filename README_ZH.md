@@ -1,5 +1,7 @@
 # vproxy
 
+[![Build Status](https://travis-ci.com/wkgcass/vproxy.svg?branch=dev)](https://travis-ci.com/wkgcass/vproxy)
+
 ## 简介
 
 VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Java 11即可运行。
@@ -116,6 +118,24 @@ java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.ja
 ```
 
 </details>
+
+<details><summary>测试功能</summary>
+
+执行测试用例:
+
+```
+./gradlew runTest
+```
+
+测试vswitch, docker network plugin, vpctl, k8s controller:
+
+```shell
+# 需要事先安装virtualbox
+
+cd ./misc/auto-setup/
+./auto-setup.sh
+./auto-verify.sh
+```
 
 ## 目标
 

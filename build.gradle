@@ -1,3 +1,5 @@
+import org.gradle.api.tasks.testing.logging.TestLogEvent
+
 plugins {
     id 'application'
     id 'idea'
@@ -37,6 +39,8 @@ repositories {
 }
 
 project(':base') {
+    compileJava.options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=vproxy.base'
+
     dependencies {
     }
 }
@@ -86,6 +90,42 @@ project(':test') {
         testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
         testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
         testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
+    }
+
+    task runSuite(type: Test) {
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+
+        include '**/VSuite.class'
+    }
+
+    task runCI(type: Test) {
+        jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
+        testLogging {
+            events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+            maxGranularity 100
+            exceptionFormat "full"
+            showCauses true
+            showExceptions true
+            showStackTraces true
+        }
+
+        include '**/CI.class'
+    }
+
+    task runTest {
+        dependsOn clean
+        dependsOn runSuite
+        dependsOn runCI
     }
 }
 

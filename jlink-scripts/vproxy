@@ -1,3 +1,3 @@
 #!/bin/sh
 DIR="${0%/*}"
-"$DIR/java"  -jar "$DIR/../lib/vproxy.jar" "$@"
+"$DIR/java" --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -jar "$DIR/../lib/vproxy.jar" "$@"

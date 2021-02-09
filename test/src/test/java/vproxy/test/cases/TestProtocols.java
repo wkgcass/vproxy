@@ -7,7 +7,9 @@ import io.grpc.Server;
 import io.grpc.ServerBuilder;
 import io.grpc.stub.StreamObserver;
 import io.vertx.core.Handler;
+import io.vertx.core.MultiMap;
 import io.vertx.core.Vertx;
+import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.*;
 import org.apache.thrift.TProcessor;
 import org.apache.thrift.protocol.TBinaryProtocol;
@@ -37,9 +39,12 @@ import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.util.AnnotationKeys;
+import vproxybase.util.Annotations;
 import vproxybase.util.thread.VProxyThread;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.junit.Assert.assertEquals;
@@ -66,16 +71,16 @@ public class TestProtocols {
 
         ServerGroup sg1 = new ServerGroup("test-s1", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg1.setAnnotations(Map.of(
-            AnnotationKeys.ServerGroup_HintHost, "s1.test.com",
-            AnnotationKeys.ServerGroup_HintUri, "/a"));
+        sg1.setAnnotations(new Annotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost.name, "s1.test.com",
+            AnnotationKeys.ServerGroup_HintUri.name, "/a")));
         sg1.add("svr1", new IPPort(IP.from("127.0.0.1"), port1), 10);
         ServerGroup sg2 = new ServerGroup("test-s2", elg,
             new HealthCheckConfig(1000, 10000, 1, 3, CheckProtocol.tcpDelay), Method.wrr);
-        sg2.setAnnotations(Map.of(
-            AnnotationKeys.ServerGroup_HintHost, "s2.test.com",
-            AnnotationKeys.ServerGroup_HintUri, "/b"
-        ));
+        sg2.setAnnotations(new Annotations(Map.of(
+            AnnotationKeys.ServerGroup_HintHost.name, "s2.test.com",
+            AnnotationKeys.ServerGroup_HintUri.name, "/b"
+        )));
         sg2.add("svr2", new IPPort(IP.from("127.0.0.1"), port2), 10);
 
         // set to up
@@ -640,6 +645,53 @@ public class TestProtocols {
             assertEquals(1, svr2[0]);
             assertEquals(1, conn[0]);
 
+        } finally {
+            boolean[] closeDone = {false};
+            vertx.close(v -> closeDone[0] = true);
+            while (!closeDone[0]) {
+                Thread.sleep(1);
+            }
+            Thread.sleep(200);
+        }
+    }
+
+    @Test
+    public void h1websocket() throws Throwable {
+        Vertx vertx = Vertx.vertx();
+        try {
+            Handler<ServerWebSocket> handler = sock -> {
+                sock.write(Buffer.buffer(sock.path()));
+                sock.end();
+            };
+            vertx.createHttpServer().websocketHandler(handler).listen(port1);
+            vertx.createHttpServer().websocketHandler(handler).listen(port2);
+
+            initLb("http/1.x");
+
+            Throwable[] err = new Throwable[1];
+            Set<String> results = new HashSet<>();
+            for (int i = 0; i < 4; ++i) {
+                vertx.createHttpClient().websocket(lbPort, "127.0.0.1", "/request-" + i, MultiMap.caseInsensitiveMultiMap(), WebsocketVersion.V13,
+                    "", socket -> socket.handler(buf -> {
+                        synchronized (results) {
+                            results.add(buf.toString());
+                        }
+                        ++step;
+                    }), e -> err[0] = e);
+            }
+
+            while (step != 4 && err[0] == null) {
+                Thread.sleep(1);
+            }
+            if (err[0] != null) {
+                throw err[0];
+            }
+            assertEquals(Set.of(
+                "/request-0",
+                "/request-1",
+                "/request-2",
+                "/request-3"
+            ), results);
         } finally {
             boolean[] closeDone = {false};
             vertx.close(v -> closeDone[0] = true);

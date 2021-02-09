@@ -749,9 +749,9 @@ public class Shutdown {
             sb.toString();
     }
 
-    private static String toAnnotation(Map<String, String> anno) {
+    private static String toAnnotation(Annotations anno) {
         ObjectBuilder ob = new ObjectBuilder();
-        for (Map.Entry<String, String> kv : anno.entrySet()) {
+        for (Map.Entry<String, String> kv : anno.getRaw().entrySet()) {
             ob.put(kv.getKey(), kv.getValue());
         }
         return ob.build().stringify();

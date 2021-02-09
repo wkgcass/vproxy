@@ -3,18 +3,7 @@ package vproxybase.processor;
 import vfd.IPPort;
 import vproxybase.util.ByteArray;
 
-class HeadPayloadContext extends Processor.Context {
-}
-
-class HeadPayloadSubContext extends Processor.SubContext {
-    int parsedLength = 0;
-
-    public HeadPayloadSubContext(int connId) {
-        super(connId);
-    }
-}
-
-public abstract class HeadPayloadProcessor extends AbstractProcessor<HeadPayloadContext, HeadPayloadSubContext> {
+public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProcessor.HeadPayloadContext, HeadPayloadProcessor.HeadPayloadSubContext> {
     private final String name;
     private final int head; // length of head in bytes
     private final int off; // the offset of length property in bytes
@@ -38,8 +27,8 @@ public abstract class HeadPayloadProcessor extends AbstractProcessor<HeadPayload
     }
 
     @Override
-    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, IPPort ignore) {
-        return new HeadPayloadSubContext(id);
+    public HeadPayloadSubContext initSub(HeadPayloadContext headPayloadContext, int id, ConnectionDelegate delegate) {
+        return new HeadPayloadSubContext(headPayloadContext, id, delegate, head, off, len, maxLen);
     }
 
     @Override
@@ -47,63 +36,115 @@ public abstract class HeadPayloadProcessor extends AbstractProcessor<HeadPayload
         return this.name;
     }
 
-    @Override
-    protected void handle(HeadPayloadContext ctx, HeadPayloadSubContext sub) throws Exception {
-        switch (sub.step) {
-            case 0:
-                ByteArray data = wantData(off + len);
-                if (data == null)
-                    return;
+    public static class HeadPayloadContext extends OOContext<HeadPayloadSubContext> {
+    }
 
-                int parsedLength;
-                if (len < 5) { // 1,2,3,4
-                    if (len == 1) {
-                        parsedLength = data.uint8(off);
-                    } else if (len == 2) {
-                        parsedLength = data.uint16(off);
-                    } else if (len == 3) {
-                        parsedLength = data.uint24(off);
-                    } else {
-                        assert len == 4;
-                        parsedLength = data.int32(off);
-                    }
+    public static class HeadPayloadSubContext extends OOSubContext<HeadPayloadContext> {
+        private final int off; // the offset of length property in bytes
+        private final int len; // the length of length property in bytes
+        private final int maxLen; // the max supported length
+
+        private final int handleLen;
+        private final int proxyBaseLen;
+
+        private ProcessorTODO nextProcessorTODO;
+
+        public HeadPayloadSubContext(HeadPayloadContext headPayloadContext, int connId, ConnectionDelegate delegate,
+                                     int head, int off, int len, int maxLen) {
+            super(headPayloadContext, connId, delegate);
+            this.off = off;
+            this.len = len;
+            this.maxLen = maxLen;
+
+            handleLen = off + len;
+            proxyBaseLen = head - handleLen;
+
+            initProcessorTODO();
+        }
+
+        private void initProcessorTODO() {
+            nextProcessorTODO = ProcessorTODO.create();
+            nextProcessorTODO.len = handleLen;
+            nextProcessorTODO.mode = Mode.handle;
+            nextProcessorTODO.feed = this::feed;
+        }
+
+        @Override
+        public ProcessorTODO process() {
+            return nextProcessorTODO;
+        }
+
+        private HandleTODO buildFeedResult(ByteArray data, int parsedLength) {
+            nextProcessorTODO = ProcessorTODO.createProxy();
+            nextProcessorTODO.len = proxyBaseLen + parsedLength;
+            nextProcessorTODO.proxyTODO.proxyDone = this::proxyDone;
+
+            HandleTODO handleTODO = HandleTODO.create();
+            handleTODO.send = data;
+            if (isFrontend()) {
+                nextProcessorTODO.proxyTODO.connTODO = ConnectionTODO.create();
+
+                handleTODO.connTODO = ConnectionTODO.create();
+                handleTODO.connTODO.connId = -1;
+                handleTODO.connTODO.chosen = subCtx -> nextProcessorTODO.proxyTODO.connTODO.connId = subCtx.connId;
+            }
+            return handleTODO;
+        }
+
+        private HandleTODO feed(ByteArray data) throws Exception {
+            int parsedLength;
+            if (len < 5) { // 1,2,3,4
+                if (len == 1) {
+                    parsedLength = data.uint8(off);
+                } else if (len == 2) {
+                    parsedLength = data.uint16(off);
+                } else if (len == 3) {
+                    parsedLength = data.uint24(off);
                 } else {
-                    int n = 0;
-                    for (int i = 0; i < len; ++i) {
-                        int shift = (8 * (len - i - 1));
-                        int b = data.uint8(off + i);
-                        if (shift > 31) {
-                            if (b > 0)
-                                throw new Exception("unsupported length: greater than 2^32-1");
-                            continue; // otherwise it's 0, no need to consider this byte
-                        } else if (shift > 23) {
-                            if (b >= 0x80)
-                                throw new Exception("unsupported length: greater than 2^32-1");
-                        }
-                        n |= b << shift;
-                    }
-                    parsedLength = n;
+                    assert len == 4;
+                    parsedLength = data.int32(off);
                 }
-                if (parsedLength > maxLen)
-                    throw new Exception("unsupported length: " + parsedLength + " > " + maxLen);
-                sub.parsedLength = parsedLength;
-                send(data);
+                return buildFeedResult(data, parsedLength);
+            }
 
-                sub.step = 1;
-            case 1:
-                HeadPayloadSubContext sendTo = chooseConn();
-                if (sub.isFrontend()) {
-                    if (sendTo == null) {
-                        return;
-                    }
-                    reuseConn(sendTo.connId);
+            int n = 0;
+            for (int i = 0; i < len; ++i) {
+                int shift = (8 * (len - i - 1));
+                int b = data.uint8(off + i);
+                if (shift > 31) {
+                    if (b > 0)
+                        throw new Exception("unsupported length: greater than 2^32-1");
+                    continue; // otherwise it's 0, no need to consider this byte
+                } else if (shift > 23) {
+                    if (b >= 0x80)
+                        throw new Exception("unsupported length: greater than 2^32-1");
                 }
-                wantProxy(head - (off + len) + sub.parsedLength);
-                sub.step = 2;
-                return;
-            case 2:
-                frameDone();
-                sub.step = 0;
+                n |= b << shift;
+            }
+            if (n > maxLen)
+                throw new Exception("unsupported length: " + n + " > " + maxLen);
+            parsedLength = n;
+            return buildFeedResult(data, parsedLength);
+        }
+
+        private ProxyDoneTODO proxyDone() {
+            initProcessorTODO();
+            return ProxyDoneTODO.createFrameEnds();
+        }
+
+        @Override
+        public HandleTODO connected() {
+            return null; // send nothing when connected
+        }
+
+        @Override
+        public HandleTODO remoteClosed() {
+            return null; // return nothing
+        }
+
+        @Override
+        public DisconnectTODO disconnected(boolean exception) {
+            return null; // unable to handle this condition
         }
     }
 }

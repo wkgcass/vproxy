@@ -3,6 +3,7 @@ package vproxybase.util;
 import vproxybase.util.bytearray.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
+import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("UnusedReturnValue")
@@ -13,7 +14,15 @@ public interface ByteArray {
         } else if (len == 1) {
             return new OneByteArray();
         } else {
-            return from(new byte[len]);
+            return from(Utils.allocateByteArray(len));
+        }
+    }
+
+    static ByteArray allocateInitZero(int len) {
+        if (len == 0 || len == 1) {
+            return allocate(len);
+        } else {
+            return from(Utils.allocateByteArrayInitZero(len));
         }
     }
 
@@ -30,14 +39,14 @@ public interface ByteArray {
         if (buf.hasArray()) {
             return from(buf.array()).sub(buf.position(), len);
         } else {
-            byte[] array = new byte[len];
+            byte[] array = Utils.allocateByteArray(len);
             buf.get(array);
             return from(array);
         }
     }
 
     static ByteArray from(int... array) {
-        byte[] bytes = new byte[array.length];
+        byte[] bytes = Utils.allocateByteArray(array.length);
         for (int i = 0; i < array.length; ++i) {
             bytes[i] = (byte) array[i];
         }
@@ -46,6 +55,10 @@ public interface ByteArray {
 
     static ByteArray from(String str) {
         return from(str.getBytes());
+    }
+
+    static ByteArray fromHexString(String str) throws IllegalArgumentException {
+        return from(Utils.hexToBytes(str));
     }
 
     byte get(int idx);
@@ -68,7 +81,7 @@ public interface ByteArray {
 
     default byte[] toNewJavaArray() {
         int len = length();
-        byte[] array = new byte[len];
+        byte[] array = Utils.allocateByteArray(len);
         toNewJavaArray(array, 0);
         return array;
     }
@@ -173,5 +186,11 @@ public interface ByteArray {
 
     default String toHexString() {
         return Utils.bytesToHex(toJavaArray());
+    }
+
+    default byte[] toGZipJavaByteArray() {
+        byte[] dataToCompress = toJavaArray();
+        ByteArrayOutputStream out = new ByteArrayOutputStream();
+        return Utils.gzipCompress(out, dataToCompress);
     }
 }

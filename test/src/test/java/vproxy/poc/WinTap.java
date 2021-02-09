@@ -3,6 +3,7 @@ package vproxy.poc;
 import vfd.TapDatagramFD;
 import vfd.windows.WindowsFDs;
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 import vproxybase.util.thread.VProxyThread;
 
 import java.io.IOException;
@@ -15,8 +16,8 @@ public class WinTap {
         WindowsFDs windowsFDs = new WindowsFDs();
         TapDatagramFD fd = windowsFDs.openTap("tap0");
 
-        ByteBuffer rcvBuf = ByteBuffer.allocate(2048);
-        ByteBuffer sndBuf = ByteBuffer.allocate(2048);
+        ByteBuffer rcvBuf = Utils.allocateByteBuffer(2048);
+        ByteBuffer sndBuf = Utils.allocateByteBuffer(2048);
         LinkedList<ByteArray> q = new LinkedList<>();
         VProxyThread.create(() -> {
             while (true) {
@@ -29,7 +30,7 @@ public class WinTap {
                     continue;
                 }
                 System.out.println("read " + n + " bytes");
-                byte[] b = new byte[n];
+                byte[] b = Utils.allocateByteArray(n);
                 rcvBuf.limit(n).position(0);
                 rcvBuf.get(b);
                 ByteArray arr = ByteArray.from(b);

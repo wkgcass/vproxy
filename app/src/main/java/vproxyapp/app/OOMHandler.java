@@ -36,7 +36,7 @@ public class OOMHandler {
                 try {
                     Thread.sleep(60_000);
                     byte[] b = _512K;
-                    _512K = new byte[512 * 1024];
+                    _512K = Utils.allocateByteArray(512 * 1024);
                     _512K_2 = b;
                 } catch (OutOfMemoryError e) {
                     Logger.fatal(LogType.ALERT, "OOM occurred");

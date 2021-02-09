@@ -1,31 +1,17 @@
 package vproxybase.util.direct;
 
-import sun.misc.Unsafe;
 import vproxybase.GlobalInspection;
 import vproxybase.prometheus.Counter;
 import vproxybase.prometheus.GaugeF;
 import vproxybase.util.Logger;
 import vproxybase.util.objectpool.ConcurrentObjectPool;
+import vproxybase.util.unsafe.SunUnsafe;
 
-import java.lang.reflect.Field;
 import java.nio.ByteBuffer;
 import java.util.Map;
 
 public class DirectMemoryUtils {
     private DirectMemoryUtils() {
-    }
-
-    private static final Unsafe U;
-
-    static {
-        try {
-            Field field = Unsafe.class.getDeclaredField("theUnsafe");
-            field.setAccessible(true);
-            U = (Unsafe) field.get(null);
-        } catch (NoSuchFieldException | IllegalAccessException e) {
-            Logger.shouldNotHappen("Reflection failure: get unsafe failed " + e);
-            throw new RuntimeException(e);
-        }
     }
 
     private static final int BUF_POOL_SIZE = 128;
@@ -309,7 +295,7 @@ public class DirectMemoryUtils {
             }
         }
         assert Logger.lowLevelDebug("is direct buffer, do clean");
-        U.invokeCleaner(buffer.realBuffer());
+        SunUnsafe.invokeCleaner(buffer.realBuffer());
         GlobalInspection.getInstance().directBufferFree(buffer.capacity());
         return true;
     }

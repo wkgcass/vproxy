@@ -1,11 +1,12 @@
 package vproxybase.util.bytearray;
 
 import vproxybase.util.ByteArray;
+import vproxybase.util.Utils;
 
 import java.nio.ByteBuffer;
 
 public abstract class AbstractByteArray implements ByteArray {
-    public static final ByteArray EMPTY = new SimpleByteArray(new byte[0]);
+    public static final ByteArray EMPTY = new SimpleByteArray(Utils.getZeroLengthByteArray());
 
     protected void checkBoundForOffset(int off) {
         if (off < 0) {

@@ -27,6 +27,7 @@ package vproxybase.selector.wrap.kcp;
 import vproxybase.selector.wrap.kcp.mock.*;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 import vproxybase.util.ex.ReItrLinkedList;
 import vproxybase.util.ex.ReusableListIterator;
 
@@ -999,7 +1000,7 @@ public class Kcp {
                     return -4;
                 }
 
-                byte[] arr = new byte[31];
+                byte[] arr = Utils.allocateByteArrayInitZero(31);
                 arr[0] = (byte) (conv & 0xff);
                 arr[1] = (byte) ((conv >> 8) & 0xff);
                 arr[2] = (byte) ((conv >> 16) & 0xff);

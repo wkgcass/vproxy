@@ -247,7 +247,7 @@ public class DHCPClientHelper {
                 sock.bind(new IPPort(localIP, DHCP_CLIENT_PORT));
                 sock.send(ByteBuffer.wrap(reqPacket.serialize().toJavaArray()), new IPPort(remoteBroadcast, DHCP_SERVER_PORT));
                 loop.add(sock, EventSet.read(), null, new Handler<>() {
-                    private final ByteBuffer buf = ByteBuffer.allocate(1500); // usually mtu <= 1500, and is definitely enough for dhcp packets
+                    private final ByteBuffer buf = Utils.allocateByteBuffer(1500); // usually mtu <= 1500, and is definitely enough for dhcp packets
 
                     @Override
                     public void accept(HandlerContext<DatagramFD> ctx) {

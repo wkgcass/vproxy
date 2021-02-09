@@ -159,7 +159,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 WebSocksHttpContext wrapCtx = (WebSocksHttpContext) ctx.data;
                 wrapCtx.webSocksProxyContext.step = 2; // next step is WebSocket
                 int expectingLen = WebSocksUtils.bytesToSendForWebSocketFrame.length;
-                byte[] foo = new byte[expectingLen];
+                byte[] foo = Utils.allocateByteArray(expectingLen);
                 wrapCtx.webSocksProxyContext.webSocketBytes = ByteArrayChannel.fromEmpty(foo);
             }
             response(101, accept, ctx); // respond to the client about the upgrading
@@ -276,6 +276,8 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             return resp.toByteArray().toJavaArray();
         }
 
+        private final Set<String> ENCODED_MIMES = Set.of("text/html", "text/css", "text/javascript");
+
         private void response(int statusCode, String msg, ProtocolHandlerContext<HttpContext> ctx) {
             // check whether the page exists when statusCode is 200
             PageProvider.PageResult page = null;
@@ -318,6 +320,20 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 }
                 if (page.cacheAge != 0L) {
                     resp.headers.add(new Header("Cache-Control", "max-age=" + page.cacheAge));
+                }
+                boolean acceptGZip = false;
+                if (fileToSend == null && ENCODED_MIMES.contains(page.mime)) {
+                    for (Header header : ctx.data.result.headers) {
+                        if (header.key.trim().equalsIgnoreCase("accept-encoding")
+                                && header.value.trim().toLowerCase().contains("gzip")) {
+                            acceptGZip = true;
+                            break;
+                        }
+                    }
+                }
+                if (acceptGZip) {
+                    resp.headers.add(new Header("Content-Encoding", "gzip"));
+                    resp.isPlain = true;
                 }
             } else if (statusCode == 302) {
                 ByteArray body = ByteArray.from(("" +

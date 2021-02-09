@@ -10,6 +10,7 @@ import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.connection.ConnCloseHandler;
 import vproxybase.connection.Connection;
 import vproxybase.connection.NetFlowRecorder;
+import vproxybase.util.Annotations;
 import vproxybase.util.ConcurrentHashSet;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
@@ -125,7 +126,7 @@ public class ServerGroup {
         private final LongAdder fromRemoteBytes = new LongAdder();
         private final LongAdder toRemoteBytes = new LongAdder();
 
-        private ConcurrentHashSet<Connection> connMap = new ConcurrentHashSet<>();
+        private final ConcurrentHashSet<Connection> connMap = new ConcurrentHashSet<>();
 
         public Object data; // the data field, not used by this lib
 
@@ -340,7 +341,7 @@ public class ServerGroup {
     private final Attach attach;
     private ArrayList<ServerHandle> servers = new ArrayList<>(0);
     private final CopyOnWriteArraySet<ServerListener> serverListeners = new CopyOnWriteArraySet<>();
-    private Map<String, String> annotations = Collections.emptyMap();
+    private Annotations annotations = new Annotations();
 
     // START fields for WRR
     static class WRR {
@@ -793,22 +794,18 @@ public class ServerGroup {
         return new HealthCheckConfig(healthCheckConfig);
     }
 
-    public Map<String, String> getAnnotations() {
-        return Collections.unmodifiableMap(annotations);
+    public Annotations getAnnotations() {
+        return annotations;
     }
 
-    public void setAnnotations(Map<String, String> annotations) {
+    public void setAnnotations(Annotations annotations) {
         if (annotations == null) {
-            annotations = Collections.emptyMap();
+            annotations = new Annotations();
         }
         this.annotations = annotations;
 
         // set hc client annotations
-        if (annotations.isEmpty()) {
-            annotatedHcConfig.clear();
-        } else {
-            annotatedHcConfig.set(annotations);
-        }
+        annotatedHcConfig.set(annotations);
     }
 
     public synchronized ServerHandle add(String alias, IPPort server, int weight) throws AlreadyExistException {

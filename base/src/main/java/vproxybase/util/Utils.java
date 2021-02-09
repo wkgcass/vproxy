@@ -4,15 +4,13 @@ import vfd.FDProvider;
 import vpacket.Ipv4Packet;
 import vpacket.Ipv6Packet;
 import vproxybase.util.thread.VProxyThread;
+import vproxybase.util.unsafe.JDKUnsafe;
 
 import java.io.*;
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.util.Arrays;
-import java.util.Deque;
-import java.util.LinkedList;
-import java.util.List;
+import java.util.*;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -112,7 +110,7 @@ public class Utils {
             bytes.addFirst(b);
             v = v >> 8;
         }
-        byte[] ret = new byte[bytes.size()];
+        byte[] ret = allocateByteArray(bytes.size());
         int idx = 0;
         for (byte b : bytes) {
             ret[idx] = b;
@@ -301,6 +299,34 @@ public class Utils {
         return new String(hexChars);
     }
 
+    public static byte[] hexToBytes(String hex) {
+        char[] chars = hex.toCharArray();
+        if (chars.length % 2 != 0) throw new IllegalArgumentException("invalid hex string");
+        byte[] ret = allocateByteArray(chars.length / 2);
+        for (int i = 0; i < chars.length; i += 2) {
+            char m = chars[i];
+            char n = chars[i + 1];
+            byte b = (byte) ((parseHexChar(m) << 4) | parseHexChar(n));
+            ret[i / 2] = b;
+        }
+        return ret;
+    }
+
+    private static byte parseHexChar(char c) {
+        if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
+            throw new IllegalArgumentException("char `" + c + "' cannot bev hex");
+        }
+        //noinspection ConstantConditions
+        if ('0' <= c && c <= '9') {
+            return (byte) (c - '0');
+        }
+        //noinspection ConstantConditions
+        if ('a' <= c && c <= 'z') {
+            return (byte) (c - 'a' + 10);
+        }
+        return (byte) (c - 'A' + 10);
+    }
+
     public static boolean debug(Runnable r) {
         //noinspection ConstantConditions,TrivialFunctionalExpressionUsage
         assert ((BooleanSupplier) () -> {
@@ -327,7 +353,7 @@ public class Utils {
     public static byte[] gzipDecompress(ByteArrayOutputStream baos, byte[] compressed) {
         ByteArrayInputStream bais = new ByteArrayInputStream(compressed);
         try (GZIPInputStream gzip = new GZIPInputStream(bais)) {
-            byte[] buf = new byte[1024];
+            byte[] buf = allocateByteArray(1024);
             int n;
             while ((n = gzip.read(buf, 0, buf.length)) >= 0) {
                 baos.write(buf, 0, n);
@@ -346,6 +372,28 @@ public class Utils {
         } catch (AssertionError ignore) {
             return true;
         }
+    }
+
+    private static final int UNINITIALIZED_BYTE_ARRAY_THRESHOLD = 512;
+
+    public static byte[] allocateByteArray(int len) {
+        if (len < UNINITIALIZED_BYTE_ARRAY_THRESHOLD)
+            return allocateByteArrayInitZero(len);
+        return JDKUnsafe.allocateUninitializedByteArray(len);
+    }
+
+    public static byte[] allocateByteArrayInitZero(int len) {
+        return new byte[len];
+    }
+
+    private static final byte[] ZERO_LENGTH_BYTE_ARRAY = new byte[0];
+
+    public static byte[] getZeroLengthByteArray() {
+        return ZERO_LENGTH_BYTE_ARRAY;
+    }
+
+    public static ByteBuffer allocateByteBuffer(int cap) {
+        return ByteBuffer.wrap(allocateByteArray(cap));
     }
 
     public interface UtilSupplier<T> {
@@ -478,5 +526,148 @@ public class Utils {
         }
         md.update(input);
         return md.digest();
+    }
+
+    public static String getSystemProperty(String key) {
+        return getSystemProperty(key, null);
+    }
+
+    public static String getSystemProperty(String pattern, String defaultValue) {
+        String[] split = pattern.split("_");
+        Set<String> results = new HashSet<>();
+
+        String ret;
+
+        // -Dvproxy.AbcDef
+        ret = System.getProperty("vproxy." + namingConventionPascal(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dvproxy_abc_def
+        ret = System.getProperty("vproxy_" + namingConventionUnderline(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DVPROXY_ABC_DEF
+        ret = System.getProperty("VPROXY_" + namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        // env: VPROXY_ABC_DEF
+        ret = System.getenv("VPROXY_" + namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        // use properties with prefix first
+        ret = exactlyOneProperty(results);
+        if (ret != null) {
+            return ret;
+        }
+        results.clear();
+
+        if (split[0].startsWith("d")) {
+            // -Deploy=xxx
+            ret = System.getProperty(namingConventionPascal(split).substring(1));
+            if (ret != null) {
+                results.add(ret);
+            }
+        }
+        // -DAbcDef
+        ret = System.getProperty(namingConventionPascal(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DabcDef
+        ret = System.getProperty(namingConventionCamel(split));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dabc_def
+        ret = System.getProperty(namingConventionUnderline(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DABC_DEF
+        ret = System.getProperty(namingConventionUnderline(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -Dabcdef
+        ret = System.getProperty(namingConventionJoin(split, false));
+        if (ret != null) {
+            results.add(ret);
+        }
+        // -DABCDEF
+        ret = System.getProperty(namingConventionJoin(split, true));
+        if (ret != null) {
+            results.add(ret);
+        }
+
+        ret = exactlyOneProperty(results);
+        if (ret != null) {
+            return ret;
+        }
+
+        return defaultValue;
+    }
+
+    private static String exactlyOneProperty(Set<String> results) {
+        if (results.size() > 1)
+            throw new IllegalStateException(
+                "multiple keys with different patterns set for the same property");
+        if (results.isEmpty()) {
+            return null;
+        }
+        return results.iterator().next();
+    }
+
+    private static String namingConventionPascal(String[] split) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(split[0].substring(0, 1).toUpperCase());
+        sb.append(split[0].substring(1));
+        for (int i = 1; i < split.length; ++i) {
+            sb.append(split[i].substring(0, 1).toUpperCase());
+            sb.append(split[i].substring(1));
+        }
+        return sb.toString();
+    }
+
+    private static String namingConventionCamel(String[] split) {
+        StringBuilder sb = new StringBuilder();
+        sb.append(split[0]);
+        for (int i = 1; i < split.length; ++i) {
+            sb.append(split[i].substring(0, 1).toUpperCase());
+            sb.append(split[i].substring(1));
+        }
+        return sb.toString();
+    }
+
+    private static String namingConventionUnderline(String[] split, boolean upper) {
+        if (upper) {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < split.length; ++i) {
+                if (i != 0) {
+                    sb.append("_");
+                }
+                sb.append(split[i].toUpperCase());
+            }
+            return sb.toString();
+        } else {
+            return String.join("_", split);
+        }
+    }
+
+    private static String namingConventionJoin(String[] split, boolean upper) {
+        if (upper) {
+            StringBuilder sb = new StringBuilder();
+            for (String s : split) {
+                sb.append(s.toUpperCase());
+            }
+            return sb.toString();
+        } else {
+            return String.join("", split);
+        }
     }
 }

@@ -101,8 +101,8 @@ public class GetDnsServerListFromConfigFile implements DnsServerListGetter {
                         String ipName = addr.getAddress().formatToIPString();
                         if (ipName.startsWith("127.") ||
                             ipName.equals("[::1]") || // only one ipv6 loopback address
-                            ipName.startsWith("[::ffff:7f]") || // v4-mapped v6
-                            ipName.startsWith("[::7f]")) { // v4-compatible v6
+                            ipName.startsWith("[::ffff:7f") || // v4-mapped v6
+                            ipName.startsWith("[::7f")) { // v4-compatible v6
                             continue;
                         }
                     }

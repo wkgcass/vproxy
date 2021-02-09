@@ -1,5 +1,7 @@
 package vproxy.poc;
 
+import vproxybase.util.Utils;
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
@@ -26,7 +28,7 @@ public class AlphabetBlockingClient {
         }
         OutputStream output = socket.getOutputStream();
         InputStream input = socket.getInputStream();
-        byte[] buffer = new byte[32];
+        byte[] buffer = Utils.allocateByteArrayInitZero(32);
         for (int i = 0; i < times; ++i) { // demonstrate for 10 times
             int strLen = (int) (Math.random() * 23) + 3;
             StringBuilder sb = new StringBuilder();

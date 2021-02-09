@@ -6,6 +6,7 @@ import vproxybase.connection.*;
 import vproxybase.selector.SelectorEventLoop;
 import vproxybase.util.RingBuffer;
 import vproxybase.util.Tuple;
+import vproxybase.util.Utils;
 import vproxybase.util.thread.VProxyThread;
 import vproxybase.util.nio.ByteArrayChannel;
 
@@ -53,7 +54,7 @@ class My2ServerHandler extends MyServerHandler implements ServerHandler {
 }
 
 class My2ConnectionHandler extends MyConnectionHandler implements ConnectionHandler {
-    private final byte[] buffer = new byte[6]; // make it smaller than in-buffer and greater than out-buffer
+    private final byte[] buffer = Utils.allocateByteArrayInitZero(6); // make it smaller than in-buffer and greater than out-buffer
     private ByteArrayChannel byteArrayChannel = ByteArrayChannel.fromEmpty(buffer);
 
     @Override

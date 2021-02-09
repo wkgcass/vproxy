@@ -81,7 +81,7 @@ public class RESPParser {
     // return -1 means: got error, or want more data
     // call getErrorMessage() to check whether is error
     public int feed(RingBuffer buffer) {
-        byte[] nextByte = new byte[1];
+        byte[] nextByte = Utils.allocateByteArrayInitZero(1);
         ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(nextByte);
         while (true) {
             chnl.reset();

@@ -5,6 +5,7 @@ import vproxybase.connection.Connection;
 import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 import vproxybase.util.RingBuffer;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 import vproxybase.util.ringbuffer.SSLUtils;
 import vproxybase.util.ringbuffer.ssl.SSL;
@@ -59,7 +60,7 @@ public class SSLHelper {
                 Logger.error(LogType.IMPROPER_USE, msg);
                 return new IOException(msg);
             }
-            ByteBuffer dst = ByteBuffer.allocate(4096);
+            ByteBuffer dst = Utils.allocateByteBuffer(4096);
             SSLEngine engine = sslContext.createSSLEngine();
             engine.setUseClientMode(false);
             engine.setHandshakeApplicationProtocolSelector((e, ls) -> {

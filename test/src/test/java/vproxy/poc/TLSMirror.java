@@ -59,9 +59,9 @@ public class TLSMirror {
         Thread.sleep(1000);
         System.out.println("start");
 
-        var l3addr = Resolver.getDefault().blockResolve("cip.cc");
+        var l3addr = Resolver.getDefault().blockResolve("www.baidu.com");
         var cli = HttpClient.to(new IPPort(l3addr, 443), new HttpClient.Options()
-            .setHost("cip.cc")
+            .setHost("www.baidu.com")
             .setSSL(true));
         cli.get("/").header("User-Agent", "curl/vproxy").send((err, resp) -> {
             if (err != null) {

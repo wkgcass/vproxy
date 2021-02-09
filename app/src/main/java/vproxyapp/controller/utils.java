@@ -23,10 +23,7 @@ import vproxybase.component.elgroup.EventLoopWrapper;
 import vproxybase.component.svrgroup.ServerGroup;
 import vproxybase.connection.Connection;
 import vproxybase.connection.ServerSock;
-import vproxybase.util.Callback;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Utils;
+import vproxybase.util.*;
 import vproxybase.util.exception.NotFoundException;
 import vproxybase.util.exception.XException;
 import vserver.RoutingContext;
@@ -309,12 +306,12 @@ class utils {
             .build();
     }
 
-    static JSON.Object formatAnnotations(Map<String, String> map) {
+    static JSON.Object formatAnnotations(Annotations map) {
         if (map.isEmpty()) {
             return new ObjectBuilder().build();
         } else {
             ObjectBuilder ob = new ObjectBuilder();
-            map.forEach(ob::put);
+            map.getRaw().forEach(ob::put);
             return ob.build();
         }
     }

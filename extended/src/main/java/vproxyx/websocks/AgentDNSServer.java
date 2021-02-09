@@ -93,16 +93,16 @@ public class AgentDNSServer extends DNSServer {
     }
 
     @Override
-    protected List<Record> runInternal(String domain, IPPort remote) {
+    protected List<DNSRecord> runInternal(String domain, IPPort remote) {
         var res = super.runInternal(domain, remote);
         if (res != null && !res.isEmpty()) {
             return res;
         }
-        List<Record> ret = new ArrayList<>();
+        List<DNSRecord> ret = new ArrayList<>();
         IP localAddr = getLocalAddressFor(remote);
         switch (domain) {
             case "socks5.agent":
-                Record r = getSocks5Record(localAddr);
+                DNSRecord r = getSocks5Record(localAddr);
                 if (r != null) {
                     ret.add(r);
                 }
@@ -147,39 +147,39 @@ public class AgentDNSServer extends DNSServer {
         return ret;
     }
 
-    private Record getSocks5Record(IP localAddr) {
+    private DNSRecord getSocks5Record(IP localAddr) {
         if (config.getSocks5ListenPort() == 0) {
             return null;
         }
-        return new Record(localAddr, config.getSocks5ListenPort(), "socks5.agent.vproxy.local");
+        return new DNSRecord(localAddr, config.getSocks5ListenPort(), "socks5.agent.vproxy.local");
     }
 
-    private Record getHttpConnectRecord(IP localAddr) {
+    private DNSRecord getHttpConnectRecord(IP localAddr) {
         if (config.getHttpConnectListenPort() == 0) {
             return null;
         }
-        return new Record(localAddr, config.getHttpConnectListenPort(), "httpconnect.agent.vproxy.local");
+        return new DNSRecord(localAddr, config.getHttpConnectListenPort(), "httpconnect.agent.vproxy.local");
     }
 
-    private Record getSsRecord(IP localAddr) {
+    private DNSRecord getSsRecord(IP localAddr) {
         if (config.getSsListenPort() == 0) {
             return null;
         }
-        return new Record(localAddr, config.getSsListenPort(), "ss.agent.vproxy.local");
+        return new DNSRecord(localAddr, config.getSsListenPort(), "ss.agent.vproxy.local");
     }
 
-    private Record getPacServerRecord(IP localAddr) {
+    private DNSRecord getPacServerRecord(IP localAddr) {
         if (config.getPacServerPort() == 0) {
             return null;
         }
-        return new Record(localAddr, config.getPacServerPort(), "pac.agent.vproxy.local");
+        return new DNSRecord(localAddr, config.getPacServerPort(), "pac.agent.vproxy.local");
     }
 
-    private Record getDNSServerRecord(IP localAddr) {
+    private DNSRecord getDNSServerRecord(IP localAddr) {
         if (config.getDnsListenPort() == 0) {
             return null;
         }
-        return new Record(localAddr, config.getDnsListenPort(), "dns.agent.vproxy.local");
+        return new DNSRecord(localAddr, config.getDnsListenPort(), "dns.agent.vproxy.local");
     }
 
     @Override

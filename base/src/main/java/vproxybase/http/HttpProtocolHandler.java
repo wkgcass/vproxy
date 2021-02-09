@@ -3,6 +3,7 @@ package vproxybase.http;
 import vproxybase.protocol.ProtocolHandler;
 import vproxybase.protocol.ProtocolHandlerContext;
 import vproxybase.util.Logger;
+import vproxybase.util.Utils;
 import vproxybase.util.nio.ByteArrayChannel;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
@@ -39,7 +40,7 @@ public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext
     protected void sendError(ProtocolHandlerContext<HttpContext> ctx, String errMsg) {
         // flush all input data
         if (ctx.inBuffer.used() > 0) {
-            byte[] foo = new byte[ctx.inBuffer.used()];
+            byte[] foo = Utils.allocateByteArray(ctx.inBuffer.used());
             ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(foo);
             while (ctx.inBuffer.used() != 0) {
                 chnl.reset();

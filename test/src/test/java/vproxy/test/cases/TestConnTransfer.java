@@ -16,6 +16,7 @@ import vproxybase.component.check.HealthCheckConfig;
 import vproxybase.component.elgroup.EventLoopGroup;
 import vproxybase.component.svrgroup.Method;
 import vproxybase.component.svrgroup.ServerGroup;
+import vproxybase.util.Annotations;
 import vproxybase.util.BlockCallback;
 import vproxybase.util.ByteArray;
 import vserver.HttpServer;
@@ -50,11 +51,11 @@ public class TestConnTransfer {
         elg.add("el");
         Upstream ups = new Upstream("ups");
         ServerGroup sg1 = new ServerGroup("sg1", elg, new HealthCheckConfig(500, 500, 1, 2, CheckProtocol.none), Method.wrr);
-        sg1.setAnnotations(Map.of("vproxy/hint-host", "http-server-1.foo.bar", "vproxy/hint-port", "80"));
+        sg1.setAnnotations(new Annotations(Map.of("vproxy/hint-host", "http-server-1.foo.bar", "vproxy/hint-port", "80")));
         sg1.add("httpServer1", new IPPort("127.0.0.1", httpServer1Port), 1);
         ServerGroup sg2 = new ServerGroup("sg2", elg, new HealthCheckConfig(500, 500, 1, 2, CheckProtocol.none), Method.wrr);
-        sg2.setAnnotations(Map.of("vproxy/hint-host", "http-server-2.foo.bar", "vproxy/hint-port", "443"));
-        sg2.add("httpServer2", new IPPort(IP.blockResolve("cip.cc"), 443), 1);
+        sg2.setAnnotations(new Annotations(Map.of("vproxy/hint-host", "http-server-2.foo.bar", "vproxy/hint-port", "443")));
+        sg2.add("httpServer2", new IPPort(IP.blockResolve("www.baidu.com"), 443), 1);
         ups.add(sg1, 1);
         ups.add(sg2, 1);
         socks5Server = new Socks5Server("socks5", elg, elg,
@@ -68,7 +69,7 @@ public class TestConnTransfer {
 
         socksClient = SocksClient.to("127.0.0.1", socks5Port);
         httpClient1ToSocks5 = HttpClient.to("127.0.0.1", socks5Port);
-        httpClient2ToSocks5 = HttpClient.to(new IPPort("127.0.0.1", socks5Port), new HttpClient.Options().setHost("cip.cc").setSSL(true));
+        httpClient2ToSocks5 = HttpClient.to(new IPPort("127.0.0.1", socks5Port), new HttpClient.Options().setHost("www.baidu.com").setSSL(true));
 
         Thread.sleep(500);
     }

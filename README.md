@@ -1,5 +1,7 @@
 # vproxy
 
+[![Build Status](https://travis-ci.com/wkgcass/vproxy.svg?branch=dev)](https://travis-ci.com/wkgcass/vproxy)
+
 [中文文档](https://github.com/wkgcass/vproxy/blob/master/README_ZH.md)
 
 ## Intro
@@ -113,6 +115,26 @@ And there's a special version for windows to support Tap devices: `-Dvfd=windows
 ```
 make vfdwindows
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+```
+
+</details>
+
+<details><summary>test</summary>
+
+Run test cases:
+
+```
+./gradlew runTest
+```
+
+Test vswitch, docker network plugin, vpctl, k8s controller:
+
+```shell
+# requires virtualbox installed
+
+cd ./misc/auto-setup/
+./auto-setup.sh
+./auto-verify.sh
 ```
 
 </details>

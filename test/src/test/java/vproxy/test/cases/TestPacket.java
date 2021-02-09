@@ -8,6 +8,7 @@ import vfd.MacAddress;
 import vpacket.*;
 import vproxybase.util.ByteArray;
 import vproxybase.util.Consts;
+import vproxybase.util.Utils;
 
 import java.util.Collections;
 import java.util.Random;
@@ -17,19 +18,19 @@ import static org.junit.Assert.*;
 
 public class TestPacket {
     MacAddress randomMac() {
-        byte[] mac = new byte[6];
+        byte[] mac = Utils.allocateByteArrayInitZero(6);
         new Random().nextBytes(mac);
         return new MacAddress(ByteArray.from(mac));
     }
 
     IPv4 randomIpv4() {
-        byte[] b = new byte[4];
+        byte[] b = Utils.allocateByteArrayInitZero(4);
         new Random().nextBytes(b);
         return IP.fromIPv4(b);
     }
 
     IPv6 randomIpv6() {
-        byte[] b = new byte[16];
+        byte[] b = Utils.allocateByteArrayInitZero(16);
         new Random().nextBytes(b);
         return IP.fromIPv6(b);
     }
@@ -41,7 +42,7 @@ public class TestPacket {
 
     PacketBytes randomPacket(int len) {
         PacketBytes b = new PacketBytes();
-        byte[] arr = new byte[len];
+        byte[] arr = Utils.allocateByteArray(len);
         new Random().nextBytes(arr);
         b.setBytes(ByteArray.from(arr));
         return b;

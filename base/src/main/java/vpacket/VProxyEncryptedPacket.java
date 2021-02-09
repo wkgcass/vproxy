@@ -85,7 +85,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
         }
         ByteArray userB = ByteArray.from(x);
 
-        byte[] ivBytes = new byte[16];
+        byte[] ivBytes = Utils.allocateByteArrayInitZero(16);
         Random rand = new Random();
         rand.nextBytes(ivBytes);
 

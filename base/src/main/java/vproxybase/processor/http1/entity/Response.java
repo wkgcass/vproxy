@@ -10,6 +10,7 @@ public class Response {
     public String reason; // notnull
     public List<Header> headers; // nullable
     public ByteArray body; // nullable
+    public boolean isPlain = false;
 
     public List<Chunk> chunks; // nullable
     public List<Header> trailers; // nullable
@@ -19,9 +20,28 @@ public class Response {
         StringBuilder textPart = new StringBuilder();
         textPart.append(version).append(" ").append(statusCode).append(" ").append(reason).append("\r\n");
         // the following should be the same as Request
+        boolean usingGZip = false;
+        if (isPlain && headers != null) { // encode only if body is plain
+            for (Header h : headers) {
+                if (h.key.trim().equalsIgnoreCase("content-encoding") && h.value.equalsIgnoreCase("gzip")) {
+                    usingGZip = true;
+                    break;
+                }
+            }
+        }
         if (headers != null) {
             for (Header h : headers) {
+                if (usingGZip && h.key.trim().equalsIgnoreCase("content-length")) {
+                    continue; // skip content-length, we will calculate it later
+                }
                 textPart.append(h.key).append(": ").append(h.value).append("\r\n");
+            }
+        }
+        ByteArray body = this.body;
+        if (body != null) {
+            if (usingGZip) {
+                body = ByteArray.from(body.toGZipJavaByteArray());
+                textPart.append("Content-Length: ").append(body.length()).append("\r\n");
             }
         }
         textPart.append("\r\n");
@@ -59,6 +79,7 @@ public class Response {
             ", reason='" + reason + '\'' +
             ", headers=" + headers +
             ", body=" + body +
+            ", isPlain=" + isPlain +
             ", chunks=" + chunks +
             ", trailers=" + trailers +
             '}';

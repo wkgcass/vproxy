@@ -3,10 +3,7 @@ package vproxybase.util.ringbuffer;
 import vfd.IPPort;
 import vfd.NetworkFD;
 import vmirror.MirrorDataFactory;
-import vproxybase.util.ByteArray;
-import vproxybase.util.ByteBufferEx;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
+import vproxybase.util.*;
 import vproxybase.util.crypto.BlockCipherKey;
 import vproxybase.util.crypto.CryptoUtils;
 import vproxybase.util.crypto.StreamingCFBCipher;
@@ -56,13 +53,12 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
                                           Supplier<IPPort> srcAddrSupplier,
                                           Supplier<IPPort> dstAddrSupplier) {
         super(plainBytesBuffer);
-        //noinspection ReplaceNullCheck
         if (iv == null) {
             this.iv0 = CryptoUtils.randomBytes(key.ivLen());
         } else {
             this.iv0 = iv;
         }
-        byte[] ivX = new byte[this.iv0.length];
+        byte[] ivX = Utils.allocateByteArray(this.iv0.length);
         System.arraycopy(this.iv0, 0, ivX, 0, ivX.length);
         this.cipher = new StreamingCFBCipher(key, true, ivX);
 
@@ -96,7 +92,7 @@ public class EncryptIVInDataWrapRingBuffer extends AbstractWrapByteBufferRingBuf
         if (len == 0) {
             return;
         }
-        byte[] buf = new byte[len];
+        byte[] buf = Utils.allocateByteArray(len);
         input.get(buf);
 
         byte[] res = cipher.update(buf, 0, buf.length);
