@@ -1,5 +1,6 @@
 package vproxybase.util;
 
+import vjson.parser.ParserUtils;
 import vproxybase.util.bytearray.*;
 import vproxybase.util.nio.ByteArrayChannel;
 
@@ -106,13 +107,13 @@ public interface ByteArray {
 
     default long int64(int offset) {
         return uint8long(offset) << 56
-            | uint8long(offset + 1) << 48
-            | uint8long(offset + 2) << 40
-            | uint8long(offset + 3) << 32
-            | uint8long(offset + 4) << 24
-            | uint8long(offset + 5) << 16
-            | uint8long(offset + 6) << 8
-            | uint8long(offset + 7);
+                | uint8long(offset + 1) << 48
+                | uint8long(offset + 2) << 40
+                | uint8long(offset + 3) << 32
+                | uint8long(offset + 4) << 24
+                | uint8long(offset + 5) << 16
+                | uint8long(offset + 6) << 8
+                | uint8long(offset + 7);
     }
 
     default int int32(int offset) {
@@ -192,5 +193,44 @@ public interface ByteArray {
         byte[] dataToCompress = toJavaArray();
         ByteArrayOutputStream out = new ByteArrayOutputStream();
         return Utils.gzipCompress(out, dataToCompress);
+    }
+
+    private byte upperByte(byte b) {
+       return b >= 'a' && b <= 'z' ? (byte) (b - 0x20) : b;
+    }
+
+    default ByteArray trim(){
+        int len = this.length();
+        int start = 0;
+        while (start < len && ParserUtils.isWhiteSpace((char) this.get(start))) {
+            start ++;
+        }
+
+        if (len == start) {
+            return this;
+        }
+
+        int end = length() - 1;
+        while (end >= 0 && ParserUtils.isWhiteSpace((char) this.get(end))) {
+            end --;
+        }
+        return this.sub(start, end - start + 1);
+    }
+
+    default boolean equalsIgnoreCase(ByteArray other) {
+        if (this.length() != other.length()){
+            return false;
+        }
+
+        for (int i = 0; i < length(); i++) {
+            if (upperByte(this.get(i)) != upperByte(other.get(i))){
+                return false;
+            }
+        }
+        return true;
+    }
+
+    default boolean equalsIgnoreCaseAfterTrim(ByteArray other) {
+        return this.trim().equalsIgnoreCase(other.trim());
     }
 }
