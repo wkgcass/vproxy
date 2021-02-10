@@ -1,11 +1,31 @@
 package vproxybase.util.unsafe;
 
-import jdk.internal.misc.Unsafe;
+import vproxybase.util.Logger;
 
-public class JDKUnsafe {
-    private static final Unsafe unsafe = Unsafe.getUnsafe();
+public interface JDKUnsafe {
 
-    public static byte[] allocateUninitializedByteArray(int len) {
-        return (byte[]) unsafe.allocateUninitializedArray(byte.class, len);
+    static byte[] allocateUninitializedByteArray(int len) {
+        return JDKUnsafeHolder.getUnsafe().allocateUninitialized0(len);
+    }
+
+    byte[] allocateUninitialized0(int len);
+
+    class JDKUnsafeHolder {
+        private static JDKUnsafe UNSAFE;
+
+        static {
+            try {
+                UNSAFE = (JDKUnsafeImpl) Class.forName("vproxybase.util.unsafe.JDKUnsafeImpl")
+                        .getDeclaredConstructor()
+                        .newInstance();
+            } catch (Throwable e) {
+                Logger.alert("Reflection failure: new JDKUnsafeImpl " + e);
+                UNSAFE = new JDKUnsafeFallback();
+            }
+        }
+
+        public static JDKUnsafe getUnsafe() {
+            return UNSAFE;
+        }
     }
 }
