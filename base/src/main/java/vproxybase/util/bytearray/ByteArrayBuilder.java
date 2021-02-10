@@ -7,19 +7,25 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class ByteArrayBuilder extends AbstractByteArray implements ByteArray {
-    private static final int DEFAULT_PAGE_SIZE = 512;
+    private static final int DEFAULT_PAGE_SIZE = 16;
     private final List<byte[]> bytePages = new ArrayList<>();
-    private int pageSize;
+    private final int pageSize;
     private int pageIdx;
     private int arrayIdx;
 
     public ByteArrayBuilder() {
         this.pageSize = DEFAULT_PAGE_SIZE;
         this.pageIdx = -1;
-        this.arrayIdx = pageSize;
+        this.arrayIdx = this.pageSize;
     }
 
+    /**
+     * @param pageSize MUST be greater than zero
+     */
     public ByteArrayBuilder(int pageSize) {
+        if (pageSize <= 0) {
+            throw new RuntimeException("'pageSize' MUST be greater than zero");
+        }
         this.pageSize = pageSize;
         this.pageIdx = -1;
         this.arrayIdx = pageSize;
