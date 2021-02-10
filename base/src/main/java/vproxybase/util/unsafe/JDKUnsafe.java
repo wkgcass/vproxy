@@ -19,7 +19,7 @@ public interface JDKUnsafe {
                         .getDeclaredConstructor()
                         .newInstance();
             } catch (Throwable e) {
-                Logger.alert("Reflection failure: new JDKUnsafeImpl " + e);
+                Logger.alert("Reflection failure: you may add JDK startup option '--add-exports=java.base/jdk.internal.misc=vproxy.base' to enable JDKUnsafe " + e);
                 UNSAFE = new JDKUnsafeFallback();
             }
         }
