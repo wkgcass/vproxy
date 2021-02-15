@@ -1,5 +1,6 @@
 package vproxybase.util.unsafe;
 
+import vproxybase.util.LogType;
 import vproxybase.util.Logger;
 
 public interface JDKUnsafe {
@@ -9,23 +10,23 @@ public interface JDKUnsafe {
     }
 
     byte[] allocateUninitialized0(int len);
+}
 
-    class JDKUnsafeHolder {
-        private static JDKUnsafe UNSAFE;
+class JDKUnsafeHolder {
+    private static JDKUnsafe UNSAFE;
 
-        static {
-            try {
-                UNSAFE = (JDKUnsafeImpl) Class.forName("vproxybase.util.unsafe.JDKUnsafeImpl")
-                        .getDeclaredConstructor()
-                        .newInstance();
-            } catch (Throwable e) {
-                Logger.alert("Reflection failure: you may add JDK startup option '--add-exports=java.base/jdk.internal.misc=vproxy.base' to enable JDKUnsafe " + e);
-                UNSAFE = new JDKUnsafeFallback();
-            }
+    static {
+        try {
+            UNSAFE = (JDKUnsafe) Class.forName("vproxybase.util.unsafe.JDKUnsafeImpl")
+                    .getDeclaredConstructor()
+                    .newInstance();
+        } catch (Throwable e) {
+            Logger.warn(LogType.ALERT, "Reflection failure: you may add JDK startup option '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED' to enable JDKUnsafe.\nThe exception is " + e);
+            UNSAFE = new JDKUnsafeFallback();
         }
+    }
 
-        public static JDKUnsafe getUnsafe() {
-            return UNSAFE;
-        }
+    public static JDKUnsafe getUnsafe() {
+        return UNSAFE;
     }
 }
