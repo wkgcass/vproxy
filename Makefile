@@ -1,5 +1,5 @@
 SHELL := /bin/bash
-.DEFAULT: jar
+.DEFAULT_GOAL := jar
 
 VERSION := $(shell cat base/src/main/java/vproxybase/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 OS := $(shell uname)
