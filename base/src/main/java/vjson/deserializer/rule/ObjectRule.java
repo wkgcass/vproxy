@@ -44,13 +44,6 @@ public class ObjectRule<O> extends Rule<O> {
     }
 
     @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        toString(sb, new HashSet<>());
-        return sb.toString();
-    }
-
-    @Override
     void toString(StringBuilder sb, Set<Rule> processedListsOrObjects) {
         if (!processedListsOrObjects.add(this)) {
             sb.append("Object{...recursive...}");

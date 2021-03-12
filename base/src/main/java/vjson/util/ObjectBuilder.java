@@ -20,9 +20,12 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class ObjectBuilder {
-    private List<SimpleObjectEntry<JSON.Instance>> map = new LinkedList<>();
+    private final List<SimpleObjectEntry<JSON.Instance>> map = new LinkedList<>();
 
     public ObjectBuilder putInst(String key, JSON.Instance inst) {
+        if (key.equals("@type")) { // always add @type to the most front
+            map.add(0, new SimpleObjectEntry<>(key, inst));
+        }
         map.add(new SimpleObjectEntry<>(key, inst));
         return this;
     }
@@ -65,6 +68,14 @@ public class ObjectBuilder {
         ArrayBuilder builder = new ArrayBuilder();
         func.accept(builder);
         return putInst(key, builder.build());
+    }
+
+    public ObjectBuilder type(String type) {
+        return putInst("@type", new SimpleString(type));
+    }
+
+    public ObjectBuilder type(Class<?> aClass) {
+        return type(aClass.getName());
     }
 
     public JSON.Object build() {

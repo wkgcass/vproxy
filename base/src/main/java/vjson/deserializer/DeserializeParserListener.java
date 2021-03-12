@@ -30,8 +30,8 @@ public class DeserializeParserListener<T> extends AbstractParserListener {
     private Object lastObject = null;
 
     public DeserializeParserListener(Rule<T> rule) {
-        if (!(rule instanceof ObjectRule) && !(rule instanceof ArrayRule)) {
-            throw new IllegalArgumentException("can only accept ObjectRule or ArrayRule");
+        if (!(rule instanceof ObjectRule) && !(rule instanceof ArrayRule) && !(rule instanceof TypeRule)) {
+            throw new IllegalArgumentException("can only accept ObjectRule or ArrayRule or TypeRule");
         }
         nextRuleStack.push(rule);
     }
@@ -39,16 +39,41 @@ public class DeserializeParserListener<T> extends AbstractParserListener {
     @Override
     public void onObjectBegin(ObjectParser object) {
         Rule rule = nextRuleStack.peek();
-        if (!(rule instanceof ObjectRule)) {
+        if (rule instanceof TypeRule) {
+            parseStack.push(new ParseContext(rule, true, null));
+        } else if (!(rule instanceof ObjectRule)) {
             throw new JsonParseException("expect: array, actual: object");
+        } else {
+            parseStack.push(new ParseContext(rule, true, ((ObjectRule) rule).construct.get()));
         }
-        parseStack.push(new ParseContext(rule, true, ((ObjectRule) rule).construct.get()));
         begin = true;
+    }
+
+    private ParseContext useObjectRuleForTypeRule(ObjectRule<?> orule) {
+        parseStack.pop();
+        ParseContext newCtx = new ParseContext(orule, true, orule.construct.get());
+        parseStack.push(newCtx);
+        return newCtx;
     }
 
     @Override
     public void onObjectKey(ObjectParser object, String key) {
         ParseContext ctx = parseStack.peek();
+
+        if (ctx.rule instanceof TypeRule) {
+            if (key.equals("@type")) {
+                return; // will use @type to deserialize the rest k/v
+            }
+            // nothing found, try to use default rule
+            ObjectRule<?> orule = ((TypeRule<?>) ctx.rule).getDefaultRule();
+            if (orule == null) {
+                throw new JsonParseException("cannot determine type for " + ctx.rule);
+            }
+            // use the default rule
+            ctx = useObjectRuleForTypeRule(orule);
+            // fall through
+        }
+
         ObjectRule rule = (ObjectRule) ctx.rule;
         ObjectField field = rule.getRule(key);
         if (field == null) {
@@ -97,6 +122,22 @@ public class DeserializeParserListener<T> extends AbstractParserListener {
     @Override
     public void onObjectValue(ObjectParser object, String key, JSON.Instance value) {
         ParseContext ctx = parseStack.peek();
+
+        if (ctx.rule instanceof TypeRule) {
+            // assert key.equals("@type");
+            if (!(lastObject instanceof String)) {
+                throw new JsonParseException("invalid type: expecting type name for " + ctx.rule + " but got " + lastObject);
+            }
+            String type = ((String) lastObject);
+            ObjectRule<?> orule = ((TypeRule<?>) ctx.rule).getRule(type);
+            if (orule == null) {
+                // rule not found
+                throw new JsonParseException("cannot find type " + type + " in " + ctx.rule);
+            }
+            useObjectRuleForTypeRule(orule);
+            return;
+        }
+
         ObjectRule rule = (ObjectRule) ctx.rule;
         ObjectField field = rule.getRule(key);
         if (field == null) {
@@ -114,7 +155,16 @@ public class DeserializeParserListener<T> extends AbstractParserListener {
     @Override
     public void onObjectEnd(ObjectParser object) {
         ParseContext ctx = parseStack.pop();
-        lastObject = ctx.object;
+        if (ctx.rule instanceof TypeRule) {
+            ObjectRule<?> orule = ((TypeRule<?>) ctx.rule).getDefaultRule();
+            if (orule == null) {
+                throw new JsonParseException("type for " + ctx.rule + " is still not determined when reaching the object end");
+            }
+            // use the default rule to construct an empty object
+            lastObject = orule.construct.get();
+        } else {
+            lastObject = ctx.object;
+        }
     }
 
     @Override

@@ -12,6 +12,7 @@
 
 package vjson.deserializer.rule;
 
+import java.util.HashSet;
 import java.util.Set;
 
 @SuppressWarnings("unused")
@@ -20,4 +21,11 @@ public abstract class Rule<T> {
     }
 
     abstract void toString(StringBuilder sb, Set<Rule> processedListsOrObjects);
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        toString(sb, new HashSet<>());
+        return sb.toString();
+    }
 }

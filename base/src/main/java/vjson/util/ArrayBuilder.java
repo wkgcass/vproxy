@@ -20,7 +20,7 @@ import java.util.List;
 import java.util.function.Consumer;
 
 public class ArrayBuilder {
-    private List<JSON.Instance> list = new LinkedList<>();
+    private final List<JSON.Instance> list = new LinkedList<>();
 
     public ArrayBuilder addInst(JSON.Instance inst) {
         list.add(inst);

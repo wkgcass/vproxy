@@ -29,13 +29,6 @@ public class ArrayRule<L, E> extends Rule<L> {
     }
 
     @Override
-    public String toString() {
-        StringBuilder sb = new StringBuilder();
-        toString(sb, new HashSet<>());
-        return sb.toString();
-    }
-
-    @Override
     void toString(StringBuilder sb, Set<Rule> processedListsOrObjects) {
         if (!processedListsOrObjects.add(this)) {
             sb.append("Array[...recursive...]");
