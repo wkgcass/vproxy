@@ -2,6 +2,7 @@
 
 set -e
 
+chmod 400 ./key.rsa2048.pem
 ip=`./get-ip.sh`
 cmd=`printf "/bin/bash -ic %q" "$*"`
 ssh -o LogLevel=ERROR -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -t -i ./key.rsa2048.pem root@"$ip" -- "$cmd"

@@ -132,8 +132,9 @@ then
 		rollbacked=1
 
 		vm_start
-		set -e
+		set +e
 		v_exec /usr/bin/apt-get remove -y docker docker-engine docker.io containerd runc
+		set -e
 		v_exec /bin/rm -rf /var/lib/docker
 		v_exec /usr/bin/apt-get install -y apt-transport-https ca-certificates curl gnupg-agent software-properties-common
 		v_exec /bin/bash -c '/usr/bin/curl -fsSL https://download.docker.com/linux/ubuntu/gpg | /usr/bin/apt-key add -'
