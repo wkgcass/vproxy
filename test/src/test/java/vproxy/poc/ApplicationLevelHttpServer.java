@@ -4,6 +4,7 @@ import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vjson.util.Transformer;
 import vproxy.base.util.Logger;
+import vproxy.base.util.kt.KT;
 import vproxy.vclient.HttpClient;
 import vproxy.vclient.HttpResponse;
 import vproxy.vfd.IP;
@@ -42,7 +43,7 @@ public class ApplicationLevelHttpServer {
 
     private final List<Service> services = new LinkedList<>();
     private final Transformer tf = new Transformer()
-        .addRule(Service.class, s -> new ObjectBuilder()
+        .addRule(KT.kclass(Service.class), s -> new ObjectBuilder()
             .put("id", s.id.toString())
             .put("name", s.name)
             .put("ingressAddress", s.address)

@@ -1,7 +1,7 @@
 package vproxy.base;
 
 import vjson.simple.SimpleString;
-import vjson.util.AppendableMap;
+import vproxy.base.util.AppendableMap;
 import vproxy.base.prometheus.Counter;
 import vproxy.base.prometheus.Gauge;
 import vproxy.base.prometheus.Metric;

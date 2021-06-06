@@ -1,5 +1,6 @@
 module vproxy.base {
     requires jdk.unsupported;
+    requires kotlin.stdlib;
 
     exports com.twitter.hpack;
     exports tlschannel.impl;
@@ -13,6 +14,8 @@ module vproxy.base {
     exports vjson.simple;
     exports vjson.stringifier;
     exports vjson.util;
+    exports vjson.util.collection;
+    exports vjson.util.functional;
     exports vproxy.base;
     exports vproxy.base.component.check;
     exports vproxy.base.component.elgroup;
@@ -62,6 +65,7 @@ module vproxy.base {
     exports vproxy.base.util.exception;
     exports vproxy.base.util.functional;
     exports vproxy.base.util.io;
+    exports vproxy.base.util.kt;
     exports vproxy.base.util.nio;
     exports vproxy.base.util.objectpool;
     exports vproxy.base.util.promise;

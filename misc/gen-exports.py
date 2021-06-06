@@ -14,7 +14,7 @@ def build(ls, prefix, base):
     files.sort()
     has_java = False
     for f in files:
-        if f.endswith('.java') and f != 'module-info.java' and f != 'package-info.java':
+        if (f.endswith('.java') or f.endswith('.kt')) and f != 'module-info.java' and f != 'package-info.java':
             has_java = True
             break
     if prefix != '':

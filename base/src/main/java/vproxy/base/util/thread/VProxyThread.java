@@ -3,6 +3,7 @@ package vproxy.base.util.thread;
 import vjson.parser.ArrayParser;
 import vjson.parser.ObjectParser;
 import vjson.parser.StringParser;
+import vjson.util.StringDictionary;
 import vproxy.base.selector.SelectorEventLoop;
 
 public interface VProxyThread {
@@ -52,5 +53,6 @@ public interface VProxyThread {
         public ArrayParser threadLocalArrayParserJavaObject;
         public ObjectParser threadLocalObjectParserJavaObject;
         public StringParser threadLocalStringParserJavaObject;
+        public StringDictionary threadLocalKeyDictionary;
     }
 }

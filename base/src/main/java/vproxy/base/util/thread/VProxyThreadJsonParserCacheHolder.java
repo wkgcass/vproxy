@@ -4,6 +4,7 @@ import vjson.parser.ArrayParser;
 import vjson.parser.ObjectParser;
 import vjson.parser.ParserCacheHolder;
 import vjson.parser.StringParser;
+import vjson.util.StringDictionary;
 
 public class VProxyThreadJsonParserCacheHolder implements ParserCacheHolder {
     @Override
@@ -64,5 +65,15 @@ public class VProxyThreadJsonParserCacheHolder implements ParserCacheHolder {
     @Override
     public void threadLocalStringParserJavaObject(StringParser parser) {
         VProxyThread.current().threadLocalStringParserJavaObject = parser;
+    }
+
+    @Override
+    public StringDictionary threadLocalKeyDictionary() {
+        return VProxyThread.current().threadLocalKeyDictionary;
+    }
+
+    @Override
+    public void threadLocalKeyDictionary(StringDictionary dic) {
+        VProxyThread.current().threadLocalKeyDictionary = dic;
     }
 }

@@ -3,6 +3,7 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 plugins {
     id 'application'
     id 'idea'
+    id 'org.jetbrains.kotlin.jvm' version '1.4.31'
 }
 
 group 'vproxy'
@@ -21,9 +22,16 @@ jar {
 
 subprojects {
     apply plugin: 'java'
+    apply plugin: 'org.jetbrains.kotlin.jvm'
 
     sourceCompatibility = 11.0
     targetCompatibility = 11.0
+    compileKotlin {
+        kotlinOptions {
+            jvmTarget = '11'
+            freeCompilerArgs += '-Xjvm-default=enable'
+        }
+    }
     compileJava.options.encoding = "UTF-8"
     compileTestJava.options.encoding = "UTF-8"
 
@@ -40,8 +48,12 @@ repositories {
 
 project(':base') {
     compileJava.options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=vproxy.base'
+    compileKotlin {
+        destinationDir = compileJava.destinationDir
+    }
 
     dependencies {
+        compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.4.31'
     }
 }
 
