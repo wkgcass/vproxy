@@ -1,12 +1,12 @@
 package vproxyx.websocks;
 
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.wrap.file.FileFD;
-import vproxybase.selector.wrap.file.FilePath;
-import vproxybase.util.ByteArray;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Utils;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.wrap.file.FileFD;
+import vproxy.base.selector.wrap.file.FilePath;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;

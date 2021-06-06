@@ -3,12 +3,12 @@ package vproxy.test.cases;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import vlibbase.Conn;
-import vclient.NetClient;
+import vproxy.base.util.BlockCallback;
+import vproxy.base.util.ByteArray;
 import vproxy.test.tool.Client;
-import vproxybase.util.BlockCallback;
-import vproxybase.util.ByteArray;
-import vserver.NetServer;
+import vproxy.vclient.NetClient;
+import vproxy.vlibbase.Conn;
+import vproxy.vserver.NetServer;
 
 import java.io.IOException;
 import java.util.Arrays;

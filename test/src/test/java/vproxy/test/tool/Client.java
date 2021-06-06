@@ -1,6 +1,6 @@
 package vproxy.test.tool;
 
-import vproxybase.util.Utils;
+import vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.net.InetSocketAddress;

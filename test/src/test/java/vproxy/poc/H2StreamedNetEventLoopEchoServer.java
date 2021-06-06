@@ -1,14 +1,14 @@
 package vproxy.poc;
 
-import vfd.IPPort;
-import vproxybase.connection.ConnectableConnection;
-import vproxybase.connection.ConnectionOpts;
-import vproxybase.connection.NetEventLoop;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.wrap.h2streamed.H2StreamedClientFDs;
-import vproxybase.selector.wrap.h2streamed.H2StreamedServerFDs;
-import vproxybase.selector.wrap.kcp.KCPFDs;
-import vproxybase.util.RingBuffer;
+import vproxy.base.connection.ConnectableConnection;
+import vproxy.base.connection.ConnectionOpts;
+import vproxy.base.connection.NetEventLoop;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
+import vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
+import vproxy.base.selector.wrap.kcp.KCPFDs;
+import vproxy.base.util.RingBuffer;
+import vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

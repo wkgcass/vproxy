@@ -1,10 +1,10 @@
 package vproxy.test.tool;
 
-import vfd.EventSet;
-import vfd.FDProvider;
-import vfd.IPPort;
-import vfd.ServerSocketFD;
-import vproxybase.selector.SelectorEventLoop;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.vfd.EventSet;
+import vproxy.vfd.FDProvider;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.ServerSocketFD;
 
 import java.io.IOException;
 

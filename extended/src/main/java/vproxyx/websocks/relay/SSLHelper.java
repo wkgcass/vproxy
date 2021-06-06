@@ -1,16 +1,16 @@
 package vproxyx.websocks.relay;
 
 import tlschannel.impl.TlsExplorer;
-import vproxybase.connection.Connection;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Utils;
-import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.ringbuffer.SSLUtils;
-import vproxybase.util.ringbuffer.ssl.SSL;
-import vproxybase.util.ringbuffer.ssl.SSLEngineBuilder;
-import vproxybase.util.ringbuffer.ssl.VSSLContext;
+import vproxy.base.connection.Connection;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.Utils;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.ringbuffer.SSLUtils;
+import vproxy.base.util.ringbuffer.ssl.SSL;
+import vproxy.base.util.ringbuffer.ssl.SSLEngineBuilder;
+import vproxy.base.util.ringbuffer.ssl.VSSLContext;
 import vproxyx.websocks.WebSocksUtils;
 
 import javax.net.ssl.*;

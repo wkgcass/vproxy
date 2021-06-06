@@ -1,7 +1,7 @@
 package vproxyx.websocks;
 
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.wrap.h2streamed.H2StreamedClientFDs;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
 
 import java.util.Collections;
 import java.util.Map;

@@ -1,9 +1,9 @@
 package vproxy.component.secure;
 
-import vfd.IP;
-import vproxybase.connection.Protocol;
-import vproxybase.util.exception.AlreadyExistException;
-import vproxybase.util.exception.NotFoundException;
+import vproxy.base.connection.Protocol;
+import vproxy.base.util.exception.AlreadyExistException;
+import vproxy.base.util.exception.NotFoundException;
+import vproxy.vfd.IP;
 
 import java.util.ArrayList;
 import java.util.LinkedList;

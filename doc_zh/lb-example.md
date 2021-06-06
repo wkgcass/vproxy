@@ -45,7 +45,7 @@ service nginx start
 启动vproxy实例的同时，为了方便管理，我们也配置一个`RESPController`。
 
 ```
-java vproxyapp.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
+java vproxy.app.app.Main resp-controller 10.0.3.10:16309 m1PasSw0rd
 ```
 
 启动vproxy，并且启动了一个resp-controller，绑定了`10.0.3.10:16309`，这样`ADMIN`就可以访问它了。

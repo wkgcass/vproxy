@@ -1,11 +1,11 @@
 package vproxy.pool;
 
-import vproxybase.connection.*;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.ThreadSafe;
-import vproxybase.util.Utils;
+import vproxy.base.connection.*;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.ThreadSafe;
+import vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.util.LinkedList;

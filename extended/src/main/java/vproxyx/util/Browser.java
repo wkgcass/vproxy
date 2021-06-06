@@ -1,8 +1,8 @@
 package vproxyx.util;
 
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.OS;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.OS;
 
 import java.io.IOException;
 

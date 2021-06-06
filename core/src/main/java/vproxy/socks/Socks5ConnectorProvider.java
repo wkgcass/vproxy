@@ -1,10 +1,10 @@
 package vproxy.socks;
 
-import vfd.IP;
-import vproxybase.connection.Connection;
-import vproxybase.connection.Connector;
-import vproxybase.connection.ConnectorProvider;
-import vproxybase.socks.AddressType;
+import vproxy.base.connection.Connection;
+import vproxy.base.connection.Connector;
+import vproxy.base.connection.ConnectorProvider;
+import vproxy.base.socks.AddressType;
+import vproxy.vfd.IP;
 
 import java.util.function.Consumer;
 

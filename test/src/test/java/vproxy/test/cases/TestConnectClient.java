@@ -1,18 +1,18 @@
 package vproxy.test.cases;
 
 import org.junit.*;
-import vfd.IPPort;
+import vproxy.base.component.check.AnnotatedHcConfig;
+import vproxy.base.component.check.CheckProtocol;
+import vproxy.base.component.check.ConnectClient;
+import vproxy.base.component.check.ConnectResult;
+import vproxy.base.connection.NetEventLoop;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.BlockCallback;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.test.tool.DirectCloseServer;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.SendOnConnectIdServer;
-import vproxybase.component.check.AnnotatedHcConfig;
-import vproxybase.component.check.CheckProtocol;
-import vproxybase.component.check.ConnectClient;
-import vproxybase.component.check.ConnectResult;
-import vproxybase.connection.NetEventLoop;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.BlockCallback;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.nio.channels.InterruptedByTimeoutException;

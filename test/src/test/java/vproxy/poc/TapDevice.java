@@ -1,12 +1,12 @@
 package vproxy.poc;
 
-import vfd.FDProvider;
-import vfd.FDs;
-import vfd.FDsWithTap;
-import vfd.TapDatagramFD;
-import vpacket.EthernetPacket;
-import vproxybase.util.ByteArray;
-import vproxybase.util.Utils;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.Utils;
+import vproxy.vfd.FDProvider;
+import vproxy.vfd.FDs;
+import vproxy.vfd.FDsWithTap;
+import vproxy.vfd.TapDatagramFD;
+import vproxy.vpacket.EthernetPacket;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

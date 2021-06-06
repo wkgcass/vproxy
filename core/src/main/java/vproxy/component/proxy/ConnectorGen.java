@@ -1,12 +1,12 @@
 package vproxy.component.proxy;
 
-import vproxybase.connection.Connection;
-import vproxybase.connection.Connector;
-import vproxybase.processor.Hint;
-import vproxybase.processor.Processor;
-import vproxybase.protocol.ProtocolHandler;
-import vproxybase.util.Callback;
-import vproxybase.util.Tuple;
+import vproxy.base.connection.Connection;
+import vproxy.base.connection.Connector;
+import vproxy.base.processor.Hint;
+import vproxy.base.processor.Processor;
+import vproxy.base.protocol.ProtocolHandler;
+import vproxy.base.util.Callback;
+import vproxy.base.util.Tuple;
 
 import java.io.IOException;
 

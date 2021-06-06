@@ -1,12 +1,12 @@
 package vproxy.socks;
 
-import vfd.IP;
-import vproxybase.connection.Connector;
-import vproxybase.protocol.ProtocolHandler;
-import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.socks.AddressType;
-import vproxybase.util.*;
-import vproxybase.util.nio.ByteArrayChannel;
+import vproxy.base.connection.Connector;
+import vproxy.base.protocol.ProtocolHandler;
+import vproxy.base.protocol.ProtocolHandlerContext;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.*;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,23 +1,23 @@
 package vproxyx.websocks;
 
-import vfd.IP;
-import vfd.IPPort;
+import vproxy.base.component.svrgroup.ServerGroup;
+import vproxy.base.component.svrgroup.SvrHandleConnector;
+import vproxy.base.connection.*;
+import vproxy.base.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
+import vproxy.base.http.HttpRespParser;
+import vproxy.base.processor.http1.entity.Response;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.*;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.ringbuffer.SSLUtils;
 import vproxy.pool.ConnectionPool;
 import vproxy.pool.ConnectionPoolHandler;
 import vproxy.pool.PoolCallback;
-import vproxybase.socks.AddressType;
 import vproxy.socks.Socks5ConnectorProvider;
 import vproxy.util.CoreUtils;
-import vproxybase.component.svrgroup.ServerGroup;
-import vproxybase.component.svrgroup.SvrHandleConnector;
-import vproxybase.connection.*;
-import vproxybase.connection.util.SSLHandshakeDoneConnectableConnectionHandler;
-import vproxybase.http.HttpRespParser;
-import vproxybase.processor.http1.entity.Response;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.*;
-import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.ringbuffer.SSLUtils;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 import vproxyx.websocks.relay.HttpsSniErasureForRawAcceptedConnector;
 
 import javax.net.ssl.SNIHostName;

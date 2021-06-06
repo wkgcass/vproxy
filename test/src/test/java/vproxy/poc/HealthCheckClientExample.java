@@ -1,11 +1,11 @@
 package vproxy.poc;
 
-import vfd.IPPort;
-import vfd.SockAddr;
-import vproxybase.component.check.*;
-import vproxybase.connection.NetEventLoop;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.base.component.check.*;
+import vproxy.base.connection.NetEventLoop;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.SockAddr;
 
 import java.io.IOException;
 

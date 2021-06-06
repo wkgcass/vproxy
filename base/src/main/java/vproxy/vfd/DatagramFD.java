@@ -1,0 +1,4 @@
+package vproxy.vfd;
+
+public interface DatagramFD extends AbstractDatagramFD<IPPort> {
+}

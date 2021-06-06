@@ -1,11 +1,11 @@
 package vproxyx.websocks.relay;
 
-import vfd.IP;
-import vproxybase.component.elgroup.EventLoopGroup;
-import vproxybase.util.ErrorPages;
-import vserver.HttpServer;
-import vserver.RoutingHandler;
-import vserver.impl.Http1ServerImpl;
+import vproxy.base.component.elgroup.EventLoopGroup;
+import vproxy.base.util.ErrorPages;
+import vproxy.vfd.IP;
+import vproxy.vserver.HttpServer;
+import vproxy.vserver.RoutingHandler;
+import vproxy.vserver.impl.Http1ServerImpl;
 
 import java.io.IOException;
 

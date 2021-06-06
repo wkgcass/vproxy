@@ -1,8 +1,8 @@
 package vproxyx.websocks;
 
-import vfd.IPPort;
-import vproxybase.connection.*;
-import vproxybase.util.RingBuffer;
+import vproxy.base.connection.*;
+import vproxy.base.util.RingBuffer;
+import vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

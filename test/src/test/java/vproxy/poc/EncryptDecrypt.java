@@ -1,12 +1,12 @@
 package vproxy.poc;
 
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Utils;
-import vproxybase.util.crypto.Aes256Key;
-import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
-import vproxybase.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
+import vproxy.base.util.Logger;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.Utils;
+import vproxy.base.util.crypto.Aes256Key;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
+import vproxy.base.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
 
 import java.util.Arrays;
 

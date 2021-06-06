@@ -1,9 +1,9 @@
 package vproxy.poc;
 
-import vproxybase.redis.RESPParser;
-import vproxybase.redis.entity.*;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.nio.ByteArrayChannel;
+import vproxy.base.redis.RESPParser;
+import vproxy.base.redis.entity.*;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.nio.ByteArrayChannel;
 
 public class TestRESPParser {
     public static void main(String[] args) throws Exception {

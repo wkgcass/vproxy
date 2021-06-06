@@ -1,9 +1,9 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
-import vproxybase.util.objectpool.ConcurrentObjectPool;
-import vproxybase.util.objectpool.CursorList;
-import vproxybase.util.objectpool.PrototypeObjectList;
+import vproxy.base.util.objectpool.ConcurrentObjectPool;
+import vproxy.base.util.objectpool.CursorList;
+import vproxy.base.util.objectpool.PrototypeObjectList;
 
 import java.util.LinkedList;
 import java.util.List;

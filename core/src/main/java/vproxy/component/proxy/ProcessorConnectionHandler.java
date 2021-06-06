@@ -1,12 +1,12 @@
 package vproxy.component.proxy;
 
-import vproxybase.connection.*;
-import vproxybase.processor.ConnectionDelegate;
-import vproxybase.processor.Hint;
-import vproxybase.processor.Processor;
-import vproxybase.util.*;
-import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.ringbuffer.ProxyOutputRingBuffer;
+import vproxy.base.connection.*;
+import vproxy.base.processor.ConnectionDelegate;
+import vproxy.base.processor.Hint;
+import vproxy.base.processor.Processor;
+import vproxy.base.util.*;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
 
 import java.io.IOException;
 import java.util.*;

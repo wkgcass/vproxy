@@ -3,12 +3,12 @@ package vproxy.test.cases;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import vfd.IPPort;
-import vproxybase.component.check.CheckProtocol;
-import vproxybase.component.check.HealthCheckConfig;
-import vproxybase.component.elgroup.EventLoopGroup;
-import vproxybase.component.svrgroup.Method;
-import vproxybase.component.svrgroup.ServerGroup;
+import vproxy.base.component.check.CheckProtocol;
+import vproxy.base.component.check.HealthCheckConfig;
+import vproxy.base.component.elgroup.EventLoopGroup;
+import vproxy.base.component.svrgroup.Method;
+import vproxy.base.component.svrgroup.ServerGroup;
+import vproxy.vfd.IPPort;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

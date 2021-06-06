@@ -1,19 +1,19 @@
 package vproxyx.websocks.ss;
 
-import vfd.IP;
-import vproxybase.socks.AddressType;
+import vproxy.base.connection.Connector;
+import vproxy.base.protocol.ProtocolHandler;
+import vproxy.base.protocol.ProtocolHandlerContext;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.Callback;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Tuple;
+import vproxy.base.util.Utils;
+import vproxy.base.util.crypto.Aes256Key;
+import vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
+import vproxy.base.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
+import vproxy.base.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
 import vproxy.socks.Socks5ConnectorProvider;
-import vproxybase.connection.Connector;
-import vproxybase.protocol.ProtocolHandler;
-import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.util.Callback;
-import vproxybase.util.Logger;
-import vproxybase.util.Tuple;
-import vproxybase.util.Utils;
-import vproxybase.util.crypto.Aes256Key;
-import vproxybase.util.ringbuffer.ByteBufferRingBuffer;
-import vproxybase.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
-import vproxybase.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
+import vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

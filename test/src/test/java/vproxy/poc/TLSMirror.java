@@ -1,12 +1,12 @@
 package vproxy.poc;
 
-import vclient.HttpClient;
-import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
-import vmirror.Mirror;
-import vproxybase.dns.Resolver;
-import vproxybase.util.OS;
+import vproxy.base.dns.Resolver;
+import vproxy.base.util.OS;
+import vproxy.vclient.HttpClient;
+import vproxy.vfd.IPPort;
+import vproxy.vmirror.Mirror;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -14,9 +14,9 @@ import java.io.FileOutputStream;
 public class TLSMirror {
     public static void main(String[] args) throws Exception {
         if (OS.isWindows()) {
-            System.setProperty("vfd", "windows");
+            System.setProperty("vproxy/vfd", "windows");
         } else {
-            System.setProperty("vfd", "posix");
+            System.setProperty("vproxy/vfd", "posix");
         }
 
         JSON.Instance config = new ObjectBuilder()

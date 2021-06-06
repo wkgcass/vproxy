@@ -1,14 +1,14 @@
 package vproxy.util;
 
-import vfd.IP;
-import vfd.IPPort;
+import vproxy.base.connection.Connector;
+import vproxy.base.dns.Resolver;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.Callback;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 import vproxy.component.ssl.CertKey;
-import vproxybase.socks.AddressType;
-import vproxybase.connection.Connector;
-import vproxybase.dns.Resolver;
-import vproxybase.util.Callback;
-import vproxybase.util.Logger;
-import vproxybase.util.Utils;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 
 import java.io.BufferedReader;
 import java.io.File;

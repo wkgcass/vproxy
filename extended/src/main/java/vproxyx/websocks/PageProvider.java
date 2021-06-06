@@ -1,7 +1,7 @@
 package vproxyx.websocks;
 
-import vproxybase.selector.wrap.file.FileFD;
-import vproxybase.util.ByteArray;
+import vproxy.base.selector.wrap.file.FileFD;
+import vproxy.base.util.ByteArray;
 
 public interface PageProvider {
     class PageResult {

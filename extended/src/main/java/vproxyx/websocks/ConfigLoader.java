@@ -1,15 +1,15 @@
 package vproxyx.websocks;
 
-import vclient.HttpClient;
-import vclient.HttpResponse;
-import vfd.IP;
-import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
-import vproxybase.util.BlockCallback;
-import vproxybase.util.Logger;
-import vproxybase.util.Network;
-import vproxybase.util.Utils;
+import vproxy.base.util.BlockCallback;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Network;
+import vproxy.base.util.Utils;
+import vproxy.vclient.HttpClient;
+import vproxy.vclient.HttpResponse;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 
 import java.io.*;
 import java.nio.file.Files;

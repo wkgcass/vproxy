@@ -1,12 +1,12 @@
 package vproxy.poc;
 
-import vfd.IP;
-import vproxybase.dhcp.DHCPClientHelper;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.Callback;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.base.dhcp.DHCPClientHelper;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.Callback;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.util.Set;

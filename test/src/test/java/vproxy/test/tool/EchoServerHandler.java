@@ -1,10 +1,10 @@
 package vproxy.test.tool;
 
-import vfd.EventSet;
-import vfd.ServerSocketFD;
-import vfd.SocketFD;
-import vproxybase.selector.Handler;
-import vproxybase.selector.HandlerContext;
+import vproxy.base.selector.Handler;
+import vproxy.base.selector.HandlerContext;
+import vproxy.vfd.EventSet;
+import vproxy.vfd.ServerSocketFD;
+import vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

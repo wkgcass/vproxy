@@ -1,15 +1,15 @@
 package vproxyx.websocks;
 
-import vproxybase.http.HttpContext;
-import vproxybase.http.HttpProtocolHandler;
-import vproxybase.processor.http1.entity.Header;
-import vproxybase.processor.http1.entity.Request;
-import vproxybase.processor.http1.entity.Response;
-import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.util.ByteArray;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.Version;
+import vproxy.base.http.HttpContext;
+import vproxy.base.http.HttpProtocolHandler;
+import vproxy.base.processor.http1.entity.Header;
+import vproxy.base.processor.http1.entity.Request;
+import vproxy.base.processor.http1.entity.Response;
+import vproxy.base.protocol.ProtocolHandlerContext;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Version;
 
 import java.util.Date;
 import java.util.LinkedList;

@@ -1,10 +1,10 @@
 package vproxy.test.tool;
 
-import vfd.IPPort;
-import vfd.SocketFD;
-import vproxybase.connection.*;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Tuple;
+import vproxy.base.connection.*;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.Tuple;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

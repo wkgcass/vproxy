@@ -1,12 +1,12 @@
 package vproxy.poc;
 
-import vfd.EventSet;
-import vfd.FDProvider;
-import vfd.IPPort;
-import vfd.ServerSocketFD;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.test.tool.EchoServerHandler;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.vfd.EventSet;
+import vproxy.vfd.FDProvider;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.ServerSocketFD;
 
 import java.io.IOException;
 

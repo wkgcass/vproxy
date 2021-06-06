@@ -8,7 +8,7 @@ plugins {
 group 'vproxy'
 version loadVersion()
 
-mainClassName = 'vproxyapp.app.Main'
+mainClassName = 'vproxy.app.app.Main'
 
 jar {
     archiveName 'vproxy.jar'
@@ -137,7 +137,7 @@ dependencies {
 def loadVersion() {
     def PREFIX = "public static final String VERSION = \""
     def SUFFIX = "\"; // _THE_VERSION_"
-    def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/vproxybase/util/Version.java")
+    def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/vproxy/base/util/Version.java")
     def lines = ver.getText().split("\n")
     for (def line : lines) {
         line = line.trim()

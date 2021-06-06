@@ -1,7 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
-import vfd.IP;
+import vproxy.vfd.IP;
 
 import java.net.Inet6Address;
 import java.net.InetAddress;

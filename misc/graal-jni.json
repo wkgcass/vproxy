@@ -9,7 +9,7 @@
 		]
 	},
 	{
-		"name": "vfd.posix.FDInfoPrototypeObjectList",
+		"name": "vproxy.vfd.posix.FDInfoPrototypeObjectList",
 		"methods": [
 			{
 				"name": "add",
@@ -18,7 +18,7 @@
 		]
 	},
 	{
-		"name": "vfd.posix.SocketAddressIPv4",
+		"name": "vproxy.vfd.posix.SocketAddressIPv4",
 		"methods": [
 			{
 				"name": "<init>",
@@ -27,7 +27,7 @@
 		]
 	},
 	{
-		"name": "vfd.posix.SocketAddressIPv6",
+		"name": "vproxy.vfd.posix.SocketAddressIPv6",
 		"methods": [
 			{
 				"name": "<init>",
@@ -36,7 +36,7 @@
 		]
 	},
 	{
-		"name": "vfd.posix.SocketAddressUDS",
+		"name": "vproxy.vfd.posix.SocketAddressUDS",
 		"methods": [
 			{
 				"name": "<init>",
@@ -45,16 +45,16 @@
 		]
 	},
 	{
-		"name": "vfd.posix.UDPRecvResult",
+		"name": "vproxy.vfd.posix.UDPRecvResult",
 		"methods": [
 			{
 				"name": "<init>",
-				"parameterTypes": [ "vfd.posix.VSocketAddress", "int" ]
+				"parameterTypes": [ "vproxy.vfd.posix.VSocketAddress", "int" ]
 			}
 		]
 	},
 	{
-		"name": "vfd.TapInfo",
+		"name": "vproxy.vfd.TapInfo",
 		"methods": [
 			{
 				"name": "<init>",

@@ -16,7 +16,8 @@ import vjson.JSON;
 import vjson.deserializer.rule.*;
 import vjson.ex.JsonParseException;
 import vjson.listener.AbstractParserListener;
-import vjson.parser.*;
+import vjson.parser.ArrayParser;
+import vjson.parser.ObjectParser;
 
 import java.util.LinkedList;
 import java.util.function.BiConsumer;

@@ -1,6 +1,6 @@
 package vproxy.component.proxy;
 
-import vproxybase.connection.NetEventLoop;
+import vproxy.base.connection.NetEventLoop;
 
 public interface NetEventLoopProvider {
     NetEventLoop getHandleLoop(NetEventLoop acceptLoop);

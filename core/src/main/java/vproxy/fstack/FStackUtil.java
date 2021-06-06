@@ -1,9 +1,9 @@
 package vproxy.fstack;
 
-import vfd.VFDConfig;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.vfd.VFDConfig;
 
 import java.io.IOException;
 import java.util.Arrays;

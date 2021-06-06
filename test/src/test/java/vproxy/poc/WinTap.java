@@ -1,10 +1,10 @@
 package vproxy.poc;
 
-import vfd.TapDatagramFD;
-import vfd.windows.WindowsFDs;
-import vproxybase.util.ByteArray;
-import vproxybase.util.Utils;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.Utils;
+import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.TapDatagramFD;
+import vproxy.vfd.windows.WindowsFDs;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

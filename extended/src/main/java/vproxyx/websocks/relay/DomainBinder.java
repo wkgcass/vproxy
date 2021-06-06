@@ -1,10 +1,10 @@
 package vproxyx.websocks.relay;
 
-import vfd.IP;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.TimerEvent;
-import vproxybase.util.*;
-import vproxybase.util.crypto.CryptoUtils;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.TimerEvent;
+import vproxy.base.util.*;
+import vproxy.base.util.crypto.CryptoUtils;
+import vproxy.vfd.IP;
 
 import java.util.HashMap;
 import java.util.Map;

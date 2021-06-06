@@ -3,10 +3,10 @@ package vproxy.test.cases;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import vproxybase.selector.PeriodicEvent;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.TimerEvent;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.base.selector.PeriodicEvent;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.TimerEvent;
+import vproxy.base.util.thread.VProxyThread;
 
 import static org.junit.Assert.*;
 

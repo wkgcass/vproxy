@@ -1,10 +1,10 @@
 package vproxy.socks;
 
-import vproxybase.connection.Connector;
-import vproxybase.socks.AddressType;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Utils;
-import vproxybase.util.nio.ByteArrayChannel;
+import vproxy.base.connection.Connector;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.Utils;
+import vproxy.base.util.nio.ByteArrayChannel;
 
 import java.util.Arrays;
 

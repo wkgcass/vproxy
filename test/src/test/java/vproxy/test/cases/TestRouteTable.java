@@ -1,9 +1,9 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
-import vfd.IP;
-import vproxybase.util.Network;
-import vswitch.RouteTable;
+import vproxy.base.util.Network;
+import vproxy.vfd.IP;
+import vproxy.vswitch.RouteTable;
 
 import java.util.Arrays;
 import java.util.List;

@@ -1,11 +1,11 @@
 package vproxy.test.cases;
 
 import org.junit.*;
-import vclient.HttpClient;
-import vclient.HttpResponse;
-import vproxybase.util.BlockCallback;
-import vserver.HttpServer;
-import vserver.RoutingHandler;
+import vproxy.base.util.BlockCallback;
+import vproxy.vclient.HttpClient;
+import vproxy.vclient.HttpResponse;
+import vproxy.vserver.HttpServer;
+import vproxy.vserver.RoutingHandler;
 
 import java.io.IOException;
 

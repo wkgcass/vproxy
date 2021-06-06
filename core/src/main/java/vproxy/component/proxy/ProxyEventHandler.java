@@ -1,6 +1,6 @@
 package vproxy.component.proxy;
 
-import vproxybase.connection.ServerSock;
+import vproxy.base.connection.ServerSock;
 
 public interface ProxyEventHandler {
     void serverRemoved(ServerSock server);

@@ -1,7 +1,7 @@
 package vproxy.pool;
 
-import vproxybase.connection.ConnectableConnection;
-import vproxybase.util.Logger;
+import vproxy.base.connection.ConnectableConnection;
+import vproxy.base.util.Logger;
 
 public class PoolCallback {
     private final ConnectionPool pool;

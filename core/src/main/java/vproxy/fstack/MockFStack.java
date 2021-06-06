@@ -1,7 +1,7 @@
 package vproxy.fstack;
 
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
 
 import java.util.List;
 

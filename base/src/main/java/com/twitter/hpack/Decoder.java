@@ -16,7 +16,7 @@
 package com.twitter.hpack;
 
 import com.twitter.hpack.HpackUtil.IndexType;
-import vproxybase.util.Utils;
+import vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;

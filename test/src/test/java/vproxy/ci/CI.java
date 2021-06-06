@@ -13,17 +13,17 @@ import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
 import org.junit.*;
-import vfd.IPPort;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
+import vproxy.app.app.Application;
+import vproxy.base.Config;
+import vproxy.base.connection.ServerSock;
+import vproxy.base.util.AnnotationKeys;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Tuple;
+import vproxy.base.util.Utils;
 import vproxy.test.cases.TestSSL;
-import vproxyapp.app.Application;
-import vproxybase.Config;
-import vproxybase.connection.ServerSock;
-import vproxybase.util.AnnotationKeys;
-import vproxybase.util.Logger;
-import vproxybase.util.Tuple;
-import vproxybase.util.Utils;
+import vproxy.vfd.IPPort;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -168,7 +168,7 @@ public class CI {
             password = "123456";
 
         if (Utils.getSystemProperty("vproxy_exists") == null) {
-            vproxyapp.app.Main.main(new String[]{
+            vproxy.app.app.Main.main(new String[]{
                 "resp-controller", "localhost:" + vproxyRESPPort, password,
                 "http-controller", "localhost:" + vproxyHTTPPort,
                 "allowSystemCallInNonStdIOController",

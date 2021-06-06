@@ -4,19 +4,19 @@ module vproxy.core {
 
     requires vproxy.base;
 
-    exports vproxy.util;
-    exports vproxy.fstack;
-    exports vproxy.component.ssl;
     exports vproxy.component.app;
     exports vproxy.component.proxy;
-    exports vproxy.component.svrgroup;
     exports vproxy.component.secure;
-    exports vproxy.socks;
+    exports vproxy.component.ssl;
+    exports vproxy.component.svrgroup;
     exports vproxy.dns;
+    exports vproxy.fstack;
     exports vproxy.pool;
-    exports vswitch;
-    exports vswitch.util;
-    exports vswitch.iface;
-    exports vswitch.stack;
-    exports vswitch.stack.fd;
+    exports vproxy.socks;
+    exports vproxy.util;
+    exports vproxy.vswitch;
+    exports vproxy.vswitch.iface;
+    exports vproxy.vswitch.stack;
+    exports vproxy.vswitch.stack.fd;
+    exports vproxy.vswitch.util;
 }

@@ -1,6 +1,6 @@
 package vproxy.poc;
 
-import vproxyapp.app.cmd.Command;
+import vproxy.app.app.cmd.Command;
 
 public class CommandParser {
     public static void main(String[] args) throws Exception {

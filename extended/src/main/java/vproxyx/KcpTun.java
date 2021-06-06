@@ -1,20 +1,20 @@
 package vproxyx;
 
-import vfd.IP;
-import vfd.IPPort;
+import vproxy.base.connection.*;
+import vproxy.base.dns.Resolver;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
+import vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
+import vproxy.base.selector.wrap.kcp.KCPFDs;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
-import vproxybase.connection.*;
-import vproxybase.dns.Resolver;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.selector.wrap.h2streamed.H2StreamedClientFDs;
-import vproxybase.selector.wrap.h2streamed.H2StreamedServerFDs;
-import vproxybase.selector.wrap.kcp.KCPFDs;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 import vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.io.IOException;

@@ -9,11 +9,18 @@ if base_dir.endswith('/') or base_dir.endswith('\\'):
     base_dir = base_dir[0:-1]
 
 def build(ls, prefix, base):
-    if prefix != '':
-        ls.append(prefix)
-        prefix += '.'
     base += '/'
     files = os.listdir(base)
+    files.sort()
+    has_java = False
+    for f in files:
+        if f.endswith('.java') and f != 'module-info.java' and f != 'package-info.java':
+            has_java = True
+            break
+    if prefix != '':
+        if has_java:
+            ls.append(prefix)
+        prefix += '.'
     for f in files:
         if os.path.isdir(base + f):
             build(ls, prefix + f, base + f)

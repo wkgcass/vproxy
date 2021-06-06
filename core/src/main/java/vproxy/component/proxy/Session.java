@@ -1,6 +1,6 @@
 package vproxy.component.proxy;
 
-import vproxybase.connection.Connection;
+import vproxy.base.connection.Connection;
 
 public class Session {
     public final Connection active;

@@ -1,14 +1,14 @@
 package vproxyx.websocks;
 
-import vfd.IP;
-import vproxybase.connection.Connection;
-import vproxybase.http.HttpContext;
-import vproxybase.http.HttpProtocolHandler;
-import vproxybase.processor.http1.entity.Header;
-import vproxybase.processor.http1.entity.Request;
-import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.util.LogType;
-import vproxybase.util.Logger;
+import vproxy.base.connection.Connection;
+import vproxy.base.http.HttpContext;
+import vproxy.base.http.HttpProtocolHandler;
+import vproxy.base.processor.http1.entity.Header;
+import vproxy.base.processor.http1.entity.Request;
+import vproxy.base.protocol.ProtocolHandlerContext;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.net.Inet4Address;

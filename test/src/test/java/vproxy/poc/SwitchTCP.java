@@ -1,22 +1,22 @@
 package vproxy.poc;
 
-import vfd.FDs;
-import vfd.IP;
-import vfd.IPPort;
-import vfd.MacAddress;
+import vproxy.base.component.elgroup.EventLoopGroup;
+import vproxy.base.component.elgroup.EventLoopWrapper;
+import vproxy.base.connection.ServerSock;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.Network;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.test.tool.CommandServer;
-import vproxybase.component.elgroup.EventLoopGroup;
-import vproxybase.component.elgroup.EventLoopWrapper;
-import vproxybase.connection.ServerSock;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.ByteArray;
-import vproxybase.util.Network;
-import vserver.impl.Http1ServerImpl;
-import vswitch.Switch;
-import vswitch.Table;
-import vswitch.stack.fd.VSwitchFDContext;
-import vswitch.stack.fd.VSwitchFDs;
+import vproxy.vfd.FDs;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.MacAddress;
+import vproxy.vserver.impl.Http1ServerImpl;
+import vproxy.vswitch.Switch;
+import vproxy.vswitch.Table;
+import vproxy.vswitch.stack.fd.VSwitchFDContext;
+import vproxy.vswitch.stack.fd.VSwitchFDs;
 
 import java.io.File;
 import java.io.FileOutputStream;

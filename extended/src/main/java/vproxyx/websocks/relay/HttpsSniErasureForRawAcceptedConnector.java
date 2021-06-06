@@ -1,9 +1,9 @@
 package vproxyx.websocks.relay;
 
-import vfd.IPPort;
-import vproxybase.connection.ConnectableConnection;
-import vproxybase.connection.Connection;
-import vproxybase.connection.NetEventLoop;
+import vproxy.base.connection.ConnectableConnection;
+import vproxy.base.connection.Connection;
+import vproxy.base.connection.NetEventLoop;
+import vproxy.vfd.IPPort;
 import vproxyx.websocks.AlreadyConnectedConnector;
 
 public class HttpsSniErasureForRawAcceptedConnector extends AlreadyConnectedConnector {

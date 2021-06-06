@@ -1,18 +1,18 @@
 package vproxyx;
 
-import vclient.HttpClient;
-import vfd.IP;
-import vfd.IPPort;
-import vfd.SocketFD;
-import vfd.VFDConfig;
-import vproxybase.Config;
-import vproxybase.connection.*;
-import vproxybase.dhcp.DHCPClientHelper;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.*;
-import vproxybase.util.nio.ByteArrayChannel;
-import vproxybase.util.thread.VProxyThread;
-import vserver.HttpServer;
+import vproxy.base.Config;
+import vproxy.base.connection.*;
+import vproxy.base.dhcp.DHCPClientHelper;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.*;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.thread.VProxyThread;
+import vproxy.vclient.HttpClient;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.SocketFD;
+import vproxy.vfd.VFDConfig;
+import vproxy.vserver.HttpServer;
 
 import java.io.IOException;
 import java.util.Set;

@@ -1,24 +1,24 @@
 package vproxy.test.cases;
 
 import org.junit.*;
-import vfd.IP;
-import vfd.IPPort;
+import vproxy.base.Config;
+import vproxy.base.component.check.HealthCheckConfig;
+import vproxy.base.component.elgroup.EventLoopGroup;
+import vproxy.base.component.svrgroup.Method;
+import vproxy.base.component.svrgroup.ServerGroup;
+import vproxy.base.connection.NetEventLoop;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.socks.AddressType;
+import vproxy.base.util.AnnotationKeys;
+import vproxy.base.util.Annotations;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
-import vproxybase.socks.AddressType;
 import vproxy.test.tool.IdServer;
 import vproxy.test.tool.Socks5Client;
-import vproxybase.Config;
-import vproxybase.component.check.HealthCheckConfig;
-import vproxybase.component.elgroup.EventLoopGroup;
-import vproxybase.component.svrgroup.Method;
-import vproxybase.component.svrgroup.ServerGroup;
-import vproxybase.connection.NetEventLoop;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.AnnotationKeys;
-import vproxybase.util.Annotations;
-import vproxybase.util.thread.VProxyThread;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 
 import java.util.LinkedList;
 import java.util.List;

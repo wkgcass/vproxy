@@ -1,6 +1,6 @@
 package vproxy.poc;
 
-import vproxybase.dns.Resolver;
+import vproxy.base.dns.Resolver;
 
 public class RunAll {
     public static void main(String[] args) throws Exception {

@@ -2,7 +2,7 @@ package vproxy.test.cases;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import vproxybase.dns.Resolver;
+import vproxy.base.dns.Resolver;
 
 public class BeforeAll {
     @BeforeClass

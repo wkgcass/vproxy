@@ -1,15 +1,15 @@
 package vproxy.poc;
 
-import vclient.HttpClient;
-import vclient.HttpResponse;
-import vfd.IP;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
 import vjson.util.Transformer;
-import vproxybase.util.Logger;
-import vserver.HttpServer;
-import vserver.RoutingContext;
-import vserver.Tool;
+import vproxy.base.util.Logger;
+import vproxy.vclient.HttpClient;
+import vproxy.vclient.HttpResponse;
+import vproxy.vfd.IP;
+import vproxy.vserver.HttpServer;
+import vproxy.vserver.RoutingContext;
+import vproxy.vserver.Tool;
 
 import java.io.IOException;
 import java.util.LinkedList;

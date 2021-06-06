@@ -1,19 +1,17 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
-import vfd.IP;
-import vfd.IPPort;
-import vproxybase.processor.Processor;
-import vproxybase.processor.http1.HttpContext;
-import vproxybase.processor.http1.HttpProcessor;
-import vproxybase.processor.http1.HttpSubContext;
-import vproxybase.processor.http1.entity.Header;
-import vproxybase.processor.http1.entity.Request;
-import vproxybase.processor.http1.entity.Response;
-import vproxybase.util.ByteArray;
-import vproxybase.util.Utils;
+import vproxy.base.processor.Processor;
+import vproxy.base.processor.http1.HttpContext;
+import vproxy.base.processor.http1.HttpProcessor;
+import vproxy.base.processor.http1.HttpSubContext;
+import vproxy.base.processor.http1.entity.Header;
+import vproxy.base.processor.http1.entity.Request;
+import vproxy.base.processor.http1.entity.Response;
+import vproxy.base.util.ByteArray;
+import vproxy.vfd.IP;
+import vproxy.vfd.IPPort;
 
-import java.io.ByteArrayOutputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;
 import java.util.LinkedList;

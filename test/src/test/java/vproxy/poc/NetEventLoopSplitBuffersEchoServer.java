@@ -1,14 +1,14 @@
 package vproxy.poc;
 
-import vfd.IPPort;
-import vfd.SocketFD;
-import vproxybase.connection.*;
-import vproxybase.selector.SelectorEventLoop;
-import vproxybase.util.RingBuffer;
-import vproxybase.util.Tuple;
-import vproxybase.util.Utils;
-import vproxybase.util.thread.VProxyThread;
-import vproxybase.util.nio.ByteArrayChannel;
+import vproxy.base.connection.*;
+import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.RingBuffer;
+import vproxy.base.util.Tuple;
+import vproxy.base.util.Utils;
+import vproxy.base.util.nio.ByteArrayChannel;
+import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.IPPort;
+import vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

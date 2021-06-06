@@ -1,18 +1,18 @@
 package vproxy.component.proxy;
 
-import vfd.SocketFD;
-import vproxybase.connection.*;
-import vproxybase.processor.ConnectionDelegate;
-import vproxybase.processor.Processor;
-import vproxybase.protocol.ProtocolConnectionHandler;
-import vproxybase.protocol.ProtocolHandler;
-import vproxybase.protocol.ProtocolHandlerContext;
-import vproxybase.util.*;
-import vproxybase.util.ringbuffer.ByteBufferRingBuffer;
-import vproxybase.util.ringbuffer.ProxyOutputRingBuffer;
-import vproxybase.util.ringbuffer.SSLUtils;
-import vproxybase.util.ringbuffer.ssl.SSL;
-import vproxybase.util.ringbuffer.ssl.SSLEngineBuilder;
+import vproxy.base.connection.*;
+import vproxy.base.processor.ConnectionDelegate;
+import vproxy.base.processor.Processor;
+import vproxy.base.protocol.ProtocolConnectionHandler;
+import vproxy.base.protocol.ProtocolHandler;
+import vproxy.base.protocol.ProtocolHandlerContext;
+import vproxy.base.util.*;
+import vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
+import vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
+import vproxy.base.util.ringbuffer.SSLUtils;
+import vproxy.base.util.ringbuffer.ssl.SSL;
+import vproxy.base.util.ringbuffer.ssl.SSLEngineBuilder;
+import vproxy.vfd.SocketFD;
 
 import javax.net.ssl.SSLParameters;
 import java.io.IOException;
