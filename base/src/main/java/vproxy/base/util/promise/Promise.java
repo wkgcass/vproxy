@@ -50,7 +50,7 @@ public class Promise<T> {
         this.handler.accept(null, err);
     }
 
-    private void setHandler(BiConsumer<T, Throwable> handler) {
+    public void setHandler(BiConsumer<T, Throwable> handler) {
         synchronized (this) {
             if (this.handler != null) {
                 throw new IllegalStateException("handler is already set");

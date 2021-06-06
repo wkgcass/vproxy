@@ -32,6 +32,12 @@ subprojects {
             freeCompilerArgs += '-Xjvm-default=enable'
         }
     }
+    compileTestKotlin {
+        kotlinOptions {
+            jvmTarget = '11'
+            freeCompilerArgs += '-Xjvm-default=enable'
+        }
+    }
     compileJava.options.encoding = "UTF-8"
     compileTestJava.options.encoding = "UTF-8"
 
@@ -54,6 +60,7 @@ project(':base') {
 
     dependencies {
         compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.4.31'
+        compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '1.4.3'
     }
 }
 

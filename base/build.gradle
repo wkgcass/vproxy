@@ -4,6 +4,7 @@ compileJava {
     }
     options.compilerArgs << '--add-modules' << [
             'kotlin.stdlib',
+            'kotlinx.coroutines.core.jvm',
     ].join(',')
 }
 
