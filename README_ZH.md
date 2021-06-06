@@ -137,6 +137,8 @@ cd ./misc/auto-setup/
 ./auto-verify.sh
 ```
 
+</details>
+
 ## 目标
 
 * 零依赖: 除了java和kotlin标准库外不加任何依赖。
