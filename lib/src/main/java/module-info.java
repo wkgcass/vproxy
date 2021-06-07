@@ -1,6 +1,7 @@
 module vproxy.lib {
     requires vproxy.base;
-    requires vproxy.core;
+    requires kotlin.stdlib;
+    requires kotlinx.coroutines.core.jvm;
 
     exports vproxy.vclient;
     exports vproxy.vclient.impl;
@@ -10,4 +11,7 @@ module vproxy.lib {
     exports vproxy.vserver.impl;
     exports vproxy.vserver.route;
     exports vproxy.vserver.util;
+
+    exports vproxy.lib.tcp;
+    exports vproxy.lib.common;
 }

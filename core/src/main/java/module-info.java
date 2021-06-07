@@ -3,6 +3,7 @@ module vproxy.core {
     requires jdk.crypto.cryptoki;
 
     requires vproxy.base;
+    requires vproxy.lib;
 
     exports vproxy.component.app;
     exports vproxy.component.proxy;

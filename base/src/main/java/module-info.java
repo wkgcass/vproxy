@@ -47,7 +47,6 @@ module vproxy.base {
     exports vproxy.base.redis.application;
     exports vproxy.base.redis.entity;
     exports vproxy.base.selector;
-    exports vproxy.base.selector.coroutine;
     exports vproxy.base.selector.wrap;
     exports vproxy.base.selector.wrap.arqudp;
     exports vproxy.base.selector.wrap.blocking;

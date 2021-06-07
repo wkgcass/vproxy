@@ -55,12 +55,7 @@ public class Request {
         }
         if (chunks != null) {
             for (Chunk ch : chunks) {
-                ByteArray chBytes = ByteArray.from((Integer.toHexString(ch.size) + ";" + ch.extension + "\r\n").getBytes());
-                if (ch.size != 0) {
-                    chBytes = chBytes.concat(ch.content);
-                    chBytes = chBytes.concat(ByteArray.from("\r\n".getBytes()));
-                }
-                ret = ret.concat(chBytes);
+                ret = ret.concat(ch.toByteArray());
             }
         }
         if (trailers != null) {
@@ -68,6 +63,7 @@ public class Request {
             for (Header h : trailers) {
                 textPart.append(h.key).append(": ").append(h.value).append("\r\n");
             }
+            ret = ret.concat(ByteArray.from(textPart.toString()));
         }
         if (chunks != null || trailers != null) {
             ret = ret.concat(ByteArray.from("\r\n".getBytes()));

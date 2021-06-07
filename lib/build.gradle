@@ -4,7 +4,8 @@ compileJava {
     }
     options.compilerArgs << '--add-modules' << [
             'vproxy.base',
-            'vproxy.core',
+            'kotlin.stdlib',
+            'kotlinx.coroutines.core.jvm',
     ].join(',')
 }
 

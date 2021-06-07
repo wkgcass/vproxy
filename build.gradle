@@ -64,16 +64,20 @@ project(':base') {
     }
 }
 
-project(':core') {
+project(':lib') {
+    compileKotlin {
+        destinationDir = compileJava.destinationDir
+    }
+
     dependencies {
         compile project(':base')
     }
 }
 
-project(':lib') {
+project(':core') {
     dependencies {
         compile project(':base')
-        compile project(':core')
+        compile project(':lib')
     }
 }
 

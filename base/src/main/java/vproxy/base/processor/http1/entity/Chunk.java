@@ -21,7 +21,10 @@ public class Chunk {
         if (extension != null && !extension.isBlank()) {
             ext = ";" + extension;
         }
-        return ByteArray.from((Integer.toHexString(size) + ext + "\r\n").getBytes())
-            .concat(content).concat(ByteArray.from("\r\n".getBytes()));
+        ByteArray ret = ByteArray.from((Integer.toHexString(size) + ext + "\r\n").getBytes());
+        if (size == 0) {
+            return ret;
+        }
+        return ret.concat(content).concat(ByteArray.from("\r\n".getBytes()));
     }
 }

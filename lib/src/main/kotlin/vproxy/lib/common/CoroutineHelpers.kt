@@ -1,12 +1,15 @@
-package vproxy.base.selector.coroutine
+package vproxy.lib.common
 
-import kotlinx.coroutines.CancellableContinuation
-import kotlinx.coroutines.CoroutineDispatcher
-import kotlinx.coroutines.asCoroutineDispatcher
-import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.*
+import vproxy.base.connection.Connection
+import vproxy.base.connection.NetEventLoop
+import vproxy.base.connection.ServerSock
 import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.selector.TimerEvent
+import vproxy.base.util.Callback
 import vproxy.base.util.promise.Promise
+import vproxy.lib.tcp.CoroutineConnection
+import vproxy.lib.tcp.CoroutineServerSock
 import java.time.Duration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicReference
@@ -133,8 +136,42 @@ suspend fun <T> Promise<T>.await(): T {
   }
 }
 
-suspend fun delay(millis: Int) {
+suspend fun <T, E : Exception> awaitCallback(f: (Callback<T, E>) -> Unit): T {
+  return suspendCancellableCoroutine { cont: CancellableContinuation<T> ->
+    f(object : Callback<T, E>() {
+      override fun onSucceeded(value: T) {
+        cont.resume(value)
+      }
+
+      override fun onFailed(err: E) {
+        cont.resumeWithException(err)
+      }
+    })
+  }
+}
+
+suspend fun sleep(millis: Int) {
   return suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
     SelectorEventLoop.current().delay(millis) { cont.resume(Unit) }
   }
+}
+
+fun launchGlobal(exec: suspend CoroutineScope.() -> Unit) {
+  val loop = SelectorEventLoop.current()
+  if (loop == null) {
+    throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
+  }
+  loop.launch(exec)
+}
+
+fun SelectorEventLoop.launch(exec: suspend CoroutineScope.() -> Unit) {
+  GlobalScope.launch(this.dispatcher(), CoroutineStart.DEFAULT, exec)
+}
+
+fun Connection.fitCoroutine(loop: NetEventLoop): CoroutineConnection {
+  return CoroutineConnection(loop, this)
+}
+
+fun ServerSock.fitCoroutine(loop: NetEventLoop): CoroutineServerSock {
+  return CoroutineServerSock(loop, this)
 }

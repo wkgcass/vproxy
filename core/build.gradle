@@ -4,6 +4,7 @@ compileJava {
     }
     options.compilerArgs << '--add-modules' << [
             'vproxy.base',
+            'vproxy.lib',
     ].join(',')
 }
 
