@@ -14,11 +14,9 @@ public abstract class AbstractParser<T> {
     private final byte[] bytes = Utils.allocateByteArrayInitZero(1);
     private final ByteArrayChannel chnl = ByteArrayChannel.fromEmpty(bytes);
     private final Set<Integer> terminateStates;
-    private final Set<Integer> terminateRegardlessOfInputStates;
 
-    protected AbstractParser(Set<Integer> terminateStates, Set<Integer> terminateRegardlessOfInputStates) {
+    protected AbstractParser(Set<Integer> terminateStates) {
         this.terminateStates = terminateStates;
-        this.terminateRegardlessOfInputStates = terminateRegardlessOfInputStates;
     }
 
     public int feed(RingBuffer buffer) {
@@ -31,7 +29,7 @@ public abstract class AbstractParser<T> {
             if (state == -1) { // parse failed, return -1
                 return -1;
             }
-            if (terminateRegardlessOfInputStates.contains(state))
+            if (terminateStates.contains(state))
                 break;
         }
         if (terminateStates.contains(state)) {

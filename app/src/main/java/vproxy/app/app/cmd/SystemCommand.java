@@ -400,9 +400,9 @@ public class SystemCommand {
                     continue;
                 }
                 controllers.add(c);
-                sb.append(c.alias);
+                sb.append(c.getAlias());
                 if (detail) {
-                    sb.append(" -> ").append(c.address.toInetSocketAddress());
+                    sb.append(" -> ").append(c.getAddress().toInetSocketAddress());
                 }
             } else {
                 //noinspection ConstantConditions
@@ -416,9 +416,9 @@ public class SystemCommand {
                     continue;
                 }
                 controllers.add(c);
-                sb.append(c.alias);
+                sb.append(c.getAlias());
                 if (detail) {
-                    sb.append(" -> ").append(c.path.path);
+                    sb.append(" -> ").append(c.getPath().path);
                 }
             }
         }

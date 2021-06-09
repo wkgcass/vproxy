@@ -1,31 +1,51 @@
 package vproxy.lib.http1
 
+import kotlinx.coroutines.suspendCancellableCoroutine
+import vjson.JSON
+import vproxy.base.connection.ConnectableConnection
+import vproxy.base.connection.ConnectionOpts
+import vproxy.base.dns.Resolver
 import vproxy.base.http.HttpRespParser
 import vproxy.base.processor.http1.entity.Header
 import vproxy.base.processor.http1.entity.Request
 import vproxy.base.processor.http1.entity.Response
+import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.ByteArray
+import vproxy.base.util.Callback
+import vproxy.base.util.RingBuffer
+import vproxy.base.util.promise.Promise
+import vproxy.base.util.ringbuffer.SSLUtils
+import vproxy.base.util.thread.VProxyThread
+import vproxy.lib.common.execute
+import vproxy.lib.common.fitCoroutine
 import vproxy.lib.tcp.CoroutineConnection
+import vproxy.vfd.IP
+import vproxy.vfd.IPPort
 import java.io.IOException
+import java.net.UnknownHostException
+import javax.net.ssl.SSLEngine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
+@Suppress("LiftReturnOrAssignment")
 class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
   fun get(url: String): CoroutineHttp1Request {
-    return newRequest("GET", url)
+    return request("GET", url)
   }
 
   fun post(url: String): CoroutineHttp1Request {
-    return newRequest("POST", url)
+    return request("POST", url)
   }
 
   fun put(url: String): CoroutineHttp1Request {
-    return newRequest("PUT", url)
+    return request("PUT", url)
   }
 
   fun del(url: String): CoroutineHttp1Request {
-    return newRequest("DELETE", url)
+    return request("DELETE", url)
   }
 
-  fun newRequest(method: String, url: String): CoroutineHttp1Request {
+  fun request(method: String, url: String): CoroutineHttp1Request {
     return CoroutineHttp1Request(method, url)
   }
 
@@ -44,6 +64,10 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
 
     suspend fun send(body: String) {
       send(ByteArray.from(body))
+    }
+
+    suspend fun send(json: JSON.Instance<*>) {
+      send(json.stringify())
     }
 
     @Suppress("DuplicatedCode")
@@ -84,6 +108,160 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
       }
       // done
       return parser.result
+    }
+  }
+
+  @Suppress("HttpUrlsUsage", "CascadeIf")
+  companion object {
+    @JvmStatic
+    fun simpleGet(full: String): Promise<ByteArray> {
+      val invokerLoop = SelectorEventLoop.current()
+
+      val protocolAndHostAndPort: String
+      val uri: String
+
+      val protocol: String
+      val hostAndPortAndUri: String
+      if (full.startsWith("http://")) {
+        protocol = "http://"
+        hostAndPortAndUri = full.substring("http://".length)
+      } else if (full.startsWith("https://")) {
+        protocol = "https://"
+        hostAndPortAndUri = full.substring("https://".length)
+      } else {
+        throw Exception("unknown protocol in $full")
+      }
+      if (hostAndPortAndUri.contains("/")) {
+        protocolAndHostAndPort = protocol + hostAndPortAndUri.substring(0, hostAndPortAndUri.indexOf("/"))
+        uri = hostAndPortAndUri.substring(hostAndPortAndUri.indexOf("/"))
+      } else {
+        protocolAndHostAndPort = hostAndPortAndUri
+        uri = "/"
+      }
+
+      val loop: SelectorEventLoop
+      if (invokerLoop == null) {
+        loop = SelectorEventLoop.open()
+        loop.ensureNetEventLoop()
+      } else {
+        loop = invokerLoop
+      }
+      loop.loop { VProxyThread.create(it, "http1-simple-get") }
+
+      return loop.execute {
+        val conn = create(protocolAndHostAndPort)
+        conn.conn.setTimeout(5_000)
+        conn.get(uri).send()
+        val resp = conn.readResponse()
+        val ret: ByteArray
+        if (resp.statusCode != 200) {
+          throw IOException("request failed: response status is " + resp.statusCode + " instead of 200")
+        } else if (resp.body == null) {
+          ret = ByteArray.allocate(0)
+        } else {
+          ret = resp.body
+        }
+        if (invokerLoop == null) { // which means a new loop is created
+          loop.nextTick { loop.close() } // use nextTick to let the promise finish
+        }
+        ret
+      }
+    }
+
+    suspend fun create(protocolAndHostAndPort: String): CoroutineHttp1ClientConnection {
+      val ssl: Boolean
+      val hostAndPort: String
+      val host: String
+      val port: Int
+
+      if (protocolAndHostAndPort.startsWith("http://")) {
+        ssl = false
+        hostAndPort = protocolAndHostAndPort.substring("http://".length)
+      } else if (protocolAndHostAndPort.startsWith("https://")) {
+        ssl = true
+        hostAndPort = protocolAndHostAndPort.substring("https://".length)
+      } else {
+        ssl = false
+        hostAndPort = protocolAndHostAndPort
+      }
+      if (IP.isIpLiteral(hostAndPort)) {
+        host = hostAndPort
+        port = if (ssl) {
+          443
+        } else {
+          80
+        }
+      } else if (hostAndPort.contains(":")) {
+        host = hostAndPort.substring(0, hostAndPort.lastIndexOf(":"))
+        val portStr = hostAndPort.substring(hostAndPort.lastIndexOf(":") + 1)
+        try {
+          port = Integer.parseInt(portStr)
+        } catch (e: NumberFormatException) {
+          throw IllegalArgumentException("invalid port number")
+        }
+      } else {
+        host = hostAndPort
+        port = if (ssl) {
+          443
+        } else {
+          80
+        }
+      }
+
+      // resolve
+      val ip = if (IP.isIpLiteral(host)) {
+        IP.from(host)
+      } else {
+        suspendCancellableCoroutine { cont ->
+          Resolver.getDefault().resolve(host, object : Callback<IP, UnknownHostException>() {
+            override fun onSucceeded(value: IP) {
+              cont.resume(value)
+            }
+
+            override fun onFailed(err: UnknownHostException) {
+              cont.resumeWithException(err)
+            }
+          })
+        }
+      }
+
+      // now try to connect
+      if (ssl) {
+        val sslContext = SSLUtils.getDefaultClientSSLContext()
+        val engine: SSLEngine
+        if (IP.isIpLiteral(host)) {
+          engine = sslContext.createSSLEngine()
+        } else {
+          engine = sslContext.createSSLEngine(host, port)
+        }
+        return create(IPPort(ip, port), engine)
+      } else {
+        return create(IPPort(ip, port))
+      }
+    }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    suspend fun create(ipport: IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
+      val pair = SSLUtils.genbuf(
+        engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
+        SelectorEventLoop.current(), ipport
+      )
+      val conn = ConnectableConnection.create(
+        ipport, ConnectionOpts(),
+        pair.left, pair.right
+      ).fitCoroutine()
+      conn.connect()
+      return conn.asHttp1ClientConnection()
+    }
+
+    @Suppress("BlockingMethodInNonBlockingContext")
+    suspend fun create(ipport: IPPort): CoroutineHttp1ClientConnection {
+      val conn = ConnectableConnection.create(
+        ipport, ConnectionOpts(),
+        RingBuffer.allocate(16384), RingBuffer.allocate(16384)
+      ).fitCoroutine()
+      conn.connect()
+      return conn.asHttp1ClientConnection()
     }
   }
 }

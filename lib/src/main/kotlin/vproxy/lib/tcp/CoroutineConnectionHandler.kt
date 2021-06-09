@@ -6,6 +6,7 @@ import java.io.EOFException
 import java.io.IOException
 
 class CoroutineConnectionHandler : ConnectionHandler {
+  internal var willBeDetached = false
   internal var err: IOException? = null
   internal var eof: Boolean = false
   internal var readableEvent: ((err: IOException?) -> Unit)? = null
@@ -58,6 +59,9 @@ class CoroutineConnectionHandler : ConnectionHandler {
 
   override fun removed(ctx: ConnectionHandlerContext) {
     if (ctx.connection.isClosed) {
+      return
+    }
+    if (willBeDetached) {
       return
     }
     exception(ctx, IOException("removed from event loop"))

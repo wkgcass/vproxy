@@ -1,5 +1,7 @@
 package vproxy.base.util;
 
+import vjson.util.ObjectBuilder;
+
 import java.util.Iterator;
 import java.util.LinkedList;
 
@@ -15,6 +17,12 @@ public class Tree<BRANCH, LEAF> {
             this.parent = parent;
             this.data = data;
         }
+
+        @Override
+        void buildObject(ObjectBuilder ob) {
+            ob.put("data", String.valueOf(data));
+            super.buildObject(ob);
+        }
     }
 
     public static class Leaf<BRANCH, LEAF> {
@@ -24,6 +32,10 @@ public class Tree<BRANCH, LEAF> {
         Leaf(Tree<BRANCH, LEAF> parent, LEAF data) {
             this.parent = parent;
             this.data = data;
+        }
+
+        void buildObject(ObjectBuilder ob) {
+            ob.put("data", String.valueOf(data));
         }
     }
 
@@ -94,5 +106,25 @@ public class Tree<BRANCH, LEAF> {
                 }
             };
         };
+    }
+
+    @Override
+    public String toString() {
+        ObjectBuilder ob = new ObjectBuilder();
+        buildObject(ob);
+        return ob.build().pretty();
+    }
+
+    void buildObject(ObjectBuilder ob) {
+        ob.putArray("leaves", ab -> {
+            for (var leaf : leaves) {
+                ab.addObject(leaf::buildObject);
+            }
+        });
+        ob.putArray("branches", ab -> {
+            for (var br : branches) {
+                ab.addObject(br::buildObject);
+            }
+        });
     }
 }

@@ -14,9 +14,7 @@ import vproxy.base.util.Utils;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
-import vproxy.vclient.ClientContext;
-import vproxy.vclient.HttpClient;
-import vproxy.vclient.impl.Http1ClientImpl;
+import vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.IPv4;
@@ -279,30 +277,17 @@ public class AgentDNSServer extends DNSServer {
         }
         // see ConfigProcessor.java
         SharedData data = (SharedData) svr.getData();
-        HttpClient cli = new Http1ClientImpl(svr.remote,
-            new HttpClient.Options()
-                .setTimeout(5_000)
-                .setClientContext(new ClientContext(eventLoopGroup.next()))
-                .setSSLContext(
-                    data.useSSL ? WebSocksUtils.getSslContext() : null
-                ));
-        cli.get("/tools/resolve?domain=" + domain).send((err, resp) -> {
-            cli.close(); // close the cli on response
+        CoroutineHttp1ClientConnection.simpleGet((data.useSSL ? "https" : "http") + "://"
+            + svr.remote.formatToIPPortString() + "/tools/resolve?domain=" + domain).setHandler((bytes, err) -> {
             if (err != null) {
-                Logger.error(LogType.CONN_ERROR, "request " + svr.remote + " to resolve " + domain + "failed", err);
+                Logger.error(LogType.CONN_ERROR, "request " + svr.remote + " to resolve " + domain + " failed", err);
                 cb.failed(new UnknownHostException(Utils.formatErr(err) + " - " + domain));
-                return;
-            }
-            if (resp.status() != 200) {
-                String msg = "http dns response status is not 200 for resolving " + domain + " via " + svr.remote;
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, msg);
-                cb.failed(new UnknownHostException(msg));
                 return;
             }
             String ip;
             byte[] ipBytes;
             try {
-                JSON.Object ins = (JSON.Object) resp.bodyAsJson();
+                var ins = (JSON.Object) JSON.parse(new String(bytes.toJavaArray()));
                 JSON.Array arr = ins.getArray("addresses");
                 ip = arr.getString(0);
                 ipBytes = IP.parseIpString(ip);
@@ -362,6 +347,7 @@ public class AgentDNSServer extends DNSServer {
         }
     }
 
+    @SuppressWarnings("DuplicatedCode")
     private void respond(DNSPacket p, String domain, IP result, IPPort remote) {
         Logger.alert("[DNS] respond " + domain + " -> " + result.formatToIPString() + " to " + remote.formatToIPPortString());
 

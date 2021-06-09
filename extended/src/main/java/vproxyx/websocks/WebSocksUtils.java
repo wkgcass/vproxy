@@ -72,7 +72,6 @@ public class WebSocksUtils {
     public static AgentDNSServer agentDNSServer = null;
 
     public static void sendWebSocketFrame(RingBuffer outBuffer) {
-        // noinspection TrivialFunctionalExpressionUsage
         assert ((Predicate<Void>) v -> {
             // for debug purpose
             // we set the 3rd to 10th byte to 0....3

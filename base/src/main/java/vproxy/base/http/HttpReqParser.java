@@ -9,16 +9,14 @@ import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.codec.AbstractParser;
 
-import java.util.Arrays;
-import java.util.Collections;
-import java.util.HashSet;
+import java.util.Set;
 
 public class HttpReqParser extends AbstractParser<Request> {
     private final boolean parseBody;
     private final HttpSubContext ctx;
 
     public HttpReqParser(boolean parseBody) {
-        super(new HashSet<>(Arrays.asList(1, 2)), Collections.singleton(2));
+        super(Set.of(1, 2));
         result = null;
         this.parseBody = parseBody;
 

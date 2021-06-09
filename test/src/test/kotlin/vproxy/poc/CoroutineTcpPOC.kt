@@ -1,9 +1,7 @@
 package vproxy.poc
 
-import kotlinx.coroutines.launch
 import vproxy.base.connection.ConnectableConnection
 import vproxy.base.connection.ConnectionOpts
-import vproxy.base.connection.NetEventLoop
 import vproxy.base.connection.ServerSock
 import vproxy.base.http.HttpReqParser
 import vproxy.base.processor.http1.entity.Header
@@ -24,13 +22,13 @@ object CoroutineTcpPOC {
   @JvmStatic
   fun main(args: Array<String>) {
     val loop = SelectorEventLoop.open()
-    val netLoop = NetEventLoop(loop)
+    loop.ensureNetEventLoop()
     loop.loop { VProxyThread.create(it, "coroutine-tcp-poc") }
     loop.launch {
       val listenPort = 30080
       launch {
         // start server
-        val serverSock = ServerSock.create(IPPort("127.0.0.1", listenPort)).fitCoroutine(netLoop)
+        val serverSock = ServerSock.create(IPPort("127.0.0.1", listenPort)).fitCoroutine()
         while (true) {
           val sock = serverSock.accept()
           println("accepted socket $sock")
@@ -59,7 +57,7 @@ object CoroutineTcpPOC {
       val sock = ConnectableConnection.create(
         IPPort("127.0.0.1", listenPort), ConnectionOpts(),
         RingBuffer.allocate(1024), RingBuffer.allocate(1024)
-      ).fitCoroutine(netLoop)
+      ).fitCoroutine()
       sock.setTimeout(1000)
       sock.connect()
       val req = Request()
@@ -73,7 +71,6 @@ object CoroutineTcpPOC {
       println("client received response: " + buf.sub(0, n))
       sock.close()
 
-      sleep(1000)
       loop.close()
     }
   }

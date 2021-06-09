@@ -1,4 +1,6 @@
 module vproxy.extended {
+    requires kotlin.stdlib;
+    requires kotlinx.coroutines.core.jvm;
     requires vproxy.base;
     requires vproxy.core;
     requires vproxy.lib;

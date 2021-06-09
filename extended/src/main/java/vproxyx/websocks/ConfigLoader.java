@@ -2,12 +2,12 @@ package vproxyx.websocks;
 
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
-import vproxy.base.util.BlockCallback;
+import vproxy.base.util.ByteArray;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Network;
 import vproxy.base.util.Utils;
-import vproxy.vclient.HttpClient;
-import vproxy.vclient.HttpResponse;
+import vproxy.base.util.promise.Promise;
+import vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 
@@ -637,51 +637,16 @@ public class ConfigLoader {
             String content;
             if (abpfile.contains("://")) {
                 Logger.alert("getting abp from " + abpfile);
-                String protocolAndHostAndPort;
-                String uri;
-                {
-                    String protocol;
-                    String hostAndPortAndUri;
-                    if (abpfile.startsWith("http://")) {
-                        protocol = "http://";
-                        hostAndPortAndUri = abpfile.substring("http://".length());
-                    } else if (abpfile.startsWith("https://")) {
-                        protocol = "https://";
-                        hostAndPortAndUri = abpfile.substring("https://".length());
-                    } else {
-                        throw new Exception("unknown protocol in " + abpfile);
-                    }
-                    if (hostAndPortAndUri.contains("/")) {
-                        protocolAndHostAndPort = protocol + hostAndPortAndUri.substring(0, hostAndPortAndUri.indexOf("/"));
-                        uri = hostAndPortAndUri.substring(hostAndPortAndUri.indexOf("/"));
-                    } else {
-                        protocolAndHostAndPort = hostAndPortAndUri;
-                        uri = "/";
-                    }
-                }
-                BlockCallback<HttpResponse, IOException> cb = new BlockCallback<>();
-                HttpClient cli = HttpClient.to(protocolAndHostAndPort);
-                cli.get(uri).send((err, response) -> {
-                    if (err != null) {
-                        cb.failed(err);
-                    } else {
-                        cb.succeeded(response);
-                    }
-                });
-                HttpResponse resp;
+                Promise<ByteArray> contentPromise = CoroutineHttp1ClientConnection.simpleGet(abpfile);
+                ByteArray contentBytes;
                 try {
-                    resp = cb.block();
-                } catch (IOException e) {
-                    throw new IOException("requesting " + abpfile + " failed", e);
+                    contentBytes = contentPromise.block();
+                } catch (Exception e) {
+                    throw e;
+                } catch (Throwable t) {
+                    throw new Exception(t);
                 }
-                cli.close();
-                if (resp.status() != 200) {
-                    throw new IOException("requesting " + abpfile + " failed, response status not 200: " + resp.status());
-                }
-                if (resp.body() == null) {
-                    throw new IOException("requesting " + abpfile + " failed, no response body");
-                }
-                content = new String(resp.body().toJavaArray());
+                content = new String(contentBytes.toJavaArray());
                 content = Arrays.stream(content.split("\n")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.joining());
             } else {
                 String filename = Utils.filename(abpfile);

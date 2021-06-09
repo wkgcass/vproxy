@@ -1,5 +1,7 @@
 module vproxy.app {
     requires jdk.unsupported;
+    requires kotlin.stdlib;
+    requires kotlinx.coroutines.core.jvm;
     requires vproxy.base;
     requires vproxy.core;
     requires vproxy.extended;

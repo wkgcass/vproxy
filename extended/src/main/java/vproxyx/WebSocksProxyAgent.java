@@ -15,10 +15,10 @@ import vproxy.component.proxy.ConnectorGen;
 import vproxy.component.proxy.Proxy;
 import vproxy.component.proxy.ProxyNetConfig;
 import vproxy.dns.DNSServer;
+import vproxy.lib.http1.CoroutineHttp1Server;
 import vproxy.socks.Socks5ProxyProtocolHandler;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
-import vproxy.vserver.HttpServer;
 import vproxyx.util.Browser;
 import vproxyx.websocks.*;
 import vproxyx.websocks.relay.DomainBinder;
@@ -53,7 +53,7 @@ public class WebSocksProxyAgent {
     private Proxy httpConnect = null;
     private Proxy ss = null;
     private ServerSock pacServer = null;
-    private HttpServer relayHttp = null;
+    private CoroutineHttp1Server relayHttp = null;
     private Proxy relayHttps = null;
     private Proxy relayAny = null;
 
@@ -384,7 +384,7 @@ public class WebSocksProxyAgent {
         return pacServer;
     }
 
-    public HttpServer getRelayHttp() {
+    public CoroutineHttp1Server getRelayHttp() {
         return relayHttp;
     }
 

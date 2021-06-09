@@ -21,6 +21,13 @@ public class NetEventLoop {
 
     public NetEventLoop(SelectorEventLoop selectorEventLoop) {
         this.selectorEventLoop = selectorEventLoop;
+        selectorEventLoop.setNetEventLoop(this);
+    }
+
+    public static NetEventLoop current() {
+        SelectorEventLoop loop = SelectorEventLoop.current();
+        if (loop == null) return null;
+        return loop.getNetEventLoop();
     }
 
     public SelectorEventLoop getSelectorEventLoop() {

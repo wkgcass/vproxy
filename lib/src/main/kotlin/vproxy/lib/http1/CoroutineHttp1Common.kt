@@ -10,7 +10,7 @@ abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
 
   protected abstract suspend fun sendHeadersBeforeChunks()
 
-  suspend fun sendChunk(payload: ByteArray): CoroutineHttp1Common {
+  open suspend fun sendChunk(payload: ByteArray): CoroutineHttp1Common {
     if (!headersSent) {
       headersSent = true
       sendHeadersBeforeChunks()
@@ -23,7 +23,7 @@ abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
     return this
   }
 
-  suspend fun endChunks(trailers: List<Header>) {
+  open suspend fun endChunks(trailers: List<Header>) {
     val chunk = Chunk()
     chunk.size = 0
 

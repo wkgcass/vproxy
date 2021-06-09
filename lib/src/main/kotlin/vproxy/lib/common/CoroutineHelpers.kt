@@ -7,9 +7,12 @@ import vproxy.base.connection.ServerSock
 import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.selector.TimerEvent
 import vproxy.base.util.Callback
+import vproxy.base.util.LogType
+import vproxy.base.util.Logger
 import vproxy.base.util.promise.Promise
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.lib.tcp.CoroutineServerSock
+import java.io.EOFException
 import java.time.Duration
 import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicReference
@@ -156,20 +159,72 @@ suspend fun sleep(millis: Int) {
   }
 }
 
-fun launchGlobal(exec: suspend CoroutineScope.() -> Unit) {
+fun launch(exec: suspend () -> Unit): Job {
   val loop = SelectorEventLoop.current()
   if (loop == null) {
     throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
   }
-  loop.launch(exec)
+  return loop.launch(exec)
 }
 
-fun SelectorEventLoop.launch(exec: suspend CoroutineScope.() -> Unit) {
-  GlobalScope.launch(this.dispatcher(), CoroutineStart.DEFAULT, exec)
+fun SelectorEventLoop.launch(exec: suspend () -> Unit): Job {
+  if (this.runningThread == null) {
+    throw IllegalStateException("loop is not started")
+  }
+  return GlobalScope.launch(this.dispatcher(), CoroutineStart.DEFAULT) {
+    try {
+      exec()
+    } catch (e: EOFException) {
+      // it's normal to throw
+      throw e
+    } catch (e: Throwable) {
+      Logger.error(LogType.IMPROPER_USE, "coroutine thrown exception", e)
+      throw e
+    }
+  }
+}
+
+fun <T : Any?> SelectorEventLoop.execute(f: suspend () -> T): Promise<T> {
+  if (this.runningThread == null) {
+    throw IllegalStateException("loop is not started")
+  }
+  val tup = Promise.todo<T>()
+  this.launch {
+    val value: T
+    try {
+      value = f()
+    } catch (e: Throwable) {
+      tup.right.failed(e)
+      return@launch
+    }
+    tup.right.succeeded(value)
+  }
+  return tup.left
+}
+
+fun Connection.fitCoroutine(): CoroutineConnection {
+  val loop = NetEventLoop.current()
+  if (loop == null) {
+    val sLoop = SelectorEventLoop.current()
+    if (sLoop == null) {
+      throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
+    } else {
+      throw IllegalStateException("net event loop not created yet: " + Thread.currentThread())
+    }
+  }
+  return fitCoroutine(loop)
 }
 
 fun Connection.fitCoroutine(loop: NetEventLoop): CoroutineConnection {
   return CoroutineConnection(loop, this)
+}
+
+fun ServerSock.fitCoroutine(): CoroutineServerSock {
+  val loop = NetEventLoop.current()
+  if (loop == null) {
+    throw IllegalStateException("currently not on any event loop or net event loop not created yet: " + Thread.currentThread())
+  }
+  return fitCoroutine(loop)
 }
 
 fun ServerSock.fitCoroutine(loop: NetEventLoop): CoroutineServerSock {

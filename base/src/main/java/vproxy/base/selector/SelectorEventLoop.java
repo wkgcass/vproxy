@@ -2,6 +2,7 @@ package vproxy.base.selector;
 
 import vproxy.base.Config;
 import vproxy.base.GlobalInspection;
+import vproxy.base.connection.NetEventLoop;
 import vproxy.base.selector.wrap.FDInspection;
 import vproxy.base.selector.wrap.WrappedSelector;
 import vproxy.base.util.*;
@@ -73,6 +74,31 @@ public class SelectorEventLoop {
             CLOSE_LOCK = Lock.createMock();
         } else {
             CLOSE_LOCK = Lock.create();
+        }
+    }
+
+    private NetEventLoop netEventLoop = null;
+
+    public void setNetEventLoop(NetEventLoop netEventLoop) {
+        if (this.netEventLoop != null) {
+            throw new IllegalStateException("already assigned with a NetEventLoop");
+        }
+        if (netEventLoop.getSelectorEventLoop() != this) {
+            throw new IllegalArgumentException("input is not using this event loop");
+        }
+        this.netEventLoop = netEventLoop;
+    }
+
+    public NetEventLoop getNetEventLoop() {
+        return netEventLoop;
+    }
+
+    public NetEventLoop ensureNetEventLoop() {
+        //noinspection ReplaceNullCheck
+        if (netEventLoop == null) {
+            return new NetEventLoop(this);
+        } else {
+            return netEventLoop;
         }
     }
 

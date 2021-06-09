@@ -32,6 +32,11 @@ public class ConnectableConnection extends Connection {
         }
     }
 
+    public static ConnectableConnection create(IPPort remote) throws IOException {
+        return create(remote, ConnectionOpts.getDefault(),
+            RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384));
+    }
+
     public static ConnectableConnection create(IPPort remote,
                                                ConnectionOpts opts,
                                                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {

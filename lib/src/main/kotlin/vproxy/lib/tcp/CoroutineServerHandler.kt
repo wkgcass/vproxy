@@ -9,7 +9,9 @@ import vproxy.vfd.SocketFD
 import java.io.IOException
 import java.util.*
 
-class CoroutineServerHandler : ServerHandler {
+class CoroutineServerHandler(
+  private val getIOBuffers: ((channel: SocketFD) -> Tuple<RingBuffer, RingBuffer>)?,
+) : ServerHandler {
   internal val acceptQ = LinkedList<Connection>()
   internal var errQ = LinkedList<IOException>()
   internal var connectionEvent: ((IOException?, Connection?) -> Unit)? = null
@@ -34,8 +36,11 @@ class CoroutineServerHandler : ServerHandler {
     }
   }
 
-  override fun getIOBuffers(channel: SocketFD?): Tuple<RingBuffer, RingBuffer> {
-    return Tuple(RingBuffer.allocateDirect(24576), RingBuffer.allocateDirect(24576))
+  override fun getIOBuffers(channel: SocketFD): Tuple<RingBuffer, RingBuffer> {
+    if (getIOBuffers != null) {
+      return getIOBuffers(channel)
+    }
+    return Tuple(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384))
   }
 
   override fun removed(ctx: ServerHandlerContext) {

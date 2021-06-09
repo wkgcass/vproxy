@@ -12,9 +12,9 @@ import kotlin.coroutines.resumeWithException
 class CoroutineConnectingHandler(
   private val cont: CancellableContinuation<Unit>,
 ) : ConnectableConnectionHandler {
-  private var willBeRemoved = false
+  private var willBeDetached = false
   override fun connected(ctx: ConnectableConnectionHandlerContext) {
-    willBeRemoved = true
+    willBeDetached = true
     ctx.eventLoop.removeConnection(ctx.connection)
     cont.resume(Unit)
   }
@@ -42,7 +42,7 @@ class CoroutineConnectingHandler(
   }
 
   override fun removed(ctx: ConnectionHandlerContext?) {
-    if (willBeRemoved) {
+    if (willBeDetached) {
       return
     }
     exception(ctx, IOException("removed from event loop"))

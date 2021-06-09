@@ -4,15 +4,19 @@ import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
 import vproxy.base.connection.NetEventLoop
 import vproxy.base.connection.ServerSock
+import vproxy.base.util.RingBuffer
+import vproxy.base.util.Tuple
+import vproxy.vfd.SocketFD
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-class CoroutineServerSock(
+class CoroutineServerSock @JvmOverloads constructor(
   private val loop: NetEventLoop,
   private val svr: ServerSock,
+  getIOBuffers: ((channel: SocketFD) -> Tuple<RingBuffer, RingBuffer>)? = null,
 ) {
   private var initialized = false
-  private val handler = CoroutineServerHandler()
+  private val handler = CoroutineServerHandler(getIOBuffers)
 
   private fun ensureInitialized() {
     if (initialized) {

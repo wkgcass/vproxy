@@ -25,8 +25,8 @@ import vproxy.component.secure.SecurityGroupRule;
 import vproxy.component.ssl.CertKey;
 import vproxy.component.svrgroup.Upstream;
 import vproxy.dns.DNSServer;
+import vproxy.lib.http.RoutingContext;
 import vproxy.vfd.IPPort;
-import vproxy.vserver.RoutingContext;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -35,6 +35,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+@SuppressWarnings("rawtypes")
 class utils {
     private utils() {
     }
@@ -98,6 +99,7 @@ class utils {
         return (tl instanceof Socks5Server ? "socks5-server" : "tcp-lb") + " " + tl.alias;
     }
 
+    @SuppressWarnings("DuplicatedCode")
     static void respondBytesInFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         IPPort l4addr = tl.bindAddress;
         if (l4addr.formatToIPPortString().equals(l4addrStr)) {
@@ -108,6 +110,7 @@ class utils {
         }
     }
 
+    @SuppressWarnings("DuplicatedCode")
     static void respondBytesOutFromL4AddrTl(String l4addrStr, TcpLB tl, Callback<JSON.Instance, Throwable> cb) throws NotFoundException {
         IPPort l4addr = tl.bindAddress;
         if (l4addr.formatToIPPortString().equals(l4addrStr)) {

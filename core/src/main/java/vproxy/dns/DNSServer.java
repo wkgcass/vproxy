@@ -382,6 +382,7 @@ public class DNSServer {
         }
     }
 
+    @SuppressWarnings("DuplicatedCode")
     protected void sendError(DNSPacket requestPacket, IPPort remote, IOException err) {
         assert Logger.lowLevelDebug("sending error to " + remote + ": " + err);
         DNSPacket p = new DNSPacket();

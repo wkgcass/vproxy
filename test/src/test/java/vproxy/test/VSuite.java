@@ -25,7 +25,6 @@ import vproxy.test.cases.*;
     TestTCP.class,
     TestHttpServer.class,
     TestNetServerClient.class,
-    TestConnTransfer.class,
     TestPrometheus.class,
     TestPromise.class,
     TestUtilities.class,

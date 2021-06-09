@@ -17,13 +17,18 @@ import kotlin.coroutines.resumeWithException
 
 class CoroutineConnection(
   private val loop: NetEventLoop,
-  private val conn: Connection,
+  internal val conn: Connection,
 ) {
   private var initialized = false
   private val handler = CoroutineConnectionHandler()
 
   private var reading = false
   private var writing = false
+  private var detached = false
+
+  fun base(): Connection {
+    return conn
+  }
 
   suspend fun connect() {
     val conn: ConnectableConnection
@@ -121,6 +126,10 @@ class CoroutineConnection(
     }
   }
 
+  suspend fun write(str: String) {
+    write(ByteArray.from(str))
+  }
+
   suspend fun write(buf: ByteArray) {
     if (writing) {
       throw IllegalStateException("another coroutine is writing to this connection")
@@ -189,5 +198,39 @@ class CoroutineConnection(
 
   fun asHttp1ServerConnection(): CoroutineHttp1ServerConnection {
     return CoroutineHttp1ServerConnection(this)
+  }
+
+  fun detach() {
+    if (reading) {
+      throw IllegalStateException("another coroutine is reading from this connection")
+    }
+    if (writing) {
+      throw IllegalStateException("another coroutine is writing to this connection")
+    }
+    if (detached) {
+      throw IllegalStateException("the connection is already detached from event loop")
+    }
+    reading = true
+    writing = true
+    detached = true
+    if (initialized) {
+      handler.willBeDetached = true
+      loop.removeConnection(conn)
+      handler.willBeDetached = false
+    }
+  }
+
+  fun attach() {
+    if (!detached) {
+      throw IllegalStateException("the connection is not detached from event loop yet")
+    }
+    detached = false
+    reading = false
+    writing = false
+    if (initialized) {
+      loop.addConnection(conn, null, handler)
+    } else {
+      ensureInitialized()
+    }
   }
 }
