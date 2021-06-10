@@ -12,7 +12,7 @@ interface SubPath {
 
   companion object {
     @JvmStatic
-    fun create(path: String): SubPath {
+    fun create(path: String): SubPath? {
       val paths = Arrays.stream(path.split("/").toTypedArray()).map { obj: String -> obj.trim { it <= ' ' } }
         .filter { s: String -> !s.isEmpty() }.collect(Collectors.toList())
       var next: SubPath? = null
@@ -26,7 +26,7 @@ interface SubPath {
           FixedSubPath(next, p)
         }
       }
-      return next!!
+      return next
     }
   }
 }

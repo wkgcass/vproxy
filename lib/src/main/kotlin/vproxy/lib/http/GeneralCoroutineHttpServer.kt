@@ -67,12 +67,12 @@ abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutine
     return handle(method, SubPath.create(route), handler)
   }
 
-  fun handle(method: HttpMethod, route: SubPath, handler: RoutingHandler): CoroutineHttpServer {
+  fun handle(method: HttpMethod, route: SubPath?, handler: RoutingHandler): CoroutineHttpServer {
     return handle(arrayOf(method), route, handler)
   }
 
   @Suppress("unchecked_cast")
-  fun handle(methods: Array<HttpMethod>, route: SubPath, handler: RoutingHandler): CoroutineHttpServer {
+  fun handle(methods: Array<HttpMethod>, route: SubPath?, handler: RoutingHandler): CoroutineHttpServer {
     check(!started) { "This http server is already started" }
     record(methods, route, handler)
     return this as CoroutineHttpServer
@@ -103,7 +103,7 @@ abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutine
     record(br, subpath.next(), handler)
   }
 
-  private fun record(methods: Array<HttpMethod>, route: SubPath, handler: RoutingHandler) {
+  private fun record(methods: Array<HttpMethod>, route: SubPath?, handler: RoutingHandler) {
     for (m in methods) {
       record(routes[m]!!, route, handler)
     }

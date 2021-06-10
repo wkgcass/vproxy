@@ -9,8 +9,8 @@ import vproxy.base.util.nio.ByteArrayChannel
 import vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
-import vproxy.lib.common.unsafeIO
 import vproxy.lib.common.sleep
+import vproxy.lib.common.unsafeIO
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1Server
 import vproxy.vfd.IP
@@ -52,10 +52,9 @@ object HelloWorld {
         .get("/") { it.conn.response(200).send("vproxy ${Version.VERSION}\r\n") }
         .get("/hello") {
           it.conn.response(200).send(
-            "Welcome to vproxy ${Version.VERSION}." +
-              "Your request address is ${it.conn.base().remote.formatToIPPortString()}." +
-              "Server address is ${it.conn.base().local.formatToIPPortString()}." +
-              "\r\n"
+            "Welcome to vproxy ${Version.VERSION}.\r\n" +
+              "Your request address is ${it.conn.base().remote.formatToIPPortString()}.\r\n" +
+              "Server address is ${it.conn.base().local.formatToIPPortString()}.\r\n"
           )
         }
       server.start()

@@ -167,11 +167,13 @@ class VProxyCoroutineCodeBlock {
   }
 
   internal fun runDefer() {
-    val f = deferList.pollLast()
-    try {
-      f()
-    } catch (e: Throwable) {
-      Logger.error(LogType.IMPROPER_USE, "exception thrown in deferred function", e)
+    while (true) {
+      val f = deferList.pollLast() ?: break
+      try {
+        f()
+      } catch (e: Throwable) {
+        Logger.error(LogType.IMPROPER_USE, "exception thrown in deferred function", e)
+      }
     }
   }
 }
