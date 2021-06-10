@@ -109,3 +109,7 @@ docker-plugin-rootfs/rootfs:
 docker-network-plugin: docker-network-plugin-rootfs
 	cp docker-plugin/config.json ./docker-plugin-rootfs
 	docker plugin create vproxy ./docker-plugin-rootfs
+
+.PHONY: dockertest
+dockertest:
+	./misc/run-tests-in-docker.sh

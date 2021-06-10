@@ -166,6 +166,32 @@ project(':test') {
         dependsOn runSuite
         dependsOn runCI
     }
+
+    task runSingleTest(type: Test) {
+        outputs.upToDateWhen { return false }
+
+        doFirst {
+            def c = System.getProperty("case")
+            if (c == null) {
+                def message = "missing test case to run, specify it with -Dcase"
+                println(message)
+                throw new Exception(message)
+            }
+
+            jvmArgs += '--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED'
+
+            testLogging {
+                events TestLogEvent.FAILED, TestLogEvent.PASSED, TestLogEvent.SKIPPED, TestLogEvent.STARTED
+                maxGranularity 100
+                exceptionFormat "full"
+                showCauses true
+                showExceptions true
+                showStackTraces true
+            }
+
+            include '**/' + c + '.class'
+        }
+    }
 }
 
 dependencies {
