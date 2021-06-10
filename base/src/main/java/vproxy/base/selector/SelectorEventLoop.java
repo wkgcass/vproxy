@@ -19,7 +19,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 
-public class SelectorEventLoop {
+public class SelectorEventLoop implements AutoCloseable {
     static class RegisterData {
         boolean connected = false;
         final Handler handler;
@@ -562,6 +562,7 @@ public class SelectorEventLoop {
         return !selector.isOpen();
     }
 
+    @Override
     @Blocking
     // wait until it's actually closed if closing on a non event loop thread
     @ThreadSafe

@@ -16,8 +16,9 @@ import vproxy.base.util.RingBuffer
 import vproxy.base.util.promise.Promise
 import vproxy.base.util.ringbuffer.SSLUtils
 import vproxy.base.util.thread.VProxyThread
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.execute
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.unsafeIO
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.vfd.IP
 import vproxy.vfd.IPPort
@@ -28,7 +29,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 @Suppress("LiftReturnOrAssignment")
-class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
+class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoCloseable {
   fun get(url: String): CoroutineHttp1Request {
     return request("GET", url)
   }
@@ -95,11 +96,15 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
     }
   }
 
-  @Suppress("DuplicatedCode")
+  /**
+   * @return a full response object including body or chunks/trailers.
+   * If eof received, an IOException would be thrown instead of returning null Response
+   */
   suspend fun readResponse(): Response {
     val parser = HttpRespParser(true)
     while (true) {
-      val res = parser.feed(conn.read())
+      val rb = conn.read() ?: throw IOException("unexpected eof")
+      val res = parser.feed(rb)
       if (res == -1) {
         if (parser.errorMessage != null) {
           throw IOException(parser.errorMessage)
@@ -109,6 +114,10 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
       // done
       return parser.result
     }
+  }
+
+  override fun close() {
+    conn.close()
   }
 
   @Suppress("HttpUrlsUsage", "CascadeIf")
@@ -143,13 +152,18 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
       if (invokerLoop == null) {
         loop = SelectorEventLoop.open()
         loop.ensureNetEventLoop()
+        loop.loop { VProxyThread.create(it, "http1-simple-get") }
       } else {
         loop = invokerLoop
       }
-      loop.loop { VProxyThread.create(it, "http1-simple-get") }
 
       return loop.execute {
         val conn = create(protocolAndHostAndPort)
+        defer { conn.close() }
+        if (invokerLoop == null) { // which means a new loop is created
+          defer { loop.close() }
+        }
+
         conn.conn.setTimeout(5_000)
         conn.get(uri).send()
         val resp = conn.readResponse()
@@ -160,9 +174,6 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
           ret = ByteArray.allocate(0)
         } else {
           ret = resp.body
-        }
-        if (invokerLoop == null) { // which means a new loop is created
-          loop.nextTick { loop.close() } // use nextTick to let the promise finish
         }
         ret
       }
@@ -240,26 +251,28 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) {
       }
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     suspend fun create(ipport: IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
       val pair = SSLUtils.genbuf(
         engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
         SelectorEventLoop.current(), ipport
       )
-      val conn = ConnectableConnection.create(
-        ipport, ConnectionOpts(),
-        pair.left, pair.right
-      ).fitCoroutine()
+      val conn = unsafeIO {
+        ConnectableConnection.create(
+          ipport, ConnectionOpts(),
+          pair.left, pair.right
+        ).coroutine()
+      }
       conn.connect()
       return conn.asHttp1ClientConnection()
     }
 
-    @Suppress("BlockingMethodInNonBlockingContext")
     suspend fun create(ipport: IPPort): CoroutineHttp1ClientConnection {
-      val conn = ConnectableConnection.create(
-        ipport, ConnectionOpts(),
-        RingBuffer.allocate(16384), RingBuffer.allocate(16384)
-      ).fitCoroutine()
+      val conn = unsafeIO {
+        ConnectableConnection.create(
+          ipport, ConnectionOpts(),
+          RingBuffer.allocate(16384), RingBuffer.allocate(16384)
+        ).coroutine()
+      }
       conn.connect()
       return conn.asHttp1ClientConnection()
     }

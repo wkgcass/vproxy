@@ -11,9 +11,9 @@ import vproxy.base.util.ByteArray
 import vproxy.base.util.Logger
 import vproxy.base.util.kt.KT
 import vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.fitCoroutine
-import vproxy.lib.common.launch
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.sleep
+import vproxy.lib.common.with
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.http.Tool
 import vproxy.lib.http1.CoroutineHttp1Server
@@ -21,7 +21,6 @@ import vproxy.vfd.IP
 import vproxy.vfd.IPPort
 import java.util.*
 
-@Suppress("BlockingMethodInNonBlockingContext")
 class ApplicationLevelHttpServer {
   private class Service constructor(val name: String, var address: String, var port: Int) {
     val id: UUID = UUID.randomUUID()
@@ -42,8 +41,8 @@ class ApplicationLevelHttpServer {
     val loop = SelectorEventLoop.open()
     loop.ensureNetEventLoop()
     loop.loop { VProxyThread.create(it, "app-level-http-run-client") }
-    val conn = ConnectableConnection.create(IPPort("127.0.0.1", 8080)).fitCoroutine(loop.ensureNetEventLoop())
-    loop.launch {
+    val conn = ConnectableConnection.create(IPPort("127.0.0.1", 8080)).coroutine(loop.ensureNetEventLoop())
+    loop.with(conn).launch {
       sleep(500)
       conn.connect()
       val http = conn.asHttp1ClientConnection()
@@ -73,8 +72,6 @@ class ApplicationLevelHttpServer {
       }
       println("Fetch services result:")
       println(JSON.parse(resp.body.toString()))
-    }.invokeOnCompletion {
-      conn.close()
     }
   }
 
@@ -91,7 +88,7 @@ class ApplicationLevelHttpServer {
     loop.ensureNetEventLoop()
     loop.loop { VProxyThread.create(it, "app-level-http-run-server") }
     val svrsock = ServerSock.create(IPPort("::", 8080))
-    val server = CoroutineHttp1Server(svrsock.fitCoroutine(loop.ensureNetEventLoop()))
+    val server = CoroutineHttp1Server(svrsock.coroutine(loop.ensureNetEventLoop()))
     server
       .all("/*") { log(it) }
       .all("/api/v1/*", Tool.bodyJsonHandler())
@@ -101,7 +98,7 @@ class ApplicationLevelHttpServer {
       .put("/api/v1/services/:serviceId") { updateService(it) }
       .del("/api/v1/services/:serviceId") { deleteService(it) }
 
-    loop.launch {
+    loop.with(loop, server).launch {
       server.start()
     }
   }

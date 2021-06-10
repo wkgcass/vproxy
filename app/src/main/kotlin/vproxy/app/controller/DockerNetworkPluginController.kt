@@ -7,7 +7,7 @@ import vproxy.base.Config
 import vproxy.base.connection.ServerSock
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.http.Tool
@@ -18,7 +18,7 @@ import java.util.*
 @Suppress("DuplicatedCode")
 class DockerNetworkPluginController(val alias: String, val path: UDSPath) {
   companion object {
-    private const val dockerNetworkPluginBase = "/"
+    private const val dockerNetworkPluginBase = ""
     private val driver: DockerNetworkDriver = DockerNetworkDriverImpl()
   }
 
@@ -36,7 +36,7 @@ class DockerNetworkPluginController(val alias: String, val path: UDSPath) {
       }
       // no need to check explicitly, because uds cannot enable reuse_port
     }
-    val sock = ServerSock.create(path).fitCoroutine(loop)
+    val sock = ServerSock.create(path).coroutine(loop)
     server = CoroutineHttp1Server(sock)
 
     // see https://github.com/moby/libnetwork/blob/master/docs/remote.md

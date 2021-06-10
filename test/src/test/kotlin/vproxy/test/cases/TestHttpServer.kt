@@ -8,8 +8,8 @@ import vproxy.base.connection.ServerSock
 import vproxy.base.processor.http1.entity.Response
 import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.thread.VProxyThread
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.execute
-import vproxy.lib.common.fitCoroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http.RoutingHandlerFunc
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
@@ -32,7 +32,7 @@ class TestHttpServer {
       this.loop = loop
       loop.ensureNetEventLoop()
       loop.loop { VProxyThread.create(it, "test-http-server") }
-      val server = CoroutineHttp1Server(serverSock.fitCoroutine(loop.ensureNetEventLoop()))
+      val server = CoroutineHttp1Server(serverSock.coroutine(loop.ensureNetEventLoop()))
       this.server = server
 
       loop.launch {
@@ -97,9 +97,10 @@ class TestHttpServer {
   private fun request(uri: String): String {
     val body = loop!!.execute {
       val client = CoroutineHttp1ClientConnection.create(IPPort("127.0.0.1", port))
+      defer { client.close() }
+
       client.get(uri).send()
       val resp = client.readResponse()
-      client.conn.close()
       if (resp.statusCode != 200) {
         throw IOException("response status code not 200: " + resp.statusCode)
       }

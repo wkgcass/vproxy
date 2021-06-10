@@ -4,7 +4,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import vproxy.base.GlobalInspection
 import vproxy.base.connection.ServerSock
 import vproxy.base.selector.SelectorEventLoop
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http1.CoroutineHttp1Server
 import vproxy.vfd.IPPort
@@ -15,7 +15,6 @@ class GlobalInspectionHttpServerLauncher private constructor() {
   private var app: CoroutineHttp1Server? = null
   private var loop: SelectorEventLoop? = null
 
-  @Throws(IOException::class)
   private fun launch0(l4addr: IPPort) {
     if (app != null) {
       throw IOException("GlobalInspectionHttpServer already started: $app")
@@ -25,7 +24,7 @@ class GlobalInspectionHttpServerLauncher private constructor() {
     if (loop == null) {
       loop = SelectorEventLoop.open()
     }
-    val app = CoroutineHttp1Server(serverSock.fitCoroutine(loop!!.ensureNetEventLoop()))
+    val app = CoroutineHttp1Server(serverSock.coroutine(loop!!.ensureNetEventLoop()))
 
     app.get("/metrics") { it.conn.response(200).send(GlobalInspection.getInstance().prometheusString) }
     app.get("/lsof") {

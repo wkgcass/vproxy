@@ -7,8 +7,9 @@ import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.*
 import vproxy.base.util.nio.ByteArrayChannel
 import vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
+import vproxy.lib.common.unsafeIO
 import vproxy.lib.common.sleep
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1Server
@@ -45,8 +46,7 @@ object HelloWorld {
     }
     val listenPort = 8080
     sLoop.launch {
-      @Suppress("BlockingMethodInNonBlockingContext")
-      val httpServerSock = ServerSock.create(IPPort("0.0.0.0", listenPort)).fitCoroutine()
+      val httpServerSock = unsafeIO { ServerSock.create(IPPort("0.0.0.0", listenPort)).coroutine() }
       val server = CoroutineHttp1Server(httpServerSock)
       server
         .get("/") { it.conn.response(200).send("vproxy ${Version.VERSION}\r\n") }
@@ -72,11 +72,11 @@ object HelloWorld {
         Logger.alert("Making request: GET /hello")
 
         val client = CoroutineHttp1ClientConnection.create(IPPort("127.0.0.1", listenPort))
+        defer { client.close() }
         client.get("/hello").send()
         val resp = client.readResponse()
         Logger.alert("Server responds:\n${resp.body}")
         Logger.alert("TCP seems OK")
-        client.conn.close()
       }
     }
     val listenAddress = IPPort(IP.from(byteArrayOf(0, 0, 0, 0)), listenPort)

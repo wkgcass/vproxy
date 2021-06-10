@@ -5,7 +5,7 @@ import vproxy.base.connection.ServerSock
 import vproxy.base.util.ByteArray
 import vproxy.base.util.Network
 import vproxy.component.secure.SecurityGroup
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http1.CoroutineHttp1Server
 import vproxy.test.tool.CommandServer
@@ -47,7 +47,7 @@ object SwitchTCP {
     val fds = VSwitchFDs(VSwitchFDContext(sw, table, loop.selector))
     val serverSock = ServerSock.create(IPPort("0.0.0.0", 80), fds)
 
-    val httpServer = CoroutineHttp1Server(serverSock.fitCoroutine(el))
+    val httpServer = CoroutineHttp1Server(serverSock.coroutine(el))
     httpServer.get("/hello") { it.conn.response(200).send("world\r\n") }
     val largeBuffer = ByteArray.allocate(1024 * 1024)
     val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toByteArray()

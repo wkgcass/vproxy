@@ -12,27 +12,25 @@ import vproxy.base.util.ByteArray
 import vproxy.base.util.RingBuffer
 import vproxy.base.util.Version
 import vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.fitCoroutine
-import vproxy.lib.common.launch
-import vproxy.lib.common.sleep
+import vproxy.lib.common.*
 import vproxy.vfd.IPPort
 
-@Suppress("BlockingMethodInNonBlockingContext")
 object CoroutineTcpPOC {
   @JvmStatic
   fun main(args: Array<String>) {
     val loop = SelectorEventLoop.open()
     loop.ensureNetEventLoop()
     loop.loop { VProxyThread.create(it, "coroutine-tcp-poc") }
-    loop.launch {
+    loop.with(loop).launch {
       val listenPort = 30080
-      launch {
+      vproxy.coroutine.launch {
         // start server
-        val serverSock = ServerSock.create(IPPort("127.0.0.1", listenPort)).fitCoroutine()
+        val serverSock = unsafeIO { ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine() }
+        defer { serverSock.close() }
         while (true) {
           val sock = serverSock.accept()
           println("accepted socket $sock")
-          launch {
+          vproxy.coroutine.with(sock).launch {
             val rb = sock.read()
             val parser = HttpReqParser(true)
             parser.feed(rb) // expect to be completed in this example
@@ -54,10 +52,13 @@ object CoroutineTcpPOC {
       sleep(1000)
       println("begin request on thread: " + Thread.currentThread())
 
-      val sock = ConnectableConnection.create(
-        IPPort("127.0.0.1", listenPort), ConnectionOpts(),
-        RingBuffer.allocate(1024), RingBuffer.allocate(1024)
-      ).fitCoroutine()
+      val sock = unsafeIO {
+        ConnectableConnection.create(
+          IPPort("127.0.0.1", listenPort), ConnectionOpts(),
+          RingBuffer.allocate(1024), RingBuffer.allocate(1024)
+        ).coroutine()
+      }
+      defer { sock.close() }
       sock.setTimeout(1000)
       sock.connect()
       val req = Request()
@@ -69,9 +70,6 @@ object CoroutineTcpPOC {
       val buf = ByteArray.allocate(1024)
       val n = sock.read(buf)
       println("client received response: " + buf.sub(0, n))
-      sock.close()
-
-      loop.close()
     }
   }
 }

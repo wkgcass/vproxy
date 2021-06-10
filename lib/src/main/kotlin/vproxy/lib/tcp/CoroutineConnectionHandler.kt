@@ -2,7 +2,6 @@ package vproxy.lib.tcp
 
 import vproxy.base.connection.ConnectionHandler
 import vproxy.base.connection.ConnectionHandlerContext
-import java.io.EOFException
 import java.io.IOException
 
 class CoroutineConnectionHandler : ConnectionHandler {
@@ -49,7 +48,7 @@ class CoroutineConnectionHandler : ConnectionHandler {
     val readableEvent = this.readableEvent
     this.readableEvent = null
     if (readableEvent != null) {
-      readableEvent(EOFException())
+      readableEvent(null)
     }
   }
 
@@ -58,10 +57,10 @@ class CoroutineConnectionHandler : ConnectionHandler {
   }
 
   override fun removed(ctx: ConnectionHandlerContext) {
-    if (ctx.connection.isClosed) {
+    if (willBeDetached) {
       return
     }
-    if (willBeDetached) {
+    if (ctx.connection.isClosed && readableEvent == null && writableEvent == null) {
       return
     }
     exception(ctx, IOException("removed from event loop"))

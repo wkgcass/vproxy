@@ -1,11 +1,14 @@
-package vproxy.lib.socks
+package vproxy.lib.tcp
 
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import vproxy.base.connection.*
+import vproxy.base.connection.ConnectableConnection
+import vproxy.base.connection.ConnectableConnectionHandler
+import vproxy.base.connection.ConnectableConnectionHandlerContext
+import vproxy.base.connection.ConnectionHandlerContext
 import vproxy.base.socks.Socks5ClientHandshake
 import vproxy.base.util.Callback
-import vproxy.lib.tcp.CoroutineConnection
+import vproxy.lib.common.__getCurrentNetEventLoopOrFail
 import vproxy.vfd.IP
 import vproxy.vfd.IPPort
 import java.io.IOException
@@ -18,10 +21,7 @@ suspend fun CoroutineConnection.socks5Proxy(targetHost: String, targetPort: Int)
     throw IllegalArgumentException("the connection is not a connectable connection")
   }
 
-  val loop = NetEventLoop.current()
-  if (loop == null) {
-    throw IllegalStateException("not running on any event loop")
-  }
+  val loop = __getCurrentNetEventLoopOrFail()
   this.detach()
 
   try {
@@ -70,12 +70,10 @@ private class Socks5ClientConnectableConnectionHandler constructor(
 
   override fun exception(ctx: ConnectionHandlerContext, err: IOException) {
     failedEventFunc(err)
-    ctx.connection.close()
   }
 
   override fun remoteClosed(ctx: ConnectionHandlerContext) {
     failedEventFunc(IOException("remote closed before socks5 handshaking done"))
-    ctx.connection.close()
   }
 
   override fun closed(ctx: ConnectionHandlerContext) {
@@ -86,7 +84,6 @@ private class Socks5ClientConnectableConnectionHandler constructor(
     if (handshake.isDone) {
       return // handshake is done, no need to do anything
     }
-    ctx.connection.close()
     failedEventFunc(IOException("removed from event loop"))
   }
 }

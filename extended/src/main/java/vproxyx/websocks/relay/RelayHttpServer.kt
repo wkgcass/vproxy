@@ -3,8 +3,8 @@ package vproxyx.websocks.relay
 import vproxy.base.component.elgroup.EventLoopGroup
 import vproxy.base.connection.ServerSock
 import vproxy.base.util.ErrorPages
-import vproxy.lib.common.fitCoroutine
-import vproxy.lib.common.launch
+import vproxy.lib.common.coroutine
+import vproxy.lib.common.with
 import vproxy.lib.http.RoutingHandlerFunc
 import vproxy.lib.http1.CoroutineHttp1Server
 import vproxy.vfd.IP
@@ -17,7 +17,7 @@ object RelayHttpServer {
   fun launch(worker: EventLoopGroup): CoroutineHttp1Server {
     val sock = ServerSock.create(IPPort("0.0.0.0", 80))
     val loop = worker.next()
-    val cosock = sock.fitCoroutine(loop)
+    val cosock = sock.coroutine(loop)
     val server = CoroutineHttp1Server(cosock)
     val handler: RoutingHandlerFunc = {
       var host: String? = it.req.headers().get("host")
@@ -44,7 +44,7 @@ object RelayHttpServer {
     server.get("/*", handler)
     server.get("/", handler)
 
-    loop.selectorEventLoop.launch {
+    loop.selectorEventLoop.with(server).launch {
       server.start()
     }
     return server

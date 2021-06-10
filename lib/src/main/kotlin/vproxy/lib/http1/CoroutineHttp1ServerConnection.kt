@@ -12,7 +12,7 @@ import vproxy.lib.http.HttpServerResponse
 import vproxy.lib.tcp.CoroutineConnection
 import java.io.IOException
 
-class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServerConnection {
+class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServerConnection, AutoCloseable {
   override fun base(): Connection {
     return conn.conn
   }
@@ -68,11 +68,21 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
     }
   }
 
-  @Suppress("DuplicatedCode")
-  suspend fun readRequest(): Request {
+  /**
+   * @return a full request object including body or chunks/trailers.
+   * If eof received, the function returns null
+   */
+  suspend fun readRequest(): Request? {
     val parser = HttpReqParser(true)
+    var started = false
     while (true) {
-      val rb = conn.read()
+      val rb = conn.read() ?: if (started) {
+        throw IOException("unexpected eof")
+      } else {
+        return null
+      }
+      started = true
+
       val res = parser.feed(rb)
       if (res == -1) {
         if (parser.errorMessage != null) {
@@ -83,5 +93,9 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
       // done
       return parser.result
     }
+  }
+
+  override fun close() {
+    conn.close()
   }
 }

@@ -8,23 +8,24 @@ import vproxy.base.connection.NetEventLoop
 import vproxy.base.util.ByteArray
 import vproxy.base.util.RingBuffer
 import vproxy.base.util.nio.ByteArrayChannel
+import vproxy.lib.common.vproxy
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1ServerConnection
 import vproxy.vfd.IPPort
-import java.io.EOFException
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class CoroutineConnection(
   private val loop: NetEventLoop,
   internal val conn: Connection,
-) {
-  private var initialized = false
+) : AutoCloseable {
+  private var handlerAdded = false
   private val handler = CoroutineConnectionHandler()
 
   private var reading = false
   private var writing = false
   private var detached = false
+  private var connected = conn !is ConnectableConnection
 
   fun base(): Connection {
     return conn
@@ -32,52 +33,80 @@ class CoroutineConnection(
 
   suspend fun connect() {
     val conn: ConnectableConnection
-    if (this.conn is ConnectableConnection) {
+    if (!connected && this.conn is ConnectableConnection) {
       conn = this.conn
     } else {
       return // already connected
     }
-    return suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
+    suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
       loop.addConnectableConnection(conn, null, CoroutineConnectingHandler(cont))
     }
+    connected = true
   }
 
-  private fun ensureInitialized() {
-    if (initialized) {
+  private fun ensureHandler() {
+    if (handlerAdded) {
       return
     }
-    initialized = true
+    if (!connected) {
+      throw IllegalStateException("not connected, cannot read nor write")
+    }
     loop.addConnection(conn, null, handler)
+    handlerAdded = true
   }
 
-  suspend fun read(): RingBuffer {
+  private fun handleExceptions() {
+    val err = handler.err
+    if (err != null) {
+      throw err
+    }
+  }
+
+  /**
+   * @return null when eof
+   */
+  suspend fun read(): RingBuffer? {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }
     handleExceptions()
-    reading = true
+
     if (conn.inBuffer.used() != 0) {
-      reading = false
       return conn.inBuffer
     }
-    ensureInitialized()
-    return suspendCancellableCoroutine { cont: CancellableContinuation<RingBuffer> ->
-      handler.readableEvent = { err ->
-        if (err != null) {
-          reading = false
-          cont.resumeWithException(err)
-        } else {
-          reading = false
-          cont.resume(conn.inBuffer)
+
+    reading = true
+    return vproxy.coroutine.run {
+      defer { reading = false }
+
+      ensureHandler()
+      suspendCancellableCoroutine<Unit> { cont ->
+        handler.readableEvent = { err ->
+          if (err != null) {
+            cont.resumeWithException(err)
+          } else {
+            cont.resume(Unit)
+          }
         }
+      }
+      if (handler.eof && conn.inBuffer.used() == 0) {
+        return@run null
+      } else {
+        return@run conn.inBuffer
       }
     }
   }
 
+  /**
+   * @return read bytes, 0 when eof
+   */
   suspend fun read(buf: ByteArray): Int {
     return read(buf, 0)
   }
 
+  /**
+   * @return read bytes, 0 when eof
+   */
   suspend fun read(buf: ByteArray, off: Int): Int {
     if (off == buf.length()) {
       return 0
@@ -89,38 +118,31 @@ class CoroutineConnection(
     return before - after
   }
 
-  private fun handleExceptions() {
-    val err = handler.err
-    if (err != null) {
-      throw err
-    }
-    if (handler.eof) {
-      throw EOFException()
-    }
-    reading = true
-  }
-
-  suspend fun read(chnl: ByteArrayChannel) {
+  /**
+   * @return read bytes, 0 when eof
+   */
+  suspend fun read(chnl: ByteArrayChannel): Int {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }
     handleExceptions()
-    reading = true
+
     if (conn.inBuffer.used() > 0) {
-      conn.inBuffer.writeTo(chnl)
-      reading = false
-      return
+      return conn.inBuffer.writeTo(chnl)
     }
-    ensureInitialized()
-    return suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
-      handler.readableEvent = { err ->
-        if (err != null) {
-          reading = false
-          cont.resumeWithException(err)
-        } else {
-          conn.inBuffer.writeTo(chnl)
-          reading = false
-          cont.resume(Unit)
+
+    reading = true
+    return vproxy.coroutine.run {
+      defer { reading = false }
+
+      ensureHandler()
+      return@run suspendCancellableCoroutine { cont ->
+        handler.readableEvent = { err ->
+          if (err != null) {
+            cont.resumeWithException(err)
+          } else {
+            cont.resume(conn.inBuffer.writeTo(chnl))
+          }
         }
       }
     }
@@ -134,32 +156,31 @@ class CoroutineConnection(
     if (writing) {
       throw IllegalStateException("another coroutine is writing to this connection")
     }
-    val err = handler.err
-    if (err != null) {
-      throw err
-    }
+    handleExceptions()
+
     writing = true
-    if (conn.outBuffer.free() >= buf.length()) {
-      conn.outBuffer.storeBytesFrom(ByteArrayChannel.from(buf, 0, buf.length(), 0))
-      writing = false
-      return
-    }
-    ensureInitialized()
-    val chnl = ByteArrayChannel.from(buf, 0, buf.length(), 0)
-    return suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
-      recursivelyWrite(cont, chnl)
+    vproxy.coroutine.run {
+      defer { writing = false }
+
+      if (conn.outBuffer.free() >= buf.length()) {
+        conn.outBuffer.storeBytesFrom(ByteArrayChannel.from(buf, 0, buf.length(), 0))
+        return@run
+      }
+      ensureHandler()
+      val chnl = ByteArrayChannel.from(buf, 0, buf.length(), 0)
+      return@run suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
+        recursivelyWrite(cont, chnl)
+      }
     }
   }
 
   private fun recursivelyWrite(cont: CancellableContinuation<Unit>, chnl: ByteArrayChannel) {
     if (chnl.used() == 0) {
-      writing = false
       cont.resume(Unit)
       return
     }
     handler.writableEvent = { err ->
       if (err != null) {
-        writing = false
         cont.resumeWithException(err)
       } else {
         conn.outBuffer.storeBytesFrom(chnl)
@@ -184,7 +205,7 @@ class CoroutineConnection(
     conn.closeWrite()
   }
 
-  fun close() {
+  override fun close() {
     conn.close()
   }
 
@@ -200,7 +221,7 @@ class CoroutineConnection(
     return CoroutineHttp1ServerConnection(this)
   }
 
-  fun detach() {
+  internal fun detach() {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }
@@ -213,24 +234,24 @@ class CoroutineConnection(
     reading = true
     writing = true
     detached = true
-    if (initialized) {
+    if (handlerAdded) {
       handler.willBeDetached = true
       loop.removeConnection(conn)
       handler.willBeDetached = false
     }
   }
 
-  fun attach() {
+  internal fun attach() {
     if (!detached) {
       throw IllegalStateException("the connection is not detached from event loop yet")
     }
     detached = false
     reading = false
     writing = false
-    if (initialized) {
+    if (handlerAdded) {
       loop.addConnection(conn, null, handler)
     } else {
-      ensureInitialized()
+      ensureHandler()
     }
   }
 }

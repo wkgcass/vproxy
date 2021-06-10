@@ -9,14 +9,10 @@ import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.ByteArray
 import vproxy.base.util.RingBuffer
 import vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.execute
-import vproxy.lib.common.fitCoroutine
-import vproxy.lib.common.launch
-import vproxy.lib.common.sleep
+import vproxy.lib.common.*
 import vproxy.lib.tcp.CoroutineServerSock
 import vproxy.test.tool.Client
 import vproxy.vfd.IPPort
-import java.io.EOFException
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 
@@ -44,7 +40,7 @@ class TestNetServerClient {
 
   @Before
   fun setUp() {
-    server = ServerSock.create(IPPort("127.0.0.1", listenPort)).fitCoroutine(loop!!.ensureNetEventLoop())
+    server = ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine(loop!!.ensureNetEventLoop())
   }
 
   @After
@@ -57,7 +53,7 @@ class TestNetServerClient {
     val channel = Channel<String>()
     val promise = loop!!.execute {
       val conn = server!!.accept()
-      launch {
+      vproxy.coroutine.with(conn).launch {
         val buf = ByteArray.allocate(1024)
         while (true) {
           val n = conn.read(buf)
@@ -73,7 +69,7 @@ class TestNetServerClient {
           conn.write(data)
           channel.send(str)
         }
-      }.invokeOnCompletion { conn.close() }
+      }
       val sb = StringBuilder()
       for (s in channel) {
         sb.append(s)
@@ -96,28 +92,29 @@ class TestNetServerClient {
     loop!!.launch {
       while (true) {
         val conn = server!!.accept()
-        launch {
+        vproxy.coroutine.with(conn).launch {
           val buf = ByteArray.allocate(1024)
           while (true) {
-            val n = try {
-              conn.read(buf)
-            } catch (e: EOFException) {
+            val n = conn.read(buf)
+            if (n == 0) {
               break
             }
             val data = buf.sub(0, n)
             conn.write(data)
           }
-        }.invokeOnCompletion { conn.close() }
+        }
       }
     }
 
     val dataQ = LinkedBlockingDeque<String>()
     loop!!.launch {
-      @Suppress("BlockingMethodInNonBlockingContext")
-      val client = ConnectableConnection.create(
-        IPPort("127.0.0.1", listenPort), ConnectionOpts(),
-        RingBuffer.allocate(1024), RingBuffer.allocate(1024)
-      ).fitCoroutine(loop!!.ensureNetEventLoop())
+      val client = unsafeIO {
+        ConnectableConnection.create(
+          IPPort("127.0.0.1", listenPort), ConnectionOpts(),
+          RingBuffer.allocate(1024), RingBuffer.allocate(1024)
+        ).coroutine(loop!!.ensureNetEventLoop())
+      }
+      defer { client.close() }
       client.connect()
       val buf = ByteArray.allocate(1024)
       for (s in listOf("hello", "world", "foo", "bar")) {
@@ -126,7 +123,6 @@ class TestNetServerClient {
         dataQ.add(String(buf.sub(0, n).toJavaArray()))
         sleep(10)
       }
-      client.close()
     }
 
     for (s in listOf("hello", "world", "foo", "bar")) {

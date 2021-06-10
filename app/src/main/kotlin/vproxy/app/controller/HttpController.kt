@@ -28,7 +28,7 @@ import vproxy.component.secure.SecurityGroupRule
 import vproxy.component.ssl.CertKey
 import vproxy.component.svrgroup.Upstream
 import vproxy.dns.DNSServer
-import vproxy.lib.common.fitCoroutine
+import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.http.RoutingHandler
@@ -53,7 +53,7 @@ class HttpController(val alias: String, val address: IPPort) {
     }
     val sock = ServerSock.create(address)
     val loop = Application.get().controlEventLoop
-    server = CoroutineHttp1Server(sock.fitCoroutine(loop))
+    server = CoroutineHttp1Server(sock.coroutine(loop))
 
     // hc
     server.get("/healthz") { ctx -> ctx.conn.response(200).send("OK") }

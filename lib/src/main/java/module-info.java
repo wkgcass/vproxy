@@ -7,6 +7,5 @@ module vproxy.lib {
     exports vproxy.lib.http;
     exports vproxy.lib.http.route;
     exports vproxy.lib.http1;
-    exports vproxy.lib.socks;
     exports vproxy.lib.tcp;
 }

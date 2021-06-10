@@ -14,15 +14,15 @@ class CoroutineServerSock @JvmOverloads constructor(
   private val loop: NetEventLoop,
   private val svr: ServerSock,
   getIOBuffers: ((channel: SocketFD) -> Tuple<RingBuffer, RingBuffer>)? = null,
-) {
-  private var initialized = false
+): AutoCloseable {
+  private var handlerAdded = false
   private val handler = CoroutineServerHandler(getIOBuffers)
 
-  private fun ensureInitialized() {
-    if (initialized) {
+  private fun ensureHandler() {
+    if (handlerAdded) {
       return
     }
-    initialized = true
+    handlerAdded = true
     loop.addServer(svr, null, handler)
   }
 
@@ -34,7 +34,7 @@ class CoroutineServerSock @JvmOverloads constructor(
       val conn = handler.acceptQ.removeFirst()
       return CoroutineConnection(loop, conn)
     }
-    ensureInitialized()
+    ensureHandler()
     return suspendCancellableCoroutine { cont: CancellableContinuation<CoroutineConnection> ->
       handler.connectionEvent = { err, conn ->
         if (err != null) {
@@ -46,7 +46,7 @@ class CoroutineServerSock @JvmOverloads constructor(
     }
   }
 
-  fun close() {
+  override fun close() {
     svr.close()
   }
 

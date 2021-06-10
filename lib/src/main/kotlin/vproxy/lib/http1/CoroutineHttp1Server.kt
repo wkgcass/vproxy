@@ -4,16 +4,15 @@ import vproxy.base.processor.http1.entity.Request
 import vproxy.base.util.ByteArray
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
-import vproxy.lib.common.launch
+import vproxy.lib.common.vproxy
 import vproxy.lib.http.GeneralCoroutineHttpServer
 import vproxy.lib.http.HttpHeaders
 import vproxy.lib.http.HttpServerRequest
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.lib.tcp.CoroutineServerSock
-import java.io.EOFException
 
-class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHttpServer<CoroutineHttp1Server>() {
+class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHttpServer<CoroutineHttp1Server>(), AutoCloseable {
   suspend fun start() {
     if (started) {
       throw IllegalStateException("This http1 server is already started")
@@ -22,21 +21,17 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
 
     while (true) {
       val conn = server.accept()
-      launch {
+      vproxy.coroutine.with(conn).launch {
         try {
           handleConnection(conn)
-        } catch (e: EOFException) {
-          // do nothing
         } catch (e: Throwable) {
           Logger.error(LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
         }
-      }.invokeOnCompletion {
-        conn.close()
       }
     }
   }
 
-  fun close() {
+  override fun close() {
     server.close()
   }
 
@@ -58,7 +53,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
 
     val httpconn = conn.asHttp1ServerConnection()
     while (true) {
-      val req = httpconn.readRequest()
+      val req = httpconn.readRequest() ?: break
       val ctx = RoutingContext(httpconn, ReqWrapper(req), routes)
       ctx.execute()
     }
