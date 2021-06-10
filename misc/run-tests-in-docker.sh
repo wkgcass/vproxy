@@ -7,21 +7,21 @@ image="wkgcass/vproxy-test:latest"
 
 docker pull "$image"
 
-id=`docker run -it --rm "$image" uuid 2>/dev/null | cut -d '-' -f 1`
+id=`docker run --rm "$image" uuid 2>/dev/null | cut -d '-' -f 1`
 echo "random id: \`$id'"
 name="vproxy-test-$id"
 
-docker run -d -it --rm -v `pwd`:/vproxy --name "$name" "$image" /bin/bash -c 'sleep 1200s'
+docker run -d --rm -v `pwd`:/vproxy --name "$name" "$image" /bin/bash -c 'sleep 1200s'
 
 docker exec "$name" ./gradlew clean
 
 for cls in $testclasses
 do
 	echo "running $cls"
-	docker exec -it "$name" ./gradlew runSingleTest -Dcase="$cls"
+	docker exec "$name" ./gradlew runSingleTest -Dcase="$cls"
 done
 
-docker exec -it "$name" ./gradlew runSingleTest -Dcase="CI"
+docker exec "$name" ./gradlew runSingleTest -Dcase="CI"
 
 docker kill "$name"
 
