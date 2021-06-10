@@ -1,4 +1,5 @@
-language: java
+language: generic
+arch: amd64
 os: linux
 
 services:

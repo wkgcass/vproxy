@@ -3,10 +3,12 @@
 set -e
 
 testclasses=`cat test/src/test/java/vproxy/test/VSuite.java | grep '\bTest' | cut -d '.' -f 1 | xargs`
-id=`uuid`
+image="wkgcass/vproxy-test:latest"
+
+id=`docker run -it --rm "$image" uuid 2>/dev/null`
 name="vproxy-test-$id"
 
-docker run -d -it --rm -v `pwd`:/vproxy --name "$name" wkgcass/vproxy-test:latest /bin/bash -c 'sleep 1200s'
+docker run -d -it --rm -v `pwd`:/vproxy --name "$name" "$image" /bin/bash -c 'sleep 1200s'
 
 docker exec "$name" ./gradlew clean
 
