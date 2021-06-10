@@ -27,7 +27,7 @@ public class VFDConfig {
     static {
         fstack = Utils.getSystemProperty("fstack", "");
         useFStack = !fstack.isBlank();
-        vfdImpl = useFStack ? "posix" : Utils.getSystemProperty("vproxy/vfd", "provided");
+        vfdImpl = useFStack ? "posix" : Utils.getSystemProperty("vfd", "provided");
         if (!vfdImpl.equals("provided")) {
             if (vfdImpl.equals("posix")) {
                 if (useFStack) {
