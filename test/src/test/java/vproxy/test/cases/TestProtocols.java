@@ -107,6 +107,7 @@ public class TestProtocols {
             "tl0", elg, elg, new IPPort("0.0.0.0", lbPort), ups, 10000, 16384, 16384, protocol, null, null, SecurityGroup.allowAll()
         );
         lb.start();
+        Thread.sleep(500); // wait for a while to ensure it's listening
     }
 
     private void initDubboLb() throws Exception {
@@ -119,6 +120,7 @@ public class TestProtocols {
         lb.start();
         sg.add("svr3", new IPPort(IP.from("127.0.0.1"), port3dubbo), 10);
         sg.add("svr4", new IPPort(IP.from("127.0.0.1"), port4dubbo), 10);
+        Thread.sleep(500); // wait for a while to ensure it's listening
     }
 
     @SuppressWarnings("deprecation")
