@@ -730,7 +730,7 @@ public class Shutdown {
                         continue;
                     }
                     var tap = (TapIface) iface;
-                    cmd = "add tap " + tap.tap.getTap().dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
+                    cmd = "add tap " + tap.devPattern + " to switch " + sw.alias + " vni " + tap.localSideVni;
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
                         cmd += " post-script " + tap.postScript;
                     }

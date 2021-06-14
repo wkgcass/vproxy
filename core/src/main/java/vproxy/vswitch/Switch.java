@@ -289,7 +289,7 @@ public class Switch {
             } else {
                 fdToPutIntoLoop = new BlockingDatagramFD<>(fd, loop, 2048, 65536, 32);
             }
-            iface = new TapIface(fd, fdToPutIntoLoop, vni, postScript, annotations, loop);
+            iface = new TapIface(devPattern, fd, fdToPutIntoLoop, vni, postScript, annotations, loop);
             loop.add(fdToPutIntoLoop, EventSet.read(), null, new TapHandler(iface, fd));
         } catch (IOException e) {
             if (fdToPutIntoLoop != null) {

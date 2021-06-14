@@ -13,6 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class TapIface implements Iface {
+    public final String devPattern;
     public final TapDatagramFD tap;
     public final int localSideVni;
     public final String postScript;
@@ -21,8 +22,10 @@ public class TapIface implements Iface {
     private final AbstractDatagramFD<?> operateTap;
     private final SelectorEventLoop bondLoop;
 
-    public TapIface(TapDatagramFD tap, AbstractDatagramFD<?> operateTap, int localSideVni, String postScript, Annotations annotations,
+    public TapIface(String devPattern, TapDatagramFD tap, AbstractDatagramFD<?> operateTap,
+                    int localSideVni, String postScript, Annotations annotations,
                     SelectorEventLoop bondLoop) {
+        this.devPattern = devPattern;
         this.tap = tap;
         this.localSideVni = localSideVni;
         this.postScript = postScript;

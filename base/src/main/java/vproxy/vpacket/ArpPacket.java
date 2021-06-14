@@ -2,6 +2,7 @@ package vproxy.vpacket;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.IP;
 
@@ -57,7 +58,22 @@ public class ArpPacket extends AbstractPacket {
         }
         targetIp = bytes.sub(8 + hardwareSize + protocolSize + hardwareSize, protocolSize);
         if (bytes.length() != 8 + 2 * hardwareSize + 2 * protocolSize) {
-            return "input packet has extra bytes for an arp packet: " + (bytes.length() - (8 + 2 * hardwareSize + 2 * protocolSize) + " bytes");
+            // check whether they are all zeros
+            int extraSize = bytes.length() - (8 + 2 * hardwareSize + 2 * protocolSize);
+            int base = 8 + hardwareSize + protocolSize + hardwareSize + protocolSize;
+            boolean hasNonZero = false;
+            for (int i = 0; i < extraSize; ++i) {
+                if (bytes.get(base + i) != 0) {
+                    hasNonZero = true;
+                    break;
+                }
+            }
+            if (hasNonZero) {
+                return "input packet has extra bytes for an arp packet: " + extraSize + " bytes";
+            } else {
+                assert Logger.lowLevelDebug("received arp packet has extra bytes (" + extraSize + "), " +
+                    "but all bytes are 0, consider them as padding");
+            }
         }
 
         raw = bytes;

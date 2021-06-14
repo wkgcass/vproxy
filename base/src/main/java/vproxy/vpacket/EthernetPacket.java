@@ -36,7 +36,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         String err = packet.from(data);
         if (err != null) {
             if (mayIgnoreError) {
-                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data);
+                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString());
                 packet = new PacketBytes();
                 packet.from(data);
             } else {
