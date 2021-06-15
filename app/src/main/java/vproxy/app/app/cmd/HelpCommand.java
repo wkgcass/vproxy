@@ -119,7 +119,7 @@ public class HelpCommand {
             .append(withSpaces("man ...", maxLenOfFullName))
             .append(withSpaces(null, maxLenOfShortName))
             .append(withMaxLen("use `man action|resource|param_name` to get detailed doc." +
-                    "use `man add-to|remove-from` to see info about `add ... to ...` or `remove ... from ...`",
+                    "use `man add-to|remove-from` to see info about `add-to` or `remove-from`",
                 descrMaxLen, descrSpaces))
             .append(SystemCommand.systemCallHelpStr)
             .append("\n    Available actions:");
@@ -362,13 +362,13 @@ public class HelpCommand {
 
     public enum ActMan {
         add("add", "a", "create a resource"),
-        addto("add ... to ...", "a ... to ...", "attach a resource to another one"),
+        addto("add-to", "a-to", "attach a resource to another one"),
         list("list", "l", "list names, or retrieve count of some resources"),
         listdetail("list-detail", "L", "list detailed info of some resources"),
         update("update", "u", "modify a resource"),
         remove("remove", "r", "remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted"),
         forceremove("force-remove", "R", "remove and destroy/stop a resource, regardless of warnings"),
-        removefrom("remove ... from ...", "r ... from ...", "detach a resource from another one"),
+        removefrom("remove-from", "r-from", "detach a resource from another one"),
         ;
         public final String act;
         public final String shortVer;
@@ -1293,16 +1293,16 @@ public class HelpCommand {
                         "1) \"1314 -> v4network 172.16.0.0/16\""
                     )
                 )),
-                new ResActMan(ActMan.add, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
+                new ResActMan(ActMan.addto, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
                     new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vpc"),
                     new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vpc", "not allowed")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add vpc 1314 in switch sw0 v4network 172.16.0.0/16",
+                        "add vpc 1314 to switch sw0 v4network 172.16.0.0/16",
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a vpc from a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a vpc from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remote vpc 1314 from switch sw0",
                         "\"OK\""
@@ -1427,7 +1427,7 @@ public class HelpCommand {
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
                     )
                 )),
-                new ResActMan(ActMan.add, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
+                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
                     new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
                 ), Collections.singletonList(
                     new Tuple<>(
@@ -1435,7 +1435,7 @@ public class HelpCommand {
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove ip 172.16.0.21 from vpc 1314 in switch sw0",
                         "\"OK\""
@@ -1458,7 +1458,7 @@ public class HelpCommand {
                             "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315\""
                     )
                 )),
-                new ResActMan(ActMan.add, "add a route to a vpc of a switch", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a route to a vpc of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.network, "network to be matched"),
                     new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|via can be used"),
                     new ResActParamMan(ParamMan.via, "the address to forward the packet to. only one of via|vni can be used")
@@ -1472,7 +1472,7 @@ public class HelpCommand {
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove route to172.17 from vpc 1314 in switch sw0",
                         "\"OK\""
