@@ -554,7 +554,7 @@ public class BinaryHttpSubContext extends OOSubContext<BinaryHttpContext> implem
         }
 
         var another = session.another(stream);
-        System.out.println(another.streamId + "/" + another.ctx.connId);
+        assert Logger.lowLevelDebug(another.streamId + "/" + another.ctx.connId);
         frame.streamId = (int) another.streamId;
         if (onlyPayload) {
             dataToProxy = frame.serializeH2Payload(another.ctx);
