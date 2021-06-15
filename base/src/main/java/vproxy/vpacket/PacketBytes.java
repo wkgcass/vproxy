@@ -20,6 +20,11 @@ public class PacketBytes extends AbstractPacket {
     }
 
     @Override
+    public String description() {
+        return "packet,len=" + bytes.length();
+    }
+
+    @Override
     public String toString() {
         return "PacketBytes(" + Utils.runAvoidNull(() -> bytes.toHexString(), "null") + ')';
     }

@@ -19,4 +19,6 @@ public abstract class AbstractPacket {
     }
 
     protected abstract ByteArray buildPacket();
+
+    public abstract String description();
 }

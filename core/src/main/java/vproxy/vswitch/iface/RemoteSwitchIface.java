@@ -65,4 +65,14 @@ public class RemoteSwitchIface implements Iface {
     public int getLocalSideVni(int hint) {
         return hint;
     }
+
+    @Override
+    public int baseMTU() {
+        return 1500; // TODO make this a variable
+    }
+
+    @Override
+    public int overhead() {
+        return 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
+    }
 }

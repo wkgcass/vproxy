@@ -10,7 +10,7 @@ import java.util.Objects;
 
 public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
     public final IPPort udpSockAddress; // for vxlan or vproxy wrapped vxlan
-    private int serverSideVni;
+    private int localSideVni;
 
     public BareVXLanIface(IPPort udpSockAddress) {
         this.udpSockAddress = udpSockAddress;
@@ -56,11 +56,21 @@ public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
 
     @Override
     public int getLocalSideVni(int hint) {
-        return serverSideVni;
+        return localSideVni;
+    }
+
+    @Override
+    public int baseMTU() {
+        return 1500; // TODO make this a variable
+    }
+
+    @Override
+    public int overhead() {
+        return 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
     }
 
     @Override
     public void setLocalSideVni(int vni) {
-        this.serverSideVni = vni;
+        this.localSideVni = vni;
     }
 }

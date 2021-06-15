@@ -52,7 +52,11 @@ public class Ipv4Packet extends AbstractIpPacket {
             return "input ihl(" + ihl + ") > totalLength(" + totalLength + ")";
         }
         if (totalLength != bytes.length()) {
-            return "input packet length does not correspond to totalLength(" + totalLength + ")";
+            if (Utils.allZerosAfter(bytes, totalLength)) {
+                bytes = bytes.sub(0, totalLength);
+            } else {
+                return "input packet length does not correspond to totalLength(" + totalLength + "), actual(" + bytes.length() + ")";
+            }
         }
 
         // 4-7
@@ -125,6 +129,14 @@ public class Ipv4Packet extends AbstractIpPacket {
         headerChecksum = calculateChecksum(arr);
         arr.int16(10, headerChecksum);
         return arr;
+    }
+
+    @Override
+    public String description() {
+        return "ip"
+            + ",nw_src=" + src.formatToIPString()
+            + ",nw_dst=" + dst.formatToIPString()
+            + "," + packet.description();
     }
 
     private ByteArray genHeaderWithChecksumUnfilled() {

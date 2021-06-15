@@ -12,4 +12,8 @@ public interface Iface {
     void destroy();
 
     int getLocalSideVni(int hint);
+
+    int baseMTU();
+
+    int overhead();
 }

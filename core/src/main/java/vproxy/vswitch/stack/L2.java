@@ -2,6 +2,7 @@ package vproxy.vswitch.stack;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
+import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
@@ -72,7 +73,33 @@ public class L2 {
             broadcastLocal(ctx);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
+        handleInputDroppedPacket(ctx);
+    }
+
+    private void handleInputDroppedPacket(InputPacketL2Context ctx) {
+        assert Logger.lowLevelDebug(ctx.handlingUUID + " no path for this packet in l2: " + ctx);
+        // TODO make whether to flood an option
+        flood(ctx.handlingUUID, ctx.inputIface, getOrMakeVXLanPacket(null, ctx.inputPacket, ctx.table), ctx.table);
+        // TODO assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
+    }
+
+    private void flood(String ctxUUID, Iface inputIface, VXLanPacket p, Table table) {
+        Logger.warn(LogType.ALERT, "flood packet: input=" + inputIface + "," + p.description());
+        for (Iface iface : swCtx.getIfaces()) {
+            if (inputIface != null && iface == inputIface) {
+                continue;
+            }
+            if (iface.getLocalSideVni(table.vni) != table.vni) {
+                continue;
+            }
+            sendPacket(ctxUUID, p, iface);
+        }
+
+        // also, send arp/ndp request for these addresses if they are ip packet
+        if (p.getPacket().getPacket() instanceof AbstractIpPacket) {
+            AbstractIpPacket ip = (AbstractIpPacket) p.getPacket().getPacket();
+            L3.resolve(ctxUUID, table, ip.getDst(), null);
+        }
     }
 
     private void updateArpTable(InputPacketL2Context ctx) {
@@ -120,7 +147,7 @@ public class L2 {
                 }
                 ctx.table.arpTable.record(ctx.inputPacket.getSrc(), ip);
             } else {
-                assert Logger.lowLevelDebug("arp type is neighther req nor resp");
+                assert Logger.lowLevelDebug("arp type is neither req nor resp");
                 return;
             }
             // ============================================================
@@ -225,7 +252,14 @@ public class L2 {
             outputBroadcastLocal(ctx);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
+        handleOutputDroppedPacket(ctx, vxLanPacket);
+    }
+
+    private void handleOutputDroppedPacket(OutputPacketL2Context ctx, VXLanPacket p) {
+        assert Logger.lowLevelDebug(ctx.handlingUUID + " no path for this packet in l2: " + ctx);
+        // TODO make whether to flood an option
+        flood(ctx.handlingUUID, null, p, ctx.table);
+        // TODO assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
     }
 
     private void forwardPacket(InputPacketL2Context ctx, Iface output) {

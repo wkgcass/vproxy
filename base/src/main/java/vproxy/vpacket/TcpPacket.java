@@ -252,6 +252,15 @@ public class TcpPacket extends AbstractPacket {
         throw new UnsupportedOperationException();
     }
 
+    @Override
+    public String description() {
+        return "tcp"
+            + ",flags=" + Integer.toBinaryString(flags)
+            + ",tp_src=" + srcPort
+            + ",tp_dst=" + dstPort
+            + ",data=" + (data == null ? 0 : data.length());
+    }
+
     private ByteArray buildCommonPart() {
         ByteArray base = ByteArray.allocate(20);
         base.int16(0, srcPort);
@@ -292,13 +301,18 @@ public class TcpPacket extends AbstractPacket {
             int len = optBytes.length();
             int mod = len % 4;
             if (mod != 0) {
-                padding = mod;
+                padding = 4 - mod;
             }
             off += len + padding;
         }
         dataOffset = off;
         int dataOffsetReservedFlags = ((dataOffset / 4) << 12) | flags;
         base.int16(12, dataOffsetReservedFlags);
+
+        // add padding
+        if (padding != 0) {
+            base = base.concat(ByteArray.allocate(padding));
+        }
 
         if (data == null || data.length() == 0) {
             return base;
@@ -451,6 +465,11 @@ public class TcpPacket extends AbstractPacket {
             } else {
                 return o.concat(data);
             }
+        }
+
+        @Override
+        public String description() {
+            throw new UnsupportedOperationException();
         }
     }
 }

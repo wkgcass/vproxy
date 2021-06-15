@@ -43,6 +43,13 @@ public class VXLanPacket extends AbstractPacket {
     }
 
     @Override
+    public String description() {
+        return "vxlan"
+            + ",vni=" + vni
+            + "," + packet.description();
+    }
+
+    @Override
     public String toString() {
         return "VXLanPacket{" +
             "flags=" + Utils.toBinaryString(flags) +

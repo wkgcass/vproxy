@@ -43,6 +43,11 @@ public class IcmpPacket extends AbstractPacket {
         return ret;
     }
 
+    @Override
+    public String description() {
+        return isIpv6 ? "icmp6" : "icmp";
+    }
+
     public ByteArray getRawICMPv6Packet(Ipv6Packet ipv6) {
         if (!isIpv6)
             throw new UnsupportedOperationException("this packet is ICMP, not v6");

@@ -2,6 +2,7 @@ package vproxy.vpacket;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
+import vproxy.base.util.Utils;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv6;
 
@@ -47,7 +48,11 @@ public class Ipv6Packet extends AbstractIpPacket {
             return "we do not support Jumbo Payload for now";
         }
         if (40 + payloadLength != bytes.length()) {
-            return "input packet length does not correspond to payloadLength(" + payloadLength + ")";
+            if (Utils.allZerosAfter(bytes, 40 + payloadLength)) {
+                bytes = bytes.sub(0, 49 + payloadLength);
+            } else {
+                return "input packet length does not correspond to 40 + payloadLength(" + payloadLength + "), actualPacket(" + bytes.length() + ")";
+            }
         }
 
         byte[] srcBytes = bytes.sub(8, 16).toJavaArray();
@@ -120,6 +125,14 @@ public class Ipv6Packet extends AbstractIpPacket {
         } else {
             return headers.concat(packet.getRawPacket());
         }
+    }
+
+    @Override
+    public String description() {
+        return "ipv6"
+            + ",ipv6_src=" + src.formatToIPString()
+            + ",ipv6_dst=" + dst.formatToIPString()
+            + "," + packet.description();
     }
 
     @Override
@@ -264,6 +277,11 @@ public class Ipv6Packet extends AbstractIpPacket {
         @Override
         protected ByteArray buildPacket() {
             return ByteArray.allocate(2).set(0, (byte) nextHeader).set(1, (byte) hdrExtLen).concat(other);
+        }
+
+        @Override
+        public String description() {
+            throw new UnsupportedOperationException();
         }
 
         @Override

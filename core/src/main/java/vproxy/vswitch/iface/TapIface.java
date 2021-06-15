@@ -80,4 +80,14 @@ public class TapIface implements Iface {
     public int getLocalSideVni(int hint) {
         return localSideVni;
     }
+
+    @Override
+    public int baseMTU() {
+        return 1500; // TODO make this a variable
+    }
+
+    @Override
+    public int overhead() {
+        return 0;
+    }
 }

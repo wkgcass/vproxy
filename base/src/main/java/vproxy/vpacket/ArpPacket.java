@@ -57,22 +57,16 @@ public class ArpPacket extends AbstractPacket {
             return "input packet length too short for an arp packet: no enough bytes for targetIp";
         }
         targetIp = bytes.sub(8 + hardwareSize + protocolSize + hardwareSize, protocolSize);
-        if (bytes.length() != 8 + 2 * hardwareSize + 2 * protocolSize) {
+
+        int expectedTotalLen = 8 + hardwareSize + protocolSize + hardwareSize + protocolSize;
+        if (bytes.length() != expectedTotalLen) {
             // check whether they are all zeros
-            int extraSize = bytes.length() - (8 + 2 * hardwareSize + 2 * protocolSize);
-            int base = 8 + hardwareSize + protocolSize + hardwareSize + protocolSize;
-            boolean hasNonZero = false;
-            for (int i = 0; i < extraSize; ++i) {
-                if (bytes.get(base + i) != 0) {
-                    hasNonZero = true;
-                    break;
-                }
-            }
-            if (hasNonZero) {
-                return "input packet has extra bytes for an arp packet: " + extraSize + " bytes";
-            } else {
-                assert Logger.lowLevelDebug("received arp packet has extra bytes (" + extraSize + "), " +
+            if (Utils.allZerosAfter(bytes, expectedTotalLen)) {
+                assert Logger.lowLevelDebug("received arp packet has extra bytes, " +
                     "but all bytes are 0, consider them as padding");
+                bytes = bytes.sub(0, expectedTotalLen);
+            } else {
+                return "input packet has extra bytes for an arp packet: " + (bytes.length() - expectedTotalLen) + " bytes";
             }
         }
 
@@ -102,6 +96,16 @@ public class ArpPacket extends AbstractPacket {
             .concat(senderIp)
             .concat(targetMac)
             .concat(targetIp);
+    }
+
+    @Override
+    public String description() {
+        return "arp"
+            + ",arp_op=" + opcode
+            + ",arp_spa=" + senderIp.toHexString()
+            + ",arp_tpa=" + targetIp.toHexString()
+            + ",arp_sha=" + senderMac.toHexString()
+            + ",arp_tha=" + targetMac.toHexString();
     }
 
     @Override

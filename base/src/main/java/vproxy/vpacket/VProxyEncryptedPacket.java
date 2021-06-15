@@ -103,6 +103,14 @@ public class VProxyEncryptedPacket extends AbstractPacket {
     }
 
     @Override
+    public String description() {
+        return "vproxy"
+            + ",user=" + user
+            + ",type=" + type
+            + "," + vxlan.description();
+    }
+
+    @Override
     public String toString() {
         return "VProxyEncryptedPacket{" +
             "user=" + user +

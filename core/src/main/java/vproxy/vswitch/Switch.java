@@ -19,9 +19,7 @@ import vproxy.base.util.exception.XException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vfd.*;
 import vproxy.vmirror.Mirror;
-import vproxy.vpacket.EthernetPacket;
-import vproxy.vpacket.VProxyEncryptedPacket;
-import vproxy.vpacket.VXLanPacket;
+import vproxy.vpacket.*;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.stack.InputPacketL2Context;
 import vproxy.vswitch.stack.L2;
@@ -604,6 +602,8 @@ public class Switch {
         private void sendPacket(VXLanPacket vxlan, Iface iface) {
             assert Logger.lowLevelDebug("unicast(" + iface + "," + vxlan + ")");
 
+            checkAndUpdateMss(vxlan, iface);
+
             if (Mirror.isEnabled("switch")) {
                 Mirror.switchPacket(vxlan.getPacket());
             }
@@ -613,6 +613,56 @@ public class Switch {
                 iface.sendPacket(sock, vxlan, sndBuf);
             } catch (IOException e) {
                 Logger.error(LogType.CONN_ERROR, "sending packet to " + iface + " failed", e);
+            }
+        }
+
+        private void checkAndUpdateMss(VXLanPacket vxlan, Iface iface) {
+            int maxMss = iface.baseMTU() - iface.overhead() - 20 /* tcp common */;
+            if (!(vxlan.getPacket() instanceof EthernetPacket) ||
+                !(vxlan.getPacket().getPacket() instanceof AbstractIpPacket) ||
+                !(((AbstractIpPacket) vxlan.getPacket().getPacket()).getPacket() instanceof TcpPacket)) {
+                return; // only tcp requires modification
+            }
+            AbstractIpPacket ip = (AbstractIpPacket) vxlan.getPacket().getPacket();
+            TcpPacket tcp = (TcpPacket) ((AbstractIpPacket) vxlan.getPacket().getPacket()).getPacket();
+            if ((tcp.getFlags() & Consts.TCP_FLAGS_SYN) != Consts.TCP_FLAGS_SYN) {
+                return; // only handle syn and syn-ack
+            }
+            if (tcp.getOptions() == null) {
+                tcp.setOptions(new ArrayList<>(1));
+            }
+            boolean foundMss = false;
+            for (TcpPacket.TcpOption opt : tcp.getOptions()) {
+                if (opt.getKind() == Consts.TCP_OPTION_MSS) {
+                    foundMss = true;
+                    int originalMss = opt.getData().uint16(0);
+                    if (originalMss > maxMss) {
+                        assert Logger.lowLevelDebug("tcp mss updated from " + originalMss + " to " + maxMss);
+                        opt.setData(ByteArray.allocate(2).int16(0, maxMss));
+                        tcp.clearRawPacket();
+                        if (ip instanceof Ipv4Packet) {
+                            tcp.buildIPv4TcpPacket((Ipv4Packet) ip);
+                        } else {
+                            tcp.buildIPv6TcpPacket((Ipv6Packet) ip);
+                        }
+                    }
+                    break;
+                }
+            }
+            if (foundMss) {
+                return;
+            }
+            // need to add mss
+            assert Logger.lowLevelDebug("add tcp mss: " + maxMss);
+            TcpPacket.TcpOption opt = new TcpPacket.TcpOption();
+            opt.setKind(Consts.TCP_OPTION_MSS);
+            opt.setData(ByteArray.allocate(2).int16(0, maxMss));
+            tcp.getOptions().add(opt);
+            tcp.clearRawPacket();
+            if (ip instanceof Ipv4Packet) {
+                tcp.buildIPv4TcpPacket((Ipv4Packet) ip);
+            } else {
+                tcp.buildIPv6TcpPacket((Ipv6Packet) ip);
             }
         }
 
@@ -652,13 +702,35 @@ public class Switch {
             if (err == null) {
                 String user = packet.getUser();
                 UserIface uiface = new UserIface(remote, user, users);
-                iface = uiface;
                 UserInfo info = users.get(user);
                 if (info == null) {
                     Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
                     return null;
                 }
                 uiface.setLocalSideVni(info.vni);
+
+                // get iface from recorded userifaces
+                for (Iface recorded : ifaces.keySet()) {
+                    if (recorded instanceof UserIface) {
+                        var recordedUIface = (UserIface) recorded;
+                        if (recordedUIface.user.equals(user)) {
+                            if (recordedUIface.udpSockAddress.getAddress().equals(remote.getAddress())) {
+                                if (recordedUIface.udpSockAddress.getPort() == remote.getPort()) {
+                                    assert Logger.lowLevelDebug(handlingUUID + " using existing uiface: " + recordedUIface);
+                                    uiface = recordedUIface;
+                                    break;
+                                }
+                            }
+                            Logger.warn(LogType.ALERT, "new connection established for user " + user + ", the old one will be disconnected");
+                            var timer = ifaces.get(recordedUIface);
+                            if (timer != null) {
+                                timer.cancel();
+                            }
+                            break;
+                        }
+                    }
+                }
+                iface = uiface;
 
                 assert Logger.lowLevelDebug(handlingUUID + " got packet " + packet + " from " + iface);
 

@@ -3,8 +3,7 @@ package vproxy.base.util;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.base.util.unsafe.JDKUnsafe;
 import vproxy.vfd.FDProvider;
-import vproxy.vpacket.Ipv4Packet;
-import vproxy.vpacket.Ipv6Packet;
+import vproxy.vpacket.*;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -363,6 +362,15 @@ public class Utils {
             return null;
         }
         return baos.toByteArray();
+    }
+
+    public static boolean allZerosAfter(ByteArray bytes, int index) {
+        for (int i = index; i < bytes.length(); ++i) {
+            if (bytes.get(i) != 0) {
+                return false;
+            }
+        }
+        return true;
     }
 
     public static boolean assertOn() {

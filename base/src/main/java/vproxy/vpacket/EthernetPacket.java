@@ -36,7 +36,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         String err = packet.from(data);
         if (err != null) {
             if (mayIgnoreError) {
-                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString());
+                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString() + ": " + err);
                 packet = new PacketBytes();
                 packet.from(data);
             } else {
@@ -55,6 +55,14 @@ public class EthernetPacket extends AbstractEthernetPacket {
             .concat(src.bytes) // src
             .concat(ByteArray.allocate(2).int16(0, type)) // type
             .concat(packet.getRawPacket()); // packet
+    }
+
+    @Override
+    public String description() {
+        return "ether"
+            + ",dl_dst=" + dst
+            + ",dl_src=" + src
+            + "," + packet.description();
     }
 
     @Override
