@@ -2,6 +2,7 @@ package vproxy.vpacket;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
@@ -51,12 +52,9 @@ public class Ipv4Packet extends AbstractIpPacket {
         if (totalLength < ihl * 4) {
             return "input ihl(" + ihl + ") > totalLength(" + totalLength + ")";
         }
-        if (totalLength != bytes.length()) {
-            if (Utils.allZerosAfter(bytes, totalLength)) {
-                bytes = bytes.sub(0, totalLength);
-            } else {
-                return "input packet length does not correspond to totalLength(" + totalLength + "), actual(" + bytes.length() + ")";
-            }
+        if (totalLength < bytes.length()) {
+            assert Logger.lowLevelDebug("ipv4 packet is cut shorter from " + bytes.length() + " to " + totalLength);
+            bytes = bytes.sub(0, totalLength);
         }
 
         // 4-7

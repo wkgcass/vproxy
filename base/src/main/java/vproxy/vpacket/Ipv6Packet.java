@@ -2,7 +2,7 @@ package vproxy.vpacket;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
-import vproxy.base.util.Utils;
+import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv6;
 
@@ -47,12 +47,9 @@ public class Ipv6Packet extends AbstractIpPacket {
         if (payloadLength == 0) {
             return "we do not support Jumbo Payload for now";
         }
-        if (40 + payloadLength != bytes.length()) {
-            if (Utils.allZerosAfter(bytes, 40 + payloadLength)) {
-                bytes = bytes.sub(0, 49 + payloadLength);
-            } else {
-                return "input packet length does not correspond to 40 + payloadLength(" + payloadLength + "), actualPacket(" + bytes.length() + ")";
-            }
+        if (40 + payloadLength < bytes.length()) {
+            assert Logger.lowLevelDebug("ipv6 packet is cut shorter from " + bytes.length() + " to " + (40 + payloadLength));
+            bytes = bytes.sub(0, 40 + payloadLength);
         }
 
         byte[] srcBytes = bytes.sub(8, 16).toJavaArray();
