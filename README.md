@@ -114,17 +114,25 @@ And there's a special version for windows to support Tap devices: `-Dvfd=windows
 
 ```
 make vfdwindows
-java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 </details>
 
 <details><summary>test</summary>
 
+<br>
+
 Run test cases:
 
 ```
 ./gradlew runTest
+```
+
+Run test cases in docker:
+
+```
+make dockertest
 ```
 
 Test vswitch, docker network plugin, vpctl, k8s controller:

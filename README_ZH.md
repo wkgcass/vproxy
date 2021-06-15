@@ -114,17 +114,25 @@ java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.ja
 
 ```
 make vfdwindows
-java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
 </details>
 
 <details><summary>测试功能</summary>
 
+<br>
+
 执行测试用例:
 
 ```
 ./gradlew runTest
+```
+
+在docker中执行测试用例：
+
+```
+make dockertest
 ```
 
 测试vswitch, docker network plugin, vpctl, k8s controller:
