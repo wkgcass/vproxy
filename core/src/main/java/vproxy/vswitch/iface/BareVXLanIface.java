@@ -8,7 +8,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
+public class BareVXLanIface extends AbstractIface implements Iface, LocalSideVniGetterSetter {
     public final IPPort udpSockAddress; // for vxlan or vproxy wrapped vxlan
     private int localSideVni;
 
@@ -60,12 +60,7 @@ public class BareVXLanIface implements Iface, LocalSideVniGetterSetter {
     }
 
     @Override
-    public int baseMTU() {
-        return 1500; // TODO make this a variable
-    }
-
-    @Override
-    public int overhead() {
+    public int getOverhead() {
         return 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
     }
 

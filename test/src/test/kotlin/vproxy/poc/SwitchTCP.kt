@@ -23,7 +23,10 @@ object SwitchTCP {
   @JvmStatic
   fun main(args: Array<String>) {
     val elg = EventLoopGroup("elg0")
-    val sw = Switch("sw0", IPPort("127.0.0.1", 18472), elg, 60000, 60000, SecurityGroup.allowAll())
+    val sw = Switch(
+      "sw0", IPPort("127.0.0.1", 18472), elg, 60000, 60000, SecurityGroup.allowAll(),
+      1500, true
+    )
     sw.start()
     elg.add("el0")
     val el = elg["el0"]

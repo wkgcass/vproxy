@@ -656,13 +656,17 @@ public class Command {
                     case a:
                     case r:
                     case R:
-                        throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                    case u:
+                        if (cmd.resource.type == ResourceType.iface && cmd.action == Action.u) {
+                            IfaceHandle.checkUpdateIface(cmd);
+                        } else {
+                            throw new Exception("cannot run " + cmd.action.fullname + " on " + cmd.resource.type.fullname);
+                        }
                     case L:
                     case l:
                         if (cmd.resource.type == ResourceType.arp) {
                             ArpHandle.checkArpParent(targetResource);
                         } else {
-                            //noinspection ConstantConditions
                             assert cmd.resource.type == ResourceType.iface;
                             IfaceHandle.checkIfaceParent(targetResource);
                         }
@@ -672,15 +676,30 @@ public class Command {
                 }
                 break;
             case user:
+                switch (cmd.action) {
+                    case a:
+                        UserHandle.checkCreateUser(cmd);
+                    case u:
+                        if (cmd.action == Action.u) {
+                            UserHandle.checkUpdateUser(cmd);
+                        }
+                    case r:
+                    case R:
+                    case L:
+                    case l:
+                        UserHandle.checkUserParent(targetResource);
+                        break;
+                    default:
+                        throw new Exception("unsupported action " + cmd.action.fullname + " for " + cmd.resource.type.fullname);
+                }
+                break;
             case vpc:
             case route:
             case ip:
             case proxy:
                 switch (cmd.action) {
                     case a:
-                        if (cmd.resource.type == ResourceType.user) {
-                            UserHandle.checkCreateUser(cmd);
-                        } else if (cmd.resource.type == ResourceType.vpc) {
+                        if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkCreateVpc(cmd);
                         } else if (cmd.resource.type == ResourceType.route) {
                             RouteHandle.checkCreateRoute(cmd);
@@ -700,9 +719,7 @@ public class Command {
                         }
                     case L:
                     case l:
-                        if (cmd.resource.type == ResourceType.user) {
-                            UserHandle.checkUserParent(targetResource);
-                        } else if (cmd.resource.type == ResourceType.vpc) {
+                        if (cmd.resource.type == ResourceType.vpc) {
                             VpcHandle.checkVpcParent(targetResource);
                         } else if (cmd.resource.type == ResourceType.route) {
                             RouteHandle.checkRouteParent(targetResource);
@@ -1087,8 +1104,11 @@ public class Command {
                         return new CmdResult(cnt, cnt, "" + cnt);
                     case L:
                         List<Iface> ifaces = IfaceHandle.list(targetResource);
-                        List<Object> ls = ifaces.stream().map(Iface::toString).collect(Collectors.toList());
+                        List<Object> ls = ifaces.stream().map(i -> i.toString() + " " + i.paramsToString()).collect(Collectors.toList());
                         return new CmdResult(ifaces, ls, utilJoinList(ls));
+                    case u:
+                        IfaceHandle.update(this);
+                        return new CmdResult();
                 }
             case arp:
                 switch (action) {
@@ -1111,6 +1131,9 @@ public class Command {
                         return new CmdResult(userInfoList, strList, utilJoinList(strList));
                     case a:
                         UserHandle.add(this);
+                        return new CmdResult();
+                    case u:
+                        UserHandle.update(this);
                         return new CmdResult();
                     case r:
                     case R:

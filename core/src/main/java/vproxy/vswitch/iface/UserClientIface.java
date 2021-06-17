@@ -14,7 +14,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
+public class UserClientIface extends AbstractIface implements Iface, IfaceCanSendVProxyPacket {
     public final UserInfo user;
     public final DatagramFD sock;
     public final IPPort remoteAddress;
@@ -132,12 +132,7 @@ public class UserClientIface implements Iface, IfaceCanSendVProxyPacket {
     }
 
     @Override
-    public int baseMTU() {
-        return 1500; // TODO make this a variable
-    }
-
-    @Override
-    public int overhead() {
+    public int getOverhead() {
         return 28 /* vproxy header */ + 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
     }
 }

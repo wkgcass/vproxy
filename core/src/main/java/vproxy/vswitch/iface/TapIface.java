@@ -12,7 +12,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class TapIface implements Iface {
+public class TapIface extends AbstractIface implements Iface {
     public final String devPattern;
     public final TapDatagramFD tap;
     public final int localSideVni;
@@ -82,12 +82,7 @@ public class TapIface implements Iface {
     }
 
     @Override
-    public int baseMTU() {
-        return 1500; // TODO make this a variable
-    }
-
-    @Override
-    public int overhead() {
+    public int getOverhead() {
         return 0;
     }
 }

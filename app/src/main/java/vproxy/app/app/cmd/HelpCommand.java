@@ -421,6 +421,8 @@ public class HelpCommand {
         mac("mac", null, "mac address"),
         vni("vni", null, "vni number"),
         postscript("post-script", null, "the script to run after added"),
+        mtu("mtu", null, "max transmission unit"),
+        flood("flood", null, "flooding traffic"),
         ;
         public final String param;
         public final String shortVer;
@@ -1215,7 +1217,9 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "" + SwitchHandle.MAC_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
-                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", SecurityGroup.defaultName)
+                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", SecurityGroup.defaultName),
+                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports", "1500"),
+                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports", "allow")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1227,7 +1231,9 @@ public class HelpCommand {
                     Arrays.asList(
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
-                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed")
+                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
+                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones", "not changed"),
+                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1323,6 +1329,31 @@ public class HelpCommand {
                         "1) \"Iface(192.168.56.2:8472)\"\n" +
                             "2) \"Iface(100.64.0.4:8472)\""
                     )
+                )),
+                new ResActMan(ActMan.update, "update interface config", Arrays.asList(
+                    new ResActParamMan(ParamMan.mtu, "mtu of this interface", "1500"),
+                    new ResActParamMan(ParamMan.flood, "whether to allow flooding traffic through this interface, allow or deny", "allow")
+                ), Arrays.asList(
+                    new Tuple<>(
+                        "update iface tap:tap0 in switch sw0 mtu 9000 flood allow",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "update iface remote:sw-x in switch sw0 mtu 1500 flood deny",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "update iface ucli:hello in switch sw0 mtu 1500 flood deny",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "update iface user:hello in switch sw0 mtu 1500 flood allow",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "update iface 10.0.0.1:8472 in switch sw0 mtu 1500 flood allow",
+                        "\"OK\""
+                    )
                 ))
             )),
         arp("arp", null, "arp and mac table entries",
@@ -1357,10 +1388,21 @@ public class HelpCommand {
                 )),
                 new ResActMan(ActMan.add, "add a user to a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.pass, "password of the user"),
-                    new ResActParamMan(ParamMan.vni, "vni assigned for the user")
+                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
+                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add user hello to switch sw0 vni 1314 password p@sSw0rD",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.update, "update user info in a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones", "not changed"),
+                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "update user hello in switch sw0 mtu 1500 flood allow",
                         "\"OK\""
                     )
                 )),
@@ -1375,8 +1417,10 @@ public class HelpCommand {
             "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix or -Dvfd=windows",
             Arrays.asList(
                 new ResActMan(ActMan.add, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
-                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
-                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
+                    new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
+                    new ResActParamMan(ParamMan.mtu, "mtu of this tap device", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.flood, "whether the tap device allows flooding traffic", "flood setting of the switch")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add tap tap%d to switch sw0 vni 1314",

@@ -13,7 +13,7 @@ import java.nio.ByteBuffer;
 import java.util.Map;
 import java.util.Objects;
 
-public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVniGetterSetter, IfaceCanSendVProxyPacket {
+public class UserIface extends AbstractIface implements Iface, RemoteSideVniGetterSetter, LocalSideVniGetterSetter, IfaceCanSendVProxyPacket {
     public final IPPort udpSockAddress;
     public final String user;
 
@@ -89,12 +89,7 @@ public class UserIface implements Iface, RemoteSideVniGetterSetter, LocalSideVni
     }
 
     @Override
-    public int baseMTU() {
-        return 1500; // TODO make this a variable
-    }
-
-    @Override
-    public int overhead() {
+    public int getOverhead() {
         return 28 /* encryption header */ + 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
     }
 

@@ -45,6 +45,9 @@ public enum Param {
     postscript("post-script"),
 
     path("path"),
+
+    mtu("mtu"),
+    flood("flood"),
     ;
     public final String fullname;
 

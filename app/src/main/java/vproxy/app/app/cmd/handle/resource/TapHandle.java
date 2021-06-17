@@ -6,6 +6,8 @@ import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
+import vproxy.app.app.cmd.handle.param.FloodHandle;
+import vproxy.app.app.cmd.handle.param.MTUHandle;
 import vproxy.base.util.Annotations;
 import vproxy.base.util.Utils;
 import vproxy.base.util.exception.XException;
@@ -35,6 +37,12 @@ public class TapHandle {
         if (!Utils.isInteger(vni)) {
             throw new Exception("invalid " + Param.vni.fullname + ", not an integer");
         }
+        if (cmd.args.containsKey(Param.mtu)) {
+            MTUHandle.check(cmd);
+        }
+        if (cmd.args.containsKey(Param.flood)) {
+            FloodHandle.check(cmd);
+        }
     }
 
     public static String add(Command cmd) throws Exception {
@@ -46,7 +54,15 @@ public class TapHandle {
         if (cmd.args.containsKey(Param.anno)) {
             anno = AnnotationsHandle.get(cmd);
         }
-        return sw.addTap(devPattern, vni, postScript, anno);
+        Integer mtu = null;
+        if (cmd.args.containsKey(Param.mtu)) {
+            mtu = MTUHandle.get(cmd);
+        }
+        Boolean flood = null;
+        if (cmd.args.containsKey(Param.flood)) {
+            flood = FloodHandle.get(cmd);
+        }
+        return sw.addTap(devPattern, vni, postScript, anno, mtu, flood);
     }
 
     public static void forceRemove(Command cmd) throws Exception {

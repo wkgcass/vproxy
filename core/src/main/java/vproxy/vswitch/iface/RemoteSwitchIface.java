@@ -9,7 +9,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class RemoteSwitchIface implements Iface {
+public class RemoteSwitchIface extends AbstractIface implements Iface {
     public final String alias;
     public final IPPort udpSockAddress;
     public final boolean addSwitchFlag;
@@ -67,12 +67,7 @@ public class RemoteSwitchIface implements Iface {
     }
 
     @Override
-    public int baseMTU() {
-        return 1500; // TODO make this a variable
-    }
-
-    @Override
-    public int overhead() {
+    public int getOverhead() {
         return 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
     }
 }

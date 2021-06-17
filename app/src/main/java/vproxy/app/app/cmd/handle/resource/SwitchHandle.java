@@ -6,6 +6,8 @@ import vproxy.app.app.cmd.Flag;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.handle.param.AddrHandle;
+import vproxy.app.app.cmd.handle.param.FloodHandle;
+import vproxy.app.app.cmd.handle.param.MTUHandle;
 import vproxy.app.app.cmd.handle.param.TimeoutHandle;
 import vproxy.base.component.elgroup.EventLoopGroup;
 import vproxy.base.util.exception.NotFoundException;
@@ -36,13 +38,8 @@ public class SwitchHandle {
 
         AddrHandle.check(cmd);
 
-        if (cmd.prepositionResource == null) { // the switch on top level require these arguments
-            if (cmd.args.containsKey(Param.mactabletimeout)) {
-                TimeoutHandle.check(cmd, Param.mactabletimeout);
-            }
-            if (cmd.args.containsKey(Param.arptabletimeout)) {
-                TimeoutHandle.check(cmd, Param.arptabletimeout);
-            }
+        if (cmd.prepositionResource == null) { // the switch on top level can have these arguments
+            checkTopLevelArgs(cmd);
         }
     }
 
@@ -91,7 +88,21 @@ public class SwitchHandle {
         } else {
             bareVXLanAccess = SecurityGroup.allowAll();
         }
-        Application.get().switchHolder.add(alias, addr, eventLoopGroup, macTableTimeout, arpTableTimeout, bareVXLanAccess);
+        int mtu;
+        if (cmd.args.containsKey(Param.mtu)) {
+            mtu = MTUHandle.get(cmd);
+        } else {
+            mtu = 1500;
+        }
+        boolean flood;
+        if (cmd.args.containsKey(Param.flood)) {
+            flood = FloodHandle.get(cmd);
+        } else {
+            flood = true;
+        }
+        Application.get().switchHolder.add(alias, addr, eventLoopGroup,
+            macTableTimeout, arpTableTimeout, bareVXLanAccess,
+            mtu, flood);
     }
 
     public static void addSubLevel(Command cmd) throws Exception {
@@ -118,11 +129,21 @@ public class SwitchHandle {
         if (cmd.prepositionResource != null) {
             throw new Exception("you can only update the switch on top level");
         }
+        checkTopLevelArgs(cmd);
+    }
+
+    private static void checkTopLevelArgs(Command cmd) throws Exception {
         if (cmd.args.containsKey(Param.mactabletimeout)) {
             TimeoutHandle.check(cmd, Param.mactabletimeout);
         }
         if (cmd.args.containsKey(Param.arptabletimeout)) {
             TimeoutHandle.check(cmd, Param.arptabletimeout);
+        }
+        if (cmd.args.containsKey(Param.mtu)) {
+            MTUHandle.check(cmd);
+        }
+        if (cmd.args.containsKey(Param.flood)) {
+            FloodHandle.check(cmd);
         }
     }
 
@@ -139,6 +160,12 @@ public class SwitchHandle {
         }
         if (cmd.args.containsKey(Param.secg)) {
             sw.bareVXLanAccess = SecurityGroupHandle.get(cmd.args.get(Param.secg));
+        }
+        if (cmd.args.containsKey(Param.mtu)) {
+            sw.defaultMtu = MTUHandle.get(cmd);
+        }
+        if (cmd.args.containsKey(Param.flood)) {
+            sw.defaultFloodAllowed = FloodHandle.get(cmd);
         }
     }
 
@@ -163,7 +190,9 @@ public class SwitchHandle {
                 + " bind " + sw.vxlanBindingAddress.formatToIPPortString()
                 + " mac-table-timeout " + sw.getMacTableTimeout()
                 + " arp-table-timeout " + sw.getArpTableTimeout()
-                + " bare-vxlan-access " + sw.bareVXLanAccess.alias;
+                + " bare-vxlan-access " + sw.bareVXLanAccess.alias
+                + " mtu " + sw.defaultMtu
+                + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
         }
     }
 }

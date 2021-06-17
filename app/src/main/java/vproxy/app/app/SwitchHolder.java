@@ -26,11 +26,15 @@ public class SwitchHolder {
                       EventLoopGroup eventLoopGroup,
                       int macTableTimeout,
                       int arpTableTimeout,
-                      SecurityGroup bareVXLanAccess) throws AlreadyExistException, ClosedException, IOException {
+                      SecurityGroup bareVXLanAccess,
+                      int defaultMtu,
+                      boolean defaultFloodAllowed) throws AlreadyExistException, ClosedException, IOException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("switch", alias);
 
-        Switch sw = new Switch(alias, vxlanBindingAddress, eventLoopGroup, macTableTimeout, arpTableTimeout, bareVXLanAccess);
+        Switch sw = new Switch(alias, vxlanBindingAddress, eventLoopGroup,
+            macTableTimeout, arpTableTimeout, bareVXLanAccess,
+            defaultMtu, defaultFloodAllowed);
         try {
             sw.start();
         } catch (IOException e) {

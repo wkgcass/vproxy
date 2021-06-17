@@ -42,6 +42,8 @@ public class Switch {
     private int macTableTimeout;
     private int arpTableTimeout;
     public SecurityGroup bareVXLanAccess;
+    public int defaultMtu;
+    public boolean defaultFloodAllowed;
 
     private boolean started = false;
     private boolean wantStart = false;
@@ -54,13 +56,16 @@ public class Switch {
     public final NetworkStack netStack = new NetworkStack();
 
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
-                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess) throws AlreadyExistException, ClosedException {
+                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess,
+                  int defaultMtu, boolean defaultFloodAllowed) throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.macTableTimeout = macTableTimeout;
         this.arpTableTimeout = arpTableTimeout;
         this.bareVXLanAccess = bareVXLanAccess;
+        this.defaultMtu = defaultMtu;
+        this.defaultFloodAllowed = defaultFloodAllowed;
 
         try {
             eventLoopGroup.attachResource(new SwitchEventLoopGroupAttach());
@@ -245,10 +250,20 @@ public class Switch {
     }
 
     public void addUser(String user, String password, int vni) throws AlreadyExistException, XException {
-        user = formatUserName(user);
+        addUser(user, password, vni, null, null);
+    }
 
+    public void addUser(String user, String password, int vni,
+                        Integer defaultMtu, Boolean defaultFloodAllowed) throws AlreadyExistException, XException {
+        user = formatUserName(user);
         Aes256Key key = new Aes256Key(password);
-        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni));
+        if (defaultMtu == null) {
+            defaultMtu = this.defaultMtu;
+        }
+        if (defaultFloodAllowed == null) {
+            defaultFloodAllowed = this.defaultFloodAllowed;
+        }
+        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni, defaultMtu, defaultFloodAllowed));
         if (old != null) {
             throw new AlreadyExistException("the user " + user + " already exists in switch " + alias);
         }
@@ -266,6 +281,12 @@ public class Switch {
 
     // return created dev name
     public String addTap(String devPattern, int vni, String postScript, Annotations annotations) throws XException, IOException {
+        return addTap(devPattern, vni, postScript, annotations, null, null);
+    }
+
+    // return created dev name
+    public String addTap(String devPattern, int vni, String postScript, Annotations annotations,
+                         Integer mtu, Boolean floodAllowed) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -325,9 +346,31 @@ public class Switch {
             }
             throw new XException(Utils.formatErr(e));
         }
-        loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
+        blockAndAddPersistentIface(loop, iface);
+        if (mtu != null) {
+            iface.setBaseMTU(mtu);
+        }
+        if (floodAllowed != null) {
+            iface.setFloodAllowed(floodAllowed);
+        }
         Logger.alert("tap device added: " + fd.getTap().dev);
         return fd.getTap().dev;
+    }
+
+    @Blocking
+    private void blockAndAddPersistentIface(SelectorEventLoop loop, Iface iface) {
+        initIface(iface);
+        BlockCallback<Void, RuntimeException> cb = new BlockCallback<>();
+        loop.runOnLoop(() -> {
+            ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+            cb.succeeded();
+        });
+        cb.block();
+    }
+
+    private void initIface(Iface iface) {
+        iface.setBaseMTU(defaultMtu);
+        iface.setFloodAllowed(defaultFloodAllowed);
     }
 
     private void executePostScript(String dev, int vni, String postScript) throws Exception {
@@ -398,7 +441,7 @@ public class Switch {
         SelectorEventLoop loop = eventLoop.getSelectorEventLoop();
 
         Aes256Key key = new Aes256Key(password);
-        UserInfo info = new UserInfo(user, key, password, vni);
+        UserInfo info = new UserInfo(user, key, password, vni, defaultMtu, defaultFloodAllowed);
 
         DatagramFD cliSock = FDProvider.get().openDatagramFD();
         UserClientIface iface = new UserClientIface(info, cliSock, remoteAddr);
@@ -425,7 +468,7 @@ public class Switch {
             }
             throw e;
         }
-        ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+        blockAndAddPersistentIface(loop, iface);
     }
 
     private String formatUserName(String user) throws XException {
@@ -483,7 +526,7 @@ public class Switch {
             }
         }
         Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr, addSwitchFlag);
-        loop.runOnLoop(() -> ifaces.put(iface, new IfaceTimer(loop, -1, iface)));
+        blockAndAddPersistentIface(loop, iface);
     }
 
     public void delRemoteSwitch(String alias) throws NotFoundException {
@@ -617,7 +660,7 @@ public class Switch {
         }
 
         private void checkAndUpdateMss(VXLanPacket vxlan, Iface iface) {
-            int maxMss = iface.baseMTU() - iface.overhead() - 20 /* tcp common */;
+            int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */;
             if (!(vxlan.getPacket() instanceof EthernetPacket) ||
                 !(vxlan.getPacket().getPacket() instanceof AbstractIpPacket) ||
                 !(((AbstractIpPacket) vxlan.getPacket().getPacket()).getPacket() instanceof TcpPacket)) {
@@ -701,15 +744,14 @@ public class Switch {
             assert Logger.lowLevelDebug(handlingUUID + " packet.from(data) = " + err);
             if (err == null) {
                 String user = packet.getUser();
-                UserIface uiface = new UserIface(remote, user, users);
                 UserInfo info = users.get(user);
                 if (info == null) {
                     Logger.warn(LogType.SYS_ERROR, "concurrency detected: user info is null while parsing the packet succeeded: " + user);
                     return null;
                 }
-                uiface.setLocalSideVni(info.vni);
 
                 // get iface from recorded userifaces
+                UserIface uiface = null;
                 for (Iface recorded : ifaces.keySet()) {
                     if (recorded instanceof UserIface) {
                         var recordedUIface = (UserIface) recorded;
@@ -730,6 +772,13 @@ public class Switch {
                         }
                     }
                 }
+                if (uiface == null) {
+                    uiface = new UserIface(remote, user, users);
+                    initIface(uiface);
+                    uiface.setBaseMTU(info.defaultMtu);
+                    uiface.setFloodAllowed(info.defaultFloodAllowed);
+                }
+                uiface.setLocalSideVni(info.vni);
                 iface = uiface;
 
                 assert Logger.lowLevelDebug(handlingUUID + " got packet " + packet + " from " + iface);
@@ -795,6 +844,8 @@ public class Switch {
                     assert Logger.lowLevelDebug(handlingUUID + " not in allowed security-group or invalid packet: " + err + ", drop it");
                     return null;
                 }
+
+                initIface(iface);
             }
 
             // check whether the packet's src and dst mac are the same

@@ -78,9 +78,7 @@ public class L2 {
 
     private void handleInputDroppedPacket(InputPacketL2Context ctx) {
         assert Logger.lowLevelDebug(ctx.handlingUUID + " no path for this packet in l2: " + ctx);
-        // TODO make whether to flood an option
         flood(ctx.handlingUUID, ctx.inputIface, getOrMakeVXLanPacket(null, ctx.inputPacket, ctx.table), ctx.table);
-        // TODO assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
     }
 
     private void flood(String ctxUUID, Iface inputIface, VXLanPacket p, Table table) {
@@ -90,6 +88,9 @@ public class L2 {
                 continue;
             }
             if (iface.getLocalSideVni(table.vni) != table.vni) {
+                continue;
+            }
+            if (!iface.isFloodAllowed()) {
                 continue;
             }
             sendPacket(ctxUUID, p, iface);
@@ -257,9 +258,7 @@ public class L2 {
 
     private void handleOutputDroppedPacket(OutputPacketL2Context ctx, VXLanPacket p) {
         assert Logger.lowLevelDebug(ctx.handlingUUID + " no path for this packet in l2: " + ctx);
-        // TODO make whether to flood an option
         flood(ctx.handlingUUID, null, p, ctx.table);
-        // TODO assert Logger.lowLevelDebug(ctx.handlingUUID + " dropped in l2 " + ctx);
     }
 
     private void forwardPacket(InputPacketL2Context ctx, Iface output) {

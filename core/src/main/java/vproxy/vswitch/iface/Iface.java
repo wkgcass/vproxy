@@ -13,7 +13,15 @@ public interface Iface {
 
     int getLocalSideVni(int hint);
 
-    int baseMTU();
+    int getOverhead();
 
-    int overhead();
+    int getBaseMTU();
+
+    void setBaseMTU(int baseMTU);
+
+    boolean isFloodAllowed();
+
+    void setFloodAllowed(boolean floodAllowed);
+
+    String paramsToString();
 }

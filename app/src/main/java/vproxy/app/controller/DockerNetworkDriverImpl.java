@@ -182,7 +182,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 elg,
                 300000,
                 14400000,
-                SecurityGroup.allowAll());
+                SecurityGroup.allowAll(),
+                1500,
+                true);
             Logger.alert("switch " + SWITCH_NAME + " created");
             return ret;
         }
