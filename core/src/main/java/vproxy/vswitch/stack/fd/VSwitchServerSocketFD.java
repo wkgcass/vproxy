@@ -8,7 +8,7 @@ import vproxy.vfd.type.FDCloseReturn;
 import vproxy.vpacket.conntrack.tcp.ListenEntry;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
 import vproxy.vpacket.conntrack.tcp.TcpUtils;
-import vproxy.vswitch.stack.OutputPacketL3Context;
+import vproxy.vswitch.SocketBuffer;
 
 import java.io.IOException;
 
@@ -102,16 +102,12 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
             return FDCloseReturn.nothing(req);
         }
         for (var e : entry.synBacklog) {
-            ctx.L4.output(new OutputPacketL3Context(
-                getUUID(), ctx.table,
-                TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e))
-            ));
+            SocketBuffer skb = SocketBuffer.fromPacket(ctx.table, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
+            ctx.L4.output(skb);
         }
         for (var e : entry.backlog) {
-            ctx.L4.output(new OutputPacketL3Context(
-                getUUID(), ctx.table,
-                TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e))
-            ));
+            SocketBuffer skb = SocketBuffer.fromPacket(ctx.table, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
+            ctx.L4.output(skb);
         }
         ctx.conntrack.removeListen(local);
         entry.destroy();

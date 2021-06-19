@@ -93,7 +93,7 @@ public class IfaceHandle {
                 if (!isTapIface) {
                     continue;
                 }
-                if (((TapIface) iface).tap.getTap().dev.equals(name)) {
+                if (((TapIface) iface).getTap().getTap().dev.equals(name)) {
                     target = iface;
                     break;
                 }

@@ -19,12 +19,12 @@ import java.util.concurrent.ConcurrentHashMap;
 public class ProxyHolder {
     private final ConcurrentHashMap<IPPort, ProxyRecord> proxies = new ConcurrentHashMap<>();
     private final NetEventLoop loop;
-    private final Switch sw;
+    private final SwitchContext swCtx;
     private final Table table;
 
-    public ProxyHolder(NetEventLoop loop, Switch sw, Table table) {
+    public ProxyHolder(NetEventLoop loop, SwitchContext swCtx, Table table) {
         this.loop = loop;
-        this.sw = sw;
+        this.swCtx = swCtx;
         this.table = table;
     }
 
@@ -76,7 +76,7 @@ public class ProxyHolder {
 
         public void start() throws IOException {
             sock = ServerSock.create(listen, new VSwitchFDs(new VSwitchFDContext(
-                sw, table, loop.getSelectorEventLoop().selector
+                swCtx, table, loop.getSelectorEventLoop().selector
             )));
 
             var eventHandler = new ProxyEventHandler() {

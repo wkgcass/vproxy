@@ -5,6 +5,9 @@ import vjson.parser.ObjectParser;
 import vjson.parser.StringParser;
 import vjson.util.StringDictionary;
 import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.Logger;
+
+import java.util.UUID;
 
 public interface VProxyThread {
     ThreadLocal<VProxyThreadVariable> threadLocal = new ThreadLocal<>();
@@ -54,5 +57,13 @@ public interface VProxyThread {
         public ObjectParser threadLocalObjectParserJavaObject;
         public StringParser threadLocalStringParserJavaObject;
         public StringDictionary threadLocalKeyDictionary;
+
+        public String debugInfo;
+
+        public void newUuidDebugInfo() {
+            if (Logger.debugOn()) {
+                debugInfo = UUID.randomUUID().toString();
+            }
+        }
     }
 }

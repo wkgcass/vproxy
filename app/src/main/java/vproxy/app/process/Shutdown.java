@@ -728,7 +728,7 @@ public class Shutdown {
                     }
                     var ucliIface = (UserClientIface) iface;
                     cmd = "add user-client " + ucliIface.user.user.replace(Consts.USER_PADDING, "") + " to switch " + sw.alias
-                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remoteAddress.formatToIPPortString();
+                        + " password " + ucliIface.user.pass + " vni " + ucliIface.user.vni + " address " + ucliIface.remote.formatToIPPortString();
                     commands.add(cmd);
                 }
                 // create tap

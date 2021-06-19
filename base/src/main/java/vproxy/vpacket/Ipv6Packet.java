@@ -97,6 +97,7 @@ public class Ipv6Packet extends AbstractIpPacket {
         } else {
             packet = new PacketBytes();
         }
+        packet.recordParent(this);
         String err = packet.from(bytesForPacket);
         if (err != null) {
             return err;

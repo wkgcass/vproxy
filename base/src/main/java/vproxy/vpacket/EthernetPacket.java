@@ -33,6 +33,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         } else {
             packet = new PacketBytes();
         }
+        packet.recordParent(this);
         String err = packet.from(data);
         if (err != null) {
             if (mayIgnoreError) {

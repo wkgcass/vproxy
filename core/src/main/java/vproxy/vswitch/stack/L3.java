@@ -9,6 +9,8 @@ import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
 import vproxy.vswitch.IPMac;
+import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.Table;
 
 import java.util.Collections;
@@ -24,132 +26,132 @@ public class L3 {
         L4 = new L4(swCtx, this);
     }
 
-    public void input(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("L3.input(" + ctx + ")");
-        if (ctx.isUnicast) {
-            handleInputUnicast(ctx);
+    public void input(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("L3.input(" + skb + ")");
+        if (skb.pkt.getDst().isUnicast()) {
+            handleInputUnicast(skb);
         } else {
-            handleInputBroadcast(ctx);
+            handleInputBroadcast(skb);
         }
     }
 
-    public void resolve(String handlingUUID, Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + handlingUUID + "," + table + "," + ip + "," + knownMac + ")");
+    public void resolve(Table table, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
         if (ip instanceof IPv4) {
-            arpResolve(handlingUUID, table, ip, knownMac);
+            arpResolve(table, ip, knownMac);
         } else {
-            ndpResolve(handlingUUID, table, ip, knownMac);
+            ndpResolve(table, ip, knownMac);
         }
     }
 
-    private void arpResolve(String handlingUUID, Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + handlingUUID + "," + table + "," + ip + "," + knownMac + ")");
+    private void arpResolve(Table table, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
         var iface = knownMac == null ? null : table.macTable.lookup(knownMac);
         if (iface == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " cannot find iface of the mac, try broadcast");
-            broadcastArp(handlingUUID, table, ip);
+            assert Logger.lowLevelDebug(" cannot find iface of the mac, try broadcast");
+            broadcastArp(table, ip);
         } else {
-            assert Logger.lowLevelDebug(handlingUUID + " run unicast");
-            unicastArp(handlingUUID, table, ip, knownMac);
+            assert Logger.lowLevelDebug(" run unicast");
+            unicastArp(table, ip, knownMac);
         }
     }
 
-    private void ndpResolve(String handlingUUID, Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + handlingUUID + "," + table + "," + ip + "," + knownMac + ")");
+    private void ndpResolve(Table table, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
         var iface = table.macTable.lookup(knownMac);
         if (iface == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " cannot find iface of the mac, try broadcast");
-            broadcastNdp(handlingUUID, table, ip);
+            assert Logger.lowLevelDebug("cannot find iface of the mac, try broadcast");
+            broadcastNdp(table, ip);
         } else {
-            assert Logger.lowLevelDebug(handlingUUID + " run unicast");
-            unicastNdp(handlingUUID, table, ip, knownMac);
+            assert Logger.lowLevelDebug("run unicast");
+            unicastNdp(table, ip, knownMac);
         }
     }
 
-    private void handleInputUnicast(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleInputUnicast(" + ctx + ")");
+    private void handleInputUnicast(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleInputUnicast(" + skb + ")");
 
-        var packet = ctx.inputPacket.getPacket();
+        var packet = skb.pkt.getPacket();
         if (packet instanceof ArpPacket) {
-            handleArp(ctx);
+            handleArp(skb);
             return;
         } else if (packet instanceof AbstractIpPacket) {
-            handleUnicastIP(ctx);
+            handleUnicastIP(skb);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot process the packet");
+        assert Logger.lowLevelDebug("cannot process the packet");
     }
 
-    private void handleInputBroadcast(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleInputBroadcast(" + ctx + ")");
+    private void handleInputBroadcast(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleInputBroadcast(" + skb + ")");
 
-        var packet = ctx.inputPacket.getPacket();
+        var packet = skb.pkt.getPacket();
         if (packet instanceof ArpPacket) {
-            handleArp(ctx);
+            handleArp(skb);
             return;
         } else if (packet instanceof AbstractIpPacket) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " is ip packet");
+            assert Logger.lowLevelDebug("is ip packet");
             // we only handle icmpv6 packets when it's broadcasted
 
             var ipPkt = (AbstractIpPacket) packet;
 
             if (!(ipPkt instanceof Ipv6Packet)) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is not ipv6. the packet protocol is " + ipPkt.getProtocol());
+                assert Logger.lowLevelDebug("is not ipv6. the packet protocol is " + ipPkt.getProtocol());
                 return;
             }
             if (!(ipPkt.getPacket() instanceof IcmpPacket)) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is not icmp");
+                assert Logger.lowLevelDebug("is not icmp");
                 return;
             }
             var icmpPkt = (IcmpPacket) ipPkt.getPacket();
             if (!icmpPkt.isIpv6()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is not icmpv6");
+                assert Logger.lowLevelDebug("is not icmpv6");
                 return;
             }
             if (icmpPkt.getType() != Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is not neighbor solicitation");
+                assert Logger.lowLevelDebug("is not neighbor solicitation");
                 return;
             }
-            handleNeighborSolicitation(ctx);
+            handleNeighborSolicitation(skb);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot process the packet");
+        assert Logger.lowLevelDebug("cannot process the packet");
     }
 
-    private void handleArp(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleArp(" + ctx + ")");
+    private void handleArp(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleArp(" + skb + ")");
 
-        ArpPacket arp = (ArpPacket) ctx.inputPacket.getPacket();
+        ArpPacket arp = (ArpPacket) skb.pkt.getPacket();
         if (arp.getProtocolType() != Consts.ARP_PROTOCOL_TYPE_IP) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " type of arp packet is not ip");
+            assert Logger.lowLevelDebug("type of arp packet is not ip");
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " arp protocol is ip");
+        assert Logger.lowLevelDebug("arp protocol is ip");
         if (arp.getOpcode() != Consts.ARP_PROTOCOL_OPCODE_REQ) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot handle this type arp message");
+            assert Logger.lowLevelDebug("cannot handle this type arp message");
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " arp is req");
+        assert Logger.lowLevelDebug("arp is req");
 
         // only handle ipv4 in arp, v6 should be handled with ndp
         ByteArray targetIp = arp.getTargetIp();
         if (targetIp.length() != 4) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " target ip length is not 4");
+            assert Logger.lowLevelDebug("target ip length is not 4");
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " arp target is ipv4");
+        assert Logger.lowLevelDebug("arp target is ipv4");
         IP ip = IP.from(targetIp.toJavaArray());
 
         // check whether we can handle the packet
-        if (!ctx.matchedIps.contains(ip)) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " no matched ip found for the arp packet");
+        if (!skb.matchedIps.contains(ip)) {
+            assert Logger.lowLevelDebug("no matched ip found for the arp packet");
             return;
         }
 
         // handle
-        MacAddress mac = ctx.table.ips.lookup(ip);
+        MacAddress mac = skb.table.ips.lookup(ip);
 
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " respond arp");
+        assert Logger.lowLevelDebug("respond arp");
         ArpPacket resp = new ArpPacket();
         resp.setHardwareType(arp.getHardwareType());
         resp.setProtocolType(arp.getProtocolType());
@@ -162,137 +164,138 @@ public class L3 {
         resp.setTargetIp(arp.getSenderIp());
 
         EthernetPacket ether = new EthernetPacket();
-        ether.setDst(ctx.inputPacket.getSrc());
+        ether.setDst(skb.pkt.getSrc());
         ether.setSrc(mac);
         ether.setType(Consts.ETHER_TYPE_ARP);
         ether.setPacket(resp);
 
-        directOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        skb.replacePacket(ether);
+
+        directOutput(skb);
     }
 
-    private void handleUnicastIP(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleUnicastIP(" + ctx + ")");
+    private void handleUnicastIP(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleUnicastIP(" + skb + ")");
 
         // check whether we can handle the packet
-        var ipPkt = (AbstractIpPacket) ctx.inputPacket.getPacket();
+        var ipPkt = (AbstractIpPacket) skb.pkt.getPacket();
 
         // check whether we can handle the packet
         var dst = ipPkt.getDst();
-        if (!ctx.matchedIps.contains(dst)) {
-            route(ctx);
+        if (!skb.matchedIps.contains(dst)) {
+            route(skb);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " no need to route the packet");
+        assert Logger.lowLevelDebug("no need to route the packet");
 
         if (ipPkt.getPacket() instanceof IcmpPacket) {
             // validate the icmp part
             var icmpPkt = (IcmpPacket) ipPkt.getPacket();
             if (ipPkt instanceof Ipv4Packet && icmpPkt.isIpv6()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " drop the packet because it's icmpv6 inside ipv4");
+                assert Logger.lowLevelDebug("drop the packet because it's icmpv6 inside ipv4");
                 return;
             } else if (ipPkt instanceof Ipv6Packet && !icmpPkt.isIpv6()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " drop the packet because it's icmpv4 inside ipv6");
+                assert Logger.lowLevelDebug("drop the packet because it's icmpv4 inside ipv6");
                 return;
             }
 
             if (icmpPkt.isIpv6()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is icmpv6");
+                assert Logger.lowLevelDebug("is icmpv6");
                 if (icmpPkt.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation ||
                     icmpPkt.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement) {
-                    handleNDP(ctx);
+                    handleNDP(skb);
                     return;
                 }
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " is not NDP");
+                assert Logger.lowLevelDebug("is not NDP");
 
-                handleIcmpv6NotNDP(ctx);
+                handleIcmpv6NotNDP(skb);
                 return;
             } else {
-                handleIcmpv4(ctx);
+                handleIcmpv4(skb);
                 return;
             }
         } else if (ipPkt.getProtocol() == Consts.IP_PROTOCOL_TCP || ipPkt.getProtocol() == Consts.IP_PROTOCOL_UDP || ipPkt.getProtocol() == Consts.IP_PROTOCOL_SCTP) {
-            var l4ctx = new InputPacketL4Context(ctx);
-            if (L4.input(l4ctx)) {
+            if (L4.input(skb)) {
                 return;
             }
-            respondIcmpPortUnreachable(ctx);
+            respondIcmpPortUnreachable(skb);
             return;
         } // else other packet types may be supported in the future
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " nothing to be done for the packet");
+        assert Logger.lowLevelDebug("nothing to be done for the packet");
     }
 
-    private void handleIcmpv4(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleIcmpv4(" + ctx + ")");
+    private void handleIcmpv4(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleIcmpv4(" + skb + ")");
 
-        var ipPkt = (Ipv4Packet) ctx.inputPacket.getPacket();
+        var ipPkt = (Ipv4Packet) skb.pkt.getPacket();
         var icmp = (IcmpPacket) ipPkt.getPacket();
 
         if (icmp.getType() != Consts.ICMP_PROTOCOL_TYPE_ECHO_REQ) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot handle this type icmp packet");
+            assert Logger.lowLevelDebug("cannot handle this type icmp packet");
             return;
         }
 
-        respondIcmpPong(ctx);
+        respondIcmpPong(skb);
     }
 
-    private void handleIcmpv6NotNDP(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleIcmpv6(" + ctx + ")");
+    private void handleIcmpv6NotNDP(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleIcmpv6(" + skb + ")");
 
-        var ipPkt = (Ipv6Packet) ctx.inputPacket.getPacket();
+        var ipPkt = (Ipv6Packet) skb.pkt.getPacket();
         var icmp = (IcmpPacket) ipPkt.getPacket();
 
         if (icmp.getType() != Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot handle this type icmp packet");
+            assert Logger.lowLevelDebug("cannot handle this type icmp packet");
             return;
         }
 
-        respondIcmpPong(ctx);
+        respondIcmpPong(skb);
     }
 
-    private void handleNDP(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleNDP(" + ctx + ")");
-        var icmpv6 = (IcmpPacket) (((Ipv6Packet) ctx.inputPacket.getPacket()).getPacket());
+    private void handleNDP(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleNDP(" + skb + ")");
+        var icmpv6 = (IcmpPacket) (((Ipv6Packet) skb.pkt.getPacket()).getPacket());
         if (icmpv6.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
-            handleNeighborSolicitation(ctx);
+            handleNeighborSolicitation(skb);
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot handle the ndp packet");
+        assert Logger.lowLevelDebug("cannot handle the ndp packet");
     }
 
-    private void handleNeighborSolicitation(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("handleNeighborSolicitation(" + ctx + ")");
+    private void handleNeighborSolicitation(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleNeighborSolicitation(" + skb + ")");
 
-        var inIpPkt = (Ipv6Packet) ctx.inputPacket.getPacket();
+        var inIpPkt = (Ipv6Packet) skb.pkt.getPacket();
         var inIcmp = (IcmpPacket) inIpPkt.getPacket();
 
         ByteArray other = inIcmp.getOther();
         if (other.length() < 20) { // 4 reserved and 16 target address
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " invalid packet for neighbor solicitation: too short");
+            assert Logger.lowLevelDebug("invalid packet for neighbor solicitation: too short");
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " is a valid neighbor solicitation");
+        assert Logger.lowLevelDebug("is a valid neighbor solicitation");
 
         byte[] targetAddr = other.sub(4, 16).toJavaArray();
         IPv6 ndpNeighborSolicitation = IP.fromIPv6(targetAddr);
 
-        if (!ctx.matchedIps.contains(ndpNeighborSolicitation)) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " this ndp ns does not request for matched synthetic ip");
+        if (!skb.matchedIps.contains(ndpNeighborSolicitation)) {
+            assert Logger.lowLevelDebug("this ndp ns does not request for matched synthetic ip");
             return;
         }
 
-        MacAddress correspondingMac = ctx.table.ips.lookup(ndpNeighborSolicitation);
+        MacAddress correspondingMac = skb.table.ips.lookup(ndpNeighborSolicitation);
         if (correspondingMac == null) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " requested ip is not synthetic ip");
+            assert Logger.lowLevelDebug("requested ip is not synthetic ip");
             return;
         }
 
-        respondIcmpNeighborAdvertisement(ctx, ndpNeighborSolicitation, correspondingMac);
+        respondIcmpNeighborAdvertisement(skb, ndpNeighborSolicitation, correspondingMac);
     }
 
-    private void respondIcmpNeighborAdvertisement(InputPacketL3Context ctx, IPv6 requestedIp, MacAddress requestedMac) {
-        assert Logger.lowLevelDebug("respondIcmpNeighborAdvertisement(" + ctx + "," + requestedIp + "," + requestedMac + ")");
+    private void respondIcmpNeighborAdvertisement(SocketBuffer skb, IPv6 requestedIp, MacAddress requestedMac) {
+        assert Logger.lowLevelDebug("respondIcmpNeighborAdvertisement(" + skb + "," + requestedIp + "," + requestedMac + ")");
 
-        var inIpPkt = (Ipv6Packet) ctx.inputPacket.getPacket();
+        var inIpPkt = (Ipv6Packet) skb.pkt.getPacket();
 
         IcmpPacket icmp = new IcmpPacket(true);
         icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
@@ -317,24 +320,26 @@ public class L3 {
         ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
 
         EthernetPacket ether = new EthernetPacket();
-        ether.setDst(ctx.inputPacket.getSrc());
+        ether.setDst(skb.pkt.getSrc());
         ether.setSrc(requestedMac);
         ether.setType(Consts.ETHER_TYPE_IPv6);
         ether.setPacket(ipv6);
 
-        directOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        skb.replacePacket(ether);
+
+        directOutput(skb);
     }
 
-    private void respondIcmpPong(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("respondIcmpPong(" + ctx + ")");
+    private void respondIcmpPong(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("respondIcmpPong(" + skb + ")");
 
-        var inIpPkt = (AbstractIpPacket) ctx.inputPacket.getPacket();
+        var inIpPkt = (AbstractIpPacket) skb.pkt.getPacket();
         var inIcmp = (IcmpPacket) inIpPkt.getPacket();
 
         var srcIp = inIpPkt.getDst();
-        var srcMac = ctx.table.ips.lookup(srcIp);
+        var srcMac = skb.table.ips.lookup(srcIp);
         if (srcMac == null) {
-            Logger.shouldNotHappen(ctx.handlingUUID + " cannot find src mac for sending the icmp echo resp packet");
+            Logger.shouldNotHappen("cannot find src mac for sending the icmp echo resp packet");
             return;
         }
 
@@ -343,21 +348,22 @@ public class L3 {
         icmp.setCode(0);
         icmp.setOther(inIcmp.getOther());
 
-        EthernetPacket ether = buildEtherIpIcmpPacket(ctx.handlingUUID, ctx.inputPacket.getSrc(), srcMac, srcIp, inIpPkt.getSrc(), icmp);
+        EthernetPacket ether = buildEtherIpIcmpPacket(skb.pkt.getSrc(), srcMac, srcIp, inIpPkt.getSrc(), icmp);
+        skb.replacePacket(ether);
 
-        routeOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        routeOutput(skb);
     }
 
-    private void respondIcmpPortUnreachable(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("respondIcmpPortUnreachable(" + ctx + ")");
+    private void respondIcmpPortUnreachable(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("respondIcmpPortUnreachable(" + skb + ")");
 
-        var inIpPkt = (AbstractIpPacket) ctx.inputPacket.getPacket();
+        var inIpPkt = (AbstractIpPacket) skb.pkt.getPacket();
 
         boolean isIpv6 = inIpPkt instanceof Ipv6Packet;
         var srcIp = inIpPkt.getDst();
-        var srcMac = ctx.table.ips.lookup(srcIp);
+        var srcMac = skb.table.ips.lookup(srcIp);
         if (srcMac == null) {
-            Logger.shouldNotHappen(ctx.handlingUUID + " cannot find src mac for sending the icmp time exceeded packet");
+            Logger.shouldNotHappen("cannot find src mac for sending the icmp time exceeded packet");
             return;
         }
         // build the icmp time exceeded packet content
@@ -380,19 +386,20 @@ public class L3 {
                 .concat(toSet)
         );
 
-        EthernetPacket ether = buildEtherIpIcmpPacket(ctx.handlingUUID, ctx.inputPacket.getSrc(), srcMac, srcIp, inIpPkt.getSrc(), icmp);
+        EthernetPacket ether = buildEtherIpIcmpPacket(skb.pkt.getSrc(), srcMac, srcIp, inIpPkt.getSrc(), icmp);
+        skb.replacePacket(ether);
 
-        routeOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        routeOutput(skb);
     }
 
-    private void respondIcmpTimeExceeded(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("respondIcmpTimeExceeded(" + ctx + ")");
+    private void respondIcmpTimeExceeded(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("respondIcmpTimeExceeded(" + skb + ")");
 
-        var inIpPkt = (AbstractIpPacket) ctx.inputPacket.getPacket();
+        var inIpPkt = (AbstractIpPacket) skb.pkt.getPacket();
         boolean isIpv6 = inIpPkt instanceof Ipv6Packet;
-        var srcIpAndMac = getRoutedSrcIpAndMac(ctx.handlingUUID, ctx.table, inIpPkt.getSrc());
+        var srcIpAndMac = getRoutedSrcIpAndMac(skb.table, inIpPkt.getSrc());
         if (srcIpAndMac == null) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot find src ip for sending the icmp time exceeded packet");
+            assert Logger.lowLevelDebug("cannot find src ip for sending the icmp time exceeded packet");
             return;
         }
         // build the icmp time exceeded packet content
@@ -415,163 +422,165 @@ public class L3 {
                 .concat(toSet)
         );
 
-        EthernetPacket ether = buildEtherIpIcmpPacket(ctx.handlingUUID, ctx.inputPacket.getSrc(), srcIpAndMac.mac, srcIpAndMac.ip, inIpPkt.getSrc(), icmp);
+        EthernetPacket ether = buildEtherIpIcmpPacket(skb.pkt.getSrc(), srcIpAndMac.mac, srcIpAndMac.ip, inIpPkt.getSrc(), icmp);
+        skb.replacePacket(ether);
 
-        routeOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        routeOutput(skb);
     }
 
-    private void route(InputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("route(" + ctx + ")");
+    private void route(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("route(" + skb + ")");
 
-        var ippkt = (AbstractIpPacket) ctx.inputPacket.getPacket();
+        var ippkt = (AbstractIpPacket) skb.pkt.getPacket();
         var dst = ippkt.getDst();
 
         // reduce ip packet hop
         {
             int hop = ippkt.getHopLimit();
             if (hop <= 1) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " hop too low, drop");
-                respondIcmpTimeExceeded(ctx);
+                assert Logger.lowLevelDebug("hop too low, drop");
+                respondIcmpTimeExceeded(skb);
                 return;
             }
             hop -= 1;
             ippkt.setHopLimit(hop);
-            ctx.inputPacket.clearRawPacket();
-            ctx.clearVXLanRawPacket();
         }
 
         // find ruling rule for the dst
-        var rule = ctx.table.routeTable.lookup(dst);
+        var rule = skb.table.routeTable.lookup(dst);
         if (rule == null) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " no route rule found");
+            assert Logger.lowLevelDebug("no route rule found");
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " route rule found");
+        assert Logger.lowLevelDebug("route rule found");
 
         int vni = rule.toVni;
-        if (vni == ctx.table.vni) {
+        if (vni == skb.vni) {
             // direct route
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " in the same vpc");
+            assert Logger.lowLevelDebug("in the same vpc");
 
-            MacAddress dstMac = ctx.table.lookup(dst);
+            MacAddress dstMac = skb.table.lookup(dst);
             if (dstMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot find correct mac");
-                broadcastArpOrNdp(ctx.handlingUUID, ctx.table, dst);
+                assert Logger.lowLevelDebug("cannot find correct mac");
+                broadcastArpOrNdp(skb.table, dst);
                 return;
             }
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " found the correct mac");
+            assert Logger.lowLevelDebug("found the correct mac");
 
-            var srcMac = getRoutedSrcMac(ctx.handlingUUID, ctx.table, dst);
+            var srcMac = getRoutedSrcMac(skb.table, dst);
             if (srcMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot route because src mac is not found");
+                assert Logger.lowLevelDebug("cannot route because src mac is not found");
                 return;
             }
 
-            ctx.inputPacket.setSrc(srcMac);
-            ctx.inputPacket.setDst(dstMac);
-            directOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ctx.inputPacket));
+            skb.pkt.setSrc(srcMac);
+            skb.pkt.setDst(dstMac);
+            directOutput(skb);
         } else if (vni != 0) {
             // route to another network
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " routing to another vpc: " + vni);
+            assert Logger.lowLevelDebug("routing to another vpc: " + vni);
             Table t = swCtx.getTable(vni);
             if (t == null) { // cannot handle if the table does no exist
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " target table " + vni + " is not found");
+                assert Logger.lowLevelDebug("target table " + vni + " is not found");
                 return;
             }
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " target table is found");
+            assert Logger.lowLevelDebug("target table is found");
 
             // get target mac
-            var targetMac = getRoutedSrcMac(ctx.handlingUUID, t, dst);
+            var targetMac = getRoutedSrcMac(t, dst);
             if (targetMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot route because target mac is not found");
+                assert Logger.lowLevelDebug("cannot route because target mac is not found");
                 return;
             }
 
-            ctx.inputPacket.setSrc(targetMac);
-            ctx.inputPacket.setDst(targetMac);
-            if (ctx.inputVXLan != null) {
-                ctx.inputVXLan.setVni(t.vni);
+            skb.pkt.setSrc(targetMac);
+            skb.pkt.setDst(targetMac);
+            if (skb.vxlan != null) {
+                skb.setVni(t.vni);
             }
-            L2.input(new InputPacketL2Context(ctx.handlingUUID, null, t, ctx.inputVXLan, ctx.inputPacket));
+            L2.input(skb);
         } else {
             // route based on ip
             var targetIp = rule.ip;
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " gateway rule");
-            MacAddress dstMac = ctx.table.lookup(targetIp);
+            assert Logger.lowLevelDebug("gateway rule");
+            MacAddress dstMac = skb.table.lookup(targetIp);
             if (dstMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " mac not found in arp table, run a broadcast");
-                broadcastArpOrNdp(ctx.handlingUUID, ctx.table, targetIp);
+                assert Logger.lowLevelDebug("mac not found in arp table, run a broadcast");
+                broadcastArpOrNdp(skb.table, targetIp);
                 return;
             }
 
-            var srcMac = getRoutedSrcMac(ctx.handlingUUID, ctx.table, dst);
+            var srcMac = getRoutedSrcMac(skb.table, dst);
             if (srcMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot route because src mac is not found");
+                assert Logger.lowLevelDebug("cannot route because src mac is not found");
                 return;
             }
 
-            ctx.inputPacket.setSrc(srcMac);
-            ctx.inputPacket.setDst(dstMac);
-            directOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ctx.inputPacket));
+            skb.pkt.setSrc(srcMac);
+            skb.pkt.setDst(dstMac);
+            directOutput(skb);
         }
     }
 
-    private void broadcastArpOrNdp(String handlingUUID, Table table, IP dst) {
-        assert Logger.lowLevelDebug("getRoutedSrcMac(" + handlingUUID + "," + table + "," + dst + ")");
+    private void broadcastArpOrNdp(Table table, IP dst) {
+        assert Logger.lowLevelDebug("getRoutedSrcMac(" + table + "," + dst + ")");
         if (dst instanceof IPv4) {
-            broadcastArp(handlingUUID, table, dst);
+            broadcastArp(table, dst);
         } else {
-            broadcastNdp(handlingUUID, table, dst);
+            broadcastNdp(table, dst);
         }
     }
 
-    private void broadcastArp(String handlingUUID, Table table, IP dst) {
-        assert Logger.lowLevelDebug("broadcastArp(" + handlingUUID + "," + table + "," + dst + ")");
+    private void broadcastArp(Table table, IP dst) {
+        assert Logger.lowLevelDebug("broadcastArp(" + table + "," + dst + ")");
 
-        EthernetPacket packet = buildArpReq(handlingUUID, table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
+        EthernetPacket packet = buildArpReq(table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
         if (packet == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " failed to build arp packet");
+            assert Logger.lowLevelDebug("failed to build arp packet");
             return;
         }
-        directOutput(new OutputPacketL2Context(handlingUUID, table, packet));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, packet);
+        directOutput(skb);
     }
 
-    private void unicastArp(String handlingUUID, Table table, IP dst, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("unicastArp(" + handlingUUID + "," + table + "," + dst + "," + dstMac + ")");
+    private void unicastArp(Table table, IP dst, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("unicastArp(" + table + "," + dst + "," + dstMac + ")");
 
-        EthernetPacket packet = buildArpReq(handlingUUID, table, dst, dstMac);
+        EthernetPacket packet = buildArpReq(table, dst, dstMac);
         if (packet == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " failed to build arp packet");
+            assert Logger.lowLevelDebug("failed to build arp packet");
             return;
         }
-        directOutput(new OutputPacketL2Context(handlingUUID, table, packet));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, packet);
+        directOutput(skb);
     }
 
-    private void broadcastNdp(String handlingUUID, Table table, IP dst) {
-        assert Logger.lowLevelDebug("broadcastNdp(" + handlingUUID + "," + table + "," + dst + ")");
+    private void broadcastNdp(Table table, IP dst) {
+        assert Logger.lowLevelDebug("broadcastNdp(" + table + "," + dst + ")");
 
-        EthernetPacket packet = buildNdpNeighborSolicitation(handlingUUID, table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
+        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
         if (packet == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " failed to build ndp neighbor solicitation packet");
+            assert Logger.lowLevelDebug("failed to build ndp neighbor solicitation packet");
             return;
         }
-        directOutput(new OutputPacketL2Context(handlingUUID, table, packet));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, packet);
+        directOutput(skb);
     }
 
-    private void unicastNdp(String handlingUUID, Table table, IP dst, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("unicastNdp(" + handlingUUID + "," + table + "," + dst + "," + dstMac + ")");
+    private void unicastNdp(Table table, IP dst, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("unicastNdp(" + table + "," + dst + "," + dstMac + ")");
 
-        EthernetPacket packet = buildNdpNeighborSolicitation(handlingUUID, table, dst, dstMac);
+        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, dstMac);
         if (packet == null) {
-            assert Logger.lowLevelDebug(handlingUUID + " failed to build ndp neighbor solicitation packet");
+            assert Logger.lowLevelDebug("failed to build ndp neighbor solicitation packet");
             return;
         }
-
-        directOutput(new OutputPacketL2Context(handlingUUID, table, packet));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, packet);
+        directOutput(skb);
     }
 
-    private IPMac getRoutedSrcIpAndMac(String handlingUUID, Table table, IP dstIp) {
-        assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + handlingUUID + ", " + table + "," + dstIp + ")");
+    private IPMac getRoutedSrcIpAndMac(Table table, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + table + "," + dstIp + ")");
 
         // find an ip in that table to be used for the src mac address
         var ipsInTable = table.ips.entries();
@@ -590,17 +599,17 @@ public class L3 {
         return src;
     }
 
-    private MacAddress getRoutedSrcMac(String handlingUUID, Table table, IP dstIp) {
-        assert Logger.lowLevelDebug("getRoutedSrcMac(" + handlingUUID + "," + table + "," + dstIp + ")");
-        var entry = getRoutedSrcIpAndMac(handlingUUID, table, dstIp);
+    private MacAddress getRoutedSrcMac(Table table, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcMac(" + table + "," + dstIp + ")");
+        var entry = getRoutedSrcIpAndMac(table, dstIp);
         if (entry == null) {
             return null;
         }
         return entry.mac;
     }
 
-    private EthernetPacket buildEtherIpIcmpPacket(String handlingUUID, MacAddress dstMac, MacAddress srcMac, IP srcIp, IP dstIp, IcmpPacket icmp) {
-        assert Logger.lowLevelDebug("buildIpIcmpPacket(" + handlingUUID + "," + dstMac + "," + srcMac + srcIp + "," + dstIp + icmp + ")");
+    private EthernetPacket buildEtherIpIcmpPacket(MacAddress dstMac, MacAddress srcMac, IP srcIp, IP dstIp, IcmpPacket icmp) {
+        assert Logger.lowLevelDebug("buildIpIcmpPacket(" + dstMac + "," + srcMac + srcIp + "," + dstIp + icmp + ")");
 
         AbstractIpPacket ipPkt;
         if (srcIp instanceof IPv4) {
@@ -642,12 +651,12 @@ public class L3 {
         return ether;
     }
 
-    private EthernetPacket buildArpReq(String handlingUUID, Table table, IP dstIp, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("buildArpReq(" + handlingUUID + "," + table + "," + dstIp + "," + dstMac + ")");
+    private EthernetPacket buildArpReq(Table table, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildArpReq(" + table + "," + dstIp + "," + dstMac + ")");
 
         var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv4).findAny();
         if (optIp.isEmpty()) {
-            assert Logger.lowLevelDebug(handlingUUID + " cannot find synthetic ipv4 in the table");
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the table");
             return null;
         }
         IP reqIp = optIp.get().ip;
@@ -673,12 +682,12 @@ public class L3 {
         return ether;
     }
 
-    private EthernetPacket buildNdpNeighborSolicitation(String handlingUUID, Table table, IP dstIp, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + handlingUUID + "," + table + "," + dstIp + "," + dstMac + ")");
+    private EthernetPacket buildNdpNeighborSolicitation(Table table, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + table + "," + dstIp + "," + dstMac + ")");
 
         var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv6).findAny();
         if (optIp.isEmpty()) {
-            assert Logger.lowLevelDebug(handlingUUID + " cannot find synthetic ipv4 in the table");
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the table");
             return null;
         }
         IP reqIp = optIp.get().ip;
@@ -720,70 +729,71 @@ public class L3 {
         return ether;
     }
 
-    private void directOutput(OutputPacketL2Context ctx) {
-        assert Logger.lowLevelDebug("directOutput(" + ctx + ")");
-        L2.output(ctx);
+    private void directOutput(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("directOutput(" + skb + ")");
+        L2.output(skb);
     }
 
-    private void routeOutput(OutputPacketL2Context ctx) {
-        assert Logger.lowLevelDebug("routeOutput(" + ctx + ")");
+    private void routeOutput(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("routeOutput(" + skb + ")");
 
-        if (!ctx.outputPacket.getDst().isUnicast()) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " packet is not unicast, no need to route");
-            directOutput(ctx);
+        if (!skb.pkt.getDst().isUnicast()) {
+            assert Logger.lowLevelDebug("packet is not unicast, no need to route");
+            directOutput(skb);
             return;
         }
 
-        var ipPkt = (AbstractIpPacket) ctx.outputPacket.getPacket();
+        var ipPkt = (AbstractIpPacket) skb.pkt.getPacket();
         var dst = ipPkt.getDst();
-        var routeRule = ctx.table.routeTable.lookup(dst);
+        var routeRule = skb.table.routeTable.lookup(dst);
         if (routeRule == null) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " no route rule found for the ip dst, no need to route");
-            directOutput(ctx);
+            assert Logger.lowLevelDebug("no route rule found for the ip dst, no need to route");
+            directOutput(skb);
             return;
         }
 
-        if (routeRule.toVni == ctx.table.vni) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " direct route, no changes required");
-            directOutput(ctx);
+        if (routeRule.toVni == skb.vni) {
+            assert Logger.lowLevelDebug("direct route, no changes required");
+            directOutput(skb);
         } else if (routeRule.toVni != 0) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " route to another vpc");
+            assert Logger.lowLevelDebug("route to another vpc");
 
             // search for any synthetic ip in the target vpc
             Table targetTable = swCtx.getTable(routeRule.toVni);
             if (targetTable == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " target vpc not found");
+                assert Logger.lowLevelDebug("target vpc not found");
                 return;
             }
-            MacAddress targetMac = getRoutedSrcMac(ctx.handlingUUID, targetTable, dst);
+            MacAddress targetMac = getRoutedSrcMac(targetTable, dst);
             if (targetMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot find dst mac for sending this packet to another vpc");
+                assert Logger.lowLevelDebug("cannot find dst mac for sending this packet to another vpc");
                 return;
             }
-            ctx.outputPacket.setSrc(targetMac);
-            ctx.outputPacket.setDst(targetMac);
-            L2.input(new InputPacketL2Context(ctx.handlingUUID, null, targetTable, ctx.outputPacket));
+            skb.pkt.setSrc(targetMac);
+            skb.pkt.setDst(targetMac);
+            skb.setTable(targetTable);
+            L2.input(skb);
         } else {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " route based on ip");
+            assert Logger.lowLevelDebug("route based on ip");
 
             var targetIp = routeRule.ip;
-            MacAddress dstMac = ctx.table.lookup(targetIp);
+            MacAddress dstMac = skb.table.lookup(targetIp);
             if (dstMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " mac not found in arp table, run a broadcast");
-                broadcastArpOrNdp(ctx.handlingUUID, ctx.table, targetIp);
+                assert Logger.lowLevelDebug("mac not found in arp table, run a broadcast");
+                broadcastArpOrNdp(skb.table, targetIp);
                 return;
             }
 
-            ctx.outputPacket.setDst(dstMac);
-            directOutput(ctx);
+            skb.pkt.setDst(dstMac);
+            directOutput(skb);
         }
     }
 
-    public void output(OutputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("L3.output(" + ctx + ")");
+    public void output(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("L3.output(" + skb + ")");
 
         // assign mac to the packet
-        MacAddress srcMac = ctx.table.ips.lookup(ctx.outputPacket.getSrc());
+        MacAddress srcMac = skb.table.ips.lookup(skb.ipPkt.getSrc());
         if (srcMac == null) {
             Logger.shouldNotHappen("cannot find synthetic ip for sending the output packet");
             return;
@@ -791,16 +801,16 @@ public class L3 {
         MacAddress dstMac;
 
         // check routing rule
-        var rule = ctx.table.routeTable.lookup(ctx.outputPacket.getDst());
-        if (rule == null || rule.toVni == ctx.table.vni) {
+        var rule = skb.table.routeTable.lookup(skb.ipPkt.getDst());
+        if (rule == null || rule.toVni == skb.vni) {
             assert Logger.lowLevelDebug("no route rule or route to current network");
 
             // try to find the mac address of the dst
-            dstMac = ctx.table.lookup(ctx.outputPacket.getDst());
+            dstMac = skb.table.lookup(skb.ipPkt.getDst());
 
             if (dstMac == null) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " cannot find dst mac for sending the packet");
-                broadcastArpOrNdp(ctx.handlingUUID, ctx.table, ctx.outputPacket.getDst());
+                assert Logger.lowLevelDebug("cannot find dst mac for sending the packet");
+                broadcastArpOrNdp(skb.table, skb.ipPkt.getDst());
                 return;
             }
         } else {
@@ -813,10 +823,12 @@ public class L3 {
         EthernetPacket ether = new EthernetPacket();
         ether.setDst(dstMac);
         ether.setSrc(srcMac);
-        ether.setType((ctx.outputPacket instanceof Ipv4Packet) ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
-        ether.setPacket(ctx.outputPacket);
+        ether.setType((skb.ipPkt instanceof Ipv4Packet) ? Consts.ETHER_TYPE_IPv4 : Consts.ETHER_TYPE_IPv6);
+        ether.setPacket(skb.ipPkt);
+
+        skb.replacePacket(ether);
 
         // route out
-        routeOutput(new OutputPacketL2Context(ctx.handlingUUID, ctx.table, ether));
+        routeOutput(skb);
     }
 }

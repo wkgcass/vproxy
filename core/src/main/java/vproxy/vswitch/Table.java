@@ -23,7 +23,7 @@ public class Table {
 
     public final Conntrack conntrack = new Conntrack();
 
-    public Table(Switch sw, int vni, NetEventLoop loop,
+    public Table(SwitchContext swCtx, int vni, NetEventLoop loop,
                  Network v4network, Network v6network,
                  int macTableTimeout, int arpTableTimeout,
                  Annotations annotations) {
@@ -38,7 +38,7 @@ public class Table {
         macTable = new MacTable(loop.getSelectorEventLoop(), macTableTimeout);
         arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
-        proxies = new ProxyHolder(loop, sw, this);
+        proxies = new ProxyHolder(loop, swCtx, this);
         routeTable = new RouteTable(this);
     }
 

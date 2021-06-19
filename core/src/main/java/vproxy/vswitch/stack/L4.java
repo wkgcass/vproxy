@@ -3,6 +3,7 @@ package vproxy.vswitch.stack;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
@@ -11,6 +12,8 @@ import vproxy.vpacket.Ipv4Packet;
 import vproxy.vpacket.Ipv6Packet;
 import vproxy.vpacket.TcpPacket;
 import vproxy.vpacket.conntrack.tcp.*;
+import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.Table;
 
 import java.util.Collections;
@@ -25,111 +28,111 @@ public class L4 {
         L3 = l3;
     }
 
-    public boolean input(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug("L4.input(" + ctx + ")");
-        if (!wantToHandle(ctx)) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " L4 stack doesn't handle this packet");
+    public boolean input(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("L4.input(" + skb + ")");
+        if (!wantToHandle(skb)) {
+            assert Logger.lowLevelDebug("L4 stack doesn't handle this packet");
             return false;
         }
-        if (ctx.needTcpReset) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " reset the packet");
-            sendRst(ctx);
+        if (skb.needTcpReset) {
+            assert Logger.lowLevelDebug("reset the packet");
+            sendRst(skb);
             return true;
         }
-        if (ctx.tcp != null) {
-            handleTcp(ctx);
+        if (skb.tcp != null) {
+            handleTcp(skb);
             return true;
         }
         // implement more L4 protocols in the future
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " this packet is not handled by L4");
+        assert Logger.lowLevelDebug("this packet is not handled by L4");
         return true;
     }
 
-    private boolean wantToHandle(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug("wantToHandle(" + ctx + ")");
+    private boolean wantToHandle(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("wantToHandle(" + skb + ")");
 
         // implement more L4 protocols in the future
         boolean result = false;
 
-        var ipPkt = ctx.inputIpPacket;
+        var ipPkt = skb.ipPkt;
         if (ipPkt.getPacket() instanceof TcpPacket) {
             var tcpPkt = (TcpPacket) ipPkt.getPacket();
             IPPort src = new IPPort(ipPkt.getSrc(), tcpPkt.getSrcPort());
             IPPort dst = new IPPort(ipPkt.getDst(), tcpPkt.getDstPort());
-            var tcpEntry = ctx.table.conntrack.lookup(src, dst);
+            var tcpEntry = skb.table.conntrack.lookup(src, dst);
             if (tcpEntry != null) {
-                ctx.tcp = tcpEntry;
+                skb.tcp = tcpEntry;
                 result = true;
             } else if (tcpPkt.getFlags() == Consts.TCP_FLAGS_SYN) {
                 // only consider the packets with only SYN on it
-                var listenEntry = ctx.table.conntrack.lookupListen(dst);
+                var listenEntry = skb.table.conntrack.lookupListen(dst);
                 if (listenEntry != null) {
-                    assert Logger.lowLevelDebug(ctx.handlingUUID + " got new connection");
+                    assert Logger.lowLevelDebug("got new connection");
 
                     // check backlog
                     if (listenEntry.synBacklog.size() >= ListenEntry.MAX_SYN_BACKLOG_SIZE) {
-                        assert Logger.lowLevelDebug(ctx.handlingUUID + " syn-backlog is full");
+                        assert Logger.lowLevelDebug("syn-backlog is full");
                         // here we reset the connection instead of dropping it like linux
-                        ctx.needTcpReset = true;
+                        skb.needTcpReset = true;
                     } else {
-                        tcpEntry = ctx.table.conntrack.create(listenEntry, src, dst, tcpPkt.getSeqNum());
+                        tcpEntry = skb.table.conntrack.create(listenEntry, src, dst, tcpPkt.getSeqNum());
                         listenEntry.synBacklog.add(tcpEntry);
-                        ctx.tcp = tcpEntry;
+                        skb.tcp = tcpEntry;
                     }
                     result = true;
                 }
             } else {
                 assert Logger.lowLevelDebug("need to reset");
-                ctx.needTcpReset = true;
+                skb.needTcpReset = true;
                 result = true;
             }
         }
 
-        assert Logger.lowLevelDebug("wantToHandle(" + ctx + ") = " + result);
+        assert Logger.lowLevelDebug("wantToHandle(" + skb + ") = " + result);
         return result;
     }
 
-    private void handleTcp(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug("handleTcp(" + ctx + ")");
-        var tcp = ctx.tcp;
+    private void handleTcp(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcp(" + skb + ")");
+        var tcp = skb.tcp;
         switch (tcp.getState()) {
             case CLOSED:
-                handleTcpClosed(ctx);
+                handleTcpClosed(skb);
                 break;
             case SYN_SENT:
-                handleTcpSynSent(ctx);
+                handleTcpSynSent(skb);
                 break;
             case SYN_RECEIVED:
-                handleTcpSynReceived(ctx);
+                handleTcpSynReceived(skb);
                 break;
             case ESTABLISHED:
-                handleTcpEstablished(ctx);
+                handleTcpEstablished(skb);
                 break;
             case FIN_WAIT_1:
-                handleTcpFinWait1(ctx);
+                handleTcpFinWait1(skb);
                 break;
             case FIN_WAIT_2:
-                handleTcpFinWait2(ctx);
+                handleTcpFinWait2(skb);
                 break;
             case CLOSE_WAIT:
-                handleTcpCloseWait(ctx);
+                handleTcpCloseWait(skb);
                 break;
             case CLOSING:
-                handleTcpClosing(ctx);
+                handleTcpClosing(skb);
                 break;
             case LAST_ACK:
-                handleLastAck(ctx);
+                handleLastAck(skb);
                 break;
             case TIME_WAIT:
-                handleTimeWait(ctx);
+                handleTimeWait(skb);
                 break;
             default:
                 Logger.shouldNotHappen("should not reach here");
         }
     }
 
-    private TcpPacket buildSynAck(InputPacketL4Context ctx) {
-        TcpPacket respondTcp = TcpUtils.buildCommonTcpResponse(ctx.tcp);
+    private TcpPacket buildSynAck(SocketBuffer skb) {
+        TcpPacket respondTcp = TcpUtils.buildCommonTcpResponse(skb.tcp);
         respondTcp.setFlags(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK);
         respondTcp.setWindow(65535);
         {
@@ -139,7 +142,7 @@ public class L4 {
             respondTcp.getOptions().add(optMss);
         }
         {
-            int scale = ctx.tcp.receivingQueue.getWindowScale();
+            int scale = skb.tcp.receivingQueue.getWindowScale();
             int cnt = 0;
             while (scale != 1) {
                 scale /= 2;
@@ -155,13 +158,13 @@ public class L4 {
         return respondTcp;
     }
 
-    private void sendRst(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug("sendRst(" + ctx + ")");
+    private void sendRst(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("sendRst(" + skb + ")");
 
         // maybe there's no tcp entry when sending rst
         // so we can only use the fields in the received packet
 
-        var inputTcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var inputTcpPkt = skb.tcpPkt;
 
         TcpPacket respondTcp = new TcpPacket();
         respondTcp.setSrcPort(inputTcpPkt.getDstPort());
@@ -172,10 +175,10 @@ public class L4 {
         respondTcp.setWindow(0);
 
         AbstractIpPacket ipPkt;
-        if (ctx.inputIpPacket.getSrc() instanceof IPv4) {
+        if (skb.ipPkt.getSrc() instanceof IPv4) {
             var ipv4 = new Ipv4Packet();
-            ipv4.setSrc((IPv4) ctx.inputIpPacket.getDst());
-            ipv4.setDst((IPv4) ctx.inputIpPacket.getSrc());
+            ipv4.setSrc((IPv4) skb.ipPkt.getDst());
+            ipv4.setDst((IPv4) skb.ipPkt.getSrc());
             var tcpBytes = respondTcp.buildIPv4TcpPacket(ipv4);
 
             ipv4.setVersion(4);
@@ -189,8 +192,8 @@ public class L4 {
             ipPkt = ipv4;
         } else {
             var ipv6 = new Ipv6Packet();
-            ipv6.setSrc((IPv6) ctx.inputIpPacket.getDst());
-            ipv6.setDst((IPv6) ctx.inputIpPacket.getSrc());
+            ipv6.setSrc((IPv6) skb.ipPkt.getDst());
+            ipv6.setDst((IPv6) skb.ipPkt.getSrc());
             var tcpBytes = respondTcp.buildIPv6TcpPacket(ipv6);
 
             ipv6.setVersion(6);
@@ -203,19 +206,20 @@ public class L4 {
             ipPkt = ipv6;
         }
 
-        L3.output(new OutputPacketL3Context(ctx.handlingUUID, ctx.table, ipPkt));
+        skb.replacePacket(ipPkt);
+        L3.output(skb);
     }
 
-    private void handleTcpClosed(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpClosed");
+    private void handleTcpClosed(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpClosed");
 
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         // only handle syn
         if (tcpPkt.getFlags() != Consts.TCP_FLAGS_SYN) {
             assert Logger.lowLevelDebug("not SYN packet");
             return;
         }
-        ctx.tcp.setState(TcpState.SYN_RECEIVED);
+        skb.tcp.setState(TcpState.SYN_RECEIVED);
         // get tcp options from the syn
         int mss = TcpEntry.SND_DEFAULT_MSS;
         int windowScale = 1;
@@ -230,78 +234,80 @@ public class L4 {
                     break;
             }
         }
-        ctx.tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale);
+        skb.tcp.sendingQueue.init(tcpPkt.getWindow(), mss, windowScale);
 
         // SYN-ACK
-        TcpPacket respondTcp = buildSynAck(ctx);
-        AbstractIpPacket respondIp = TcpUtils.buildIpResponse(ctx.tcp, respondTcp);
+        TcpPacket respondTcp = buildSynAck(skb);
+        AbstractIpPacket respondIp = TcpUtils.buildIpResponse(skb.tcp, respondTcp);
 
-        ctx.tcp.sendingQueue.incAllSeq();
+        skb.tcp.sendingQueue.incAllSeq();
 
-        L3.output(new OutputPacketL3Context(ctx.handlingUUID, ctx.table, respondIp));
+        skb.replacePacket(respondIp);
+        L3.output(skb);
     }
 
-    private void handleTcpSynSent(@SuppressWarnings("unused") InputPacketL4Context ctx) {
+    private void handleTcpSynSent(@SuppressWarnings("unused") SocketBuffer skb) {
         Logger.shouldNotHappen("unsupported yet: syn-sent state");
     }
 
-    private void handleTcpSynReceived(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpSynReceived");
+    private void handleTcpSynReceived(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpSynReceived");
         // first check whether the packet has ack, and if so, check the ack number
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         if (tcpPkt.isSyn()) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " probably a syn retransmission");
-            if (tcpPkt.getSeqNum() == ctx.tcp.receivingQueue.getAckedSeq() - 1) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " seq matches");
-                ctx.tcp.sendingQueue.decAllSeq();
-                TcpPacket respondTcp = buildSynAck(ctx);
-                AbstractIpPacket respondIp = TcpUtils.buildIpResponse(ctx.tcp, respondTcp);
-                ctx.tcp.sendingQueue.incAllSeq();
-                L3.output(new OutputPacketL3Context(ctx.handlingUUID, ctx.table, respondIp));
+            assert Logger.lowLevelDebug("probably a syn retransmission");
+            if (tcpPkt.getSeqNum() == skb.tcp.receivingQueue.getAckedSeq() - 1) {
+                assert Logger.lowLevelDebug("seq matches");
+                skb.tcp.sendingQueue.decAllSeq();
+                TcpPacket respondTcp = buildSynAck(skb);
+                AbstractIpPacket respondIp = TcpUtils.buildIpResponse(skb.tcp, respondTcp);
+                skb.tcp.sendingQueue.incAllSeq();
+                skb.replacePacket(respondIp);
+                L3.output(skb);
                 return;
             }
         }
         if (!tcpPkt.isAck()) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " no ack flag set");
+            assert Logger.lowLevelDebug("no ack flag set");
             return;
         }
-        if (tcpPkt.getAckNum() != ctx.tcp.sendingQueue.getAckSeq()) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " wrong ack number");
+        if (tcpPkt.getAckNum() != skb.tcp.sendingQueue.getAckSeq()) {
+            assert Logger.lowLevelDebug("wrong ack number");
             return;
         }
-        connectionEstablishes(ctx);
+        connectionEstablishes(skb);
 
         // then run the same handling as established
-        handleTcpEstablished(ctx);
+        handleTcpEstablished(skb);
     }
 
-    private void connectionEstablishes(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " connectionEstablishes");
-        ctx.tcp.setState(TcpState.ESTABLISHED);
+    private void connectionEstablishes(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("connectionEstablishes");
+        skb.tcp.setState(TcpState.ESTABLISHED);
         // alert that this connection can be retrieved
-        var parent = ctx.tcp.getParent();
-        parent.synBacklog.remove(ctx.tcp);
-        parent.backlog.add(ctx.tcp);
+        var parent = skb.tcp.getParent();
+        parent.synBacklog.remove(skb.tcp);
+        parent.backlog.add(skb.tcp);
         parent.listenHandler.readable(parent);
     }
 
-    private boolean handleTcpGeneralReturnFalse(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpGeneral");
+    private boolean handleTcpGeneralReturnFalse(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpGeneral");
 
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
 
         // check whether seq matches
         var seq = tcpPkt.getSeqNum();
-        var expect = ctx.tcp.receivingQueue.getExpectingSeq();
-        var acked = ctx.tcp.receivingQueue.getAckedSeq();
+        var expect = skb.tcp.receivingQueue.getExpectingSeq();
+        var acked = skb.tcp.receivingQueue.getAckedSeq();
         if (tcpPkt.isFin()) {
             if (seq != acked) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " data not fully consumed yet but received FIN");
+                assert Logger.lowLevelDebug("data not fully consumed yet but received FIN");
                 return true;
             }
         } else if (seq != expect) {
             if (!tcpPkt.isPsh() || seq > expect) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " invalid sequence number");
+                assert Logger.lowLevelDebug("invalid sequence number");
                 return true;
             }
         }
@@ -309,127 +315,128 @@ public class L4 {
         if (tcpPkt.isAck()) {
             long ack = tcpPkt.getAckNum();
             int window = tcpPkt.getWindow();
-            ctx.tcp.sendingQueue.ack(ack, window);
+            skb.tcp.sendingQueue.ack(ack, window);
             // then check whether there's data to send
             // because the window may forbid it from sending
             // ack resets the window so it might get chance to send data
-            if (ctx.tcp.retransmissionTimer == null) {
-                tcpStartRetransmission(ctx.handlingUUID, ctx.table, ctx.tcp);
+            if (skb.tcp.retransmissionTimer == null) {
+                tcpStartRetransmission(skb.table, skb.tcp);
             }
         }
         return false;
     }
 
-    private void handleTcpEstablished(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpEstablished");
-        if (handleTcpGeneralReturnFalse(ctx)) {
+    private void handleTcpEstablished(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpEstablished");
+        if (handleTcpGeneralReturnFalse(skb)) {
             return;
         }
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         if (tcpPkt.isPsh()) {
             long seq = tcpPkt.getSeqNum();
             ByteArray data = tcpPkt.getData();
-            ctx.tcp.receivingQueue.store(new Segment(seq, data));
+            skb.tcp.receivingQueue.store(new Segment(seq, data));
         }
         if (tcpPkt.isFin()) {
-            ctx.tcp.setState(TcpState.CLOSE_WAIT);
-            ctx.tcp.receivingQueue.incExpectingSeq();
-            tcpAck(ctx.handlingUUID, ctx.table, ctx.tcp);
+            skb.tcp.setState(TcpState.CLOSE_WAIT);
+            skb.tcp.receivingQueue.incExpectingSeq();
+            tcpAck(skb.table, skb.tcp);
         }
     }
 
-    private void handleTcpFinWait1(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpFinWait1");
-        if (handleTcpGeneralReturnFalse(ctx)) {
+    private void handleTcpFinWait1(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpFinWait1");
+        if (handleTcpGeneralReturnFalse(skb)) {
             return;
         }
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         if (tcpPkt.isFin()) {
-            if (ctx.tcp.sendingQueue.ackOfFinReceived()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " transform to CLOSING");
-                ctx.tcp.setState(TcpState.CLOSING);
-                sendRst(ctx);
+            if (skb.tcp.sendingQueue.ackOfFinReceived()) {
+                assert Logger.lowLevelDebug("transform to CLOSING");
+                skb.tcp.setState(TcpState.CLOSING);
+                sendRst(skb);
             } else {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " received FIN but the previous sent FIN not acked");
+                assert Logger.lowLevelDebug("received FIN but the previous sent FIN not acked");
             }
         } else {
-            if (ctx.tcp.sendingQueue.ackOfFinReceived()) {
-                assert Logger.lowLevelDebug(ctx.handlingUUID + " the sent FIN is acked, transform to FIN_WAIT_2");
-                ctx.tcp.setState(TcpState.FIN_WAIT_2);
+            if (skb.tcp.sendingQueue.ackOfFinReceived()) {
+                assert Logger.lowLevelDebug("the sent FIN is acked, transform to FIN_WAIT_2");
+                skb.tcp.setState(TcpState.FIN_WAIT_2);
             }
         }
     }
 
-    private void handleTcpFinWait2(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpFinWait2");
-        if (handleTcpGeneralReturnFalse(ctx)) {
+    private void handleTcpFinWait2(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpFinWait2");
+        if (handleTcpGeneralReturnFalse(skb)) {
             return;
         }
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         if (tcpPkt.isFin()) {
-            assert Logger.lowLevelDebug(ctx.handlingUUID + " transform to CLOSING");
-            ctx.tcp.setState(TcpState.CLOSING);
-            sendRst(ctx);
+            assert Logger.lowLevelDebug("transform to CLOSING");
+            skb.tcp.setState(TcpState.CLOSING);
+            sendRst(skb);
         }
     }
 
-    private void handleTcpCloseWait(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpCloseWait");
-        if (handleTcpGeneralReturnFalse(ctx)) {
+    private void handleTcpCloseWait(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpCloseWait");
+        if (handleTcpGeneralReturnFalse(skb)) {
             return;
         }
-        var tcpPkt = (TcpPacket) ctx.inputIpPacket.getPacket();
+        var tcpPkt = skb.tcpPkt;
         if (tcpPkt.isFin()) {
             assert Logger.lowLevelDebug("received FIN again, maybe it's retransmission");
-            if (tcpPkt.getSeqNum() == ctx.tcp.receivingQueue.getExpectingSeq() - 1) {
-                tcpAck(ctx.handlingUUID, ctx.table, ctx.tcp);
+            if (tcpPkt.getSeqNum() == skb.tcp.receivingQueue.getExpectingSeq() - 1) {
+                tcpAck(skb.table, skb.tcp);
             }
         }
     }
 
-    private void handleTcpClosing(InputPacketL4Context ctx) {
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " handleTcpClosing");
-        if (handleTcpGeneralReturnFalse(ctx)) {
+    private void handleTcpClosing(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("handleTcpClosing");
+        if (handleTcpGeneralReturnFalse(skb)) {
             return;
         }
-        assert Logger.lowLevelDebug(ctx.handlingUUID + " drop any packet when it's in CLOSING state");
+        assert Logger.lowLevelDebug("drop any packet when it's in CLOSING state");
     }
 
-    private void handleLastAck(@SuppressWarnings("unused") InputPacketL4Context ctx) {
+    private void handleLastAck(@SuppressWarnings("unused") SocketBuffer skb) {
         Logger.shouldNotHappen("unsupported yet: last-ack state");
     }
 
-    private void handleTimeWait(@SuppressWarnings("unused") InputPacketL4Context ctx) {
+    private void handleTimeWait(@SuppressWarnings("unused") SocketBuffer skb) {
         Logger.shouldNotHappen("unsupported yet: time-wait state");
     }
 
-    public void output(OutputPacketL3Context ctx) {
-        assert Logger.lowLevelDebug("L4.output(" + ctx + ")");
-        L3.output(ctx);
+    public void output(SocketBuffer skb) {
+        assert Logger.lowLevelDebug("L4.output(" + skb + ")");
+        L3.output(skb);
     }
 
-    public void tcpAck(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("tcpAck(" + handlingUUID + ", " + table + ", " + tcp + ")");
+    public void tcpAck(Table table, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("tcpAck(" + ", " + table + ", " + tcp + ")");
 
         if (tcp.receivingQueue.getWindow() == 0) {
-            assert Logger.lowLevelDebug(handlingUUID + " no window, very bad, need to ack immediately");
+            assert Logger.lowLevelDebug("no window, very bad, need to ack immediately");
             if (tcp.delayedAckTimer != null) {
-                assert Logger.lowLevelDebug(handlingUUID + " cancel the timer");
+                assert Logger.lowLevelDebug("cancel the timer");
                 tcp.delayedAckTimer.cancel();
                 tcp.delayedAckTimer = null;
             }
-            sendAck(handlingUUID, table, tcp);
+            sendAck(table, tcp);
             return;
         }
         if (tcp.delayedAckTimer != null) {
-            assert Logger.lowLevelDebug(handlingUUID + " delayed ack already scheduled");
+            assert Logger.lowLevelDebug("delayed ack already scheduled");
             return;
         }
-        tcp.delayedAckTimer = swCtx.getSelectorEventLoop().delay(TcpEntry.DELAYED_ACK_TIMEOUT, () -> sendAck(handlingUUID, table, tcp));
+        tcp.delayedAckTimer = swCtx.getSelectorEventLoop().delay(TcpEntry.DELAYED_ACK_TIMEOUT, () -> sendAck(table, tcp));
     }
 
-    private void sendAck(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("sendAck(" + handlingUUID + ", " + table + ", " + tcp + ")");
+    private void sendAck(Table table, TcpEntry tcp) {
+        VProxyThread.current().newUuidDebugInfo();
+        assert Logger.lowLevelDebug("sendAck(" + ", " + table + ", " + tcp + ")");
 
         if (tcp.delayedAckTimer != null) {
             tcp.delayedAckTimer.cancel();
@@ -438,16 +445,18 @@ public class L4 {
 
         TcpPacket respondTcp = TcpUtils.buildAckResponse(tcp);
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
-        L3.output(new OutputPacketL3Context(handlingUUID, table, respondIp));
+
+        SocketBuffer skb = SocketBuffer.fromPacket(table, respondIp);
+        L3.output(skb);
     }
 
-    public void tcpStartRetransmission(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("tcpStartRetransmission(" + handlingUUID + "," + table + "," + tcp + ")");
-        transmitTcp(handlingUUID, table, tcp, 0, 0);
+    public void tcpStartRetransmission(Table table, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("tcpStartRetransmission(" + table + "," + tcp + ")");
+        transmitTcp(table, tcp, 0, 0);
     }
 
-    private void transmitTcp(String handlingUUID, Table table, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
-        assert Logger.lowLevelDebug("transmitTcp(" + handlingUUID + "," + table + "," + tcp + ")");
+    private void transmitTcp(Table table, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
+        assert Logger.lowLevelDebug("transmitTcp(" + table + "," + tcp + ")");
 
         if (tcp.retransmissionTimer != null) { // reset timer
             tcp.retransmissionTimer.cancel();
@@ -456,30 +465,30 @@ public class L4 {
 
         // check whether need to reset the connection because of too many retransmits
         if (tcp.requireClosing() && retransmissionCount > TcpEntry.MAX_RETRANSMISSION_AFTER_CLOSING) {
-            assert Logger.lowLevelDebug(handlingUUID + " conn " + tcp + " is closed due to too many retransmission after closing");
-            resetTcpConnection(handlingUUID, table, tcp);
+            assert Logger.lowLevelDebug("conn " + tcp + " is closed due to too many retransmission after closing");
+            resetTcpConnection(table, tcp);
             return;
         }
 
         List<Segment> segments = tcp.sendingQueue.fetch();
         if (segments.isEmpty()) { // no data to send, check FIN
             if (tcp.sendingQueue.needToSendFin()) {
-                assert Logger.lowLevelDebug(handlingUUID + " need to send FIN");
+                assert Logger.lowLevelDebug("need to send FIN");
                 // fall through
             } else {
                 // nothing to send
-                assert Logger.lowLevelDebug(handlingUUID + " no need to retransmit after " + retransmissionCount + " time(s)");
+                assert Logger.lowLevelDebug("no need to retransmit after " + retransmissionCount + " time(s)");
                 if (tcp.retransmissionTimer != null) {
                     tcp.retransmissionTimer.cancel();
                     tcp.retransmissionTimer = null;
                 }
-                afterTransmission(handlingUUID, table, tcp);
+                afterTransmission(table, tcp);
                 return;
             }
         }
         long currentBeginSeq = segments.isEmpty() ? tcp.sendingQueue.getFetchSeq() + 1 : segments.get(0).seqBeginInclusive;
         if (currentBeginSeq != lastBeginSeq) {
-            assert Logger.lowLevelDebug(handlingUUID + " the sequence increased, it's not retransmitting after " + retransmissionCount + " time(s)");
+            assert Logger.lowLevelDebug("the sequence increased, it's not retransmitting after " + retransmissionCount + " time(s)");
             retransmissionCount = 0;
         }
 
@@ -488,42 +497,45 @@ public class L4 {
         if (delay <= 0 || delay > TcpEntry.RTO_MAX) { // overflow or exceeds maximum
             delay = TcpEntry.RTO_MAX;
         }
-        assert Logger.lowLevelDebug(handlingUUID + " will delay " + delay + " ms then retransmit");
+        assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
         final int finalRetransmissionCount = retransmissionCount;
         tcp.retransmissionTimer = swCtx.getSelectorEventLoop().delay(delay, () ->
-            transmitTcp(handlingUUID, table, tcp, currentBeginSeq, finalRetransmissionCount + 1)
+            transmitTcp(table, tcp, currentBeginSeq, finalRetransmissionCount + 1)
         );
 
         if (segments.isEmpty()) {
             assert tcp.sendingQueue.needToSendFin();
-            sendTcpFin(handlingUUID, table, tcp);
+            sendTcpFin(table, tcp);
         } else {
             for (var s : segments) {
-                sendTcpPsh(handlingUUID, table, tcp, s);
+                sendTcpPsh(table, tcp, s);
             }
         }
     }
 
-    private void afterTransmission(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("afterTransmission(" + handlingUUID + "," + table + "," + tcp + "," + ")");
+    private void afterTransmission(Table table, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("afterTransmission(" + table + "," + tcp + "," + ")");
 
         if (tcp.requireClosing()) {
-            assert Logger.lowLevelDebug(handlingUUID + " need to be closed");
-            resetTcpConnection(handlingUUID, table, tcp);
+            assert Logger.lowLevelDebug("need to be closed");
+            resetTcpConnection(table, tcp);
         }
     }
 
-    public void resetTcpConnection(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("sendTcpRst(" + handlingUUID + "," + table + "," + tcp + "," + ")");
+    public void resetTcpConnection(Table table, TcpEntry tcp) {
+        VProxyThread.current().newUuidDebugInfo();
+        assert Logger.lowLevelDebug("sendTcpRst(" + table + "," + tcp + "," + ")");
 
-        output(new OutputPacketL3Context(handlingUUID, table,
-            TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp))));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp)));
+        output(skb);
+
         tcp.setState(TcpState.CLOSED);
         table.conntrack.remove(tcp.source, tcp.destination);
     }
 
-    private void sendTcpPsh(String handlingUUID, Table table, TcpEntry tcp, Segment s) {
-        assert Logger.lowLevelDebug("sendTcpPsh(" + handlingUUID + "," + table + "," + tcp + "," + s + ")");
+    private void sendTcpPsh(Table table, TcpEntry tcp, Segment s) {
+        VProxyThread.current().newUuidDebugInfo();
+        assert Logger.lowLevelDebug("sendTcpPsh(" + table + "," + tcp + "," + s + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(s.seqBeginInclusive);
@@ -531,17 +543,20 @@ public class L4 {
         tcpPkt.setData(s.data);
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
-        L3.output(new OutputPacketL3Context(handlingUUID, table, ipPkt));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, ipPkt);
+        L3.output(skb);
     }
 
-    private void sendTcpFin(String handlingUUID, Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("sendTcpFin(" + handlingUUID + "," + table + "," + tcp + ")");
+    private void sendTcpFin(Table table, TcpEntry tcp) {
+        VProxyThread.current().newUuidDebugInfo();
+        assert Logger.lowLevelDebug("sendTcpFin(" + table + "," + tcp + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(tcp.sendingQueue.getFetchSeq());
         tcpPkt.setFlags(Consts.TCP_FLAGS_FIN | Consts.TCP_FLAGS_ACK);
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
-        L3.output(new OutputPacketL3Context(handlingUUID, table, ipPkt));
+        SocketBuffer skb = SocketBuffer.fromPacket(table, ipPkt);
+        L3.output(skb);
     }
 }

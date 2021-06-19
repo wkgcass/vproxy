@@ -35,8 +35,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         isWritable = true;
     }
 
-    // TODO
-    @SuppressWarnings("unused")
+    @SuppressWarnings("unused") // TODO
     public VSwitchSocketFD(VSwitchFDContext ctx) {
         super(ctx);
         // TODO maybe support the socket as client ?
@@ -105,7 +104,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         } else {
             Logger.shouldNotHappen("should not reach here: " + entry.getState());
         }
-        ctx.L4.tcpStartRetransmission(getUUID(), ctx.table, entry);
+        ctx.L4.tcpStartRetransmission(ctx.table, entry);
     }
 
     @Override
@@ -161,7 +160,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         }
 
         // need to send ack
-        ctx.L4.tcpAck(getUUID(), ctx.table, entry);
+        ctx.L4.tcpAck(ctx.table, entry);
         // reset window
         entry.receivingQueue.resetWindow();
 
@@ -183,7 +182,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
 
         // start retransmission
         if (wrote > 0) {
-            ctx.L4.tcpStartRetransmission(getUUID(), ctx.table, entry);
+            ctx.L4.tcpStartRetransmission(ctx.table, entry);
         }
 
         // handle events
@@ -233,10 +232,10 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
             // wait until all data sent
             assert Logger.lowLevelDebug("fd " + this + " is closed, but more data to send, so do not close the connection for now");
             entry.doClose();
-            ctx.L4.tcpStartRetransmission(getUUID(), ctx.table, entry);
+            ctx.L4.tcpStartRetransmission(ctx.table, entry);
         } else {
             // send reset
-            ctx.L4.resetTcpConnection(getUUID(), ctx.table, entry);
+            ctx.L4.resetTcpConnection(ctx.table, entry);
         }
         return FDCloseReturn.nothing(req);
     }

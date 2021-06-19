@@ -1,18 +1,16 @@
 package vproxy.vswitch.iface;
 
-import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
-import vproxy.vpacket.VXLanPacket;
+import vproxy.vswitch.SocketBuffer;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class BareVXLanIface extends AbstractIface implements Iface, LocalSideVniGetterSetter {
-    public final IPPort udpSockAddress; // for vxlan or vproxy wrapped vxlan
+public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Iface, LocalSideVniGetterSetter {
+    public final IPPort udpSockAddress; // remote vxlan address
     private int localSideVni;
 
     public BareVXLanIface(IPPort udpSockAddress) {
+        super(udpSockAddress);
         this.udpSockAddress = udpSockAddress;
     }
 
@@ -35,18 +33,17 @@ public class BareVXLanIface extends AbstractIface implements Iface, LocalSideVni
     }
 
     @Override
-    public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
-        byte[] bytes = vxlan.getRawPacket().toJavaArray();
+    public void sendPacket(SocketBuffer skb) {
+        super.sendPacket(skb);
+    }
 
-        writeBuf.put(bytes);
-        writeBuf.flip();
-
+    @Override
+    protected void manipulate() {
         // keep reserved fields empty
-        writeBuf.put(1, (byte) 0);
-        writeBuf.put(2, (byte) 0);
-        writeBuf.put(3, (byte) 0);
-        writeBuf.put(7, (byte) 0);
-        serverUDPSock.send(writeBuf, udpSockAddress);
+        sndBuf.put(1, (byte) 0);
+        sndBuf.put(2, (byte) 0);
+        sndBuf.put(3, (byte) 0);
+        sndBuf.put(7, (byte) 0);
     }
 
     @Override

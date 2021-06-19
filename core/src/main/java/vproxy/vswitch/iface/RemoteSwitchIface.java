@@ -1,20 +1,18 @@
 package vproxy.vswitch.iface;
 
 import vproxy.base.util.Consts;
-import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
-import vproxy.vpacket.VXLanPacket;
+import vproxy.vswitch.SocketBuffer;
 
-import java.io.IOException;
-import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class RemoteSwitchIface extends AbstractIface implements Iface {
+public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface implements Iface {
     public final String alias;
     public final IPPort udpSockAddress;
     public final boolean addSwitchFlag;
 
     public RemoteSwitchIface(String alias, IPPort udpSockAddress, boolean addSwitchFlag) {
+        super(udpSockAddress);
         this.alias = alias;
         this.udpSockAddress = udpSockAddress;
         this.addSwitchFlag = addSwitchFlag;
@@ -40,20 +38,21 @@ public class RemoteSwitchIface extends AbstractIface implements Iface {
     }
 
     @Override
-    public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
-        byte[] bytes = vxlan.getRawPacket().toJavaArray();
-        writeBuf.put(bytes);
-        writeBuf.flip();
+    public void sendPacket(SocketBuffer skb) {
+        super.sendPacket(skb);
+    }
+
+    @Override
+    protected void manipulate() {
         if (addSwitchFlag) {
-            writeBuf.put(1, (byte) (bytes[1] | ((Consts.I_AM_FROM_SWITCH >> 16) & 0xff)));
+            sndBuf.put(1, (byte) (sndBuf.get(1) | ((Consts.I_AM_FROM_SWITCH >> 16) & 0xff)));
         } else {
             // remove all possible flags or counters
-            writeBuf.put(1, (byte) 0);
-            writeBuf.put(2, (byte) 0);
-            writeBuf.put(3, (byte) 0);
-            writeBuf.put(7, (byte) 0);
+            sndBuf.put(1, (byte) 0);
+            sndBuf.put(2, (byte) 0);
+            sndBuf.put(3, (byte) 0);
+            sndBuf.put(7, (byte) 0);
         }
-        serverUDPSock.send(writeBuf, udpSockAddress);
     }
 
     @Override

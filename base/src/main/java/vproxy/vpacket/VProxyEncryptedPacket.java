@@ -63,6 +63,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
                 return err;
             }
             vxlan = packet;
+            vxlan.recordParent(this);
         } else if (type == Consts.VPROXY_SWITCH_TYPE_PING) {
             if (result.length() != 2) {
                 return "extra bytes for a vproxy switch ping packet: " + (result.length() - 2);

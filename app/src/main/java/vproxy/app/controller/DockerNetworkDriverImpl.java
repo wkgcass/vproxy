@@ -296,8 +296,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var sw = ensureSwitch();
         findNetwork(sw, networkId);
         var tap = findEndpoint(sw, endpointId);
-        sw.delTap(tap.tap.getTap().dev);
-        Logger.alert("tap deleted: " + tap.tap.getTap().dev + ", endpointId=" + endpointId);
+        sw.delTap(tap.getTap().getTap().dev);
+        Logger.alert("tap deleted: " + tap.getTap().getTap().dev + ", endpointId=" + endpointId);
 
         File f = new File(POST_SCRIPT_BASE_DIRECTORY + endpointId);
         //noinspection ResultOfMethodCallIgnored
@@ -310,7 +310,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var sw = ensureSwitch();
         var tbl = findNetwork(sw, networkId);
         var tap = findEndpoint(sw, endpointId);
-        var tapName = tap.tap.getTap().dev;
+        var tapName = tap.getTap().getTap().dev;
         var ipv4 = tap.annotations.other.get(TAP_ENDPOINT_IPv4_ANNOTATION);
         var ipv6 = tap.annotations.other.get(TAP_ENDPOINT_IPv6_ANNOTATION);
         var mac = tap.annotations.other.get(TAP_ENDPOINT_MAC_ANNOTATION);

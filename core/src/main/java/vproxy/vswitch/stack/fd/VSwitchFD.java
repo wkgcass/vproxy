@@ -5,7 +5,6 @@ import vproxy.vfd.FD;
 
 import java.io.IOException;
 import java.net.SocketOption;
-import java.util.UUID;
 
 public abstract class VSwitchFD implements FD, VirtualFD {
     protected final VSwitchFDContext ctx;
@@ -19,10 +18,6 @@ public abstract class VSwitchFD implements FD, VirtualFD {
         if (closed) {
             throw new IOException("closed");
         }
-    }
-
-    protected String getUUID() {
-        return UUID.randomUUID().toString();
     }
 
     @Override

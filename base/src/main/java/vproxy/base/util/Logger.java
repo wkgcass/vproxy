@@ -1,5 +1,6 @@
 package vproxy.base.util;
 
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.DatagramFD;
 import vproxy.vfd.FDProvider;
 import vproxy.vfd.IP;
@@ -8,6 +9,7 @@ import vproxy.vfd.IPPort;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Date;
+import java.util.Set;
 
 public class Logger {
     private static final boolean stackTraceOn;
@@ -41,6 +43,10 @@ public class Logger {
                 stackTraceOn = !"off".equals(stackTrace);
             }
         }
+    }
+
+    public static boolean debugOn() {
+        return lowLevelDebugOn || lowLevelNetDebugOn;
     }
 
     private Logger() {
@@ -86,25 +92,46 @@ public class Logger {
         return arr[arr.length - 1];
     }
 
+    private static final Set<String> ADD_DEBUG_INFO_CLASS_PREFIX = Set.of(
+        "vproxy.vswitch."
+    );
+
     // some message for debugging this project
     // use assert to print this log
     // e.g. assert Logger.lowLevelDebug("i will not be here in production environment")
     public static boolean lowLevelDebug(String msg) {
         if (!lowLevelDebugOn)
             return true;
-        String threadName = Thread.currentThread().getName();
-        StackTraceElement elem = getFirstElementOutOfLoggerLib();
-        System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + msg);
-        return true;
+        return debugLog(msg);
     }
 
     public static boolean lowLevelNetDebug(String msg) {
         if (!lowLevelNetDebugOn || !lowLevelDebugOn)
             return true;
+        return debugLog(msg);
+    }
+
+    private static boolean debugLog(String msg) {
         String threadName = Thread.currentThread().getName();
         StackTraceElement elem = getFirstElementOutOfLoggerLib();
-        System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + msg);
+        System.out.println(DEBUG_COLOR + current() + threadName + " - " + elem.getClassName() + "#" + elem.getMethodName() + "(" + elem.getLineNumber() + ") - " + RESET_COLOR + getDebugInfo(elem) + msg);
         return true;
+    }
+
+    private static String getDebugInfo(StackTraceElement elem) {
+        String clsName = elem.getClassName();
+        boolean addDebugInfo = false;
+        for (String cls : ADD_DEBUG_INFO_CLASS_PREFIX) {
+            if (clsName.startsWith(cls)) {
+                addDebugInfo = true;
+                break;
+            }
+        }
+        if (addDebugInfo) {
+            String debugInfo = VProxyThread.current().debugInfo;
+            return debugInfo + " - ";
+        }
+        return "";
     }
 
     private static void privateErr(String err) {
@@ -119,7 +146,7 @@ public class Logger {
         } else {
             StringBuilder sb = new StringBuilder();
             formatExceptionStackTrace(t, sb);
-            System.out.println(sb.toString());
+            System.out.println(sb);
         }
     }
 

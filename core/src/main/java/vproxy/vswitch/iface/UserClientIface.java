@@ -1,32 +1,34 @@
 package vproxy.vswitch.iface;
 
+import vproxy.base.selector.Handler;
+import vproxy.base.selector.HandlerContext;
+import vproxy.base.selector.PeriodicEvent;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.Consts;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import vproxy.base.util.*;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.DatagramFD;
+import vproxy.vfd.EventSet;
+import vproxy.vfd.FDProvider;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.VProxyEncryptedPacket;
-import vproxy.vpacket.VXLanPacket;
+import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class UserClientIface extends AbstractIface implements Iface, IfaceCanSendVProxyPacket {
+public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface implements Iface, IfaceCanSendVProxyPacket {
     public final UserInfo user;
-    public final DatagramFD sock;
-    public final IPPort remoteAddress;
 
     private SelectorEventLoop bondLoop;
 
     private boolean connected = false;
 
-    public UserClientIface(UserInfo user, DatagramFD sock, IPPort remoteAddress) {
+    public UserClientIface(UserInfo user, IPPort remoteAddress) {
+        super(user.user, remoteAddress);
         this.user = user;
-        this.sock = sock;
-        this.remoteAddress = remoteAddress;
     }
 
     public void detachedFromLoopAlert() {
@@ -35,9 +37,15 @@ public class UserClientIface extends AbstractIface implements Iface, IfaceCanSen
 
     public void attachedToLoopAlert(SelectorEventLoop newLoop) {
         this.bondLoop = newLoop;
+        try {
+            bondLoop.add(sock, EventSet.read(), null, new UserClientHandler(bondLoop));
+        } catch (IOException e) {
+            Logger.error(LogType.EVENT_LOOP_ADD_FAIL, "adding sock " + sock + " for " + this + " into event loop failed", e);
+            callback.alertDeviceDown(this);
+        }
     }
 
-    public void setConnected(boolean connected) {
+    private void setConnected(boolean connected) {
         boolean oldConnected = this.connected;
         this.connected = connected;
         if (connected) {
@@ -57,7 +65,7 @@ public class UserClientIface extends AbstractIface implements Iface, IfaceCanSen
 
     @Override
     public String toString() {
-        return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + remoteAddress.formatToIPPortString() + ",vni:" + user.vni
+        return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + remote.formatToIPPortString() + ",vni:" + user.vni
             + ")" + (connected ? "[UP]" : "[DOWN]");
     }
 
@@ -67,16 +75,36 @@ public class UserClientIface extends AbstractIface implements Iface, IfaceCanSen
         if (o == null || getClass() != o.getClass()) return false;
         UserClientIface iface = (UserClientIface) o;
         return Objects.equals(user, iface.user) &&
-            Objects.equals(remoteAddress, iface.remoteAddress);
+            Objects.equals(remote, iface.remote);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(user, remoteAddress);
+        return Objects.hash(user, remote);
     }
 
     @Override
-    public void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException {
+    public void init(IfaceInitParams params) throws Exception {
+        super.init(params);
+
+        DatagramFD cliSock = FDProvider.get().openDatagramFD();
+        try {
+            cliSock.connect(remote);
+            cliSock.configureBlocking(false);
+        } catch (IOException e) {
+            try {
+                cliSock.close();
+            } catch (IOException t) {
+                Logger.shouldNotHappen("close datagram sock when rolling back failed", t);
+            }
+            throw e;
+        }
+        setSock(cliSock, true);
+        attachedToLoopAlert(params.loop);
+    }
+
+    @Override
+    public void sendPacket(SocketBuffer skb) {
         if (bondLoop == null) {
             assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
             return;
@@ -86,28 +114,7 @@ public class UserClientIface extends AbstractIface implements Iface, IfaceCanSen
             return;
         }
 
-        vxlan.setVni(user.vni);
-        VProxyEncryptedPacket p = new VProxyEncryptedPacket(u -> user.key);
-        p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
-        p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
-        p.setVxlan(vxlan);
-
-        sendVProxyPacket(null, p, writeBuf);
-    }
-
-    @Override
-    public void sendVProxyPacket(DatagramFD notUsed, VProxyEncryptedPacket p, ByteBuffer writeBuf) throws IOException {
-        if (bondLoop == null) {
-            assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
-            return;
-        }
-
-        p.setUser(user.user);
-
-        byte[] bytes = p.getRawPacket().toJavaArray();
-        writeBuf.put(bytes);
-        writeBuf.flip();
-        sock.write(writeBuf);
+        super.sendPacket(skb);
     }
 
     @Override
@@ -134,5 +141,116 @@ public class UserClientIface extends AbstractIface implements Iface, IfaceCanSen
     @Override
     public int getOverhead() {
         return 28 /* vproxy header */ + 14 /* inner ethernet */ + 8 /* vxlan header */ + 8 /* udp header */ + 40 /* ipv6 header common */;
+    }
+
+    private class UserClientHandler implements Handler<DatagramFD> {
+        private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(SwitchUtils.TOTAL_RCV_BUF_LEN);
+        private final UserClientIface iface = UserClientIface.this;
+
+        private ConnectedToSwitchTimer connectedToSwitchTimer = null;
+        private static final int toSwitchTimeoutSeconds = 60;
+
+        private PeriodicEvent pingPeriodicEvent;
+        private static final int pingPeriod = 20 * 1000;
+
+        private class ConnectedToSwitchTimer extends Timer {
+            public ConnectedToSwitchTimer(SelectorEventLoop loop) {
+                super(loop, toSwitchTimeoutSeconds * 1000);
+                iface.setConnected(true);
+            }
+
+            @Override
+            public void cancel() {
+                super.cancel();
+                connectedToSwitchTimer = null;
+                iface.setConnected(false);
+            }
+        }
+
+        public UserClientHandler(SelectorEventLoop loop) {
+            pingPeriodicEvent = loop.period(pingPeriod, this::sendPingPacket);
+            sendPingPacket();
+        }
+
+        private void sendPingPacket() {
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(unused -> iface.user.key);
+            p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
+            p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
+            iface.sendVProxyPacket(p);
+        }
+
+        @Override
+        public void accept(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void connected(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void readable(HandlerContext<DatagramFD> ctx) {
+            DatagramFD sock = ctx.getChannel();
+            while (true) {
+                VProxyThread.current().newUuidDebugInfo();
+
+                rcvBuf.limit(rcvBuf.capacity()).position(0);
+                try {
+                    sock.read(rcvBuf);
+                } catch (IOException e) {
+                    Logger.error(LogType.CONN_ERROR, "udp sock " + ctx.getChannel() + " got error when reading", e);
+                    return;
+                }
+                if (rcvBuf.position() == 0) {
+                    break; // nothing read, quit loop
+                }
+
+                VProxyEncryptedPacket p = new VProxyEncryptedPacket(unused -> iface.user.key);
+                ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
+                String err = p.from(arr);
+                if (err != null) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + iface + ": " + arr);
+                    continue;
+                }
+                if (!p.getUser().equals(iface.user.user)) {
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet from " + iface + " mismatches, got " + p.getUser());
+                    continue;
+                }
+                if (connectedToSwitchTimer == null) {
+                    connectedToSwitchTimer = new ConnectedToSwitchTimer(ctx.getEventLoop());
+                }
+                connectedToSwitchTimer.resetTimer();
+                if (p.getVxlan() == null) {
+                    // not vxlan packet, ignore
+                    continue;
+                }
+                if (p.getVxlan().getVni() != iface.user.vni) {
+                    p.getVxlan().setVni(iface.user.vni);
+                }
+                SocketBuffer skb = SocketBuffer.fromPacket(p.getVxlan());
+                skb.devin = iface;
+                received(skb);
+                callback.alertPacketsArrive();
+            }
+        }
+
+        @Override
+        public void writable(HandlerContext<DatagramFD> ctx) {
+            // will not fire
+        }
+
+        @Override
+        public void removed(HandlerContext<DatagramFD> ctx) {
+            iface.detachedFromLoopAlert();
+            if (connectedToSwitchTimer != null) {
+                connectedToSwitchTimer.cancel();
+                connectedToSwitchTimer = null;
+            }
+            if (pingPeriodicEvent != null) {
+                pingPeriodicEvent.cancel();
+                pingPeriodicEvent = null;
+            }
+        }
     }
 }

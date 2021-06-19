@@ -23,6 +23,7 @@ public class VXLanPacket extends AbstractPacket {
         reserved2 = bytes.uint8(7);
         // for now, we only consider it being this type of ethernet packet
         packet = new EthernetPacket();
+        packet.recordParent(this);
         String err = packet.from(bytes.sub(8, bytes.length() - 8));
         if (err != null) {
             return err;

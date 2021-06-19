@@ -1,15 +1,15 @@
 package vproxy.vswitch.iface;
 
-import vproxy.vfd.DatagramFD;
-import vproxy.vpacket.VXLanPacket;
-
-import java.io.IOException;
-import java.nio.ByteBuffer;
+import vproxy.vswitch.SocketBuffer;
 
 public interface Iface {
-    void sendPacket(DatagramFD serverUDPSock, VXLanPacket vxlan, ByteBuffer writeBuf) throws IOException;
+    void init(IfaceInitParams params) throws Exception;
+
+    void sendPacket(SocketBuffer skb);
 
     void destroy();
+
+    SocketBuffer pollPacket(); // nullable
 
     int getLocalSideVni(int hint);
 
