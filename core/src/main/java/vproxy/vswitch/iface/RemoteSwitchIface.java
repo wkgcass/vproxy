@@ -2,7 +2,7 @@ package vproxy.vswitch.iface;
 
 import vproxy.base.util.Consts;
 import vproxy.vfd.IPPort;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 
@@ -38,8 +38,8 @@ public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface implements 
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
-        super.sendPacket(skb);
+    public void sendPacket(PacketBuffer pkb) {
+        super.sendPacket(pkb);
     }
 
     @Override

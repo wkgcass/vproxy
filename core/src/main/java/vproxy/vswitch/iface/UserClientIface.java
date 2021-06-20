@@ -12,7 +12,7 @@ import vproxy.vfd.EventSet;
 import vproxy.vfd.FDProvider;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.VProxyEncryptedPacket;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
 
@@ -112,7 +112,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
+    public void sendPacket(PacketBuffer pkb) {
         if (bondLoop == null) {
             assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
             return;
@@ -122,7 +122,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
             return;
         }
 
-        super.sendPacket(skb);
+        super.sendPacket(pkb);
     }
 
     @Override
@@ -236,9 +236,9 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
                 if (p.getVxlan().getVni() != iface.user.vni) {
                     p.getVxlan().setVni(iface.user.vni);
                 }
-                SocketBuffer skb = SocketBuffer.fromPacket(p.getVxlan());
-                skb.devin = iface;
-                received(skb);
+                PacketBuffer pkb = PacketBuffer.fromPacket(p.getVxlan());
+                pkb.devin = iface;
+                received(pkb);
                 callback.alertPacketsArrive();
             }
         }

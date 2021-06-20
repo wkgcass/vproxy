@@ -8,7 +8,7 @@ import vproxy.base.util.*;
 import vproxy.base.util.exception.XException;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.*;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 
 import java.io.IOException;
@@ -120,9 +120,9 @@ public class TapIface extends AbstractIface implements Iface {
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
+    public void sendPacket(PacketBuffer pkb) {
         sndBuf.position(0).limit(sndBuf.capacity());
-        var bytes = skb.pkt.getRawPacket().toJavaArray();
+        var bytes = pkb.pkt.getRawPacket().toJavaArray();
         sndBuf.put(bytes);
         sndBuf.flip();
         try {
@@ -192,14 +192,14 @@ public class TapIface extends AbstractIface implements Iface {
                 if (rcvBuf.position() == PRESERVED_LEN) {
                     break; // nothing read, quit loop
                 }
-                SocketBuffer skb = SocketBuffer.fromEtherBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-                String err = skb.init();
+                PacketBuffer pkb = PacketBuffer.fromEtherBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+                String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
                     continue;
                 }
 
-                received(skb);
+                received(pkb);
                 callback.alertPacketsArrive();
             }
         }

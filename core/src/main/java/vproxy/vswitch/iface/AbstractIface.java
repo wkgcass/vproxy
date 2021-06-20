@@ -1,13 +1,13 @@
 package vproxy.vswitch.iface;
 
 import vproxy.base.util.objectpool.CursorList;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 
 public abstract class AbstractIface implements Iface {
     private int baseMTU;
     private boolean floodAllowed;
     protected IfaceInitParams.PacketCallback callback;
-    private final CursorList<SocketBuffer> rcvQ = new CursorList<>(1);
+    private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
 
     @Override
     public void init(IfaceInitParams params) throws Exception {
@@ -35,13 +35,13 @@ public abstract class AbstractIface implements Iface {
     }
 
     @Override
-    public SocketBuffer pollPacket() {
+    public PacketBuffer pollPacket() {
         if (rcvQ.isEmpty()) return null;
         return rcvQ.remove(rcvQ.size() - 1);
     }
 
-    protected void received(SocketBuffer skb) {
-        rcvQ.add(skb);
+    protected void received(PacketBuffer pkb) {
+        rcvQ.add(pkb);
     }
 
     public String paramsToString() {

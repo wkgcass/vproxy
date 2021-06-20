@@ -12,7 +12,7 @@ import vproxy.vpacket.AbstractIpPacket;
 import vproxy.vpacket.ArpPacket;
 import vproxy.vpacket.IcmpPacket;
 import vproxy.vpacket.Ipv4Packet;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 
 import java.io.IOException;
@@ -129,18 +129,18 @@ public class TunIface extends AbstractIface implements Iface {
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
-        if (handleArpOrNdp(skb)) {
+    public void sendPacket(PacketBuffer pkb) {
+        if (handleArpOrNdp(pkb)) {
             assert Logger.lowLevelDebug("the packet is arp/ndp req, which is handled another way, " +
                 "original packet will not be sent");
             return;
         }
-        if (skb.ipPkt == null) {
+        if (pkb.ipPkt == null) {
             assert Logger.lowLevelDebug("packet is not sent to " + this + " because there is no ip packet");
             return;
         }
 
-        sendPacket(skb.ipPkt);
+        sendPacket(pkb.ipPkt);
     }
 
     private void sendPacket(AbstractIpPacket ipPkt) {
@@ -164,15 +164,15 @@ public class TunIface extends AbstractIface implements Iface {
         }
     }
 
-    private boolean handleArpOrNdp(SocketBuffer skb) {
-        if (skb.pkt.getDst().isUnicast() && !skb.pkt.getDst().equals(mac)) {
+    private boolean handleArpOrNdp(PacketBuffer pkb) {
+        if (pkb.pkt.getDst().isUnicast() && !pkb.pkt.getDst().equals(mac)) {
             assert Logger.lowLevelDebug("unicast packet whose dst is not this dev");
             return false;
         }
         assert Logger.lowLevelDebug("try to handle arp or ndp for tun dev");
-        if (skb.ipPkt != null && skb.ipPkt.getPacket() instanceof IcmpPacket) {
+        if (pkb.ipPkt != null && pkb.ipPkt.getPacket() instanceof IcmpPacket) {
             assert Logger.lowLevelDebug("is icmp");
-            var icmp = (IcmpPacket) skb.ipPkt.getPacket();
+            var icmp = (IcmpPacket) pkb.ipPkt.getPacket();
             if (icmp.getType() != Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
                 assert Logger.lowLevelDebug("is not neighbor solicitation");
                 return false;
@@ -182,11 +182,11 @@ public class TunIface extends AbstractIface implements Iface {
                 assert Logger.lowLevelDebug("invalid neighbor solicitation");
                 return false;
             }
-            IP src = skb.ipPkt.getSrc();
+            IP src = pkb.ipPkt.getSrc();
             buildAndSendPing(src, dst);
-        } else if (skb.pkt.getPacket() instanceof ArpPacket) {
+        } else if (pkb.pkt.getPacket() instanceof ArpPacket) {
             assert Logger.lowLevelDebug("is arp");
-            var arp = (ArpPacket) skb.pkt.getPacket();
+            var arp = (ArpPacket) pkb.pkt.getPacket();
             if (arp.getOpcode() != Consts.ARP_PROTOCOL_OPCODE_REQ) {
                 assert Logger.lowLevelDebug("is not arp request");
                 return false;
@@ -200,15 +200,15 @@ public class TunIface extends AbstractIface implements Iface {
                 assert Logger.lowLevelDebug("protocol size is not 4 nor 16");
                 return false;
             }
-            handleArp(skb);
+            handleArp(pkb);
         }
         assert Logger.lowLevelDebug("not arp nor neighbor solicitation");
         return false;
     }
 
-    private void handleArp(SocketBuffer skb) {
+    private void handleArp(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("handling arp for tun dev");
-        var arp = (ArpPacket) skb.pkt.getPacket();
+        var arp = (ArpPacket) pkb.pkt.getPacket();
         IP src = IP.from(arp.getSenderIp().toJavaArray());
         IP dst = IP.from(arp.getTargetIp().toJavaArray());
         buildAndSendPing(src, dst);
@@ -287,14 +287,14 @@ public class TunIface extends AbstractIface implements Iface {
                 if (rcvBuf.position() == position) {
                     break; // nothing read, quit loop
                 }
-                SocketBuffer skb = SocketBuffer.fromIpBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-                String err = skb.init();
+                PacketBuffer pkb = PacketBuffer.fromIpBytes(iface, localSideVni, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+                String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
                     continue;
                 }
 
-                received(skb);
+                received(pkb);
                 callback.alertPacketsArrive();
             }
         }

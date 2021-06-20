@@ -8,32 +8,32 @@ import vproxy.vswitch.iface.Iface;
 
 import java.util.Collection;
 
-public class SocketBuffer {
+public class PacketBuffer {
     public static final int FLAG_VXLAN = 0x00000001;
     public static final int FLAG_IP = 0x00000004;
 
-    public static SocketBuffer fromVXLanBytes(Iface devin, ByteArray buf, int pktOff, int pad) {
-        return new SocketBuffer(devin, buf, pktOff, pad);
+    public static PacketBuffer fromVXLanBytes(Iface devin, ByteArray buf, int pktOff, int pad) {
+        return new PacketBuffer(devin, buf, pktOff, pad);
     }
 
-    public static SocketBuffer fromEtherBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
-        return new SocketBuffer(devin, vni, buf, pktOff, pad);
+    public static PacketBuffer fromEtherBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
+        return new PacketBuffer(devin, vni, buf, pktOff, pad);
     }
 
-    public static SocketBuffer fromIpBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
-        return new SocketBuffer(devin, vni, buf, pktOff, pad, FLAG_IP);
+    public static PacketBuffer fromIpBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
+        return new PacketBuffer(devin, vni, buf, pktOff, pad, FLAG_IP);
     }
 
-    public static SocketBuffer fromPacket(VXLanPacket pkt) {
-        return new SocketBuffer(pkt);
+    public static PacketBuffer fromPacket(VXLanPacket pkt) {
+        return new PacketBuffer(pkt);
     }
 
-    public static SocketBuffer fromPacket(Table table, AbstractEthernetPacket pkt) {
-        return new SocketBuffer(table, pkt);
+    public static PacketBuffer fromPacket(Table table, AbstractEthernetPacket pkt) {
+        return new PacketBuffer(table, pkt);
     }
 
-    public static SocketBuffer fromPacket(Table table, AbstractIpPacket pkt) {
-        return new SocketBuffer(table, pkt);
+    public static PacketBuffer fromPacket(Table table, AbstractIpPacket pkt) {
+        return new PacketBuffer(table, pkt);
     }
 
     // ----- context -----
@@ -61,7 +61,7 @@ public class SocketBuffer {
     public TcpEntry tcp = null;
     public boolean needTcpReset = false; // this field is only used in L4.input
 
-    private SocketBuffer(Iface devin, ByteArray fullbuf, int pktOff, int pad) {
+    private PacketBuffer(Iface devin, ByteArray fullbuf, int pktOff, int pad) {
         this.devin = devin;
         this.flags = FLAG_VXLAN;
         this.fullbuf = fullbuf;
@@ -74,7 +74,7 @@ public class SocketBuffer {
         }
     }
 
-    private SocketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad) {
+    private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad) {
         this.devin = devin;
         this.vni = vni;
         this.flags = 0;
@@ -88,7 +88,7 @@ public class SocketBuffer {
         }
     }
 
-    private SocketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad, int flags) {
+    private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad, int flags) {
         this.devin = devin;
         this.vni = vni;
         this.flags = flags;
@@ -102,7 +102,7 @@ public class SocketBuffer {
         }
     }
 
-    private SocketBuffer(VXLanPacket pkt) {
+    private PacketBuffer(VXLanPacket pkt) {
         this.devin = null;
         this.vni = pkt.getVni();
         this.flags = FLAG_VXLAN;
@@ -110,7 +110,7 @@ public class SocketBuffer {
         initPackets(true, false, false);
     }
 
-    private SocketBuffer(Table table, AbstractEthernetPacket pkt) {
+    private PacketBuffer(Table table, AbstractEthernetPacket pkt) {
         this.devin = null;
         this.vni = table.vni;
         this.table = table;
@@ -119,7 +119,7 @@ public class SocketBuffer {
         initPackets(false, true, false);
     }
 
-    private SocketBuffer(Table table, AbstractIpPacket pkt) {
+    private PacketBuffer(Table table, AbstractIpPacket pkt) {
         this.devin = null;
         this.vni = table.vni;
         this.table = table;

@@ -6,7 +6,7 @@ import vproxy.base.util.Logger;
 import vproxy.base.util.crypto.Aes256Key;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.VProxyEncryptedPacket;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 
 import java.io.IOException;
@@ -20,10 +20,10 @@ public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBas
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
-        assert Logger.lowLevelDebug(this + ".sendPacket(" + skb + ")");
+    public void sendPacket(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug(this + ".sendPacket(" + pkb + ")");
 
-        var vxlan = SwitchUtils.getOrMakeVXLanPacket(skb);
+        var vxlan = SwitchUtils.getOrMakeVXLanPacket(pkb);
         // clear all possible flags and counters
         vxlan.setReserved1(0);
         vxlan.setReserved2(0);

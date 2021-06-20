@@ -5,7 +5,7 @@ import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.Table;
 
@@ -18,16 +18,16 @@ public class NetworkStack {
         this.L4 = this.L2.L3.L4;
     }
 
-    public void devInput(SocketBuffer skb) {
-        if (loopDetect(skb)) {
+    public void devInput(PacketBuffer pkb) {
+        if (loopDetect(pkb)) {
             return;
         }
 
-        L2.input(skb);
+        L2.input(pkb);
     }
 
-    private boolean loopDetect(SocketBuffer skb) {
-        var vxlan = skb.vxlan;
+    private boolean loopDetect(PacketBuffer pkb) {
+        var vxlan = pkb.vxlan;
         if (vxlan == null) {
             return false;
         }
@@ -35,7 +35,7 @@ public class NetworkStack {
         int r2 = vxlan.getReserved2();
 
         if (r2 > 250) {
-            Logger.error(LogType.INVALID_EXTERNAL_DATA, "possible loop detected from " + skb.devin + " with packet " + vxlan);
+            Logger.error(LogType.INVALID_EXTERNAL_DATA, "possible loop detected from " + pkb.devin + " with packet " + vxlan);
 
             final int I_DETECTED_A_POSSIBLE_LOOP = Consts.I_DETECTED_A_POSSIBLE_LOOP;
             final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN = Consts.I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN;
@@ -44,8 +44,8 @@ public class NetworkStack {
             boolean willDisconnect = (r1 & I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN) == I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN;
 
             if (possibleLoop && willDisconnect) {
-                Logger.error(LogType.INVALID_EXTERNAL_DATA, "disconnect from " + skb.devin + " due to possible loop");
-                skb.table.macTable.disconnect(skb.devin);
+                Logger.error(LogType.INVALID_EXTERNAL_DATA, "disconnect from " + pkb.devin + " due to possible loop");
+                pkb.table.macTable.disconnect(pkb.devin);
                 return true; // drop
             }
             if (!possibleLoop && !willDisconnect) {

@@ -48,13 +48,13 @@ public class SwitchContext {
     }
 
     public interface SendingPacket {
-        void send(SocketBuffer skb, Iface iface);
+        void send(PacketBuffer pkb, Iface iface);
     }
 
     private final SendingPacket sendPacketFunc;
 
-    public void sendPacket(SocketBuffer skb, Iface toIface) {
-        sendPacketFunc.send(skb, toIface);
+    public void sendPacket(PacketBuffer pkb, Iface toIface) {
+        sendPacketFunc.send(pkb, toIface);
     }
 
     public interface GetIfaces {
@@ -118,12 +118,12 @@ public class SwitchContext {
     }
 
     public interface AlertPacketsArrive {
-        void alertPacketsArrive(CursorList<SocketBuffer> skb);
+        void alertPacketsArrive(CursorList<PacketBuffer> pkb);
     }
 
     private final AlertPacketsArrive alertPacketsArriveFunc;
 
-    public void alertPacketsArrive(CursorList<SocketBuffer> skb) {
-        alertPacketsArriveFunc.alertPacketsArrive(skb);
+    public void alertPacketsArrive(CursorList<PacketBuffer> pkb) {
+        alertPacketsArriveFunc.alertPacketsArrive(pkb);
     }
 }

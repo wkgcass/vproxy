@@ -10,7 +10,7 @@ import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.VProxyEncryptedPacket;
 import vproxy.vpacket.VXLanPacket;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
@@ -25,7 +25,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
     private final SwitchContext swCtx;
     private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(TOTAL_LEN);
     private final ByteArray raw = ByteArray.from(rcvBuf.array());
-    private final CursorList<SocketBuffer> rcvQ = new CursorList<>(1);
+    private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
 
     public DatagramInputHandler(SwitchContext swCtx) {
         this.swCtx = swCtx;
@@ -63,17 +63,17 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 break; // nothing read, quit loop
             }
 
-            var skb = handleNetworkAndGetSKB(remote);
-            if (skb == null) {
-                assert Logger.lowLevelDebug("no skb provided, ignore");
+            var pkb = handleNetworkAndGetPKB(remote);
+            if (pkb == null) {
+                assert Logger.lowLevelDebug("no pkb provided, ignore");
                 continue;
             }
-            rcvQ.add(skb);
+            rcvQ.add(pkb);
             swCtx.alertPacketsArrive(rcvQ);
         }
     }
 
-    private SocketBuffer handleNetworkAndGetSKB(IPPort remote) {
+    private PacketBuffer handleNetworkAndGetPKB(IPPort remote) {
         ByteArray data = raw.sub(PRESERVED_LEN, rcvBuf.position() - PRESERVED_LEN);
 
         VProxyEncryptedPacket packet = new VProxyEncryptedPacket(uname -> {
@@ -81,7 +81,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
             if (info == null) return null;
             return info.key;
         });
-        SocketBuffer skb;
+        PacketBuffer pkb;
 
         String err = packet.from(data);
         assert Logger.lowLevelDebug("packet.from(data) = " + err);
@@ -144,8 +144,8 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 return null;
             }
 
-            skb = SocketBuffer.fromPacket(vxLanPacket);
-            skb.devin = uiface;
+            pkb = PacketBuffer.fromPacket(vxLanPacket);
+            pkb.devin = uiface;
             // fall through
         } else {
             assert Logger.lowLevelDebug("is vxlan packet");
@@ -195,8 +195,8 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
             }
 
             // try to parse into vxlan directly
-            skb = SocketBuffer.fromVXLanBytes(iface, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
-            err = skb.init();
+            pkb = PacketBuffer.fromVXLanBytes(iface, raw, PRESERVED_LEN, TOTAL_LEN - rcvBuf.position());
+            err = pkb.init();
             if (err != null) {
                 assert Logger.lowLevelDebug("invalid packet for vxlan: " + err + ", drop it");
                 return null;
@@ -205,24 +205,24 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
             if (iface instanceof BareVXLanIface) { // additional check
                 BareVXLanIface biface = (BareVXLanIface) iface;
                 if (isNewIface) {
-                    biface.setLocalSideVni(skb.vni);
+                    biface.setLocalSideVni(pkb.vni);
                 } else {
-                    int ifaceVni = biface.getLocalSideVni(skb.vni);
-                    if (ifaceVni != skb.vni) {
+                    int ifaceVni = biface.getLocalSideVni(pkb.vni);
+                    if (ifaceVni != pkb.vni) {
                         Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                             "received vxlan packet from " + remote + " " +
-                                "but originally vni is " + ifaceVni + ", currently " + skb.vni);
+                                "but originally vni is " + ifaceVni + ", currently " + pkb.vni);
                         return null;
                     }
                 }
 
                 // distinguish bare vxlan sock and switch vxlan link
-                int r1 = skb.vxlan.getReserved1();
+                int r1 = pkb.vxlan.getReserved1();
                 final int I_AM_FROM_SWITCH = Consts.I_AM_FROM_SWITCH;
                 if ((r1 & I_AM_FROM_SWITCH) == I_AM_FROM_SWITCH) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                         "received a packet which should come from a remote switch, " +
-                            "but actually coming from bare vxlan sock: " + iface + " with packet " + skb.vxlan);
+                            "but actually coming from bare vxlan sock: " + iface + " with packet " + pkb.vxlan);
                     return null; // drop
                 }
             }
@@ -236,8 +236,8 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 }
             }
         }
-        assert Logger.lowLevelDebug("got packet " + skb + " from " + remote);
-        return skb;
+        assert Logger.lowLevelDebug("got packet " + pkb + " from " + remote);
+        return pkb;
     }
 
     private void sendPingTo(UserIface iface) {

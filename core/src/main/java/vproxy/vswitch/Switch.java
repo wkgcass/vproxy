@@ -548,50 +548,50 @@ public class Switch {
         return ret;
     }
 
-    private void sendPacket(SocketBuffer skb, Iface iface) {
-        assert Logger.lowLevelDebug("sendPacket(" + skb + ", " + iface + ")");
+    private void sendPacket(PacketBuffer pkb, Iface iface) {
+        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
 
-        SwitchUtils.checkAndUpdateMss(skb, iface);
+        SwitchUtils.checkAndUpdateMss(pkb, iface);
         if (Mirror.isEnabled("switch")) {
-            Mirror.switchPacket(skb.pkt);
+            Mirror.switchPacket(pkb.pkt);
         }
 
-        iface.sendPacket(skb);
+        iface.sendPacket(pkb);
     }
 
-    private final CursorList<SocketBuffer> socketBuffersToBeHandled = new CursorList<>(128);
+    private final CursorList<PacketBuffer> socketBuffersToBeHandled = new CursorList<>(128);
 
     private void onIfacePacketsArrive() {
         for (Iface iface : ifaces.keySet()) {
-            SocketBuffer skb;
-            while ((skb = iface.pollPacket()) != null) {
-                preHandleInputSkb(skb);
+            PacketBuffer pkb;
+            while ((pkb = iface.pollPacket()) != null) {
+                preHandleInputPkb(pkb);
             }
         }
-        handleInputSkb();
+        handleInputPkb();
     }
 
-    private void onIfacePacketsArrive(CursorList<SocketBuffer> ls) {
+    private void onIfacePacketsArrive(CursorList<PacketBuffer> ls) {
         while (!ls.isEmpty()) {
-            SocketBuffer skb = ls.remove(ls.size() - 1);
-            preHandleInputSkb(skb);
+            PacketBuffer pkb = ls.remove(ls.size() - 1);
+            preHandleInputPkb(pkb);
         }
-        handleInputSkb();
+        handleInputPkb();
     }
 
-    private void preHandleInputSkb(SocketBuffer skb) {
+    private void preHandleInputPkb(PacketBuffer pkb) {
         // init vpc table
-        int vni = skb.vni;
+        int vni = pkb.vni;
         Table table = swCtx.getTable(vni);
         if (table == null) {
             assert Logger.lowLevelDebug("vni not defined: " + vni);
             return;
         }
-        skb.table = table;
+        pkb.table = table;
 
         // init tun packets
-        if (skb.pkt == null && skb.ipPkt != null) {
-            var mac = table.ips.lookup(skb.ipPkt.getDst()); // it's the target ip address is synthetic ip, directly use if
+        if (pkb.pkt == null && pkb.ipPkt != null) {
+            var mac = table.ips.lookup(pkb.ipPkt.getDst()); // it's the target ip address is synthetic ip, directly use if
             if (mac == null) {
                 var ipmac = table.ips.findAny(); // otherwise find any synthetic ip
                 if (ipmac == null) {
@@ -600,65 +600,65 @@ public class Switch {
                 }
                 mac = ipmac.mac;
             }
-            buildEthernetHeaderForTunDev(skb, mac);
+            buildEthernetHeaderForTunDev(pkb, mac);
         }
-        assert skb.pkt != null;
+        assert pkb.pkt != null;
 
         // update arp info for tun devices
-        if (skb.devin instanceof TunIface) {
-            table.arpTable.record(skb.pkt.getSrc(), skb.ipPkt.getSrc());
+        if (pkb.devin instanceof TunIface) {
+            table.arpTable.record(pkb.pkt.getSrc(), pkb.ipPkt.getSrc());
         }
 
         // mirror the packet
         if (Mirror.isEnabled("switch")) {
-            Mirror.switchPacket(skb.pkt);
+            Mirror.switchPacket(pkb.pkt);
         }
 
         // check whether the packet's src and dst mac are the same
-        if (skb.pkt.getSrc().equals(skb.pkt.getDst())) {
-            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "input packet with the same src and dst: " + skb.pkt.description());
+        if (pkb.pkt.getSrc().equals(pkb.pkt.getDst())) {
+            Logger.warn(LogType.INVALID_EXTERNAL_DATA, "input packet with the same src and dst: " + pkb.pkt.description());
             return;
         }
 
-        recordIface(skb.devin);
+        recordIface(pkb.devin);
 
-        socketBuffersToBeHandled.add(skb);
+        socketBuffersToBeHandled.add(pkb);
     }
 
-    private void buildEthernetHeaderForTunDev(SocketBuffer skb, MacAddress mac) {
-        TunIface tun = (TunIface) skb.devin;
-        assert skb.pktOff >= 14; // should have enough space for ethernet header
+    private void buildEthernetHeaderForTunDev(PacketBuffer pkb, MacAddress mac) {
+        TunIface tun = (TunIface) pkb.devin;
+        assert pkb.pktOff >= 14; // should have enough space for ethernet header
         // dst
-        int off = skb.pktOff - 14;
+        int off = pkb.pktOff - 14;
         for (int i = 0; i < mac.bytes.length(); ++i) {
-            skb.fullbuf.set(off + i, mac.bytes.get(i));
+            pkb.fullbuf.set(off + i, mac.bytes.get(i));
         }
         // src
         off += 6;
         for (int i = 0; i < tun.mac.bytes.length(); ++i) {
-            skb.fullbuf.set(off + i, tun.mac.bytes.get(i));
+            pkb.fullbuf.set(off + i, tun.mac.bytes.get(i));
         }
         // type
         off += 6;
         int dltype;
-        if (skb.ipPkt instanceof Ipv4Packet) {
+        if (pkb.ipPkt instanceof Ipv4Packet) {
             dltype = Consts.ETHER_TYPE_IPv4;
         } else {
             dltype = Consts.ETHER_TYPE_IPv6;
         }
-        skb.fullbuf.int16(off, dltype);
+        pkb.fullbuf.int16(off, dltype);
 
         EthernetPacket ether = new EthernetPacket();
-        ether.from(skb.fullbuf.sub(skb.pktOff - 14, 14), skb.ipPkt);
+        ether.from(pkb.fullbuf.sub(pkb.pktOff - 14, 14), pkb.ipPkt);
 
-        skb.pkt = ether;
-        skb.flags = 0;
+        pkb.pkt = ether;
+        pkb.flags = 0;
     }
 
-    private void handleInputSkb() {
-        for (SocketBuffer skb : socketBuffersToBeHandled) {
+    private void handleInputPkb() {
+        for (PacketBuffer pkb : socketBuffersToBeHandled) {
             try {
-                netStack.devInput(skb);
+                netStack.devInput(pkb);
             } catch (Throwable t) {
                 Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
             }

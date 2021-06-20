@@ -4,7 +4,7 @@ import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
 import vproxy.base.util.crypto.Aes256Key;
 import vproxy.vfd.IPPort;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.UserInfo;
 
 import java.util.Map;
@@ -59,13 +59,13 @@ public class UserIface extends AbstractBaseEncryptedSwitchSocketIface implements
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
+    public void sendPacket(PacketBuffer pkb) {
         // should set the remote side vni to reduce the chance of info leak on server side
         if (remoteSideVni == 0) {
             assert Logger.lowLevelDebug("remote side vni not learnt yet, drop the packet for now");
             return;
         }
-        skb.executeWithVni(remoteSideVni, () -> super.sendPacket(skb));
+        pkb.executeWithVni(remoteSideVni, () -> super.sendPacket(pkb));
     }
 
     @Override

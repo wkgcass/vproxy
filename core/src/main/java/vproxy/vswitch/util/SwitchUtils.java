@@ -9,7 +9,7 @@ import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.iface.LocalSideVniGetterSetter;
 import vproxy.vswitch.iface.RemoteSideVniGetterSetter;
@@ -43,24 +43,24 @@ public class SwitchUtils {
         }
     }
 
-    public static VXLanPacket getOrMakeVXLanPacket(SocketBuffer skb) {
-        if (skb.vxlan == null) {
+    public static VXLanPacket getOrMakeVXLanPacket(PacketBuffer pkb) {
+        if (pkb.vxlan == null) {
             var p = new VXLanPacket();
-            p.setVni(skb.vni);
-            p.setPacket(skb.pkt);
-            skb.vxlan = p;
+            p.setVni(pkb.vni);
+            p.setPacket(pkb.pkt);
+            pkb.vxlan = p;
         }
-        return skb.vxlan;
+        return pkb.vxlan;
     }
 
-    public static void checkAndUpdateMss(SocketBuffer skb, Iface iface) {
+    public static void checkAndUpdateMss(PacketBuffer pkb, Iface iface) {
         int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */;
-        if (!(skb.pkt.getPacket() instanceof AbstractIpPacket) ||
-            !(((AbstractIpPacket) skb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
+        if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket) ||
+            !(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
             return; // only tcp requires modification
         }
-        AbstractIpPacket ip = (AbstractIpPacket) skb.pkt.getPacket();
-        TcpPacket tcp = (TcpPacket) ((AbstractIpPacket) skb.pkt.getPacket()).getPacket();
+        AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
+        TcpPacket tcp = (TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket();
         if ((tcp.getFlags() & Consts.TCP_FLAGS_SYN) != Consts.TCP_FLAGS_SYN) {
             return; // only handle syn and syn-ack
         }

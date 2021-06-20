@@ -1,7 +1,7 @@
 package vproxy.vswitch.iface;
 
 import vproxy.vfd.IPPort;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 
@@ -33,8 +33,8 @@ public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Ifa
     }
 
     @Override
-    public void sendPacket(SocketBuffer skb) {
-        super.sendPacket(skb);
+    public void sendPacket(PacketBuffer pkb) {
+        super.sendPacket(pkb);
     }
 
     @Override

@@ -5,7 +5,7 @@ import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 
 import java.io.IOException;
@@ -34,10 +34,10 @@ public abstract class AbstractBaseSwitchSocketIface extends AbstractIface implem
 
     @SuppressWarnings("DuplicatedCode")
     @Override
-    public void sendPacket(SocketBuffer skb) {
-        assert Logger.lowLevelDebug(this + ".sendPacket(" + skb + ")");
+    public void sendPacket(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug(this + ".sendPacket(" + pkb + ")");
 
-        var vxlan = SwitchUtils.getOrMakeVXLanPacket(skb);
+        var vxlan = SwitchUtils.getOrMakeVXLanPacket(pkb);
 
         sndBuf.limit(sndBuf.capacity()).position(0);
 

@@ -1,15 +1,15 @@
 package vproxy.vswitch.iface;
 
-import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.PacketBuffer;
 
 public interface Iface {
     void init(IfaceInitParams params) throws Exception;
 
-    void sendPacket(SocketBuffer skb);
+    void sendPacket(PacketBuffer pkb);
 
     void destroy();
 
-    SocketBuffer pollPacket(); // nullable
+    PacketBuffer pollPacket(); // nullable
 
     int getLocalSideVni(int hint);
 
