@@ -86,7 +86,7 @@ public class L2 {
     }
 
     private void flood(SocketBuffer skb) {
-        Logger.warn(LogType.ALERT, "flood packet: input=" + skb.devin + "," + skb.pkt.description());
+        Logger.warn(LogType.ALERT, "flood packet: " + skb);
         for (Iface iface : swCtx.getIfaces()) {
             if (skb.devin != null && iface == skb.devin) {
                 continue;
@@ -103,7 +103,12 @@ public class L2 {
         // also, send arp/ndp request for these addresses if they are ip packet
         if (skb.pkt.getPacket() instanceof AbstractIpPacket) {
             AbstractIpPacket ip = (AbstractIpPacket) skb.pkt.getPacket();
-            L3.resolve(skb.table, ip.getDst(), null);
+            if (skb.table.v4network.contains(ip.getDst()) || (skb.table.v6network != null && skb.table.v6network.contains(ip.getDst()))) {
+                assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
+                L3.resolve(skb.table, ip.getDst(), null);
+            } else {
+                assert Logger.lowLevelDebug("cannot resolve " + ip.getDst() + " when flooding because dst is not in current network");
+            }
         }
     }
 

@@ -5,6 +5,7 @@ import vproxy.base.selector.HandlerContext;
 import vproxy.base.selector.PeriodicEvent;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.*;
+import vproxy.base.util.crypto.Aes256Key;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.DatagramFD;
 import vproxy.vfd.EventSet;
@@ -21,14 +22,16 @@ import java.util.Objects;
 
 public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface implements Iface, IfaceCanSendVProxyPacket {
     public final UserInfo user;
+    private final Aes256Key key;
 
     private SelectorEventLoop bondLoop;
 
     private boolean connected = false;
 
-    public UserClientIface(UserInfo user, IPPort remoteAddress) {
+    public UserClientIface(UserInfo user, Aes256Key key, IPPort remoteAddress) {
         super(user.user, remoteAddress);
         this.user = user;
+        this.key = key;
     }
 
     public void detachedFromLoopAlert() {
@@ -104,6 +107,11 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
     }
 
     @Override
+    protected Aes256Key getEncryptionKey() {
+        return key;
+    }
+
+    @Override
     public void sendPacket(SocketBuffer skb) {
         if (bondLoop == null) {
             assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
@@ -173,7 +181,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
         }
 
         private void sendPingPacket() {
-            VProxyEncryptedPacket p = new VProxyEncryptedPacket(unused -> iface.user.key);
+            VProxyEncryptedPacket p = new VProxyEncryptedPacket(iface.user.key);
             p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
             p.setType(Consts.VPROXY_SWITCH_TYPE_PING);
             iface.sendVProxyPacket(p);
@@ -206,7 +214,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
                     break; // nothing read, quit loop
                 }
 
-                VProxyEncryptedPacket p = new VProxyEncryptedPacket(unused -> iface.user.key);
+                VProxyEncryptedPacket p = new VProxyEncryptedPacket(iface.user.key);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
                 String err = p.from(arr);
                 if (err != null) {

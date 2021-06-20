@@ -89,8 +89,7 @@ public class SocketBuffer {
         this.vni = pkt.getVni();
         this.flags = FLAG_VXLAN;
         this.vxlan = pkt;
-        this.pkt = pkt.getPacket();
-        initPackets();
+        initPackets(true, false, false);
     }
 
     private SocketBuffer(Table table, AbstractEthernetPacket pkt) {
@@ -99,7 +98,7 @@ public class SocketBuffer {
         this.table = table;
         this.flags = 0;
         this.pkt = pkt;
-        initPackets();
+        initPackets(false, true, false);
     }
 
     private SocketBuffer(Table table, AbstractIpPacket pkt) {
@@ -108,7 +107,7 @@ public class SocketBuffer {
         this.table = table;
         this.flags = FLAG_IP;
         this.ipPkt = pkt;
-        initPackets();
+        initPackets(false, false, true);
     }
 
     @SuppressWarnings("ConstantConditions")
@@ -125,12 +124,12 @@ public class SocketBuffer {
         }
         if ((flags & FLAG_VXLAN) == FLAG_VXLAN) {
             this.vxlan = (VXLanPacket) pkt;
-            this.pkt = this.vxlan.getPacket();
             this.vni = this.vxlan.getVni();
+            initPackets(true, false, false);
         } else {
             this.pkt = (AbstractEthernetPacket) pkt;
+            initPackets(false, true, false);
         }
-        initPackets();
         return null;
     }
 
@@ -139,10 +138,6 @@ public class SocketBuffer {
         this.pktOff = 0;
         this.pad = 0;
         this.pktBuf = null;
-    }
-
-    public void clearPackets() {
-        this.ipPkt = null;
     }
 
     public void clearHelperFields() {
@@ -155,46 +150,72 @@ public class SocketBuffer {
         clearBuffers();
         clearHelperFields();
         this.flags = 0;
-        this.vxlan = null;
         this.pkt = pkt;
-        initPackets();
+        initPackets(false, true, false);
     }
 
     public void replacePacket(AbstractIpPacket pkt) {
         clearBuffers();
         clearHelperFields();
         this.flags = FLAG_IP;
-        this.vxlan = null;
-        this.pkt = null;
         this.ipPkt = pkt;
-        initPackets();
+        initPackets(false, false, true);
     }
 
-    private void initPackets() {
-        clearPackets();
-
-        if (pkt != null && pkt.getPacket() instanceof AbstractIpPacket) {
-            this.ipPkt = (AbstractIpPacket) pkt.getPacket();
+    private void initPackets(boolean hasVxlan, boolean hasEther, boolean hasIp) {
+        if (hasVxlan) {
+            this.pkt = vxlan.getPacket();
+            hasEther = true;
+        } else {
+            this.vxlan = null;
         }
-        if (ipPkt != null && ipPkt.getPacket() instanceof TcpPacket) {
-            this.tcpPkt = (TcpPacket) ipPkt.getPacket();
+        if (hasEther) {
+            if (pkt.getPacket() instanceof AbstractIpPacket) {
+                this.ipPkt = (AbstractIpPacket) pkt.getPacket();
+                hasIp = true;
+            } else {
+                this.ipPkt = null;
+                hasIp = false;
+            }
+        } else {
+            this.pkt = null;
+        }
+        if (hasIp) {
+            if (ipPkt.getPacket() instanceof TcpPacket) {
+                this.tcpPkt = (TcpPacket) ipPkt.getPacket();
+            } else {
+                this.tcpPkt = null;
+            }
+        } else {
+            this.ipPkt = null;
         }
     }
 
     public void setTable(Table table) {
-        setVni(table.vni);
+        this.vni = table.vni;
         this.table = table;
+        if (vxlan != null) {
+            vxlan.setVni(table.vni);
+        }
     }
 
-    public void setVni(int vni) {
+    public void executeWithVni(int vni, Runnable r) {
         if (this.vni == vni) {
+            r.run();
             return;
         }
+
+        Table tableBackup = this.table;
+
         this.vni = vni;
         this.table = null;
         if (this.vxlan != null) {
             this.vxlan.setVni(vni);
         }
+
+        r.run();
+
+        setTable(tableBackup);
     }
 
     public void recordMatchedIps(Collection<IP> matchedIps) {

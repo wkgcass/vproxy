@@ -3,28 +3,20 @@ package vproxy.vswitch.iface;
 import vproxy.base.util.Consts;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.crypto.Aes256Key;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.VProxyEncryptedPacket;
 import vproxy.vswitch.SocketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
-import vproxy.vswitch.util.UserInfo;
 
 import java.io.IOException;
-import java.util.Map;
 
 public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBaseSwitchSocketIface implements IfaceCanSendVProxyPacket {
     private final String user;
-    private Map<String, UserInfo> users;
 
     protected AbstractBaseEncryptedSwitchSocketIface(String user, IPPort remote) {
         super(remote);
         this.user = user;
-    }
-
-    @Override
-    public void init(IfaceInitParams params) throws Exception {
-        super.init(params);
-        this.users = params.users;
     }
 
     @Override
@@ -36,18 +28,20 @@ public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBas
         vxlan.setReserved1(0);
         vxlan.setReserved2(0);
         // make packet
-        UserInfo uinfo = users.get(user);
-        if (uinfo == null) {
+        Aes256Key key = getEncryptionKey();
+        if (key == null) {
             Logger.error(LogType.IMPROPER_USE, "cannot retrieve key for user " + user);
             return; // packet dropped
         }
-        var p = new VProxyEncryptedPacket(unused -> uinfo.key);
+        var p = new VProxyEncryptedPacket(key);
         p.setVxlan(vxlan);
         p.setMagic(Consts.VPROXY_SWITCH_MAGIC);
         p.setType(Consts.VPROXY_SWITCH_TYPE_VXLAN);
 
         sendVProxyPacket(p);
     }
+
+    abstract protected Aes256Key getEncryptionKey();
 
     @SuppressWarnings("DuplicatedCode")
     @Override

@@ -23,6 +23,7 @@ public abstract class AbstractBaseSwitchSocketIface extends AbstractIface implem
 
     @Override
     public void init(IfaceInitParams params) throws Exception {
+        super.init(params);
         this.sock = params.sock;
     }
 

@@ -391,7 +391,7 @@ public class Switch {
         Aes256Key key = new Aes256Key(password);
         UserInfo info = new UserInfo(user, key, password, vni, defaultMtu, defaultFloodAllowed);
 
-        UserClientIface iface = new UserClientIface(info, remoteAddr);
+        UserClientIface iface = new UserClientIface(info, key, remoteAddr);
 
         try {
             initIface(iface);

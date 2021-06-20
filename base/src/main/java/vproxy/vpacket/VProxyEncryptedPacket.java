@@ -30,6 +30,10 @@ public class VProxyEncryptedPacket extends AbstractPacket {
         this.keyProvider = keyProvider;
     }
 
+    public VProxyEncryptedPacket(Aes256Key key) {
+        this(unused -> key);
+    }
+
     @Override
     public String from(ByteArray bytes) {
         if (bytes.length() < 28) {

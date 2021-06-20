@@ -452,7 +452,7 @@ public class L3 {
             assert Logger.lowLevelDebug("no route rule found");
             return;
         }
-        assert Logger.lowLevelDebug("route rule found");
+        assert Logger.lowLevelDebug("route rule found: " + rule);
 
         int vni = rule.toVni;
         if (vni == skb.vni) {
@@ -486,18 +486,36 @@ public class L3 {
             }
             assert Logger.lowLevelDebug("target table is found");
 
-            // get target mac
-            var targetMac = getRoutedSrcMac(t, dst);
-            if (targetMac == null) {
-                assert Logger.lowLevelDebug("cannot route because target mac is not found");
+            // get src mac
+            var newSrcMac = getRoutedSrcMac(t, dst);
+            if (newSrcMac == null) {
+                assert Logger.lowLevelDebug("cannot route because source mac is not found");
                 return;
             }
 
-            skb.pkt.setSrc(targetMac);
-            skb.pkt.setDst(targetMac);
-            if (skb.vxlan != null) {
-                skb.setVni(t.vni);
+            var targetRule = t.routeTable.lookup(dst);
+            if (!targetRule.isLocalDirect(t.vni)) {
+                assert Logger.lowLevelDebug("still require routing after switching the table");
+                skb.setTable(t);
+                skb.pkt.setSrc(newSrcMac);
+                routeOutput(skb);
+                return;
             }
+
+            assert Logger.lowLevelDebug("direct route after switching the table");
+
+            // get target mac
+            var targetMac = t.lookup(dst);
+            if (targetMac == null) {
+                assert Logger.lowLevelDebug("cannot route because dest mac is not found");
+                broadcastArpOrNdp(t, dst);
+                return;
+            }
+            assert Logger.lowLevelDebug("found dst mac: " + targetMac);
+
+            skb.pkt.setSrc(newSrcMac);
+            skb.pkt.setDst(targetMac);
+            skb.setTable(t);
             L2.input(skb);
         } else {
             // route based on ip
@@ -751,6 +769,8 @@ public class L3 {
             directOutput(skb);
             return;
         }
+
+        assert Logger.lowLevelDebug("route rule found: " + routeRule);
 
         if (routeRule.toVni == skb.vni) {
             assert Logger.lowLevelDebug("direct route, no changes required");

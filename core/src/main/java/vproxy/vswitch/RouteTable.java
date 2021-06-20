@@ -199,6 +199,10 @@ public class RouteTable {
             this.ip = ip;
         }
 
+        public boolean isLocalDirect(int currentVni) {
+            return ip == null && (toVni == 0 || toVni == currentVni);
+        }
+
         @Override
         public String toString() {
             return alias + " -> network " + rule + (

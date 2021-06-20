@@ -2,14 +2,18 @@ package vproxy.vswitch.iface;
 
 import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
+import vproxy.base.util.crypto.Aes256Key;
 import vproxy.vfd.IPPort;
 import vproxy.vswitch.SocketBuffer;
+import vproxy.vswitch.util.UserInfo;
 
+import java.util.Map;
 import java.util.Objects;
 
 public class UserIface extends AbstractBaseEncryptedSwitchSocketIface implements RemoteSideVniGetterSetter, LocalSideVniGetterSetter {
     public final IPPort udpSockAddress;
     public final String user;
+    private Map<String, UserInfo> users;
 
     private int remoteSideVni;
     private int localSideVni;
@@ -40,16 +44,28 @@ public class UserIface extends AbstractBaseEncryptedSwitchSocketIface implements
     }
 
     @Override
+    public void init(IfaceInitParams params) throws Exception {
+        super.init(params);
+        this.users = params.users;
+    }
+
+    @Override
+    protected Aes256Key getEncryptionKey() {
+        UserInfo uinfo = users.get(user);
+        if (uinfo == null) {
+            return null;
+        }
+        return uinfo.key;
+    }
+
+    @Override
     public void sendPacket(SocketBuffer skb) {
         // should set the remote side vni to reduce the chance of info leak on server side
         if (remoteSideVni == 0) {
             assert Logger.lowLevelDebug("remote side vni not learnt yet, drop the packet for now");
             return;
         }
-        if (skb.vni != remoteSideVni) {
-            skb.setVni(remoteSideVni);
-        }
-        super.sendPacket(skb);
+        skb.executeWithVni(remoteSideVni, () -> super.sendPacket(skb));
     }
 
     @Override
