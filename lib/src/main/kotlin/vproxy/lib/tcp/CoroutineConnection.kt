@@ -183,10 +183,10 @@ class CoroutineConnection(
       if (err != null) {
         cont.resumeWithException(err)
       } else {
-        conn.outBuffer.storeBytesFrom(chnl)
         recursivelyWrite(cont, chnl)
       }
     }
+    conn.outBuffer.storeBytesFrom(chnl) // write after callback set
   }
 
   fun setTimeout(millis: Int) {
