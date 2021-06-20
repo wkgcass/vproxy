@@ -401,11 +401,19 @@ JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_tapNonBlockingSupp
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
+ * Method:    tunNonBlockingSupported
+ * Signature: ()Z
+ */
+JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_tunNonBlockingSupported
+  (JNIEnv *, jobject);
+
+/*
+ * Class:     vproxy_vfd_posix_GeneralPosix
  * Method:    createTapFD
- * Signature: (Ljava/lang/String;)Lvproxy/vfd/TapInfo;
+ * Signature: (Ljava/lang/String;Z)Lvproxy/vfd/TapInfo;
  */
 JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
-  (JNIEnv *, jobject, jstring);
+  (JNIEnv *, jobject, jstring, jboolean);
 
 #ifdef __cplusplus
 }

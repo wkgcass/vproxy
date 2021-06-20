@@ -50,6 +50,11 @@ public class SyntheticIpHolder {
         return ipMap.values();
     }
 
+    public IPMac findAny() {
+        var opt = ipMap.values().stream().findAny();
+        return opt.orElse(null);
+    }
+
     public Collection<MacAddress> allMac() {
         return macMap.keySet();
     }

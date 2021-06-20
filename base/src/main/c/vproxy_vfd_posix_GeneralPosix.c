@@ -760,11 +760,22 @@ JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_tapNonBlockingSupp
     #endif
 }
 
+JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_tunNonBlockingSupported
+  (JNIEnv* env, jobject self) {
+    #ifdef __linux__
+      return JNI_TRUE;
+    #elif defined(__APPLE__)
+      return JNI_TRUE;
+    #else
+      throwIOException(env, "unsupported on current platform");
+    #endif
+}
+
 jclass TapInfo = NULL;
 jmethodID TapInfo_init = NULL;
 
 JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
-  (JNIEnv* env, jobject self, jstring dev) {
+  (JNIEnv* env, jobject self, jstring dev, jboolean isTun) {
     // the returned device name
     char devName[IFNAMSIZ + 1];
     // get java input dev name
@@ -782,7 +793,13 @@ JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
       if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
           goto fail;
       }
-      ifr.ifr_flags = IFF_TAP | IFF_NO_PI;
+      ifr.ifr_flags = 0;
+      if (isTun) {
+        ifr.ifr_flags |= IFF_TUN;
+      } else {
+        ifr.ifr_flags |= IFF_TAP;
+      }
+      ifr.ifr_flags |= IFF_NO_PI;
       strncpy(ifr.ifr_name, devChars, IFNAMSIZ);
 
       if (ioctl(fd, TUNSETIFF, (void *) &ifr) < 0) {
@@ -790,9 +807,46 @@ JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
       }
 
       strcpy(devName, ifr.ifr_name);
-      goto success;
 
+    // end ifdef __linux__
     #elif defined(__APPLE__)
+
+    if (isTun) {
+      // use macos utun
+      if (!v_str_starts_with(devChars, "utun")) {
+        (*env)->ReleaseStringUTFChars(env, dev, devChars);
+        throwIOException(env, "tun devices must starts with `utun`");
+        return NULL;
+      }
+      int utun = atoi(devChars + 4); // 4 for "utun"
+      if (utun < 0) {
+        (*env)->ReleaseStringUTFChars(env, dev, devChars);
+        throwIOException(env, "tun devices must be utun{n} where n >= 0");
+        return NULL;
+      }
+
+      fd = socket(PF_SYSTEM, SOCK_DGRAM, SYSPROTO_CONTROL);
+      if (fd < 0) {
+        goto fail;
+      }
+      struct ctl_info ctlInfo;
+      strlcpy(ctlInfo.ctl_name, UTUN_CONTROL_NAME, sizeof(ctlInfo.ctl_name));
+      struct sockaddr_ctl sc;
+      if (ioctl(fd, CTLIOCGINFO, &ctlInfo) == -1) {
+        goto fail;
+      }
+      sc.sc_id = ctlInfo.ctl_id;
+      sc.sc_len = sizeof(sc);
+      sc.sc_family = AF_SYSTEM;
+      sc.ss_sysaddr = AF_SYS_CONTROL;
+      sc.sc_unit = utun + 1;
+      if (connect(fd, (struct sockaddr*) &sc, sizeof(sc)) < 0) {
+        goto fail;
+      }
+      // set_nonblock
+      fcntl(fd, F_SETFL, O_NONBLOCK);
+    } else {
+      // use tuntaposx kernel extension
       char tapFileName[16]; // usually /dev/tapX which is in minimum 5 + 4 chars and give it 16 would definitely be enough in normal cases
       int inputLen = strlen(devChars);
       if (inputLen > 10) { // 10 == 16 - 1 - 5
@@ -818,14 +872,17 @@ JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
       if (v_ioctl(tmpFd, V_SIOCSIFFLAGS, &ifr) < 0) {
           goto fail;
       }
+    }
       // copy the dev name to return str
       strncpy(devName, devChars, IFNAMSIZ);
+
+    // end defined(__APPLE__)
     #else
       (*env)->ReleaseStringUTFChars(env, dev, devChars);
       throwIOException(env, "unsupported on current platform");
       return NULL;
     #endif
-success:
+
       devName[IFNAMSIZ] = '\0'; // make sure the last byte is 0
       jstring genDevName = (*env)->NewStringUTF(env, devName);
 

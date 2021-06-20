@@ -735,12 +735,15 @@ public class Command {
                 break;
             case ucli:
             case tap:
+            case tun:
                 switch (cmd.action) {
                     case a:
                         if (cmd.resource.type == ResourceType.ucli) {
                             UserClientHandle.checkCreateUserClient(cmd);
-                        } else {
+                        } else if (cmd.resource.type == ResourceType.tap) {
                             TapHandle.checkCreateTap(cmd);
+                        } else {
+                            TunHandle.checkCreateTun(cmd);
                         }
                     case r:
                     case R:
@@ -751,8 +754,10 @@ public class Command {
                         }
                         if (cmd.resource.type == ResourceType.ucli) {
                             UserClientHandle.checkUserClientParent(targetResource);
-                        } else {
+                        } else if (cmd.resource.type == ResourceType.tap) {
                             TapHandle.checkTapParent(targetResource);
+                        } else {
+                            TunHandle.checkTunParent(targetResource);
                         }
                         break;
                     default:
@@ -1148,6 +1153,16 @@ public class Command {
                     case r:
                     case R:
                         TapHandle.forceRemove(this);
+                        return new CmdResult();
+                }
+            case tun:
+                switch (action) {
+                    case a:
+                        String dev = TunHandle.add(this);
+                        return new CmdResult(dev, dev, dev);
+                    case r:
+                    case R:
+                        TunHandle.forceRemove(this);
                         return new CmdResult();
                 }
             case ucli:

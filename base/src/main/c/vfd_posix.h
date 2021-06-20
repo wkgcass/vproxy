@@ -158,6 +158,7 @@
 
     #include <strings.h>
     #include <stdio.h>
+    #include <stdlib.h>
     #define v_bzero bzero
 
     #include <fcntl.h>
@@ -168,9 +169,21 @@
       #include <linux/if.h>
       #include <linux/if_tun.h>
     #endif
+    #ifdef __APPLE__
+      #include <sys/kern_control.h>
+      #include <net/if_utun.h>
+      #include <sys/sys_domain.h>
+    #endif
     #ifndef IFNAMSIZ
       #define IFNAMSIZ 16
     #endif
 
+
+    // util functions
+    static inline int v_str_starts_with(const char* str, const char* prefix) {
+      int prelen = strlen(prefix);
+      int len = strlen(str);
+      return len < prelen ? 0 : memcmp(prefix, str, prelen) == 0;
+    }
 
 #endif

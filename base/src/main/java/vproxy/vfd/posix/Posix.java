@@ -104,5 +104,7 @@ public interface Posix {
 
     boolean tapNonBlockingSupported() throws IOException;
 
-    TapInfo createTapFD(String dev) throws IOException;
+    boolean tunNonBlockingSupported() throws IOException;
+
+    TapInfo createTapFD(String dev, boolean isTun) throws IOException;
 }

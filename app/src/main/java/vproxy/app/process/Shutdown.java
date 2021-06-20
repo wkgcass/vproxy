@@ -27,6 +27,7 @@ import vproxy.vswitch.RouteTable;
 import vproxy.vswitch.Switch;
 import vproxy.vswitch.iface.RemoteSwitchIface;
 import vproxy.vswitch.iface.TapIface;
+import vproxy.vswitch.iface.TunIface;
 import vproxy.vswitch.iface.UserClientIface;
 import vproxy.vswitch.util.UserInfo;
 
@@ -745,6 +746,24 @@ public class Shutdown {
                     }
                     if (!tap.annotations.isEmpty()) {
                         cmd += " annotations " + toAnnotation(tap.annotations);
+                    }
+                    commands.add(cmd);
+                }
+                // create tun
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof TunIface)) {
+                        continue;
+                    }
+                    var tun = (TunIface) iface;
+                    cmd = "add tun " + tun.devPattern + " to switch " + sw.alias + " vni " + tun.localSideVni
+                        + " mac " + tun.mac
+                        + " mtu " + sw.defaultMtu
+                        + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
+                    if (tun.postScript != null && !tun.postScript.isBlank()) {
+                        cmd += " post-script " + tun.postScript;
+                    }
+                    if (!tun.annotations.isEmpty()) {
+                        cmd += " annotations " + toAnnotation(tun.annotations);
                     }
                     commands.add(cmd);
                 }

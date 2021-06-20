@@ -105,4 +105,14 @@ public class WindowsFDs implements FDs, FDsWithTap {
     public boolean tapNonBlockingSupported() throws IOException {
         return windows.tapNonBlockingSupported();
     }
+
+    @Override
+    public TapDatagramFD openTun(String devPattern) throws IOException {
+        throw new IOException("tun unsupported");
+    }
+
+    @Override
+    public boolean tunNonBlockingSupported() throws IOException {
+        throw new IOException("tun unsupported");
+    }
 }

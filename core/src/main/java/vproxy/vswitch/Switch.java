@@ -17,6 +17,8 @@ import vproxy.base.util.thread.VProxyThread;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vfd.*;
 import vproxy.vmirror.Mirror;
+import vproxy.vpacket.EthernetPacket;
+import vproxy.vpacket.Ipv4Packet;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
@@ -336,7 +338,7 @@ public class Switch {
     }
 
     @Blocking
-    private void blockAndAddPersistentIface(SelectorEventLoop loop, Iface iface) throws IOException {
+    private void blockAndAddPersistentIface(SelectorEventLoop loop, Iface iface) {
         BlockCallback<Void, RuntimeException> cb = new BlockCallback<>();
         loop.runOnLoop(() -> {
             ifaces.put(iface, new IfaceTimer(loop, -1, iface));
@@ -373,7 +375,61 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, IOException, XException {
+    public String addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations)
+        throws XException, IOException {
+        return addTun(devPattern, vni, mac, postScript, annotations, defaultMtu, defaultFloodAllowed);
+    }
+
+    // return created dev name
+    public String addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations,
+                         Integer mtu, Boolean floodAllowed) throws XException, IOException {
+        NetEventLoop netEventLoop = eventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tun device");
+        }
+        SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
+
+        FDs fds = FDProvider.get().getProvided();
+        if (!(fds instanceof FDsWithTap)) {
+            throw new IOException("tun is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
+        }
+        TunIface iface = new TunIface(devPattern, vni, mac, postScript, annotations);
+        try {
+            initIface(iface);
+        } catch (Exception e) {
+            iface.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+        blockAndAddPersistentIface(loop, iface);
+        if (mtu != null) {
+            iface.setBaseMTU(mtu);
+        }
+        if (floodAllowed != null) {
+            iface.setFloodAllowed(floodAllowed);
+        }
+        Logger.alert("tun device added: " + iface.getTun().getTap().dev);
+        return iface.getTun().getTap().dev;
+    }
+
+    public void delTun(String devName) throws NotFoundException {
+        Iface iface = null;
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof TunIface)) {
+                continue;
+            }
+            TunIface tunIface = (TunIface) i;
+            if (tunIface.getTun().getTap().dev.equals(devName)) {
+                iface = i;
+                break;
+            }
+        }
+        if (iface == null) {
+            throw new NotFoundException("tun", devName);
+        }
+        utilRemoveIface(iface);
+    }
+
+    public void addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, XException {
         user = formatUserName(user);
 
         for (Iface i : ifaces.keySet()) {
@@ -437,7 +493,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, IOException, AlreadyExistException {
+    public void addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
@@ -524,9 +580,40 @@ public class Switch {
     }
 
     private void preHandleInputSkb(SocketBuffer skb) {
-        if (initSKB(skb)) {
+        // init vpc table
+        int vni = skb.vni;
+        Table table = swCtx.getTable(vni);
+        if (table == null) {
+            assert Logger.lowLevelDebug("vni not defined: " + vni);
             return;
         }
+        skb.table = table;
+
+        // init tun packets
+        if (skb.pkt == null && skb.ipPkt != null) {
+            var mac = table.ips.lookup(skb.ipPkt.getDst()); // it's the target ip address is synthetic ip, directly use if
+            if (mac == null) {
+                var ipmac = table.ips.findAny(); // otherwise find any synthetic ip
+                if (ipmac == null) {
+                    Logger.warn(LogType.IMPROPER_USE, "tun devices must be used with synthetic ips, but found none in vpc " + vni);
+                    return;
+                }
+                mac = ipmac.mac;
+            }
+            buildEthernetHeaderForTunDev(skb, mac);
+        }
+        assert skb.pkt != null;
+
+        // update arp info for tun devices
+        if (skb.devin instanceof TunIface) {
+            table.arpTable.record(skb.pkt.getSrc(), skb.ipPkt.getSrc());
+        }
+
+        // mirror the packet
+        if (Mirror.isEnabled("switch")) {
+            Mirror.switchPacket(skb.pkt);
+        }
+
         // check whether the packet's src and dst mac are the same
         if (skb.pkt.getSrc().equals(skb.pkt.getDst())) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "input packet with the same src and dst: " + skb.pkt.description());
@@ -538,19 +625,34 @@ public class Switch {
         socketBuffersToBeHandled.add(skb);
     }
 
-    private boolean initSKB(SocketBuffer skb) {
-        int vni = skb.vni;
-        Table table = swCtx.getTable(vni);
-        if (table == null) {
-            assert Logger.lowLevelDebug("vni not defined: " + vni);
-            return true;
+    private void buildEthernetHeaderForTunDev(SocketBuffer skb, MacAddress mac) {
+        TunIface tun = (TunIface) skb.devin;
+        assert skb.pktOff >= 14; // should have enough space for ethernet header
+        // dst
+        int off = skb.pktOff - 14;
+        for (int i = 0; i < mac.bytes.length(); ++i) {
+            skb.fullbuf.set(off + i, mac.bytes.get(i));
         }
-        skb.table = table;
+        // src
+        off += 6;
+        for (int i = 0; i < tun.mac.bytes.length(); ++i) {
+            skb.fullbuf.set(off + i, tun.mac.bytes.get(i));
+        }
+        // type
+        off += 6;
+        int dltype;
+        if (skb.ipPkt instanceof Ipv4Packet) {
+            dltype = Consts.ETHER_TYPE_IPv4;
+        } else {
+            dltype = Consts.ETHER_TYPE_IPv6;
+        }
+        skb.fullbuf.int16(off, dltype);
 
-        if (Mirror.isEnabled("switch")) {
-            Mirror.switchPacket(skb.pkt);
-        }
-        return false;
+        EthernetPacket ether = new EthernetPacket();
+        ether.from(skb.fullbuf.sub(skb.pktOff - 14, 14), skb.ipPkt);
+
+        skb.pkt = ether;
+        skb.flags = 0;
     }
 
     private void handleInputSkb() {

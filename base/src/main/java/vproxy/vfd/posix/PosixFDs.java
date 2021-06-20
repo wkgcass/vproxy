@@ -82,10 +82,14 @@ public class PosixFDs implements FDs, FDsWithTap {
         return posix.currentTimeMillis();
     }
 
+    public UnixDomainServerSocketFD openUnixDomainServerSocketFD() throws IOException {
+        return new UnixDomainServerSocketFD(posix);
+    }
+
     @Override
     public TapDatagramFD openTap(String devPattern) throws IOException {
-        TapInfo info = posix.createTapFD(devPattern);
-        return new PosixTapDatagramFD(posix, info);
+        TapInfo info = posix.createTapFD(devPattern, false);
+        return new PosixTapDatagramFD(posix, info, false);
     }
 
     @Override
@@ -93,7 +97,14 @@ public class PosixFDs implements FDs, FDsWithTap {
         return posix.tapNonBlockingSupported();
     }
 
-    public UnixDomainServerSocketFD openUnixDomainServerSocketFD() throws IOException {
-        return new UnixDomainServerSocketFD(posix);
+    @Override
+    public TapDatagramFD openTun(String devPattern) throws IOException {
+        TapInfo info = posix.createTapFD(devPattern, true);
+        return new PosixTapDatagramFD(posix, info, true);
+    }
+
+    @Override
+    public boolean tunNonBlockingSupported() throws IOException {
+        return posix.tunNonBlockingSupported();
     }
 }

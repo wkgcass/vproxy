@@ -27,6 +27,7 @@ public enum ResourceType {
     iface("iface"),
     user("user"),
     tap("tap"),
+    tun("tun"),
     ip("ip"),
     route("route"),
     ucli("user-client"),

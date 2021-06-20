@@ -20,6 +20,10 @@ public class SocketBuffer {
         return new SocketBuffer(devin, vni, buf, pktOff, pad);
     }
 
+    public static SocketBuffer fromIpBytes(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
+        return new SocketBuffer(devin, vni, buf, pktOff, pad, FLAG_IP);
+    }
+
     public static SocketBuffer fromPacket(VXLanPacket pkt) {
         return new SocketBuffer(pkt);
     }
@@ -39,7 +43,7 @@ public class SocketBuffer {
     public int flags;
 
     // ----- buffer -----
-    public ByteArray buf;
+    public ByteArray fullbuf;
     public int pktOff; // packet offset
     public int pad; // padding length after the end of the packet
     public ByteArray pktBuf; // sub buffer of buf
@@ -57,30 +61,44 @@ public class SocketBuffer {
     public TcpEntry tcp = null;
     public boolean needTcpReset = false; // this field is only used in L4.input
 
-    private SocketBuffer(Iface devin, ByteArray buf, int pktOff, int pad) {
+    private SocketBuffer(Iface devin, ByteArray fullbuf, int pktOff, int pad) {
         this.devin = devin;
         this.flags = FLAG_VXLAN;
-        this.buf = buf;
+        this.fullbuf = fullbuf;
         this.pktOff = pktOff;
         this.pad = pad;
         if (pktOff == 0 && pad == 0) {
-            this.pktBuf = buf;
+            this.pktBuf = fullbuf;
         } else {
-            this.pktBuf = buf.sub(pktOff, buf.length() - pad - pktOff);
+            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
         }
     }
 
-    private SocketBuffer(Iface devin, int vni, ByteArray buf, int pktOff, int pad) {
+    private SocketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad) {
         this.devin = devin;
         this.vni = vni;
         this.flags = 0;
-        this.buf = buf;
+        this.fullbuf = fullbuf;
         this.pktOff = pktOff;
         this.pad = pad;
         if (pktOff == 0 && pad == 0) {
-            this.pktBuf = buf;
+            this.pktBuf = fullbuf;
         } else {
-            this.pktBuf = buf.sub(pktOff, buf.length() - pad - pktOff);
+            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
+        }
+    }
+
+    private SocketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad, int flags) {
+        this.devin = devin;
+        this.vni = vni;
+        this.flags = flags;
+        this.fullbuf = fullbuf;
+        this.pktOff = pktOff;
+        this.pad = pad;
+        if (pktOff == 0 && pad == 0) {
+            this.pktBuf = fullbuf;
+        } else {
+            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
         }
     }
 
@@ -115,6 +133,16 @@ public class SocketBuffer {
         AbstractPacket pkt;
         if ((flags & FLAG_VXLAN) == FLAG_VXLAN) {
             pkt = new VXLanPacket();
+        } else if ((flags & FLAG_IP) == FLAG_IP) {
+            byte b0 = pktBuf.get(0);
+            int version = (b0 >> 4) & 0xff;
+            if (version == 4) {
+                pkt = new Ipv4Packet();
+            } else if (version == 6) {
+                pkt = new Ipv6Packet();
+            } else {
+                return "receiving packet with unknown ip version: " + version;
+            }
         } else {
             pkt = new EthernetPacket();
         }
@@ -126,6 +154,9 @@ public class SocketBuffer {
             this.vxlan = (VXLanPacket) pkt;
             this.vni = this.vxlan.getVni();
             initPackets(true, false, false);
+        } else if ((flags & FLAG_IP) == FLAG_IP) {
+            this.ipPkt = (AbstractIpPacket) pkt;
+            initPackets(false, false, true);
         } else {
             this.pkt = (AbstractEthernetPacket) pkt;
             initPackets(false, true, false);
@@ -134,7 +165,7 @@ public class SocketBuffer {
     }
 
     public void clearBuffers() {
-        this.buf = null;
+        this.fullbuf = null;
         this.pktOff = 0;
         this.pad = 0;
         this.pktBuf = null;

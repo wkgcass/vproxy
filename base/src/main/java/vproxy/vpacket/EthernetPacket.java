@@ -13,12 +13,10 @@ public class EthernetPacket extends AbstractEthernetPacket {
 
     @Override
     public String from(ByteArray bytes) {
-        if (bytes.length() < (6 /*dst*/ + 6 /*src*/ + 2 /*type*/)) {
-            return "input packet length too short for a ethernet packet";
+        String err = from(bytes, null);
+        if (err != null) {
+            return err;
         }
-        dst = new MacAddress(bytes.sub(0, 6));
-        src = new MacAddress(bytes.sub(6, 6));
-        type = bytes.uint16(12);
         ByteArray data = bytes.sub(14, bytes.length() - 14);
         AbstractPacket packet;
         boolean mayIgnoreError = false;
@@ -34,7 +32,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
             packet = new PacketBytes();
         }
         packet.recordParent(this);
-        String err = packet.from(data);
+        err = packet.from(data);
         if (err != null) {
             if (mayIgnoreError) {
                 Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString() + ": " + err);
@@ -47,6 +45,20 @@ public class EthernetPacket extends AbstractEthernetPacket {
         this.packet = packet;
 
         raw = bytes;
+        return null;
+    }
+
+    public String from(ByteArray bytes, AbstractPacket packet) {
+        if (bytes.length() < (6 /*dst*/ + 6 /*src*/ + 2 /*type*/)) {
+            return "input packet length too short for a ethernet packet";
+        }
+        dst = new MacAddress(bytes.sub(0, 6));
+        src = new MacAddress(bytes.sub(6, 6));
+        type = bytes.uint16(12);
+        if (packet != null) {
+            this.packet = packet;
+            packet.recordParent(this);
+        }
         return null;
     }
 

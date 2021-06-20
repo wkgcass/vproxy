@@ -12,12 +12,14 @@ import java.util.concurrent.TimeUnit;
 
 public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD {
     public final TapInfo tap;
+    public final boolean isTun;
 
-    public PosixTapDatagramFD(Posix posix, TapInfo tap) {
+    public PosixTapDatagramFD(Posix posix, TapInfo tap, boolean isTun) {
         super(posix);
         this.fd = tap.fd;
         this.connected = true;
         this.tap = tap;
+        this.isTun = isTun;
     }
 
     @Override
@@ -51,6 +53,11 @@ public class PosixTapDatagramFD extends PosixNetworkFD implements TapDatagramFD 
     @Override
     public TapInfo getTap() {
         return tap;
+    }
+
+    @Override
+    public boolean isTun() {
+        return isTun;
     }
 
     @Override

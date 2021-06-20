@@ -37,6 +37,11 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
         return tap;
     }
 
+    @Override
+    public boolean isTun() {
+        return false;
+    }
+
     protected void checkNotClosed() throws IOException {
         if (closed) {
             throw new IOException("closed");

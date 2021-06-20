@@ -154,5 +154,8 @@ public class GeneralPosix implements Posix {
     native public boolean tapNonBlockingSupported() throws IOException;
 
     @Override
-    native public TapInfo createTapFD(String dev) throws IOException;
+    native public boolean tunNonBlockingSupported() throws IOException;
+
+    @Override
+    native public TapInfo createTapFD(String dev, boolean isTun) throws IOException;
 }

@@ -96,7 +96,7 @@ public class TapIface extends AbstractIface implements Iface {
         }
 
         try {
-            SwitchUtils.executeTapPostScript(params.sw.alias, tap.getTap().dev, localSideVni, postScript);
+            SwitchUtils.executeDevPostScript(params.sw.alias, tap.getTap().dev, localSideVni, postScript);
         } catch (Exception e) {
             // executing script failed
             // close the fds
