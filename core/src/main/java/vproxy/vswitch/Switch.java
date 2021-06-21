@@ -604,11 +604,6 @@ public class Switch {
         }
         assert pkb.pkt != null;
 
-        // update arp info for tun devices
-        if (pkb.devin instanceof TunIface) {
-            table.arpTable.record(pkb.pkt.getSrc(), pkb.ipPkt.getSrc());
-        }
-
         // mirror the packet
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);

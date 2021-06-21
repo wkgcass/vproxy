@@ -8,10 +8,7 @@ import vproxy.base.util.*;
 import vproxy.base.util.exception.XException;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.*;
-import vproxy.vpacket.AbstractIpPacket;
-import vproxy.vpacket.ArpPacket;
-import vproxy.vpacket.IcmpPacket;
-import vproxy.vpacket.Ipv4Packet;
+import vproxy.vpacket.*;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
 
@@ -20,7 +17,12 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class TunIface extends AbstractIface implements Iface {
-    private static final ByteArray icmpPingOtherPart = ByteArray.from("vpsr"); // id and seq only, no data
+    private final ByteArray icmpPingPayloadPrefix = ByteArray.from("vpsrtunarp");
+    private final ByteArray icmpPingPayloadPlaceHolder = ByteArray.from("macadd"); // 6 bytes mac of the original req pkt
+    private final ByteArray icmpPingOtherPart = ByteArray.from("id").concat(ByteArray.from(0, 0))
+        .concat(icmpPingPayloadPrefix)
+        .concat(icmpPingPayloadPlaceHolder)
+        .arrange();
 
     public final String devPattern;
     private TapDatagramFD tun;
@@ -130,7 +132,7 @@ public class TunIface extends AbstractIface implements Iface {
 
     @Override
     public void sendPacket(PacketBuffer pkb) {
-        if (handleArpOrNdp(pkb)) {
+        if (handleArpOrNdpOutput(pkb)) {
             assert Logger.lowLevelDebug("the packet is arp/ndp req, which is handled another way, " +
                 "original packet will not be sent");
             return;
@@ -164,7 +166,7 @@ public class TunIface extends AbstractIface implements Iface {
         }
     }
 
-    private boolean handleArpOrNdp(PacketBuffer pkb) {
+    private boolean handleArpOrNdpOutput(PacketBuffer pkb) {
         if (pkb.pkt.getDst().isUnicast() && !pkb.pkt.getDst().equals(mac)) {
             assert Logger.lowLevelDebug("unicast packet whose dst is not this dev");
             return false;
@@ -183,7 +185,7 @@ public class TunIface extends AbstractIface implements Iface {
                 return false;
             }
             IP src = pkb.ipPkt.getSrc();
-            buildAndSendPing(src, dst);
+            transformToPingOutput(src, dst, pkb.pkt.getSrc());
         } else if (pkb.pkt.getPacket() instanceof ArpPacket) {
             assert Logger.lowLevelDebug("is arp");
             var arp = (ArpPacket) pkb.pkt.getPacket();
@@ -200,30 +202,87 @@ public class TunIface extends AbstractIface implements Iface {
                 assert Logger.lowLevelDebug("protocol size is not 4 nor 16");
                 return false;
             }
-            handleArp(pkb);
+            handleArpOutput(pkb);
         }
         assert Logger.lowLevelDebug("not arp nor neighbor solicitation");
         return false;
     }
 
-    private void handleArp(PacketBuffer pkb) {
+    private void handleArpOutput(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("handling arp for tun dev");
         var arp = (ArpPacket) pkb.pkt.getPacket();
         IP src = IP.from(arp.getSenderIp().toJavaArray());
         IP dst = IP.from(arp.getTargetIp().toJavaArray());
-        buildAndSendPing(src, dst);
+        transformToPingOutput(src, dst, pkb.pkt.getSrc());
     }
 
-    private void buildAndSendPing(IP src, IP dst) {
-        assert Logger.lowLevelDebug("buildAndSendPing(" + src + ", " + dst + ")");
+    private void transformToPingOutput(IP src, IP dst, MacAddress pktSrc) {
+        assert Logger.lowLevelDebug("transformToPingOutput(" + src + ", " + dst + ")");
 
         IcmpPacket icmp = new IcmpPacket(src instanceof IPv6);
         icmp.setType(icmp.isIpv6() ? Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ : Consts.ICMP_PROTOCOL_TYPE_ECHO_REQ);
         icmp.setCode(0);
+        int id = (int) (Math.random() * 256);
+        icmpPingOtherPart.int16(0, id);
+        for (int i = 0; i < 6; ++i) {
+            icmpPingOtherPart.set(4 + icmpPingPayloadPrefix.length() + i, pktSrc.bytes.get(i));
+        }
         icmp.setOther(icmpPingOtherPart);
 
         AbstractIpPacket ipPkt = SwitchUtils.buildIpIcmpPacket(src, dst, icmp);
         sendPacket(ipPkt);
+    }
+
+    // need to convert pong to arp/ndp responses
+    private void transformToArpOrNdpInput(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("transformToArpOrNdpInput(" + pkb + ")");
+
+        if (!(pkb.ipPkt.getPacket() instanceof IcmpPacket)) {
+            assert Logger.lowLevelDebug("not icmp packet");
+            return;
+        }
+        var icmp = (IcmpPacket) pkb.ipPkt.getPacket();
+        if (icmp.isIpv6()) {
+            if (icmp.getType() != Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP) {
+                assert Logger.lowLevelDebug("not icmp resp (v6)");
+                return;
+            }
+        } else {
+            if (icmp.getType() != Consts.ICMP_PROTOCOL_TYPE_ECHO_RESP) {
+                assert Logger.lowLevelDebug("not icmp resp");
+                return;
+            }
+        }
+        ByteArray other = icmp.getOther();
+        if (other.length() != icmpPingOtherPart.length()) {
+            assert Logger.lowLevelDebug("icmp length mismatch");
+            return;
+        }
+        if (!other.sub(4, icmpPingPayloadPrefix.length()).equals(icmpPingPayloadPrefix)) {
+            assert Logger.lowLevelDebug("pong prefix mismatch");
+            return;
+        }
+        MacAddress dst = new MacAddress(other.sub(4 + icmpPingPayloadPrefix.length(), 6));
+
+        EthernetPacket ether;
+        if (pkb.ipPkt instanceof Ipv4Packet) {
+            ether = transformToArpInput((IPv4) pkb.ipPkt.getSrc(), (IPv4) pkb.ipPkt.getDst(), dst);
+        } else {
+            ether = transformToNdpInput((IPv6) pkb.ipPkt.getSrc(), (IPv6) pkb.ipPkt.getDst(), dst);
+        }
+
+        pkb.replacePacket(ether);
+        assert Logger.lowLevelDebug("packet transformed: " + pkb);
+    }
+
+    private EthernetPacket transformToArpInput(IPv4 src, IPv4 dst, MacAddress dldst) {
+        var arp = SwitchUtils.buildArpPacket(Consts.ARP_PROTOCOL_OPCODE_RESP, dldst, dst, mac, src);
+        return SwitchUtils.buildEtherArpPacket(dldst, mac, arp);
+    }
+
+    private EthernetPacket transformToNdpInput(IPv6 src, IPv6 dst, MacAddress dldst) {
+        var ipicmp = SwitchUtils.buildNeighborAdvertisementPacket(mac, src, dst);
+        return SwitchUtils.buildEtherIpPacket(dldst, mac, ipicmp);
     }
 
     @Override
@@ -293,6 +352,8 @@ public class TunIface extends AbstractIface implements Iface {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
                     continue;
                 }
+
+                transformToArpOrNdpInput(pkb);
 
                 received(pkb);
                 callback.alertPacketsArrive();

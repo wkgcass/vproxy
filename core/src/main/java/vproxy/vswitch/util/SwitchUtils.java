@@ -137,6 +137,56 @@ public class SwitchUtils {
         return IP.fromIPv6(targetAddr);
     }
 
+    public static ArpPacket buildArpPacket(int opcode, MacAddress dst, IPv4 dstIp, MacAddress src, IPv4 srcIp) {
+        ArpPacket resp = new ArpPacket();
+        resp.setHardwareType(Consts.ARP_HARDWARE_TYPE_ETHER);
+        resp.setProtocolType(Consts.ARP_PROTOCOL_TYPE_IP);
+        resp.setHardwareSize(6);
+        resp.setProtocolSize(4);
+        resp.setOpcode(opcode);
+        resp.setSenderMac(src.bytes);
+        resp.setSenderIp(ByteArray.from(srcIp.getAddress()));
+        resp.setTargetMac(dst.bytes);
+        resp.setTargetIp(ByteArray.from(dstIp.getAddress()));
+
+        return resp;
+    }
+
+    public static EthernetPacket buildEtherArpPacket(MacAddress dst, MacAddress src, ArpPacket arp) {
+        EthernetPacket ether = new EthernetPacket();
+        ether.setDst(dst);
+        ether.setSrc(src);
+        ether.setType(Consts.ETHER_TYPE_ARP);
+        ether.setPacket(arp);
+        return ether;
+    }
+
+    public static Ipv6Packet buildNeighborAdvertisementPacket(MacAddress requestedMac, IPv6 requestedIpOrSrc, IPv6 dstIp) {
+        IcmpPacket icmp = new IcmpPacket(true);
+        icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
+        icmp.setCode(0);
+        icmp.setOther(
+            (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(ByteArray.from(requestedIpOrSrc.getAddress()))
+                .concat(( // the target link-layer address
+                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address)
+                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
+                        .concat(requestedMac.bytes)
+                ))
+        );
+
+        Ipv6Packet ipv6 = new Ipv6Packet();
+        ipv6.setVersion(6);
+        ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
+        ipv6.setHopLimit(255);
+        ipv6.setSrc(requestedIpOrSrc);
+        ipv6.setDst(dstIp);
+        ipv6.setExtHeaders(Collections.emptyList());
+        ipv6.setPacket(icmp);
+        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+
+        return ipv6;
+    }
+
     public static AbstractIpPacket buildIpIcmpPacket(IP srcIp, IP dstIp, IcmpPacket icmp) {
         AbstractIpPacket ipPkt;
         if (srcIp instanceof IPv4) {
@@ -173,8 +223,12 @@ public class SwitchUtils {
 
     public static EthernetPacket buildEtherIpIcmpPacket(MacAddress dstMac, MacAddress srcMac, IP srcIp, IP dstIp, IcmpPacket icmp) {
         assert Logger.lowLevelDebug("buildIpIcmpPacket(" + dstMac + "," + srcMac + "," + srcIp + "," + dstIp + "," + icmp + ")");
-
         AbstractIpPacket ipPkt = buildIpIcmpPacket(srcIp, dstIp, icmp);
+        return buildEtherIpPacket(dstMac, srcMac, ipPkt);
+    }
+
+    public static EthernetPacket buildEtherIpPacket(MacAddress dstMac, MacAddress srcMac, AbstractIpPacket ipPkt) {
+        var srcIp = ipPkt.getSrc();
 
         EthernetPacket ether = new EthernetPacket();
         ether.setDst(dstMac);

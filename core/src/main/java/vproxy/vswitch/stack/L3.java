@@ -164,11 +164,7 @@ public class L3 {
         resp.setTargetMac(arp.getSenderMac());
         resp.setTargetIp(arp.getSenderIp());
 
-        EthernetPacket ether = new EthernetPacket();
-        ether.setDst(pkb.pkt.getSrc());
-        ether.setSrc(mac);
-        ether.setType(Consts.ETHER_TYPE_ARP);
-        ether.setPacket(resp);
+        EthernetPacket ether = SwitchUtils.buildEtherArpPacket(pkb.pkt.getSrc(), mac, resp);
 
         pkb.replacePacket(ether);
 
@@ -293,33 +289,8 @@ public class L3 {
 
         var inIpPkt = (Ipv6Packet) pkb.pkt.getPacket();
 
-        IcmpPacket icmp = new IcmpPacket(true);
-        icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
-        icmp.setCode(0);
-        icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(ByteArray.from(requestedIp.getAddress()))
-                .concat(( // the target link-layer address
-                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address)
-                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
-                        .concat(requestedMac.bytes)
-                ))
-        );
-
-        Ipv6Packet ipv6 = new Ipv6Packet();
-        ipv6.setVersion(6);
-        ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
-        ipv6.setHopLimit(255);
-        ipv6.setSrc(requestedIp);
-        ipv6.setDst(inIpPkt.getSrc());
-        ipv6.setExtHeaders(Collections.emptyList());
-        ipv6.setPacket(icmp);
-        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
-
-        EthernetPacket ether = new EthernetPacket();
-        ether.setDst(pkb.pkt.getSrc());
-        ether.setSrc(requestedMac);
-        ether.setType(Consts.ETHER_TYPE_IPv6);
-        ether.setPacket(ipv6);
+        var ipicmp = SwitchUtils.buildNeighborAdvertisementPacket(requestedMac, requestedIp, inIpPkt.getSrc());
+        var ether = SwitchUtils.buildEtherIpPacket(pkb.pkt.getSrc(), requestedMac, ipicmp);
 
         pkb.replacePacket(ether);
 
