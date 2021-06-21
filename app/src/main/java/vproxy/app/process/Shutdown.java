@@ -32,6 +32,9 @@ import vproxy.vswitch.iface.UserClientIface;
 import vproxy.vswitch.util.UserInfo;
 
 import java.io.*;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
 import java.util.*;
 
 public class Shutdown {
@@ -41,6 +44,7 @@ public class Shutdown {
     private static boolean initiated = false;
     private static int sigIntTimes = 0;
     public static int sigIntBeforeTerminate = 3;
+    private static volatile boolean signalToShutTriggered = false;
 
     public static void initSignal() {
         if (initiated)
@@ -48,9 +52,12 @@ public class Shutdown {
         initiated = true;
         try {
             SignalHook.getInstance().sigInt(() -> {
+                if (signalToShutTriggered) return;
                 ++sigIntTimes;
                 if (sigIntTimes >= sigIntBeforeTerminate) {
                     sigIntTimes = -10000; // set to a very small number to prevent triggered multiple times
+
+                    signalToShutTriggered = true;
                     endSaveAndQuit(128 + 2);
                 } else {
                     System.out.println("press ctrl-c more times to quit");
@@ -61,13 +68,21 @@ public class Shutdown {
             System.err.println("SIGINT not handled");
         }
         try {
-            SignalHook.getInstance().sigHup(() -> endSaveAndQuit(128 + 1));
+            SignalHook.getInstance().sigHup(() -> {
+                if (signalToShutTriggered) return;
+                signalToShutTriggered = true;
+                endSaveAndQuit(128 + 1);
+            });
             assert Logger.lowLevelDebug("SIGHUP handled");
         } catch (Exception e) {
             System.err.println("SIGHUP not handled");
         }
         try {
-            SignalHook.getInstance().sigTerm(() -> endSaveAndQuit(128 + 1));
+            SignalHook.getInstance().sigTerm(() -> {
+                if (signalToShutTriggered) return;
+                signalToShutTriggered = true;
+                endSaveAndQuit(128 + 15);
+            });
             assert Logger.lowLevelDebug("SIGTERM handled");
         } catch (Exception e) {
             System.err.println("SIGTERM not handled");
@@ -84,7 +99,11 @@ public class Shutdown {
             System.err.println("SIGUSR1 not handled");
         }
         try {
-            SignalHook.getInstance().sigUsr2(() -> endSaveAndSoftQuit(128 + 12));
+            SignalHook.getInstance().sigUsr2(() -> {
+                if (signalToShutTriggered) return;
+                signalToShutTriggered = true;
+                endSaveAndSoftQuit(128 + 12);
+            });
         } catch (Exception e) {
             System.err.println("SIGUSR2 not handled");
         }
@@ -93,6 +112,7 @@ public class Shutdown {
             while (true) {
                 sigIntTimes = 0;
                 try {
+                    //noinspection BusyWait
                     Thread.sleep(1000); // reset the counter every 1 second
                 } catch (InterruptedException ignore) {
                 }
@@ -180,6 +200,7 @@ public class Shutdown {
                     break;
                 }
                 try {
+                    //noinspection BusyWait
                     Thread.sleep(1_000);
                 } catch (InterruptedException e) {
                     // ignore exception
@@ -238,7 +259,7 @@ public class Shutdown {
     }
 
     @Blocking // writing file is blocking
-    public static void save(String filepath) throws Exception {
+    public static synchronized void save(String filepath) throws Exception {
         if (Config.configSavingDisabled) {
             throw new UnsupportedOperationException("saving is disabled");
         }
@@ -250,20 +271,29 @@ public class Shutdown {
             filepath = defaultFilePath();
         }
         filepath = Utils.filename(filepath);
-        Logger.alert("Trying to save config into file: " + filepath);
-        backupAndRemove(filepath);
-        File f = new File(filepath);
+        Logger.alert("Trying to save config into file: " + filepath + ".new");
+        File f = new File(filepath + ".new");
+        if (f.exists()) {
+            //noinspection ResultOfMethodCallIgnored
+            f.delete();
+        }
         if (!f.createNewFile()) {
             throw new Exception("create new file failed");
         }
-        FileOutputStream fos = new FileOutputStream(f);
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
+        try (FileOutputStream fos = new FileOutputStream(f)) {
+            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
 
-        String fileContent = currentConfig();
-        bw.write(fileContent);
-        bw.flush();
+            String fileContent = currentConfig();
+            bw.write(fileContent);
+            bw.flush();
+        }
 
-        fos.close();
+        Logger.alert("backup old config " + filepath);
+        backupAndRemove(filepath);
+
+        Logger.alert("move new config to " + filepath);
+        Files.move(Path.of(f.getAbsolutePath()), Path.of(filepath), StandardCopyOption.REPLACE_EXISTING);
+
         Logger.alert("Saving config into file done: " + filepath);
     }
 
@@ -834,7 +864,7 @@ public class Shutdown {
                 Logger.warn(LogType.AFTER_PARSING_CMD, "parse command `" + line + "` failed");
                 throw e;
             }
-            assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd.toString());
+            assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd);
             commands.add(cmd);
         }
         runCommandsOnLoading(commands, 0, cb);
@@ -861,6 +891,7 @@ public class Shutdown {
         });
     }
 
+    @SuppressWarnings("unused")
     public static void releaseEverything() {
         GlobalInspectionHttpServerLauncher.stop();
         DNSClient.getDefault().close();
