@@ -19,6 +19,8 @@ import vproxy.vfd.*;
 import vproxy.vmirror.Mirror;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.Ipv4Packet;
+import vproxy.vswitch.plugin.FilterResult;
+import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
@@ -39,6 +41,8 @@ public class Switch {
     public SecurityGroup bareVXLanAccess;
     public int defaultMtu;
     public boolean defaultFloodAllowed;
+
+    private IfaceWatcher ifaceWatcher;
 
     private boolean started = false;
     private boolean wantStart = false;
@@ -291,14 +295,12 @@ public class Switch {
         }
     }
 
-    // return created dev name
-    public String addTap(String devPattern, int vni, String postScript, Annotations annotations) throws XException, IOException {
+    public TapIface addTap(String devPattern, int vni, String postScript, Annotations annotations) throws XException, IOException {
         return addTap(devPattern, vni, postScript, annotations, null, null);
     }
 
-    // return created dev name
-    public String addTap(String devPattern, int vni, String postScript, Annotations annotations,
-                         Integer mtu, Boolean floodAllowed) throws XException, IOException {
+    public TapIface addTap(String devPattern, int vni, String postScript, Annotations annotations,
+                           Integer mtu, Boolean floodAllowed) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -324,7 +326,7 @@ public class Switch {
             iface.setFloodAllowed(floodAllowed);
         }
         Logger.alert("tap device added: " + iface.getTap().getTap().dev);
-        return iface.getTap().getTap().dev;
+        return iface;
     }
 
     private void initIface(Iface iface) throws Exception {
@@ -343,6 +345,8 @@ public class Switch {
         loop.runOnLoop(() -> {
             ifaces.put(iface, new IfaceTimer(loop, -1, iface));
             cb.succeeded();
+
+            ifaceAdded(iface);
         });
         cb.block();
     }
@@ -375,14 +379,13 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public String addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations)
+    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations)
         throws XException, IOException {
         return addTun(devPattern, vni, mac, postScript, annotations, defaultMtu, defaultFloodAllowed);
     }
 
-    // return created dev name
-    public String addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations,
-                         Integer mtu, Boolean floodAllowed) throws XException, IOException {
+    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations,
+                           Integer mtu, Boolean floodAllowed) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tun device");
@@ -408,7 +411,7 @@ public class Switch {
             iface.setFloodAllowed(floodAllowed);
         }
         Logger.alert("tun device added: " + iface.getTun().getTap().dev);
-        return iface.getTun().getTap().dev;
+        return iface;
     }
 
     public void delTun(String devName) throws NotFoundException {
@@ -429,7 +432,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, XException {
+    public UserClientIface addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, XException {
         user = formatUserName(user);
 
         for (Iface i : ifaces.keySet()) {
@@ -456,6 +459,8 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         blockAndAddPersistentIface(loop, iface);
+
+        return iface;
     }
 
     private String formatUserName(String user) throws XException {
@@ -493,7 +498,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public void addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
+    public RemoteSwitchIface addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add remote switch");
@@ -512,7 +517,7 @@ public class Switch {
                 throw new AlreadyExistException("switch", vxlanSockAddr.formatToIPPortString());
             }
         }
-        Iface iface = new RemoteSwitchIface(alias, vxlanSockAddr, addSwitchFlag);
+        var iface = new RemoteSwitchIface(alias, vxlanSockAddr, addSwitchFlag);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -520,6 +525,8 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         blockAndAddPersistentIface(loop, iface);
+
+        return iface;
     }
 
     public void delRemoteSwitch(String alias) throws NotFoundException {
@@ -551,12 +558,57 @@ public class Switch {
     private void sendPacket(PacketBuffer pkb, Iface iface) {
         assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
 
+        // handle it by packet filter
+        var egressFilter = iface.getEgressFilter();
+        if (egressFilter == null) {
+            assert Logger.lowLevelDebug("no egress filter on " + iface);
+        } else {
+            assert Logger.lowLevelDebug("run egress filter " + egressFilter + " on " + pkb);
+            var res = egressFilter.handle(swCtx, pkb);
+            if (res != FilterResult.PASS) {
+                handleEgressFilterResult(pkb, res);
+                return;
+            }
+            assert Logger.lowLevelDebug("the filter returns pass");
+        }
+
         SwitchUtils.checkAndUpdateMss(pkb, iface);
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);
         }
 
         iface.sendPacket(pkb);
+    }
+
+    private void handleEgressFilterResult(PacketBuffer pkb, FilterResult res) {
+        if (res == FilterResult.DROP) {
+            assert Logger.lowLevelDebug("egress filter drops the packet: " + pkb);
+            return;
+        }
+        if (res == FilterResult.REDIRECT) {
+            assert Logger.lowLevelDebug("egress filter redirects the packet: " + pkb + ", " + pkb.devredirect);
+            var redirect = pkb.devredirect;
+            var reinput = pkb.reinput;
+            if (redirect == null && !reinput) {
+                Logger.error(LogType.IMPROPER_USE, "filter returns REDIRECT, but devredirect is not set and reinput is false");
+                return; // drop the packet
+            }
+            pkb.clearFilterFields();
+            if (reinput) {
+                assert Logger.lowLevelDebug("reinput the packet");
+                pkb.table = null;
+                if (redirect != null) {
+                    assert Logger.lowLevelDebug("set devin to " + redirect);
+                    pkb.devin = redirect;
+                }
+                onIfacePacketsArrive(pkb);
+            } else {
+                assert Logger.lowLevelDebug("send the packet to " + redirect);
+                sendPacket(pkb, redirect);
+            }
+            return;
+        }
+        Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet egress");
     }
 
     private final CursorList<PacketBuffer> socketBuffersToBeHandled = new CursorList<>(128);
@@ -579,7 +631,15 @@ public class Switch {
         handleInputPkb();
     }
 
+    private void onIfacePacketsArrive(PacketBuffer pkb) {
+        preHandleInputPkb(pkb);
+        handleInputPkb();
+    }
+
     private void preHandleInputPkb(PacketBuffer pkb) {
+        // ensure the dev is recorded
+        recordIface(pkb.devin);
+
         // init vpc table
         int vni = pkb.vni;
         Table table = swCtx.getTable(vni);
@@ -604,6 +664,20 @@ public class Switch {
         }
         assert pkb.pkt != null;
 
+        // handle it by packet filter
+        var ingressFilter = pkb.devin.getIngressFilter();
+        if (ingressFilter == null) {
+            assert Logger.lowLevelDebug("no ingress filter on " + pkb.devin);
+        } else {
+            assert Logger.lowLevelDebug("run ingress filter " + ingressFilter + " on " + pkb);
+            var res = ingressFilter.handle(swCtx, pkb);
+            if (res != FilterResult.PASS) {
+                handleIngressFilterResult(pkb, res);
+                return;
+            }
+            assert Logger.lowLevelDebug("the filter returns pass");
+        }
+
         // mirror the packet
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);
@@ -615,9 +689,37 @@ public class Switch {
             return;
         }
 
-        recordIface(pkb.devin);
-
         socketBuffersToBeHandled.add(pkb);
+    }
+
+    private void handleIngressFilterResult(PacketBuffer pkb, FilterResult res) {
+        if (res == FilterResult.DROP) {
+            assert Logger.lowLevelDebug("ingress filter drops the packet: " + pkb);
+            return;
+        }
+        if (res == FilterResult.REDIRECT) {
+            assert Logger.lowLevelDebug("ingress filter redirects the packet: " + pkb + ", " + pkb.devredirect);
+            var redirect = pkb.devredirect;
+            var reinput = pkb.reinput;
+            if (redirect == null && !reinput) {
+                Logger.error(LogType.IMPROPER_USE, "filter returns REDIRECT, but devredirect is not set and reinput is false");
+                return; // drop the packet
+            }
+            pkb.clearFilterFields();
+            if (reinput) {
+                assert Logger.lowLevelDebug("reinput the packet");
+                pkb.table = null;
+                if (redirect != null) {
+                    assert Logger.lowLevelDebug("set devin to " + redirect);
+                    pkb.devin = redirect;
+                }
+                preHandleInputPkb(pkb); // the packet is not actually handled yet, so run the preHandle would be enough
+            } else {
+                sendPacket(pkb, redirect);
+            }
+            return;
+        }
+        Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");
     }
 
     private void buildEthernetHeaderForTunDev(PacketBuffer pkb, MacAddress mac) {
@@ -677,6 +779,13 @@ public class Switch {
         }
     };
 
+    private void ifaceAdded(Iface iface) {
+        var watcher = this.ifaceWatcher;
+        if (watcher != null) {
+            watcher.ifaceAdded(iface);
+        }
+    }
+
     private void utilRemoveIface(Iface iface) {
         var timer = ifaces.remove(iface);
         if (timer != null) {
@@ -689,6 +798,19 @@ public class Switch {
         Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
 
         iface.destroy();
+
+        var watcher = this.ifaceWatcher;
+        if (watcher != null) {
+            watcher.ifaceRemoved(iface);
+        }
+    }
+
+    public IfaceWatcher getIfaceWatcher() {
+        return ifaceWatcher;
+    }
+
+    public void setIfaceWatcher(IfaceWatcher ifaceWatcher) {
+        this.ifaceWatcher = ifaceWatcher;
     }
 
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {
@@ -734,6 +856,7 @@ public class Switch {
             SwitchUtils.updateBothSideVni(iface, newIface);
             if (ifaces.putIfAbsent(iface, this) == null) {
                 Logger.alert(iface + " connected to Switch:" + alias);
+                ifaceAdded(iface);
             }
             resetTimer();
         }

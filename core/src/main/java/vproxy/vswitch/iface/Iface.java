@@ -1,6 +1,7 @@
 package vproxy.vswitch.iface;
 
 import vproxy.vswitch.PacketBuffer;
+import vproxy.vswitch.plugin.PacketFilter;
 
 public interface Iface {
     void init(IfaceInitParams params) throws Exception;
@@ -24,4 +25,12 @@ public interface Iface {
     void setFloodAllowed(boolean floodAllowed);
 
     String paramsToString();
+
+    void setIngressFilter(PacketFilter filter);
+
+    PacketFilter getIngressFilter();
+
+    void setEgressFilter(PacketFilter filter);
+
+    PacketFilter getEgressFilter();
 }

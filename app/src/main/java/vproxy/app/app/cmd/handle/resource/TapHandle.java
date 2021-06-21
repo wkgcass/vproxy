@@ -62,7 +62,8 @@ public class TapHandle {
         if (cmd.args.containsKey(Param.flood)) {
             flood = FloodHandle.get(cmd);
         }
-        return sw.addTap(devPattern, vni, postScript, anno, mtu, flood);
+        var tap = sw.addTap(devPattern, vni, postScript, anno, mtu, flood);
+        return tap.getTap().getTap().dev;
     }
 
     public static void forceRemove(Command cmd) throws Exception {

@@ -61,6 +61,11 @@ public class PacketBuffer {
     public TcpEntry tcp = null;
     public boolean needTcpReset = false; // this field is only used in L4.input
 
+    // ----- used by packet filters -----
+    // redirect
+    public Iface devredirect; // the dev to redirect to
+    public boolean reinput; // set to true to input the packet again
+
     private PacketBuffer(Iface devin, ByteArray fullbuf, int pktOff, int pad) {
         this.devin = devin;
         this.flags = FLAG_VXLAN;
@@ -175,6 +180,11 @@ public class PacketBuffer {
         matchedIps = null;
         tcp = null;
         needTcpReset = false;
+    }
+
+    public void clearFilterFields() {
+        devredirect = null;
+        reinput = false;
     }
 
     public void replacePacket(EthernetPacket pkt) {

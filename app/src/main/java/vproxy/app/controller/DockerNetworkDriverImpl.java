@@ -240,7 +240,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         ensurePostScript(req.endpointId, "");
 
         String nameSuffix = req.endpointId.substring(0, 12);
-        String tapName = sw.addTap("tap" + nameSuffix, tbl.vni, POST_SCRIPT_BASE_DIRECTORY + req.endpointId, new Annotations(anno));
+        TapIface tapIface = sw.addTap("tap" + nameSuffix, tbl.vni, POST_SCRIPT_BASE_DIRECTORY + req.endpointId, new Annotations(anno));
+        String tapName = tapIface.getTap().getTap().dev;
         Logger.alert("tap added: " + tapName + ", vni=" + tbl.vni
             + ", endpointId=" + req.endpointId
             + ", ipv4=" + anno.get(TAP_ENDPOINT_IPv4_ANNOTATION)

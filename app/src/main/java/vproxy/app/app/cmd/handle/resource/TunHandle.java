@@ -66,7 +66,8 @@ public class TunHandle {
         if (cmd.args.containsKey(Param.flood)) {
             flood = FloodHandle.get(cmd);
         }
-        return sw.addTun(devPattern, vni, mac, postScript, anno, mtu, flood);
+        var tun = sw.addTun(devPattern, vni, mac, postScript, anno, mtu, flood);
+        return tun.getTun().getTap().dev;
     }
 
     public static void forceRemove(Command cmd) throws Exception {
