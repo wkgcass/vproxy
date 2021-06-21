@@ -50,6 +50,8 @@ public class Ipv6Packet extends AbstractIpPacket {
         if (40 + payloadLength < bytes.length()) {
             assert Logger.lowLevelDebug("ipv6 packet is cut shorter from " + bytes.length() + " to " + (40 + payloadLength));
             bytes = bytes.sub(0, 40 + payloadLength);
+        } else if (40 + payloadLength > bytes.length()) {
+            return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
         }
 
         byte[] srcBytes = bytes.sub(8, 16).toJavaArray();

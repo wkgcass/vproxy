@@ -55,6 +55,8 @@ public class Ipv4Packet extends AbstractIpPacket {
         if (totalLength < bytes.length()) {
             assert Logger.lowLevelDebug("ipv4 packet is cut shorter from " + bytes.length() + " to " + totalLength);
             bytes = bytes.sub(0, totalLength);
+        } else if (totalLength > bytes.length()) {
+            return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
         }
 
         // 4-7
