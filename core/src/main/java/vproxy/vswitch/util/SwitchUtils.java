@@ -56,7 +56,8 @@ public class SwitchUtils {
     }
 
     public static void checkAndUpdateMss(PacketBuffer pkb, Iface iface) {
-        int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */;
+        int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */
+            - 20 /* possible options in normal tcp packets, and also ip headers/opts */;
         if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket) ||
             !(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
             return; // only tcp requires modification
