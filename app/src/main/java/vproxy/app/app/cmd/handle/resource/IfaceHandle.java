@@ -52,6 +52,7 @@ public class IfaceHandle {
         boolean isBareVXLanIface = false;
         boolean isRemoteSwitchIface = false;
         boolean isTapIface = false;
+        boolean isTunIface = false;
         boolean isUserClientIface = false;
         boolean isUserIface = false;
 
@@ -64,6 +65,9 @@ public class IfaceHandle {
         } else if (name.startsWith("tap:")) {
             isTapIface = true;
             name = name.substring("tap:".length());
+        } else if (name.startsWith("tun:")) {
+            isTunIface = true;
+            name = name.substring("tun:".length());
         } else if (name.startsWith("remote:")) {
             isRemoteSwitchIface = true;
             name = name.substring("remote:".length());
@@ -94,6 +98,14 @@ public class IfaceHandle {
                     continue;
                 }
                 if (((TapIface) iface).getTap().getTap().dev.equals(name)) {
+                    target = iface;
+                    break;
+                }
+            } else if (iface instanceof TunIface) {
+                if (!isTunIface) {
+                    continue;
+                }
+                if (((TunIface) iface).getTun().getTap().dev.equals(name)) {
                     target = iface;
                     break;
                 }
