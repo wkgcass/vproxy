@@ -14,8 +14,6 @@ import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.Table;
 import vproxy.vswitch.util.SwitchUtils;
 
-import java.util.Collections;
-
 public class L3 {
     private final SwitchContext swCtx;
     private final L2 L2;
@@ -519,7 +517,7 @@ public class L3 {
     private void broadcastArp(Table table, IP dst) {
         assert Logger.lowLevelDebug("broadcastArp(" + table + "," + dst + ")");
 
-        EthernetPacket packet = buildArpReq(table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
+        EthernetPacket packet = buildArpReq(table, dst, SwitchUtils.BROADCAST_MAC);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build arp packet");
             return;
@@ -543,7 +541,7 @@ public class L3 {
     private void broadcastNdp(Table table, IP dst) {
         assert Logger.lowLevelDebug("broadcastNdp(" + table + "," + dst + ")");
 
-        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, new MacAddress("ff:ff:ff:ff:ff:ff"));
+        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, SwitchUtils.BROADCAST_MAC);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build ndp neighbor solicitation packet");
             return;
@@ -639,32 +637,7 @@ public class L3 {
         IP reqIp = optIp.get().ip;
         MacAddress reqMac = optIp.get().mac;
 
-        IcmpPacket icmp = new IcmpPacket(true);
-        icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
-        icmp.setCode(0);
-        icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0)).concat(ByteArray.from(dstIp.getAddress()))
-                .concat(( // the source link-layer address
-                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address)
-                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
-                        .concat(reqMac.bytes)
-                ))
-        );
-
-        Ipv6Packet ipv6 = new Ipv6Packet();
-        ipv6.setVersion(6);
-        ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
-        ipv6.setHopLimit(255);
-        ipv6.setSrc((IPv6) reqIp);
-        byte[] foo = Consts.IPv6_Solicitation_Node_Multicast_Address.toNewJavaArray();
-        byte[] bar = dstIp.getAddress();
-        foo[13] = bar[13];
-        foo[14] = bar[14];
-        foo[15] = bar[15];
-        ipv6.setDst(IP.fromIPv6(foo));
-        ipv6.setExtHeaders(Collections.emptyList());
-        ipv6.setPacket(icmp);
-        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+        Ipv6Packet ipv6 = SwitchUtils.buildNeighborSolicitationPacket((IPv6) dstIp, reqMac, (IPv6) reqIp);
 
         EthernetPacket ether = new EthernetPacket();
         ether.setDst(dstMac);

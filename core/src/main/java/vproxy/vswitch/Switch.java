@@ -19,9 +19,9 @@ import vproxy.vfd.*;
 import vproxy.vmirror.Mirror;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.Ipv4Packet;
+import vproxy.vswitch.iface.*;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.IfaceWatcher;
-import vproxy.vswitch.iface.*;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
@@ -650,17 +650,17 @@ public class Switch {
         pkb.table = table;
 
         // init tun packets
-        if (pkb.pkt == null && pkb.ipPkt != null) {
-            var mac = table.ips.lookup(pkb.ipPkt.getDst()); // it's the target ip address is synthetic ip, directly use if
-            if (mac == null) {
-                var ipmac = table.ips.findAny(); // otherwise find any synthetic ip
-                if (ipmac == null) {
-                    Logger.warn(LogType.IMPROPER_USE, "tun devices must be used with synthetic ips, but found none in vpc " + vni);
-                    return;
-                }
-                mac = ipmac.mac;
+        if (pkb.pkt == null) {
+            if (!(pkb.devin instanceof TunIface)) {
+                Logger.shouldNotHappen("only tun interfaces can input non-ethernet packets, but got " + pkb.devin);
+                return; // drop
             }
-            buildEthernetHeaderForTunDev(pkb, mac);
+            var mac = table.arpTable.lookup(pkb.ipPkt.getDst());
+            if (mac != null) {
+                buildEthernetHeaderForTunDev(pkb, mac);
+            } else {
+                generateArpOrNdpRequestForTunDev(pkb);
+            }
         }
         assert pkb.pkt != null;
 
@@ -750,6 +750,34 @@ public class Switch {
 
         pkb.pkt = ether;
         pkb.flags = 0;
+    }
+
+    private void generateArpOrNdpRequestForTunDev(PacketBuffer pkb) {
+        if (pkb.ipPkt instanceof Ipv4Packet) {
+            generateArpRequestForTunDev(pkb);
+        } else {
+            generateNdpRequestForTunDev(pkb);
+        }
+    }
+
+    private void generateArpRequestForTunDev(PacketBuffer pkb) {
+        var tun = (TunIface) pkb.devin;
+        var arp = SwitchUtils.buildArpPacket(Consts.ARP_PROTOCOL_OPCODE_REQ,
+            SwitchUtils.ZERO_MAC, (IPv4) pkb.ipPkt.getDst(),
+            tun.mac, (IPv4) pkb.ipPkt.getSrc());
+        var ether = SwitchUtils.buildEtherArpPacket(SwitchUtils.BROADCAST_MAC, tun.mac, arp);
+
+        assert Logger.lowLevelDebug("original input " + pkb + " is replaced with arp request " + ether);
+        pkb.replacePacket(ether);
+    }
+
+    private void generateNdpRequestForTunDev(PacketBuffer pkb) {
+        var tun = (TunIface) pkb.devin;
+        var ipv6 = SwitchUtils.buildNeighborSolicitationPacket((IPv6) pkb.ipPkt.getDst(), tun.mac, (IPv6) pkb.ipPkt.getSrc());
+        var ether = SwitchUtils.buildEtherIpPacket(SwitchUtils.BROADCAST_MAC, tun.mac, ipv6);
+
+        assert Logger.lowLevelDebug("original input " + pkb + " is replaced with ndp request " + ether);
+        pkb.replacePacket(ether);
     }
 
     private void handleInputPkb() {

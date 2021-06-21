@@ -1435,7 +1435,7 @@ public class HelpCommand {
                 ))
             )),
         tun("tun", null, "add/remove a tun device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
-            "Note: 1) use list iface to see these tun devices, 2) should set -Dvfd=posix, 3) in macos, the tun dev name must start with `utun`",
+            "Note: 1) use list iface to see these tun devices, 2) should set -Dvfd=posix",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),

@@ -21,6 +21,8 @@ import java.util.concurrent.TimeUnit;
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
     public static final int RCV_HEAD_PRESERVE_LEN = 512;
+    public static final MacAddress BROADCAST_MAC = new MacAddress("ff:ff:ff:ff:ff:ff");
+    public static final MacAddress ZERO_MAC = new MacAddress("00:00:00:00:00:00");
 
     private SwitchUtils() {
     }
@@ -180,6 +182,37 @@ public class SwitchUtils {
         ipv6.setHopLimit(255);
         ipv6.setSrc(requestedIpOrSrc);
         ipv6.setDst(dstIp);
+        ipv6.setExtHeaders(Collections.emptyList());
+        ipv6.setPacket(icmp);
+        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+
+        return ipv6;
+    }
+
+    public static Ipv6Packet buildNeighborSolicitationPacket(IPv6 targetIp, MacAddress senderMac, IPv6 senderIp) {
+        IcmpPacket icmp = new IcmpPacket(true);
+        icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
+        icmp.setCode(0);
+        icmp.setOther(
+            (ByteArray.allocate(4).set(0, (byte) 0)).concat(ByteArray.from(targetIp.getAddress()))
+                .concat(( // the source link-layer address
+                    ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address)
+                        .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
+                        .concat(senderMac.bytes)
+                ))
+        );
+
+        Ipv6Packet ipv6 = new Ipv6Packet();
+        ipv6.setVersion(6);
+        ipv6.setNextHeader(Consts.IP_PROTOCOL_ICMPv6);
+        ipv6.setHopLimit(255);
+        ipv6.setSrc(senderIp);
+        byte[] foo = Consts.IPv6_Solicitation_Node_Multicast_Address.toNewJavaArray();
+        byte[] bar = targetIp.getAddress();
+        foo[13] = bar[13];
+        foo[14] = bar[14];
+        foo[15] = bar[15];
+        ipv6.setDst(IP.fromIPv6(foo));
         ipv6.setExtHeaders(Collections.emptyList());
         ipv6.setPacket(icmp);
         ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
