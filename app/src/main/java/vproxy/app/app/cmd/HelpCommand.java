@@ -121,7 +121,7 @@ public class HelpCommand {
             .append(withMaxLen("use `man action|resource|param_name` to get detailed doc." +
                     "use `man add-to|remove-from` to see info about `add-to` or `remove-from`",
                 descrMaxLen, descrSpaces))
-            .append(SystemCommand.systemCallHelpStr)
+            .append(SystemCommand.systemCommandHelpStr)
             .append("\n    Available actions:");
         for (ActMan actMan : ActMan.values()) {
             sb.append("\n        ")

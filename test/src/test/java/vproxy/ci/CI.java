@@ -171,7 +171,7 @@ public class CI {
             vproxy.app.app.Main.main(new String[]{
                 "resp-controller", "localhost:" + vproxyRESPPort, password,
                 "http-controller", "localhost:" + vproxyHTTPPort,
-                "allowSystemCallInNonStdIOController",
+                "allowSystemCommandInNonStdIOController",
                 "noStdIOController",
                 "noLoadLast",
                 "noSave"

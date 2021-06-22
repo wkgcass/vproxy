@@ -131,18 +131,18 @@ add tcp-lb lb0 acceptor-elg acceptor event-loop-group worker address 10.0.0.10:8
 
 ### 6. 检查并保存配置
 
-你可以在vproxy控制台中执行一些特殊的命令，这些命令不能通过`redis-cli`执行。（除非你在启动时指定`allowSystemCallInNonStdIOController`，但是为了安全考虑，和本机文件系统或者进程相关的命令依然不可执行）。
+你可以在vproxy控制台中执行一些特殊的命令，这些命令不能通过`redis-cli`执行。（除非你在启动时指定`allowSystemCommandInNonStdIOController`，但是为了安全考虑，和本机文件系统或者进程相关的命令依然不可执行）。
 
 检查配置：
 
 ```
-System call: list config
+System: list config
 ```
 
 保存配置：
 
 ```
-System call: save ~/vproxy.conf
+System: save ~/vproxy.conf
 ```
 
 除了手动保存外，vproxy每小时都会自动向`~/.vproxy/vproxy.last`中保存配置。此外，如果程序通过`SIGINT`,`SIGHUP`停止或者手动关闭，配置文件都会自动保存。

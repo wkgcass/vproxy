@@ -33,8 +33,8 @@ public class StdIOController {
                 stdoutSync(Application.get().version);
                 continue;
             }
-            if (SystemCommand.isSystemCall(line)) {
-                handleSystemCall(line);
+            if (SystemCommand.isSystemCommand(line)) {
+                handleSystemCommand(line);
             } else {
                 handleCommand(line);
             }
@@ -65,8 +65,8 @@ public class StdIOController {
         printStarter();
     }
 
-    private static void handleSystemCall(String line) {
-        SystemCommand.handleSystemCall(line, new ResultCallback(line));
+    private static void handleSystemCommand(String line) {
+        SystemCommand.handleSystemCommand(line, new ResultCallback(line));
     }
 
     private static void handleCommand(String line) {

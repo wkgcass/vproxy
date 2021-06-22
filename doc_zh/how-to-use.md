@@ -91,7 +91,7 @@ java vproxy.app.app.Main load ~/vproxy.conf
 
 > 可以同时指定多个配置文件，每个配置文件都会被读取
 
-#### 3.3. System call 指令
+#### 3.3. 系统指令
 
 启动一个vproxy实例：
 
@@ -102,8 +102,8 @@ java vproxy.app.app.Main
 然后输入：
 
 ```
-> System call: save ~/vproxy.conf             --- 将当前配置保存到文件中
-> System call: load ~/vproxy.conf             --- 从文件中读取配置
+> System: save ~/vproxy.conf             --- 将当前配置保存到文件中
+> System: load ~/vproxy.conf             --- 从文件中读取配置
 ```
 
 > 你可以使用`noLoadLast`禁止启动时的配置文件读取。  
@@ -139,8 +139,8 @@ redis-cli -p 16309 -a m1paSsw0rd
 
 > 注意: `redis-cli` 不会将`help`命令发送到服务端，而是直接打印自己的帮助信息。  
 > 注意: 所以我们提供了一个叫做`man`的命令，用来获取vproxy的帮助信息。  
-> 注意: 为安全考虑，并非所有`System call:`命令都可以在RESPController中执行。  
-> 注意: 你可以在启动时指定一个`allowSystemCallInNonStdIOController`标记，以便在 RESPController 中启用 system call 指令。
+> 注意: 为安全考虑，并非所有`System:`命令都可以在RESPController中执行。  
+> 注意: 你可以在启动时指定一个`allowSystemCommandInNonStdIOController`标记，以便在 RESPController 中启用系统指令。
 
 在启动vproxy时，`resp-controller`就会默认自动启动，监听`16309`，使用密码`123456`。  
 你也可以使用启动参数或者在StdIOController中使用命令控制RESPController。
@@ -155,7 +155,7 @@ redis-cli -p 16309 -a m1paSsw0rd
 java vproxy.app.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
-#### 5.2. System call 命令
+#### 5.2. 通过系统指令
 
 启动vproxy实例：
 
@@ -166,13 +166,13 @@ java vproxy.app.app.Main
 你可以输入如下命令来启动RESPController：
 
 ```
-> System call: add resp-controller ${name} address ${host:port} password ${pass}
+> System: add resp-controller ${name} address ${host:port} password ${pass}
 ```
 
 你可以输入如下命令来查看已有的RESPController：
 
 ```
-> System call: list-detail resp-controller
+> System: list-detail resp-controller
 resp-controller	127.0.0.1:16309              ---- 返回内容
 >
 ```
@@ -180,7 +180,7 @@ resp-controller	127.0.0.1:16309              ---- 返回内容
 你可以输入如下命令来停止一个RESPController：
 
 ```
-> System call: remove resp-controller ${name}
+> System: remove resp-controller ${name}
 (done)                                       ---- 返回内容
 >
 ```
@@ -206,25 +206,25 @@ e.g.
 java vproxy.app.app.Main http-controller 0.0.0.0:18776
 ```
 
-#### 6.2. System Call 命令
+#### 6.2. 通过系统指令
 
 你可以输入如下命令来创建一个HTTPController
 
 ```
-> System call: add http-controller ${name} address ${host:port}
+> System: add http-controller ${name} address ${host:port}
 ```
 
 输入如下命令查看当前的HTTPController
 
 ```
-> System call: list-detail http-controller
+> System: list-detail http-controller
 http-controller        0.0.0.0:18776              ---- this is response
 ```
 
 输入如下命令停止HTTPController
 
 ```
-> System call: remove http-controller ${name}
+> System: remove http-controller ${name}
 (done)                                       ---- this is response
 ```
 

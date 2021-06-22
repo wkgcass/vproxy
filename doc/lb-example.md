@@ -135,18 +135,18 @@ Then the tcp loadbalancer starts.
 
 #### 6. Check and save config
 
-You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCallInNonStdIOController` on start up, but methods related to local filesystem or process will not be allowed for safety concern).
+You can run some special commands in vproxy console, they cannot be executed from `redis-cli`. (Unless you specify `allowSystemCommandInNonStdIOController` on start up, but methods related to local filesystem or process will not be allowed for safety concern).
 
 Check config:
 
 ```
-System call: list config
+System: list config
 ```
 
 Save config:
 
 ```
-System call: save ~/vproxy.conf
+System: save ~/vproxy.conf
 ```
 
 Except for saving by hand, the config can be automatically saved in `~/.vproxy/vproxy.last` for every hour. And if it's terminated by `SIGINT` or `SIGHUP`, or manually shutdown, the config will also be saved.

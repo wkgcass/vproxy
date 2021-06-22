@@ -123,12 +123,12 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
             }
         };
 
-        if (SystemCommand.isSystemCall(line)) {
+        if (SystemCommand.isSystemCommand(line)) {
             if (!SystemCommand.allowNonStdIOController) {
-                cb.failed(new XException("system call denied in RESPController"));
+                cb.failed(new XException("system cmd denied in RESPController"));
                 return;
             }
-            SystemCommand.handleSystemCall(line, callback);
+            SystemCommand.handleSystemCommand(line, callback);
         } else {
             Command cmd;
             try {

@@ -28,41 +28,41 @@ public class SystemCommand {
     private SystemCommand() {
     }
 
-    static final String systemCallHelpStr = "" +
-        "\n        System call: help                          show this message" +
-        "\n        System call: shutdown                      shutdown the vproxy process" +
-        "\n        System call: load ${filepath}              load config commands from a file" +
-        "\n        System call: save ${filepath}              save current config into a file" +
-        "\n        System call: add resp-controller           start resp controller" +
+    static final String systemCommandHelpStr = "" +
+        "\n        System: help                               show this message" +
+        "\n        System: shutdown                           shutdown the vproxy process" +
+        "\n        System: load ${filepath}                   load config commands from a file" +
+        "\n        System: save ${filepath}                   save current config into a file" +
+        "\n        System: add resp-controller                start resp controller" +
         "\n                               ${alias}" +
         "\n                               address  ${bind addr}" +
         "\n                               password ${password}" +
-        "\n        System call: remove resp-controller        stop resp controller" +
+        "\n        System: remove resp-controller             stop resp controller" +
         "\n                               ${alias}" +
-        "\n        System call: list-detail resp-controller   check resp controller" +
-        "\n        System call: add http-controller           start http controller" +
+        "\n        System: list-detail resp-controller        check resp controller" +
+        "\n        System: add http-controller                start http controller" +
         "\n                               ${alias}" +
         "\n                               address ${bind addr}" +
-        "\n        System call: remove http-controller        stop http controller" +
+        "\n        System: remove http-controller             stop http controller" +
         "\n                               ${alias}" +
-        "\n        System call: list-detail http-controller   check http controller" +
-        "\n        System call: add docker-network-plugin-controller         start docker net plugin ctl" +
+        "\n        System: list-detail http-controller        check http controller" +
+        "\n        System: add docker-network-plugin-controller              start docker net plugin ctl" +
         "\n                               ${alias}" +
         "\n                               path ${unix domain socket path}" +
-        "\n        System call: remove docker-network-plugin-controller      stop docker net plugin ctl" +
+        "\n        System: remove docker-network-plugin-controller           stop docker net plugin ctl" +
         "\n                               ${alias}" +
-        "\n        System call: list-detail docker-network-plugin-controller show docker net plugin ctl list" +
-        "\n        System call: list config                   show current config";
+        "\n        System: list-detail docker-network-plugin-controller show docker net plugin ctl list" +
+        "\n        System: list config                        show current config";
 
     public static boolean allowNonStdIOController = false;
 
-    public static boolean isSystemCall(String line) {
-        return line.startsWith("System call:");
+    public static boolean isSystemCommand(String line) {
+        return line.startsWith("System:");
     }
 
-    public static void handleSystemCall(String line, Callback<CmdResult, ? super Throwable> cb) {
+    public static void handleSystemCommand(String line, Callback<CmdResult, ? super Throwable> cb) {
         String from = Utils.stackTraceStartingFromThisMethodInclusive()[1].getClassName();
-        String cmd = line.substring("System call:".length()).trim();
+        String cmd = line.substring("System:".length()).trim();
         outswitch:
         switch (cmd) {
             case "help":
@@ -86,7 +86,7 @@ public class SystemCommand {
                     }
                     String[] split = cmd.split(" ");
                     if (split.length <= 1) {
-                        cb.failed(new Exception("invalid system call for `load`: should specify a file name to load"));
+                        cb.failed(new Exception("invalid system cmd for `load`: should specify a file name to load"));
                         break;
                     }
                     StringBuilder filename = new StringBuilder();
@@ -119,7 +119,7 @@ public class SystemCommand {
                     }
                     String[] split = cmd.split(" ");
                     if (split.length <= 1) {
-                        cb.failed(new Exception("invalid system call for `save`: should specify a file name to save"));
+                        cb.failed(new Exception("invalid system cmd for `save`: should specify a file name to save"));
                         break;
                     }
                     StringBuilder filename = new StringBuilder();
@@ -247,7 +247,7 @@ public class SystemCommand {
                             break;
                     }
                 }
-                cb.failed(new Exception("unknown or invalid system call `" + cmd + "`"));
+                cb.failed(new Exception("unknown or invalid system cmd `" + cmd + "`"));
         }
     }
 
@@ -262,7 +262,7 @@ public class SystemCommand {
         try {
             cmd = Command.statm(Arrays.asList(arr));
         } catch (Exception e) {
-            cb.failed(new Exception("invalid system call: " + Utils.formatErr(e)));
+            cb.failed(new Exception("invalid System: " + Utils.formatErr(e)));
             return;
         }
         if (type.equals("docker-network-plugin")) {
@@ -287,7 +287,7 @@ public class SystemCommand {
             try {
                 AddrHandle.check(cmd);
             } catch (Exception e) {
-                cb.failed(new XException("invalid system call, address is invalid: " + Utils.formatErr(e)));
+                cb.failed(new XException("invalid system cmd, address is invalid: " + Utils.formatErr(e)));
                 return;
             }
         }
@@ -300,7 +300,7 @@ public class SystemCommand {
                 addr = AddrHandle.get(cmd);
             } catch (Exception e) {
                 Logger.shouldNotHappen("it should have already been checked but still failed", e);
-                cb.failed(new Exception("invalid system call"));
+                cb.failed(new Exception("invalid system cmd"));
                 return;
             }
         }

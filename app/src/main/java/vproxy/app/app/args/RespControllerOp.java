@@ -37,7 +37,7 @@ public class RespControllerOp implements MainOp {
         ctx.set("hasRespController", true);
         //noinspection StringBufferReplaceableByString
         StringBuilder call = new StringBuilder();
-        call.append("System call: add ")
+        call.append("System: add ")
             .append("resp-controller")
             .append(" (")
             .append("resp-controller")
@@ -46,7 +46,7 @@ public class RespControllerOp implements MainOp {
             .append(" password ")
             .append(args[1]);
         BlockCallback<CmdResult, Throwable> cb = new BlockCallback<>();
-        SystemCommand.handleSystemCall(call.toString(), cb);
+        SystemCommand.handleSystemCommand(call.toString(), cb);
         try {
             cb.block();
         } catch (Throwable e) {

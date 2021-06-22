@@ -37,14 +37,14 @@ public class HttpControllerOp implements MainOp {
         ctx.set("hasHttpController", true);
         //noinspection StringBufferReplaceableByString
         StringBuilder call = new StringBuilder();
-        call.append("System call: add ")
+        call.append("System: add ")
             .append("http-controller")
             .append(" (")
             .append("http-controller")
             .append(") address ")
             .append(args[0]);
         BlockCallback<CmdResult, Throwable> cb = new BlockCallback<>();
-        SystemCommand.handleSystemCall(call.toString(), cb);
+        SystemCommand.handleSystemCommand(call.toString(), cb);
         try {
             cb.block();
         } catch (Throwable e) {

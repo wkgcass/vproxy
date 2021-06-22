@@ -42,7 +42,7 @@ public class Main {
         "\n\t\tdocker-network-plugin-controller ${path}     Start the docker-network-plugin-" +
         "\n\t\t                                             controller, will be named as" +
         "\n\t\t                                             `docker-network-plugin-controller`" +
-        "\n\t\tallowSystemCallInNonStdIOController          Allow system call in all controllers" +
+        "\n\t\tallowSystemCommandInNonStdIOController       Allow system cmd in all controllers" +
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
         "\n\t\t                                             if the flag is set" +
@@ -232,7 +232,7 @@ public class Main {
 
         // init ctx
         MainCtx ctx = new MainCtx();
-        ctx.addOp(new AllowSystemCallInNonStdIOControllerOp());
+        ctx.addOp(new AllowSystemCommandInNonStdIOControllerOp());
         ctx.addOp(new CheckOp());
         ctx.addOp(new HttpControllerOp());
         ctx.addOp(new DockerNetworkPluginControllerOp());

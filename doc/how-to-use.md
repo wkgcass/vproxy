@@ -88,7 +88,7 @@ java vproxy.app.app.Main load ~/vproxy.conf
 
 > Multiple config files can be specified at the same time, they will be loaded one by one.
 
-#### 3.3. system call command
+#### 3.3. system command
 
 Start the vproxy instance:
 
@@ -99,8 +99,8 @@ java vproxy.app.app.Main
 Then type in:
 
 ```
-> System call: save ~/vproxy.conf             --- saves the current config into a file
-> System call: load ~/vproxy.conf             --- loads config from a file
+> System: save ~/vproxy.conf             --- saves the current config into a file
+> System: load ~/vproxy.conf             --- loads config from a file
 ```
 
 > You may use `noLoadLast` to forbid loading config on startup.  
@@ -136,8 +136,8 @@ redis-cli -p 16309 -a m1paSsw0rd
 
 > NOTE: `redis-cli` traps `help` command and prints redis help message.  
 > NOTE: So we provided a new command named `man` instead, to retrieve vproxy help message.  
-> NOTE: For safety concern, not all `System call:` commands are not allowed in RESPController.
-> NOTE: You can use add start argument flag `allowSystemCallInNonStdIOController` to enable system call commands for RESPController
+> NOTE: For safety concern, not all `System:` commands are not allowed in RESPController.  
+> NOTE: You can use add start argument flag `allowSystemCommandInNonStdIOController` to enable system commands for RESPController
 
 The `resp-controller` is automatically launched on startup and listens to `16309` with password `123456`.  
 You may configure the RESPController on startup or using a command in StdIOController.
@@ -152,7 +152,7 @@ e.g.
 java vproxy.app.app.Main resp-controller 0.0.0.0:16309 m1paSsw0rd
 ```
 
-#### 5.2. system call command
+#### 5.2. through system command
 
 Start the vproxy instance:
 
@@ -163,13 +163,13 @@ java vproxy.app.app.Main
 To create a RESPController, you can type in:
 
 ```
-> System call: add resp-controller ${name} address ${host:port} password ${pass}
+> System: add resp-controller ${name} address ${host:port} password ${pass}
 ```
 
 To list existing RESPController, you can type in:
 
 ```
-> System call: list-detail resp-controller
+> System: list-detail resp-controller
 resp-controller	127.0.0.1:16309              ---- this is response
 >
 ```
@@ -177,7 +177,7 @@ resp-controller	127.0.0.1:16309              ---- this is response
 To stop a RESPController, you can type in:
 
 ```
-> System call: remove resp-controller ${name}
+> System: remove resp-controller ${name}
 (done)                                       ---- this is response
 >
 ```
@@ -203,7 +203,7 @@ e.g.
 java vproxy.app.app.Main http-controller 0.0.0.0:18776
 ```
 
-#### 6.2. system call command
+#### 6.2. through system command
 
 Start the vproxy instance:
 
@@ -214,13 +214,13 @@ java vproxy.app.app.Main
 To create a HTTPController, you can type in:
 
 ```
-> System call: add http-controller ${name} address ${host:port}
+> System: add http-controller ${name} address ${host:port}
 ```
 
 To list existing HTTPController, you can type in:
 
 ```
-> System call: list-detail http-controller
+> System: list-detail http-controller
 http-controller	0.0.0.0:18776              ---- this is response
 >
 ```
@@ -228,7 +228,7 @@ http-controller	0.0.0.0:18776              ---- this is response
 To stop a HTTPController, you can type in:
 
 ```
-> System call: remove http-controller ${name}
+> System: remove http-controller ${name}
 (done)                                       ---- this is response
 >
 ```

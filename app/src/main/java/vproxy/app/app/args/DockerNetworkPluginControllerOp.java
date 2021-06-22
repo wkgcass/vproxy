@@ -37,14 +37,14 @@ public class DockerNetworkPluginControllerOp implements MainOp {
         ctx.set("hasDockerNetworkPluginController", true);
         //noinspection StringBufferReplaceableByString
         StringBuilder call = new StringBuilder();
-        call.append("System call: add ")
+        call.append("System: add ")
             .append("docker-network-plugin-controller")
             .append(" (")
             .append("docker-network-plugin-controller")
             .append(") path ")
             .append(args[0]);
         BlockCallback<CmdResult, Throwable> cb = new BlockCallback<>();
-        SystemCommand.handleSystemCall(call.toString(), cb);
+        SystemCommand.handleSystemCommand(call.toString(), cb);
         try {
             cb.block();
         } catch (Throwable e) {

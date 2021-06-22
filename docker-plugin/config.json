@@ -8,7 +8,7 @@
   "entrypoint": [
     "/vproxy",
     "-Dvfd=posix", "-Djava.library.path=/",
-    "allowSystemCallInNonStdIOController",
+    "allowSystemCommandInNonStdIOController",
     "noStdIOController",
     "sigIntDirectlyShutdown",
 

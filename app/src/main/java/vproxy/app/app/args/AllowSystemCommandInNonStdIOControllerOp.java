@@ -4,10 +4,10 @@ import vproxy.app.app.MainCtx;
 import vproxy.app.app.MainOp;
 import vproxy.app.app.cmd.SystemCommand;
 
-public class AllowSystemCallInNonStdIOControllerOp implements MainOp {
+public class AllowSystemCommandInNonStdIOControllerOp implements MainOp {
     @Override
     public String key() {
-        return "allowSystemCallInNonStdIOController";
+        return "allowSystemCommandInNonStdIOController";
     }
 
     @Override
