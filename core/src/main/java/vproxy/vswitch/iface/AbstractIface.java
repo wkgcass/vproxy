@@ -44,8 +44,13 @@ public abstract class AbstractIface implements Iface {
     }
 
     @Override
-    public void setIngressFilter(PacketFilter filter) {
-        this.ingressFilter = filter;
+    public boolean replaceIngressFilter(PacketFilter old, PacketFilter now) {
+        var foo = this.ingressFilter;
+        if (foo != old) {
+            return false;
+        }
+        this.ingressFilter = now;
+        return true;
     }
 
     @Override
@@ -54,8 +59,13 @@ public abstract class AbstractIface implements Iface {
     }
 
     @Override
-    public void setEgressFilter(PacketFilter egressFilter) {
-        this.egressFilter = egressFilter;
+    public boolean replaceEgressFilter(PacketFilter old, PacketFilter now) {
+        var foo = this.egressFilter;
+        if (foo != old) {
+            return false;
+        }
+        this.egressFilter = now;
+        return true;
     }
 
     @Override

@@ -837,8 +837,18 @@ public class Switch {
         return ifaceWatcher;
     }
 
-    public void setIfaceWatcher(IfaceWatcher ifaceWatcher) {
-        this.ifaceWatcher = ifaceWatcher;
+    public boolean replaceIfaceWatcher(IfaceWatcher old, IfaceWatcher now) {
+        var foo = this.ifaceWatcher;
+        if (foo != old) {
+            return false;
+        }
+        this.ifaceWatcher = now;
+
+        // init with existing ifaces
+        for (var iface : ifaces.keySet()) {
+            now.ifaceAdded(iface);
+        }
+        return true;
     }
 
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {

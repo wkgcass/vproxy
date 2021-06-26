@@ -26,11 +26,11 @@ public interface Iface {
 
     String paramsToString();
 
-    void setIngressFilter(PacketFilter filter);
+    boolean replaceIngressFilter(PacketFilter old, PacketFilter now);
 
     PacketFilter getIngressFilter();
 
-    void setEgressFilter(PacketFilter filter);
+    boolean replaceEgressFilter(PacketFilter old, PacketFilter now);
 
     PacketFilter getEgressFilter();
 }
