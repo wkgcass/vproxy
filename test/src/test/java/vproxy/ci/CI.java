@@ -1196,6 +1196,8 @@ public class CI {
         assertEquals("7771", requestViaProxy("myexample.com", 8080));
     }
 
+    // TODO is not supported now
+    @Ignore
     @Test
     public void channelAndStateAndStatistics() throws Exception {
         int port = 7007;

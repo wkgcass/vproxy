@@ -2,7 +2,6 @@ package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
@@ -18,19 +17,6 @@ import java.util.List;
 
 public class ArpHandle {
     private ArpHandle() {
-    }
-
-    public static void checkArpParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.arp.fullname + " on top level");
-        if (parent.type != ResourceType.vpc) {
-            if (parent.type == ResourceType.sw) {
-                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.arp.fullname + ", you have to specify vpc first");
-            }
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.arp.fullname);
-        }
-
-        VpcHandle.checkVpc(parent);
     }
 
     public static int count(Resource parent) throws Exception {

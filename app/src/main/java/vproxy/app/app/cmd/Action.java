@@ -5,7 +5,6 @@ public enum Action {
     L("list-detail"),
     a("add"),
     r("remove"),
-    R("force-remove"),
     u("update"),
     ;
     public final String fullname;

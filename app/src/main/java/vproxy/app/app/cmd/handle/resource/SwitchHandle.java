@@ -25,24 +25,6 @@ public class SwitchHandle {
     private SwitchHandle() {
     }
 
-    public static void checkSwitch(Resource sw) throws Exception {
-        // only top level switches would be called for this method
-        if (sw.parentResource != null)
-            throw new Exception(sw.type.fullname + " is on top level");
-    }
-
-    @SuppressWarnings("Duplicates")
-    public static void checkCreateSwitch(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.addr))
-            throw new Exception("missing argument " + Param.addr.fullname);
-
-        AddrHandle.check(cmd);
-
-        if (cmd.prepositionResource == null) { // the switch on top level can have these arguments
-            checkTopLevelArgs(cmd);
-        }
-    }
-
     public static Switch get(Resource sw) throws NotFoundException {
         return Application.get().switchHolder.get(sw.alias);
     }
@@ -61,8 +43,7 @@ public class SwitchHandle {
         return result;
     }
 
-    @SuppressWarnings("Duplicates")
-    private static void addTopLevel(Command cmd) throws Exception {
+    public static void add(Command cmd) throws Exception {
         if (!cmd.args.containsKey(Param.elg)) {
             cmd.args.put(Param.elg, Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
         }
@@ -105,46 +86,13 @@ public class SwitchHandle {
             mtu, flood);
     }
 
-    public static void addSubLevel(Command cmd) throws Exception {
+    public static void attach(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
         IPPort addr = AddrHandle.get(cmd);
 
         Switch sw = get(cmd.prepositionResource);
-        boolean addSwitchFlag = true;
-        if (cmd.flags.contains(Flag.noswitchflag)) {
-            addSwitchFlag = false;
-        }
+        boolean addSwitchFlag = !cmd.flags.contains(Flag.noswitchflag);
         sw.addRemoteSwitch(alias, addr, addSwitchFlag);
-    }
-
-    public static void add(Command cmd) throws Exception {
-        if (cmd.prepositionResource == null) {
-            addTopLevel(cmd);
-        } else {
-            addSubLevel(cmd);
-        }
-    }
-
-    public static void checkUpdateSwitch(Command cmd) throws Exception {
-        if (cmd.prepositionResource != null) {
-            throw new Exception("you can only update the switch on top level");
-        }
-        checkTopLevelArgs(cmd);
-    }
-
-    private static void checkTopLevelArgs(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.mactabletimeout)) {
-            TimeoutHandle.check(cmd, Param.mactabletimeout);
-        }
-        if (cmd.args.containsKey(Param.arptabletimeout)) {
-            TimeoutHandle.check(cmd, Param.arptabletimeout);
-        }
-        if (cmd.args.containsKey(Param.mtu)) {
-            MTUHandle.check(cmd);
-        }
-        if (cmd.args.containsKey(Param.flood)) {
-            FloodHandle.check(cmd);
-        }
     }
 
     public static void update(Command cmd) throws Exception {
@@ -169,12 +117,14 @@ public class SwitchHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
-        if (cmd.prepositionResource == null) { // remove the top level switch
-            Application.get().switchHolder.removeAndStop(cmd.resource.alias);
-        } else { // remove the remote switch ref inside the switch
-            Application.get().switchHolder.get(cmd.prepositionResource.alias).delRemoteSwitch(cmd.resource.alias);
-        }
+    public static void remove(Command cmd) throws Exception {
+        // remove the top level switch
+        Application.get().switchHolder.removeAndStop(cmd.resource.alias);
+    }
+
+    public static void detach(Command cmd) throws Exception {
+        // remove the remote switch ref inside the switch
+        Application.get().switchHolder.get(cmd.prepositionResource.alias).delRemoteSwitch(cmd.resource.alias);
     }
 
     public static class SwitchRef {

@@ -1,7 +1,6 @@
 package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.handle.param.NetworkHandle;
 import vproxy.app.app.cmd.handle.param.PortRangeHandle;
@@ -20,22 +19,6 @@ public class SecurityGroupRuleHandle {
     private SecurityGroupRuleHandle() {
     }
 
-    public static void checkCreateSecurityGroupRule(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.net))
-            throw new Exception("missing argument " + Param.net.fullname);
-        if (!cmd.args.containsKey(Param.protocol))
-            throw new Exception("missing argument " + Param.protocol.fullname);
-        if (!cmd.args.containsKey(Param.portrange))
-            throw new Exception("missing argument " + Param.portrange.fullname);
-        if (!cmd.args.containsKey(Param.secgrdefault))
-            throw new Exception("missing argument " + Param.secgrdefault.fullname);
-
-        NetworkHandle.check(cmd);
-        ProtocolHandle.check(cmd);
-        PortRangeHandle.check(cmd);
-        SecGRDefaultHandle.check(cmd);
-    }
-
     public static List<String> names(Resource parent) throws Exception {
         SecurityGroup grp = SecurityGroupHandle.get(parent);
         return grp.getRules().stream().map(r -> r.alias).collect(Collectors.toList());
@@ -46,7 +29,7 @@ public class SecurityGroupRuleHandle {
         return grp.getRules();
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         SecurityGroup grp = SecurityGroupHandle.get(cmd.prepositionResource);
         grp.removeRule(cmd.resource.alias);
     }

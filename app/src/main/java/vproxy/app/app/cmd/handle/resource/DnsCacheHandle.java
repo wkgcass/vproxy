@@ -13,12 +13,6 @@ public class DnsCacheHandle {
     private DnsCacheHandle() {
     }
 
-    public static void checkDnsCacheParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.dnscache.fullname + " on top level");
-        ResolverHandle.checkResolver(parent);
-    }
-
     public static int count() {
         Resolver resolver = Resolver.getDefault();
         return resolver.cacheCount();

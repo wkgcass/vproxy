@@ -19,7 +19,6 @@ There are eight `$action`s in vproxy command:
 * `list-detail (L)`: show detailed info about some resources
 * `update (u)`: modify a resource
 * `remove (r)`: remove and destroy a resource
-* `force-remove (R)`: ignore warnings and remove a resource
 * `remove (r) ... from ...`: detach a resource from another one
 
 If the `$action` is `list` or `list-detail`, the first `$resource-alias` should not be specified, otherwise, it's required:
@@ -112,10 +111,6 @@ Modify a resource.
 ## Action: remove (r)
 
 Remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted.
-
-## Action: force-remove (R)
-
-Remove and destroy/stop a resource, regardless of warnings.
 
 ## Action: remove ... from ... (r ... from ...)
 
@@ -715,12 +710,12 @@ list-detail dns-cache in resolver (default)
    3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
 ```
 
-#### force-remove
+#### remove
 
 Specify the host and remove the dns cache.
 
 ```
-force-remove dns-cache localhost from resolver (default)
+remove dns-cache localhost from resolver (default)
 "OK"
 ```
 
@@ -801,7 +796,7 @@ list-detail connection in server svr0 in sg sg0
 1) "127.0.0.1:63537/127.0.0.1:6379"
 ```
 
-#### force-remove
+#### remove from
 
 Close the connection, and if the connection is bond to a session, the session will be closed as well.
 
@@ -811,10 +806,10 @@ Supports regexp pattern or plain string:
 * otherwise it matches the full string
 
 ```
-force-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
+remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
 "OK"
 
-force-remove conn /.*/ from el worker2 in elg worker
+remove conn /.*/ from el worker2 in elg worker
 "OK"
 ```
 
@@ -850,15 +845,15 @@ list-detail session in socks5-server s5
    2) "127.0.0.1:53592/127.0.0.1:16666"
 ```
 
-#### force-remove
+#### remove from
 
 Close a session from lb. The related two connections will be closed as well.
 
 ```
-force-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
+remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
 "OK"
 
-force-remove sess /127.0.0.1:58713.*/ from tl lb0
+remove sess /127.0.0.1:58713.*/ from tl lb0
 "OK"
 ```
 

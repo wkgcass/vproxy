@@ -22,24 +22,6 @@ public class ConnectionHandle {
     private ConnectionHandle() {
     }
 
-    public static void checkConnectionParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.conn.fullname + " on top level");
-        if (parent.type == ResourceType.el) {
-            EventLoopHandle.checkEventLoop(parent);
-        } else if (parent.type == ResourceType.tl) {
-            TcpLBHandle.checkTcpLB(parent);
-        } else if (parent.type == ResourceType.socks5) {
-            Socks5ServerHandle.checkSocks5Server(parent);
-        } else if (parent.type == ResourceType.svr) {
-            ServerHandle.checkServer(parent);
-        } else if (parent.type == ResourceType.vpc) {
-            VpcHandle.checkVpc(parent);
-        } else {
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.conn.fullname);
-        }
-    }
-
     public static Conn get(Resource resource) throws Exception {
         return list(resource.parentResource)
             .stream()

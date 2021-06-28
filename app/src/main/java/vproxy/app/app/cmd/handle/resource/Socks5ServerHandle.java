@@ -24,42 +24,6 @@ public class Socks5ServerHandle {
     private Socks5ServerHandle() {
     }
 
-    public static void checkSocks5Server(Resource socks5) throws Exception {
-        if (socks5.parentResource != null)
-            throw new Exception(socks5.type.fullname + " is on top level");
-    }
-
-    @SuppressWarnings("Duplicates")
-    public static void checkCreateSocks5Server(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.addr))
-            throw new Exception("missing argument " + Param.addr.fullname);
-        if (!cmd.args.containsKey(Param.ups))
-            throw new Exception("missing argument " + Param.ups.fullname);
-
-        AddrHandle.check(cmd);
-
-        if (cmd.args.containsKey(Param.inbuffersize))
-            InBufferSizeHandle.check(cmd);
-        else
-            cmd.args.put(Param.inbuffersize, "16384");
-
-        if (cmd.args.containsKey(Param.outbuffersize))
-            OutBufferSizeHandle.check(cmd);
-        else
-            cmd.args.put(Param.outbuffersize, "16384");
-
-        if (cmd.args.containsKey(Param.timeout))
-            TimeoutHandle.get(cmd);
-    }
-
-    public static void checkUpdateSocks5Server(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.inbuffersize))
-            InBufferSizeHandle.check(cmd);
-
-        if (cmd.args.containsKey(Param.outbuffersize))
-            OutBufferSizeHandle.check(cmd);
-    }
-
     public static Socks5Server get(Resource socks5) throws NotFoundException {
         return Application.get().socks5ServerHolder.get(socks5.alias);
     }
@@ -92,8 +56,8 @@ public class Socks5ServerHandle {
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
-        int inBufferSize = InBufferSizeHandle.get(cmd);
-        int outBufferSize = OutBufferSizeHandle.get(cmd);
+        int inBufferSize = InBufferSizeHandle.get(cmd, 16384);
+        int outBufferSize = OutBufferSizeHandle.get(cmd, 16384);
         int timeout;
         SecurityGroup secg;
         if (cmd.args.containsKey(Param.timeout)) {
@@ -116,7 +80,7 @@ public class Socks5ServerHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         Application.get().socks5ServerHolder.removeAndStop(cmd.resource.alias);
     }
 
@@ -124,10 +88,10 @@ public class Socks5ServerHandle {
         Socks5Server socks5 = get(cmd.resource);
 
         if (cmd.args.containsKey(Param.inbuffersize)) {
-            socks5.setInBufferSize(InBufferSizeHandle.get(cmd));
+            socks5.setInBufferSize(InBufferSizeHandle.get(cmd, -1));
         }
         if (cmd.args.containsKey(Param.outbuffersize)) {
-            socks5.setOutBufferSize(OutBufferSizeHandle.get(cmd));
+            socks5.setOutBufferSize(OutBufferSizeHandle.get(cmd, -1));
         }
         if (cmd.flags.contains(Flag.allownonbackend)) {
             socks5.allowNonBackend = true;

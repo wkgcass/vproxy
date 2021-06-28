@@ -3,8 +3,6 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.AddrHandle;
 import vproxy.base.util.Utils;
 import vproxy.vfd.IPPort;
@@ -12,14 +10,6 @@ import vproxy.vswitch.Switch;
 
 public class UserClientHandle {
     private UserClientHandle() {
-    }
-
-    public static void checkUserClientParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.ucli.fullname + " on top level");
-        if (parent.type != ResourceType.sw)
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ucli.fullname);
-        SwitchHandle.checkSwitch(parent);
     }
 
     public static void checkCreateUserClient(Command cmd) throws Exception {

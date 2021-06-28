@@ -31,7 +31,6 @@ public enum ResourceType {
     ip("ip"),
     route("route"),
     ucli("user-client"),
-    proxy("proxy"),
 
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),

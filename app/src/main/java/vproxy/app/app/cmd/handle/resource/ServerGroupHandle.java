@@ -48,141 +48,56 @@ public class ServerGroupHandle {
         throw new NotFoundException("server-group in upstream " + resource.parentResource.alias, resource.alias);
     }
 
-    public static void checkAttachServerGroup(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.w))
-            WeightHandle.check(cmd);
-        if (cmd.args.containsKey(Param.anno))
-            AnnotationsHandle.check(cmd);
-    }
-
-    public static void checkCreateServerGroup(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.timeout))
-            throw new Exception("missing argument " + Param.timeout.fullname);
-        if (!cmd.args.containsKey(Param.period))
-            throw new Exception("missing argument " + Param.period.fullname);
-        if (!cmd.args.containsKey(Param.up))
-            throw new Exception("missing argument " + Param.up.fullname);
-        if (!cmd.args.containsKey(Param.down))
-            throw new Exception("missing argument " + Param.down.fullname);
-
-        try {
-            HealthCheckHandle.getHealthCheckConfig(cmd);
-        } catch (Exception e) {
-            throw new XException("invalid health check config");
-        }
-        if (cmd.args.containsKey(Param.meth)) {
-            try {
-                MethHandle.get(cmd);
-            } catch (Exception e) {
-                throw new XException("invalid method");
-            }
-        } else {
-            cmd.args.put(Param.meth, "wrr");
-        }
-
-        if (cmd.args.containsKey(Param.anno)) {
-            AnnotationsHandle.check(cmd);
-        }
-    }
-
-    public static void checkUpdateServerGroup(Command cmd) throws Exception {
-        if (cmd.resource.parentResource == null) {
-            // can only update the server group self info on top level
-            // i'm not saying that you cannot modify the one in upstream
-            // but you don't have to go into upstream to modify,
-            // the one on top level is the same one in any upstream
-            if (cmd.args.containsKey(Param.timeout)
-                || cmd.args.containsKey(Param.period)
-                || cmd.args.containsKey(Param.up)
-                || cmd.args.containsKey(Param.down)) {
-                try {
-                    HealthCheckHandle.getHealthCheckConfig(cmd);
-                } catch (Exception e) {
-                    throw new XException("missing health check argument or is invalid");
-                }
-            }
-            if (cmd.args.containsKey(Param.meth)) {
-                try {
-                    MethHandle.get(cmd);
-                } catch (Exception e) {
-                    throw new XException("invalid method");
-                }
-            }
-            if (cmd.args.containsKey(Param.anno)) {
-                AnnotationsHandle.check(cmd);
-            }
-        } else {
-            // can modify the weight in a upstream
-            if (cmd.resource.parentResource.type != ResourceType.ups)
-                throw new Exception(cmd.resource.parentResource.type.fullname + " does not contain " + ResourceType.sg.fullname);
-            if (cmd.args.containsKey(Param.w)) {
-                WeightHandle.check(cmd);
-            }
-            if (cmd.args.containsKey(Param.anno)) {
-                AnnotationsHandle.check(cmd);
-            }
-        }
-    }
-
-    public static void checkServerGroup(Resource serverGroup) throws Exception {
-        if (serverGroup.parentResource != null)
-            throw new Exception(serverGroup.type.fullname + " is on top level");
+    public static List<String> names() throws Exception {
+        return Application.get().serverGroupHolder.names();
     }
 
     public static List<String> names(Resource targetResource) throws Exception {
-        if (targetResource == null) {
-            return Application.get().serverGroupHolder.names();
-        } else {
-            return UpstreamHandle.get(targetResource).getServerGroupHandles()
-                .stream().map(g -> g.alias).collect(Collectors.toList());
+        return UpstreamHandle.get(targetResource).getServerGroupHandles()
+            .stream().map(g -> g.alias).collect(Collectors.toList());
+    }
+
+    public static List<ServerGroupRef> details() throws Exception {
+        ServerGroupHolder holder = Application.get().serverGroupHolder;
+        List<String> names = holder.names();
+        List<ServerGroupRef> list = new LinkedList<>();
+        for (String name : names) {
+            list.add(new ServerGroupRef(name, holder.get(name)));
         }
+        return list;
     }
 
     public static List<ServerGroupRef> details(Resource targetResource) throws Exception {
-        if (targetResource == null) {
-            ServerGroupHolder holder = Application.get().serverGroupHolder;
-            List<String> names = holder.names();
-            List<ServerGroupRef> list = new LinkedList<>();
-            for (String name : names) {
-                list.add(new ServerGroupRef(name, holder.get(name)));
-            }
-            return list;
-        } else {
-            return UpstreamHandle.get(targetResource).getServerGroupHandles()
-                .stream().map(h -> new ServerGroupRef(h.alias, h)).collect(Collectors.toList());
-        }
+        return UpstreamHandle.get(targetResource).getServerGroupHandles()
+            .stream().map(h -> new ServerGroupRef(h.alias, h)).collect(Collectors.toList());
     }
 
     public static void add(Command cmd) throws Exception {
-        if (cmd.prepositionResource == null) {
-            // add on top level
-            if (!cmd.args.containsKey(Param.elg)) {
-                cmd.args.put(Param.elg, Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
-            }
+        if (!cmd.args.containsKey(Param.elg)) {
+            cmd.args.put(Param.elg, Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME);
+        }
 
-            String alias = cmd.resource.alias;
-            String eventLoopGroupName = cmd.args.get(Param.elg);
-            EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);
-            HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
-            Annotations anno = null;
-            if (cmd.args.containsKey(Param.anno)) {
-                anno = AnnotationsHandle.get(cmd);
-            }
-            Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd), anno);
-        } else {
-            // add into upstream
-            int weight = WeightHandle.get(cmd);
-            var h = Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
-                .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
-            if (cmd.args.containsKey(Param.anno)) {
-                h.setAnnotations(AnnotationsHandle.get(cmd));
-            }
+        String alias = cmd.resource.alias;
+        String eventLoopGroupName = cmd.args.get(Param.elg);
+        EventLoopGroup elg = EventLoopGroupHandle.get(eventLoopGroupName);
+        HealthCheckConfig c = HealthCheckHandle.getHealthCheckConfig(cmd);
+        Annotations anno = null;
+        if (cmd.args.containsKey(Param.anno)) {
+            anno = AnnotationsHandle.get(cmd);
+        }
+        Application.get().serverGroupHolder.add(alias, elg, c, MethHandle.get(cmd, "wrr"), anno);
+    }
+
+    public static void attach(Command cmd) throws Exception {
+        int weight = WeightHandle.get(cmd);
+        var h = Application.get().upstreamHolder.get(cmd.prepositionResource.alias)
+            .add(Application.get().serverGroupHolder.get(cmd.resource.alias), weight);
+        if (cmd.args.containsKey(Param.anno)) {
+            h.setAnnotations(AnnotationsHandle.get(cmd));
         }
     }
 
     public static void preRemoveCheck(Command cmd) throws Exception {
-        if (cmd.prepositionResource != null)
-            return; // it's ok to detach from upstream
         // remove top level server group
         ServerGroup serverGroup = Application.get().serverGroupHolder.get(cmd.resource.alias);
 
@@ -195,37 +110,37 @@ public class ServerGroupHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
-        if (cmd.prepositionResource == null) {
-            // remove top level server group
-            Application.get().serverGroupHolder.removeAndClear(cmd.resource.alias);
-        } else {
-            // detach from upstream
-            ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
-            UpstreamHandle.get(cmd.prepositionResource).remove(g);
-        }
+    public static void remove(Command cmd) throws Exception {
+        // remove top level server group
+        Application.get().serverGroupHolder.removeAndClear(cmd.resource.alias);
+    }
+
+    public static void detach(Command cmd) throws Exception {
+        // detach from upstream
+        ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
+        UpstreamHandle.get(cmd.prepositionResource).remove(g);
     }
 
     public static void update(Command cmd) throws Exception {
-        if (cmd.resource.parentResource == null) {
-            ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
-            if (cmd.args.containsKey(Param.timeout)) {
-                g.setHealthCheckConfig(HealthCheckHandle.getHealthCheckConfig(cmd));
-            }
-            if (cmd.args.containsKey(Param.meth)) {
-                g.setMethod(MethHandle.get(cmd));
-            }
-            if (cmd.args.containsKey(Param.anno)) {
-                g.setAnnotations(AnnotationsHandle.get(cmd));
-            }
-        } else {
-            Upstream.ServerGroupHandle h = getHandle(cmd.resource);
-            if (cmd.args.containsKey(Param.w)) {
-                h.setWeight(WeightHandle.get(cmd));
-            }
-            if (cmd.args.containsKey(Param.anno)) {
-                h.setAnnotations(AnnotationsHandle.get(cmd));
-            }
+        ServerGroup g = Application.get().serverGroupHolder.get(cmd.resource.alias);
+        if (cmd.args.containsKey(Param.timeout)) {
+            g.setHealthCheckConfig(HealthCheckHandle.getHealthCheckConfig(cmd));
+        }
+        if (cmd.args.containsKey(Param.meth)) {
+            g.setMethod(MethHandle.get(cmd, ""));
+        }
+        if (cmd.args.containsKey(Param.anno)) {
+            g.setAnnotations(AnnotationsHandle.get(cmd));
+        }
+    }
+
+    public static void updateInUpstream(Command cmd) throws Exception {
+        Upstream.ServerGroupHandle h = getHandle(cmd.resource);
+        if (cmd.args.containsKey(Param.weight)) {
+            h.setWeight(WeightHandle.get(cmd));
+        }
+        if (cmd.args.containsKey(Param.anno)) {
+            h.setAnnotations(AnnotationsHandle.get(cmd));
         }
     }
 

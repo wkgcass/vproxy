@@ -13,7 +13,7 @@ public enum Param {
     inbuffersize("in-buffer-size"),
     outbuffersize("out-buffer-size"),
     meth("method"),
-    w("weight"),
+    weight("weight"),
     secg("security-group"),
     secgrdefault("default"),
     net("network"),

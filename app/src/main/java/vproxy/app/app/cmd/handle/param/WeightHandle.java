@@ -13,15 +13,15 @@ public class WeightHandle {
         try {
             weight = get(cmd);
         } catch (Exception e) {
-            throw new XException("invalid " + Param.w.fullname);
+            throw new XException("invalid " + Param.weight.fullname);
         }
         if (weight < 0)
-            throw new XException("invalid " + Param.w.fullname);
+            throw new XException("invalid " + Param.weight.fullname);
     }
 
     public static int get(Command cmd) {
-        if (cmd.args.containsKey(Param.w))
-            return Integer.parseInt(cmd.args.get(Param.w));
+        if (cmd.args.containsKey(Param.weight))
+            return Integer.parseInt(cmd.args.get(Param.weight));
         else
             return 10;
     }

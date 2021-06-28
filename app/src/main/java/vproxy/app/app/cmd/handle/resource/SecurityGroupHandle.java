@@ -27,12 +27,6 @@ public class SecurityGroupHandle {
         return get(resource.alias);
     }
 
-    public static void checkCreateSecurityGroup(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.secgrdefault))
-            throw new Exception("missing argument " + Param.secgrdefault.fullname);
-        SecGRDefaultHandle.check(cmd);
-    }
-
     public static List<String> names() {
         return Application.get().securityGroupHolder.names();
     }
@@ -84,12 +78,7 @@ public class SecurityGroupHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws NotFoundException {
+    public static void remove(Command cmd) throws NotFoundException {
         Application.get().securityGroupHolder.remove(cmd.resource.alias);
-    }
-
-    public static void checkSecurityGroup(Resource secg) throws Exception {
-        if (secg.parentResource != null)
-            throw new Exception(secg.type.fullname + " is on top level");
     }
 }

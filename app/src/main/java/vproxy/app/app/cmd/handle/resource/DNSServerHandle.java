@@ -20,19 +20,6 @@ public class DNSServerHandle {
     private DNSServerHandle() {
     }
 
-    @SuppressWarnings("Duplicates")
-    public static void checkCreateDNSServer(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.addr))
-            throw new Exception("missing argument " + Param.addr.fullname);
-        if (!cmd.args.containsKey(Param.ups))
-            throw new Exception("missing argument " + Param.ups.fullname);
-
-        AddrHandle.check(cmd);
-        if (cmd.args.containsKey(Param.ttl)) {
-            TTLHandle.check(cmd);
-        }
-    }
-
     public static DNSServer get(Resource dnsServer) throws NotFoundException {
         return Application.get().dnsServerHolder.get(dnsServer.alias);
     }
@@ -76,11 +63,6 @@ public class DNSServerHandle {
         Application.get().dnsServerHolder.add(alias, addr, eventLoopGroup, backend, ttl, secg);
     }
 
-    public static void checkUpdateDNSServer(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.ttl))
-            TTLHandle.check(cmd);
-    }
-
     public static void update(Command cmd) throws Exception {
         DNSServer dnsServer = get(cmd.resource);
 
@@ -92,7 +74,7 @@ public class DNSServerHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         Application.get().dnsServerHolder.removeAndStop(cmd.resource.alias);
     }
 

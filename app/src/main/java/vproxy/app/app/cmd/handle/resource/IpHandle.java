@@ -3,7 +3,6 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.base.util.Annotations;
 import vproxy.base.util.exception.XException;
@@ -18,17 +17,11 @@ public class IpHandle {
     private IpHandle() {
     }
 
-    public static void checkIpParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.ip.fullname + " on top level");
-        if (parent.type != ResourceType.vpc) {
-            if (parent.type == ResourceType.sw) {
-                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.ip.fullname + ", you have to specify vpc first");
-            }
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ip.fullname);
+    public static void checkIpName(Resource resource) throws XException {
+        var bytes = IP.parseIpString(resource.alias);
+        if (bytes == null) {
+            throw new XException("input is not a valid ip string: " + resource.alias);
         }
-
-        VpcHandle.checkVpc(parent);
     }
 
     public static Collection<IP> names(Resource parent) throws Exception {
@@ -39,13 +32,6 @@ public class IpHandle {
     public static Collection<IPMac> list(Resource parent) throws Exception {
         Table tbl = VpcHandle.get(parent);
         return tbl.ips.entries();
-    }
-
-    public static void checkCreateIp(Command cmd) throws Exception {
-        String mac = cmd.args.get(Param.mac);
-        if (mac == null) {
-            throw new Exception("missing " + Param.mac.fullname);
-        }
     }
 
     public static void add(Command cmd) throws Exception {
@@ -72,7 +58,7 @@ public class IpHandle {
         VpcHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         String ip = cmd.resource.alias;
 
         byte[] ipBytes = IP.parseIpString(ip);

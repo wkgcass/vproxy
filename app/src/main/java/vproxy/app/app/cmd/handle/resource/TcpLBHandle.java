@@ -26,42 +26,6 @@ public class TcpLBHandle {
     private TcpLBHandle() {
     }
 
-    public static void checkTcpLB(Resource tcpLB) throws Exception {
-        if (tcpLB.parentResource != null)
-            throw new Exception(tcpLB.type.fullname + " is on top level");
-    }
-
-    @SuppressWarnings("Duplicates")
-    public static void checkCreateTcpLB(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.addr))
-            throw new Exception("missing argument " + Param.addr.fullname);
-        if (!cmd.args.containsKey(Param.ups))
-            throw new Exception("missing argument " + Param.ups.fullname);
-
-        AddrHandle.check(cmd);
-
-        if (cmd.args.containsKey(Param.inbuffersize))
-            InBufferSizeHandle.check(cmd);
-        else
-            cmd.args.put(Param.inbuffersize, "16384");
-
-        if (cmd.args.containsKey(Param.outbuffersize))
-            OutBufferSizeHandle.check(cmd);
-        else
-            cmd.args.put(Param.outbuffersize, "16384");
-
-        if (cmd.args.containsKey(Param.timeout))
-            TimeoutHandle.get(cmd);
-    }
-
-    public static void checkUpdateTcpLB(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.inbuffersize))
-            InBufferSizeHandle.check(cmd);
-
-        if (cmd.args.containsKey(Param.outbuffersize))
-            OutBufferSizeHandle.check(cmd);
-    }
-
     public static TcpLB get(Resource tcplb) throws NotFoundException {
         return Application.get().tcpLBHolder.get(tcplb.alias);
     }
@@ -94,8 +58,8 @@ public class TcpLBHandle {
         EventLoopGroup worker = Application.get().eventLoopGroupHolder.get(cmd.args.get(Param.elg));
         IPPort addr = AddrHandle.get(cmd);
         Upstream backend = Application.get().upstreamHolder.get(cmd.args.get(Param.ups));
-        int inBufferSize = InBufferSizeHandle.get(cmd);
-        int outBufferSize = OutBufferSizeHandle.get(cmd);
+        int inBufferSize = InBufferSizeHandle.get(cmd, 16384);
+        int outBufferSize = OutBufferSizeHandle.get(cmd, 16384);
         String protocol = cmd.args.get(Param.protocol);
         if (protocol == null) protocol = "tcp";
         int timeout;
@@ -123,7 +87,7 @@ public class TcpLBHandle {
         );
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         Application.get().tcpLBHolder.removeAndStop(cmd.resource.alias);
     }
 
@@ -131,10 +95,10 @@ public class TcpLBHandle {
         TcpLB tcpLB = get(cmd.resource);
 
         if (cmd.args.containsKey(Param.inbuffersize)) {
-            tcpLB.setInBufferSize(InBufferSizeHandle.get(cmd));
+            tcpLB.setInBufferSize(InBufferSizeHandle.get(cmd, -1));
         }
         if (cmd.args.containsKey(Param.outbuffersize)) {
-            tcpLB.setOutBufferSize(OutBufferSizeHandle.get(cmd));
+            tcpLB.setOutBufferSize(OutBufferSizeHandle.get(cmd, -1));
         }
         if (cmd.args.containsKey(Param.timeout)) {
             tcpLB.setTimeout(TimeoutHandle.get(cmd));

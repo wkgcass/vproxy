@@ -11,10 +11,14 @@ public class NetworkHandle {
     }
 
     public static void check(Command cmd) throws Exception {
+        check(cmd, Param.net);
+    }
+
+    public static void check(Command cmd, Param param) throws Exception {
         try {
-            get(cmd);
+            get(cmd, param);
         } catch (Exception e) {
-            throw new XException("invalid format for " + Param.net.fullname);
+            throw new XException("invalid format for " + param.fullname);
         }
     }
 
@@ -22,7 +26,7 @@ public class NetworkHandle {
         String[] arr = net.split("/");
         if (arr.length > 2)
             throw new IllegalArgumentException();
-        byte[] addr = IP.blockParseAddress(arr[0]);
+        byte[] addr = IP.parseIpString(arr[0]);
         byte[] mask = Network.parseMask(Integer.parseInt(arr[1]));
         if (!Network.validNetwork(addr, mask))
             throw new IllegalArgumentException();
@@ -30,7 +34,11 @@ public class NetworkHandle {
     }
 
     public static Network get(Command cmd) {
-        String net = cmd.args.get(Param.net);
+        return get(cmd, Param.net);
+    }
+
+    public static Network get(Command cmd, Param param) {
+        String net = cmd.args.get(param);
         return get(net);
     }
 }

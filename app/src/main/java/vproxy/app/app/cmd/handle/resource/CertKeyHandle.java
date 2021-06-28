@@ -3,7 +3,6 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.ResourceType;
 import vproxy.base.util.exception.XException;
 import vproxy.component.app.TcpLB;
@@ -15,21 +14,7 @@ public class CertKeyHandle {
     private CertKeyHandle() {
     }
 
-    public static void checkCertKey(Resource ck) throws Exception {
-        if (ck.parentResource != null) {
-            throw new Exception("cert-key is on top level");
-        }
-    }
-
-    public static void checkAddCertKey(Command cmd) throws Exception {
-        if (!cmd.args.containsKey(Param.cert))
-            throw new Exception("missing argument " + Param.cert.fullname);
-        if (!cmd.args.containsKey(Param.key))
-            throw new Exception("missing argument " + Param.key.fullname);
-    }
-
     public static void add(Command cmd) throws Exception {
-        checkAddCertKey(cmd);
         String[] certsPath = cmd.args.get(Param.cert).split(",");
         String keyPath = cmd.args.get(Param.key);
         Application.get().certKeyHolder.add(cmd.resource.alias, certsPath, keyPath);
@@ -54,7 +39,7 @@ public class CertKeyHandle {
         }
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         Application.get().certKeyHolder.remove(cmd.resource.alias);
     }
 }

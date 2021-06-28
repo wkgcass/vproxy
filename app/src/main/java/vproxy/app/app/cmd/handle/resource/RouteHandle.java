@@ -3,7 +3,6 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.NetworkHandle;
 import vproxy.base.util.Network;
 import vproxy.base.util.Utils;
@@ -16,19 +15,6 @@ import java.util.stream.Collectors;
 
 public class RouteHandle {
     private RouteHandle() {
-    }
-
-    public static void checkRouteParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.route.fullname + " on top level");
-        if (parent.type != ResourceType.vpc) {
-            if (parent.type == ResourceType.sw) {
-                throw new Exception(parent.type.fullname + " does not directly contain " + ResourceType.route.fullname + ", you have to specify vpc first");
-            }
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.route.fullname);
-        }
-
-        VpcHandle.checkVpc(parent);
     }
 
     public static List<String> names(Resource parent) throws Exception {
@@ -80,7 +66,7 @@ public class RouteHandle {
         tbl.routeTable.addRule(rule);
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
 
         Table tbl = VpcHandle.get(cmd.prepositionResource);

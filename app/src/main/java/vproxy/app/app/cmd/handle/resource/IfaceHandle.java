@@ -19,14 +19,6 @@ public class IfaceHandle {
     private IfaceHandle() {
     }
 
-    public static void checkIfaceParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.iface.fullname + " on top level");
-        if (parent.type != ResourceType.sw)
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.iface.fullname);
-        SwitchHandle.checkSwitch(parent);
-    }
-
     public static int count(Resource parent) throws Exception {
         return list(parent).size();
     }
@@ -34,15 +26,6 @@ public class IfaceHandle {
     public static List<Iface> list(Resource parent) throws Exception {
         Switch sw = Application.get().switchHolder.get(parent.alias);
         return sw.getIfaces();
-    }
-
-    public static void checkUpdateIface(Command cmd) throws Exception {
-        if (cmd.args.containsKey(Param.mtu)) {
-            MTUHandle.check(cmd);
-        }
-        if (cmd.args.containsKey(Param.flood)) {
-            FloodHandle.check(cmd);
-        }
     }
 
     public static void update(Command cmd) throws Exception {

@@ -1518,7 +1518,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteConnFromEl(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection",
+      cb, "remove", "connection",
       rctx.param("l4addr-act") + "/" + rctx.param("l4addr-pas"),
       "in", "event-loop", rctx.param("el"), "in", "event-loop-group", rctx.param("elg")
     )
@@ -1526,7 +1526,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteConnFromTl(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection",
+      cb, "remove", "connection",
       rctx.param("l4addr-act") + "/" + rctx.param("l4addr-pas"),
       "in", "tcp-lb", rctx.param("tl")
     )
@@ -1534,7 +1534,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteConnFromSocks5(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection",
+      cb, "remove", "connection",
       rctx.param("l4addr-act") + "/" + rctx.param("l4addr-pas"),
       "in", "socks5-server", rctx.param("socks5")
     )
@@ -1542,7 +1542,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteConnFromServer(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection",
+      cb, "remove", "connection",
       rctx.param("l4addr-act") + "/" + rctx.param("l4addr-pas"),
       "in", "server", rctx.param("svr"), "in", "server-group", rctx.param("sg")
     )
@@ -1550,28 +1550,28 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteConnFromElRegexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "connection", "/" + rctx.param("regexp") + "/",
       "in", "event-loop", rctx.param("el"), "in", "event-loop-group", rctx.param("elg")
     )
   }
 
   private fun deleteConnFromTlRegexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "connection", "/" + rctx.param("regexp") + "/",
       "in", "tcp-lb", rctx.param("tl")
     )
   }
 
   private fun deleteConnFromSocks5Regexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "connection", "/" + rctx.param("regexp") + "/",
       "in", "socks5-server", rctx.param("socks5")
     )
   }
 
   private fun deleteConnFromServerRegexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "connection", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "connection", "/" + rctx.param("regexp") + "/",
       "in", "server", rctx.param("svr"), "in", "server-group", rctx.param("sg")
     )
   }
@@ -1590,7 +1590,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteSessionInTl(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "session",
+      cb, "remove", "session",
       rctx.param("front-act") + "/" + rctx.param("front-pas") + "->" + rctx.param("back-act") + "/" + rctx.param("back-pas"),
       "in", "tcp-lb", rctx.param("tl")
     )
@@ -1598,7 +1598,7 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteSessionInSocks5(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "session",
+      cb, "remove", "session",
       rctx.param("front-act") + "/" + rctx.param("front-pas") + "->" + rctx.param("back-act") + "/" + rctx.param("back-pas"),
       "in", "socks5-server", rctx.param("socks5")
     )
@@ -1606,14 +1606,14 @@ class HttpController(val alias: String, val address: IPPort) {
 
   private fun deleteSessionInTlRegexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "session", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "session", "/" + rctx.param("regexp") + "/",
       "in", "tcp-lb", rctx.param("tl")
     )
   }
 
   private fun deleteSessionInSocks5Regexp(rctx: RoutingContext, cb: Callback<JSON.Instance<*>, Throwable>) {
     utils.execute(
-      cb, "force-remove", "session", "/" + rctx.param("regexp") + "/",
+      cb, "remove", "session", "/" + rctx.param("regexp") + "/",
       "in", "socks5-server", rctx.param("socks5")
     )
   }

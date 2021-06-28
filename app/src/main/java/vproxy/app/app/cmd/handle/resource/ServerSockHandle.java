@@ -15,22 +15,6 @@ public class ServerSockHandle {
     private ServerSockHandle() {
     }
 
-    public static void checkServerSockParent(Resource parent) throws Exception {
-        if (parent == null)
-            throw new Exception("cannot find " + ResourceType.ss.fullname + " on top level");
-        if (parent.type == ResourceType.el) {
-            EventLoopHandle.checkEventLoop(parent);
-        } else if (parent.type == ResourceType.tl) {
-            TcpLBHandle.checkTcpLB(parent);
-        } else if (parent.type == ResourceType.socks5) {
-            Socks5ServerHandle.checkSocks5Server(parent);
-        } else if (parent.type == ResourceType.vpc) {
-            VpcHandle.checkVpc(parent);
-        } else {
-            throw new Exception(parent.type.fullname + " does not contain " + ResourceType.ss.fullname);
-        }
-    }
-
     public static ServerSock2 get(Resource svr) throws Exception {
         return list(svr.parentResource)
             .stream()

@@ -3,7 +3,6 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.AddrHandle;
 import vproxy.app.app.cmd.handle.param.WeightHandle;
 import vproxy.base.component.svrgroup.ServerGroup;
@@ -15,23 +14,6 @@ import java.util.stream.Collectors;
 
 public class ServerHandle {
     private ServerHandle() {
-    }
-
-    public static void checkServer(Resource server) throws Exception {
-        if (server.parentResource == null)
-            throw new Exception("cannot find " + server.type.fullname + " on top level");
-        if (server.parentResource.type != ResourceType.sg)
-            throw new Exception(server.parentResource.type.fullname + " does not contain " + server.type.fullname);
-        ServerGroupHandle.checkServerGroup(server.parentResource);
-    }
-
-    public static void checkCreateServer(Command cmd) throws Exception {
-        AddrHandle.check(cmd);
-        WeightHandle.check(cmd);
-    }
-
-    public static void checkUpdateServer(Command cmd) throws Exception {
-        WeightHandle.check(cmd);
     }
 
     public static ServerGroup.ServerHandle get(Resource server) throws Exception {
@@ -67,7 +49,7 @@ public class ServerHandle {
             .add(name, host, AddrHandle.get(cmd), WeightHandle.get(cmd));
     }
 
-    public static void forceRemove(Command cmd) throws Exception {
+    public static void remove(Command cmd) throws Exception {
         ServerGroupHandle.get(cmd.prepositionResource)
             .remove(cmd.resource.alias);
     }

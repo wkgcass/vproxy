@@ -9,7 +9,10 @@ public class MethHandle {
     private MethHandle() {
     }
 
-    public static Method get(Command cmd) throws Exception {
+    public static Method get(Command cmd, String defaultValue) throws Exception {
+        if (!cmd.args.containsKey(Param.meth)) {
+            return Method.valueOf(defaultValue);
+        }
         String meth = cmd.args.get(Param.meth);
         try {
             return Method.valueOf(meth);

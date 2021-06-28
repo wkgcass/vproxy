@@ -2,6 +2,7 @@ package vproxy.app.app.cmd;
 
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.handle.resource.SwitchHandle;
+import vproxy.base.Config;
 import vproxy.base.util.Tuple;
 import vproxy.component.secure.SecurityGroup;
 
@@ -367,7 +368,6 @@ public class HelpCommand {
         listdetail("list-detail", "L", "list detailed info of some resources"),
         update("update", "u", "modify a resource"),
         remove("remove", "r", "remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted"),
-        forceremove("force-remove", "R", "remove and destroy/stop a resource, regardless of warnings"),
         removefrom("remove-from", "r-from", "detach a resource from another one"),
         ;
         public final String act;
@@ -395,7 +395,7 @@ public class HelpCommand {
         up("up", null, "health check up times"),
         down("down", null, "health check down times"),
         method("method", "meth", "method to retrieve a server"),
-        weight("weight", "w", "weight"),
+        weight("weight", null, "weight"),
         dft("default", null, "enum: allow or deny"),
         network("network", "net", "network: $network/$mask"),
         v4network("v4network", "v4net", "ipv4 network: $v4network/$mask"),
@@ -457,12 +457,13 @@ public class HelpCommand {
         tcplb("tcp-lb", "tl", "TCP load balancer", Arrays.asList(
             new ResActMan(ActMan.add, "create a loadbalancer",
                 Arrays.asList(
-                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
-                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
-                    , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
+                    new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
                     , new ResActParamMan(ParamMan.upstream, "used as the backend servers")
+                    , new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
+                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
+                    , new ResActParamMan(ParamMan.timeout, "idle timeout of connections in this lb instance", Config.tcpTimeout + " (ms)")
                     , new ResActParamMan(ParamMan.protocol, "the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See doc for more info", "tcp")
                     , new ResActParamMan(ParamMan.certkey, "the certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the lb", "allow any")
@@ -493,6 +494,8 @@ public class HelpCommand {
                 Arrays.asList(
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
+                    , new ResActParamMan(ParamMan.timeout, "idle timeout of connections in this lb instance", "not changed")
+                    , new ResActParamMan(ParamMan.certkey, "the certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`", "not changed")
                     , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
                 ),
                 Collections.singletonList(
@@ -513,12 +516,13 @@ public class HelpCommand {
         socks5server("socks5-server", "socks5", "socks5 proxy server", Arrays.asList(
             new ResActMan(ActMan.add, "create a socks5 server",
                 Arrays.asList(
-                    new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
-                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
-                    , new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
+                    new ResActParamMan(ParamMan.address, "the bind address of the loadbalancer")
                     , new ResActParamMan(ParamMan.upstream, "used as the backend servers")
+                    , new ResActParamMan(ParamMan.acceptorelg, "choose an event loop group as the acceptor event loop group. can be the same as worker event loop group", Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME)
+                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group as the worker event loop group. can be the same as acceptor event loop group", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "16384 (bytes)")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "16384 (bytes)")
+                    , new ResActParamMan(ParamMan.timeout, "idle timeout of connections in this socks5 server instance", Config.tcpTimeout + " (ms)")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the socks5 server", "allow any")
                 ),
                 Arrays.asList(
@@ -551,6 +555,7 @@ public class HelpCommand {
                 Arrays.asList(
                     new ResActParamMan(ParamMan.inbuffersize, "input buffer size", "not changed")
                     , new ResActParamMan(ParamMan.outbuffersize, "output buffer size", "not changed")
+                    , new ResActParamMan(ParamMan.timeout, "idle timeout of connections in this socks5 server instance", "not changed")
                     , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
                 ),
                 Arrays.asList(
@@ -575,26 +580,15 @@ public class HelpCommand {
         dns("dns-server", "dns", "dns server", Arrays.asList(
             new ResActMan(ActMan.add, "create a dns server",
                 Arrays.asList(
-                    new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group to run the dns server", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
-                    , new ResActParamMan(ParamMan.address, "the bind address of the socks5 server")
+                    new ResActParamMan(ParamMan.address, "the bind address of the socks5 server")
                     , new ResActParamMan(ParamMan.upstream, "the domains to be resolved")
+                    , new ResActParamMan(ParamMan.eventloopgroup, "choose an event loop group to run the dns server", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)
                     , new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "0")
                     , new ResActParamMan(ParamMan.securitygroup, "specify a security group for the dns server", "allow any")
                 ),
                 Collections.singletonList(
                     new Tuple<>(
                         "add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0",
-                        "\"OK\""
-                    )
-                ))
-            , new ResActMan(ActMan.update, "update config of a dns server",
-                Arrays.asList(
-                    new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "not changed")
-                    , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
-                ),
-                Collections.singletonList(
-                    new Tuple<>(
-                        "update dns-server dns0 ttl 60",
                         "\"OK\""
                     )
                 ))
@@ -612,6 +606,17 @@ public class HelpCommand {
                     new Tuple<>(
                         "list-detail dns-server",
                         "1) \"dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups security-group (allow-all)\""
+                    )
+                ))
+            , new ResActMan(ActMan.update, "update config of a dns server",
+                Arrays.asList(
+                    new ResActParamMan(ParamMan.ttl, "the ttl of responded records", "not changed")
+                    , new ResActParamMan(ParamMan.securitygroup, "the security group", "not changed")
+                ),
+                Collections.singletonList(
+                    new Tuple<>(
+                        "update dns-server dns0 ttl 60",
+                        "\"OK\""
                     )
                 ))
             , new ResActMan(ActMan.remove, "remove a dns server",
@@ -847,7 +852,9 @@ public class HelpCommand {
                         )
                     )),
                 new ResActMan(ActMan.update, "change weight of the server",
-                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new ResActParamMan(ParamMan.weight, "weight of the server, which will be used by wrr, wlc and source algorithm", "not changed")
+                    ),
                     Collections.singletonList(
                         new Tuple<>(
                             "update server svr0 in server-group sg0 weight 11",
@@ -914,7 +921,7 @@ public class HelpCommand {
             )),
         securitygrouprule("security-group-rule", "secgr", "a rule containing protocol, source network, dest port range and whether to deny",
             Arrays.asList(
-                new ResActMan(ActMan.add, "create a rule in the security group",
+                new ResActMan(ActMan.addto, "create a rule in the security group",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.network, "a cidr string for checking client ip"),
                         new ResActParamMan(ParamMan.protocol, "enum {TCP, UDP}"),
@@ -1010,202 +1017,12 @@ public class HelpCommand {
                                 "   3) 1) \"[0000:0000:0000:0000:0000:0000:0000:0001]\""
                         )
                     )),
-                new ResActMan(ActMan.forceremove, "specify the host and remove the dns cache",
+                new ResActMan(ActMan.remove, "specify the host and remove the dns cache",
                     Collections.emptyList(),
                     Collections.singletonList(
                         new Tuple<>(
-                            "force-remove dns-cache localhost from resolver (default)",
+                            "remove dns-cache localhost from resolver (default)",
                             "\"OK\""
-                        )
-                    ))
-            )),
-        serversock("server-sock", "ss", "represents a `ServerSocketChannel`, which binds an ip:port",
-            Arrays.asList(
-                new ResActMan(ActMan.list, "count server-socks",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list server-sock in el el0 in elg elg0",
-                            "(integer) 1"
-                        ),
-                        new Tuple<>(
-                            "list server-sock in tcp-lb lb0",
-                            "(integer) 1"
-                        ),
-                        new Tuple<>(
-                            "list server-sock in socks5-server s5",
-                            "(integer) 1"
-                        )
-                    )),
-                new ResActMan(ActMan.listdetail, "get info about bind servers",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list-detail server-sock in el el0 in elg elg0",
-                            "1) \"127.0.0.1:6380\""
-                        ),
-                        new Tuple<>(
-                            "list-detail server-sock in tcp-lb lb0",
-                            "1) \"127.0.0.1:6380\""
-                        ),
-                        new Tuple<>(
-                            "list-detail server-sock in socks5-server s5",
-                            "1) \"127.0.0.1:18081\""
-                        )
-                    ))
-            )),
-        connection("connection", "conn", "represents a `SocketChannel`",
-            Arrays.asList(
-                new ResActMan(ActMan.list, "count connections",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list connection in el el0 in elg elg0",
-                            "(integer) 2"
-                        ),
-                        new Tuple<>(
-                            "list connection in tcp-lb lb0",
-                            "(integer) 2"
-                        ),
-                        new Tuple<>(
-                            "list connection in socks5-server s5",
-                            "(integer) 2"
-                        ),
-                        new Tuple<>(
-                            "list connection in server svr0 in sg sg0",
-                            "(integer) 1"
-                        )
-                    )),
-                new ResActMan(ActMan.listdetail, "get info about connections",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list-detail connection in el el0 in elg elg0",
-                            "1) \"127.0.0.1:63537/127.0.0.1:6379\"\n" +
-                                "2) \"127.0.0.1:63536/127.0.0.1:6380\""
-                        ),
-                        new Tuple<>(
-                            "list-detail connection in tcp-lb lb0",
-                            "1) \"127.0.0.1:63536/127.0.0.1:6380\"\n" +
-                                "2) \"127.0.0.1:63537/127.0.0.1:6379\""
-                        ),
-                        new Tuple<>(
-                            "list-detail connection in socks5-server s5",
-                            "1) \"127.0.0.1:55981/127.0.0.1:18081\"\n" +
-                                "2) \"127.0.0.1:55982/127.0.0.1:16666\""
-                        ),
-                        new Tuple<>(
-                            "list-detail connection in server svr0 in sg sg0",
-                            "1) \"127.0.0.1:63537/127.0.0.1:6379\""
-                        )
-                    )),
-                new ResActMan(ActMan.forceremove, "close the connection, and if the connection is bond to a session, the session will be closed as well.\n" +
-                    "\n" +
-                    "Supports regexp pattern or plain string:\n" +
-                    "\n" +
-                    "* if the input starts with `/` and ends with `/`, then it's considered as a regexp.\n" +
-                    "* otherwise it matches the full string",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "force-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker",
-                            "\"OK\""
-                        ),
-                        new Tuple<>(
-                            "force-remove conn /.*/ from el worker2 in elg worker",
-                            "\"OK\""
-                        )
-                    ))
-            )),
-        session("session", "sess", "represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server",
-            Arrays.asList(
-                new ResActMan(ActMan.list, "count loadbalancer sessions",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list session in tcp-lb lb0",
-                            "(integer) 1"
-                        ),
-                        new Tuple<>(
-                            "list session in socks5-server s5",
-                            "(integer) 2"
-                        )
-                    )),
-                new ResActMan(ActMan.listdetail, "get info about loadbalancer sessions",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list-detail session in tcp-lb lb0",
-                            "1) 1) \"127.0.0.1:63536/127.0.0.1:6380\"\n" +
-                                "   2) \"127.0.0.1:63537/127.0.0.1:6379\""
-                        ),
-                        new Tuple<>(
-                            "list-detail session in socks5-server s5",
-                            "1) 1) \"127.0.0.1:53589/127.0.0.1:18081\"\n" +
-                                "   2) \"127.0.0.1:53591/127.0.0.1:16666\"\n" +
-                                "2) 1) \"127.0.0.1:53590/127.0.0.1:18081\"\n" +
-                                "   2) \"127.0.0.1:53592/127.0.0.1:16666\""
-                        )
-                    )),
-                new ResActMan(ActMan.forceremove, "close a session from lb",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "force-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0",
-                            "\"OK\""
-                        ),
-                        new Tuple<>(
-                            "force-remove sess /127.0.0.1:58713.*/ from tl lb0",
-                            "\"OK\""
-                        )
-                    ))
-            )),
-        bytesin("bytes-in", "bin", "statistics: bytes flow from remote to local",
-            Collections.singletonList(
-                new ResActMan(ActMan.list, "get history total input bytes from a resource",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list bytes-in in server-sock 127.0.0.1:6380 in tl lb0",
-                            "(integer) 45"
-                        ),
-                        new Tuple<>(
-                            "list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0",
-                            "(integer) 45"
-                        ),
-                        new Tuple<>(
-                            "list bytes-in in server svr0 in sg sg0",
-                            "(integer) 9767"
-                        )
-                    ))
-            )),
-        bytesout("bytes-out", "bout", "statistics: bytes flow from local to remote",
-            Collections.singletonList(
-                new ResActMan(ActMan.list, "get history total output bytes from a resource",
-                    Collections.emptyList(),
-                    Arrays.asList(
-                        new Tuple<>(
-                            "list bytes-out in server-sock 127.0.0.1:6380 in tl lb0",
-                            "(integer) 9767"
-                        ),
-                        new Tuple<>(
-                            "list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0",
-                            "(integer) 9767"
-                        ),
-                        new Tuple<>(
-                            "list bytes-out in server svr0 in sg sg0",
-                            "(integer) 45"
-                        )
-                    ))
-            )),
-        acceptedconncount("accepted-conn-count", null, "Statistics: successfully accpeted connections",
-            Collections.singletonList(
-                new ResActMan(ActMan.list, "get history total accepted connection count",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0",
-                            "(integer) 2"
                         )
                     ))
             )),
@@ -1227,20 +1044,6 @@ public class HelpCommand {
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.update, "update a switch",
-                    Arrays.asList(
-                        new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
-                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
-                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
-                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones", "not changed"),
-                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed")
-                    ),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000",
-                            "\"OK\""
-                        )
-                    )),
                 new ResActMan(ActMan.list, "get names of switches",
                     Collections.emptyList(),
                     Collections.singletonList(
@@ -1255,6 +1058,20 @@ public class HelpCommand {
                         new Tuple<>(
                             "list-detail switch",
                             "1) \"sw0\" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all)"
+                        )
+                    )),
+                new ResActMan(ActMan.update, "update a switch",
+                    Arrays.asList(
+                        new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
+                        new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
+                        new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
+                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones", "not changed"),
+                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed")
+                    ),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000",
+                            "\"OK\""
                         )
                     )),
                 new ResActMan(ActMan.remove, "stop and remove a switch",
@@ -1287,6 +1104,16 @@ public class HelpCommand {
             )),
         vpc("vpc", null, "a private network",
             Arrays.asList(
+                new ResActMan(ActMan.addto, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
+                    new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vpc"),
+                    new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vpc", "not allowed"),
+                    new ResActParamMan(ParamMan.annotations, "annotations of the vpc", "{}")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add vpc 1314 to switch sw0 v4network 172.16.0.0/16",
+                        "\"OK\""
+                    )
+                )),
                 new ResActMan(ActMan.list, "list existing vpcs in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list vpc in switch sw0",
@@ -1297,15 +1124,6 @@ public class HelpCommand {
                     new Tuple<>(
                         "list-detail vpc in switch sw0",
                         "1) \"1314 -> v4network 172.16.0.0/16\""
-                    )
-                )),
-                new ResActMan(ActMan.addto, "create a vpc in a switch. the name should be vni of the vpc", Arrays.asList(
-                    new ResActParamMan(ParamMan.v4network, "the ipv4 network allowed in this vpc"),
-                    new ResActParamMan(ParamMan.v6network, "the ipv6 network allowed in this vpc", "not allowed")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add vpc 1314 to switch sw0 v4network 172.16.0.0/16",
-                        "\"OK\""
                     )
                 )),
                 new ResActMan(ActMan.removefrom, "remove a vpc from a switch", Collections.emptyList(), Collections.singletonList(
@@ -1336,6 +1154,10 @@ public class HelpCommand {
                 ), Arrays.asList(
                     new Tuple<>(
                         "update iface tap:tap0 in switch sw0 mtu 9000 flood allow",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "update iface tun:utun9 in switch sw0 mtu 9000 flood allow",
                         "\"OK\""
                     ),
                     new Tuple<>(
@@ -1374,6 +1196,17 @@ public class HelpCommand {
             )),
         user("user", null, "user in a switch",
             Arrays.asList(
+                new ResActMan(ActMan.addto, "add a user to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.pass, "password of the user"),
+                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
+                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add user hello to switch sw0 vni 1314 password p@sSw0rD",
+                        "\"OK\""
+                    )
+                )),
                 new ResActMan(ActMan.list, "list user names in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list user in switch sw0",
@@ -1386,17 +1219,6 @@ public class HelpCommand {
                         "1) \"hello\" -> vni 1314"
                     )
                 )),
-                new ResActMan(ActMan.add, "add a user to a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.pass, "password of the user"),
-                    new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
-                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected", "mtu setting of the switch"),
-                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add user hello to switch sw0 vni 1314 password p@sSw0rD",
-                        "\"OK\""
-                    )
-                )),
                 new ResActMan(ActMan.update, "update user info in a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones", "not changed"),
                     new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed")
@@ -1406,7 +1228,7 @@ public class HelpCommand {
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a user from a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove user hello from switch sw0",
                         "\"OK\""
@@ -1462,7 +1284,7 @@ public class HelpCommand {
             )),
         usercli("user-client", "ucli", "user client of an encrypted tunnel to remote switch. Note: use list iface to see these clients",
             Arrays.asList(
-                new ResActMan(ActMan.add, "add a user client to a switch", Arrays.asList(
+                new ResActMan(ActMan.addto, "add a user client to a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.pass, "password of the user"),
                     new ResActParamMan(ParamMan.vni, "vni which the user is assigned to"),
                     new ResActParamMan(ParamMan.address, "remote switch address to connect to")
@@ -1472,7 +1294,7 @@ public class HelpCommand {
                         "\"OK\""
                     )
                 )),
-                new ResActMan(ActMan.remove, "remove a user client from a switch", Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove a user client from a switch", Collections.singletonList(
                     new ResActParamMan(ParamMan.address, "remote switch address the client connected to")
                 ), Collections.singletonList(
                     new Tuple<>(
@@ -1483,6 +1305,14 @@ public class HelpCommand {
             )),
         ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
+                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
+                    new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22",
+                        "\"OK\""
+                    )
+                )),
                 new ResActMan(ActMan.list, "show synthetic ips in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list ip in vpc 1314 in switch sw0",
@@ -1497,14 +1327,6 @@ public class HelpCommand {
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
                     )
                 )),
-                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
-                    new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22",
-                        "\"OK\""
-                    )
-                )),
                 new ResActMan(ActMan.removefrom, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove ip 172.16.0.21 from vpc 1314 in switch sw0",
@@ -1514,20 +1336,6 @@ public class HelpCommand {
             )),
         route("route", null, "route rules in a vpc of a switch",
             Arrays.asList(
-                new ResActMan(ActMan.list, "show route rule names in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list route in vpc 1314 in switch sw0",
-                        "1) \"to172.17\"\n" +
-                            "2) \"to2001:0db8:0000:f102\""
-                    )
-                )),
-                new ResActMan(ActMan.listdetail, "show detailed info about route rules in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "list-detail route in vpc 1314 in switch sw0",
-                        "1) \"to172.17 -> network 172.17.0.0/24 vni 1315\"\n" +
-                            "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315\""
-                    )
-                )),
                 new ResActMan(ActMan.addto, "add a route to a vpc of a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.network, "network to be matched"),
                     new ResActParamMan(ParamMan.vni, "the vni to send packet to. only one of vni|via can be used"),
@@ -1540,6 +1348,20 @@ public class HelpCommand {
                     new Tuple<>(
                         "add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1",
                         "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.list, "show route rule names in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list route in vpc 1314 in switch sw0",
+                        "1) \"to172.17\"\n" +
+                            "2) \"to2001:0db8:0000:f102\""
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "show detailed info about route rules in a vpc of a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail route in vpc 1314 in switch sw0",
+                        "1) \"to172.17 -> network 172.17.0.0/24 vni 1315\"\n" +
+                            "2) \"to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315\""
                     )
                 )),
                 new ResActMan(ActMan.removefrom, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
