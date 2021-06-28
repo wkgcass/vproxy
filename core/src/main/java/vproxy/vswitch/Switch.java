@@ -254,7 +254,7 @@ public class Switch {
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        tables.computeIfAbsent(vni, n -> new Table(swCtx, n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
+        tables.computeIfAbsent(vni, n -> new Table(n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
     }
 
     public void delTable(int vni) throws NotFoundException {

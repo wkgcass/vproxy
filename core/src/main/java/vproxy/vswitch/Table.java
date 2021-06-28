@@ -17,13 +17,12 @@ public class Table {
     public final MacTable macTable;
     public final ArpTable arpTable;
     public final SyntheticIpHolder ips;
-    public final ProxyHolder proxies;
     public final RouteTable routeTable;
     private Annotations annotations;
 
     public final Conntrack conntrack = new Conntrack();
 
-    public Table(SwitchContext swCtx, int vni, NetEventLoop loop,
+    public Table(int vni, NetEventLoop loop,
                  Network v4network, Network v6network,
                  int macTableTimeout, int arpTableTimeout,
                  Annotations annotations) {
@@ -38,7 +37,6 @@ public class Table {
         macTable = new MacTable(loop.getSelectorEventLoop(), macTableTimeout);
         arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
-        proxies = new ProxyHolder(loop, swCtx, this);
         routeTable = new RouteTable(this);
     }
 
