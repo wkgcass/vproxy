@@ -1,1017 +1,2281 @@
-# Command
+# vproxy
 
-## General
+## tcp-lb
 
-VProxy provides you with full control of inside components.
-As a result, the configuration is a little different from what you might have thought.
+short version: tl
 
-VProxy has a very simple configuration syntax.
+description: TCP load balancer.
 
-```
-$action $resource-type [$resource-alias] [in $resource-type $resource-alias [in ...]] [to/from $resource-$type $resource-alias] $param-key $param-value $flag
-```
+### 1. add
 
-There are eight `$action`s in vproxy command:
+description: Create a loadbalancer.
 
-* `add (a)`: create a resource
-* `add (a) ... to ...`: attach a resource to another one
-* `list (l)`: show brief info about some resources
-* `list-detail (L)`: show detailed info about some resources
-* `update (u)`: modify a resource
-* `remove (r)`: remove and destroy a resource
-* `force-remove (R)`: ignore warnings and remove a resource
-* `remove (r) ... from ...`: detach a resource from another one
+#### parameter description:
 
-If the `$action` is `list` or `list-detail`, the first `$resource-alias` should not be specified, otherwise, it's required:
+##### 1. acceptorelg
 
-```
-list upstream                   --- no alias
-add upstream name               --- an alias is required when action is not list nor list-detail
-```
+description: Choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
 
-where `upstream` is a `$resource-type`. The command means to list all resources with type `upstream` on top level.
+optional: true
 
-There are many kinds of `$resource-type`s, as shown in this figure:
+default value: (acceptor-elg)
 
-```
-+---+ tcp-lb (tl)
-+---+ socks5-server (socks5)
-+---+ event-loop-group (elg)
-|        |
-|        +---+ event-loop (el)
-+---+ upstream (ups)
-|        |
-|        +---+ server-group (sg)
-+---+ server-group (sg)
-|        |
-|        +---+ server (svr)
-+---+ security-group (secg)
-|        |
-|        +---+ security-group-rule (secgr)
-|
-+---+ cert-key (ck)
-|
-+---+ switch (sw)
+##### 2. eventloopgroup
 
-   server-sock (ss) --+
-  connection (conn)   +-- /* channel */
-     session (sess) --+
+description: Choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
 
-          dns-cache --+-- /* state */
-                vni --+
-                arp --+
+optional: true
 
-     bytes-in (bin) --+
-   bytes-out (bout)   +-- /* statistics */
-accepted-conn-count --+
+default value: (worker-elg)
 
-short version keywords are between `()`
-```
+##### 3. address
 
-The resource types form a tree structure. This corresponds to the vproxy architecture figure in README.md.
+description: The bind address of the loadbalancer.
 
-For some resources which can be directly accessed from tree root, we call them `on top level`.  
-For some other resources that are not on top level, we use a keyword `in` to access them, e.g.:
+optional: false
 
-```
-event-loop [$alias] in event-loop-group $alias
-```
+default value: null
 
-which tries to access some `event-loop` in an event-loop-group.
+##### 4. upstream
 
-There can be multiple `in` to represent a single resource, e.g.:
+description: Used as the backend servers.
 
-```
-l bytes-in in conn 127.0.0.1:56727/127.0.0.1:6379 in svr svr0 in sg sg0
-```
+optional: false
 
-which tries to get `input bytes` of a connection `127.0.0.1:56727/127.0.0.1:6379`. To retrieve the connection, we first get a `server-group` named `sg0`, and get `server` named `svr0` from `sg0`, then we can retrieve the connection from the `svr0`.
+default value: null
 
-The params and flags are simple. Params are pairs of "key"s and "value"s. Flags represent booleans.
+##### 5. inbuffersize
 
-## Action: add (a)
+description: Input buffer size.
 
-Create a resource.
+optional: true
 
-## Action: add ... to ... (a ... to ...)
+default value: 16384 (bytes)
 
-Attach a resource to another one.
+##### 6. outbuffersize
 
-## Action: list (l)
+description: Output buffer size.
 
-List names, or retrieve count of some resources.
+optional: true
 
-## Action: list-detail (L)
+default value: 16384 (bytes)
 
-List detailed info of some resources.
+##### 7. protocol
 
-## Action: update (u)
+description: The protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See doc for more info.
 
-Modify a resource.
+optional: true
 
-## Action: remove (r)
+default value: tcp
 
-Remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted.
+##### 8. certkey
 
-## Action: force-remove (R)
+description: The certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`.
 
-Remove and destroy/stop a resource, regardless of warnings.
+optional: false
 
-## Action: remove ... from ... (r ... from ...)
+default value: null
 
-Detach a resource from another one.
+##### 9. securitygroup
 
-## Resource: tcp-lb (tl)
+description: Specify a security group for the lb.
 
-TCP load balancer
+optional: true
 
-#### add
+default value: allow any
 
-Create a loadbalancer.
-
-* acceptor-elg (aelg): *optional*. choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
-* event-loop-group (elg): *optional*. choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
-* address (addr): the bind address of the loadbalancer
-* upstream (ups): used as the backend servers
-* in-buffer-size: *optional*. input buffer size. default 16384 (bytes)
-* out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
-* protocol: *optional*. the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
-* security-group (secg): *optional*. specify a security group for the lb. default allow any
-* cert-key (ck): *optional*. the list of cert-key resources to be applied. if specified, tls is enabled
+examples:
 
 ```
-add tcp-lb lb0 address 127.0.0.1:18080 upstream ups0
+$ add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 upstream ups0 in-buffer-size 16384 out-buffer-size 16384
 "OK"
 ```
 
-#### list
+### 2. list
 
-Retrieve names of all tcp-loadbalancers.
+description: Retrieve names of all tcp-loadbalancers.
+
+examples:
 
 ```
-list tcp-lb
+$ list tcp-lb
 1) "lb0"
 ```
 
-#### list-detail
+### 3. listdetail
 
-Retrieve detailed info of all tcp-loadbalancers.
+description: Retrieve detailed info of all tcp-loadbalancers.
 
-```
-list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
-```
-
-#### update
-
-Update in-buffer-size or out-buffer-size or security-group or cert-key of an lb.
+examples:
 
 ```
-update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768 security-group secg0
+$ list-detail tcp-lb
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0"
+```
+
+### 4. update
+
+description: Update in-buffer-size or out-buffer-size of an lb.
+
+#### parameter description:
+
+##### 1. inbuffersize
+
+description: Input buffer size.
+
+optional: true
+
+default value: not changed
+
+##### 2. outbuffersize
+
+description: Output buffer size.
+
+optional: true
+
+default value: not changed
+
+##### 3. securitygroup
+
+description: The security group.
+
+optional: true
+
+default value: not changed
+
+examples:
+
+```
+$ update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768
 "OK"
 ```
 
-> You can miss some of the params, and only specified params will be updated.
+### 5. remove
 
-#### remove
+description: Remove and stop a tcp-loadbalancer. The already established connections won't be affected.
 
-Remove and stop a tcp-loadbalancer. The already established connections won't be affected.
+examples:
 
 ```
-remove tcp-lb lb0
+$ remove tcp-lb lb0
 "OK"
 ```
 
-## Resource: socks5-server (socks5)
+## socks5-server
 
-Socks5 proxy server.
+short version: socks5
 
-#### add
+description: Socks5 proxy server.
 
-Create a socks5 server.
+### 1. add
 
-All params are the same as creating `tcp-lb`.  
-See `add tcp-lb` for more info.
+description: Create a socks5 server.
 
-* acceptor-elg (aelg): *optional*, the acceptor event loop.
-* event-loop-group (elg): *optional*. the worker event loop.
-* address (addr): the bind address
-* upstream (ups): used as backend, the socks5 only supports servers added into this group
-* in-buffer-size: *optional*. input buffer size.
-* out-buffer-size: *optional*. output buffer size.
-* security-group (secg): security group
+#### flag:
 
-Flags:
+##### 1. allownonbackend
 
-* allow-non-backend: *optional*. allow to access non backend endpoints.
-* deny-non-backend: *optional*. only able to access backend endpoints. the default flag.
+description: Allow to access non backend endpoints.
+
+optional: true
+
+default: false
+
+##### 2. denynonbackend
+
+description: Only enable backend endpoints.
+
+optional: true
+
+default: true
+
+#### parameter description:
+
+##### 1. acceptorelg
+
+description: Choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
+
+optional: true
+
+default value: (acceptor-elg)
+
+##### 2. eventloopgroup
+
+description: Choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
+
+optional: true
+
+default value: (worker-elg)
+
+##### 3. address
+
+description: The bind address of the loadbalancer.
+
+optional: false
+
+default value: null
+
+##### 4. upstream
+
+description: Used as the backend servers.
+
+optional: false
+
+default value: null
+
+##### 5. inbuffersize
+
+description: Input buffer size.
+
+optional: true
+
+default value: 16384 (bytes)
+
+##### 6. outbuffersize
+
+description: Output buffer size.
+
+optional: true
+
+default value: 16384 (bytes)
+
+##### 7. securitygroup
+
+description: Specify a security group for the socks5 server.
+
+optional: true
+
+default value: allow any
+
+examples:
 
 ```
-add socks5-server s5 address 127.0.0.1:18081 upstream backend-groups security-group secg0
+$ add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 upstream backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0
 "OK"
 ```
 
-#### list
+### 2. list
 
-Retrieve names of socks5 servers.
+description: Retrieve names of socks5 servers.
+
+examples:
 
 ```
-list socks5-server
+$ list socks5-server
 1) "s5"
 ```
 
-#### list-detail
+### 3. listdetail
 
-Retrieve detailed info of socks5 servers.
+description: Retrieve detailed info of socks5 servers.
+
+examples:
 
 ```
-list-detail socks5-server
+$ list-detail socks5-server
 1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backend backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0"
 ```
 
-#### update
+### 4. update
 
-Update in-buffer-size or out-buffer-size or security-group of a socks5 server. Also, whether to allow non backend endpoints can be updated.
+description: Update in-buffer-size or out-buffer-size of a socks5 server.
+
+#### flag:
+
+##### 1. allownonbackend
+
+description: Allow to access non backend endpoints.
+
+optional: true
+
+default: false
+
+##### 2. denynonbackend
+
+description: Only enable backend endpoints.
+
+optional: true
+
+default: true
+
+#### parameter description:
+
+##### 1. inbuffersize
+
+description: Input buffer size.
+
+optional: true
+
+default value: not changed
+
+##### 2. outbuffersize
+
+description: Output buffer size.
+
+optional: true
+
+default value: not changed
+
+##### 3. securitygroup
+
+description: The security group.
+
+optional: true
+
+default value: not changed
+
+examples:
 
 ```
-update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192 security-group secg0 allow-non-backend
+$ update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192
 "OK"
 ```
 
-#### remove
+### 5. remove
 
-Remove a socks5 server.
+description: Remove a socks5 server.
+
+examples:
 
 ```
-remove socks5-server s5
+$ remove socks5-server s5
 "OK"
 ```
 
-## Resource: dns-server (dns)
+## dns-server
 
-DNS Server
+short version: dns
 
-#### add
+description: Dns server.
 
-Create a dns server.
+### 1. add
 
-* address (addr): The bind address of the socks5 server.
-* upstream (ups): The domains to be resolved.
-* ttl: *optional* The ttl of responded records. Default: 0
-* event-loop-group: *optional* Choose an event loop group to run the dns server. Default: (worker-elg)
-* security-group: *optional* The security group to use. Default: (allow-all)
+description: Create a dns server.
+
+#### parameter description:
+
+##### 1. eventloopgroup
+
+description: Choose an event loop group to run the dns server.
+
+optional: true
+
+default value: (worker-elg)
+
+##### 2. address
+
+description: The bind address of the socks5 server.
+
+optional: false
+
+default value: null
+
+##### 3. upstream
+
+description: The domains to be resolved.
+
+optional: false
+
+default value: null
+
+##### 4. ttl
+
+description: The ttl of responded records.
+
+optional: true
+
+default value: 0
+
+##### 5. securitygroup
+
+description: Specify a security group for the dns server.
+
+optional: true
+
+default value: allow any
+
+examples:
 
 ```
-add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
+$ add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
 "OK"
 ```
 
-#### update
+### 2. update
 
-Update config of a dns server.
+description: Update config of a dns server.
 
-* ttl: *optional* The ttl of responded records. Default: not changed
-* security-group: *optional* The security group to use. Default: not changed
+#### parameter description:
+
+##### 1. ttl
+
+description: The ttl of responded records.
+
+optional: true
+
+default value: not changed
+
+##### 2. securitygroup
+
+description: The security group.
+
+optional: true
+
+default value: not changed
+
+examples:
 
 ```
-update dns-server dns0 ttl 60
+$ update dns-server dns0 ttl 60
 "OK"
 ```
 
-#### list
+### 3. list
 
-Retrieve names of dns servers.
+description: Retrieve names of dns servers.
+
+examples:
 
 ```
-list dns-server
+$ list dns-server
 1) "dns0"
 ```
 
-#### list-detail
+### 4. listdetail
 
-Retrieve detailed info of dns servers.
+description: Retrieve detailed info of dns servers.
+
+examples:
 
 ```
-list-detail dns-server
+$ list-detail dns-server
 1) "dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups security-group (allow-all)"
 ```
 
-#### remove
+### 5. remove
 
-Remove a dns server.
+description: Remove a dns server.
+
+examples:
 
 ```
-remove dns-server dns0
+$ remove dns-server dns0
 "OK"
 ```
 
-## Resource: event-loop-group (elg)
+## event-loop-group
 
-A group of event loops
+short version: elg
 
-#### add
+description: A group of event loops.
 
-Specify a name and create a event loop group
+### 1. add
+
+description: Specify a name and create a event loop group.
+
+examples:
 
 ```
-add event-loop-group elg0
+$ add event-loop-group elg0
 "OK"
 ```
 
-#### list/list-detail
+### 2. list
 
-Retrieve names of all event loop groups
+description: Retrieve names of all event loop groups.
+
+examples:
 
 ```
-list event-loop-group
+$ list event-loop-group
 1) "elg0"
-list-detail event-loop-group
+```
+
+```
+$ list-detail event-loop-group
 1) "elg0"
 ```
 
-#### remove
+### 3. remove
 
-Remove a event loop group
+description: Remove a event loop group.
+
+examples:
 
 ```
-remove event-loop-group elg0
+$ remove event-loop-group elg0
 "OK"
 ```
 
-## Resource: upstream (ups)
+## upstream
 
-A resource containing multiple `server-group` resources.
+short version: ups
 
-#### add
+description: A resource containing multiple `server-group` resources.
 
-Specify a name and create a `upstream`.
+### 1. add
+
+description: Specify a name and create an upstream resource.
+
+examples:
 
 ```
-add upstream ups0
+$ add upstream ups0
 "OK"
 ```
 
-#### list/list-detail
+### 2. list
 
-Retrieve names of all `upstream` resources.
+description: Retrieve names of all upstream resources.
+
+examples:
 
 ```
-list upstream
+$ list upstream
 1) "ups0"
-list-detail upstream
+```
+
+```
+$ list-detail upstream
 1) "ups0"
 ```
 
-#### remove
+### 3. remove
 
-Remove a `upstream` resource.
+description: Remove an upstream resource.
+
+examples:
 
 ```
-remove upstream ups0
+$ remove upstream ups0
 "OK"
 ```
 
-## Resource: server-group
+## server-group
 
-A group of remote servers, which will run health check for all contained servers.
+short version: sg
 
-#### add
+description: A group of remote servers, which will run health check for all contained servers.
 
-Specify name, event loop, load balancing method, health check config and create a server group.
+### 1. add
 
-* timeout: health check connect timeout (ms)
-* period: do check every `${period}` milliseconds
-* up: set server status to UP after succeeded for `${up}` times
-* down: set server status to DOWN after failed for `${down}` times
-* protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `http`, `tcpDelay`, `dns`, `none`. default `tcp`
-* method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
-* annotations: *optional*. extra info for the server-group, such as host info, health check url. Must be a json and values must be strings. default `{}`
-* event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
+description: Specify name, event loop, load balancing method, health check config and create a server group.
+
+#### parameter description:
+
+##### 1. timeout
+
+description: Health check connect timeout (ms).
+
+optional: false
+
+default value: null
+
+##### 2. period
+
+description: Do check every `${period}` milliseconds.
+
+optional: false
+
+default value: null
+
+##### 3. up
+
+description: Set server status to UP after succeeded for `${up}` times.
+
+optional: false
+
+default value: null
+
+##### 4. down
+
+description: Set server status to DOWN after failed for `${down}` times.
+
+optional: false
+
+default value: null
+
+##### 5. protocol
+
+description: The protocol used for checking the servers, you may choose `tcp`, `none`.
+
+optional: true
+
+default value: tcp
+
+##### 6. method
+
+description: Loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`.
+
+optional: true
+
+default value: wrr
+
+##### 7. annotations
+
+description: Extra info for the server-group, such as host info, health check url. Must be a json and values must be strings.
+
+optional: true
+
+default value: {}
+
+##### 8. eventloopgroup
+
+description: Choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
+
+optional: true
+
+default value: (control-elg)
+
+examples:
 
 ```
-add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr
+$ add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr elg elg0
 "OK"
 ```
 
-#### add to
+### 2. addto
 
-Attach an existing server group into `upstream`.
+description: Attach an existing server group into an `upstream` resource.
 
-* weight (w): the weight of group in this upstream resource
+#### parameter description:
+
+##### 1. weight
+
+description: The weight of group in this upstream resource.
+
+optional: true
+
+default value: 10
+
+##### 2. annotations
+
+description: Extra info for the server-group inside upstream, such as host info. Must be a json and values must be strings.
+
+optional: true
+
+default value: {}
+
+examples:
 
 ```
-add server-group sg0 to upstream ups0 weight 10
+$ add server-group sg0 to upstream ups0 weight 10
 "OK"
 ```
 
-#### list
+### 3. list
 
-Retrieve names of all server group (s) on top level or in a `upstream`.
+description: Retrieve names of all server group (s) on top level or in an upstream.
+
+examples:
 
 ```
-list server-group
+$ list server-group
 1) "sg0"
+```
 
-list server-group in upstream ups0
+```
+$ list server-group in upstream ups0
 1) "sg0"
 ```
 
-#### list-detail
+### 4. listdetail
 
-Retrieve detailed info of all server group (s).
+description: Retrieve detailed info of all server group(s).
+
+examples:
 
 ```
-list-detail server-group
+$ list-detail server-group
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {}"
+```
 
-list-detail server-group in upstream ups0
+```
+$ list-detail server-group in upstream ups0
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {} weight 10"
 ```
 
-#### update
+### 5. update
 
-Change health check config or load balancing algorithm.
+description: Change health check config or load balancing algorithm.
 
-Param list is the same as add, but not all required. Note that if you change the health check related params and not specifying `procotol`, it will be set to `tcp` as default.
+Param list is the same as add, but not all required.
 
-Also you can change the weight/annotations of a group in a `upstream` resource.
+Also you can change the weight of a group in an upstream resource.
+
+#### parameter description:
+
+##### 1. timeout
+
+description: Health check connect timeout (ms).
+
+optional: true
+
+default value: not changed
+
+##### 2. period
+
+description: Do check every `${period}` milliseconds.
+
+optional: true
+
+default value: not changed
+
+##### 3. up
+
+description: Set server status to UP after succeeded for `${up}` times.
+
+optional: true
+
+default value: not changed
+
+##### 4. down
+
+description: Set server status to DOWN after failed for `${down}` times.
+
+optional: true
+
+default value: not changed
+
+##### 5. protocol
+
+description: The protocol used for checking the servers, you may choose `tcp`, `none`. Note: this field will be set to `tcp` as default when updating other hc options.
+
+optional: true
+
+default value: not changed
+
+##### 6. method
+
+description: Loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`.
+
+optional: true
+
+default value: not changed
+
+##### 7. weight
+
+description: The weight of group in the upstream resource (only available for server-group in upstream).
+
+optional: true
+
+default value: not changed
+
+##### 8. annotations
+
+description: Annotation of the group itself, or the group in the upstream.
+
+optional: true
+
+default value: not changed
+
+examples:
 
 ```
-update server-group sg0 timeout 500 period 600 up 3 down 2 protocol tcp
+$ update server-group sg0 timeout 500 period 600 up 3 down 2
 "OK"
-
-update server-group sg0 method wlc
-"OK"
-
-update server-group sg0 in upstream ups0 weight 5
-"OK"
 ```
 
-> NOTE: all fields in health check config should be all specified if any one of them exists.
-
-#### remove
-
-Remove a server group.
-
 ```
-remove server-group sg0
+$ update server-group sg0 method wlc
 "OK"
 ```
 
-#### remove from
-
-Detach the group grom a `upstream` resource.
-
 ```
-remove server-group sg0 from upstream ups0
+$ update server-group sg0 in upstream ups0 weight 5
 "OK"
 ```
 
-## Resource: event-loop (el)
+### 6. remove
 
-#### add to
+description: Remove a server group.
 
-Specify a name, a event loop group, and create a new event loop in the specified group.
+examples:
 
 ```
-add event-loop el0 to elg elg0
+$ remove server-group sg0
 "OK"
 ```
 
-#### list/list-detail
+### 7. removefrom
 
-Retrieve names of all event loops in a event loop group.
+description: Detach the group from an `upstream` resource.
+
+examples:
 
 ```
-list event-loop in event-loop-group elg0
+$ remove server-group sg0 from upstream ups0
+"OK"
+```
+
+## event-loop
+
+short version: el
+
+description: Event loop.
+
+### 1. addto
+
+description: Specify a name, a event loop group, and create a new event loop in the specified group.
+
+examples:
+
+```
+$ add event-loop el0 to elg elg0
+"OK"
+```
+
+### 2. list
+
+description: Retrieve names of all event loops in a event loop group.
+
+examples:
+
+```
+$ list event-loop in event-loop-group elg0
 1) "el0"
-list-detail event-loop in event-loop-group elg0
+```
+
+```
+$ list-detail event-loop in event-loop-group elg0
 1) "el0"
 ```
 
-#### remove from
+### 3. removefrom
 
-Remove a event loop from event loop group.
+description: Remove a event loop from event loop group.
+
+examples:
 
 ```
-remove event-loop el0 from event-loop-group elg0
+$ remove event-loop el0 from event-loop-group elg0
 "OK"
 ```
 
-## Resource: server (svr)
+## server
 
-#### add to
+short version: svr
 
-Specify name, remote ip:port, weight, and attach the server into the server group
+description: A remote endpoint.
 
-* address (addr): remote address, ip:port
-* weight: weight of the server, which will be used by wrr, wlc and source algorithm
+### 1. addto
+
+description: Specify name, remote ip:port, weight, and attach the server into the server group.
+
+#### parameter description:
+
+##### 1. address
+
+description: Remote address, ip:port.
+
+optional: false
+
+default value: null
+
+##### 2. weight
+
+description: Weight of the server, which will be used by wrr, wlc and source algorithm.
+
+optional: true
+
+default value: 10
+
+examples:
 
 ```
-add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
+$ add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
 "OK"
 ```
 
-#### list
+### 2. list
 
-Retrieve names of all servers in a server group.
+description: Retrieve names of all servers in a server group.
+
+examples:
 
 ```
-list server in server-group sg0
+$ list server in server-group sg0
 1) "svr0"
 ```
 
-#### list-detail
+### 3. listdetail
 
-Retrieve detailed info of all servers in a server group.
+description: Retrieve detailed info of all servers in a server group.
+
+examples:
 
 ```
-list-detail server in server-group sg0
+$ list-detail server in server-group sg0
 1) "svr0 -> connect-to 127.0.0.1:6379 weight 10 currently DOWN"
 ```
 
-#### update
+### 4. update
 
-Change weight of the server.
+description: Change weight of the server.
+
+examples:
 
 ```
-update server svr0 in server-group sg0 weight 11
+$ update server svr0 in server-group sg0 weight 11
 "OK"
 ```
 
-#### remove from
+### 5. removefrom
 
-Remove a server from a server group.
+description: Remove a server from a server group.
+
+examples:
 
 ```
-remove server svr0 from server-group sg0
+$ remove server svr0 from server-group sg0
 "OK"
 ```
 
-## Resource: security-group (secg)
+## security-group
 
-A white/black list, see `security-group-rule` for more info.
+short version: secg
 
-#### add
+description: A white/black list, see `security-group-rule` for more info.
 
-Create a security group.
+### 1. add
 
-* default: enum {allow, deny}  
-    if set to allow, then will allow connection if all rules not match  
-    if set to deny, then will deny connection if all rules not match
+description: Create a security group.
+
+#### parameter description:
+
+##### 1. dft
+
+description: Default: enum {allow, deny}
+if set to allow, then will allow connection if all rules not match
+if set to deny, then will deny connection if all rules not match.
+
+optional: false
+
+default value: null
+
+examples:
 
 ```
-add security-group secg0 default allow
+$ add security-group secg0 default allow
 "OK"
 ```
 
-#### list
+### 2. list
 
-Retrieve names of all security groups.
+description: Retrieve names of all security groups.
+
+examples:
 
 ```
-list security-group
+$ list security-group
 1) "secg0"
 ```
 
-#### list-detail
+### 3. listdetail
 
-Retrieve detailed info of all security groups.
+description: Retrieve detailed info of all security groups.
+
+examples:
 
 ```
-list-detail security-group
+$ list-detail security-group
 1) "secg0 -> default allow"
 ```
 
-#### update
+### 4. update
 
-Update properties of a security group.
+description: Update properties of a security group.
+
+#### parameter description:
+
+##### 1. dft
+
+description: Default: enum {allow, deny}.
+
+optional: false
+
+default value: null
+
+examples:
 
 ```
-update security-group secg0 default deny
+$ update security-group secg0 default deny
 "OK"
 ```
 
-#### remove
+### 5. remove
 
-Remove a security group.
+description: Remove a security group.
+
+examples:
 
 ```
-remove security-group secg0
+$ remove security-group secg0
 "OK"
 ```
 
-## Resource: security-group-rule
+## security-group-rule
 
-A rule containing protocol, source network, dest port range and whether to deny.
+short version: secgr
 
-#### add
+description: A rule containing protocol, source network, dest port range and whether to deny.
 
-Create a rule in the security group.
+### 1. add
 
-* network (net): a cidr string for checking client ip
-* protocol: enum {TCP, UDP}
-* port-range: a tuple of integer for vproxy port, 0 <= first <= second <= 65535
-* default: enum {allow, deny}  
-    if set to allow, then will allow the connection if matches  
-    if set to deny, then will deny the connection if matches
+description: Create a rule in the security group.
 
-> NOTE: network is for client (source ip), and port-range is for vproxy (destination port).
+#### parameter description:
+
+##### 1. network
+
+description: A cidr string for checking client ip.
+
+optional: false
+
+default value: null
+
+##### 2. protocol
+
+description: Enum {TCP, UDP}.
+
+optional: false
+
+default value: null
+
+##### 3. portrange
+
+description: A tuple of integer for vproxy port, 0 <= first <= second <= 65535.
+
+optional: false
+
+default value: null
+
+##### 4. dft
+
+description: Enum {allow, deny}
+if set to allow, then will allow the connection if matches
+if set to deny, then will deny the connection if matches.
+
+optional: false
+
+default value: null
+
+examples:
 
 ```
-add security-group-rule secgr0 to security-group secg0 network 10.127.0.0/16 protocol TCP port-range 22,22 default allow
+$ add security-group-rule secgr0 to security-group secg0 network 10.127.0.0/16 protocol TCP port-range 22,22 default allow
 "OK"
 ```
 
-#### list
+### 2. list
 
-Retrieve names of all rules in a security group.
+description: Retrieve names of all rules in a security group.
+
+examples:
 
 ```
-list security-group-rule in security-group secg0
+$ list security-group-rule in security-group secg0
 1) "secgr0"
 ```
 
-#### list-detail
+### 3. listdetail
 
-Retrieve detailed info of all rules in a security group.
+description: Retrieve detailed info of all rules in a security group.
+
+examples:
 
 ```
-list-detail security-group-rule in security-group secg0
+$ list-detail security-group-rule in security-group secg0
 1) "secgr0 -> allow 10.127.0.0/16 protocol TCP port [22,33]"
 ```
 
-#### remove
+### 4. remove
 
-Remove a rule from a security group.
+description: Remove a rule from a security group.
+
+examples:
 
 ```
-remove security-group-rule secgr0 from security-group secg0
+$ remove security-group-rule secgr0 from security-group secg0
 "OK"
 ```
 
-## Resource: cert-key
+## cert-key
 
-A resource corresponds to certificates and a key.
+short version: ck
 
-#### add
+description: Some certificates and one key.
 
-Load certificates and a key from file.
+### 1. add
 
-* cert: the certificate files, separated with `,`
-* key: the key file. only `-----BEGINE PRIVATE KEY-----` format is supported for now
+description: Load certificates and key from file.
+
+#### parameter description:
+
+##### 1. cert
+
+description: The cert file path. Multiple files are separated with `,`.
+
+optional: false
+
+default value: null
+
+##### 2. key
+
+description: The key file path.
+
+optional: false
+
+default value: null
+
+examples:
 
 ```
-add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem
+$ add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem
 "OK"
 ```
 
-#### list
+### 2. list
 
-Get names of cert-key info.
+description: View loaded cert-key resources.
 
-```
-list cert-key
-1) vproxy.cassite.net
-```
-
-#### remove
-
-Remove a cert-key.
+examples:
 
 ```
-remove cert-key vproxy.cassite.net
+$ list cert-key
+1) "vproxy.cassite.net"
+```
+
+### 3. remove
+
+description: Remove a cert-key resource.
+
+examples:
+
+```
+$ remove cert-key vproxy.cassite.net
 "OK"
 ```
 
-## Resource: dns-cache
+## dns-cache
 
-The dns record cache. It's a `host -> ipv4List, ipv6List` map.  
-It can only be accessed from the `(default)` dns resolver.
+description: The dns record cache. It's a host -> ipv4List, ipv6List map. It can only be accessed from the (default) dns resolver.
 
-#### list
+### 1. list
 
-Count current cache
+description: Count current cache.
+
+examples:
 
 ```
-list dns-cache in resolver (default)
+$ list dns-cache in resolver (default)
 (integer) 1
 ```
 
-#### list-detail
+### 2. listdetail
 
-List detailed info of dns cache.
+description: List detailed info of dns cache.
 
 The return values are:
 
-* host
-* ipv4 ip list
-* ipv6 ip list
+host.
+ipv4 ip list.
+ipv6 ip list.
+
+examples:
 
 ```
-list-detail dns-cache in resolver (default)
+$ list-detail dns-cache in resolver (default)
 1) 1) "localhost"
    2) 1) "127.0.0.1"
    3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
 ```
 
-#### force-remove
+### 3. forceremove
 
-Specify the host and remove the dns cache.
+description: Specify the host and remove the dns cache.
+
+examples:
 
 ```
-force-remove dns-cache localhost from resolver (default)
+$ force-remove dns-cache localhost from resolver (default)
 "OK"
 ```
 
-## Resource: server-sock (ss)
+## server-sock
 
-Represents a `ServerSocketChannel`, which binds an ip:port.
+short version: ss
 
-#### list
+description: Represents a `ServerSocketChannel`, which binds an ip:port.
 
-Count server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+### 1. list
+
+description: Count server-socks.
+
+examples:
 
 ```
-list server-sock in el el0 in elg elg0
-(integer) 1
-
-list server-sock in tcp-lb lb0
-(integer) 1
-
-list server-sock in socks5-server s5
+$ list server-sock in el el0 in elg elg0
 (integer) 1
 ```
 
-#### list-detail
-
-Get info about server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+```
+$ list server-sock in tcp-lb lb0
+(integer) 1
+```
 
 ```
-list-detail server-sock in el el0 in elg elg0
+$ list server-sock in socks5-server s5
+(integer) 1
+```
+
+### 2. listdetail
+
+description: Get info about bind servers.
+
+examples:
+
+```
+$ list-detail server-sock in el el0 in elg elg0
 1) "127.0.0.1:6380"
+```
 
-list-detail server-sock in tcp-lb lb0
+```
+$ list-detail server-sock in tcp-lb lb0
 1) "127.0.0.1:6380"
+```
 
-list-detail server-sock in socks5-server s5
+```
+$ list-detail server-sock in socks5-server s5
 1) "127.0.0.1:18081"
 ```
 
-## Resource: connection (conn)
+## connection
 
-Represents a `SocketChannel`.
+short version: conn
 
-#### list
+description: Represents a `SocketChannel`.
 
-Count connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
+### 1. list
+
+description: Count connections.
+
+examples:
 
 ```
-list connection in el el0 in elg elg0
+$ list connection in el el0 in elg elg0
 (integer) 2
+```
 
-list connection in tcp-lb lb0
+```
+$ list connection in tcp-lb lb0
 (integer) 2
+```
 
-list connection in socks5-server s5
+```
+$ list connection in socks5-server s5
 (integer) 2
+```
 
-list connection in server svr0 in sg sg0
+```
+$ list connection in server svr0 in sg sg0
 (integer) 1
 ```
 
-#### list-detail
+### 2. listdetail
 
-Get info about connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
+description: Get info about connections.
+
+examples:
 
 ```
-list-detail connection in el el0 in elg elg0
+$ list-detail connection in el el0 in elg elg0
 1) "127.0.0.1:63537/127.0.0.1:6379"
 2) "127.0.0.1:63536/127.0.0.1:6380"
+```
 
-list-detail connection in tcp-lb lb0
+```
+$ list-detail connection in tcp-lb lb0
 1) "127.0.0.1:63536/127.0.0.1:6380"
 2) "127.0.0.1:63537/127.0.0.1:6379"
+```
 
-list-detail connection in socks5-server s5
+```
+$ list-detail connection in socks5-server s5
 1) "127.0.0.1:55981/127.0.0.1:18081"
 2) "127.0.0.1:55982/127.0.0.1:16666"
+```
 
-list-detail connection in server svr0 in sg sg0
+```
+$ list-detail connection in server svr0 in sg sg0
 1) "127.0.0.1:63537/127.0.0.1:6379"
 ```
 
-#### force-remove
+### 3. forceremove
 
-Close the connection, and if the connection is bond to a session, the session will be closed as well.
+description: Close the connection, and if the connection is bond to a session, the session will be closed as well.
 
 Supports regexp pattern or plain string:
 
-* if the input starts with `/` and ends with `/`, then it's considered as a regexp
-* otherwise it matches the full string
+* if the input starts with `/` and ends with `/`, then it's considered as a regexp.
+* otherwise it matches the full string.
+
+examples:
 
 ```
-force-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
+$ force-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
 "OK"
+```
 
-force-remove conn /.*/ from el worker2 in elg worker
+```
+$ force-remove conn /.*/ from el worker2 in elg worker
 "OK"
 ```
 
-## Resource: session (sess)
+## session
 
-Represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server.
+short version: sess
 
-#### list
+description: Represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server.
 
-Count loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
+### 1. list
+
+description: Count loadbalancer sessions.
+
+examples:
 
 ```
-list session in tcp-lb lb0
+$ list session in tcp-lb lb0
 (integer) 1
+```
 
-list session in socks5-server s5
+```
+$ list session in socks5-server s5
 (integer) 2
 ```
 
-#### list-detail
+### 2. listdetail
 
-Get info about loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
+description: Get info about loadbalancer sessions.
+
+examples:
 
 ```
-list-detail session in tcp-lb lb0
+$ list-detail session in tcp-lb lb0
 1) 1) "127.0.0.1:63536/127.0.0.1:6380"
    2) "127.0.0.1:63537/127.0.0.1:6379"
+```
 
-list-detail session in socks5-server s5
+```
+$ list-detail session in socks5-server s5
 1) 1) "127.0.0.1:53589/127.0.0.1:18081"
    2) "127.0.0.1:53591/127.0.0.1:16666"
 2) 1) "127.0.0.1:53590/127.0.0.1:18081"
    2) "127.0.0.1:53592/127.0.0.1:16666"
 ```
 
-#### force-remove
+### 3. forceremove
 
-Close a session from lb. The related two connections will be closed as well.
+description: Close a session from lb.
+
+examples:
 
 ```
-force-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
+$ force-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
 "OK"
+```
 
-force-remove sess /127.0.0.1:58713.*/ from tl lb0
+```
+$ force-remove sess /127.0.0.1:58713.*/ from tl lb0
 "OK"
 ```
 
-## Resource: bytes-in (bin)
+## bytes-in
 
-Statistics: bytes flow from remote to local.
+short version: bin
 
-#### list/list-detail
+description: Statistics: bytes flow from remote to local.
 
-Get history total input bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
+### 1. list
 
-```
-list bytes-in in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 45
+description: Get history total input bytes from a resource.
 
-list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 45
-
-list bytes-in in server svr0 in sg sg0
-(integer) 9767
-```
-
-## Resource: bytes-out (bout)
-
-Statistics: bytes flow from local to remote.
-
-#### list/list-detail
-
-Get history total output bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
+examples:
 
 ```
-list bytes-out in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 9767
-
-list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 9767
-
-list bytes-out in server svr0 in sg sg0
+$ list bytes-in in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 45
 ```
 
-## Resource: accepted-conn-count
-
-Statistics: successfully accpeted connections. Connections accepted by os but directly terminated by the Proxy are not calculated.
-
-#### list/list-detail
-
-Get history total accepted connection count. Can be retrieved from `server-sock`.
+```
+$ list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
+(integer) 45
+```
 
 ```
-list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
+$ list bytes-in in server svr0 in sg sg0
+(integer) 9767
+```
+
+## bytes-out
+
+short version: bout
+
+description: Statistics: bytes flow from local to remote.
+
+### 1. list
+
+description: Get history total output bytes from a resource.
+
+examples:
+
+```
+$ list bytes-out in server-sock 127.0.0.1:6380 in tl lb0
+(integer) 9767
+```
+
+```
+$ list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
+(integer) 9767
+```
+
+```
+$ list bytes-out in server svr0 in sg sg0
+(integer) 45
+```
+
+## accepted-conn-count
+
+description: Statistics: successfully accpeted connections.
+
+### 1. list
+
+description: Get history total accepted connection count.
+
+examples:
+
+```
+$ list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
 (integer) 2
 ```
 
-## Resource: switch (sw)
+## switch
 
-A switch for vproxy wrapped vxlan packets.
+short version: sw
 
-#### add
+description: A switch for vproxy wrapped vxlan packets.
 
-Create a switch.
+### 1. add
 
-* address (addr): Binding udp address of the switch for wrapped vxlan packets.
-* password (pass): Password of the wrapped vxlan packets.
-* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: 300000
-* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: 14400000
-* event-loop-group (elg): *optional*. The event loop group used for handling packets. Default: (worker-elg)
+description: Create a switch.
+
+#### parameter description:
+
+##### 1. address
+
+description: Binding udp address of the switch for wrapped vxlan packets.
+
+optional: false
+
+default value: null
+
+##### 2. mactabletimeout
+
+description: Timeout for mac table (ms).
+
+optional: true
+
+default value: 300000
+
+##### 3. arptabletimeout
+
+description: Timeout for arp table (ms).
+
+optional: true
+
+default value: 14400000
+
+##### 4. eventloopgroup
+
+description: The event loop group used for handling packets.
+
+optional: true
+
+default value: (worker-elg)
+
+##### 5. securitygroup
+
+description: The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).
+
+optional: true
+
+default value: (allow-all)
+
+##### 6. mtu
+
+description: Default mtu setting for new connected ports.
+
+optional: true
+
+default value: 1500
+
+##### 7. flood
+
+description: Default flood setting for new connected ports.
+
+optional: true
+
+default value: allow
+
+examples:
 
 ```
-add switch sw0 address 0.0.0.0:4789 password p@sSw0rD
+$ add switch sw0 address 0.0.0.0:4789
 "OK"
 ```
 
-#### update
+### 2. update
 
-Update a switch.
+description: Update a switch.
 
-* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: not changed
-* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: not changed
+#### parameter description:
+
+##### 1. mactabletimeout
+
+description: Timeout for mac table (ms).
+
+optional: true
+
+default value: not changed
+
+##### 2. arptabletimeout
+
+description: Timeout for arp table (ms).
+
+optional: true
+
+default value: not changed
+
+##### 3. securitygroup
+
+description: The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).
+
+optional: true
+
+default value: not changed
+
+##### 4. mtu
+
+description: Default mtu setting for new connected ports, updating it will not affect the existing ones.
+
+optional: true
+
+default value: not changed
+
+##### 5. flood
+
+description: Default flood setting for new connected ports, updating it will not affect the existing ones.
+
+optional: true
+
+default value: not changed
+
+examples:
 
 ```
-update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000
+$ update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000
 "OK"
 ```
 
-#### list
+### 3. list
 
-Show names of all switches.
+description: Get names of switches.
+
+examples:
 
 ```
-list switch
+$ list switch
 1) "sw0"
 ```
 
-#### list-detail
+### 4. listdetail
 
-Show detailed info about all switches.
+description: Get detailed info of switches.
 
-```
-list-detail switch
-1) "sw0" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000
-```
-
-#### remove
-
-Remove and stop a switch.
+examples:
 
 ```
-remove switch sw0
+$ list-detail switch
+1) "sw0" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all)
+```
+
+### 5. remove
+
+description: Stop and remove a switch.
+
+examples:
+
+```
+$ remove switch sw0
 "OK"
 ```
 
-## Resource: vni
+### 6. addto
 
-Vxlan network id.
+description: Add a remote switch ref to a local switch. note: use list iface to see these remote switches.
 
-#### list
+#### flag:
 
-Count existing vnis in a switch.
+##### 1. noswitchflag
+
+description: Do not add switch flag on vxlan packets sent through this iface.
+
+optional: true
+
+default: false
+
+#### parameter description:
+
+##### 1. address
+
+description: The remote switch address.
+
+optional: false
+
+default value: null
+
+examples:
 
 ```
-list vni in switch sw0
-(integer) 1
+$ add switch sw1 to switch sw0 address 100.64.0.1:18472
+"OK"
 ```
 
-#### list-detail
+### 7. removefrom
 
-List existing vnis in a switch.
+description: Remove a remote switch ref from a local switch.
+
+examples:
 
 ```
-list-detail vni in switch sw0
+$ remove switch sw1 from switch sw0
+"OK"
+```
+
+## vpc
+
+description: A private network.
+
+### 1. list
+
+description: List existing vpcs in a switch.
+
+examples:
+
+```
+$ list vpc in switch sw0
 1) (integer) 1314
+```
+
+### 2. listdetail
+
+description: List detailed info about vpcs in a switch.
+
+examples:
+
+```
+$ list-detail vpc in switch sw0
+1) "1314 -> v4network 172.16.0.0/16"
+```
+
+### 3. addto
+
+description: Create a vpc in a switch. the name should be vni of the vpc.
+
+#### parameter description:
+
+##### 1. v4network
+
+description: The ipv4 network allowed in this vpc.
+
+optional: false
+
+default value: null
+
+##### 2. v6network
+
+description: The ipv6 network allowed in this vpc.
+
+optional: true
+
+default value: not allowed
+
+examples:
+
+```
+$ add vpc 1314 to switch sw0 v4network 172.16.0.0/16
+"OK"
+```
+
+### 4. removefrom
+
+description: Remove a vpc from a switch.
+
+examples:
+
+```
+$ remote vpc 1314 from switch sw0
+"OK"
+```
+
+## iface
+
+description: Connected interfaces.
+
+### 1. list
+
+description: Count currently connected interfaces in a switch.
+
+examples:
+
+```
+$ list iface in switch sw0
+(integer) 2
+```
+
+### 2. listdetail
+
+description: List current connected interfaces in a switch.
+
+examples:
+
+```
+$ list-detail iface in switch sw0
+1) "Iface(192.168.56.2:8472)"
+2) "Iface(100.64.0.4:8472)"
+```
+
+### 3. update
+
+description: Update interface config.
+
+#### parameter description:
+
+##### 1. mtu
+
+description: Mtu of this interface.
+
+optional: true
+
+default value: 1500
+
+##### 2. flood
+
+description: Whether to allow flooding traffic through this interface, allow or deny.
+
+optional: true
+
+default value: allow
+
+examples:
+
+```
+$ update iface tap:tap0 in switch sw0 mtu 9000 flood allow
+"OK"
+```
+
+```
+$ update iface remote:sw-x in switch sw0 mtu 1500 flood deny
+"OK"
+```
+
+```
+$ update iface ucli:hello in switch sw0 mtu 1500 flood deny
+"OK"
+```
+
+```
+$ update iface user:hello in switch sw0 mtu 1500 flood allow
+"OK"
+```
+
+```
+$ update iface 10.0.0.1:8472 in switch sw0 mtu 1500 flood allow
+"OK"
 ```
 
 ## arp
 
-Arp and mac table entries.
+description: Arp and mac table entries.
 
-#### list
+### 1. list
 
-Count entries in a vni.
+description: Count entries in a vpc.
+
+examples:
 
 ```
-list arp in vni 1314 in switch sw0
+$ list arp in vpc 1314 in switch sw0
 (integer) 2
 ```
 
-#### list-detail
+### 2. listdetail
 
-List arp and mac table entries in a vni.
+description: List arp and mac table entries in a vpc.
+
+examples:
 
 ```
-list-detail arp in vni 1314 in switch sw0
+$ list-detail arp in vpc 1314 in switch sw0
 1) "aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299"
 2) "fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299"
+```
+
+## user
+
+description: User in a switch.
+
+### 1. list
+
+description: List user names in a switch.
+
+examples:
+
+```
+$ list user in switch sw0
+1) "hello"
+```
+
+### 2. listdetail
+
+description: List all user info in a switch.
+
+examples:
+
+```
+$ list-detail user in switch sw0
+1) "hello" -> vni 1314
+```
+
+### 3. add
+
+description: Add a user to a switch.
+
+#### parameter description:
+
+##### 1. pass
+
+description: Password of the user.
+
+optional: false
+
+default value: null
+
+##### 2. vni
+
+description: Vni assigned for the user.
+
+optional: false
+
+default value: null
+
+##### 3. mtu
+
+description: Mtu for the user interface when the user is connected.
+
+optional: true
+
+default value: mtu setting of the switch
+
+##### 4. flood
+
+description: Whether the user interface allows flooding traffic.
+
+optional: true
+
+default value: flood setting of the switch
+
+examples:
+
+```
+$ add user hello to switch sw0 vni 1314 password p@sSw0rD
+"OK"
+```
+
+### 4. update
+
+description: Update user info in a switch.
+
+#### parameter description:
+
+##### 1. mtu
+
+description: Mtu for the user interface when the user is connected, updating it will not affect connected ones.
+
+optional: true
+
+default value: not changed
+
+##### 2. flood
+
+description: Whether the user interface allows flooding traffic, updating it will not affect connected ones.
+
+optional: true
+
+default value: not changed
+
+examples:
+
+```
+$ update user hello in switch sw0 mtu 1500 flood allow
+"OK"
+```
+
+### 5. remove
+
+description: Remove a user from a switch.
+
+examples:
+
+```
+$ remove user hello from switch sw0
+"OK"
+```
+
+## tap
+
+description: Add/remove a tap device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix or -Dvfd=windows.
+
+### 1. addto
+
+description: Add a user to a switch. Note: the result string is the name of the tap device because might be generated.
+
+#### parameter description:
+
+##### 1. vni
+
+description: Vni of the vpc which the tap device is attached to.
+
+optional: false
+
+default value: null
+
+##### 2. postscript
+
+description: Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).
+
+optional: true
+
+default value: (empty)
+
+##### 3. mtu
+
+description: Mtu of this tap device.
+
+optional: true
+
+default value: mtu setting of the switch
+
+##### 4. flood
+
+description: Whether the tap device allows flooding traffic.
+
+optional: true
+
+default value: flood setting of the switch
+
+examples:
+
+```
+$ add tap tap%d to switch sw0 vni 1314
+"tap0"
+```
+
+### 2. removefrom
+
+description: Remove and close a tap from a switch.
+
+examples:
+
+```
+$ remove tap tap0 from switch sw0
+"OK"
+```
+
+## tun
+
+description: Add/remove a tun device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. Note: 1) use list iface to see these tun devices, 2) should set -Dvfd=posix.
+
+### 1. addto
+
+description: Add a user to a switch. Note: the result string is the name of the tun device because might be generated.
+
+#### parameter description:
+
+##### 1. vni
+
+description: Vni of the vpc which the tun device is attached to.
+
+optional: false
+
+default value: null
+
+##### 2. mac
+
+description: Mac address of this tun device. the switch requires l2 layer frames for handling packets.
+
+optional: false
+
+default value: null
+
+##### 3. postscript
+
+description: Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).
+
+optional: true
+
+default value: (empty)
+
+##### 4. mtu
+
+description: Mtu of this tun device.
+
+optional: true
+
+default value: mtu setting of the switch
+
+##### 5. flood
+
+description: Whether the tun device allows flooding traffic.
+
+optional: true
+
+default value: flood setting of the switch
+
+examples:
+
+```
+$ add tun tun%d to switch sw0 vni 1314
+"tun0"
+```
+
+```
+$ add tun utun9 to switch sw0 vni 1314
+"utun9"
+```
+
+### 2. removefrom
+
+description: Remove and close a tun from a switch.
+
+examples:
+
+```
+$ remove tun tun0 from switch sw0
+"OK"
+```
+
+## user-client
+
+short version: ucli
+
+description: User client of an encrypted tunnel to remote switch. Note: use list iface to see these clients.
+
+### 1. add
+
+description: Add a user client to a switch.
+
+#### parameter description:
+
+##### 1. pass
+
+description: Password of the user.
+
+optional: false
+
+default value: null
+
+##### 2. vni
+
+description: Vni which the user is assigned to.
+
+optional: false
+
+default value: null
+
+##### 3. address
+
+description: Remote switch address to connect to.
+
+optional: false
+
+default value: null
+
+examples:
+
+```
+$ add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472
+"OK"
+```
+
+### 2. remove
+
+description: Remove a user client from a switch.
+
+#### parameter description:
+
+##### 1. address
+
+description: Remote switch address the client connected to.
+
+optional: false
+
+default value: null
+
+examples:
+
+```
+$ remove user-client hello from switch sw0 address 192.168.77.1:18472
+"OK"
+```
+
+## ip
+
+description: Synthetic ip in a vpc of a switch.
+
+### 1. list
+
+description: Show synthetic ips in a vpc of a switch.
+
+examples:
+
+```
+$ list ip in vpc 1314 in switch sw0
+1) "172.16.0.21"
+2) "[2001:0db8:0000:f101:0000:0000:0000:0002]"
+```
+
+### 2. listdetail
+
+description: Show detailed info about synthetic ips in a vpc of a switch.
+
+examples:
+
+```
+$ list-detail ip in vpc 1314 in switch sw0
+1) "172.16.0.21 -> mac e2:8b:11:00:00:22"
+2) "[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33"
+```
+
+### 3. addto
+
+description: Add a synthetic ip to a vpc of a switch.
+
+#### parameter description:
+
+##### 1. mac
+
+description: Mac address that the ip assigned on.
+
+optional: false
+
+default value: null
+
+examples:
+
+```
+$ add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22
+"OK"
+```
+
+### 4. removefrom
+
+description: Remove a synthetic ip from a vpc of a switch.
+
+examples:
+
+```
+$ remove ip 172.16.0.21 from vpc 1314 in switch sw0
+"OK"
+```
+
+## route
+
+description: Route rules in a vpc of a switch.
+
+### 1. list
+
+description: Show route rule names in a vpc of a switch.
+
+examples:
+
+```
+$ list route in vpc 1314 in switch sw0
+1) "to172.17"
+2) "to2001:0db8:0000:f102"
+```
+
+### 2. listdetail
+
+description: Show detailed info about route rules in a vpc of a switch.
+
+examples:
+
+```
+$ list-detail route in vpc 1314 in switch sw0
+1) "to172.17 -> network 172.17.0.0/24 vni 1315"
+2) "to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315"
+```
+
+### 3. addto
+
+description: Add a route to a vpc of a switch.
+
+#### parameter description:
+
+##### 1. network
+
+description: Network to be matched.
+
+optional: false
+
+default value: null
+
+##### 2. vni
+
+description: The vni to send packet to. only one of vni|via can be used.
+
+optional: false
+
+default value: null
+
+##### 3. via
+
+description: The address to forward the packet to. only one of via|vni can be used.
+
+optional: false
+
+default value: null
+
+examples:
+
+```
+$ add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315
+"OK"
+```
+
+```
+$ add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1
+"OK"
+```
+
+### 4. removefrom
+
+description: Remove a route rule from a vpc of a switch.
+
+examples:
+
+```
+$ remove route to172.17 from vpc 1314 in switch sw0
+"OK"
 ```

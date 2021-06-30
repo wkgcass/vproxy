@@ -45,6 +45,60 @@ public class HelpCommand {
         return sb.toString();
     }
 
+    public static String helpMarkdown() {
+        StringBuilder result = new StringBuilder();
+        HelpCommand.ResMan[] men = HelpCommand.ResMan.values();
+        result.append("# vproxy\n\n");
+        for (HelpCommand.ResMan man : men) {
+            result.append("## ").append(man.res).append("\n\n");
+            if (man.shortVer != null) {
+                result.append("short version: ").append(man.shortVer).append("\n\n");
+            }
+            result.append("description: ").append(man.descr).append("\n\n");
+            List<HelpCommand.ResActMan> acts = man.acts;
+            for (int j = 0, actsSize = acts.size(); j < actsSize; j++) {
+                HelpCommand.ResActMan act = acts.get(j);
+                result.append("### ").append(j + 1).append(". ").append(act.act).append("\n\n");
+                result.append("description: ").append(act.descr).append("\n\n");
+
+                if (act.flagDescr != null && !act.flagDescr.isEmpty()) {
+                    result.append("#### flag: " + "\n\n");
+                    List<HelpCommand.ResActFlagMan> flagDescr = act.flagDescr;
+                    for (int i = 0, flagDescrSize = flagDescr.size(); i < flagDescrSize; i++) {
+                        HelpCommand.ResActFlagMan resActFlagMan = flagDescr.get(i);
+                        result.append("##### ").append(i + 1).append(". ").append(resActFlagMan.flag).append("\n\n");
+                        result.append("description: ").append(resActFlagMan.descr).append("\n\n");
+                        result.append("optional: ").append(resActFlagMan.optional).append("\n\n");
+                        result.append("default: ").append(resActFlagMan.isDefault).append("\n\n");
+                    }
+                }
+
+                if (act.paramDescr != null && !act.paramDescr.isEmpty()) {
+                    result.append("#### parameter description:\n\n");
+                    List<HelpCommand.ResActParamMan> paramDescr = act.paramDescr;
+                    for (int i = 0, paramDescrSize = paramDescr.size(); i < paramDescrSize; i++) {
+                        HelpCommand.ResActParamMan resActParamMan = paramDescr.get(i);
+                        result.append("##### ").append(i + 1).append(". ").append(resActParamMan.param).append("\n\n");
+                        result.append("description: ").append(resActParamMan.descr).append("\n\n");
+                        result.append("optional: ").append(resActParamMan.optional).append("\n\n");
+                        result.append("default value: ").append(resActParamMan.defaultValue).append("\n\n");
+                    }
+                }
+
+                if (act.examples != null && !act.examples.isEmpty()) {
+                    result.append("examples: \n\n");
+                    for (Tuple<String, String> example : act.examples) {
+                        result.append("```\n");
+                        result.append("$ ").append(example.left).append("\n");
+                        result.append(example.right).append("\n");
+                        result.append("```\n\n");
+                    }
+                }
+            }
+        }
+        return result.toString();
+    }
+
     public static String helpString() {
         int maxLenOfFullName = "man ...".length();
         {
@@ -1561,6 +1615,16 @@ public class HelpCommand {
             this.descr = descr.substring(0, 1).toUpperCase() + descr.substring(1) + ".";
             this.acts = Collections.unmodifiableList(acts);
         }
+
+        @Override
+        public String toString() {
+            return "ResMan{" +
+                    "res='" + res + '\'' +
+                    ", shortVer='" + shortVer + '\'' +
+                    ", descr='" + descr + '\'' +
+                    ", acts=" + acts +
+                    '}';
+        }
     }
 
     public static class ResActMan {
@@ -1591,6 +1655,18 @@ public class HelpCommand {
             this.examples = examples;
             this.note = note;
         }
+
+        @Override
+        public String toString() {
+            return "ResActMan{" +
+                    "act=" + act +
+                    ", descr='" + descr + '\'' +
+                    ", paramDescr=" + paramDescr +
+                    ", flagDescr=" + flagDescr +
+                    ", examples=" + examples +
+                    ", note='" + note + '\'' +
+                    '}';
+        }
     }
 
     public static class ResActParamMan {
@@ -1612,6 +1688,16 @@ public class HelpCommand {
             this.optional = true;
             this.defaultValue = defaultValue;
         }
+
+        @Override
+        public String toString() {
+            return "ResActParamMan{" +
+                    "param=" + param +
+                    ", descr='" + descr + '\'' +
+                    ", optional=" + optional +
+                    ", defaultValue='" + defaultValue + '\'' +
+                    '}';
+        }
     }
 
     public static class ResActFlagMan {
@@ -1625,6 +1711,16 @@ public class HelpCommand {
             this.descr = descr.substring(0, 1).toUpperCase() + descr.substring(1) + ".";
             this.optional = true;
             this.isDefault = isDefault;
+        }
+
+        @Override
+        public String toString() {
+            return "ResActFlagMan{" +
+                    "flag=" + flag +
+                    ", descr='" + descr + '\'' +
+                    ", optional=" + optional +
+                    ", isDefault=" + isDefault +
+                    '}';
         }
     }
 }
