@@ -11,8 +11,6 @@ import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.AbstractDatagramFD;
 import vproxy.vfd.FD;
 import vproxy.vfd.SockAddr;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -244,16 +242,15 @@ public class BlockingDatagramFD<ADDR extends SockAddr> implements AbstractDatagr
     }
 
     @Override
-    public FDCloseReturn close(FDCloseReq req) throws IOException {
+    public void close() throws IOException {
         if (isClosed) {
             fd.close(); // still proxy the call to fd
-            return FDCloseReturn.nothing(req);
+            return;
         }
         isClosed = true;
         fd.close();
         readThread.interrupt();
         writeThread.interrupt();
-        return FDCloseReturn.nothing(req);
     }
 
     private void threadRead() {

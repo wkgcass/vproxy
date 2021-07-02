@@ -3,7 +3,6 @@ package vproxy.vfd.posix;
 import vproxy.vfd.FD;
 import vproxy.vfd.SocketOptions;
 import vproxy.vfd.abs.AbstractBaseFD;
-import vproxy.vfd.type.FDCloseReq;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -101,36 +100,17 @@ public class PosixFD extends AbstractBaseFD implements FD {
         return !closed;
     }
 
-    @SuppressWarnings("unused")
-    protected class PosixFDCloseReturn extends AbstractBaseFDCloseReturn {
-        protected PosixFDCloseReturn(FDCloseReq req, DummyCall unused) throws IOException {
-            super(req, dummyCall());
-        }
-
-        protected PosixFDCloseReturn(FDCloseReq req, RealCall unused) throws IOException {
-            super(req, dummyCall());
-            close0(req);
-        }
-
-        protected PosixFDCloseReturn(FDCloseReq req, SuperCall unused) throws IOException {
-            super(req, realCall());
-        }
-    }
-
-    private PosixFDCloseReturn close0(FDCloseReq req) throws IOException {
+    @Override
+    public void close() throws IOException {
         if (closed) {
-            return req.superClose(PosixFDCloseReturn::new);
+            super.close();
+            return;
         }
         closed = true;
         if (fd != -1) {
             posix.close(fd);
         }
-        return req.superClose(PosixFDCloseReturn::new);
-    }
-
-    @Override
-    public PosixFDCloseReturn close(FDCloseReq req) throws IOException {
-        return close0(req);
+        super.close();
     }
 
     @Override

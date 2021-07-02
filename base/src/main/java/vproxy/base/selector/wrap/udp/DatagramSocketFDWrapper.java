@@ -4,8 +4,6 @@ import vproxy.vfd.DatagramFD;
 import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -81,9 +79,8 @@ public final class DatagramSocketFDWrapper implements SocketFD {
     }
 
     @Override
-    public FDCloseReturn close(FDCloseReq req) throws IOException {
+    public void close() throws IOException {
         fd.close();
-        return FDCloseReturn.nothing(req);
     }
 
     @Override

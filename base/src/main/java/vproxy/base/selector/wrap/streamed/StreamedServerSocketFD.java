@@ -11,8 +11,6 @@ import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.ServerSocketFD;
 import vproxy.vfd.SocketFD;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -119,18 +117,12 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
 
     @Override
     public void close() throws IOException {
-        FDCloseReq.inst().wrapClose(this::close);
-    }
-
-    @Override
-    public FDCloseReturn close(FDCloseReq req) {
         isOpen = false;
         synchronized (this.serverPtr) {
             this.serverPtr[0] = null;
         }
 
         GlobalInspection.getInstance().removeMetric(statisticsAcceptQueueLength);
-        return FDCloseReturn.nothing(req);
     }
 
     void accepted(StreamedFD fd) {

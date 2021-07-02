@@ -10,8 +10,6 @@ import vproxy.base.selector.wrap.WritableAware;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.*;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -147,7 +145,7 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     }
 
     @Override
-    public FDCloseReturn close(FDCloseReq req) throws IOException {
+    public void close() throws IOException {
         server.close();
         for (VirtualDatagramFD fd : conns.values()) {
             // the fd is accepted by user code
@@ -170,7 +168,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         if (statisticsEstablishedCount != null) {
             GlobalInspection.getInstance().removeMetric(statisticsEstablishedCount);
         }
-        return FDCloseReturn.nothing(req);
     }
 
     @Override
@@ -308,11 +305,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
 
         @Override
         public void close() {
-            FDCloseReq.inst().wrapClose(this::close);
-        }
-
-        @Override
-        public FDCloseReturn close(FDCloseReq req) {
             release();
             bufs.clear();
             conns.values().remove(this);
@@ -321,7 +313,6 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
             if (x != null) {
                 acceptQ.remove(this);
             }
-            return FDCloseReturn.nothing(req);
         }
 
         @Override

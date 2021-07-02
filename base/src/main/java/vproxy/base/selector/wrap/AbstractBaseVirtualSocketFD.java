@@ -8,7 +8,6 @@ import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
 import vproxy.vfd.abs.AbstractBaseFD;
-import vproxy.vfd.type.FDCloseReq;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -236,51 +235,25 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
         return !closed;
     }
 
-    @SuppressWarnings("unused")
-    protected class AbstractBaseVirtualSocketFDCloseReturn extends AbstractBaseFDCloseReturn {
-        protected AbstractBaseVirtualSocketFDCloseReturn(FDCloseReq req, DummyCall unused) throws IOException {
-            super(req, dummyCall());
-        }
-
-        protected AbstractBaseVirtualSocketFDCloseReturn(FDCloseReq req, RealCall unused) throws IOException {
-            super(req, dummyCall());
-            close0(req);
-        }
-
-        protected AbstractBaseVirtualSocketFDCloseReturn(FDCloseReq req, SuperCall unused) throws IOException {
-            super(req, realCall());
-        }
-    }
-
     @Override
     public void close() { // virtual fd must not raise exceptions when closing
-        FDCloseReq.inst().wrapClose(this::close);
-    }
-
-    private AbstractBaseVirtualSocketFDCloseReturn close0(FDCloseReq req) {
         if (closed) {
-            return superClose(req);
+            superClose();
+            return;
         }
         assert Logger.lowLevelDebug(this + ".close() called, reset=" + resetWhenClosing);
-        var closeReturn = closeSelf(req);
+        closeSelf();
         doClose(resetWhenClosing);
-        return closeReturn;
     }
 
-    @Override
-    public AbstractBaseVirtualSocketFDCloseReturn close(FDCloseReq req) {
-        return close0(req);
-    }
-
-    private AbstractBaseVirtualSocketFDCloseReturn closeSelf(FDCloseReq req) {
-        var closeReturn = superClose(req);
+    private void closeSelf() {
+        superClose();
         closed = true;
-        return closeReturn;
     }
 
-    private AbstractBaseVirtualSocketFDCloseReturn superClose(FDCloseReq req) {
+    private void superClose() {
         try {
-            return req.superClose(AbstractBaseVirtualSocketFDCloseReturn::new);
+            super.close();
         } catch (IOException e) {
             Logger.shouldNotHappen("closing base fd failed", e);
             throw new RuntimeException(e);
@@ -289,13 +262,13 @@ public abstract class AbstractBaseVirtualSocketFD extends AbstractBaseFD impleme
 
     protected abstract void doClose(boolean reset);
 
-    protected void asyncClose(FDCloseReq req, Function<Boolean, Promise<Void>> promiseFunc) {
+    protected void asyncClose(Function<Boolean, Promise<Void>> promiseFunc) {
         if (closed) {
             return;
         }
         closed = true;
         promiseFunc.apply(resetWhenClosing).then(v -> {
-            closeSelf(req);
+            closeSelf();
             return Promise.resolve(null);
         });
     }

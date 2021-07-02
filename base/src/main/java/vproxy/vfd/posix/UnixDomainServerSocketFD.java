@@ -4,7 +4,6 @@ import vproxy.vfd.IPPort;
 import vproxy.vfd.ServerSocketFD;
 import vproxy.vfd.SocketFD;
 import vproxy.vfd.UDSPath;
-import vproxy.vfd.type.FDCloseReq;
 
 import java.io.File;
 import java.io.IOException;
@@ -61,8 +60,8 @@ public class UnixDomainServerSocketFD extends PosixNetworkFD implements ServerSo
     }
 
     @Override
-    public PosixFDCloseReturn close(FDCloseReq req) throws IOException {
-        var closeReturn = super.close(req);
+    public void close() throws IOException {
+        super.close();
 
         // remove file now
         if (sockFile != null) {
@@ -70,7 +69,5 @@ public class UnixDomainServerSocketFD extends PosixNetworkFD implements ServerSo
             sockFile.delete();
         }
         sockFile = null;
-
-        return closeReturn;
     }
 }
