@@ -10,7 +10,9 @@ clean:
 	rm -f ./base/src/main/c/libvfdposix.dylib
 	rm -f ./base/src/main/c/libvfdposix.so
 	rm -f ./base/src/main/c/libvfdfstack.so
+	rm -f ./base/src/main/c/libvpxdp.so
 	rm -f ./base/src/main/c/vfdwindows.dll
+	cd ./base/src/main/c/xdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
 	rm -rf ./docker-plugin-rootfs
@@ -39,6 +41,14 @@ jlink: jar
 .PHONY: vfdposix
 vfdposix:
 	cd ./base/src/main/c && ./make-general.sh
+
+.PHONY: vpxdp
+vpxdp: vfdposix
+	cd ./base/src/main/c && ./make-xdp.sh
+
+.PHONY: xdp-sample-kern
+xdp-sample-kern:
+	cd ./base/src/main/c/xdp && make kern
 
 .PHONY: vfdposix-linux
 ifeq ($(OS),Linux)

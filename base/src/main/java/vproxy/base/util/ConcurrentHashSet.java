@@ -93,4 +93,21 @@ public class ConcurrentHashSet<E> implements Set<E> {
     public void clear() {
         map.clear();
     }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("[");
+        boolean isFirst = true;
+        for (E e : map.keySet()) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append(", ");
+            }
+            sb.append(e);
+        }
+        sb.append("]");
+        return sb.toString();
+    }
 }

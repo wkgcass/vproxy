@@ -86,6 +86,7 @@ module vproxy.base {
     exports vproxy.vpacket;
     exports vproxy.vpacket.conntrack;
     exports vproxy.vpacket.conntrack.tcp;
+    exports vproxy.xdp;
 
     uses vproxy.vfd.FDs;
     uses vproxy.base.processor.ProcessorRegistry;
