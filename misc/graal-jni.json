@@ -79,5 +79,23 @@
 				"parameterTypes": [ "java.lang.String" ]
 			}
 		]
+	},
+	{
+		"name": "vproxy.xdp.ChunkPrototypeObjectList",
+		"methods": [
+			{
+				"name": "add",
+				"parameterTypes": ["long", "int", "int", "int"]
+			}
+		]
+	},
+	{
+		"name": "vproxy.xdp.Chunk",
+		"methods": [
+			{
+				"name": "set",
+				"parameterTypes": ["long", "int", "int", "int"]
+			}
+		]
 	}
 ]

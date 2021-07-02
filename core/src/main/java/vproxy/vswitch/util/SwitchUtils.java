@@ -21,6 +21,7 @@ import java.util.concurrent.TimeUnit;
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
     public static final int RCV_HEAD_PRESERVE_LEN = 512;
+    public static final int RX_TX_CHUNKS = 2048;
     public static final MacAddress BROADCAST_MAC = new MacAddress("ff:ff:ff:ff:ff:ff");
     public static final MacAddress ZERO_MAC = new MacAddress("00:00:00:00:00:00");
 
