@@ -9,8 +9,6 @@ import vproxy.base.util.Utils;
 import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 import vproxy.vmirror.MirrorDataFactory;
 
 import java.io.IOException;
@@ -331,9 +329,9 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
-    public FDCloseReturn close(FDCloseReq req) throws IOException {
+    public void close() throws IOException {
         if (state == State.real_closed) {
-            return FDCloseReturn.nothing(req);
+            return;
         }
         setState(State.real_closed);
         if (state != State.dead && soLinger0) {
@@ -343,7 +341,6 @@ public class StreamedFD implements SocketFD, VirtualFD {
         }
         handler.removeStreamedFD(this);
         release();
-        return FDCloseReturn.nothing(req);
     }
 
     private void release() {

@@ -3,8 +3,6 @@ package vproxy.vswitch.stack.fd;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.ServerSocketFD;
 import vproxy.vfd.SocketFD;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 import vproxy.vpacket.conntrack.tcp.ListenEntry;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
 import vproxy.vpacket.conntrack.tcp.TcpUtils;
@@ -87,19 +85,14 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
 
     @Override
     public void close() {
-        FDCloseReq.inst().wrapClose(this::close);
-    }
-
-    @Override
-    public FDCloseReturn close(FDCloseReq req) {
         if (closed) {
-            return FDCloseReturn.nothing(req);
+            return;
         }
         closed = true;
 
         cancelReadable();
         if (entry == null) {
-            return FDCloseReturn.nothing(req);
+            return;
         }
         for (var e : entry.synBacklog) {
             PacketBuffer pkb = PacketBuffer.fromPacket(ctx.table, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
@@ -111,7 +104,6 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
         }
         ctx.conntrack.removeListen(local);
         entry.destroy();
-        return FDCloseReturn.nothing(req);
     }
 
     private class ListenHandler implements vproxy.vpacket.conntrack.tcp.ListenHandler {

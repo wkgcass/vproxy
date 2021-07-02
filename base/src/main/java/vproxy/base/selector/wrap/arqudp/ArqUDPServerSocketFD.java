@@ -9,8 +9,6 @@ import vproxy.base.selector.wrap.udp.ServerDatagramFD;
 import vproxy.base.util.Logger;
 import vproxy.base.util.nio.ByteArrayChannel;
 import vproxy.vfd.*;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -127,9 +125,8 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
-    public FDCloseReturn close(FDCloseReq req) throws IOException {
+    public void close() throws IOException {
         fd.close();
-        return FDCloseReturn.nothing(req);
     }
 
     @Override

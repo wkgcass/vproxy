@@ -8,7 +8,6 @@ import vproxy.vfd.IPPort;
 import vproxy.vfd.ServerSocketFD;
 import vproxy.vfd.SocketFD;
 import vproxy.vfd.abs.AbstractBaseFD;
-import vproxy.vfd.type.FDCloseReq;
 
 import java.io.IOException;
 import java.net.SocketOption;
@@ -148,45 +147,20 @@ public abstract class AbstractBaseVirtualServerSocketFD<ACCEPTED extends SocketF
         return !closed;
     }
 
-    @SuppressWarnings("unused")
-    protected class AbstractBaseVirtualServerSocketFDCloseReturn extends AbstractBaseFDCloseReturn {
-        protected AbstractBaseVirtualServerSocketFDCloseReturn(FDCloseReq req, DummyCall unused) throws IOException {
-            super(req, dummyCall());
-        }
-
-        protected AbstractBaseVirtualServerSocketFDCloseReturn(FDCloseReq req, RealCall realCall) throws IOException {
-            super(req, dummyCall());
-            close0(req);
-        }
-
-        protected AbstractBaseVirtualServerSocketFDCloseReturn(FDCloseReq req, SuperCall realCall) throws IOException {
-            super(req, realCall());
-        }
-    }
-
-    private AbstractBaseVirtualServerSocketFDCloseReturn close0(FDCloseReq req) {
+    @Override
+    public void close() {
         if (closed) {
-            return superClose(req);
+            superClose();
+            return;
         }
-        var closeReturn = superClose(req);
+        superClose();
         closed = true;
         doClose();
-        return closeReturn;
     }
 
-    @Override
-    public void close() { // virtual fd must not raise exceptions when closing
-        FDCloseReq.inst().wrapClose(this::close);
-    }
-
-    @Override
-    public AbstractBaseVirtualServerSocketFDCloseReturn close(FDCloseReq req) {
-        return close0(req);
-    }
-
-    private AbstractBaseVirtualServerSocketFDCloseReturn superClose(FDCloseReq req) {
+    private void superClose() {
         try {
-            return req.superClose(AbstractBaseVirtualServerSocketFDCloseReturn::new);
+            super.close();
         } catch (IOException e) {
             Logger.shouldNotHappen("closing base fd failed", e);
             throw new RuntimeException(e);

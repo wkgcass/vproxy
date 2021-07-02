@@ -4,8 +4,6 @@ import vproxy.base.util.ByteBufferEx;
 import vproxy.base.util.direct.DirectByteBuffer;
 import vproxy.base.util.direct.DirectMemoryUtils;
 import vproxy.vfd.FD;
-import vproxy.vfd.type.FDCloseReq;
-import vproxy.vfd.type.FDCloseReturn;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -52,23 +50,8 @@ public abstract class AbstractBaseFD implements FD {
         directBufferForWriting.limit(directBufferForWriting.capacity()).position(0);
     }
 
-    @SuppressWarnings("unused")
-    public class AbstractBaseFDCloseReturn extends FDCloseReturn {
-        protected AbstractBaseFDCloseReturn(FDCloseReq req, DummyCall unused) throws IOException {
-            super(req, dummyCall());
-        }
-
-        protected AbstractBaseFDCloseReturn(FDCloseReq req, RealCall unused) throws IOException {
-            super(req, dummyCall());
-            close0(req);
-        }
-
-        protected AbstractBaseFDCloseReturn(FDCloseReq req, SuperCall unused) throws IOException {
-            super(req, realCall());
-        }
-    }
-
-    private AbstractBaseFDCloseReturn close0(FDCloseReq req) throws IOException {
+    @Override
+    public void close() throws IOException {
         if (directBufferForReading != null) {
             directBufferForReading.clean();
             directBufferForReading = null;
@@ -77,12 +60,6 @@ public abstract class AbstractBaseFD implements FD {
             directBufferForWriting.clean();
             directBufferForWriting = null;
         }
-        return req.superClose(AbstractBaseFDCloseReturn::new);
-    }
-
-    @Override
-    public AbstractBaseFDCloseReturn close(FDCloseReq req) throws IOException {
-        return close0(req);
     }
 
     @FunctionalInterface
