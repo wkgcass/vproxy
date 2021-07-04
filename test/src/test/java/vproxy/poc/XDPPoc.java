@@ -25,7 +25,7 @@ public class XDPPoc {
         var bpfobj = BPFObject.loadAndAttachToNic("./base/src/main/c/xdp/sample_kern.o",
             "xdp_sock", ifname, BPFMode.SKB, true);
         var map = bpfobj.getMap("xsks_map");
-        var umem = UMem.create(5, 4, 4, 4096, 0);
+        var umem = UMem.create("poc-umem", 5, 4, 4, 4096, 0);
         var buf = umem.getBuffer();
         Logger.alert("buffer from umem: " + buf);
         var xsk = XDPSocket.create(ifname, 0, umem, 4, 4, BPFMode.SKB, false);
@@ -78,7 +78,7 @@ public class XDPPoc {
                             chunk.releaseRef(umem);
                             continue;
                         }
-                        chunk2.pktaddr = chunk2.addr;
+                        chunk2.pktaddr = chunk2.addr();
                         chunk2.pktlen = chunk.pktlen;
 
                         Logger.alert("new chunk: " + chunk2);

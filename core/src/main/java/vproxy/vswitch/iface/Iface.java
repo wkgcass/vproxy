@@ -33,4 +33,7 @@ public interface Iface {
     boolean replaceEgressFilter(PacketFilter old, PacketFilter now);
 
     PacketFilter getEgressFilter();
+
+    default void completeTx() { // default do nothing
+    }
 }

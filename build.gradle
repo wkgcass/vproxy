@@ -55,7 +55,7 @@ repositories {
 project(':base') {
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=vproxy.base'
-        options.compilerArgs += ["-h", project.rootProject.projectDir.absolutePath+"/base/src/main/c"]
+        options.compilerArgs += ["-h", project.rootProject.projectDir.absolutePath + "/base/src/main/c"]
     }
     compileKotlin {
         destinationDir = compileJava.destinationDir
@@ -197,11 +197,17 @@ project(':test') {
     }
 
     task XDPPoc(type: JavaExec) {
+        if ("true" == System.getProperty("enableAssertions")) {
+            enableAssertions = true
+        }
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         systemProperty("java.library.path", "base/src/main/c:base/src/main/c/xdp/libbpf/src")
         systemProperty("vfd", "posix")
         main = "vproxy.poc.XDPPoc"
+        if (System.getProperty("XDPPoc") != null) {
+            main += System.getProperty("XDPPoc")
+        }
 
         if (System.getProperty("ifname") != null) {
             args = [System.getProperty("ifname")]
