@@ -85,7 +85,7 @@
 		"methods": [
 			{
 				"name": "add",
-				"parameterTypes": ["long", "int", "int", "int"]
+				"parameterTypes": ["long", "long", "int", "int", "int", "int", "int"]
 			}
 		]
 	},
@@ -94,7 +94,7 @@
 		"methods": [
 			{
 				"name": "set",
-				"parameterTypes": ["long", "int", "int", "int"]
+				"parameterTypes": ["long", "long", "int", "int", "int", "int", "int"]
 			}
 		]
 	}
