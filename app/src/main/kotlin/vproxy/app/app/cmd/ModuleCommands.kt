@@ -830,6 +830,34 @@ class ModuleCommands : Commands() {
         exec = execUpdate { UserClientHandle.forceRemove(it) }
       )
     }
+    it + Res(ResourceType.xdp) {
+      it + ResAct(
+        relation = ResourceType.xdp,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.sw),
+        params = {
+          it + ResActParam(Param.nic, required)
+          it + ResActParam(Param.bpfmap, required)
+          it + ResActParam(Param.umem, required)
+          it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
+          it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
+          it + ResActParam(Param.txringsize) { RingSizeHandle.check(it, Param.txringsize) }
+          it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.bpfmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
+        },
+        flags = {
+          it + ResActFlag(Flag.zerocopy)
+        },
+        exec = execUpdate { XDPHandle.add(it) }
+      )
+      it + ResAct(
+        relation = ResourceType.xdp,
+        action = ActType.removefrom,
+        targetRelation = ResRelation(ResourceType.sw),
+        exec = execUpdate { XDPHandle.remove(it) }
+      )
+    }
     it + Res(ResourceType.ip) {
       it + ResAct(
         relation = ResourceType.ip,
@@ -925,6 +953,82 @@ class ModuleCommands : Commands() {
         targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         check = { VpcHandle.checkVpcName(it.prepositionResource) },
         exec = execUpdate { RouteHandle.remove(it) }
+      )
+    }
+    it + Res(ResourceType.umem) {
+      it + ResAct(
+        relation = ResourceType.umem,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.sw),
+        params = {
+          it + ResActParam(Param.chunks) { RingSizeHandle.check(it, Param.chunks) }
+          it + ResActParam(Param.fillringsize) { RingSizeHandle.check(it, Param.fillringsize) }
+          it + ResActParam(Param.compringsize) { RingSizeHandle.check(it, Param.compringsize) }
+          it + ResActParam(Param.framesize) { FrameSizeHandle.check(it) }
+          it + ResActParam(Param.headroom) { HeadroomHandle.check(it) }
+        },
+        exec = execUpdate { UMemHandle.add(it) }
+      )
+      it + ResAct(
+        relation = ResRelation(ResourceType.umem, ResRelation(ResourceType.sw)),
+        action = ActType.list,
+        exec = {
+          val names = UMemHandle.names(it.resource.parentResource)
+          CmdResult(names, names, utilJoinList(names))
+        }
+      )
+      it + ResAct(
+        relation = ResRelation(ResourceType.umem, ResRelation(ResourceType.sw)),
+        action = ActType.listdetail,
+        exec = {
+          val umems = UMemHandle.list(it.resource.parentResource)
+          val strLs = umems.stream().map { u -> u.toString() }.collect(Collectors.toList())
+          CmdResult(umems, strLs, utilJoinList(strLs))
+        }
+      )
+      it + ResAct(
+        relation = ResourceType.umem,
+        action = ActType.removefrom,
+        targetRelation = ResRelation(ResourceType.sw),
+        // will check when executing: check = { UMemHandle.preRemoveCheck(it) },
+        exec = execUpdate { UMemHandle.remove(it) }
+      )
+    }
+    it + Res(ResourceType.bpfobj) {
+      it + ResAct(
+        relation = ResourceType.bpfobj,
+        action = ActType.add,
+        params = {
+          it + ResActParam(Param.path, true)
+          it + ResActParam(Param.prog, true)
+          it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
+        },
+        flags = {
+          it + ResActFlag(Flag.force)
+        },
+        exec = execUpdate { BPFObjectHandle.add(it) }
+      )
+      it + ResAct(
+        relation = ResourceType.bpfobj,
+        action = ActType.list,
+        exec = {
+          val names = BPFObjectHandle.names()
+          CmdResult(names, names, utilJoinList(names))
+        }
+      )
+      it + ResAct(
+        relation = ResourceType.bpfobj,
+        action = ActType.listdetail,
+        exec = {
+          val objects = BPFObjectHandle.list()
+          val strLs = objects.stream().map { o -> o.toString() }.collect(Collectors.toList())
+          CmdResult(objects, strLs, utilJoinList(strLs))
+        }
+      )
+      it + ResAct(
+        relation = ResourceType.bpfobj,
+        action = ActType.remove,
+        exec = execUpdate { BPFObjectHandle.remove(it) }
       )
     }
   } // end init

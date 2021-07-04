@@ -4,27 +4,11 @@ import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.handle.param.AddrHandle;
-import vproxy.base.util.Utils;
 import vproxy.vfd.IPPort;
 import vproxy.vswitch.Switch;
 
 public class UserClientHandle {
     private UserClientHandle() {
-    }
-
-    public static void checkCreateUserClient(Command cmd) throws Exception {
-        String pass = cmd.args.get(Param.pass);
-        if (pass == null) {
-            throw new Exception("missing " + Param.pass.fullname);
-        }
-        String vni = cmd.args.get(Param.vni);
-        if (vni == null) {
-            throw new Exception("missing " + Param.vni.fullname);
-        }
-        if (!Utils.isInteger(vni)) {
-            throw new Exception("invalid " + Param.vni.fullname + ", not an integer");
-        }
-        AddrHandle.check(cmd);
     }
 
     public static void add(Command cmd) throws Exception {
@@ -34,10 +18,6 @@ public class UserClientHandle {
         IPPort addr = AddrHandle.get(cmd);
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
         sw.addUserClient(user, pass, vni, addr);
-    }
-
-    public static void checkRemoveUserClient(Command cmd) throws Exception {
-        AddrHandle.check(cmd);
     }
 
     public static void forceRemove(Command cmd) throws Exception {

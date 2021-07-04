@@ -26,12 +26,6 @@ public enum Param {
     ttl("ttl"),
     anno("annotations"),
 
-    service("service"),
-    zone("zone"),
-    nic("nic"),
-    iptype("ip-type"),
-    port("port"),
-
     pass("password"),
 
     cert("cert"),
@@ -48,6 +42,21 @@ public enum Param {
 
     mtu("mtu"),
     flood("flood"),
+
+    prog("program"),
+    mode("mode"),
+    umem("umem"),
+    nic("nic"),
+    queue("queue"),
+    bpfmap("bpf-map"),
+    rxringsize("rx-ring-size"),
+    txringsize("tx-ring-size"),
+    chunks("chunks"),
+    fillringsize("fill-ring-size"),
+    compringsize("comp-ring-size"),
+    framesize("frame-size"),
+    headroom("headroom"),
+    bpfmapkeyselector("bpf-map-key-selector"),
     ;
     public final String fullname;
 

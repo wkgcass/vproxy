@@ -38,6 +38,7 @@ public class IfaceHandle {
         boolean isTunIface = false;
         boolean isUserClientIface = false;
         boolean isUserIface = false;
+        boolean isXDPIface = false;
 
         if (name.startsWith("ucli:")) {
             isUserClientIface = true;
@@ -54,6 +55,9 @@ public class IfaceHandle {
         } else if (name.startsWith("remote:")) {
             isRemoteSwitchIface = true;
             name = name.substring("remote:".length());
+        } else if (name.startsWith("xdp:")) {
+            isXDPIface = true;
+            name = name.substring("xdp:".length());
         } else if (IPPort.validL4AddrStr(name)) {
             isBareVXLanIface = true;
         }
@@ -105,6 +109,14 @@ public class IfaceHandle {
                     continue;
                 }
                 if (((UserIface) iface).user.replace(Consts.USER_PADDING, "").equals(name)) {
+                    target = iface;
+                    break;
+                }
+            } else if (iface instanceof XDPIface) {
+                if (!isXDPIface) {
+                    continue;
+                }
+                if (((XDPIface) iface).alias.equals(name)) {
                     target = iface;
                     break;
                 }

@@ -25,11 +25,9 @@ import vproxy.dns.DNSServer;
 import vproxy.vmirror.Mirror;
 import vproxy.vswitch.RouteTable;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.iface.RemoteSwitchIface;
-import vproxy.vswitch.iface.TapIface;
-import vproxy.vswitch.iface.TunIface;
-import vproxy.vswitch.iface.UserClientIface;
+import vproxy.vswitch.iface.*;
 import vproxy.vswitch.util.UserInfo;
+import vproxy.xdp.BPFObject;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -639,6 +637,28 @@ public class Shutdown {
             }
         }
         {
+            // create bpf
+            BPFObjectHolder bpfobjHolder = app.bpfObjectHolder;
+            List<String> names = bpfobjHolder.names();
+            for (String name : names) {
+                BPFObject bpfobj;
+                try {
+                    bpfobj = bpfobjHolder.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("bpf-object not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+
+                String cmd = "add bpf-object " + bpfobj.nic
+                    + " path " + bpfobj.filename
+                    + " program " + bpfobj.prog
+                    + " mode " + bpfobj.mode.name()
+                    + " force";
+                commands.add(cmd);
+            }
+        }
+        {
             // create switch
             SwitchHolder swh = app.switchHolder;
             List<String> names = swh.names();
@@ -670,6 +690,16 @@ public class Shutdown {
                 }
                 commands.add(cmd);
 
+                // create umem
+                for (var umem : sw.getUMems()) {
+                    cmd = "add umem " + umem.alias + " to switch " + sw.alias
+                        + " chunks " + umem.chunksSize
+                        + " fill-ring-size " + umem.fillRingSize
+                        + " comp-ring-size " + umem.compRingSize
+                        + " frame-size " + umem.frameSize
+                        + " headroom " + umem.headroom;
+                    commands.add(cmd);
+                }
                 // create vpc
                 for (var entry : sw.getTables().entrySet()) {
                     int vpc = entry.getKey();
@@ -792,6 +822,27 @@ public class Shutdown {
                     }
                     commands.add(cmd);
                 }
+                // create xdp
+                for (var iface : sw.getIfaces()) {
+                    if (!(iface instanceof XDPIface)) {
+                        continue;
+                    }
+                    var xdp = (XDPIface) iface;
+                    cmd = "add xdp " + xdp.alias + " to switch " + sw.alias
+                        + " nic " + xdp.nic
+                        + " bpf-map " + xdp.bpfMap.name
+                        + " umem " + xdp.umem.alias
+                        + " queue " + xdp.queueId
+                        + " rx-ring-size " + xdp.rxRingSize
+                        + " tx-ring-size " + xdp.txRingSize
+                        + " mode " + xdp.mode.name()
+                        + " vni " + xdp.vni
+                        + " bpf-map-key-selector " + xdp.keySelector.alias();
+                    if (xdp.zeroCopy) {
+                        cmd += " zerocopy";
+                    }
+                    commands.add(cmd);
+                }
                 // set iface options
                 for (var iface : sw.getIfaces()) {
                     String ifaceName;
@@ -799,6 +850,8 @@ public class Shutdown {
                         ifaceName = "remote:" + ((RemoteSwitchIface) iface).alias;
                     } else if (iface instanceof UserClientIface) {
                         ifaceName = "ucli:" + ((UserClientIface) iface).user.user.replace(Consts.USER_PADDING, "");
+                    } else if (iface instanceof XDPIface) {
+                        ifaceName = "xdp:" + ((XDPIface) iface).alias;
                     } else {
                         continue;
                     }
