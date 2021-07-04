@@ -8,6 +8,9 @@ public enum Flag {
     denynonbackend("deny-non-backend"),
 
     noswitchflag("no-switch-flag"),
+
+    force("force"),
+    zerocopy("zerocopy"),
     ;
     public final String fullname;
 

@@ -32,6 +32,10 @@ public enum ResourceType {
     route("route"),
     ucli("user-client"),
 
+    bpfobj("bpf-object"),
+    umem("umem"),
+    xdp("xdp"),
+
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),
     dockernetworkplugincontroller("docker-network-plugin-controller"),
