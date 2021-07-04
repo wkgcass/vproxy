@@ -12,7 +12,7 @@ public class IfaceInitParams {
     public final SelectorEventLoop loop;
     public final DatagramFD sock;
     public final PacketCallback callback;
-    public Map<String, UserInfo> users;
+    public final Map<String, UserInfo> users;
 
     public IfaceInitParams(Switch sw,
                            SelectorEventLoop loop,

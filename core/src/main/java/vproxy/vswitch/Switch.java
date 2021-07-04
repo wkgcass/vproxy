@@ -19,12 +19,17 @@ import vproxy.vfd.*;
 import vproxy.vmirror.Mirror;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.Ipv4Packet;
+import vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
+import vproxy.vswitch.util.XDPChunkByteArray;
+import vproxy.xdp.BPFMap;
+import vproxy.xdp.BPFMode;
+import vproxy.xdp.UMem;
 
 import java.io.IOException;
 import java.util.*;
@@ -51,6 +56,8 @@ public class Switch {
     private DatagramFD sock;
     private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
+
+    private final Map<String, UMem> umems = new ConcurrentHashMap<>();
 
     private final SwitchContext swCtx = new SwitchContext(
         this,
@@ -247,14 +254,14 @@ public class Switch {
         return t;
     }
 
-    public void addTable(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
+    public Table addTable(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
         if (tables.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        tables.computeIfAbsent(vni, n -> new Table(n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
+        return tables.computeIfAbsent(vni, n -> new Table(n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
     }
 
     public void delTable(int vni) throws NotFoundException {
@@ -547,6 +554,97 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
+    public XDPIface addXDP(String alias, String nic, BPFMap map, UMem umem,
+                           int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
+                           int vni, BPFMapKeySelector keySelector) throws XException, AlreadyExistException {
+        NetEventLoop netEventLoop = eventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add xdp");
+        }
+        SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
+
+        if (!umems.containsValue(umem)) {
+            throw new XException("the provided umem does not belong to this switch");
+        }
+
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof XDPIface)) {
+                continue;
+            }
+            XDPIface xdpiface = (XDPIface) i;
+            if (alias.equals(xdpiface.alias)) {
+                throw new AlreadyExistException("xdp", alias);
+            }
+        }
+
+        var iface = new XDPIface(alias, nic, map, umem,
+            queueId, rxRingSize, txRingSize, mode, zeroCopy,
+            vni, keySelector);
+        try {
+            initIface(iface);
+        } catch (Exception e) {
+            iface.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+
+        blockAndAddPersistentIface(loop, iface);
+
+        return iface;
+    }
+
+    public void delXDP(String alias) throws NotFoundException {
+        Iface iface = null;
+        for (Iface i : ifaces.keySet()) {
+            if (!(i instanceof XDPIface)) {
+                continue;
+            }
+            XDPIface xdp = (XDPIface) i;
+            if (alias.equals(xdp.alias)) {
+                iface = i;
+                break;
+            }
+        }
+        if (iface == null) {
+            throw new NotFoundException("xdp", alias);
+        }
+        utilRemoveIface(iface);
+    }
+
+    public UMem addUMem(String alias, int chunksSize, int fillRingSize, int compRingSize,
+                        int frameSize, int headroom) throws AlreadyExistException, IOException {
+        if (umems.containsKey(alias)) {
+            throw new AlreadyExistException("umem", alias);
+        }
+        var umem = UMem.create(alias, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
+        umems.put(alias, umem);
+        return umem;
+    }
+
+    public void delUMem(String alias) throws NotFoundException, XException {
+        UMem umem = umems.get(alias);
+        if (umem == null) {
+            throw new NotFoundException("umem", alias);
+        }
+
+        for (Iface iface : ifaces.keySet()) {
+            if (iface instanceof XDPIface) {
+                XDPIface xdp = ((XDPIface) iface);
+                if (xdp.umem.equals(umem)) {
+                    throw new XException("umem " + alias + " is used by xdp " + xdp.alias);
+                }
+            }
+        }
+
+        umems.remove(alias);
+        umem.release();
+    }
+
+    public List<UMem> getUMems() {
+        List<UMem> ls = new ArrayList<>(umems.size());
+        ls.addAll(umems.values());
+        return ls;
+    }
+
     public Map<String, UserInfo> getUsers() {
         var ret = new LinkedHashMap<String, UserInfo>();
         for (var entry : users.entrySet()) {
@@ -782,13 +880,32 @@ public class Switch {
 
     private void handleInputPkb() {
         for (PacketBuffer pkb : socketBuffersToBeHandled) {
+            // the umem chunk need to be released after processing
+            XDPChunkByteArray umemChunkByteArray = null;
+            if (pkb.fullbuf instanceof XDPChunkByteArray) {
+                assert Logger.lowLevelDebug("the pkb contains a umem chunk");
+                umemChunkByteArray = (XDPChunkByteArray) pkb.fullbuf;
+            }
+
             try {
                 netStack.devInput(pkb);
             } catch (Throwable t) {
                 Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
             }
+
+            if (umemChunkByteArray != null) {
+                assert Logger.lowLevelDebug("releasing the umem chunk after packet handled");
+                umemChunkByteArray.releaseRef();
+            }
         }
         socketBuffersToBeHandled.clear();
+
+        for (Iface iface : ifaces.keySet()) {
+            iface.completeTx();
+        }
+        for (UMem umem : umems.values()) {
+            umem.fillUpFillRing();
+        }
     }
 
     private void onIfaceDown(Iface iface) {
