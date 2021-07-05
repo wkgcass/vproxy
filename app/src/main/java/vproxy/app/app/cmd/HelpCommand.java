@@ -5,6 +5,9 @@ import vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import vproxy.base.Config;
 import vproxy.base.util.Tuple;
 import vproxy.component.secure.SecurityGroup;
+import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
+import vproxy.vswitch.util.SwitchUtils;
+import vproxy.xdp.BPFMode;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -406,11 +409,6 @@ public class HelpCommand {
         annotations("annotations", "anno",
             "a string:string json representing metadata for the resource"),
         portrange("port-range", null, "an integer tuple $i,$j"),
-        service("service", null, "service name"),
-        zone("zone", null, "zone name"),
-        nic("nic", null, "nic name"),
-        iptype("ip-type", null, "ip type: v4 or v6"),
-        port("port", null, "a port number"),
         certkey("cert-key", "ck", "cert-key resource"),
         cert("cert", null, "the certificate file path"),
         key("key", null, "the key file path"),
@@ -423,6 +421,22 @@ public class HelpCommand {
         postscript("post-script", null, "the script to run after added"),
         mtu("mtu", null, "max transmission unit"),
         flood("flood", null, "flooding traffic"),
+        path("path", null, "file path"),
+        program("program", "prog", "program name"),
+        mode("mode", null, "mode"),
+        umem("umem", null, "xdp umem"),
+        nic("nic", null, "nic name"),
+        queue("queue", null, "queue id"),
+        bpfmap("bpf-map", "bpfmap", "bpf map extracted from a bpfobject"),
+        rxringsize("rx-ring-size", null, "receiving ring size"),
+        txringsize("tx-ring-size", null, "transmitting ring size"),
+        chunks("chunks", null, "chunks"),
+        fillringsize("fill-ring-size", null, "xdp umem fill ring size"),
+        compringsize("comp-ring-size", null, "xdp umem comp ring size"),
+        framesize("frame-size", null, "size of a frame"),
+        headroom("headroom", null, "space reserved at the head of a buffer"),
+        bpfmapkeyselector("bpf-map-key-selector", null, "the method of " +
+            "determining the key of the corresponding xsk when putting into a bpf map"),
         ;
         public final String param;
         public final String shortVer;
@@ -441,6 +455,8 @@ public class HelpCommand {
         allownonbackend("allow-non-backend", null, "allow to access non backend endpoints"),
         denynonbackend("deny-non-backend", null, "only able to access backend endpoints"),
         noswitchflag("no-switch-flag", null, "do not add switch flag on vxlan packet"),
+        force("force", null, "forcibly to do something"),
+        zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
         ;
         public final String flag;
         public final String shortVer;
@@ -1303,6 +1319,42 @@ public class HelpCommand {
                     )
                 ))
             )),
+        xdp("xdp", null, "xdp socket, which is able to intercept packets from a net dev. " +
+            "Note: 1) use list iface to see the xdp sockets/interfaces, " +
+            "2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so on java.library.path, " +
+            "3) make sure your kernel supports xdp, recommend kernel version > 5.8. " +
+            "See also `umem`, `bpf-object`. Check doc for more info",
+            Arrays.asList(
+                new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.nic, "nic to bind the xdp socket to. Note: a program must be loaded on the nic, see `bpf-object` for more info"),
+                    new ResActParamMan(ParamMan.bpfmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP"),
+                    new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
+                    new ResActParamMan(ParamMan.queue, "the queue index to bind to"),
+                    new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRV}, see doc for more info", "" + BPFMode.SKB),
+                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
+                    new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
+                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.normal.name())
+                ), Collections.singletonList(
+                    new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false)
+                ), Arrays.asList(
+                    new Tuple<>(
+                        "add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key-selector normal zerocopy",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "add xdp xdp1 to switch sw0 nic enp4s0 bpf-map xsk_map umem umem0 queue 0 vni 1",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "remove xdp socket from the switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove xdp xdp0 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
         ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
@@ -1367,6 +1419,80 @@ public class HelpCommand {
                 new ResActMan(ActMan.removefrom, "remove a route rule from a vpc of a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove route to172.17 from vpc 1314 in switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        umem("umem", null, "umem for xdp sockets to use",
+            Arrays.asList(
+                new ResActMan(ActMan.addto, "add a umem to a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.chunks, "how many chunks are there in this umem", "" + (SwitchUtils.RX_TX_CHUNKS * 2)),
+                    new ResActParamMan(ParamMan.fillringsize, "size of the fill ring", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.compringsize, "size of the comp ring", "" + SwitchUtils.RX_TX_CHUNKS),
+                    new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN),
+                    new ResActParamMan(ParamMan.headroom, "space reserved at the head of a chunk", "" + SwitchUtils.RCV_HEAD_PRESERVE_LEN)
+                ), Arrays.asList(
+                    new Tuple<>(
+                        "add umem umem0 to switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.list, "show umem names in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list umem in switch sw0",
+                        "1) \"umem0\""
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "show detailed info about umems in a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail umem in switch sw0",
+                        "1) \"umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]\""
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "remove a umem from a switch", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove umem umem0 from switch sw0",
+                        "\"OK\""
+                    )
+                ))
+            )),
+        bpfobj("bpf-object", "bpfobj", "the ebpf object attached to net dev. " +
+            "Note that the name of the bpf-object is the nic name where ebpf program will be attached to",
+            Arrays.asList(
+                new ResActMan(ActMan.add, "load and attach ebpf to a net dev", Arrays.asList(
+                    new ResActParamMan(ParamMan.path, "path to the ebpf program .o file"),
+                    new ResActParamMan(ParamMan.program, "name of the program inside the ebpf object to be attached to the net dev"),
+                    new ResActParamMan(ParamMan.mode, "attaching mode, enum: {SKB, DRV}", "" + BPFMode.SKB)
+                ), Collections.singletonList(
+                    new ResActFlagMan(FlagMan.force, "force to replace the old program attached to the dev", false)
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add bpf-object enp0s6 path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o program xdp_sock mode SKB force",
+                        "\"OK\""
+                    )
+                )),
+                new ResActMan(ActMan.list, "show bpf-object names (attached nic names)", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list bpf-object",
+                        "1) \"enp0s6\"\n" +
+                            "2) \"xdptut-4667\""
+                    )
+                )),
+                new ResActMan(ActMan.listdetail, "show bpf-object detailed info", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "list-detail bpf-object",
+                        "1) \"enp0s6 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB\"\n" +
+                            "2) \"xdptut-4667 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB\""
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "remove bpf-object. " +
+                    "Note that the loaded program will not be detached from the nic, so xdp will not be affected", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove bpf-object enp0s6",
                         "\"OK\""
                     )
                 ))
