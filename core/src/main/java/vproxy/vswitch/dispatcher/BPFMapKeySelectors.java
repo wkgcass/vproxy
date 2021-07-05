@@ -1,11 +1,11 @@
 package vproxy.vswitch.dispatcher;
 
-import vproxy.vswitch.dispatcher.impl.NormalKeySelector;
+import vproxy.vswitch.dispatcher.impl.KeySelectorUseQueueId;
 
 import java.util.function.Supplier;
 
 public enum BPFMapKeySelectors {
-    normal(NormalKeySelector::new),
+    useQueueId(KeySelectorUseQueueId::new),
     ;
     public final Supplier<BPFMapKeySelector> keySelector;
 

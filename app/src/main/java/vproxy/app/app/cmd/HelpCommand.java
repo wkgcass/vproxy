@@ -435,7 +435,7 @@ public class HelpCommand {
         compringsize("comp-ring-size", null, "xdp umem comp ring size"),
         framesize("frame-size", null, "size of a frame"),
         headroom("headroom", null, "space reserved at the head of a buffer"),
-        bpfmapkeyselector("bpf-map-key-selector", null, "the method of " +
+        bpfmapkeyselector("bpf-map-key", null, "the method of " +
             "determining the key of the corresponding xsk when putting into a bpf map"),
         ;
         public final String param;
@@ -1335,12 +1335,12 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRV}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
                     new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
-                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.normal.name())
+                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name())
                 ), Collections.singletonList(
                     new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false)
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key-selector normal zerocopy",
+                        "add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy",
                         "\"OK\""
                     ),
                     new Tuple<>(
