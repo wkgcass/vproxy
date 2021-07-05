@@ -40,7 +40,7 @@ public class XDPHandle {
         if (cmd.args.containsKey(Param.bpfmapkeyselector)) {
             keySelector = BPFMapKeySelectorHandle.get(cmd);
         } else {
-            keySelector = BPFMapKeySelectors.normal.keySelector.get();
+            keySelector = BPFMapKeySelectors.useQueueId.keySelector.get();
         }
 
         sw.addXDP(cmd.resource.alias, nic, bpfMap, umem, queueId,

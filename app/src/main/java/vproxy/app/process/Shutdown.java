@@ -837,7 +837,7 @@ public class Shutdown {
                         + " tx-ring-size " + xdp.txRingSize
                         + " mode " + xdp.mode.name()
                         + " vni " + xdp.vni
-                        + " bpf-map-key-selector " + xdp.keySelector.alias();
+                        + " bpf-map-key " + xdp.keySelector.alias();
                     if (xdp.zeroCopy) {
                         cmd += " zerocopy";
                     }

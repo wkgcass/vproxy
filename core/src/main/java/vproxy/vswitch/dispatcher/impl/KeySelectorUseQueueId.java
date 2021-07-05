@@ -3,10 +3,10 @@ package vproxy.vswitch.dispatcher.impl;
 import vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import vproxy.xdp.XDPSocket;
 
-public class NormalKeySelector implements BPFMapKeySelector {
+public class KeySelectorUseQueueId implements BPFMapKeySelector {
     @Override
     public String alias() {
-        return "normal";
+        return "useQueueId";
     }
 
     @Override

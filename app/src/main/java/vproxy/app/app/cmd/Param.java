@@ -56,7 +56,7 @@ public enum Param {
     compringsize("comp-ring-size"),
     framesize("frame-size"),
     headroom("headroom"),
-    bpfmapkeyselector("bpf-map-key-selector"),
+    bpfmapkeyselector("bpf-map-key"),
     ;
     public final String fullname;
 
