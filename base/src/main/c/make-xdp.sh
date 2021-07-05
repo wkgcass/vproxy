@@ -13,7 +13,7 @@ rm -f libvpxdp.so
 
 echo "compiling libvpxdp.so ..."
 
-gcc -std=gnu99 \
+gcc -std=gnu99 -O2 \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/linux" \
     -I "./xdp/libbpf/src" \

@@ -18,7 +18,7 @@ fi
 
 rm -f libvfdfstack.so
 
-gcc -std=gnu99 \
+gcc -std=gnu99 -O2 \
     -I ./dep/ae \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/linux" \
