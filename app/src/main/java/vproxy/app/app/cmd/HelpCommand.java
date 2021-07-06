@@ -760,10 +760,8 @@ public class HelpCommand {
                             "1) \"sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {} weight 10\""
                         )
                     )),
-                new ResActMan(ActMan.update, "change health check config or load balancing algorithm.\n" +
-                    "\n" +
-                    "Param list is the same as add, but not all required.\n" +
-                    "\n" +
+                new ResActMan(ActMan.update, "change health check config or load balancing algorithm. " +
+                    "Param list is the same as add, but not all required. " +
                     "Also you can change the weight of a group in an upstream resource",
                     Arrays.asList(
                         new ResActParamMan(ParamMan.timeout, "health check connect timeout (ms)", "not changed"),
@@ -1017,12 +1015,10 @@ public class HelpCommand {
                             "(integer) 1"
                         )
                     )),
-                new ResActMan(ActMan.listdetail, "list detailed info of dns cache.\n" +
-                    "\n" +
-                    "The return values are:\n" +
-                    "\n" +
-                    "host.\n" +
-                    "ipv4 ip list.\n" +
+                new ResActMan(ActMan.listdetail, "list detailed info of dns cache. " +
+                    "The return values are: " +
+                    "host. " +
+                    "ipv4 ip list. " +
                     "ipv6 ip list",
                     Collections.emptyList(),
                     Collections.singletonList(

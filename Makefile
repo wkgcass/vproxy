@@ -123,3 +123,7 @@ docker-network-plugin: docker-network-plugin-rootfs
 .PHONY: dockertest
 dockertest:
 	./misc/run-tests-in-docker.sh
+
+.PHONY: generate-command-doc
+generate-command-doc: jar
+	java -Deploy=GenerateCommandDoc -jar build/libs/vproxy.jar

@@ -5,6 +5,7 @@ import vproxy.app.app.args.*;
 import vproxy.app.controller.StdIOController;
 import vproxy.app.process.Shutdown;
 import vproxy.app.vproxyx.Daemon;
+import vproxy.app.vproxyx.GenerateCommandDoc;
 import vproxy.app.vproxyx.Simple;
 import vproxy.base.Config;
 import vproxy.base.dns.Resolver;
@@ -135,6 +136,9 @@ public class Main {
                 case "HelloWorld":
                 case "helloworld":
                     HelloWorld.main0(args);
+                    break;
+                case "GenerateCommandDoc":
+                    GenerateCommandDoc.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);

@@ -36,20 +36,20 @@ There are many kinds of `$resource-type`s, as shown in this figure:
 +---+ tcp-lb (tl)
 +---+ socks5-server (socks5)
 +---+ event-loop-group (elg)
-|        |
-|        +---+ event-loop (el)
+        |
+        +---+ event-loop (el)
 +---+ upstream (ups)
-|        |
-|        +---+ server-group (sg)
+        |
+        +---+ server-group (sg)
 +---+ server-group (sg)
-|        |
-|        +---+ server (svr)
+        |
+        +---+ server (svr)
 +---+ security-group (secg)
-|        |
-|        +---+ security-group-rule (secgr)
-|
+        |
+        +---+ security-group-rule (secgr)
+
 +---+ cert-key (ck)
-|
+
 +---+ switch (sw)
 
    server-sock (ss) --+
@@ -69,7 +69,7 @@ short version keywords are between `()`
 
 The resource types form a tree structure. This corresponds to the vproxy architecture figure in README.md.
 
-For some resources which can be directly accessed from tree root, we call them `on top level`.  
+For some resources which can be directly accessed from tree root, we call them `on top level`.
 For some other resources that are not on top level, we use a keyword `in` to access them, e.g.:
 
 ```
@@ -88,925 +88,2304 @@ which tries to get `input bytes` of a connection `127.0.0.1:56727/127.0.0.1:6379
 
 The params and flags are simple. Params are pairs of "key"s and "value"s. Flags represent booleans.
 
-## Action: add (a)
+
+## Actions
+
+### add
 
 Create a resource.
 
-## Action: add ... to ... (a ... to ...)
+### add-to
 
 Attach a resource to another one.
 
-## Action: list (l)
+### list
 
 List names, or retrieve count of some resources.
 
-## Action: list-detail (L)
+### list-detail
 
 List detailed info of some resources.
 
-## Action: update (u)
+### update
 
 Modify a resource.
 
-## Action: remove (r)
+### remove
 
 Remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted.
 
-## Action: remove ... from ... (r ... from ...)
+### remove-from
 
 Detach a resource from another one.
 
-## Resource: tcp-lb (tl)
+## Resources
 
-TCP load balancer
+### tcp-lb
 
-#### add
+short version: `tl`
 
-Create a loadbalancer.
+description: TCP load balancer.
 
-* acceptor-elg (aelg): *optional*. choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.
-* event-loop-group (elg): *optional*. choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.
-* address (addr): the bind address of the loadbalancer
-* upstream (ups): used as the backend servers
-* in-buffer-size: *optional*. input buffer size. default 16384 (bytes)
-* out-buffer-size: *optional*. output buffer size. default 16384 (bytes)
-* protocol: *optional*. the protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See [doc](https://github.com/wkgcass/vproxy/blob/master/doc/using-application-layer-protocols.md) or [doc_zh](https://github.com/wkgcass/vproxy/blob/master/doc_zh/using-application-layer-protocols.md) for more info. default tcp
-* security-group (secg): *optional*. specify a security group for the lb. default allow any
-* cert-key (ck): *optional*. the list of cert-key resources to be applied. if specified, tls is enabled
+#### actions
+
+##### add
+
+<details><summary>Create a loadbalancer.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|The bind address of the loadbalancer.|||
+|upstream|Used as the backend servers.|||
+|acceptor-elg|Choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.|Y|(acceptor-elg)|
+|event-loop-group|Choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.|Y|(worker-elg)|
+|in-buffer-size|Input buffer size.|Y|16384 (bytes)|
+|out-buffer-size|Output buffer size.|Y|16384 (bytes)|
+|timeout|Idle timeout of connections in this lb instance.|Y|900000 (ms)|
+|protocol|The protocol used by tcp-lb. available options: tcp, http, h2, http/1.x, dubbo, framed-int32, or your customized protocol. See doc for more info.|Y|tcp|
+|cert-key|The certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`.|||
+|security-group|Specify a security group for the lb.|Y|allow any|
+
+examples:
 
 ```
-add tcp-lb lb0 address 127.0.0.1:18080 upstream ups0
+$ add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080 upstream ups0 in-buffer-size 16384 out-buffer-size 16384
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of all tcp-loadbalancers.
+##### list
+
+<details><summary>Retrieve names of all tcp-loadbalancers.</summary>
+
+<br>
+
+examples:
 
 ```
-list tcp-lb
+$ list tcp-lb
 1) "lb0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of all tcp-loadbalancers.
+##### list-detail
 
-```
-list-detail tcp-lb
-1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secrg0"
-```
+<details><summary>Retrieve detailed info of all tcp-loadbalancers.</summary>
 
-#### update
+<br>
 
-Update in-buffer-size or out-buffer-size or security-group or cert-key of an lb.
+examples:
 
 ```
-update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768 security-group secg0
+$ list-detail tcp-lb
+1) "lb0 -> acceptor elg0 worker elg0 bind 127.0.0.1:18080 backend ups0 in-buffer-size 16384 out-buffer-size 16384 protocol tcp security-group secg0"
+```
+
+</details>
+
+##### update
+
+<details><summary>Update in-buffer-size or out-buffer-size of an lb.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|in-buffer-size|Input buffer size.|Y|not changed|
+|out-buffer-size|Output buffer size.|Y|not changed|
+|timeout|Idle timeout of connections in this lb instance.|Y|not changed|
+|cert-key|The certificates and keys used by tcp-lb. Multiple cert-key(s) are separated with `,`.|Y|not changed|
+|security-group|The security group.|Y|not changed|
+
+examples:
+
+```
+$ update tcp-lb lb0 in-buffer-size 32768 out-buffer-size 32768
 "OK"
 ```
 
-> You can miss some of the params, and only specified params will be updated.
+</details>
 
-#### remove
+##### remove
 
-Remove and stop a tcp-loadbalancer. The already established connections won't be affected.
+<details><summary>Remove and stop a tcp-loadbalancer. The already established connections won't be affected.</summary>
+
+<br>
+
+examples:
 
 ```
-remove tcp-lb lb0
+$ remove tcp-lb lb0
 "OK"
 ```
 
-## Resource: socks5-server (socks5)
+</details>
 
-Socks5 proxy server.
+### socks5-server
 
-#### add
+short version: `socks5`
 
-Create a socks5 server.
+description: Socks5 proxy server.
 
-All params are the same as creating `tcp-lb`.  
-See `add tcp-lb` for more info.
+#### actions
 
-* acceptor-elg (aelg): *optional*, the acceptor event loop.
-* event-loop-group (elg): *optional*. the worker event loop.
-* address (addr): the bind address
-* upstream (ups): used as backend, the socks5 only supports servers added into this group
-* in-buffer-size: *optional*. input buffer size.
-* out-buffer-size: *optional*. output buffer size.
-* security-group (secg): security group
+##### add
 
-Flags:
+<details><summary>Create a socks5 server.</summary>
 
-* allow-non-backend: *optional*. allow to access non backend endpoints.
-* deny-non-backend: *optional*. only able to access backend endpoints. the default flag.
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|The bind address of the loadbalancer.|||
+|upstream|Used as the backend servers.|||
+|acceptor-elg|Choose an event loop group as the acceptor event loop group. can be the same as worker event loop group.|Y|(acceptor-elg)|
+|event-loop-group|Choose an event loop group as the worker event loop group. can be the same as acceptor event loop group.|Y|(worker-elg)|
+|in-buffer-size|Input buffer size.|Y|16384 (bytes)|
+|out-buffer-size|Output buffer size.|Y|16384 (bytes)|
+|timeout|Idle timeout of connections in this socks5 server instance.|Y|900000 (ms)|
+|security-group|Specify a security group for the socks5 server.|Y|allow any|
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|allow-non-backend|Allow to access non backend endpoints.|Y||
+|deny-non-backend|Only enable backend endpoints.|Y|Y|
+
+examples:
 
 ```
-add socks5-server s5 address 127.0.0.1:18081 upstream backend-groups security-group secg0
+$ add socks5-server s5 acceptor-elg acceptor event-loop-group worker address 127.0.0.1:18081 upstream backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of socks5 servers.
+##### list
+
+<details><summary>Retrieve names of socks5 servers.</summary>
+
+<br>
+
+examples:
 
 ```
-list socks5-server
+$ list socks5-server
 1) "s5"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of socks5 servers.
+##### list-detail
+
+<details><summary>Retrieve detailed info of socks5 servers.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail socks5-server
+$ list-detail socks5-server
 1) "s5 -> acceptor acceptor worker worker bind 127.0.0.1:18081 backend backend-groups in-buffer-size 16384 out-buffer-size 16384 security-group secg0"
 ```
 
-#### update
+</details>
 
-Update in-buffer-size or out-buffer-size or security-group of a socks5 server. Also, whether to allow non backend endpoints can be updated.
+##### update
+
+<details><summary>Update in-buffer-size or out-buffer-size of a socks5 server.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|in-buffer-size|Input buffer size.|Y|not changed|
+|out-buffer-size|Output buffer size.|Y|not changed|
+|timeout|Idle timeout of connections in this socks5 server instance.|Y|not changed|
+|security-group|The security group.|Y|not changed|
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|allow-non-backend|Allow to access non backend endpoints.|Y||
+|deny-non-backend|Only enable backend endpoints.|Y|Y|
+
+examples:
 
 ```
-update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192 security-group secg0 allow-non-backend
+$ update socks5-server s5 in-buffer-size 8192 out-buffer-size 8192
 "OK"
 ```
 
-#### remove
+</details>
 
-Remove a socks5 server.
+##### remove
+
+<details><summary>Remove a socks5 server.</summary>
+
+<br>
+
+examples:
 
 ```
-remove socks5-server s5
+$ remove socks5-server s5
 "OK"
 ```
 
-## Resource: dns-server (dns)
+</details>
 
-DNS Server
+### dns-server
 
-#### add
+short version: `dns`
 
-Create a dns server.
+description: Dns server.
 
-* address (addr): The bind address of the socks5 server.
-* upstream (ups): The domains to be resolved.
-* ttl: *optional* The ttl of responded records. Default: 0
-* event-loop-group: *optional* Choose an event loop group to run the dns server. Default: (worker-elg)
-* security-group: *optional* The security group to use. Default: (allow-all)
+#### actions
+
+##### add
+
+<details><summary>Create a dns server.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|The bind address of the socks5 server.|||
+|upstream|The domains to be resolved.|||
+|event-loop-group|Choose an event loop group to run the dns server.|Y|(worker-elg)|
+|ttl|The ttl of responded records.|Y|0|
+|security-group|Specify a security group for the dns server.|Y|allow any|
+
+examples:
 
 ```
-add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
+$ add dns-server dns0 address 127.0.0.1:53 upstream backend-groups ttl 0
 "OK"
 ```
 
-#### update
+</details>
 
-Update config of a dns server.
+##### list
 
-* ttl: *optional* The ttl of responded records. Default: not changed
-* security-group: *optional* The security group to use. Default: not changed
+<details><summary>Retrieve names of dns servers.</summary>
 
-```
-update dns-server dns0 ttl 60
-"OK"
-```
+<br>
 
-#### list
-
-Retrieve names of dns servers.
+examples:
 
 ```
-list dns-server
+$ list dns-server
 1) "dns0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of dns servers.
+##### list-detail
+
+<details><summary>Retrieve detailed info of dns servers.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail dns-server
+$ list-detail dns-server
 1) "dns0 -> event-loop-group worker bind 127.0.0.1:53 backend backend-groups security-group (allow-all)"
 ```
 
-#### remove
+</details>
 
-Remove a dns server.
+##### update
+
+<details><summary>Update config of a dns server.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|ttl|The ttl of responded records.|Y|not changed|
+|security-group|The security group.|Y|not changed|
+
+examples:
 
 ```
-remove dns-server dns0
+$ update dns-server dns0 ttl 60
 "OK"
 ```
 
-## Resource: event-loop-group (elg)
+</details>
 
-A group of event loops
+##### remove
 
-#### add
+<details><summary>Remove a dns server.</summary>
 
-Specify a name and create a event loop group
+<br>
+
+examples:
 
 ```
-add event-loop-group elg0
+$ remove dns-server dns0
 "OK"
 ```
 
-#### list/list-detail
+</details>
 
-Retrieve names of all event loop groups
+### event-loop-group
+
+short version: `elg`
+
+description: A group of event loops.
+
+#### actions
+
+##### add
+
+<details><summary>Specify a name and create a event loop group.</summary>
+
+<br>
+
+examples:
 
 ```
-list event-loop-group
+$ add event-loop-group elg0
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Retrieve names of all event loop groups.</summary>
+
+<br>
+
+examples:
+
+```
+$ list event-loop-group
 1) "elg0"
-list-detail event-loop-group
+```
+
+```
+$ list-detail event-loop-group
 1) "elg0"
 ```
 
-#### remove
+</details>
 
-Remove a event loop group
+##### remove
+
+<details><summary>Remove a event loop group.</summary>
+
+<br>
+
+examples:
 
 ```
-remove event-loop-group elg0
+$ remove event-loop-group elg0
 "OK"
 ```
 
-## Resource: upstream (ups)
+</details>
 
-A resource containing multiple `server-group` resources.
+### upstream
 
-#### add
+short version: `ups`
 
-Specify a name and create a `upstream`.
+description: A resource containing multiple `server-group` resources.
+
+#### actions
+
+##### add
+
+<details><summary>Specify a name and create an upstream resource.</summary>
+
+<br>
+
+examples:
 
 ```
-add upstream ups0
+$ add upstream ups0
 "OK"
 ```
 
-#### list/list-detail
+</details>
 
-Retrieve names of all `upstream` resources.
+##### list
+
+<details><summary>Retrieve names of all upstream resources.</summary>
+
+<br>
+
+examples:
 
 ```
-list upstream
+$ list upstream
 1) "ups0"
-list-detail upstream
+```
+
+```
+$ list-detail upstream
 1) "ups0"
 ```
 
-#### remove
+</details>
 
-Remove a `upstream` resource.
+##### remove
+
+<details><summary>Remove an upstream resource.</summary>
+
+<br>
+
+examples:
 
 ```
-remove upstream ups0
+$ remove upstream ups0
 "OK"
 ```
 
-## Resource: server-group
+</details>
 
-A group of remote servers, which will run health check for all contained servers.
+### server-group
 
-#### add
+short version: `sg`
 
-Specify name, event loop, load balancing method, health check config and create a server group.
+description: A group of remote servers, which will run health check for all contained servers.
 
-* timeout: health check connect timeout (ms)
-* period: do check every `${period}` milliseconds
-* up: set server status to UP after succeeded for `${up}` times
-* down: set server status to DOWN after failed for `${down}` times
-* protocol: *optional*. the protocol used for checking the servers, you may choose `tcp`, `http`, `tcpDelay`, `dns`, `none`. default `tcp`
-* method: *optional*. loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`. default `wrr`
-* annotations: *optional*. extra info for the server-group, such as host info, health check url. Must be a json and values must be strings. default `{}`
-* event-loop-group (elg): *optional*. choose a event-loop-group for the server group. health check operations will be performed on the event loop group.
+#### actions
+
+##### add
+
+<details><summary>Specify name, event loop, load balancing method, health check config and create a server group.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|timeout|Health check connect timeout (ms).|||
+|period|Do check every `${period}` milliseconds.|||
+|up|Set server status to UP after succeeded for `${up}` times.|||
+|down|Set server status to DOWN after failed for `${down}` times.|||
+|protocol|The protocol used for checking the servers, you may choose `tcp`, `none`.|Y|tcp|
+|method|Loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`.|Y|wrr|
+|annotations|Extra info for the server-group, such as host info, health check url. Must be a json and values must be strings.|Y|{}|
+|event-loop-group|Choose a event-loop-group for the server group. health check operations will be performed on the event loop group.|Y|(control-elg)|
+
+examples:
 
 ```
-add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr
+$ add server-group sg0 timeout 500 period 800 up 4 down 5 method wrr elg elg0
 "OK"
 ```
 
-#### add to
+</details>
 
-Attach an existing server group into `upstream`.
+##### add-to
 
-* weight (w): the weight of group in this upstream resource
+<details><summary>Attach an existing server group into an `upstream` resource.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|weight|The weight of group in this upstream resource.|Y|10|
+|annotations|Extra info for the server-group inside upstream, such as host info. Must be a json and values must be strings.|Y|{}|
+
+examples:
 
 ```
-add server-group sg0 to upstream ups0 weight 10
+$ add server-group sg0 to upstream ups0 weight 10
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of all server group (s) on top level or in a `upstream`.
+##### list
+
+<details><summary>Retrieve names of all server group (s) on top level or in an upstream.</summary>
+
+<br>
+
+examples:
 
 ```
-list server-group
+$ list server-group
 1) "sg0"
+```
 
-list server-group in upstream ups0
+```
+$ list server-group in upstream ups0
 1) "sg0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of all server group (s).
+##### list-detail
+
+<details><summary>Retrieve detailed info of all server group(s).</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail server-group
+$ list-detail server-group
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {}"
+```
 
-list-detail server-group in upstream ups0
+```
+$ list-detail server-group in upstream ups0
 1) "sg0 -> timeout 500 period 800 up 4 down 5 method wrr event-loop-group elg0 annotations {} weight 10"
 ```
 
-#### update
+</details>
 
-Change health check config or load balancing algorithm.
+##### update
 
-Param list is the same as add, but not all required. Note that if you change the health check related params and not specifying `procotol`, it will be set to `tcp` as default.
+<details><summary>Change health check config or load balancing algorithm. Param list is the same as add, but not all required. Also you can change the weight of a group in an upstream resource.</summary>
 
-Also you can change the weight/annotations of a group in a `upstream` resource.
+<br>
 
-```
-update server-group sg0 timeout 500 period 600 up 3 down 2 protocol tcp
-"OK"
+parameters:
 
-update server-group sg0 method wlc
-"OK"
+|name|description|opt|default|
+|---|---|:---:|---|
+|timeout|Health check connect timeout (ms).|Y|not changed|
+|period|Do check every `${period}` milliseconds.|Y|not changed|
+|up|Set server status to UP after succeeded for `${up}` times.|Y|not changed|
+|down|Set server status to DOWN after failed for `${down}` times.|Y|not changed|
+|protocol|The protocol used for checking the servers, you may choose `tcp`, `none`. Note: this field will be set to `tcp` as default when updating other hc options.|Y|not changed|
+|method|Loadbalancing algorithm, you can choose `wrr`, `wlc`, `source`.|Y|not changed|
+|weight|The weight of group in the upstream resource (only available for server-group in upstream).|Y|not changed|
+|annotations|Annotation of the group itself, or the group in the upstream.|Y|not changed|
 
-update server-group sg0 in upstream ups0 weight 5
-"OK"
-```
-
-> NOTE: all fields in health check config should be all specified if any one of them exists.
-
-#### remove
-
-Remove a server group.
+examples:
 
 ```
-remove server-group sg0
+$ update server-group sg0 timeout 500 period 600 up 3 down 2
 "OK"
 ```
 
-#### remove from
-
-Detach the group grom a `upstream` resource.
-
 ```
-remove server-group sg0 from upstream ups0
+$ update server-group sg0 method wlc
 "OK"
 ```
 
-## Resource: event-loop (el)
-
-#### add to
-
-Specify a name, a event loop group, and create a new event loop in the specified group.
-
 ```
-add event-loop el0 to elg elg0
+$ update server-group sg0 in upstream ups0 weight 5
 "OK"
 ```
 
-#### list/list-detail
+</details>
 
-Retrieve names of all event loops in a event loop group.
+##### remove
+
+<details><summary>Remove a server group.</summary>
+
+<br>
+
+examples:
 
 ```
-list event-loop in event-loop-group elg0
+$ remove server-group sg0
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Detach the group from an `upstream` resource.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove server-group sg0 from upstream ups0
+"OK"
+```
+
+</details>
+
+### event-loop
+
+short version: `el`
+
+description: Event loop.
+
+#### actions
+
+##### add-to
+
+<details><summary>Specify a name, a event loop group, and create a new event loop in the specified group.</summary>
+
+<br>
+
+examples:
+
+```
+$ add event-loop el0 to elg elg0
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Retrieve names of all event loops in a event loop group.</summary>
+
+<br>
+
+examples:
+
+```
+$ list event-loop in event-loop-group elg0
 1) "el0"
-list-detail event-loop in event-loop-group elg0
+```
+
+```
+$ list-detail event-loop in event-loop-group elg0
 1) "el0"
 ```
 
-#### remove from
+</details>
 
-Remove a event loop from event loop group.
+##### remove-from
+
+<details><summary>Remove a event loop from event loop group.</summary>
+
+<br>
+
+examples:
 
 ```
-remove event-loop el0 from event-loop-group elg0
+$ remove event-loop el0 from event-loop-group elg0
 "OK"
 ```
 
-## Resource: server (svr)
+</details>
 
-#### add to
+### server
 
-Specify name, remote ip:port, weight, and attach the server into the server group
+short version: `svr`
 
-* address (addr): remote address, ip:port
-* weight: weight of the server, which will be used by wrr, wlc and source algorithm
+description: A remote endpoint.
+
+#### actions
+
+##### add-to
+
+<details><summary>Specify name, remote ip:port, weight, and attach the server into the server group.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|Remote address, ip:port.|||
+|weight|Weight of the server, which will be used by wrr, wlc and source algorithm.|Y|10|
+
+examples:
 
 ```
-add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
+$ add server svr0 to server-group sg0 address 127.0.0.1:6379 weight 10
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of all servers in a server group.
+##### list
+
+<details><summary>Retrieve names of all servers in a server group.</summary>
+
+<br>
+
+examples:
 
 ```
-list server in server-group sg0
+$ list server in server-group sg0
 1) "svr0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of all servers in a server group.
+##### list-detail
+
+<details><summary>Retrieve detailed info of all servers in a server group.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail server in server-group sg0
+$ list-detail server in server-group sg0
 1) "svr0 -> connect-to 127.0.0.1:6379 weight 10 currently DOWN"
 ```
 
-#### update
+</details>
 
-Change weight of the server.
+##### update
+
+<details><summary>Change weight of the server.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|weight|Weight of the server, which will be used by wrr, wlc and source algorithm.|Y|not changed|
+
+examples:
 
 ```
-update server svr0 in server-group sg0 weight 11
+$ update server svr0 in server-group sg0 weight 11
 "OK"
 ```
 
-#### remove from
+</details>
 
-Remove a server from a server group.
+##### remove-from
+
+<details><summary>Remove a server from a server group.</summary>
+
+<br>
+
+examples:
 
 ```
-remove server svr0 from server-group sg0
+$ remove server svr0 from server-group sg0
 "OK"
 ```
 
-## Resource: security-group (secg)
+</details>
 
-A white/black list, see `security-group-rule` for more info.
+### security-group
 
-#### add
+short version: `secg`
 
-Create a security group.
+description: A white/black list, see `security-group-rule` for more info.
 
-* default: enum {allow, deny}  
-    if set to allow, then will allow connection if all rules not match  
-    if set to deny, then will deny connection if all rules not match
+#### actions
+
+##### add
+
+<details><summary>Create a security group.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|default|Default: enum {allow, deny}<br>if set to allow, then will allow connection if all rules not match<br>if set to deny, then will deny connection if all rules not match.|||
+
+examples:
 
 ```
-add security-group secg0 default allow
+$ add security-group secg0 default allow
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of all security groups.
+##### list
+
+<details><summary>Retrieve names of all security groups.</summary>
+
+<br>
+
+examples:
 
 ```
-list security-group
+$ list security-group
 1) "secg0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of all security groups.
+##### list-detail
+
+<details><summary>Retrieve detailed info of all security groups.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail security-group
+$ list-detail security-group
 1) "secg0 -> default allow"
 ```
 
-#### update
+</details>
 
-Update properties of a security group.
+##### update
+
+<details><summary>Update properties of a security group.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|default|Default: enum {allow, deny}.|||
+
+examples:
 
 ```
-update security-group secg0 default deny
+$ update security-group secg0 default deny
 "OK"
 ```
 
-#### remove
+</details>
 
-Remove a security group.
+##### remove
+
+<details><summary>Remove a security group.</summary>
+
+<br>
+
+examples:
 
 ```
-remove security-group secg0
+$ remove security-group secg0
 "OK"
 ```
 
-## Resource: security-group-rule
+</details>
 
-A rule containing protocol, source network, dest port range and whether to deny.
+### security-group-rule
 
-#### add
+short version: `secgr`
 
-Create a rule in the security group.
+description: A rule containing protocol, source network, dest port range and whether to deny.
 
-* network (net): a cidr string for checking client ip
-* protocol: enum {TCP, UDP}
-* port-range: a tuple of integer for vproxy port, 0 <= first <= second <= 65535
-* default: enum {allow, deny}  
-    if set to allow, then will allow the connection if matches  
-    if set to deny, then will deny the connection if matches
+#### actions
 
-> NOTE: network is for client (source ip), and port-range is for vproxy (destination port).
+##### add-to
+
+<details><summary>Create a rule in the security group.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|network|A cidr string for checking client ip.|||
+|protocol|Enum {TCP, UDP}.|||
+|port-range|A tuple of integer for vproxy port, 0 <= first <= second <= 65535.|||
+|default|Enum {allow, deny}<br>if set to allow, then will allow the connection if matches<br>if set to deny, then will deny the connection if matches.|||
+
+examples:
 
 ```
-add security-group-rule secgr0 to security-group secg0 network 10.127.0.0/16 protocol TCP port-range 22,22 default allow
+$ add security-group-rule secgr0 to security-group secg0 network 10.127.0.0/16 protocol TCP port-range 22,22 default allow
 "OK"
 ```
 
-#### list
+</details>
 
-Retrieve names of all rules in a security group.
+##### list
+
+<details><summary>Retrieve names of all rules in a security group.</summary>
+
+<br>
+
+examples:
 
 ```
-list security-group-rule in security-group secg0
+$ list security-group-rule in security-group secg0
 1) "secgr0"
 ```
 
-#### list-detail
+</details>
 
-Retrieve detailed info of all rules in a security group.
+##### list-detail
+
+<details><summary>Retrieve detailed info of all rules in a security group.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail security-group-rule in security-group secg0
+$ list-detail security-group-rule in security-group secg0
 1) "secgr0 -> allow 10.127.0.0/16 protocol TCP port [22,33]"
 ```
 
-#### remove
+</details>
 
-Remove a rule from a security group.
+##### remove
+
+<details><summary>Remove a rule from a security group.</summary>
+
+<br>
+
+examples:
 
 ```
-remove security-group-rule secgr0 from security-group secg0
+$ remove security-group-rule secgr0 from security-group secg0
 "OK"
 ```
 
-## Resource: cert-key
+</details>
 
-A resource corresponds to certificates and a key.
+### cert-key
 
-#### add
+short version: `ck`
 
-Load certificates and a key from file.
+description: Some certificates and one key.
 
-* cert: the certificate files, separated with `,`
-* key: the key file. only `-----BEGINE PRIVATE KEY-----` format is supported for now
+#### actions
+
+##### add
+
+<details><summary>Load certificates and key from file.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|cert|The cert file path. Multiple files are separated with `,`.|||
+|key|The key file path.|||
+
+examples:
 
 ```
-add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem
+$ add cert-key vproxy.cassite.net cert ~/cert.pem key ~/key.pem
 "OK"
 ```
 
-#### list
+</details>
 
-Get names of cert-key info.
+##### list
 
-```
-list cert-key
-1) vproxy.cassite.net
-```
+<details><summary>View loaded cert-key resources.</summary>
 
-#### remove
+<br>
 
-Remove a cert-key.
+examples:
 
 ```
-remove cert-key vproxy.cassite.net
+$ list cert-key
+1) "vproxy.cassite.net"
+```
+
+</details>
+
+##### remove
+
+<details><summary>Remove a cert-key resource.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove cert-key vproxy.cassite.net
 "OK"
 ```
 
-## Resource: dns-cache
+</details>
 
-The dns record cache. It's a `host -> ipv4List, ipv6List` map.  
-It can only be accessed from the `(default)` dns resolver.
+### dns-cache
 
-#### list
+description: The dns record cache. It's a host -> ipv4List, ipv6List map. It can only be accessed from the (default) dns resolver.
 
-Count current cache
+#### actions
+
+##### list
+
+<details><summary>Count current cache.</summary>
+
+<br>
+
+examples:
 
 ```
-list dns-cache in resolver (default)
+$ list dns-cache in resolver (default)
 (integer) 1
 ```
 
-#### list-detail
+</details>
 
-List detailed info of dns cache.
+##### list-detail
 
-The return values are:
+<details><summary>List detailed info of dns cache. The return values are: host. ipv4 ip list. ipv6 ip list.</summary>
 
-* host
-* ipv4 ip list
-* ipv6 ip list
+<br>
+
+examples:
 
 ```
-list-detail dns-cache in resolver (default)
+$ list-detail dns-cache in resolver (default)
 1) 1) "localhost"
    2) 1) "127.0.0.1"
    3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
 ```
 
-#### remove
+</details>
 
-Specify the host and remove the dns cache.
+##### remove
+
+<details><summary>Specify the host and remove the dns cache.</summary>
+
+<br>
+
+examples:
 
 ```
-remove dns-cache localhost from resolver (default)
+$ remove dns-cache localhost from resolver (default)
 "OK"
 ```
 
-## Resource: server-sock (ss)
+</details>
 
-Represents a `ServerSocketChannel`, which binds an ip:port.
+### switch
 
-#### list
+short version: `sw`
 
-Count server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+description: A switch for vproxy wrapped vxlan packets.
 
-```
-list server-sock in el el0 in elg elg0
-(integer) 1
+#### actions
 
-list server-sock in tcp-lb lb0
-(integer) 1
+##### add
 
-list server-sock in socks5-server s5
-(integer) 1
-```
+<details><summary>Create a switch.</summary>
 
-#### list-detail
+<br>
 
-Get info about server-socks. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`.
+parameters:
 
-```
-list-detail server-sock in el el0 in elg elg0
-1) "127.0.0.1:6380"
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|Binding udp address of the switch for wrapped vxlan packets.|||
+|mac-table-timeout|Timeout for mac table (ms).|Y|300000|
+|arp-table-timeout|Timeout for arp table (ms).|Y|14400000|
+|event-loop-group|The event loop group used for handling packets.|Y|(worker-elg)|
+|security-group|The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).|Y|(allow-all)|
+|mtu|Default mtu setting for new connected ports.|Y|1500|
+|flood|Default flood setting for new connected ports.|Y|allow|
 
-list-detail server-sock in tcp-lb lb0
-1) "127.0.0.1:6380"
-
-list-detail server-sock in socks5-server s5
-1) "127.0.0.1:18081"
-```
-
-## Resource: connection (conn)
-
-Represents a `SocketChannel`.
-
-#### list
-
-Count connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
+examples:
 
 ```
-list connection in el el0 in elg elg0
-(integer) 2
-
-list connection in tcp-lb lb0
-(integer) 2
-
-list connection in socks5-server s5
-(integer) 2
-
-list connection in server svr0 in sg sg0
-(integer) 1
-```
-
-#### list-detail
-
-Get info about connections. Can be retrieved from `event-loop`, `tcp-lb`, `socks5-server`, `server`.
-
-```
-list-detail connection in el el0 in elg elg0
-1) "127.0.0.1:63537/127.0.0.1:6379"
-2) "127.0.0.1:63536/127.0.0.1:6380"
-
-list-detail connection in tcp-lb lb0
-1) "127.0.0.1:63536/127.0.0.1:6380"
-2) "127.0.0.1:63537/127.0.0.1:6379"
-
-list-detail connection in socks5-server s5
-1) "127.0.0.1:55981/127.0.0.1:18081"
-2) "127.0.0.1:55982/127.0.0.1:16666"
-
-list-detail connection in server svr0 in sg sg0
-1) "127.0.0.1:63537/127.0.0.1:6379"
-```
-
-#### remove from
-
-Close the connection, and if the connection is bond to a session, the session will be closed as well.
-
-Supports regexp pattern or plain string:
-
-* if the input starts with `/` and ends with `/`, then it's considered as a regexp
-* otherwise it matches the full string
-
-```
-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
-"OK"
-
-remove conn /.*/ from el worker2 in elg worker
+$ add switch sw0 address 0.0.0.0:4789
 "OK"
 ```
 
-## Resource: session (sess)
+</details>
 
-Represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server.
+##### list
 
-#### list
+<details><summary>Get names of switches.</summary>
 
-Count loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
+<br>
 
-```
-list session in tcp-lb lb0
-(integer) 1
-
-list session in socks5-server s5
-(integer) 2
-```
-
-#### list-detail
-
-Get info about loadbalancer sessions. Can be retrieved from `tcp-lb` or `socks5-server`.
+examples:
 
 ```
-list-detail session in tcp-lb lb0
-1) 1) "127.0.0.1:63536/127.0.0.1:6380"
-   2) "127.0.0.1:63537/127.0.0.1:6379"
-
-list-detail session in socks5-server s5
-1) 1) "127.0.0.1:53589/127.0.0.1:18081"
-   2) "127.0.0.1:53591/127.0.0.1:16666"
-2) 1) "127.0.0.1:53590/127.0.0.1:18081"
-   2) "127.0.0.1:53592/127.0.0.1:16666"
-```
-
-#### remove from
-
-Close a session from lb. The related two connections will be closed as well.
-
-```
-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
-"OK"
-
-remove sess /127.0.0.1:58713.*/ from tl lb0
-"OK"
-```
-
-## Resource: bytes-in (bin)
-
-Statistics: bytes flow from remote to local.
-
-#### list/list-detail
-
-Get history total input bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
-
-```
-list bytes-in in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 45
-
-list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 45
-
-list bytes-in in server svr0 in sg sg0
-(integer) 9767
-```
-
-## Resource: bytes-out (bout)
-
-Statistics: bytes flow from local to remote.
-
-#### list/list-detail
-
-Get history total output bytes from a resource. Can be retrieved from `server-sock`, `connection`, `server`.
-
-```
-list bytes-out in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 9767
-
-list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 9767
-
-list bytes-out in server svr0 in sg sg0
-(integer) 45
-```
-
-## Resource: accepted-conn-count
-
-Statistics: successfully accpeted connections. Connections accepted by os but directly terminated by the Proxy are not calculated.
-
-#### list/list-detail
-
-Get history total accepted connection count. Can be retrieved from `server-sock`.
-
-```
-list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 2
-```
-
-## Resource: switch (sw)
-
-A switch for vproxy wrapped vxlan packets.
-
-#### add
-
-Create a switch.
-
-* address (addr): Binding udp address of the switch for wrapped vxlan packets.
-* password (pass): Password of the wrapped vxlan packets.
-* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: 300000
-* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: 14400000
-* event-loop-group (elg): *optional*. The event loop group used for handling packets. Default: (worker-elg)
-
-```
-add switch sw0 address 0.0.0.0:4789 password p@sSw0rD
-"OK"
-```
-
-#### update
-
-Update a switch.
-
-* mac-table-timeout: *optional*. Timeout for mac table (ms). Default: not changed
-* arp-table-timeout: *optional*. Timeout for arp table (ms). Default: not changed
-
-```
-update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000
-"OK"
-```
-
-#### list
-
-Show names of all switches.
-
-```
-list switch
+$ list switch
 1) "sw0"
 ```
 
-#### list-detail
+</details>
 
-Show detailed info about all switches.
+##### list-detail
 
-```
-list-detail switch
-1) "sw0" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000
-```
+<details><summary>Get detailed info of switches.</summary>
 
-#### remove
+<br>
 
-Remove and stop a switch.
+examples:
 
 ```
-remove switch sw0
+$ list-detail switch
+1) "sw0" -> event-loop-group worker bind 0.0.0.0:4789 password p@sSw0rD mac-table-timeout 300000 arp-table-timeout 14400000 bare-vxlan-access (allow-all)
+```
+
+</details>
+
+##### update
+
+<details><summary>Update a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|mac-table-timeout|Timeout for mac table (ms).|Y|not changed|
+|arp-table-timeout|Timeout for arp table (ms).|Y|not changed|
+|security-group|The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).|Y|not changed|
+|mtu|Default mtu setting for new connected ports, updating it will not affect the existing ones.|Y|not changed|
+|flood|Default flood setting for new connected ports, updating it will not affect the existing ones.|Y|not changed|
+
+examples:
+
+```
+$ update switch sw0 mac-table-timeout 60000 arp-table-timeout 120000
 "OK"
 ```
 
-## Resource: vni
+</details>
 
-Vxlan network id.
+##### remove
 
-#### list
+<details><summary>Stop and remove a switch.</summary>
 
-Count existing vnis in a switch.
+<br>
 
-```
-list vni in switch sw0
-(integer) 1
-```
-
-#### list-detail
-
-List existing vnis in a switch.
+examples:
 
 ```
-list-detail vni in switch sw0
+$ remove switch sw0
+"OK"
+```
+
+</details>
+
+##### add-to
+
+<details><summary>Add a remote switch ref to a local switch. note: use list iface to see these remote switches.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|The remote switch address.|||
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|no-switch-flag|Do not add switch flag on vxlan packets sent through this iface.|Y||
+
+examples:
+
+```
+$ add switch sw1 to switch sw0 address 100.64.0.1:18472
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a remote switch ref from a local switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove switch sw1 from switch sw0
+"OK"
+```
+
+</details>
+
+### vpc
+
+description: A private network.
+
+#### actions
+
+##### add-to
+
+<details><summary>Create a vpc in a switch. the name should be vni of the vpc.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|v4network|The ipv4 network allowed in this vpc.|||
+|v6network|The ipv6 network allowed in this vpc.|Y|not allowed|
+|annotations|Annotations of the vpc.|Y|{}|
+
+examples:
+
+```
+$ add vpc 1314 to switch sw0 v4network 172.16.0.0/16
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>List existing vpcs in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list vpc in switch sw0
 1) (integer) 1314
 ```
 
-## arp
+</details>
 
-Arp and mac table entries.
+##### list-detail
 
-#### list
+<details><summary>List detailed info about vpcs in a switch.</summary>
 
-Count entries in a vni.
+<br>
+
+examples:
 
 ```
-list arp in vni 1314 in switch sw0
+$ list-detail vpc in switch sw0
+1) "1314 -> v4network 172.16.0.0/16"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a vpc from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remote vpc 1314 from switch sw0
+"OK"
+```
+
+</details>
+
+### iface
+
+description: Connected interfaces.
+
+#### actions
+
+##### list
+
+<details><summary>Count currently connected interfaces in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list iface in switch sw0
 (integer) 2
 ```
 
-#### list-detail
+</details>
 
-List arp and mac table entries in a vni.
+##### list-detail
+
+<details><summary>List current connected interfaces in a switch.</summary>
+
+<br>
+
+examples:
 
 ```
-list-detail arp in vni 1314 in switch sw0
+$ list-detail iface in switch sw0
+1) "Iface(192.168.56.2:8472)"
+2) "Iface(100.64.0.4:8472)"
+```
+
+</details>
+
+##### update
+
+<details><summary>Update interface config.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|mtu|Mtu of this interface.|Y|1500|
+|flood|Whether to allow flooding traffic through this interface, allow or deny.|Y|allow|
+
+examples:
+
+```
+$ update iface tap:tap0 in switch sw0 mtu 9000 flood allow
+"OK"
+```
+
+```
+$ update iface tun:utun9 in switch sw0 mtu 9000 flood allow
+"OK"
+```
+
+```
+$ update iface remote:sw-x in switch sw0 mtu 1500 flood deny
+"OK"
+```
+
+```
+$ update iface ucli:hello in switch sw0 mtu 1500 flood deny
+"OK"
+```
+
+```
+$ update iface user:hello in switch sw0 mtu 1500 flood allow
+"OK"
+```
+
+```
+$ update iface 10.0.0.1:8472 in switch sw0 mtu 1500 flood allow
+"OK"
+```
+
+</details>
+
+### arp
+
+description: Arp and mac table entries.
+
+#### actions
+
+##### list
+
+<details><summary>Count entries in a vpc.</summary>
+
+<br>
+
+examples:
+
+```
+$ list arp in vpc 1314 in switch sw0
+(integer) 2
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>List arp and mac table entries in a vpc.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail arp in vpc 1314 in switch sw0
 1) "aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299"
 2) "fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299"
 ```
+
+</details>
+
+### user
+
+description: User in a switch.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a user to a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|password|Password of the user.|||
+|vni|Vni assigned for the user.|||
+|mtu|Mtu for the user interface when the user is connected.|Y|mtu setting of the switch|
+|flood|Whether the user interface allows flooding traffic.|Y|flood setting of the switch|
+
+examples:
+
+```
+$ add user hello to switch sw0 vni 1314 password p@sSw0rD
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>List user names in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list user in switch sw0
+1) "hello"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>List all user info in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail user in switch sw0
+1) "hello" -> vni 1314
+```
+
+</details>
+
+##### update
+
+<details><summary>Update user info in a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|mtu|Mtu for the user interface when the user is connected, updating it will not affect connected ones.|Y|not changed|
+|flood|Whether the user interface allows flooding traffic, updating it will not affect connected ones.|Y|not changed|
+
+examples:
+
+```
+$ update user hello in switch sw0 mtu 1500 flood allow
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a user from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove user hello from switch sw0
+"OK"
+```
+
+</details>
+
+### tap
+
+description: Add/remove a tap device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix or -Dvfd=windows.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a user to a switch. Note: the result string is the name of the tap device because might be generated.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|vni|Vni of the vpc which the tap device is attached to.|||
+|post-script|Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).|Y|(empty)|
+|mtu|Mtu of this tap device.|Y|mtu setting of the switch|
+|flood|Whether the tap device allows flooding traffic.|Y|flood setting of the switch|
+
+examples:
+
+```
+$ add tap tap%d to switch sw0 vni 1314
+"tap0"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove and close a tap from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove tap tap0 from switch sw0
+"OK"
+```
+
+</details>
+
+### tun
+
+description: Add/remove a tun device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. Note: 1) use list iface to see these tun devices, 2) should set -Dvfd=posix.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a user to a switch. Note: the result string is the name of the tun device because might be generated.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|vni|Vni of the vpc which the tun device is attached to.|||
+|mac|Mac address of this tun device. the switch requires l2 layer frames for handling packets.|||
+|post-script|Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).|Y|(empty)|
+|mtu|Mtu of this tun device.|Y|mtu setting of the switch|
+|flood|Whether the tun device allows flooding traffic.|Y|flood setting of the switch|
+
+examples:
+
+```
+$ add tun tun%d to switch sw0 vni 1314
+"tun0"
+```
+
+```
+$ add tun utun9 to switch sw0 vni 1314
+"utun9"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove and close a tun from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove tun tun0 from switch sw0
+"OK"
+```
+
+</details>
+
+### user-client
+
+short version: `ucli`
+
+description: User client of an encrypted tunnel to remote switch. Note: use list iface to see these clients.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a user client to a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|password|Password of the user.|||
+|vni|Vni which the user is assigned to.|||
+|address|Remote switch address to connect to.|||
+
+examples:
+
+```
+$ add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a user client from a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|address|Remote switch address the client connected to.|||
+
+examples:
+
+```
+$ remove user-client hello from switch sw0 address 192.168.77.1:18472
+"OK"
+```
+
+</details>
+
+### xdp
+
+description: Xdp socket, which is able to intercept packets from a net dev. Note: 1) use list iface to see the xdp sockets/interfaces, 2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, 3) make sure your kernel supports xdp, recommend kernel version >= 5.4. See also `umem`, `bpf-object`. Check doc for more info.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add xdp socket into the switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|nic|Nic to bind the xdp socket to. Note: a program must be loaded on the nic, see `bpf-object` for more info.|||
+|bpf-map|Name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP.|||
+|umem|Umem for the xdp socket to use. See `umem` for more info.|||
+|queue|The queue index to bind to.|||
+|rx-ring-size|Rx ring size.|Y|2048|
+|tx-ring-size|Tx ring size.|Y|2048|
+|mode|Mode of the xsk, enum: {SKB, DRV}, see doc for more info.|Y|SKB|
+|vni|Vni which the iface is assigned to.|||
+|bpf-map-key|The method of determining the key of the corresponding xsk when putting into a bpf map.|Y|useQueueId|
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|zerocopy|Allow kernel to use zerocopy machanism.|Y||
+
+examples:
+
+```
+$ add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy
+"OK"
+```
+
+```
+$ add xdp xdp1 to switch sw0 nic enp4s0 bpf-map xsk_map umem umem0 queue 0 vni 1
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove xdp socket from the switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove xdp xdp0 from switch sw0
+"OK"
+```
+
+</details>
+
+### ip
+
+description: Synthetic ip in a vpc of a switch.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a synthetic ip to a vpc of a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|mac|Mac address that the ip assigned on.|||
+
+examples:
+
+```
+$ add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show synthetic ips in a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list ip in vpc 1314 in switch sw0
+1) "172.16.0.21"
+2) "[2001:0db8:0000:f101:0000:0000:0000:0002]"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show detailed info about synthetic ips in a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail ip in vpc 1314 in switch sw0
+1) "172.16.0.21 -> mac e2:8b:11:00:00:22"
+2) "[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a synthetic ip from a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove ip 172.16.0.21 from vpc 1314 in switch sw0
+"OK"
+```
+
+</details>
+
+### route
+
+description: Route rules in a vpc of a switch.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a route to a vpc of a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|network|Network to be matched.|||
+|vni|The vni to send packet to. only one of vni|via can be used.|||
+|via|The address to forward the packet to. only one of via|vni can be used.|||
+
+examples:
+
+```
+$ add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 vni 1315
+"OK"
+```
+
+```
+$ add route to172.17 to vpc 1314 in switch sw0 network 172.17.0.0/24 via 172.16.0.1
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show route rule names in a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list route in vpc 1314 in switch sw0
+1) "to172.17"
+2) "to2001:0db8:0000:f102"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show detailed info about route rules in a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail route in vpc 1314 in switch sw0
+1) "to172.17 -> network 172.17.0.0/24 vni 1315"
+2) "to2001:0db8:0000:f102 -> network [2001:0db8:0000:f102:0000:0000:0000:0000]/64 vni 1315"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a route rule from a vpc of a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove route to172.17 from vpc 1314 in switch sw0
+"OK"
+```
+
+</details>
+
+### umem
+
+description: Umem for xdp sockets to use.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a umem to a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|chunks|How many chunks are there in this umem.|Y|4096|
+|fill-ring-size|Size of the fill ring.|Y|2048|
+|comp-ring-size|Size of the comp ring.|Y|2048|
+|frame-size|Size of the frame, must be 2048 or 4096.|Y|4096|
+|headroom|Space reserved at the head of a chunk.|Y|512|
+
+examples:
+
+```
+$ add umem umem0 to switch sw0
+"OK"
+```
+
+```
+$ add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show umem names in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list umem in switch sw0
+1) "umem0"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show detailed info about umems in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail umem in switch sw0
+1) "umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a umem from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove umem umem0 from switch sw0
+"OK"
+```
+
+</details>
+
+### bpf-object
+
+short version: `bpfobj`
+
+description: The ebpf object attached to net dev. Note that the name of the bpf-object is the nic name where ebpf program will be attached to.
+
+#### actions
+
+##### add
+
+<details><summary>Load and attach ebpf to a net dev.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|path|Path to the ebpf program .o file.|||
+|program|Name of the program inside the ebpf object to be attached to the net dev.|||
+|mode|Attaching mode, enum: {SKB, DRV}.|Y|SKB|
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|force|Force to replace the old program attached to the dev.|Y||
+
+examples:
+
+```
+$ add bpf-object enp0s6 path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o program xdp_sock mode SKB force
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show bpf-object names (attached nic names).</summary>
+
+<br>
+
+examples:
+
+```
+$ list bpf-object
+1) "enp0s6"
+2) "xdptut-4667"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show bpf-object detailed info.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail bpf-object
+1) "enp0s6 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB"
+2) "xdptut-4667 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove bpf-object. Note that the loaded program will not be detached from the nic, so xdp will not be affected.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove bpf-object enp0s6
+"OK"
+```
+
+</details>
+
+## Params
+
+### acceptor-elg
+
+short version: `aelg`
+
+description: Acceptor event loop group.
+
+### event-loop-group
+
+short version: `elg`
+
+description: Event loop group.
+
+### address
+
+short version: `addr`
+
+description: Ip address -> ip:port.
+
+### via
+
+description: The gateway ip for routing.
+
+### upstream
+
+short version: `ups`
+
+description: Upstream.
+
+### in-buffer-size
+
+description: In buffer size.
+
+### out-buffer-size
+
+description: Out buffer size.
+
+### security-group
+
+short version: `secg`
+
+description: Security group.
+
+### timeout
+
+description: Health check timeout.
+
+### period
+
+description: Health check period.
+
+### up
+
+description: Health check up times.
+
+### down
+
+description: Health check down times.
+
+### method
+
+short version: `meth`
+
+description: Method to retrieve a server.
+
+### weight
+
+description: Weight.
+
+### default
+
+description: Enum: allow or deny.
+
+### network
+
+short version: `net`
+
+description: Network: $network/$mask.
+
+### v4network
+
+short version: `v4net`
+
+description: Ipv4 network: $v4network/$mask.
+
+### v6network
+
+short version: `v6net`
+
+description: Ipv6 network: $v6network/$mask.
+
+### protocol
+
+description: For tcp-lb: the application layer protocol, for security-group: the transport layer protocol: tcp or udp.
+
+### annotations
+
+short version: `anno`
+
+description: A string:string json representing metadata for the resource.
+
+### port-range
+
+description: An integer tuple $i,$j.
+
+### cert-key
+
+short version: `ck`
+
+description: Cert-key resource.
+
+### cert
+
+description: The certificate file path.
+
+### key
+
+description: The key file path.
+
+### ttl
+
+description: Time to live.
+
+### mac-table-timeout
+
+description: Timeout of mac table in a switch.
+
+### arp-table-timeout
+
+description: Timeout of arp table in a switch.
+
+### password
+
+short version: `pass`
+
+description: Password.
+
+### mac
+
+description: Mac address.
+
+### vni
+
+description: Vni number.
+
+### post-script
+
+description: The script to run after added.
+
+### mtu
+
+description: Max transmission unit.
+
+### flood
+
+description: Flooding traffic.
+
+### path
+
+description: File path.
+
+### program
+
+short version: `prog`
+
+description: Program name.
+
+### mode
+
+description: Mode.
+
+### umem
+
+description: Xdp umem.
+
+### nic
+
+description: Nic name.
+
+### queue
+
+description: Queue id.
+
+### bpf-map
+
+short version: `bpfmap`
+
+description: Bpf map extracted from a bpfobject.
+
+### rx-ring-size
+
+description: Receiving ring size.
+
+### tx-ring-size
+
+description: Transmitting ring size.
+
+### chunks
+
+description: Chunks.
+
+### fill-ring-size
+
+description: Xdp umem fill ring size.
+
+### comp-ring-size
+
+description: Xdp umem comp ring size.
+
+### frame-size
+
+description: Size of a frame.
+
+### headroom
+
+description: Space reserved at the head of a buffer.
+
+### bpf-map-key
+
+description: The method of determining the key of the corresponding xsk when putting into a bpf map.
+
+## Flags
+
+### noipv4
+
+description: do not use ipv4 address. Use the flag with param: address
+
+### noipv6
+
+description: do not use ipv6 address. Use the flag with param: address
+
+### allow-non-backend
+
+description: allow to access non backend endpoints
+
+### deny-non-backend
+
+description: only able to access backend endpoints
+
+### no-switch-flag
+
+description: do not add switch flag on vxlan packet
+
+### force
+
+description: forcibly to do something
+
+### zerocopy
+
+description: indicate to perform zerocopy operations
+
