@@ -197,6 +197,10 @@ project(':test') {
     }
 
     task XDPPoc(type: JavaExec) {
+        if (!org.gradle.internal.os.OperatingSystem.current().isLinux()) {
+            return
+        }
+
         if ("true" == System.getProperty("enableAssertions")) {
             enableAssertions = true
         }
