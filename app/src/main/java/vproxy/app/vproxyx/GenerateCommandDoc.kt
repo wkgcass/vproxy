@@ -18,7 +18,7 @@ class GenerateCommandDoc {
         fun helpMarkdown(): String {
             val result = StringBuilder()
             val men = ResMan.values()
-            val general = File("./doc/general.md").readText()
+            val general = File("./misc/general.md").readText()
             result.append(
                 """
                 |# Command
@@ -56,7 +56,7 @@ class GenerateCommandDoc {
                         """
                         |##### ${act.act.act}
                         |
-                        |<details><summary>${act.descr.replace("\n", "")}</summary>
+                        |<details><summary>${act.descr}</summary>
                         |
                         |<br>
                         |

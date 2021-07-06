@@ -93,15 +93,7 @@ The params and flags are simple. Params are pairs of "key"s and "value"s. Flags 
 
 ### add
 
-There are eight `$action`s in vproxy command:
-
-* `add (a)`: create a resource
-* `add (a) ... to ...`: attach a resource to another one
-* `list (l)`: show brief info about some resources
-* `list-detail (L)`: show detailed info about some resources
-* `update (u)`: modify a resource
-* `remove (r)`: remove and destroy a resource
-* `remove (r) ... from ...`: detach a resource from another one
+Create a resource.
 
 ### add-to
 
@@ -169,7 +161,11 @@ $ add tcp-lb lb0 acceptor-elg elg0 event-loop-group elg0 address 127.0.0.1:18080
 
 ##### list
 
-## Action: remove ... from ... (r ... from ...)
+<details><summary>Retrieve names of all tcp-loadbalancers.</summary>
+
+<br>
+
+examples:
 
 ```
 $ list tcp-lb
@@ -668,7 +664,7 @@ $ list-detail server-group in upstream ups0
 
 ##### update
 
-<details><summary>Change health check config or load balancing algorithm.Param list is the same as add, but not all required.Also you can change the weight of a group in an upstream resource.</summary>
+<details><summary>Change health check config or load balancing algorithm. Param list is the same as add, but not all required. Also you can change the weight of a group in an upstream resource.</summary>
 
 <br>
 
@@ -1143,7 +1139,7 @@ $ list dns-cache in resolver (default)
 
 ##### list-detail
 
-<details><summary>List detailed info of dns cache.The return values are:host.ipv4 ip list.ipv6 ip list.</summary>
+<details><summary>List detailed info of dns cache. The return values are: host. ipv4 ip list. ipv6 ip list.</summary>
 
 <br>
 
@@ -1156,118 +1152,9 @@ $ list-detail dns-cache in resolver (default)
    3) 1) "[0000:0000:0000:0000:0000:0000:0000:0001]"
 ```
 
-#### remove
-
-<br/>
-
-description: Specify the host and remove the dns cache.
-
-examples:
-
-```
-remove dns-cache localhost from resolver (default)
-"OK"
-```
-
 </details>
 
-### server-sock
-
-short version: `ss`
-
-description: Represents a `ServerSocketChannel`, which binds an ip:port.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Count server-socks.
-
-examples:
-
-```
-$ list server-sock in el el0 in elg elg0
-(integer) 1
-```
-
-```
-$ list server-sock in tcp-lb lb0
-(integer) 1
-```
-
-```
-$ list server-sock in socks5-server s5
-(integer) 1
-```
-
-</details>
-
-<details><summary>list-detail</summary>
-
-<br/>
-
-description: Get info about bind servers.
-
-examples:
-
-```
-$ list-detail server-sock in el el0 in elg elg0
-1) "127.0.0.1:6380"
-```
-
-```
-$ list-detail server-sock in tcp-lb lb0
-1) "127.0.0.1:6380"
-```
-
-```
-$ list-detail server-sock in socks5-server s5
-1) "127.0.0.1:18081"
-```
-
-</details>
-
-### connection
-
-short version: `conn`
-
-description: Represents a `SocketChannel`.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Count connections.
-
-examples:
-
-```
-$ list connection in el el0 in elg elg0
-(integer) 2
-```
-
-```
-$ list connection in tcp-lb lb0
-(integer) 2
-```
-
-```
-$ list connection in socks5-server s5
-(integer) 2
-```
-
-```
-$ list connection in server svr0 in sg sg0
-(integer) 1
-```
-
-</details>
-
-<details><summary>list-detail</summary>
+##### remove
 
 <details><summary>Specify the host and remove the dns cache.</summary>
 
@@ -1276,204 +1163,8 @@ $ list connection in server svr0 in sg sg0
 examples:
 
 ```
-$ list-detail connection in el el0 in elg elg0
-1) "127.0.0.1:63537/127.0.0.1:6379"
-2) "127.0.0.1:63536/127.0.0.1:6380"
-```
-
-```
-$ list-detail connection in tcp-lb lb0
-1) "127.0.0.1:63536/127.0.0.1:6380"
-2) "127.0.0.1:63537/127.0.0.1:6379"
-```
-
-```
-$ list-detail connection in socks5-server s5
-1) "127.0.0.1:55981/127.0.0.1:18081"
-2) "127.0.0.1:55982/127.0.0.1:16666"
-```
-
-```
-$ list-detail connection in server svr0 in sg sg0
-1) "127.0.0.1:63537/127.0.0.1:6379"
-```
-
-#### remove from
-
-<br/>
-
-description: Close the connection, and if the connection is bond to a session, the session will be closed as well.
-
-Supports regexp pattern or plain string:
-
-* if the input starts with `/` and ends with `/`, then it's considered as a regexp.
-* otherwise it matches the full string.
-
-examples:
-
-```
-remove conn 127.0.0.1:57629/127.0.0.1:16666 from el worker2 in elg worker
+$ remove dns-cache localhost from resolver (default)
 "OK"
-```
-
-remove conn /.*/ from el worker2 in elg worker
-"OK"
-```
-
-</details>
-
-### session
-
-short version: `sess`
-
-description: Represents a tuple of connections: the connection from client to lb, and the connection from lb to backend server.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Count loadbalancer sessions.
-
-examples:
-
-```
-$ list session in tcp-lb lb0
-(integer) 1
-```
-
-```
-$ list session in socks5-server s5
-(integer) 2
-```
-
-</details>
-
-<details><summary>list-detail</summary>
-
-<br/>
-
-description: Get info about loadbalancer sessions.
-
-examples:
-
-```
-$ list-detail session in tcp-lb lb0
-1) 1) "127.0.0.1:63536/127.0.0.1:6380"
-   2) "127.0.0.1:63537/127.0.0.1:6379"
-```
-
-```
-$ list-detail session in socks5-server s5
-1) 1) "127.0.0.1:53589/127.0.0.1:18081"
-   2) "127.0.0.1:53591/127.0.0.1:16666"
-2) 1) "127.0.0.1:53590/127.0.0.1:18081"
-   2) "127.0.0.1:53592/127.0.0.1:16666"
-```
-
-#### remove from
-
-<br/>
-
-description: Close a session from lb.
-
-examples:
-
-```
-remove sess 127.0.0.1:58713/127.0.0.1:18080->127.0.0.1:58714/127.0.0.1:16666 from tl lb0
-"OK"
-```
-
-remove sess /127.0.0.1:58713.*/ from tl lb0
-"OK"
-```
-
-</details>
-
-### bytes-in
-
-short version: `bin`
-
-description: Statistics: bytes flow from remote to local.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Get history total input bytes from a resource.
-
-examples:
-
-```
-$ list bytes-in in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 45
-```
-
-```
-$ list bytes-in in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 45
-```
-
-```
-$ list bytes-in in server svr0 in sg sg0
-(integer) 9767
-```
-
-</details>
-
-### bytes-out
-
-short version: `bout`
-
-description: Statistics: bytes flow from local to remote.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Get history total output bytes from a resource.
-
-examples:
-
-```
-$ list bytes-out in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 9767
-```
-
-```
-$ list bytes-out in connection 127.0.0.1:63536/127.0.0.1:6380 in el el0 in elg elg0
-(integer) 9767
-```
-
-```
-$ list bytes-out in server svr0 in sg sg0
-(integer) 45
-```
-
-</details>
-
-### accepted-conn-count
-
-description: Statistics: successfully accpeted connections.
-
-#### actions
-
-<details><summary>list</summary>
-
-<br/>
-
-description: Get history total accepted connection count.
-
-examples:
-
-```
-$ list accepted-conn-count in server-sock 127.0.0.1:6380 in tl lb0
-(integer) 2
 ```
 
 </details>
@@ -2065,6 +1756,67 @@ $ remove user-client hello from switch sw0 address 192.168.77.1:18472
 
 </details>
 
+### xdp
+
+description: Xdp socket, which is able to intercept packets from a net dev. Note: 1) use list iface to see the xdp sockets/interfaces, 2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so on java.library.path, 3) make sure your kernel supports xdp, recommend kernel version > 5.8. See also `umem`, `bpf-object`. Check doc for more info.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add xdp socket into the switch.</summary>
+
+<br>
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|zerocopy|Allow kernel to use zerocopy machanism.|Y||
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|nic|Nic to bind the xdp socket to. Note: a program must be loaded on the nic, see `bpf-object` for more info.|||
+|bpf-map|Name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP.|||
+|umem|Umem for the xdp socket to use. See `umem` for more info.|||
+|queue|The queue index to bind to.|||
+|rx-ring-size|Rx ring size.|Y|2048|
+|tx-ring-size|Tx ring size.|Y|2048|
+|mode|Mode of the xsk, enum: {SKB, DRV}, see doc for more info.|Y|SKB|
+|vni|Vni which the iface is assigned to.|||
+|bpf-map-key|The method of determining the key of the corresponding xsk when putting into a bpf map.|Y|useQueueId|
+
+examples:
+
+```
+$ add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy
+"OK"
+```
+
+```
+$ add xdp xdp1 to switch sw0 nic enp4s0 bpf-map xsk_map umem umem0 queue 0 vni 1
+"OK"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove xdp socket from the switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove xdp xdp0 from switch sw0
+"OK"
+```
+
+</details>
+
 ### ip
 
 description: Synthetic ip in a vpc of a switch.
@@ -2220,6 +1972,171 @@ $ remove route to172.17 from vpc 1314 in switch sw0
 
 </details>
 
+### umem
+
+description: Umem for xdp sockets to use.
+
+#### actions
+
+##### add-to
+
+<details><summary>Add a umem to a switch.</summary>
+
+<br>
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|chunks|How many chunks are there in this umem.|Y|4096|
+|fill-ring-size|Size of the fill ring.|Y|2048|
+|comp-ring-size|Size of the comp ring.|Y|2048|
+|frame-size|Size of the frame, must be 2048 or 4096.|Y|4096|
+|headroom|Space reserved at the head of a chunk.|Y|512|
+
+examples:
+
+```
+$ add umem umem0 to switch sw0
+"OK"
+```
+
+```
+$ add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show umem names in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list umem in switch sw0
+1) "umem0"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show detailed info about umems in a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail umem in switch sw0
+1) "umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove a umem from a switch.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove umem umem0 from switch sw0
+"OK"
+```
+
+</details>
+
+### bpf-object
+
+short version: `bpfobj`
+
+description: The ebpf object attached to net dev. Note that the name of the bpf-object is the nic name where ebpf program will be attached to.
+
+#### actions
+
+##### add
+
+<details><summary>Load and attach ebpf to a net dev.</summary>
+
+<br>
+
+flags:
+
+|name|description|opt|default|
+|---|---|:---:|:---:|
+|force|Force to replace the old program attached to the dev.|Y||
+
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|path|Path to the ebpf program .o file.|||
+|program|Name of the program inside the ebpf object to be attached to the net dev.|||
+|mode|Attaching mode, enum: {SKB, DRV}.|Y|SKB|
+
+examples:
+
+```
+$ add bpf-object enp0s6 path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o program xdp_sock mode SKB force
+"OK"
+```
+
+</details>
+
+##### list
+
+<details><summary>Show bpf-object names (attached nic names).</summary>
+
+<br>
+
+examples:
+
+```
+$ list bpf-object
+1) "enp0s6"
+2) "xdptut-4667"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Show bpf-object detailed info.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail bpf-object
+1) "enp0s6 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB"
+2) "xdptut-4667 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB"
+```
+
+</details>
+
+##### remove-from
+
+<details><summary>Remove bpf-object. Note that the loaded program will not be detached from the nic, so xdp will not be affected.</summary>
+
+<br>
+
+examples:
+
+```
+$ remove bpf-object enp0s6
+"OK"
+```
+
+</details>
+
 ## Params
 
 ### acceptor-elg
@@ -2326,26 +2243,6 @@ description: A string:string json representing metadata for the resource.
 
 description: An integer tuple $i,$j.
 
-### service
-
-description: Service name.
-
-### zone
-
-description: Zone name.
-
-### nic
-
-description: Nic name.
-
-### ip-type
-
-description: Ip type: v4 or v6.
-
-### port
-
-description: A port number.
-
 ### cert-key
 
 short version: `ck`
@@ -2398,6 +2295,70 @@ description: Max transmission unit.
 
 description: Flooding traffic.
 
+### path
+
+description: File path.
+
+### program
+
+short version: `prog`
+
+description: Program name.
+
+### mode
+
+description: Mode.
+
+### umem
+
+description: Xdp umem.
+
+### nic
+
+description: Nic name.
+
+### queue
+
+description: Queue id.
+
+### bpf-map
+
+short version: `bpfmap`
+
+description: Bpf map extracted from a bpfobject.
+
+### rx-ring-size
+
+description: Receiving ring size.
+
+### tx-ring-size
+
+description: Transmitting ring size.
+
+### chunks
+
+description: Chunks.
+
+### fill-ring-size
+
+description: Xdp umem fill ring size.
+
+### comp-ring-size
+
+description: Xdp umem comp ring size.
+
+### frame-size
+
+description: Size of a frame.
+
+### headroom
+
+description: Space reserved at the head of a buffer.
+
+### bpf-map-key
+
+description: The method of determining the key of the corresponding xsk when putting into a bpf map.
+
 ## Flags
 
 ### noipv4
@@ -2419,4 +2380,12 @@ description: only able to access backend endpoints
 ### no-switch-flag
 
 description: do not add switch flag on vxlan packet
+
+### force
+
+description: forcibly to do something
+
+### zerocopy
+
+description: indicate to perform zerocopy operations
 
