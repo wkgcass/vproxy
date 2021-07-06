@@ -17,7 +17,7 @@ gcc -std=gnu99 -O2 \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/linux" \
     -I "./xdp/libbpf/src" \
-    -L"./xdp/libbpf/src" -Wl,--no-as-needed,--whole-archive,-lbpf,--no-whole-archive \
+    -L"./xdp/libbpf/src" -Wl,--no-as-needed,--whole-archive,-lelf,-lbpf,--no-whole-archive \
     -Wl,--as-needed,--no-whole-archive \
     -shared -Werror -lc -fPIC \
     vproxy_xdp_NativeXDP.c ./xdp/vproxy_xdp.c ./xdp/vproxy_xdp_util.c \

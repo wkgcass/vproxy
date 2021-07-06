@@ -25,10 +25,10 @@ public class XDPPoc {
         var bpfobj = BPFObject.loadAndAttachToNic("./base/src/main/c/xdp/sample_kern.o",
             "xdp_sock", ifname, BPFMode.SKB, true);
         var map = bpfobj.getMap("xsks_map");
-        var umem = UMem.create("poc-umem", 5, 4, 4, 4096, 0);
+        var umem = UMem.create("poc-umem", 64, 32, 32, 4096, 0);
         var buf = umem.getBuffer();
         Logger.alert("buffer from umem: " + buf);
-        var xsk = XDPSocket.create(ifname, 0, umem, 4, 4, BPFMode.SKB, false);
+        var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false);
         map.put(0, xsk);
 
         bpfobj.release();
@@ -36,7 +36,7 @@ public class XDPPoc {
         Logger.alert("ready to poll");
 
         var loop = SelectorEventLoop.open();
-        int total = 20;
+        int total = 128;
         int[] cnt = {0};
         Logger.alert("this program will recieve " + total + " packets and then exit");
         loop.add(xsk, EventSet.read(), null, new Handler<>() {
@@ -141,5 +141,7 @@ public class XDPPoc {
 
         umem.release();
         SunUnsafe.invokeCleaner(buf);
+
+        Logger.alert("received " + cnt[0] + " packets, exit");
     }
 }

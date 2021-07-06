@@ -49,9 +49,9 @@ public class XDPPoc2 {
             new MacAddress("00:00:00:00:ff:01"),
             new Annotations());
 
-        UMem umem = sw.addUMem("poc-umem", 5, 4, 4, 4096, 0);
+        UMem umem = sw.addUMem("poc-umem", 64, 32, 32, 4096, 0);
         sw.addXDP("poc-xdp",
-            ifname, bpfMap, umem, 0, 4, 4, BPFMode.SKB, false, 1,
+            ifname, bpfMap, umem, 0, 32, 32, BPFMode.SKB, false, 1,
             BPFMapKeySelectors.useQueueId.keySelector.get());
     }
 }

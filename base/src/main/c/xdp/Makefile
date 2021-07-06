@@ -10,11 +10,14 @@ clean:
 	cd libbpf/src && make
 	touch .libbpf
 
+linux-gnu-lib := $(shell echo /usr/lib/`uname -p`-linux-gnu)
+linux-gnu-include := $(shell echo /usr/include/`uname -p`-linux-gnu)
+
 .PHONY: libbpf
 libbpf: .libbpf
 
 sample_kern.o:
-	clang -O2 -target bpf -S -c -emit-llvm -o sample_kern.ll sample_kern.c
+	clang -O2 -I$(linux-gnu-include) -I./libbpf/src -target bpf -S -c -emit-llvm -o sample_kern.ll sample_kern.c
 	llc -march=bpf -filetype=obj -o sample_kern.o sample_kern.ll
 
 .PHONY: kern
@@ -24,7 +27,7 @@ kern:
 	make sample_kern.o
 
 sample_user: .libbpf
-	gcc -O2 -L./libbpf/src -I./libbpf/src -g -o sample_user sample_user.c vproxy_xdp.c vproxy_xdp_util.c -lbpf
+	gcc -O2 -L$(linux-gnu-lib) -L./libbpf/src -I./libbpf/src -g -o sample_user sample_user.c vproxy_xdp.c vproxy_xdp_util.c -lbpf -lelf
 
 .PHONY: user
 user:

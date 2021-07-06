@@ -18,6 +18,7 @@ public class NativeXDP {
                 return instance;
             }
 
+            System.loadLibrary("elf");
             System.loadLibrary("bpf");
             System.loadLibrary("vpxdp");
             instance = new NativeXDP();

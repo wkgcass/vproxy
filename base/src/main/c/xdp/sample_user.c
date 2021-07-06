@@ -97,11 +97,11 @@ int main(int argc, char** argv) {
         return 1;
     }
 
-    struct vp_umem_info* umem = vp_umem_create(5, 4, 4, XSK_UMEM__DEFAULT_FRAME_SIZE, 0);
+    struct vp_umem_info* umem = vp_umem_create(64, 32, 32, XSK_UMEM__DEFAULT_FRAME_SIZE, 0);
     if (umem == NULL) {
         return 1;
     }
-    struct vp_xsk_info* xsk = vp_xsk_create(ifname, 0, umem, 2048, 2048, XDP_FLAGS_SKB_MODE, XDP_COPY);
+    struct vp_xsk_info* xsk = vp_xsk_create(ifname, 0, umem, 32, 32, XDP_FLAGS_SKB_MODE, XDP_COPY);
     if (xsk == NULL) {
         return 1;
     }
@@ -119,7 +119,7 @@ int main(int argc, char** argv) {
     fds[0].fd = vp_xsk_socket_fd(xsk);
     fds[0].events = POLLIN;
 
-    int total = 20;
+    int total = 128;
     int cnt = 0;
     printf("this program will recieve %d packets and then exit\n", total);
     while (1) {
@@ -183,5 +183,6 @@ out_loop:
     vp_xsk_close(xsk);
     vp_umem_close(umem, true);
 
+    printf("received %d packets, exit\n", cnt);
     return 0;
 }
