@@ -138,7 +138,6 @@ public class Main {
                     HelloWorld.main0(args);
                     break;
                 case "GenerateCommandDoc":
-                case "generatecommanddoc":
                     GenerateCommandDoc.main0(args);
                     break;
                 default:

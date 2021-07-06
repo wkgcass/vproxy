@@ -125,5 +125,5 @@ dockertest:
 	./misc/run-tests-in-docker.sh
 
 .PHONY: generate-command-doc
-generate-command-doc: clean jar
+generate-command-doc: jar
 	java -Deploy=GenerateCommandDoc -jar build/libs/vproxy.jar
