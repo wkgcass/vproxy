@@ -202,7 +202,7 @@ project(':test') {
         }
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
-        systemProperty("java.library.path", "/usr/lib/" + System.getProperty("os.arch") + "-linux-gnu:base/src/main/c:base/src/main/c/xdp/libbpf/src")
+        systemProperty("java.library.path", "/usr/lib/" + "uname -p".execute().text.trim() + "-linux-gnu:base/src/main/c:base/src/main/c/xdp/libbpf/src")
         systemProperty("vfd", "posix")
         main = "vproxy.poc.XDPPoc"
         if (System.getProperty("ver") != null) {
