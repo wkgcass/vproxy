@@ -28,6 +28,7 @@ import vproxy.test.cases.*;
     TestPrometheus.class,
     TestPromise.class,
     TestUtilities.class,
+    TestByteArrayBuilder.class,
 
     AfterAll.class
 })
