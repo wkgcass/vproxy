@@ -88,6 +88,23 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
             }
             if (req.headers.stream().map(h -> h.key).noneMatch(key -> key.equalsIgnoreCase("upgrade"))) {
                 assert Logger.lowLevelDebug("not upgrade request, try to respond with a registered page");
+
+                // check for tools
+                for (Tool tool : tools) {
+                    String prefix = TOOLS_PREFIX + tool.prefix();
+                    if (!req.uri.startsWith(prefix)) {
+                        continue;
+                    }
+                    String arg = req.uri.substring(prefix.length()).trim();
+                    if (arg.isEmpty()) {
+                        fail(ctx, 400, "Invalid argument");
+                        return;
+                    }
+                    assert Logger.lowLevelDebug("handle req with tool: " + tool + " and arg: " + arg);
+                    tool.handle(this, ctx, arg);
+                    return;
+                }
+
                 if (pageProvider == null) {
                     assert Logger.lowLevelDebug("pageProvider is not set, cannot respond a page");
                     // fall through
@@ -97,20 +114,6 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                         // fall through
                     } else {
                         String uri = req.uri;
-                        // check for tools
-                        for (Tool tool : tools) {
-                            String prefix = TOOLS_PREFIX + tool.prefix();
-                            if (!uri.startsWith(prefix)) {
-                                continue;
-                            }
-                            String arg = uri.substring(prefix.length()).trim();
-                            if (arg.isEmpty()) {
-                                fail(ctx, 400, "Invalid argument");
-                                return;
-                            }
-                            tool.handle(this, ctx, arg);
-                            return;
-                        }
                         if (uri.contains("?")) {
                             uri = uri.substring(0, uri.indexOf("?"));
                         }
@@ -325,7 +328,7 @@ public class WebSocksProtocolHandler implements ProtocolHandler<Tuple<WebSocksPr
                 if (fileToSend == null && ENCODED_MIMES.contains(page.mime)) {
                     for (Header header : ctx.data.result.headers) {
                         if (header.key.trim().equalsIgnoreCase("accept-encoding")
-                                && header.value.trim().toLowerCase().contains("gzip")) {
+                            && header.value.trim().toLowerCase().contains("gzip")) {
                             acceptGZip = true;
                             break;
                         }
