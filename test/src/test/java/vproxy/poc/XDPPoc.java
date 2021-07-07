@@ -3,15 +3,14 @@ package vproxy.poc;
 import vproxy.base.selector.Handler;
 import vproxy.base.selector.HandlerContext;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import vproxy.base.util.*;
 import vproxy.base.util.unsafe.SunUnsafe;
 import vproxy.vfd.EventSet;
 import vproxy.vpacket.EthernetPacket;
+import vproxy.vpacket.IcmpPacket;
+import vproxy.vpacket.Ipv6Packet;
 import vproxy.xdp.*;
 
-import java.io.IOException;
 import java.util.List;
 
 public class XDPPoc {
@@ -36,9 +35,7 @@ public class XDPPoc {
         Logger.alert("ready to poll");
 
         var loop = SelectorEventLoop.open();
-        int total = 128;
         int[] cnt = {0};
-        Logger.alert("this program will recieve " + total + " packets and then exit");
         loop.add(xsk, EventSet.read(), null, new Handler<>() {
             private void handleReadable() {
                 List<Chunk> chunks = xsk.fetchPackets();
@@ -66,6 +63,38 @@ public class XDPPoc {
                         buf.put(chunk.pktaddr + i, buf.get(chunk.pktaddr + 6 + i));
                         buf.put(chunk.pktaddr + 6 + i, b);
                     }
+                    if (pkt.getPacket() instanceof Ipv6Packet) {
+                        Ipv6Packet ipv6 = (Ipv6Packet) pkt.getPacket();
+                        for (int j = 0; j < 16; ++j) {
+                            byte b2 = buf.get(chunk.pktaddr + 14 + 8 + j);
+                            buf.put(chunk.pktaddr + 14 + 8 + j, buf.get(chunk.pktaddr + 14 + 8 + 16 + j));
+                            buf.put(chunk.pktaddr + 14 + 8 + 16 + j, b2);
+                        }
+                        if (ipv6.getPacket() instanceof IcmpPacket) {
+                            IcmpPacket icmpPacket = (IcmpPacket) ipv6.getPacket();
+                            if (icmpPacket.getType() == Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ) {
+                                buf.put(chunk.pktaddr + 14 + 40, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
+                                ByteArray icmpRaw = icmpPacket.getRawPacket();
+                                {
+                                    var foo = ipv6.getSrc();
+                                    ipv6.setSrc(ipv6.getDst());
+                                    ipv6.setDst(foo);
+                                }
+                                var pesudoHeader = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_ICMPv6,
+                                    icmpRaw.length());
+                                icmpRaw.set(0, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
+                                icmpRaw.set(2, (byte) 0);
+                                icmpRaw.set(3, (byte) 0);
+                                var toCalculate = pesudoHeader.concat(icmpRaw);
+                                int checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+                                byte b1 = (byte) ((checksum >> 8) & 0xff);
+                                byte b2 = (byte) (checksum & 0xff);
+                                buf.put(chunk.pktaddr + 14 + 40 + 2, b1);
+                                buf.put(chunk.pktaddr + 14 + 40 + 3, b2);
+                            }
+                        }
+                    }
+
                     if (cnt[0] % 2 == 0) {
                         Logger.alert("echo the packet without copying");
                         chunk.reference();
@@ -91,9 +120,6 @@ public class XDPPoc {
                     }
 
                     chunk.releaseRef(umem);
-                    if (cnt[0] == total) {
-                        break;
-                    }
                 }
                 xsk.rxRelease(chunks.size());
                 chunks.clear();
@@ -114,13 +140,6 @@ public class XDPPoc {
             @Override
             public void readable(HandlerContext<XDPSocket> ctx) {
                 handleReadable();
-
-                if (cnt[0] == total) {
-                    try {
-                        loop.close();
-                    } catch (IOException ignore) {
-                    }
-                }
             }
 
             @Override
@@ -130,9 +149,7 @@ public class XDPPoc {
 
             @Override
             public void removed(HandlerContext<XDPSocket> ctx) {
-                if (cnt[0] != total) {
-                    Logger.error(LogType.ALERT, "removed: " + ctx.getChannel());
-                }
+                Logger.error(LogType.ALERT, "removed: " + ctx.getChannel());
             }
         });
 
