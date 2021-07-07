@@ -9,155 +9,155 @@ extern "C" {
 #endif
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    loadAndAttachBPFProgramToNic
+ * Method:    loadAndAttachBPFProgramToNic0
  * Signature: (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IZ)J
  */
-JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic
-  (JNIEnv *, jobject, jstring, jstring, jstring, jint, jboolean);
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic0
+  (JNIEnv *, jclass, jstring, jstring, jstring, jint, jboolean);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    findMapByNameInBPF
+ * Method:    findMapByNameInBPF0
  * Signature: (JLjava/lang/String;)J
  */
-JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_findMapByNameInBPF
-  (JNIEnv *, jobject, jlong, jstring);
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_findMapByNameInBPF0
+  (JNIEnv *, jclass, jlong, jstring);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    createUMem
+ * Method:    createUMem0
  * Signature: (IIIII)J
  */
-JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createUMem
-  (JNIEnv *, jobject, jint, jint, jint, jint, jint);
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createUMem0
+  (JNIEnv *, jclass, jint, jint, jint, jint, jint);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    getBufferFromUMem
+ * Method:    getBufferFromUMem0
  * Signature: (J)Ljava/nio/ByteBuffer;
  */
-JNIEXPORT jobject JNICALL Java_vproxy_xdp_NativeXDP_getBufferFromUMem
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT jobject JNICALL Java_vproxy_xdp_NativeXDP_getBufferFromUMem0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    createXSK
+ * Method:    createXSK0
  * Signature: (Ljava/lang/String;IJIIIZ)J
  */
-JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK
-  (JNIEnv *, jobject, jstring, jint, jlong, jint, jint, jint, jboolean);
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
+  (JNIEnv *, jclass, jstring, jint, jlong, jint, jint, jint, jboolean);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    addXSKIntoMap
+ * Method:    addXSKIntoMap0
  * Signature: (JIJ)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_addXSKIntoMap
-  (JNIEnv *, jobject, jlong, jint, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_addXSKIntoMap0
+  (JNIEnv *, jclass, jlong, jint, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    getFDFromXSK
+ * Method:    getFDFromXSK0
  * Signature: (J)I
  */
-JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_getFDFromXSK
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_getFDFromXSK0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    fillUpFillRing
+ * Method:    fillUpFillRing0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fillUpFillRing
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fillUpFillRing0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    fetchPackets
+ * Method:    fetchPackets0
  * Signature: (JLvproxy/xdp/ChunkPrototypeObjectList;)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets
-  (JNIEnv *, jobject, jlong, jobject);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    rxRelease
+ * Method:    rxRelease0
  * Signature: (JI)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_rxRelease
-  (JNIEnv *, jobject, jlong, jint);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_rxRelease0
+  (JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    writePacket
+ * Method:    writePacket0
  * Signature: (JJ)Z
  */
-JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_writePacket
-  (JNIEnv *, jobject, jlong, jlong);
+JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_writePacket0
+  (JNIEnv *, jclass, jlong, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    completeTx
+ * Method:    completeTx0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_completeTx
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_completeTx0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    fetchChunk
+ * Method:    fetchChunk0
  * Signature: (JLvproxy/xdp/Chunk;)Z
  */
-JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk
-  (JNIEnv *, jobject, jlong, jobject);
+JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
+  (JNIEnv *, jclass, jlong, jobject);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    setChunk
+ * Method:    setChunk0
  * Signature: (JII)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_setChunk
-  (JNIEnv *, jobject, jlong, jint, jint);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_setChunk0
+  (JNIEnv *, jclass, jlong, jint, jint);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    releaseChunk
+ * Method:    releaseChunk0
  * Signature: (JJ)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseChunk
-  (JNIEnv *, jobject, jlong, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseChunk0
+  (JNIEnv *, jclass, jlong, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    addChunkRefCnt
+ * Method:    addChunkRefCnt0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_addChunkRefCnt
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_addChunkRefCnt0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    releaseXSK
+ * Method:    releaseXSK0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseXSK
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseXSK0
+  (JNIEnv *, jclass, jlong);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    releaseUMem
+ * Method:    releaseUMem0
  * Signature: (JZ)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseUMem
-  (JNIEnv *, jobject, jlong, jboolean);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseUMem0
+  (JNIEnv *, jclass, jlong, jboolean);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
- * Method:    releaseBPFObject
+ * Method:    releaseBPFObject0
  * Signature: (J)V
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseBPFObject
-  (JNIEnv *, jobject, jlong);
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseBPFObject0
+  (JNIEnv *, jclass, jlong);
 
 #ifdef __cplusplus
 }
