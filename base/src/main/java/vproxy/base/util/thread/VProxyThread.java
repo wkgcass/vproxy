@@ -58,6 +58,15 @@ public interface VProxyThread {
         public StringParser threadLocalStringParserJavaObject;
         public StringDictionary threadLocalKeyDictionary;
 
+        private static final int XDPChunk_arrayLen = 2048;
+        public final long[] XDPChunk_umemArray = new long[XDPChunk_arrayLen];
+        public final long[] XDPChunk_chunkArray = new long[XDPChunk_arrayLen];
+        public final int[] XDPChunk_refArray = new int[XDPChunk_arrayLen];
+        public final int[] XDPChunk_addrArray = new int[XDPChunk_arrayLen];
+        public final int[] XDPChunk_endaddrArray = new int[XDPChunk_arrayLen];
+        public final int[] XDPChunk_pktaddrArray = new int[XDPChunk_arrayLen];
+        public final int[] XDPChunk_pktlenArray = new int[XDPChunk_arrayLen];
+
         public String debugInfo;
 
         public void newUuidDebugInfo() {

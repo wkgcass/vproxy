@@ -74,10 +74,10 @@ JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fillUpFillRing0
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    fetchPackets0
- * Signature: (JLvproxy/xdp/ChunkPrototypeObjectList;)V
+ * Signature: (J[J[J[I[I[I[I[I)I
  */
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
-  (JNIEnv *, jclass, jlong, jobject);
+JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
+  (JNIEnv *, jclass, jlong, jlongArray, jlongArray, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
@@ -106,10 +106,10 @@ JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_completeTx0
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    fetchChunk0
- * Signature: (JLvproxy/xdp/Chunk;)Z
+ * Signature: (J[J[J[I[I[I[I[I)Z
  */
 JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
-  (JNIEnv *, jclass, jlong, jobject);
+  (JNIEnv *, jclass, jlong, jlongArray, jlongArray, jintArray, jintArray, jintArray, jintArray, jintArray);
 
 /*
  * Class:     vproxy_xdp_NativeXDP

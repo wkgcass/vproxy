@@ -1,6 +1,7 @@
 package vproxy.xdp;
 
 import vproxy.base.util.objectpool.ConcurrentObjectPool;
+import vproxy.base.util.thread.VProxyThread;
 
 import java.nio.ByteBuffer;
 
@@ -26,6 +27,19 @@ public class Chunk {
             chunk = new Chunk();
         }
         return chunk;
+    }
+
+    public void set() {
+        var variables = VProxyThread.current();
+        set(
+            variables.XDPChunk_umemArray[0],
+            variables.XDPChunk_chunkArray[0],
+            variables.XDPChunk_refArray[0],
+            variables.XDPChunk_addrArray[0],
+            variables.XDPChunk_endaddrArray[0],
+            variables.XDPChunk_pktaddrArray[0],
+            variables.XDPChunk_pktlenArray[0]
+        );
     }
 
     public void set(long umem, long chunk, int ref, int addr, int endaddr, int pktaddr, int pktlen) {

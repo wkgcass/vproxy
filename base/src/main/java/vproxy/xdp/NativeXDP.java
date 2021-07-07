@@ -1,5 +1,8 @@
 package vproxy.xdp;
 
+import vproxy.base.util.CriticalNative;
+import vproxy.base.util.thread.VProxyThread;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
@@ -84,54 +87,100 @@ public class NativeXDP {
         fillUpFillRing0(umem);
     }
 
+    @CriticalNative
     private static native void fillUpFillRing0(long umem);
 
     public void fetchPackets(long xsk, ChunkPrototypeObjectList list) {
-        fetchPackets0(xsk, list);
+        var variables = VProxyThread.current();
+        int count = fetchPackets0(xsk,
+            variables.XDPChunk_umemArray,
+            variables.XDPChunk_chunkArray,
+            variables.XDPChunk_refArray,
+            variables.XDPChunk_addrArray,
+            variables.XDPChunk_endaddrArray,
+            variables.XDPChunk_pktaddrArray,
+            variables.XDPChunk_pktlenArray);
+        list.add(count);
     }
 
-    private static native void fetchPackets0(long xsk, ChunkPrototypeObjectList list);
+    @CriticalNative
+    private static native int fetchPackets0(
+        long xsk,
+        long[] umem,
+        long[] chunk,
+        int[] ref,
+        int[] addr,
+        int[] endaddr,
+        int[] pktaddr,
+        int[] pktlen);
 
     public void rxRelease(long xsk, int cnt) {
         rxRelease0(xsk, cnt);
     }
 
+    @CriticalNative
     private static native void rxRelease0(long xsk, int cnt);
 
     public boolean writePacket(long xsk, long chunk) {
         return writePacket0(xsk, chunk);
     }
 
+    @CriticalNative
     private static native boolean writePacket0(long xsk, long chunk);
 
     public void completeTx(long xsk) {
         completeTx0(xsk);
     }
 
+    @CriticalNative
     private static native void completeTx0(long xsk);
 
     public boolean fetchChunk(long umem, Chunk chunk) {
-        return fetchChunk0(umem, chunk);
+        var variables = VProxyThread.current();
+        boolean ret = fetchChunk0(umem,
+            variables.XDPChunk_umemArray,
+            variables.XDPChunk_chunkArray,
+            variables.XDPChunk_refArray,
+            variables.XDPChunk_addrArray,
+            variables.XDPChunk_endaddrArray,
+            variables.XDPChunk_pktaddrArray,
+            variables.XDPChunk_pktlenArray);
+        if (ret) {
+            chunk.set();
+        }
+        return ret;
     }
 
-    private static native boolean fetchChunk0(long umem, Chunk chunk);
+    @CriticalNative
+    private static native boolean fetchChunk0(
+        long umemPtr,
+        long[] umem,
+        long[] chunk,
+        int[] ref,
+        int[] addr,
+        int[] endaddr,
+        int[] pktaddr,
+        int[] pktlen);
 
     public void setChunk(long chunk, int pktaddr, int pktlen) {
         setChunk0(chunk, pktaddr, pktlen);
     }
 
+    @CriticalNative
     private static native void setChunk0(long chunk, int pktaddr, int pktlen);
 
     public void releaseChunk(long umem, long chunk) {
         releaseChunk0(umem, chunk);
     }
 
+    @CriticalNative
     private static native void releaseChunk0(long umem, long chunk);
 
     public void addChunkRefCnt(long chunk) {
         addChunkRefCnt0(chunk);
     }
 
+    @CriticalNative
     private static native void addChunkRefCnt0(long chunk);
 
     public void releaseXSK(long xsk) {

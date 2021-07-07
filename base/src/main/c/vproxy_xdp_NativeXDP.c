@@ -157,32 +157,86 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_fillUpFillRing0\n");
     vproxy_xdp_NativeXDP_fillUpFillRing0(umem_o);
 }
 
-jmethodID ChunkPrototypeObjectList_add = NULL;
+JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
+  (JNIEnv* env, jclass self, jlong xsk_o,
+   jlongArray umemArray, jlongArray chunkArray, jintArray refArray,
+   jintArray addrArray, jintArray endaddrArray, jintArray pktaddrArray, jintArray pktlenArray) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_xdp_NativeXDP_fetchPackets0\n");
+#endif
+    int capacity = (*env)->GetArrayLength(env, umemArray);
 
-void add_chunk(JNIEnv* env, jobject list, struct vp_chunk_info* chunk) {
-    if (ChunkPrototypeObjectList_add == NULL) {
-        jclass ChunkPrototypeObjectList = (*env)->FindClass(env, "vproxy/xdp/ChunkPrototypeObjectList");
-        ChunkPrototypeObjectList_add = (*env)->GetMethodID(env, ChunkPrototypeObjectList, "add", "(JJIIIII)V");
-    }
-    (*env)->CallVoidMethod(env, list, ChunkPrototypeObjectList_add,
-                           (long)chunk->umem, (long)chunk, (int)chunk->ref, (int)chunk->addr, (int)chunk->endaddr, (int)chunk->pktaddr, (int)chunk->pktlen);
-}
-
-JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
-  (JNIEnv* env, jclass self, jlong xsk_o, jobject list) {
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
     uint32_t idx_rx = -1;
     struct vp_chunk_info* chunk;
 
     int cnt = vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
     if (cnt <= 0) {
-        return;
+        return cnt;
+    }
+    if (cnt > capacity) {
+        cnt = capacity;
     }
 
     for (int i = 0; i < cnt; ++i) {
         vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
-        add_chunk(env, list, chunk);
+
+        jlong _umem   [] = { (long)chunk->umem    };
+        jlong _chunk  [] = { (long)chunk          };
+        jint  _ref    [] = { (int) chunk->ref     };
+        jint  _addr   [] = { (int) chunk->addr    };
+        jint  _endaddr[] = { (int) chunk->endaddr };
+        jint  _pktaddr[] = { (int) chunk->pktaddr };
+        jint  _pktlen [] = { (int) chunk->pktlen  };
+
+        (*env)->SetLongArrayRegion(env, umemArray,    i, 1, _umem   );
+        (*env)->SetLongArrayRegion(env, chunkArray,   i, 1, _chunk  );
+        (*env)->SetIntArrayRegion (env, refArray,     i, 1, _ref    );
+        (*env)->SetIntArrayRegion (env, addrArray,    i, 1, _addr   );
+        (*env)->SetIntArrayRegion (env, endaddrArray, i, 1, _endaddr);
+        (*env)->SetIntArrayRegion (env, pktaddrArray, i, 1, _pktaddr);
+        (*env)->SetIntArrayRegion (env, pktlenArray,  i, 1, _pktlen );
     }
+    return cnt;
+}
+JNIEXPORT jint JNICALL JavaCritical_vproxy_xdp_NativeXDP_fetchPackets0
+  (jlong xsk_o,
+   int umemLen,    jlong* umemArray,
+   int chunkLen,   jlong* chunkArray,
+   int refLen,     jint*  refArray,
+   int addrLen,    jint*  addrArray,
+   int endaddrLen, jint*  endaddrArray,
+   int pktaddrLen, jint*  pktaddrArray,
+   int pktlenLen,  jint*  pktlenArray) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchPackets0\n");
+#endif
+    int capacity = umemLen;
+
+    struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
+    uint32_t idx_rx = -1;
+    struct vp_chunk_info* chunk;
+
+    int cnt = vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
+    if (cnt <= 0) {
+        return cnt;
+    }
+    if (cnt > capacity) {
+        cnt = capacity;
+    }
+
+    for (int i = 0; i < cnt; ++i) {
+        vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
+
+        umemArray   [i] = (long)chunk->umem   ;
+        chunkArray  [i] = (long)chunk         ;
+        refArray    [i] = (int) chunk->ref    ;
+        addrArray   [i] = (int) chunk->addr   ;
+        endaddrArray[i] = (int) chunk->endaddr;
+        pktaddrArray[i] = (int) chunk->pktaddr;
+        pktlenArray [i] = (int) chunk->pktlen ;
+    }
+    return cnt;
 }
 
 inline static void vproxy_xdp_NativeXDP_rxRelease0
@@ -252,27 +306,62 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_completeTx0\n");
     vproxy_xdp_NativeXDP_completeTx0(xsk_o);
 }
 
-jmethodID Chunk_set = NULL;
-
-void set_chunk(JNIEnv* env, jobject jchunk, struct vp_chunk_info* chunk) {
-    if (Chunk_set == NULL) {
-        jclass Chunk = (*env)->FindClass(env, "vproxy/xdp/Chunk");
-        Chunk_set = (*env)->GetMethodID(env, Chunk, "set", "(JJIIIII)V");
-    }
-
-    (*env)->CallVoidMethod(env, jchunk, Chunk_set,
-                           (long)chunk->umem, (long)chunk, (int)chunk->ref, (int)chunk->addr, (int)chunk->endaddr, (int)chunk->pktaddr, (int)chunk->pktlen);
-}
-
 JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
-  (JNIEnv* env, jclass self, jlong umem_o, jobject jchunk) {
+  (JNIEnv* env, jclass self, jlong umem_o,
+   jlongArray umemArray, jlongArray chunkArray, jintArray refArray,
+   jintArray addrArray, jintArray endaddrArray, jintArray pktaddrArray, jintArray pktlenArray) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_xdp_NativeXDP_fetchChunk0\n");
+#endif
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
     struct vp_chunk_info* chunk = vp_chunk_fetch(&umem->chunks);
     if (chunk == NULL) {
         return JNI_FALSE;
     }
 
-    set_chunk(env, jchunk, chunk);
+    jlong _umem   [] = { (long)chunk->umem    };
+    jlong _chunk  [] = { (long)chunk          };
+    jint  _ref    [] = { (int) chunk->ref     };
+    jint  _addr   [] = { (int) chunk->addr    };
+    jint  _endaddr[] = { (int) chunk->endaddr };
+    jint  _pktaddr[] = { (int) chunk->pktaddr };
+    jint  _pktlen [] = { (int) chunk->pktlen  };
+
+    (*env)->SetLongArrayRegion(env, umemArray,    0, 1, _umem   );
+    (*env)->SetLongArrayRegion(env, chunkArray,   0, 1, _chunk  );
+    (*env)->SetIntArrayRegion (env, refArray,     0, 1, _ref    );
+    (*env)->SetIntArrayRegion (env, addrArray,    0, 1, _addr   );
+    (*env)->SetIntArrayRegion (env, endaddrArray, 0, 1, _endaddr);
+    (*env)->SetIntArrayRegion (env, pktaddrArray, 0, 1, _pktaddr);
+    (*env)->SetIntArrayRegion (env, pktlenArray,  0, 1, _pktlen );
+
+    return JNI_TRUE;
+}
+JNIEXPORT jboolean JNICALL JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0
+  (jlong umem_o,
+   int umemLen,    jlong* umemArray,
+   int chunkLen,   jlong* chunkArray,
+   int refLen,     jint*  refArray,
+   int addrLen,    jint*  addrArray,
+   int endaddrLen, jint*  endaddrArray,
+   int pktaddrLen, jint*  pktaddrArray,
+   int pktlenLen,  jint*  pktlenArray) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0\n");
+#endif
+    struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
+    struct vp_chunk_info* chunk = vp_chunk_fetch(&umem->chunks);
+    if (chunk == NULL) {
+        return JNI_FALSE;
+    }
+
+    umemArray   [0] = (long)chunk->umem   ;
+    chunkArray  [0] = (long)chunk         ;
+    refArray    [0] = (int) chunk->ref    ;
+    addrArray   [0] = (int) chunk->addr   ;
+    endaddrArray[0] = (int) chunk->endaddr;
+    pktaddrArray[0] = (int) chunk->pktaddr;
+    pktlenArray [0] = (int) chunk->pktlen ;
 
     return JNI_TRUE;
 }
