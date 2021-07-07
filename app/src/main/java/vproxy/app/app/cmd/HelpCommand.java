@@ -1332,7 +1332,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.queue, "the queue index to bind to"),
                     new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
-                    new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRV}, see doc for more info", "" + BPFMode.SKB),
+                    new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
                     new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
                         "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name())
@@ -1466,7 +1466,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.add, "load and attach ebpf to a net dev", Arrays.asList(
                     new ResActParamMan(ParamMan.path, "path to the ebpf program .o file"),
                     new ResActParamMan(ParamMan.program, "name of the program inside the ebpf object to be attached to the net dev"),
-                    new ResActParamMan(ParamMan.mode, "attaching mode, enum: {SKB, DRV}", "" + BPFMode.SKB)
+                    new ResActParamMan(ParamMan.mode, "attaching mode, enum: {SKB, DRIVER}", "" + BPFMode.SKB)
                 ), Collections.singletonList(
                     new ResActFlagMan(FlagMan.force, "force to replace the old program attached to the dev", false)
                 ), Collections.singletonList(
