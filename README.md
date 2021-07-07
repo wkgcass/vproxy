@@ -149,7 +149,7 @@ cd ./misc/auto-setup/
 
 ## Aim
 
-* Zero dependency: no dependency other than java and kotlin standard library, and no jni extensions.
+* Zero dependency: no dependency other than java and kotlin standard library.
 * Simple: keep code simple and clear.
 * Modifiable when running: no need to reload for configuration update.
 * Fast: performance is one of our main priorities.
