@@ -2,7 +2,14 @@
 #include "vfd_posix.h"
 #include "exception.h"
 
-#define MAX_EVENTS 512
+#define LISTEN_BACKLOG 512
+
+#ifdef DEBUG
+#define SHOW_CRITICAL
+#endif
+#ifdef NO_SHOW_CRITICAL
+#undef SHOW_CRITICAL
+#endif
 
 JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_pipeFDSupported
   (JNIEnv* env, jobject self) {
@@ -82,10 +89,11 @@ JNIEXPORT jlong JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
     return (jlong)ae;
 }
 
-jmethodID FDInfoPrototypeObjectList_add = NULL;
-
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll
-  (JNIEnv* env, jobject self, jlong aex, jlong wait, jobject fdInfoList) {
+JNIEXPORT jint JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0
+  (JNIEnv* env, jclass self, jlong aex, jlong wait, jintArray fdsArray, jintArray eventsArray) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
+#endif
     aeEventLoop* ae = (aeEventLoop*) aex;
     v_timeval tv;
     v_timeval* tvp = &tv;
@@ -93,84 +101,101 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll
     tvp->tv_usec = (wait % 1000)*1000;
     int numevents = aePoll(ae, tvp);
 
-    if (FDInfoPrototypeObjectList_add == NULL) {
-      jclass fdInfoListCls = (*env)->FindClass(env, "vproxy/vfd/posix/FDInfoPrototypeObjectList");
-      FDInfoPrototypeObjectList_add = (*env)->GetMethodID(env, fdInfoListCls, "add", "(IILjava/lang/Object;)V");
+    for (int j = 0; j < numevents; j++) {
+      aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
+      int mask = ae->fired[j].mask;
+      int fd = ae->fired[j].fd;
+
+      jint _fds   [] = { fd   };
+      jint _events[] = { mask };
+
+      (*env)->SetIntArrayRegion(env, fdsArray,    j, 1, _fds   );
+      (*env)->SetIntArrayRegion(env, eventsArray, j, 1, _events);
     }
+    return numevents;
+}
+JNIEXPORT jint JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeApiPoll0
+  (jlong aex, jlong wait, int fdsLen, jint* fdsArray, int eventsLen, jint* eventsArray) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
+#endif
+    aeEventLoop* ae = (aeEventLoop*) aex;
+    v_timeval tv;
+    v_timeval* tvp = &tv;
+    tvp->tv_sec = wait/1000;
+    tvp->tv_usec = (wait % 1000)*1000;
+    int numevents = aePoll(ae, tvp);
 
     for (int j = 0; j < numevents; j++) {
       aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
       int mask = ae->fired[j].mask;
       int fd = ae->fired[j].fd;
-      void* clientData = fe->clientData;
 
-      (*env)->CallVoidMethod(env, fdInfoList, FDInfoPrototypeObjectList_add, fd, mask, (jobject) clientData);
+      fdsArray   [j] = fd  ;
+      eventsArray[j] = mask;
     }
+    return numevents;
 }
 
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeAllFDs
-  (JNIEnv* env, jobject self, jlong aex, jobject fdInfoList) {
+inline static void vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
+  (jlong aex, jint fd, jint mask) {
     aeEventLoop* ae = (aeEventLoop*) aex;
-    int cnt = 0;
-    for (int i = 0; i < ae->maxfd; ++i) {
-      if ((&(ae->events[i]))->clientData != NULL) {
-        ++cnt;
-      }
-    }
-
-    if (FDInfoPrototypeObjectList_add == NULL) {
-      jclass fdInfoListCls = (*env)->FindClass(env, "vproxy/vfd/posix/FDInfoPrototypeObjectList");
-      FDInfoPrototypeObjectList_add = (*env)->GetMethodID(env, fdInfoListCls, "add", "(IILjava/lang/Object;)V");
-    }
-
-    for (int fd = 0; fd < ae->maxfd; ++fd) {
-      aeFileEvent* fe = &(ae->events[fd]);
-      if (fe->clientData != NULL) {
-        (*env)->CallVoidMethod(env, fdInfoList, FDInfoPrototypeObjectList_add, fd, fe->mask, (jobject) fe->clientData);
-      }
-    }
+    aeCreateFileEvent(ae, fd, mask, NULL, NULL);
+}
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
+  (JNIEnv* env, jclass self, jlong aex, jint fd, jint mask) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0(aex, fd, mask);
+}
+JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
+  (jlong aex, jint fd, jint mask) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0(aex, fd, mask);
 }
 
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent
-  (JNIEnv* env, jobject self, jlong aex, jint fd, jint mask, jobject clientData) {
+inline static void vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
+  (jlong aex, jint fd, jint mask) {
     aeEventLoop* ae = (aeEventLoop*) aex;
-    jobject ref = (*env)->NewGlobalRef(env, clientData);
-    aeCreateFileEvent(ae, fd, mask, NULL, ref);
-}
-
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent
-  (JNIEnv* env, jobject self, jlong aex, jint fd, jint mask) {
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    void* ref = aeGetClientData(ae, fd);
-    if (ref == NULL) {
-        // fd not registered
-        return;
-    }
     aeDeleteFileEvent(ae, fd, 0xffffffff);
-    aeCreateFileEvent(ae, fd, mask, NULL, ref);
-    // mainly to reduce the cost of creating and releasing a java GlobalRef
+    aeCreateFileEvent(ae, fd, mask, NULL, NULL);
+}
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
+  (JNIEnv* env, jclass self, jlong aex, jint fd, jint mask) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0(aex, fd, mask);
+}
+JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
+  (jlong aex, jint fd, jint mask) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0(aex, fd, mask);
 }
 
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent
-  (JNIEnv* env, jobject self, jlong aex, jint fd) {
+inline static void vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
+  (jlong aex, jint fd) {
     aeEventLoop* ae = (aeEventLoop*) aex;
-    jobject ref = (jobject) aeGetClientData(ae, fd);
-    if (ref != NULL) {
-        (*env)->DeleteGlobalRef(env, ref);
-    }
     aeDeleteFileEvent(ae, fd, 0xffffffff);
 }
-
-JNIEXPORT jint JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeGetFileEvents
-  (JNIEnv* env, jobject self, jlong aex, jint fd) {
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    return aeGetFileEvents(ae, fd);
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
+  (JNIEnv* env, jclass self, jlong aex, jint fd) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
 }
-
-JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeGetClientData
-  (JNIEnv* env, jobject self, jlong aex, jint fd) {
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    return aeGetClientData(ae, fd);
+JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
+  (jlong aex, jint fd) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0\n");
+#endif
+    vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
 }
 
 JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteEventLoop
@@ -340,7 +365,7 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_bindIPv4
         throwIOExceptionBasedOnErrno(env);
         return;
     }
-    res = v_listen(fd, MAX_EVENTS);
+    res = v_listen(fd, LISTEN_BACKLOG);
     if (res < 0) {
         if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
             throwIOExceptionBasedOnErrno(env);
@@ -378,7 +403,7 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_bindIPv6
         throwIOExceptionBasedOnErrno(env);
         return;
     }
-    res = v_listen(fd, MAX_EVENTS);
+    res = v_listen(fd, LISTEN_BACKLOG);
     if (res < 0) {
         throwIOExceptionBasedOnErrno(env);
         return;
@@ -405,7 +430,7 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_bindUnixDomainSocket
         throwIOExceptionBasedOnErrno(env);
         return;
     }
-    res = v_listen(fd, MAX_EVENTS);
+    res = v_listen(fd, LISTEN_BACKLOG);
     if (res < 0) {
         (*env)->ReleaseStringUTFChars(env, path, pathChars);
         throwIOExceptionBasedOnErrno(env);

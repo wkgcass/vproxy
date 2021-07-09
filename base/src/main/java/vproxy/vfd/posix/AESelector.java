@@ -19,6 +19,7 @@ public class AESelector implements FDSelector {
     private final Posix posix;
     private final long ae;
     private final int[] pipefd; // null, or pipefd[read][write], might be the same if using linux eventfd
+    private final Att[] attachments;
     private final DirectByteBuffer bufferForPipeFD;
     private boolean closed = false;
 
@@ -26,7 +27,10 @@ public class AESelector implements FDSelector {
     private final int aeWritable;
     private final boolean onlySelectNow;
 
-    public AESelector(Posix posix, long ae, int[] pipefd) {
+    private final int[] pollFDsArray;
+    private final int[] pollEventsArray;
+
+    public AESelector(Posix posix, long ae, int[] pipefd, int setsize) {
         this.posix = posix;
         this.ae = ae;
         this.aeReadable = posix.aeReadable();
@@ -36,28 +40,15 @@ public class AESelector implements FDSelector {
             bufferForPipeFD = null;
         } else {
             bufferForPipeFD = DirectMemoryUtils.allocateDirectBuffer(8); // linux eventfd requires 8 bytes buffer
-            posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable, new Att(null, null));
+            posix.aeCreateFileEvent(ae, pipefd[0], this.aeReadable);
         }
+        attachments = new Att[setsize];
+        for (int i = 0; i < setsize; ++i) {
+            attachments[i] = new Att();
+        }
+        pollFDsArray = new int[setsize];
+        pollEventsArray = new int[setsize];
         onlySelectNow = posix.onlySelectNow();
-    }
-
-    private static class Att {
-        final FD fd;
-
-        final Object att;
-
-        private Att(FD fd, Object att) {
-            this.fd = fd;
-            this.att = att;
-        }
-
-        @Override
-        public String toString() {
-            return "Att{" +
-                "fd=" + fd +
-                ", att=" + att +
-                '}';
-        }
     }
 
     @Override
@@ -117,6 +108,13 @@ public class AESelector implements FDSelector {
         }
     }
 
+    private void fillFDsList(int n) {
+        for (int i = 0; i < n; ++i) {
+            int fd = pollFDsArray[i];
+            fdInfoList.add(fd, pollEventsArray[i], attachments[fd]);
+        }
+    }
+
     @GarbageFree
     @Override
     public Collection<SelectedEntry> select() throws IOException {
@@ -125,7 +123,8 @@ public class AESelector implements FDSelector {
         }
         checkOpen();
         fdInfoList.clear();
-        posix.aeApiPoll(ae, 24 * 60 * 60 * 1000, fdInfoList);
+        int n = posix.aeApiPoll(ae, 24 * 60 * 60 * 1000, pollFDsArray, pollEventsArray);
+        fillFDsList(n);
         return handleSelectResult();
     }
 
@@ -134,7 +133,8 @@ public class AESelector implements FDSelector {
     public Collection<SelectedEntry> selectNow() throws IOException {
         checkOpen();
         fdInfoList.clear();
-        posix.aeApiPoll(ae, 0, fdInfoList);
+        int n = posix.aeApiPoll(ae, 0, pollFDsArray, pollEventsArray);
+        fillFDsList(n);
         return handleSelectResult();
     }
 
@@ -146,7 +146,8 @@ public class AESelector implements FDSelector {
         }
         checkOpen();
         fdInfoList.clear();
-        posix.aeApiPoll(ae, millis, fdInfoList);
+        int n = posix.aeApiPoll(ae, millis, pollFDsArray, pollEventsArray);
+        fillFDsList(n);
         return handleSelectResult();
     }
 
@@ -169,10 +170,27 @@ public class AESelector implements FDSelector {
         }
     }
 
+    private boolean checkFDMatch(FD fd) {
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        if (attachments[fdnum].fd != real) {
+            Logger.shouldNotHappen("fd mismatch: " +
+                "input: " + fd + ", existing: " + attachments[fdnum].fd);
+            return false;
+        }
+        return true;
+    }
+
     @Override
     public boolean isRegistered(FD fd) {
         checkOpen();
-        return null != posix.aeGetClientData(ae, ((PosixFD) fd.real()).fd);
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        var stored = attachments[fdnum].fd;
+        if (stored == null) {
+            return false;
+        }
+        return checkFDMatch(fd);
     }
 
     private int getIntEvents(EventSet events) {
@@ -192,43 +210,68 @@ public class AESelector implements FDSelector {
         if (!fd.isOpen()) {
             throw new ClosedChannelException();
         }
-        posix.aeCreateFileEvent(ae, ((PosixFD) fd.real()).fd, getIntEvents(ops), new Att(fd, registerData));
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        if (attachments[fdnum].fd != null) {
+            throw new IllegalArgumentException("trying to overwrite an existing fd in aeSelector: " +
+                "input: " + fd + ", existing: " + attachments[fdnum].fd);
+        }
+        attachments[fdnum].set(real, ops, registerData);
+        posix.aeCreateFileEvent(ae, fdnum, getIntEvents(ops));
     }
 
     @Override
     public void remove(FD fd) {
         checkOpen();
-        posix.aeDeleteFileEvent(ae, ((PosixFD) fd.real()).fd);
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        if (attachments[fdnum].fd != real) {
+            throw new IllegalStateException("trying to remove another fd: " +
+                "input: " + fd + ", existing: " + attachments[fdnum].fd);
+        }
+        attachments[fdnum].set(null, null, null);
+        posix.aeDeleteFileEvent(ae, fdnum);
     }
 
     @Override
     public void modify(FD fd, EventSet ops) {
         checkOpen();
-        posix.aeUpdateFileEvent(ae, ((PosixFD) fd.real()).fd, getIntEvents(ops));
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        if (attachments[fdnum].fd != real) {
+            throw new IllegalStateException("trying to modify another fd: " +
+                "input: " + fd + ", existing: " + attachments[fdnum].fd);
+        }
+        attachments[fdnum].ops = ops;
+        posix.aeUpdateFileEvent(ae, fdnum, getIntEvents(ops));
     }
 
     @Override
     public EventSet events(FD fd) {
         checkOpen();
-        return getJavaEvents(posix.aeGetFileEvents(ae, ((PosixFD) fd.real()).fd));
+        checkFDMatch(fd);
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        return attachments[fdnum].ops;
     }
 
     @Override
     public Object attachment(FD fd) {
         checkOpen();
-        return ((Att) posix.aeGetClientData(ae, ((PosixFD) fd.real()).fd)).att;
+        checkFDMatch(fd);
+        var real = (PosixFD) fd.real();
+        int fdnum = real.fd;
+        return attachments[fdnum].att;
     }
 
     @Override
     public Collection<RegisterEntry> entries() {
         checkOpen();
-        posix.aeAllFDs(ae, fdInfoList);
-        List<RegisterEntry> ret = new ArrayList<>(fdInfoList.size());
-        for (FDInfo fd : fdInfoList) {
-            var att = (Att) fd.attachment();
+        List<RegisterEntry> ret = new ArrayList<>(attachments.length / 2 + 1);
+        for (Att att : attachments) {
             if (att.fd == null) // for the internal pipe fds
                 continue;
-            ret.add(new RegisterEntry(att.fd, getJavaEvents(fd.events()), att.att));
+            ret.add(new RegisterEntry(att.fd, att.ops, att.att));
         }
         return ret;
     }

@@ -6,6 +6,9 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class GeneralPosix implements Posix {
+    GeneralPosix() {
+    }
+
     @Override
     native public boolean pipeFDSupported();
 
@@ -25,25 +28,32 @@ public class GeneralPosix implements Posix {
     native public long aeCreateEventLoop(int setsize) throws IOException;
 
     @Override
-    native public void aeApiPoll(long ae, long wait, FDInfoPrototypeObjectList fdInfoList) throws IOException;
+    public int aeApiPoll(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException {
+        return aeApiPoll0(ae, wait, fdArray, eventsArray);
+    }
+
+    private static native int aeApiPoll0(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException;
 
     @Override
-    native public void aeAllFDs(long ae, FDInfoPrototypeObjectList fdInfoList);
+    public void aeCreateFileEvent(long ae, int fd, int mask) {
+        aeCreateFileEvent0(ae, fd, mask);
+    }
+
+    private static native void aeCreateFileEvent0(long ae, int fd, int mask);
 
     @Override
-    native public void aeCreateFileEvent(long ae, int fd, int mask, Object clientData);
+    public void aeUpdateFileEvent(long ae, int fd, int mask) {
+        aeUpdateFileEvent0(ae, fd, mask);
+    }
+
+    private static native void aeUpdateFileEvent0(long ae, int fd, int mask);
 
     @Override
-    native public void aeUpdateFileEvent(long ae, int fd, int mask);
+    public void aeDeleteFileEvent(long ae, int fd) {
+        aeDeleteFileEvent0(ae, fd);
+    }
 
-    @Override
-    native public void aeDeleteFileEvent(long ae, int fd);
-
-    @Override
-    native public int aeGetFileEvents(long ae, int fd);
-
-    @Override
-    native public Object aeGetClientData(long ae, int fd);
+    private static native void aeDeleteFileEvent0(long ae, int fd);
 
     @Override
     native public void aeDeleteEventLoop(long ae);

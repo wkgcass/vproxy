@@ -26,6 +26,7 @@ fi
 rm -f "$target"
 
 gcc -std=gnu99 -O2 \
+    $GCC_OPTS \
     -I ./dep/ae \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/$include_platform_dir" \

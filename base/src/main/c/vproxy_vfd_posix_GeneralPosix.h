@@ -57,59 +57,35 @@ JNIEXPORT jlong JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeApiPoll
- * Signature: (JJLvproxy/vfd/posix/FDInfoPrototypeObjectList;)V
+ * Method:    aeApiPoll0
+ * Signature: (JJ[I[I)I
  */
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll
-  (JNIEnv *, jobject, jlong, jlong, jobject);
+JNIEXPORT jint JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0
+  (JNIEnv *, jclass, jlong, jlong, jintArray, jintArray);
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeAllFDs
- * Signature: (JLvproxy/vfd/posix/FDInfoPrototypeObjectList;)V
- */
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeAllFDs
-  (JNIEnv *, jobject, jlong, jobject);
-
-/*
- * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeCreateFileEvent
- * Signature: (JIILjava/lang/Object;)V
- */
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent
-  (JNIEnv *, jobject, jlong, jint, jint, jobject);
-
-/*
- * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeUpdateFileEvent
+ * Method:    aeCreateFileEvent0
  * Signature: (JII)V
  */
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent
-  (JNIEnv *, jobject, jlong, jint, jint);
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
+  (JNIEnv *, jclass, jlong, jint, jint);
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeDeleteFileEvent
+ * Method:    aeUpdateFileEvent0
+ * Signature: (JII)V
+ */
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
+  (JNIEnv *, jclass, jlong, jint, jint);
+
+/*
+ * Class:     vproxy_vfd_posix_GeneralPosix
+ * Method:    aeDeleteFileEvent0
  * Signature: (JI)V
  */
-JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent
-  (JNIEnv *, jobject, jlong, jint);
-
-/*
- * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeGetFileEvents
- * Signature: (JI)I
- */
-JNIEXPORT jint JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeGetFileEvents
-  (JNIEnv *, jobject, jlong, jint);
-
-/*
- * Class:     vproxy_vfd_posix_GeneralPosix
- * Method:    aeGetClientData
- * Signature: (JI)Ljava/lang/Object;
- */
-JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeGetClientData
-  (JNIEnv *, jobject, jlong, jint);
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
+  (JNIEnv *, jclass, jlong, jint);
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix

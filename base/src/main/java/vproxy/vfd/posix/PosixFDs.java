@@ -74,7 +74,7 @@ public class PosixFDs implements FDs, FDsWithTap {
             }
             throw e;
         }
-        return new AESelector(posix, ae, pipeFd);
+        return new AESelector(posix, ae, pipeFd, VFDConfig.aesetsize);
     }
 
     @Override

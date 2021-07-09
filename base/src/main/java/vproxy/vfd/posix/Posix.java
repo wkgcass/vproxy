@@ -18,19 +18,13 @@ public interface Posix {
 
     long aeCreateEventLoop(int setsize) throws IOException;
 
-    void aeApiPoll(long ae, long wait, FDInfoPrototypeObjectList fdInfoList) throws IOException;
+    int aeApiPoll(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException;
 
-    void aeAllFDs(long ae, FDInfoPrototypeObjectList fdInfoList);
-
-    void aeCreateFileEvent(long ae, int fd, int mask, Object clientData);
+    void aeCreateFileEvent(long ae, int fd, int mask);
 
     void aeUpdateFileEvent(long ae, int fd, int mask);
 
     void aeDeleteFileEvent(long ae, int fd);
-
-    int aeGetFileEvents(long ae, int fd);
-
-    Object aeGetClientData(long ae, int fd);
 
     void aeDeleteEventLoop(long ae);
 
