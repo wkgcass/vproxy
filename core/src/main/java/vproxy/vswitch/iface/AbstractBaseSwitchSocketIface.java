@@ -1,6 +1,5 @@
 package vproxy.vswitch.iface;
 
-import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.DatagramFD;
@@ -54,7 +53,7 @@ public abstract class AbstractBaseSwitchSocketIface extends AbstractIface implem
                 sock.send(sndBuf, remote);
             }
         } catch (IOException e) {
-            Logger.error(LogType.CONN_ERROR, "sending packet to " + this + " failed", e);
+            assert Logger.lowLevelDebug("sending packet to " + this + " failed: " + e);
         }
     }
 

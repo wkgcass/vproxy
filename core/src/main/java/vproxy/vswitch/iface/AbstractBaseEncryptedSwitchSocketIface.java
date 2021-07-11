@@ -60,7 +60,7 @@ public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBas
                 sock.send(sndBuf, remote);
             }
         } catch (IOException e) {
-            Logger.error(LogType.CONN_ERROR, "sending packet to " + this + " failed", e);
+            assert Logger.lowLevelDebug("sending packet to " + this + " failed: " + e);
         }
     }
 }
