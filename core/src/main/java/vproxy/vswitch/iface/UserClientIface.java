@@ -117,10 +117,6 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
             assert Logger.lowLevelDebug("bond loop is null, do not send data via this iface for now");
             return;
         }
-        if (!connected) {
-            assert Logger.lowLevelDebug("not connected yet, do not send data via this iface for now");
-            return;
-        }
 
         super.sendPacket(pkb);
     }
