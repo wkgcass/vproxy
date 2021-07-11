@@ -103,11 +103,10 @@ printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
 
     for (int j = 0; j < numevents; j++) {
       aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
-      int mask = ae->fired[j].mask;
       int fd = ae->fired[j].fd;
 
-      jint _fds   [] = { fd   };
-      jint _events[] = { mask };
+      jint _fds   [] = { fd       };
+      jint _events[] = { fe->mask };
 
       (*env)->SetIntArrayRegion(env, fdsArray,    j, 1, _fds   );
       (*env)->SetIntArrayRegion(env, eventsArray, j, 1, _events);
@@ -128,11 +127,10 @@ printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
 
     for (int j = 0; j < numevents; j++) {
       aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
-      int mask = ae->fired[j].mask;
       int fd = ae->fired[j].fd;
 
-      fdsArray   [j] = fd  ;
-      eventsArray[j] = mask;
+      fdsArray   [j] = fd      ;
+      eventsArray[j] = fe->mask;
     }
     return numevents;
 }

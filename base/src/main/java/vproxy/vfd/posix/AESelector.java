@@ -173,7 +173,7 @@ public class AESelector implements FDSelector {
     private boolean checkFDMatch(FD fd) {
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != real) {
+        if (attachments[fdnum].fd != fd) {
             Logger.shouldNotHappen("fd mismatch: " +
                 "input: " + fd + ", existing: " + attachments[fdnum].fd);
             return false;
@@ -216,7 +216,7 @@ public class AESelector implements FDSelector {
             throw new IllegalArgumentException("trying to overwrite an existing fd in aeSelector: " +
                 "input: " + fd + ", existing: " + attachments[fdnum].fd);
         }
-        attachments[fdnum].set(real, ops, registerData);
+        attachments[fdnum].set(fd, ops, registerData);
         posix.aeCreateFileEvent(ae, fdnum, getIntEvents(ops));
     }
 
@@ -225,7 +225,7 @@ public class AESelector implements FDSelector {
         checkOpen();
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != real) {
+        if (attachments[fdnum].fd != fd) {
             throw new IllegalStateException("trying to remove another fd: " +
                 "input: " + fd + ", existing: " + attachments[fdnum].fd);
         }
@@ -238,7 +238,7 @@ public class AESelector implements FDSelector {
         checkOpen();
         var real = (PosixFD) fd.real();
         int fdnum = real.fd;
-        if (attachments[fdnum].fd != real) {
+        if (attachments[fdnum].fd != fd) {
             throw new IllegalStateException("trying to modify another fd: " +
                 "input: " + fd + ", existing: " + attachments[fdnum].fd);
         }
