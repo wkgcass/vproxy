@@ -8,6 +8,7 @@ import kotlin.system.exitProcess
 
 class GenerateCommandDoc {
     companion object {
+        @Suppress("UNUSED_PARAMETER")
         @JvmStatic
         fun main0(args: Array<String>) {
             File("./doc/command.md").writeText(helpMarkdown())
