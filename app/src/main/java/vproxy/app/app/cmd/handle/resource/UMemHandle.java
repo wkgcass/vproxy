@@ -6,7 +6,6 @@ import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.FrameSizeHandle;
-import vproxy.app.app.cmd.handle.param.HeadroomHandle;
 import vproxy.app.app.cmd.handle.param.RingSizeHandle;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.vswitch.Switch;
@@ -36,10 +35,9 @@ public class UMemHandle {
         int fillRingSize = RingSizeHandle.get(cmd, Param.fillringsize, SwitchUtils.RX_TX_CHUNKS);
         int compRingSize = RingSizeHandle.get(cmd, Param.compringsize, SwitchUtils.RX_TX_CHUNKS);
         int frameSize = FrameSizeHandle.get(cmd, SwitchUtils.TOTAL_RCV_BUF_LEN);
-        int headroom = HeadroomHandle.get(cmd, SwitchUtils.RCV_HEAD_PRESERVE_LEN);
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.addUMem(cmd.resource.alias, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
+        sw.addUMem(cmd.resource.alias, chunksSize, fillRingSize, compRingSize, frameSize);
     }
 
     public static List<String> names(Resource resource) throws Exception {

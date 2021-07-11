@@ -200,4 +200,10 @@ public class NativeXDP {
     }
 
     private static native void releaseBPFObject0(long bpfobj);
+
+    public void utilCopyMemory(long umem, int src, int dst, int len) {
+        utilCopyMemory0(umem, src, dst, len);
+    }
+
+    private static native void utilCopyMemory0(long umem, int src, int dst, int len);
 }

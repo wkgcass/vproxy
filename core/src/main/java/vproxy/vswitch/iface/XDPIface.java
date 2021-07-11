@@ -81,11 +81,19 @@ public class XDPIface extends AbstractIface implements Iface {
             Chunk chunk = ((XDPChunkByteArray) pkb.fullbuf).chunk;
             if (chunk.umem() == umem.umem) {
                 assert Logger.lowLevelDebug("directly send packet without copying");
-                chunk.reference();
-                //noinspection RedundantIfStatement
-                if (!xsk.writePacket(chunk)) {
-                    assert Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
+
+                // modify chunk
+                int pktaddr = chunk.addr() + pkb.pktOff;
+                int pktlen = pkb.fullbuf.length() - pkb.pktOff - pkb.pad;
+                if (pktaddr != chunk.pktaddr || pktlen != chunk.pktlen) {
+                    chunk.pktaddr = pktaddr;
+                    chunk.pktlen = pktlen;
+                    chunk.set();
                 }
+                chunk.reference();
+
+                boolean wResult = xsk.writePacket(chunk);
+                assert wResult || Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
                 return;
             }
         }
@@ -164,18 +172,14 @@ public class XDPIface extends AbstractIface implements Iface {
         public void readable(HandlerContext<XDPSocket> ctx) {
             List<Chunk> ls = ctx.getChannel().fetchPackets();
             for (Chunk chunk : ls) {
-                var dbuf = umem.getBuffer();
-                chunk.setPositionAndLimit(dbuf);
-                ByteArray buf = ByteArray.from(dbuf).arrange();
+                var fullBuffer = new XDPChunkByteArray(xsk, chunk);
 
-                // TODO we do not use the direct buffer for now, more refactor required. the packet modification should operate on the original buffer
-                chunk.releaseRef(umem);
-
-                var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, buf, 0, 0);
+                var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, fullBuffer,
+                    chunk.pktaddr - chunk.addr(), chunk.endaddr() - chunk.pktaddr - chunk.pktlen);
                 String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
-                    chunk.releaseRef(umem);
+                    fullBuffer.releaseRef();
                     continue;
                 }
 

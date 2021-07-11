@@ -108,6 +108,11 @@ public class VProxyEncryptedPacket extends AbstractPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        vxlan.checkAndUpdateChecksum();
+    }
+
+    @Override
     public String description() {
         return "vproxy"
             + ",user=" + user

@@ -1778,7 +1778,7 @@ parameters:
 |queue|The queue index to bind to.|||
 |rx-ring-size|Rx ring size.|Y|2048|
 |tx-ring-size|Tx ring size.|Y|2048|
-|mode|Mode of the xsk, enum: {SKB, DRV}, see doc for more info.|Y|SKB|
+|mode|Mode of the xsk, enum: {SKB, DRIVER}, see doc for more info.|Y|SKB|
 |vni|Vni which the iface is assigned to.|||
 |bpf-map-key|The method of determining the key of the corresponding xsk when putting into a bpf map.|Y|useQueueId|
 
@@ -1992,7 +1992,6 @@ parameters:
 |fill-ring-size|Size of the fill ring.|Y|2048|
 |comp-ring-size|Size of the comp ring.|Y|2048|
 |frame-size|Size of the frame, must be 2048 or 4096.|Y|4096|
-|headroom|Space reserved at the head of a chunk.|Y|512|
 
 examples:
 
@@ -2002,7 +2001,7 @@ $ add umem umem0 to switch sw0
 ```
 
 ```
-$ add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512
+$ add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096
 "OK"
 ```
 
@@ -2033,7 +2032,7 @@ examples:
 
 ```
 $ list-detail umem in switch sw0
-1) "umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]"
+1) "umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]"
 ```
 
 </details>
@@ -2073,7 +2072,7 @@ parameters:
 |---|---|:---:|---|
 |path|Path to the ebpf program .o file.|||
 |program|Name of the program inside the ebpf object to be attached to the net dev.|||
-|mode|Attaching mode, enum: {SKB, DRV}.|Y|SKB|
+|mode|Attaching mode, enum: {SKB, DRIVER}.|Y|SKB|
 
 flags:
 
@@ -2350,10 +2349,6 @@ description: Xdp umem comp ring size.
 ### frame-size
 
 description: Size of a frame.
-
-### headroom
-
-description: Space reserved at the head of a buffer.
 
 ### bpf-map-key
 

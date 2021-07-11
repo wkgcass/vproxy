@@ -611,11 +611,11 @@ public class Switch {
     }
 
     public UMem addUMem(String alias, int chunksSize, int fillRingSize, int compRingSize,
-                        int frameSize, int headroom) throws AlreadyExistException, IOException {
+                        int frameSize) throws AlreadyExistException, IOException {
         if (umems.containsKey(alias)) {
             throw new AlreadyExistException("umem", alias);
         }
-        var umem = UMem.create(alias, chunksSize, fillRingSize, compRingSize, frameSize, headroom);
+        var umem = UMem.create(alias, chunksSize, fillRingSize, compRingSize, frameSize, SwitchUtils.RCV_HEAD_PRESERVE_LEN);
         umems.put(alias, umem);
         return umem;
     }

@@ -99,6 +99,11 @@ public class ArpPacket extends AbstractPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        // do nothing
+    }
+
+    @Override
     public String description() {
         return "arp"
             + ",arp_op=" + opcode

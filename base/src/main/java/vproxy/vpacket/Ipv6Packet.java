@@ -70,6 +70,7 @@ public class Ipv6Packet extends AbstractIpPacket {
                 if (err != null) {
                     return err;
                 }
+                h.recordParent(this);
                 extHeaders.add(h);
 
                 xh = h.nextHeader;
@@ -124,6 +125,17 @@ public class Ipv6Packet extends AbstractIpPacket {
             return headers.concat(((IcmpPacket) packet).getRawICMPv6Packet(this));
         } else {
             return headers.concat(packet.getRawPacket());
+        }
+    }
+
+    @Override
+    protected void updateChecksum() {
+        if (packet instanceof TcpPacket) {
+            if (packet.requireUpdatingChecksum) {
+                ((TcpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else {
+            packet.checkAndUpdateChecksum();
         }
     }
 
@@ -203,7 +215,9 @@ public class Ipv6Packet extends AbstractIpPacket {
 
     @Override
     public void setHopLimit(int hopLimit) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.set(7, (byte) hopLimit);
+        }
         this.hopLimit = hopLimit;
     }
 
@@ -277,6 +291,11 @@ public class Ipv6Packet extends AbstractIpPacket {
         @Override
         protected ByteArray buildPacket() {
             return ByteArray.allocate(2).set(0, (byte) nextHeader).set(1, (byte) hdrExtLen).concat(other);
+        }
+
+        @Override
+        protected void updateChecksum() {
+            // do nothing
         }
 
         @Override

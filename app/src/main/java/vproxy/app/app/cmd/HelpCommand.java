@@ -434,7 +434,6 @@ public class HelpCommand {
         fillringsize("fill-ring-size", null, "xdp umem fill ring size"),
         compringsize("comp-ring-size", null, "xdp umem comp ring size"),
         framesize("frame-size", null, "size of a frame"),
-        headroom("headroom", null, "space reserved at the head of a buffer"),
         bpfmapkeyselector("bpf-map-key", null, "the method of " +
             "determining the key of the corresponding xsk when putting into a bpf map"),
         ;
@@ -1425,15 +1424,14 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.chunks, "how many chunks are there in this umem", "" + (SwitchUtils.RX_TX_CHUNKS * 2)),
                     new ResActParamMan(ParamMan.fillringsize, "size of the fill ring", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.compringsize, "size of the comp ring", "" + SwitchUtils.RX_TX_CHUNKS),
-                    new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN),
-                    new ResActParamMan(ParamMan.headroom, "space reserved at the head of a chunk", "" + SwitchUtils.RCV_HEAD_PRESERVE_LEN)
+                    new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN)
                 ), Arrays.asList(
                     new Tuple<>(
                         "add umem umem0 to switch sw0",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512",
+                        "add umem umem1 to switch sw0 chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096",
                         "\"OK\""
                     )
                 )),
@@ -1446,7 +1444,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.listdetail, "show detailed info about umems in a switch", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list-detail umem in switch sw0",
-                        "1) \"umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 headroom 512 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]\""
+                        "1) \"umem0 -> chunks 4096 fill-ring-size 2048 comp-ring-size 2048 frame-size 4096 currently valid current-refs [XDPSocket(xdptut-4667#0,fd=22,closed=false)]\""
                     )
                 )),
                 new ResActMan(ActMan.removefrom, "remove a umem from a switch", Collections.emptyList(), Collections.singletonList(

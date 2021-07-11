@@ -896,7 +896,7 @@ class ModuleCommands : Commands() {
           val tuples = IpHandle.list(it.resource.parentResource)
           val strTuples = tuples.stream().map {
             it.ip.formatToIPString() + " -> mac " + it.mac +
-              if (it.annotations.isEmpty) "" else " annotations " + it.annotations
+                if (it.annotations.isEmpty) "" else " annotations " + it.annotations
           }.collect(Collectors.toList())
           CmdResult(tuples, strTuples, utilJoinList(strTuples))
         }
@@ -965,7 +965,6 @@ class ModuleCommands : Commands() {
           it + ResActParam(Param.fillringsize) { RingSizeHandle.check(it, Param.fillringsize) }
           it + ResActParam(Param.compringsize) { RingSizeHandle.check(it, Param.compringsize) }
           it + ResActParam(Param.framesize) { FrameSizeHandle.check(it) }
-          it + ResActParam(Param.headroom) { HeadroomHandle.check(it) }
         },
         exec = execUpdate { UMemHandle.add(it) }
       )

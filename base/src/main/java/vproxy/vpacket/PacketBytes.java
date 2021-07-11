@@ -20,6 +20,11 @@ public class PacketBytes extends AbstractPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        // do nothing
+    }
+
+    @Override
     public String description() {
         return "packet,len=" + bytes.length();
     }

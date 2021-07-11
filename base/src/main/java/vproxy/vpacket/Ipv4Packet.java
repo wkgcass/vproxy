@@ -133,6 +133,22 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        raw.int16(10, 0);
+        int cksum = calculateChecksum(raw.sub(0, 20));
+        headerChecksum = cksum;
+        raw.int16(10, cksum);
+
+        if (packet instanceof TcpPacket) {
+            if (packet.requireUpdatingChecksum) {
+                ((TcpPacket) packet).updateChecksumWithIPv4(this);
+            }
+        } else {
+            packet.checkAndUpdateChecksum();
+        }
+    }
+
+    @Override
     public String description() {
         return "ip"
             + ",nw_src=" + src.formatToIPString()
@@ -262,7 +278,10 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     public void setTtl(int ttl) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.set(8, (byte) ttl);
+            clearChecksum();
+        }
         this.ttl = ttl;
     }
 

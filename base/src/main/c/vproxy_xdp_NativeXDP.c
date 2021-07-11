@@ -445,3 +445,23 @@ JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseBPFObject0
     struct bpf_object* bpfobj = (struct bpf_object*) bpfobj_o;
     vp_bpfobj_release(bpfobj);
 }
+
+inline static void vproxy_xdp_NativeXDP_utilCopyMemory0
+  (jlong umem_o, jint src, jint dst, jint len) {
+    struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
+    memcpy(umem->buffer + dst, umem->buffer + src, len);
+}
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_utilCopyMemory0
+  (JNIEnv* env, jclass self, jlong umem_o, jint src, jint dst, jint len) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_xdp_NativeXDP_utilCopyMemory0\n");
+#endif
+    vproxy_xdp_NativeXDP_utilCopyMemory0(umem_o, src, dst, len);
+}
+JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_utilCopyMemory0
+  (jlong umem_o, jint src, jint dst, jint len) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_xdp_NativeXDP_utilCopyMemory0\n");
+#endif
+    vproxy_xdp_NativeXDP_utilCopyMemory0(umem_o, src, dst, len);
+}

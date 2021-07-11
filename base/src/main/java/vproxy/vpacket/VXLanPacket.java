@@ -44,6 +44,11 @@ public class VXLanPacket extends AbstractPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        packet.checkAndUpdateChecksum();
+    }
+
+    @Override
     public String description() {
         return "vxlan"
             + ",vni=" + vni

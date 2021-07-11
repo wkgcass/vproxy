@@ -68,7 +68,7 @@ public interface ByteArray {
     int length();
 
     default ByteArray sub(int fromInclusive, int len) {
-        return new SubByteArray(this, fromInclusive, len);
+        return SubByteArray.sub(this, fromInclusive, len);
     }
 
     default ByteArray concat(ByteArray array) {

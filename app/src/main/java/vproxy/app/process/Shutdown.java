@@ -696,8 +696,7 @@ public class Shutdown {
                         + " chunks " + umem.chunksSize
                         + " fill-ring-size " + umem.fillRingSize
                         + " comp-ring-size " + umem.compRingSize
-                        + " frame-size " + umem.frameSize
-                        + " headroom " + umem.headroom;
+                        + " frame-size " + umem.frameSize;
                     commands.add(cmd);
                 }
                 // create vpc

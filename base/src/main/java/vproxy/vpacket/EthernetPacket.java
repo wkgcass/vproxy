@@ -71,6 +71,11 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        packet.checkAndUpdateChecksum();
+    }
+
+    @Override
     public String description() {
         return "ether"
             + ",dl_dst=" + dst
@@ -94,7 +99,11 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     public void setSrc(MacAddress src) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < src.bytes.length(); ++i) {
+                raw.set(6 + i, src.bytes.get(i));
+            }
+        }
         this.src = src;
     }
 
@@ -104,7 +113,11 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     public void setDst(MacAddress dst) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < dst.bytes.length(); ++i) {
+                raw.set(i, dst.bytes.get(i));
+            }
+        }
         this.dst = dst;
     }
 

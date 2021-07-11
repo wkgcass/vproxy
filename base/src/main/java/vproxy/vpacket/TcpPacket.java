@@ -7,7 +7,6 @@ import vproxy.base.util.Utils;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
-import java.util.Set;
 
 public class TcpPacket extends AbstractPacket {
     private int srcPort;
@@ -193,12 +192,13 @@ public class TcpPacket extends AbstractPacket {
             int off = 20;
             while (off < dataOffset) {
                 byte kind = bytes.get(off);
-                if (TcpOption.CASE_1_OPTION_KINDS.contains(kind)) {
+                if (TcpOption.CASE_1_OPTION_KINDS[kind]) {
                     var opt = new TcpOption();
                     var err = opt.from(ByteArray.from(new byte[]{kind}));
                     if (err != null) {
                         return err;
                     }
+                    opt.recordParent(this);
                     options.add(opt);
                     off += 1;
                     if (opt.kind == Consts.TCP_OPTION_END) {
@@ -217,6 +217,7 @@ public class TcpPacket extends AbstractPacket {
                     if (err != null) {
                         return err;
                     }
+                    opt.recordParent(this);
                     options.add(opt);
                     off += len;
                 }
@@ -249,6 +250,11 @@ public class TcpPacket extends AbstractPacket {
 
     @Override
     protected ByteArray buildPacket() {
+        throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void updateChecksum() {
         throw new UnsupportedOperationException();
     }
 
@@ -336,6 +342,16 @@ public class TcpPacket extends AbstractPacket {
         return common;
     }
 
+    protected void updateChecksumWithIPv4(Ipv4Packet ipv4) {
+        raw.int16(16, 0);
+        var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, raw.length());
+        var toCalculate = pseudo.concat(raw);
+        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+        checksum = cksum;
+        raw.int16(16, cksum);
+    }
+
     public ByteArray buildIPv6TcpPacket(Ipv6Packet ipv6) {
         var common = buildCommonPart();
 
@@ -351,9 +367,25 @@ public class TcpPacket extends AbstractPacket {
         return common;
     }
 
+    protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
+        raw.int16(16, 0);
+        var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, raw.length());
+        var toCalculate = pseudo.concat(raw);
+        var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+        checksum = cksum;
+        raw.int16(16, cksum);
+    }
+
     public static class TcpOption extends AbstractPacket {
         // Case 1:  A single octet of option-kind.
-        public static final Set<Byte> CASE_1_OPTION_KINDS = Set.of(Consts.TCP_OPTION_END, Consts.TCP_OPTION_NOP);
+        public static final boolean[] CASE_1_OPTION_KINDS = new boolean[256];
+
+        static {
+            for (byte b : List.of(Consts.TCP_OPTION_END, Consts.TCP_OPTION_NOP)) {
+                CASE_1_OPTION_KINDS[b] = true;
+            }
+        }
 
         private byte kind;
         private int length;
@@ -382,7 +414,14 @@ public class TcpPacket extends AbstractPacket {
         }
 
         public void setData(ByteArray data) {
-            clearRawPacket();
+            if (CASE_1_OPTION_KINDS[kind] || data.length() != length - 2) {
+                clearRawPacket();
+            } else if (raw != null) {
+                clearChecksum();
+                for (int i = 0; i < data.length(); ++i) {
+                    raw.set(2 + i, data.get(i));
+                }
+            }
             this.data = data;
         }
 
@@ -413,7 +452,7 @@ public class TcpPacket extends AbstractPacket {
         @Override
         public String from(ByteArray bytes) {
             kind = bytes.get(0);
-            if (CASE_1_OPTION_KINDS.contains(kind)) {
+            if (CASE_1_OPTION_KINDS[kind]) {
                 return null;
             }
             length = bytes.uint8(1);
@@ -449,7 +488,7 @@ public class TcpPacket extends AbstractPacket {
 
         @Override
         protected ByteArray buildPacket() {
-            if (CASE_1_OPTION_KINDS.contains(kind)) {
+            if (CASE_1_OPTION_KINDS[kind]) {
                 return ByteArray.from(new byte[]{kind});
             }
             if (data.length() == 0) {
@@ -465,6 +504,11 @@ public class TcpPacket extends AbstractPacket {
             } else {
                 return o.concat(data);
             }
+        }
+
+        @Override
+        protected void updateChecksum() {
+            // do nothing
         }
 
         @Override

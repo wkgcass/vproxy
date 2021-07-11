@@ -5,7 +5,6 @@ import vproxy.vfd.IP;
 import vproxy.vpacket.*;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
 import vproxy.vswitch.iface.Iface;
-import vproxy.vswitch.util.XDPChunkByteArray;
 
 import java.util.Collection;
 
@@ -171,10 +170,6 @@ public class PacketBuffer {
     }
 
     public void clearBuffers() {
-        if (this.fullbuf instanceof XDPChunkByteArray) {
-            var buf = (XDPChunkByteArray) this.fullbuf;
-            buf.chunk.releaseRef(buf.xsk.umem);
-        }
         this.fullbuf = null;
         this.pktOff = 0;
         this.pad = 0;

@@ -159,6 +159,14 @@ JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseUMem0
 JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseBPFObject0
   (JNIEnv *, jclass, jlong);
 
+/*
+ * Class:     vproxy_xdp_NativeXDP
+ * Method:    utilCopyMemory0
+ * Signature: (JIII)V
+ */
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_utilCopyMemory0
+  (JNIEnv *, jclass, jlong, jint, jint, jint);
+
 #ifdef __cplusplus
 }
 #endif

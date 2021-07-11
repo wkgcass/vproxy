@@ -44,6 +44,11 @@ public class IcmpPacket extends AbstractPacket {
     }
 
     @Override
+    protected void updateChecksum() {
+        // TODO not used for now
+    }
+
+    @Override
     public String description() {
         return isIpv6 ? "icmp6" : "icmp";
     }

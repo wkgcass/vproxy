@@ -12,9 +12,9 @@ public class Chunk {
     private long umem; // ptr
     private long chunk; // ptr
     private int addr;
+    private int endaddr;
     private int ref;
 
-    public int endaddr;
     public int pktaddr;
     public int pktlen;
 
