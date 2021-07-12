@@ -678,6 +678,13 @@ public class Switch {
         iface.sendPacket(pkb);
     }
 
+    private void referenceUMemChunkIfPossible(ByteArray fullBuf) {
+        if (fullBuf instanceof XDPChunkByteArray) {
+            assert Logger.lowLevelDebug("reference the umem chunk before packet re-input from egress");
+            ((XDPChunkByteArray) fullBuf).reference();
+        }
+    }
+
     private void handleEgressFilterResult(PacketBuffer pkb, FilterResult res) {
         if (res == FilterResult.DROP) {
             assert Logger.lowLevelDebug("egress filter drops the packet: " + pkb);
@@ -699,6 +706,8 @@ public class Switch {
                     assert Logger.lowLevelDebug("set devin to " + redirect);
                     pkb.devin = redirect;
                 }
+                // need to increase ref
+                referenceUMemChunkIfPossible(pkb.fullbuf);
                 onIfacePacketsArrive(pkb);
             } else {
                 assert Logger.lowLevelDebug("send the packet to " + redirect);
@@ -768,9 +777,10 @@ public class Switch {
             assert Logger.lowLevelDebug("no ingress filter on " + pkb.devin);
         } else {
             assert Logger.lowLevelDebug("run ingress filter " + ingressFilter + " on " + pkb);
+            var fullbufBackup = pkb.fullbuf;
             var res = ingressFilter.handle(swCtx, pkb);
             if (res != FilterResult.PASS) {
-                handleIngressFilterResult(pkb, res);
+                handleIngressFilterResult(fullbufBackup, pkb, res);
                 return;
             }
             assert Logger.lowLevelDebug("the filter returns pass");
@@ -790,9 +800,17 @@ public class Switch {
         socketBuffersToBeHandled.add(pkb);
     }
 
-    private void handleIngressFilterResult(PacketBuffer pkb, FilterResult res) {
+    private void releaseUMemChunkIfPossible(ByteArray fullBuf) {
+        if (fullBuf instanceof XDPChunkByteArray) {
+            assert Logger.lowLevelDebug("releasing the umem chunk after packet handled or dropped");
+            ((XDPChunkByteArray) fullBuf).releaseRef();
+        }
+    }
+
+    private void handleIngressFilterResult(ByteArray fullbufBackup, PacketBuffer pkb, FilterResult res) {
         if (res == FilterResult.DROP) {
             assert Logger.lowLevelDebug("ingress filter drops the packet: " + pkb);
+            releaseUMemChunkIfPossible(fullbufBackup);
             return;
         }
         if (res == FilterResult.REDIRECT) {
@@ -801,6 +819,7 @@ public class Switch {
             var reinput = pkb.reinput;
             if (redirect == null && !reinput) {
                 Logger.error(LogType.IMPROPER_USE, "filter returns REDIRECT, but devredirect is not set and reinput is false");
+                releaseUMemChunkIfPossible(fullbufBackup);
                 return; // drop the packet
             }
             pkb.clearFilterFields();
@@ -814,10 +833,12 @@ public class Switch {
                 preHandleInputPkb(pkb); // the packet is not actually handled yet, so run the preHandle would be enough
             } else {
                 sendPacket(pkb, redirect);
+                releaseUMemChunkIfPossible(fullbufBackup);
             }
             return;
         }
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");
+        releaseUMemChunkIfPossible(fullbufBackup);
     }
 
     private void buildEthernetHeaderForTunDev(PacketBuffer pkb, MacAddress mac) {
@@ -881,11 +902,7 @@ public class Switch {
     private void handleInputPkb() {
         for (PacketBuffer pkb : socketBuffersToBeHandled) {
             // the umem chunk need to be released after processing
-            XDPChunkByteArray umemChunkByteArray = null;
-            if (pkb.fullbuf instanceof XDPChunkByteArray) {
-                assert Logger.lowLevelDebug("the pkb contains a umem chunk");
-                umemChunkByteArray = (XDPChunkByteArray) pkb.fullbuf;
-            }
+            var fullbufBackup = pkb.fullbuf;
 
             try {
                 netStack.devInput(pkb);
@@ -893,10 +910,7 @@ public class Switch {
                 Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
             }
 
-            if (umemChunkByteArray != null) {
-                assert Logger.lowLevelDebug("releasing the umem chunk after packet handled");
-                umemChunkByteArray.releaseRef();
-            }
+            releaseUMemChunkIfPossible(fullbufBackup);
         }
         socketBuffersToBeHandled.clear();
 

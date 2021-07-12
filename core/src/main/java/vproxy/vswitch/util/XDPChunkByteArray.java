@@ -40,6 +40,10 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
         chunk.releaseRef(xsk.umem);
     }
 
+    public void reference() {
+        chunk.reference();
+    }
+
     @Override
     public byte get(int idx) {
         if (len <= idx) {
