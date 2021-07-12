@@ -9,15 +9,6 @@
 		]
 	},
 	{
-		"name": "vproxy.vfd.posix.FDInfoPrototypeObjectList",
-		"methods": [
-			{
-				"name": "add",
-				"parameterTypes": [ "int", "int", "java.lang.Object" ]
-			}
-		]
-	},
-	{
 		"name": "vproxy.vfd.posix.SocketAddressIPv4",
 		"methods": [
 			{
@@ -77,24 +68,6 @@
 			{
 				"name": "<init>",
 				"parameterTypes": [ "java.lang.String" ]
-			}
-		]
-	},
-	{
-		"name": "vproxy.xdp.ChunkPrototypeObjectList",
-		"methods": [
-			{
-				"name": "add",
-				"parameterTypes": ["long", "long", "int", "int", "int", "int", "int"]
-			}
-		]
-	},
-	{
-		"name": "vproxy.xdp.Chunk",
-		"methods": [
-			{
-				"name": "set",
-				"parameterTypes": ["long", "long", "int", "int", "int", "int", "int"]
 			}
 		]
 	}

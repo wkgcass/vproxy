@@ -12,6 +12,12 @@
 #undef SHOW_CRITICAL
 #endif
 
+#ifndef USE_CRITICAL
+#define USE_CRITICAL
+#elif USE_CRITICAL == 0
+#undef USE_CRITICAL
+#endif
+
 JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic0
   (JNIEnv* env, jclass self, jstring filepath, jstring prog, jstring ifname, jint mode, jboolean force_attach) {
     const char* filepath_chars = (*env)->GetStringUTFChars(env, filepath, NULL);
@@ -149,6 +155,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_fillUpFillRing0\n");
 #endif
     vproxy_xdp_NativeXDP_fillUpFillRing0(umem_o);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_fillUpFillRing0
   (jlong umem_o) {
 #ifdef SHOW_CRITICAL
@@ -156,6 +163,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_fillUpFillRing0\n");
 #endif
     vproxy_xdp_NativeXDP_fillUpFillRing0(umem_o);
 }
+#endif
 
 JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_fetchPackets0
   (JNIEnv* env, jclass self, jlong xsk_o,
@@ -199,6 +207,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_fetchPackets0\n");
     }
     return cnt;
 }
+#ifdef USE_CRITICAL
 JNIEXPORT jint JNICALL JavaCritical_vproxy_xdp_NativeXDP_fetchPackets0
   (jlong xsk_o,
    int umemLen,    jlong* umemArray,
@@ -238,6 +247,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchPackets0\n");
     }
     return cnt;
 }
+#endif
 
 inline static void vproxy_xdp_NativeXDP_rxRelease0
   (jlong xsk_o, jint cnt) {
@@ -251,6 +261,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_rxRelease0\n");
 #endif
     vproxy_xdp_NativeXDP_rxRelease0(xsk_o, cnt);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_rxRelease0
   (jlong xsk_o, jint cnt) {
 #ifdef SHOW_CRITICAL
@@ -258,6 +269,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_rxRelease0\n");
 #endif
     vproxy_xdp_NativeXDP_rxRelease0(xsk_o, cnt);
 }
+#endif
 
 inline static jboolean vproxy_xdp_NativeXDP_writePacket0
   (jlong xsk_o, jlong chunk_o) {
@@ -278,6 +290,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_writePacket0\n");
 #endif
     return vproxy_xdp_NativeXDP_writePacket0(xsk_o, chunk_o);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT jboolean JNICALL JavaCritical_vproxy_xdp_NativeXDP_writePacket0
   (jlong xsk_o, jlong chunk_o) {
 #ifdef SHOW_CRITICAL
@@ -285,6 +298,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_writePacket0\n");
 #endif
     return vproxy_xdp_NativeXDP_writePacket0(xsk_o, chunk_o);
 }
+#endif
 
 inline static void vproxy_xdp_NativeXDP_completeTx0
   (jlong xsk_o) {
@@ -298,6 +312,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_completeTx0\n");
 #endif
     vproxy_xdp_NativeXDP_completeTx0(xsk_o);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_completeTx0
   (jlong xsk_o) {
 #ifdef SHOW_CRITICAL
@@ -305,6 +320,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_completeTx0\n");
 #endif
     vproxy_xdp_NativeXDP_completeTx0(xsk_o);
 }
+#endif
 
 JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
   (JNIEnv* env, jclass self, jlong umem_o,
@@ -337,6 +353,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_fetchChunk0\n");
 
     return JNI_TRUE;
 }
+#ifdef USE_CRITICAL
 JNIEXPORT jboolean JNICALL JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0
   (jlong umem_o,
    int umemLen,    jlong* umemArray,
@@ -365,6 +382,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0\n");
 
     return JNI_TRUE;
 }
+#endif
 
 inline static void vproxy_xdp_NativeXDP_setChunk0
   (jlong chunk_o, jint pktaddr, jint pktlen) {
@@ -379,6 +397,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_setChunk0\n");
 #endif
     vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_setChunk0
   (jlong chunk_o, jint pktaddr, jint pktlen) {
 #ifdef SHOW_CRITICAL
@@ -386,6 +405,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_setChunk0\n");
 #endif
     vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen);
 }
+#endif
 
 inline static void vproxy_xdp_NativeXDP_releaseChunk0
   (jlong umem_o, jlong chunk_o) {
@@ -400,6 +420,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_releaseChunk0\n");
 #endif
     vproxy_xdp_NativeXDP_releaseChunk0(umem_o, chunk_o);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_releaseChunk0
   (jlong umem_o, jlong chunk_o) {
 #ifdef SHOW_CRITICAL
@@ -407,6 +428,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_releaseChunk0\n");
 #endif
     vproxy_xdp_NativeXDP_releaseChunk0(umem_o, chunk_o);
 }
+#endif
 
 inline static void vproxy_xdp_NativeXDP_addChunkRefCnt0
   (jlong chunk_o) {
@@ -420,6 +442,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_addChunkRefCnt0\n");
 #endif
     vproxy_xdp_NativeXDP_addChunkRefCnt0(chunk_o);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_addChunkRefCnt0
   (jlong chunk_o) {
 #ifdef SHOW_CRITICAL
@@ -427,6 +450,7 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_addChunkRefCnt0\n");
 #endif
     vproxy_xdp_NativeXDP_addChunkRefCnt0(chunk_o);
 }
+#endif
 
 JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseXSK0
   (JNIEnv* env, jclass self, jlong xsk_o) {
@@ -458,6 +482,7 @@ printf("normal Java_vproxy_xdp_NativeXDP_utilCopyMemory0\n");
 #endif
     vproxy_xdp_NativeXDP_utilCopyMemory0(umem_o, src, dst, len);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_utilCopyMemory0
   (jlong umem_o, jint src, jint dst, jint len) {
 #ifdef SHOW_CRITICAL
@@ -465,3 +490,4 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_utilCopyMemory0\n");
 #endif
     vproxy_xdp_NativeXDP_utilCopyMemory0(umem_o, src, dst, len);
 }
+#endif

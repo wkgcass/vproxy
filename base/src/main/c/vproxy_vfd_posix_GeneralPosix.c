@@ -11,6 +11,12 @@
 #undef SHOW_CRITICAL
 #endif
 
+#ifndef USE_CRITICAL
+#define USE_CRITICAL
+#elif USE_CRITICAL == 0
+#undef USE_CRITICAL
+#endif
+
 JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_pipeFDSupported
   (JNIEnv* env, jobject self) {
     #ifdef HAVE_FF_KQUEUE
@@ -91,9 +97,6 @@ JNIEXPORT jlong JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
 
 JNIEXPORT jint JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0
   (JNIEnv* env, jclass self, jlong aex, jlong wait, jintArray fdsArray, jintArray eventsArray) {
-#ifdef SHOW_CRITICAL
-printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
-#endif
     aeEventLoop* ae = (aeEventLoop*) aex;
     v_timeval tv;
     v_timeval* tvp = &tv;
@@ -113,27 +116,6 @@ printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
     }
     return numevents;
 }
-JNIEXPORT jint JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeApiPoll0
-  (jlong aex, jlong wait, int fdsLen, jint* fdsArray, int eventsLen, jint* eventsArray) {
-#ifdef SHOW_CRITICAL
-printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeApiPoll0\n");
-#endif
-    aeEventLoop* ae = (aeEventLoop*) aex;
-    v_timeval tv;
-    v_timeval* tvp = &tv;
-    tvp->tv_sec = wait/1000;
-    tvp->tv_usec = (wait % 1000)*1000;
-    int numevents = aePoll(ae, tvp);
-
-    for (int j = 0; j < numevents; j++) {
-      aeFileEvent* fe = &(ae->events[ae->fired[j].fd]);
-      int fd = ae->fired[j].fd;
-
-      fdsArray   [j] = fd      ;
-      eventsArray[j] = fe->mask;
-    }
-    return numevents;
-}
 
 inline static void vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
   (jlong aex, jint fd, jint mask) {
@@ -147,6 +129,7 @@ printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0\n");
 #endif
     vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0(aex, fd, mask);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0
   (jlong aex, jint fd, jint mask) {
 #ifdef SHOW_CRITICAL
@@ -154,6 +137,7 @@ printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0\n
 #endif
     vproxy_vfd_posix_GeneralPosix_aeCreateFileEvent0(aex, fd, mask);
 }
+#endif
 
 inline static void vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
   (jlong aex, jint fd, jint mask) {
@@ -168,6 +152,7 @@ printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0\n");
 #endif
     vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0(aex, fd, mask);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0
   (jlong aex, jint fd, jint mask) {
 #ifdef SHOW_CRITICAL
@@ -175,6 +160,7 @@ printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0\n
 #endif
     vproxy_vfd_posix_GeneralPosix_aeUpdateFileEvent0(aex, fd, mask);
 }
+#endif
 
 inline static void vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
   (jlong aex, jint fd) {
@@ -188,6 +174,7 @@ printf("normal Java_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0\n");
 #endif
     vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
 }
+#ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0
   (jlong aex, jint fd) {
 #ifdef SHOW_CRITICAL
@@ -195,6 +182,7 @@ printf("critical JavaCritical_vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0\n
 #endif
     vproxy_vfd_posix_GeneralPosix_aeDeleteFileEvent0(aex, fd);
 }
+#endif
 
 JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeDeleteEventLoop
   (JNIEnv* env, jobject self, jlong aex) {
