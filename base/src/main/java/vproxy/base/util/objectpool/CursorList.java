@@ -73,6 +73,11 @@ public class CursorList<E> extends AbstractList<E> implements RandomAccess {
         return e;
     }
 
+    public E poll() {
+        if (isEmpty()) return null;
+        return remove(size - 1);
+    }
+
     @Override
     public int size() {
         return size;

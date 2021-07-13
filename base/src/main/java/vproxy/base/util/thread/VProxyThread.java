@@ -6,6 +6,8 @@ import vjson.parser.StringParser;
 import vjson.util.StringDictionary;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.Logger;
+import vproxy.base.util.objectpool.PrototypeObjectList;
+import vproxy.xdp.Chunk;
 
 import java.util.UUID;
 
@@ -66,6 +68,7 @@ public interface VProxyThread {
         public final int[] XDPChunk_endaddrArray = new int[XDPChunk_arrayLen];
         public final int[] XDPChunk_pktaddrArray = new int[XDPChunk_arrayLen];
         public final int[] XDPChunk_pktlenArray = new int[XDPChunk_arrayLen];
+        public final PrototypeObjectList<Chunk> XDPChunk_chunkPool = new PrototypeObjectList<>(XDPChunk_arrayLen, Chunk::new);
 
         public String debugInfo;
 

@@ -88,9 +88,9 @@ public class XDPIface extends AbstractIface implements Iface {
                 if (pktaddr != chunk.pktaddr || pktlen != chunk.pktlen) {
                     chunk.pktaddr = pktaddr;
                     chunk.pktlen = pktlen;
-                    chunk.set();
+                    chunk.updateNative();
                 }
-                chunk.reference();
+                chunk.referenceInNative(); // no need to increase ref in java, it can be directly reused
 
                 boolean wResult = xsk.writePacket(chunk);
                 assert wResult || Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
@@ -114,6 +114,9 @@ public class XDPIface extends AbstractIface implements Iface {
         if (!xsk.writePacket(chunk)) {
             assert Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
         }
+
+        // the chunk is not used anymore
+        chunk.returnToPool();
     }
 
     @Override

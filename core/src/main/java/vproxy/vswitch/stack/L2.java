@@ -6,10 +6,7 @@ import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
-import vproxy.vpacket.AbstractIpPacket;
-import vproxy.vpacket.AbstractPacket;
-import vproxy.vpacket.ArpPacket;
-import vproxy.vpacket.IcmpPacket;
+import vproxy.vpacket.*;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.iface.Iface;
@@ -51,6 +48,8 @@ public class L2 {
 
             var ips = pkb.table.ips.lookupByMac(dst);
             if (ips != null) {
+                if (pkb.ensureIPPacketParsed()) return;
+
                 pkb.recordMatchedIps(ips);
                 L3.input(pkb);
                 return;
@@ -86,6 +85,12 @@ public class L2 {
     }
 
     private void flood(PacketBuffer pkb) {
+        if (pkb.pkt.getPacket() instanceof PacketBytes) {
+            assert Logger.lowLevelDebug("do not flood packet with unknown ether type, maybe it's randomly generated: "
+                + pkb.pkt.description());
+            return;
+        }
+
         Logger.warn(LogType.ALERT, "flood packet: " + pkb);
         for (Iface iface : swCtx.getIfaces()) {
             if (pkb.devin != null && iface == pkb.devin) {
@@ -103,6 +108,9 @@ public class L2 {
         // also, send arp/ndp request for these addresses if they are ip packet
         if (pkb.pkt.getPacket() instanceof AbstractIpPacket) {
             AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
+
+            if (pkb.ensureIPPacketParsed()) return;
+
             if (pkb.table.v4network.contains(ip.getDst()) || (pkb.table.v6network != null && pkb.table.v6network.contains(ip.getDst()))) {
                 assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
                 L3.resolve(pkb.table, ip.getDst(), null);
@@ -171,6 +179,9 @@ public class L2 {
                 return;
             }
             assert Logger.lowLevelDebug("is icmp packet");
+
+            if (pkb.ensureIPPacketParsed()) return;
+
             var icmp = (IcmpPacket) ipPkt.getPacket();
             if (icmp.getType() != Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation
                 &&
@@ -231,6 +242,8 @@ public class L2 {
 
             var ips = pkb.table.ips.lookupByMac(dst);
             if (ips != null) {
+                if (pkb.ensureIPPacketParsed()) return;
+
                 pkb.recordMatchedIps(ips);
                 L3.input(pkb);
                 return;
@@ -310,6 +323,9 @@ public class L2 {
                 continue;
             }
             assert Logger.lowLevelDebug("broadcast to " + ips);
+
+            if (pkb.ensureIPPacketParsed()) return;
+
             pkb.recordMatchedIps(ips);
             L3.input(pkb);
             handled = true;

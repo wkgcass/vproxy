@@ -1,14 +1,10 @@
 package vproxy.xdp;
 
-import vproxy.base.util.objectpool.ConcurrentObjectPool;
 import vproxy.base.util.thread.VProxyThread;
 
 import java.nio.ByteBuffer;
 
 public class Chunk {
-    private static final int chunkPoolSize = 65536;
-    private static final ConcurrentObjectPool<Chunk> chunkPool = new ConcurrentObjectPool<>(chunkPoolSize);
-
     private long umem; // ptr
     private long chunk; // ptr
     private int addr;
@@ -18,15 +14,12 @@ public class Chunk {
     public int pktaddr;
     public int pktlen;
 
-    private Chunk() {
+    public Chunk() {
     }
 
     public static Chunk fetch() {
-        Chunk chunk = chunkPool.poll();
-        if (chunk == null) {
-            chunk = new Chunk();
-        }
-        return chunk;
+        var variables = VProxyThread.current();
+        return variables.XDPChunk_chunkPool.poll();
     }
 
     public void set() {
@@ -57,8 +50,12 @@ public class Chunk {
     }
 
     public void reference() {
-        NativeXDP.get().addChunkRefCnt(chunk);
+        referenceInNative();
         ++ref;
+    }
+
+    public void referenceInNative() {
+        NativeXDP.get().addChunkRefCnt(chunk);
     }
 
     public void releaseRef(UMem umem) {
@@ -67,7 +64,8 @@ public class Chunk {
     }
 
     public void returnToPool() {
-        chunkPool.add(this);
+        var variables = VProxyThread.current();
+        variables.XDPChunk_chunkPool.add(this);
     }
 
     public void setPositionAndLimit(ByteBuffer buf) {
@@ -98,9 +96,12 @@ public class Chunk {
     public String toString() {
         return "Chunk{" +
             "chunk=" + chunk +
+            ", umem=" + umem +
             ", addr=" + addr +
+            ", endaddr=" + endaddr +
+            ", ref=" + ref +
             ", pktaddr=" + pktaddr +
             ", pktlen=" + pktlen +
-            '}';
+            "}@" + Integer.toHexString(hashCode());
     }
 }

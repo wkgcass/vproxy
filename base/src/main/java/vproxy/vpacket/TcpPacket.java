@@ -262,8 +262,8 @@ public class TcpPacket extends AbstractPacket {
     public String description() {
         return "tcp"
             + ",flags=" + Integer.toBinaryString(flags)
-            + ",tp_src=" + srcPort
-            + ",tp_dst=" + dstPort
+            + ",tp_src=" + (srcPort == 0 ? "not-parsed-yet" : srcPort)
+            + ",tp_dst=" + (dstPort == 0 ? "not-parsed-yet" : dstPort)
             + ",data=" + (data == null ? 0 : data.length());
     }
 

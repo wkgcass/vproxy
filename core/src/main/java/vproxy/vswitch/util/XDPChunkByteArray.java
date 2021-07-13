@@ -38,6 +38,9 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
 
     public void releaseRef() {
         chunk.releaseRef(xsk.umem);
+        if (chunk.ref() == 0) {
+            chunk.returnToPool();
+        }
     }
 
     public void reference() {

@@ -27,6 +27,16 @@ public class Ipv4Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
+    public String readIPProto(ByteArray bytes) {
+        if (bytes.length() < 20) {
+            return "input packet length too short for an ip packet";
+        }
+        protocol = bytes.uint8(9);
+        initUpperLayerPacket();
+        return null;
+    }
+
+    @Override
     public String from(ByteArray bytes) {
         if (bytes.length() < 20) {
             return "input packet length too short for an ip packet";
@@ -87,13 +97,7 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // packet
         ByteArray bytesForPacket = bytes.sub(ihl * 4, totalLength - ihl * 4);
-        if (protocol == Consts.IP_PROTOCOL_ICMP) {
-            packet = new IcmpPacket(false);
-        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
-            packet = new TcpPacket();
-        } else {
-            packet = new PacketBytes();
-        }
+        initUpperLayerPacket();
         packet.recordParent(this);
         String err = packet.from(bytesForPacket);
         if (err != null) {
@@ -103,6 +107,16 @@ public class Ipv4Packet extends AbstractIpPacket {
         raw = bytes;
 
         return null;
+    }
+
+    private void initUpperLayerPacket() {
+        if (protocol == Consts.IP_PROTOCOL_ICMP) {
+            packet = new IcmpPacket(false);
+        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
+            packet = new TcpPacket();
+        } else {
+            packet = new PacketBytes();
+        }
     }
 
     @Override
@@ -151,9 +165,9 @@ public class Ipv4Packet extends AbstractIpPacket {
     @Override
     public String description() {
         return "ip"
-            + ",nw_src=" + src.formatToIPString()
-            + ",nw_dst=" + dst.formatToIPString()
-            + "," + packet.description();
+            + ",nw_src=" + (src == null ? "not-parsed-yet" : src.formatToIPString())
+            + ",nw_dst=" + (dst == null ? "not-parsed-yet" : dst.formatToIPString())
+            + "," + (packet == null ? "not-parsed-yet" : packet.description());
     }
 
     private ByteArray genHeaderWithChecksumUnfilled() {

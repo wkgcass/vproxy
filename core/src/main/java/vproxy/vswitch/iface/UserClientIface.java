@@ -212,7 +212,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
 
                 VProxyEncryptedPacket p = new VProxyEncryptedPacket(iface.user.key);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
-                String err = p.from(arr);
+                String err = p.from(arr, true);
                 if (err != null) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + iface + ": " + arr);
                     continue;

@@ -10,31 +10,42 @@ public class EthernetPacket extends AbstractEthernetPacket {
     private MacAddress src;
     private int type;
     private AbstractPacket packet;
+    private ByteArray packetBytes;
 
     @Override
     public String from(ByteArray bytes) {
+        return from(bytes, false);
+    }
+
+    @Override
+    public String from(ByteArray bytes, boolean skipIPPacket) {
         String err = from(bytes, null);
         if (err != null) {
             return err;
         }
         ByteArray data = bytes.sub(14, bytes.length() - 14);
         AbstractPacket packet;
-        boolean mayIgnoreError = false;
+        boolean isIPPacket = false;
         if (type == Consts.ETHER_TYPE_ARP) {
             packet = new ArpPacket();
         } else if (type == Consts.ETHER_TYPE_IPv4) {
-            mayIgnoreError = true;
+            isIPPacket = true;
             packet = new Ipv4Packet();
         } else if (type == Consts.ETHER_TYPE_IPv6) {
-            mayIgnoreError = true;
+            isIPPacket = true;
             packet = new Ipv6Packet();
         } else {
             packet = new PacketBytes();
         }
         packet.recordParent(this);
-        err = packet.from(data);
+        if (skipIPPacket && isIPPacket) {
+            err = ((AbstractIpPacket) packet).readIPProto(data);
+            this.packetBytes = data;
+        } else {
+            err = packet.from(data);
+        }
         if (err != null) {
-            if (mayIgnoreError) {
+            if (isIPPacket) {
                 Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString() + ": " + err);
                 packet = new PacketBytes();
                 packet.from(data);
@@ -138,6 +149,16 @@ public class EthernetPacket extends AbstractEthernetPacket {
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;
+    }
+
+    @Override
+    public ByteArray getPacketBytes() {
+        return packetBytes;
+    }
+
+    @Override
+    public void clearPacketBytes() {
+        this.packetBytes = null;
     }
 
     @Override

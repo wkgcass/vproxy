@@ -21,4 +21,13 @@ public class PrototypeObjectList<E> extends CursorList<E> {
         add(e);
         return e;
     }
+
+    @Override
+    public E poll() {
+        E e = super.poll();
+        if (e == null) {
+            return constructor.get();
+        }
+        return e;
+    }
 }

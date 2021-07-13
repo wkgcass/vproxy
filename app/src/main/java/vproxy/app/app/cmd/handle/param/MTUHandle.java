@@ -16,6 +16,9 @@ public class MTUHandle {
         } catch (NumberFormatException e) {
             throw new Exception("mtu not a valid integer");
         }
+        if (mtu == -1) {
+            return -1;
+        }
         if (mtu < 68) {
             throw new Exception("mtu too small, must >= 68");
         }

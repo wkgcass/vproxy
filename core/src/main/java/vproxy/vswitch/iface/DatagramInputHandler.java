@@ -83,7 +83,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
         });
         PacketBuffer pkb;
 
-        String err = packet.from(data);
+        String err = packet.from(data, true);
         assert Logger.lowLevelDebug("packet.from(data) = " + err);
         if (err == null) {
             String user = packet.getUser();

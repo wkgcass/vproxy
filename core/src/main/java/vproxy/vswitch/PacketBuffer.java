@@ -1,6 +1,7 @@
 package vproxy.vswitch;
 
 import vproxy.base.util.ByteArray;
+import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vpacket.*;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
@@ -136,8 +137,11 @@ public class PacketBuffer {
     @SuppressWarnings("ConstantConditions")
     public String init() {
         AbstractPacket pkt;
+        String err;
         if ((flags & FLAG_VXLAN) == FLAG_VXLAN) {
-            pkt = new VXLanPacket();
+            var vxlan = new VXLanPacket();
+            err = vxlan.from(pktBuf, true);
+            pkt = vxlan;
         } else if ((flags & FLAG_IP) == FLAG_IP) {
             byte b0 = pktBuf.get(0);
             int version = (b0 >> 4) & 0xff;
@@ -148,10 +152,12 @@ public class PacketBuffer {
             } else {
                 return "receiving packet with unknown ip version: " + version;
             }
+            err = pkt.from(pktBuf);
         } else {
-            pkt = new EthernetPacket();
+            var ether = new EthernetPacket();
+            err = ether.from(pktBuf, true);
+            pkt = ether;
         }
-        String err = pkt.from(pktBuf);
         if (err != null) {
             return err;
         }
@@ -261,6 +267,31 @@ public class PacketBuffer {
 
     public void recordMatchedIps(Collection<IP> matchedIps) {
         this.matchedIps = matchedIps;
+    }
+
+    /**
+     * @return true when parsing failed, false otherwise
+     */
+    public boolean ensureIPPacketParsed() {
+        var bytes = pkt.getPacketBytes();
+        if (bytes == null) {
+            return false;
+        }
+        pkt.clearPacketBytes();
+
+        AbstractIpPacket ip = (AbstractIpPacket) pkt.getPacket(); // cast should succeed
+        String err;
+        if (ip instanceof Ipv6Packet) {
+            err = ((Ipv6Packet) ip).from(bytes, false);
+        } else {
+            err = ip.from(bytes);
+        }
+
+        if (err == null) {
+            return false;
+        }
+        assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");
+        return true;
     }
 
     @Override

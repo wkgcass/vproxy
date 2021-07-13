@@ -8,6 +8,13 @@ public class ChunkPrototypeObjectList extends PrototypeObjectList<Chunk> {
         super(capacity, Chunk::fetch);
     }
 
+    @Override
+    public Chunk add() {
+        var chunk = Chunk.fetch();
+        add(chunk);
+        return chunk;
+    }
+
     private void add(long umem, long chunk, int ref, int addr, int endaddr, int pktaddr, int pktlen) {
         add().set(umem, chunk, ref, addr, endaddr, pktaddr, pktlen);
     }

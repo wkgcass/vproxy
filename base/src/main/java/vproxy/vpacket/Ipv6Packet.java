@@ -23,7 +23,29 @@ public class Ipv6Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
+    public String readIPProto(ByteArray bytes) {
+        if (bytes.length() < 40) {
+            return "input packet length too short for an ipv6 packet";
+        }
+        nextHeader = bytes.uint8(6);
+        if (Consts.IPv6_needs_next_header.contains(nextHeader)) {
+            return from(bytes); // must run a full load to ensure the upper level packet is parsed
+        } else {
+            initUpperLayerPacket(nextHeader);
+        }
+        return null;
+    }
+
+    @Override
     public String from(ByteArray bytes) {
+        return from(bytes, true);
+    }
+
+    public String from(ByteArray bytes, boolean mustParse) {
+        if (bytes == raw /* the same byte array */ && packet != null /* already parsed */ && !mustParse) {
+            return null;
+        }
+
         if (bytes.length() < 40) {
             return "input packet length too short for an ipv6 packet";
         }
@@ -93,13 +115,7 @@ public class Ipv6Packet extends AbstractIpPacket {
                 return "invalid packet: getting next header " + protocol + "(NO_NEXT_HEADER) but the input bytes length for next packet is not 0";
             }
         }
-        if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
-            packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
-        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
-            packet = new TcpPacket();
-        } else {
-            packet = new PacketBytes();
-        }
+        initUpperLayerPacket(protocol);
         packet.recordParent(this);
         String err = packet.from(bytesForPacket);
         if (err != null) {
@@ -109,6 +125,16 @@ public class Ipv6Packet extends AbstractIpPacket {
         raw = bytes;
 
         return null;
+    }
+
+    private void initUpperLayerPacket(int protocol) {
+        if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
+            packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
+        } else if (protocol == Consts.IP_PROTOCOL_TCP) {
+            packet = new TcpPacket();
+        } else {
+            packet = new PacketBytes();
+        }
     }
 
     @Override
@@ -142,9 +168,9 @@ public class Ipv6Packet extends AbstractIpPacket {
     @Override
     public String description() {
         return "ipv6"
-            + ",ipv6_src=" + src.formatToIPString()
-            + ",ipv6_dst=" + dst.formatToIPString()
-            + "," + packet.description();
+            + ",ipv6_src=" + (src == null ? "not-parsed-yet" : src.formatToIPString())
+            + ",ipv6_dst=" + (dst == null ? "not-parsed-yet" : dst.formatToIPString())
+            + "," + (packet == null ? "not-parsed-yet" : packet.description());
     }
 
     @Override

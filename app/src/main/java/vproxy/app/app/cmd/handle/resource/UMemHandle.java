@@ -34,7 +34,7 @@ public class UMemHandle {
         int chunksSize = RingSizeHandle.get(cmd, Param.chunks, SwitchUtils.RX_TX_CHUNKS * 2);
         int fillRingSize = RingSizeHandle.get(cmd, Param.fillringsize, SwitchUtils.RX_TX_CHUNKS);
         int compRingSize = RingSizeHandle.get(cmd, Param.compringsize, SwitchUtils.RX_TX_CHUNKS);
-        int frameSize = FrameSizeHandle.get(cmd, SwitchUtils.TOTAL_RCV_BUF_LEN);
+        int frameSize = FrameSizeHandle.get(cmd, SwitchUtils.TOTAL_RCV_BUF_LEN / 2);
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
         sw.addUMem(cmd.resource.alias, chunksSize, fillRingSize, compRingSize, frameSize);

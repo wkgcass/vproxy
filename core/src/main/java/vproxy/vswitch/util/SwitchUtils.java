@@ -57,10 +57,17 @@ public class SwitchUtils {
     }
 
     public static void checkAndUpdateMss(PacketBuffer pkb, Iface iface) {
+        if (iface.getBaseMTU() < 0) {
+            assert Logger.lowLevelDebug("iface " + iface + " has mtu < 0, skip mss updating");
+            return;
+        }
         int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */
             - 20 /* possible options in normal tcp packets, and also ip headers/opts */;
-        if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket) ||
-            !(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
+        if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket)) {
+            return; // only tcp requires modification
+        }
+        if (pkb.ensureIPPacketParsed()) return;
+        if (!(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
             return; // only tcp requires modification
         }
         AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();

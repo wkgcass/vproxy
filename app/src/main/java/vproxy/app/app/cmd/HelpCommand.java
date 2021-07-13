@@ -1046,7 +1046,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "" + SwitchHandle.ARP_TABLE_TIMEOUT),
                         new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
                         new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", SecurityGroup.defaultName),
-                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports", "1500"),
+                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, or -1 to ignore this config", "1500"),
                         new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports", "allow")
                     ),
                     Collections.singletonList(
@@ -1076,7 +1076,7 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.mactabletimeout, "timeout for mac table (ms)", "not changed"),
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
                         new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
-                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones", "not changed"),
+                        new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones. set to -1 for ignoring this config", "not changed"),
                         new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed")
                     ),
                     Collections.singletonList(
@@ -1160,7 +1160,7 @@ public class HelpCommand {
                     )
                 )),
                 new ResActMan(ActMan.update, "update interface config", Arrays.asList(
-                    new ResActParamMan(ParamMan.mtu, "mtu of this interface", "1500"),
+                    new ResActParamMan(ParamMan.mtu, "mtu of this interface, or -1 to ignore this config", "1500"),
                     new ResActParamMan(ParamMan.flood, "whether to allow flooding traffic through this interface, allow or deny", "allow")
                 ), Arrays.asList(
                     new Tuple<>(
@@ -1210,7 +1210,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "add a user to a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.pass, "password of the user"),
                     new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
-                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, or -1 to ignore this config", "mtu setting of the switch"),
                     new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch")
                 ), Collections.singletonList(
                     new Tuple<>(
@@ -1231,7 +1231,7 @@ public class HelpCommand {
                     )
                 )),
                 new ResActMan(ActMan.update, "update user info in a switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones", "not changed"),
+                    new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones. -1 means ignoring this config", "not changed"),
                     new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed")
                 ), Collections.singletonList(
                     new Tuple<>(
@@ -1252,7 +1252,7 @@ public class HelpCommand {
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
-                    new ResActParamMan(ParamMan.mtu, "mtu of this tap device", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.mtu, "mtu of this tap device, or -1 to ignore this config", "mtu setting of the switch"),
                     new ResActParamMan(ParamMan.flood, "whether the tap device allows flooding traffic", "flood setting of the switch")
                 ), Collections.singletonList(
                     new Tuple<>(
@@ -1274,7 +1274,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
-                    new ResActParamMan(ParamMan.mtu, "mtu of this tun device", "mtu setting of the switch"),
+                    new ResActParamMan(ParamMan.mtu, "mtu of this tun device, or -1 to ignore this config", "mtu setting of the switch"),
                     new ResActParamMan(ParamMan.flood, "whether the tun device allows flooding traffic", "flood setting of the switch")
                 ), Arrays.asList(
                     new Tuple<>(
@@ -1424,7 +1424,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.chunks, "how many chunks are there in this umem", "" + (SwitchUtils.RX_TX_CHUNKS * 2)),
                     new ResActParamMan(ParamMan.fillringsize, "size of the fill ring", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.compringsize, "size of the comp ring", "" + SwitchUtils.RX_TX_CHUNKS),
-                    new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN)
+                    new ResActParamMan(ParamMan.framesize, "size of the frame, must be 2048 or 4096", "" + SwitchUtils.TOTAL_RCV_BUF_LEN / 2)
                 ), Arrays.asList(
                     new Tuple<>(
                         "add umem umem0 to switch sw0",

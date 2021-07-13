@@ -14,6 +14,10 @@ public class VXLanPacket extends AbstractPacket {
 
     @Override
     public String from(ByteArray bytes) {
+        return from(bytes, false);
+    }
+
+    public String from(ByteArray bytes, boolean skipIPPacket) {
         if (bytes.length() < 1 + 3 + 3 + 1) {
             return "input packet length too short for a vxlan packet";
         }
@@ -24,7 +28,7 @@ public class VXLanPacket extends AbstractPacket {
         // for now, we only consider it being this type of ethernet packet
         packet = new EthernetPacket();
         packet.recordParent(this);
-        String err = packet.from(bytes.sub(8, bytes.length() - 8));
+        String err = packet.from(bytes.sub(8, bytes.length() - 8), skipIPPacket);
         if (err != null) {
             return err;
         }
