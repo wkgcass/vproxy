@@ -646,7 +646,9 @@ public class HelpCommand {
         eventloopgroup("event-loop-group", "elg", "a group of event loops",
             Arrays.asList(
                 new ResActMan(ActMan.add, "specify a name and create a event loop group",
-                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new ResActParamMan(ParamMan.annotations, "extra info about the event loop group, e.g. use poll instead of epoll", "{}")
+                    ),
                     Collections.singletonList(
                         new Tuple<>(
                             "add event-loop-group elg0",
@@ -663,6 +665,14 @@ public class HelpCommand {
                         new Tuple<>(
                             "list-detail event-loop-group",
                             "1) \"elg0\""
+                        )
+                    )),
+                new ResActMan(ActMan.listdetail, "retrieve detailed info about all event loop groups",
+                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "list-detail event-loop-group",
+                            "1) \"elg0\" -> annotations {}"
                         )
                     )),
                 new ResActMan(ActMan.remove, "Remove a event loop group",
@@ -807,7 +817,9 @@ public class HelpCommand {
         eventloop("event-loop", "el", "event loop",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "specify a name, a event loop group, and create a new event loop in the specified group",
-                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new ResActParamMan(ParamMan.annotations, "extra info about the event loop, e.g. core affinity", "{}")
+                    ),
                     Collections.singletonList(
                         new Tuple<>(
                             "add event-loop el0 to elg elg0",
@@ -824,6 +836,14 @@ public class HelpCommand {
                         new Tuple<>(
                             "list-detail event-loop in event-loop-group elg0",
                             "1) \"el0\""
+                        )
+                    )),
+                new ResActMan(ActMan.listdetail, "retrieve names of all event loops in a event loop group",
+                    Collections.emptyList(),
+                    Collections.singletonList(
+                        new Tuple<>(
+                            "list-detail event-loop in event-loop-group elg0",
+                            "1) \"el0\" -> annotations {}"
                         )
                     )),
                 new ResActMan(ActMan.removefrom, "remove a event loop from event loop group",

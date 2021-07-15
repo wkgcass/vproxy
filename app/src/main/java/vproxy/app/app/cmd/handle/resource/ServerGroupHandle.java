@@ -180,11 +180,7 @@ public class ServerGroupHandle {
                 annos = h.getAnnotations();
             }
 
-            ObjectBuilder ob = new ObjectBuilder();
-            for (Map.Entry<String, String> entry : annos.getRaw().entrySet()) {
-                ob.put(entry.getKey(), entry.getValue());
-            }
-            return ob.build().stringify();
+            return annos.toString();
         }
     }
 }

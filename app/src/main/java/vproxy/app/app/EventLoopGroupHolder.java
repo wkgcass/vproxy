@@ -1,6 +1,7 @@
 package vproxy.app.app;
 
 import vproxy.base.component.elgroup.EventLoopGroup;
+import vproxy.base.util.Annotations;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
 
@@ -17,9 +18,13 @@ public class EventLoopGroupHolder {
     }
 
     public void add(String alias) throws AlreadyExistException {
+        add(alias, new Annotations());
+    }
+
+    public void add(String alias, Annotations annotations) throws AlreadyExistException {
         if (map.containsKey(alias))
             throw new AlreadyExistException("event-loop-group", alias);
-        EventLoopGroup group = new EventLoopGroup(alias);
+        EventLoopGroup group = new EventLoopGroup(alias, annotations);
         map.put(alias, group);
     }
 

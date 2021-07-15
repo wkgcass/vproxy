@@ -118,7 +118,7 @@ abstract class Commands protected constructor() {
       if (cmd.resource.parentResource != null) {
         throw XException(
           "cannot execute " + act.action.fullname + " on "
-            + act.relation.resType.fullname + " inside " + cmd.resource.parentResource.type.fullname
+              + act.relation.resType.fullname + " inside " + cmd.resource.parentResource.type.fullname
         )
       }
       return
@@ -126,7 +126,7 @@ abstract class Commands protected constructor() {
     if (cmd.resource.parentResource == null) {
       throw XException(
         "cannot execute " + act.action.fullname + " on "
-          + act.relation.resType.fullname + " on top level"
+            + act.relation.resType.fullname + " on top level"
       )
     }
     val sb = StringBuilder()
@@ -142,7 +142,7 @@ abstract class Commands protected constructor() {
       if (cmd.prepositionResource != null) {
         throw XException(
           "cannot execute " + act.action.fullname + " on " + cmd.resource
-            + " while " + " " + cmd.prepositionResource.type.fullname + " is specified"
+              + " while " + " " + cmd.prepositionResource.type.fullname + " is specified"
         )
       }
       return
@@ -150,7 +150,7 @@ abstract class Commands protected constructor() {
     if (cmd.prepositionResource == null) {
       throw XException(
         "cannot execute " + act.action.fullname + " on " + act.relation.resType.fullname
-          + " without " + act.targetRelation.resType
+            + " without " + act.targetRelation.resType
       )
     }
     val sb = StringBuilder()
@@ -159,7 +159,7 @@ abstract class Commands protected constructor() {
     }
     throw XException(
       "cannot execute " + act.action.fullname + " because "
-        + "`" + cmd.preposition.name + "` " + sb
+          + "`" + cmd.preposition.name + "` " + sb
     )
   }
 
@@ -202,8 +202,8 @@ abstract class Commands protected constructor() {
   @Throws(Exception::class)
   private fun checkParameters(act: ResAct, cmd: Command) {
     for (param in cmd.args.keys) {
-      val p = act.params[param]
-      p!!.checkFunc(cmd)
+      val p = act.params[param] ?: /*extra param*/continue
+      p.checkFunc(cmd)
     }
   }
 
@@ -235,7 +235,7 @@ abstract class Commands protected constructor() {
     val additionalCheck: ConsumerEx<Command, Exception>?
 
     constructor(type: ResourceType, actions: (AddHelper<ResAct>) -> Unit) :
-      this(type, null, actions)
+        this(type, null, actions)
 
     init {
       this.actions = EnumMap(ActType::class.java)

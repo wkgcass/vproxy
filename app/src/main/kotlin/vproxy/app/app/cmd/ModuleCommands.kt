@@ -166,6 +166,9 @@ class ModuleCommands : Commands() {
       it + ResAct(
         relation = ResourceType.elg,
         action = ActType.add,
+        params = {
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
+        },
         exec = execUpdate { EventLoopGroupHandle.add(it) }
       )
       it + ResAct(
@@ -180,8 +183,10 @@ class ModuleCommands : Commands() {
         relation = ResourceType.elg,
         action = ActType.listdetail,
         exec = {
-          val elgNames = EventLoopGroupHandle.names()
-          CmdResult(elgNames, elgNames, utilJoinList(elgNames))
+          val elgs = EventLoopGroupHandle.details()
+          val elgStrs = elgs.stream().map { it.toString() }
+            .collect(Collectors.toList())
+          CmdResult(elgs, elgStrs, utilJoinList(elgs))
         }
       )
       it + ResAct(
@@ -322,6 +327,9 @@ class ModuleCommands : Commands() {
         relation = ResourceType.el,
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.elg),
+        params = {
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
+        },
         exec = execUpdate { EventLoopHandle.add(it) }
       )
       it + ResAct(
@@ -336,8 +344,10 @@ class ModuleCommands : Commands() {
         relation = ResRelation(ResourceType.el, ResRelation(ResourceType.elg)),
         action = ActType.listdetail,
         exec = {
-          val elNames = EventLoopHandle.names(it.resource.parentResource)
-          CmdResult(elNames, elNames, utilJoinList(elNames))
+          val els = EventLoopHandle.detail(it.resource.parentResource)
+          val elStrList = els.stream().map { it.toString() }
+            .collect(Collectors.toList())
+          CmdResult(els, elStrList, utilJoinList(els))
         }
       )
       it + ResAct(

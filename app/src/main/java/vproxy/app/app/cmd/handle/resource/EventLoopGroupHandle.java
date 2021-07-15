@@ -2,16 +2,20 @@ package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
+import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.ResourceType;
+import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.base.component.elgroup.EventLoopGroup;
 import vproxy.base.component.svrgroup.ServerGroup;
+import vproxy.base.util.Annotations;
 import vproxy.base.util.exception.XException;
 import vproxy.component.app.Socks5Server;
 import vproxy.component.app.TcpLB;
 import vproxy.dns.DNSServer;
 import vproxy.vswitch.Switch;
 
+import java.util.ArrayList;
 import java.util.List;
 
 public class EventLoopGroupHandle {
@@ -30,8 +34,23 @@ public class EventLoopGroupHandle {
         return Application.get().eventLoopGroupHolder.names();
     }
 
+    public static List<EventLoopGroup> details() throws Exception {
+        var names = Application.get().eventLoopGroupHolder.names();
+        var ls = new ArrayList<EventLoopGroup>(names.size());
+        for (String name : names) {
+            ls.add(Application.get().eventLoopGroupHolder.get(name));
+        }
+        return ls;
+    }
+
     public static void add(Command cmd) throws Exception {
-        Application.get().eventLoopGroupHolder.add(cmd.resource.alias);
+        Annotations anno;
+        if (cmd.args.containsKey(Param.anno)) {
+            anno = AnnotationsHandle.get(cmd);
+        } else {
+            anno = new Annotations();
+        }
+        Application.get().eventLoopGroupHolder.add(cmd.resource.alias, anno);
     }
 
     public static void preRemoveCheck(Command cmd) throws Exception {
