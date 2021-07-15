@@ -18,6 +18,7 @@ public class UMem {
     public final int headroom;
 
     private ByteBuffer buffer;
+    private long bufferAddress;
 
     private boolean released = false;
     private boolean referencedBySockets = false;
@@ -45,6 +46,13 @@ public class UMem {
         }
         buffer = NativeXDP.get().getBufferFromUMem(umem);
         return buffer;
+    }
+
+    public long getBufferAddress() {
+        if (bufferAddress == 0) {
+            bufferAddress = NativeXDP.get().getBufferAddressFromUMem(umem);
+        }
+        return bufferAddress;
     }
 
     public void fillUpFillRing() {

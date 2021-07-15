@@ -9,7 +9,7 @@ import vproxy.base.util.Logger;
 import vproxy.vfd.EventSet;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.dispatcher.BPFMapKeySelector;
-import vproxy.vswitch.util.XDPChunkByteArray;
+import vproxy.vswitch.util.UMemChunkByteArray;
 import vproxy.xdp.*;
 
 import java.io.IOException;
@@ -77,8 +77,8 @@ public class XDPIface extends AbstractIface implements Iface {
 
     @Override
     public void sendPacket(PacketBuffer pkb) {
-        if (pkb.fullbuf instanceof XDPChunkByteArray) {
-            Chunk chunk = ((XDPChunkByteArray) pkb.fullbuf).chunk;
+        if (pkb.fullbuf instanceof UMemChunkByteArray) {
+            Chunk chunk = ((UMemChunkByteArray) pkb.fullbuf).chunk;
             if (chunk.umem() == umem.umem) {
                 assert Logger.lowLevelDebug("directly send packet without copying");
 
@@ -175,7 +175,7 @@ public class XDPIface extends AbstractIface implements Iface {
         public void readable(HandlerContext<XDPSocket> ctx) {
             List<Chunk> ls = ctx.getChannel().fetchPackets();
             for (Chunk chunk : ls) {
-                var fullBuffer = new XDPChunkByteArray(xsk, chunk);
+                var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 
                 var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, fullBuffer,
                     chunk.pktaddr - chunk.addr(), chunk.endaddr() - chunk.pktaddr - chunk.pktlen);

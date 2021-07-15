@@ -26,7 +26,7 @@ import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UserInfo;
-import vproxy.vswitch.util.XDPChunkByteArray;
+import vproxy.vswitch.util.UMemChunkByteArray;
 import vproxy.xdp.BPFMap;
 import vproxy.xdp.BPFMode;
 import vproxy.xdp.UMem;
@@ -679,9 +679,9 @@ public class Switch {
     }
 
     private void referenceUMemChunkIfPossible(ByteArray fullBuf) {
-        if (fullBuf instanceof XDPChunkByteArray) {
+        if (fullBuf instanceof UMemChunkByteArray) {
             assert Logger.lowLevelDebug("reference the umem chunk before packet re-input from egress");
-            ((XDPChunkByteArray) fullBuf).reference();
+            ((UMemChunkByteArray) fullBuf).reference();
         }
     }
 
@@ -801,9 +801,9 @@ public class Switch {
     }
 
     private void releaseUMemChunkIfPossible(ByteArray fullBuf) {
-        if (fullBuf instanceof XDPChunkByteArray) {
+        if (fullBuf instanceof UMemChunkByteArray) {
             assert Logger.lowLevelDebug("releasing the umem chunk after packet handled or dropped");
-            ((XDPChunkByteArray) fullBuf).releaseRef();
+            ((UMemChunkByteArray) fullBuf).releaseRef();
         }
     }
 

@@ -2,13 +2,13 @@ package vproxy.vswitch.util;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.bytearray.AbstractByteArray;
+import vproxy.base.util.unsafe.SunUnsafe;
 import vproxy.xdp.Chunk;
-import vproxy.xdp.NativeXDP;
 import vproxy.xdp.XDPSocket;
 
 import java.nio.ByteBuffer;
 
-public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
+public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
     public final ByteBuffer buffer;
     public final int off;
     public final int len;
@@ -16,7 +16,7 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
     public final XDPSocket xsk;
     public final Chunk chunk;
 
-    public XDPChunkByteArray(XDPSocket xsk, Chunk chunk) {
+    public UMemChunkByteArray(XDPSocket xsk, Chunk chunk) {
         ByteBuffer buffer = xsk.umem.getBuffer();
         int off = chunk.addr();
         int len = chunk.endaddr() - chunk.addr();
@@ -53,10 +53,7 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
             throw new IndexOutOfBoundsException("len=" + len + ", idx=" + idx);
         }
         int n = off + idx;
-        if (n >= buffer.limit()) {
-            buffer.limit(buffer.capacity());
-        }
-        return buffer.get(n);
+        return SunUnsafe.getByte(xsk.umem.getBufferAddress() + n);
     }
 
     @Override
@@ -65,10 +62,7 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
             throw new IndexOutOfBoundsException("len=" + len + ", idx=" + idx);
         }
         int n = off + idx;
-        if (n >= buffer.limit()) {
-            buffer.limit(buffer.capacity());
-        }
-        buffer.put(n, value);
+        SunUnsafe.putByte(xsk.umem.getBufferAddress() + n, value);
         return this;
     }
 
@@ -87,7 +81,7 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
                 // same memory region, nothing to be copied
                 dst.position(dst.position() + len);
             } else {
-                NativeXDP.get().utilCopyMemory(xsk.umem.umem, this.off + off, dst.position(), len);
+                SunUnsafe.copyMemory(xsk.umem.getBufferAddress() + dst.position(), xsk.umem.getBufferAddress() + this.off + off, len);
             }
             return;
         }
@@ -109,7 +103,7 @@ public class XDPChunkByteArray extends AbstractByteArray implements ByteArray {
                 // same memory region, nothing to be copied
                 src.position(src.position() + len);
             } else {
-                NativeXDP.get().utilCopyMemory(xsk.umem.umem, src.position(), this.off + off, len);
+                SunUnsafe.copyMemory(xsk.umem.getBufferAddress() + this.off + off, xsk.umem.getBufferAddress() + src.position(), len);
             }
             return;
         }

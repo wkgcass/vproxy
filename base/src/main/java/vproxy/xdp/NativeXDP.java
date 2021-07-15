@@ -59,6 +59,12 @@ public class NativeXDP {
 
     private static native ByteBuffer getBufferFromUMem0(long umem);
 
+    public long getBufferAddressFromUMem(long umem) {
+        return getBufferAddressFromUMem0(umem);
+    }
+
+    private static native long getBufferAddressFromUMem0(long umem);
+
     public long createXSK(String nicName, int queueId, long umem,
                           int rxRingSize, int txRingSize,
                           int mode, // defined in BPFMode
@@ -200,10 +206,4 @@ public class NativeXDP {
     }
 
     private static native void releaseBPFObject0(long bpfobj);
-
-    public void utilCopyMemory(long umem, int src, int dst, int len) {
-        utilCopyMemory0(umem, src, dst, len);
-    }
-
-    private static native void utilCopyMemory0(long umem, int src, int dst, int len);
 }
