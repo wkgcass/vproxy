@@ -178,6 +178,8 @@
       #define IFNAMSIZ 16
     #endif
 
+    // pthread
+    #include <pthread.h>
 
     // util functions
     static inline int v_str_starts_with(const char* str, const char* prefix) {

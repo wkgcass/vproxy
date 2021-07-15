@@ -53,7 +53,7 @@
     #include "ae_evport.c"
     #else
         #ifdef HAVE_EPOLL
-        #include "ae_epoll.c"
+        #include "ae_epoll_poll.c"
         #else
             #ifdef HAVE_KQUEUE
             #include "ae_kqueue.c"
@@ -65,6 +65,10 @@
 #endif
 
 aeEventLoop *aeCreateEventLoop(int setsize) {
+    return aeCreateEventLoop2(setsize, 0);
+}
+
+aeEventLoop *aeCreateEventLoop2(int setsize, int flags) {
     aeEventLoop *eventLoop;
     int i;
 
@@ -80,6 +84,7 @@ aeEventLoop *aeCreateEventLoop(int setsize) {
     eventLoop->maxfd = -1;
     eventLoop->beforesleep = NULL;
     eventLoop->aftersleep = NULL;
+    eventLoop->flags = flags;
     if (aeApiCreate(eventLoop) == -1) goto err;
     /* Events with mask == AE_NONE are not set. So let's initialize the
      * vector with it. */

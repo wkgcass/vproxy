@@ -60,6 +60,9 @@
 /* Macros */
 #define AE_NOTUSED(V) ((void) V)
 
+/* Flags */
+#define AE_FLAG_PREFER_POLL 1
+
 struct aeEventLoop;
 
 /* Types and data structures */
@@ -107,10 +110,12 @@ typedef struct aeEventLoop {
     void *apidata; /* This is used for polling API specific data */
     aeBeforeSleepProc *beforesleep;
     aeBeforeSleepProc *aftersleep;
+    int flags;
 } aeEventLoop;
 
 /* Prototypes */
 aeEventLoop *aeCreateEventLoop(int setsize);
+aeEventLoop *aeCreateEventLoop2(int setsize, int flags);
 void aeDeleteEventLoop(aeEventLoop *eventLoop);
 void aeStop(aeEventLoop *eventLoop);
 int aeCreateFileEvent(aeEventLoop *eventLoop, int fd, int mask,

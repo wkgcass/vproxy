@@ -50,10 +50,10 @@ JNIEXPORT jintArray JNICALL Java_vproxy_vfd_posix_GeneralPosix_openPipe
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
  * Method:    aeCreateEventLoop
- * Signature: (I)J
+ * Signature: (IZ)J
  */
 JNIEXPORT jlong JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
-  (JNIEnv *, jobject, jint);
+  (JNIEnv *, jobject, jint, jboolean);
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
@@ -390,6 +390,14 @@ JNIEXPORT jboolean JNICALL Java_vproxy_vfd_posix_GeneralPosix_tunNonBlockingSupp
  */
 JNIEXPORT jobject JNICALL Java_vproxy_vfd_posix_GeneralPosix_createTapFD
   (JNIEnv *, jobject, jstring, jboolean);
+
+/*
+ * Class:     vproxy_vfd_posix_GeneralPosix
+ * Method:    setCoreAffinityForCurrentThread
+ * Signature: (J)V
+ */
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurrentThread
+  (JNIEnv *, jobject, jlong);
 
 #ifdef __cplusplus
 }

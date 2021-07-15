@@ -1,3 +1,5 @@
+#define _GNU_SOURCE
+
 #include "vproxy_vfd_posix_GeneralPosix.h"
 #include "vfd_posix.h"
 #include "exception.h"
@@ -87,8 +89,8 @@ JNIEXPORT jintArray JNICALL Java_vproxy_vfd_posix_GeneralPosix_openPipe
 }
 
 JNIEXPORT jlong JNICALL Java_vproxy_vfd_posix_GeneralPosix_aeCreateEventLoop
-  (JNIEnv* env, jobject self, jint setsize) {
-    aeEventLoop* ae = aeCreateEventLoop(setsize);
+  (JNIEnv* env, jobject self, jint setsize, jboolean preferPoll) {
+    aeEventLoop* ae = aeCreateEventLoop2(setsize, preferPoll);
     if (ae == NULL) {
         throwIOException(env, "create ae failed");
     }
@@ -921,4 +923,23 @@ fail:
       (*env)->ReleaseStringUTFChars(env, dev, devChars);
       throwIOExceptionBasedOnErrno(env);
       return NULL;
+}
+
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurrentThread
+  (JNIEnv* env, jobject self, jlong mask) {
+    // get current thread
+    pthread_t current = pthread_self();
+    cpu_set_t cpuset;
+    CPU_ZERO(&cpuset);
+    for (int i = 0; i < 64; ++i) {
+        int bit = (mask >> i) & 1;
+        if (bit) {
+            CPU_SET(i, &cpuset);
+        }
+    }
+    int ret = pthread_setaffinity_np(current, sizeof(cpu_set_t), &cpuset);
+    if (ret == 0) {
+        return; // succeeded
+    }
+    throwIOExceptionBasedOnErrno(env);
 }
