@@ -11,11 +11,14 @@ static int aeApiCreate_poll(aeEventLoop *eventLoop) {
     aeApiState_poll *state = zmalloc(sizeof(aeApiState_poll));
 
     if (!state) return -1;
+    memset(state, 0, sizeof(aeApiState_poll));
 
     struct pollfd* fds = zmalloc(sizeof(struct pollfd) * eventLoop->setsize);
     if (fds == NULL) {
         return -1;
     }
+    memset(fds, 0, sizeof(struct pollfd) * eventLoop->setsize);
+
     state->fds = fds;
     state->cap = eventLoop->setsize;
 
@@ -35,6 +38,7 @@ static int aeApiResize_poll(aeEventLoop *eventLoop, int setsize) {
 
     struct pollfd* fds = zmalloc(sizeof(struct pollfd) * setsize);
     if (fds == NULL) return -1;
+    memset(fds, 0, sizeof(struct pollfd) * setsize);
 
     memcpy(fds, state->fds, setsize * sizeof(struct pollfd));
 
