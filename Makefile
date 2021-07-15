@@ -6,7 +6,7 @@ OS := $(shell uname)
 
 .PHONY: clean
 clean:
-	./gradlew clean
+	/usr/bin/env bash ./gradlew clean
 	rm -f ./base/src/main/c/libvfdposix.dylib
 	rm -f ./base/src/main/c/libvfdposix.so
 	rm -f ./base/src/main/c/libvfdfstack.so
@@ -28,7 +28,7 @@ all: clean jar jlink vfdposix image docker-network-plugin
 
 .PHONY: jar
 jar:
-	./gradlew jar
+	/usr/bin/env bash ./gradlew jar
 
 .PHONY: jlink
 jlink: jar
@@ -40,11 +40,11 @@ jlink: jar
 
 .PHONY: vfdposix
 vfdposix:
-	cd ./base/src/main/c && ./make-general.sh
+	cd ./base/src/main/c && /usr/bin/env bash ./make-general.sh
 
 .PHONY: vpxdp
 vpxdp: vfdposix
-	cd ./base/src/main/c && ./make-xdp.sh
+	cd ./base/src/main/c && /usr/bin/env bash ./make-xdp.sh
 
 .PHONY: xdp-sample-kern
 xdp-sample-kern:
@@ -65,7 +65,7 @@ vfdwindows:
 
 .PHONY: fstack
 fstack:
-	cd ./base/src/main/c && ./make-fstack.sh
+	cd ./base/src/main/c && /usr/bin/env bash ./make-fstack.sh
 
 .PHONY: image
 image: jar
