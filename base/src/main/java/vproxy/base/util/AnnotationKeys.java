@@ -16,6 +16,9 @@ public enum AnnotationKeys {
     SWTap_DockerNetworkDriverEndpointIpv4("docker-network-driver/endpoint-ipv4"),
     SWTap_DockerNetworkDriverEndpointIpv6("docker-network-driver/endpoint-ipv6"),
     SWTap_DockerNetworkDriverEndpointMac("docker-network-driver/endpoint-mac"),
+
+    EventLoopGroup_PreferPoll("vproxy/event-loop-group-prefer-poll"),
+    EventLoop_CoreAffinity("vproxy/event-loop-core-affinity"),
     ;
     public final String name;
     public final boolean deserialize; // will deserialize into vproxy.base.util.Annotations

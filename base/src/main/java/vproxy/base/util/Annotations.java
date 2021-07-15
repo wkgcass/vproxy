@@ -1,5 +1,7 @@
 package vproxy.base.util;
 
+import vjson.util.ObjectBuilder;
+
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -14,6 +16,8 @@ public class Annotations {
     public final String ServerGroup_HCHttpHost;
     public final boolean[] ServerGroup_HCHttpStatus;
     public final String ServerGroup_HCDnsDomain;
+    public final boolean EventLoopGroup_PreferPoll;
+    public final long EventLoop_CoreAffinity;
 
     public final Map<String, String> other;
 
@@ -116,6 +120,19 @@ public class Annotations {
         {
             ServerGroup_HCDnsDomain = annotations.get(AnnotationKeys.ServerGroup_HCDnsDomain.name);
         }
+        {
+            EventLoopGroup_PreferPoll = "true".equals(annotations.get(AnnotationKeys.EventLoopGroup_PreferPoll.name));
+        }
+        {
+            long coreAffinity = -1;
+            String str = annotations.get(AnnotationKeys.EventLoop_CoreAffinity.name);
+            if (str != null) {
+                if (Utils.isLong(str)) {
+                    coreAffinity = Long.parseLong(str);
+                }
+            }
+            EventLoop_CoreAffinity = coreAffinity;
+        }
 
         this.other = Collections.unmodifiableMap(other);
     }
@@ -126,5 +143,14 @@ public class Annotations {
 
     public boolean isEmpty() {
         return raw.isEmpty();
+    }
+
+    @Override
+    public String toString() {
+        ObjectBuilder ob = new ObjectBuilder();
+        for (Map.Entry<String, String> entry : getRaw().entrySet()) {
+            ob.put(entry.getKey(), entry.getValue());
+        }
+        return ob.build().stringify();
     }
 }

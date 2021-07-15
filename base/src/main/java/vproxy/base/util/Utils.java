@@ -3,7 +3,8 @@ package vproxy.base.util;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.base.util.unsafe.JDKUnsafe;
 import vproxy.vfd.FDProvider;
-import vproxy.vpacket.*;
+import vproxy.vpacket.Ipv4Packet;
+import vproxy.vpacket.Ipv6Packet;
 
 import java.io.*;
 import java.nio.ByteBuffer;
@@ -437,6 +438,15 @@ public class Utils {
     public static boolean isInteger(String s) {
         try {
             Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return true;
+    }
+
+    public static boolean isLong(String s) {
+        try {
+            Long.parseLong(s);
         } catch (NumberFormatException e) {
             return false;
         }

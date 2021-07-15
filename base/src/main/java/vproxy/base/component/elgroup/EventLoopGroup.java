@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 
 public class EventLoopGroup {
     public final String alias;
+    public final Annotations annotations;
     private ArrayList<EventLoopWrapper> eventLoops = new ArrayList<>(0); // use array list to make code look better,
     // it's the same if you use array
     private boolean closed = false; // if true, then all operations are disabled or return default value
@@ -23,7 +24,12 @@ public class EventLoopGroup {
     private final ConcurrentHashSet<EventLoopGroupAttach> attaches = new ConcurrentHashSet<>();
 
     public EventLoopGroup(String alias) {
+        this(alias, new Annotations());
+    }
+
+    public EventLoopGroup(String alias, Annotations annotations) {
         this.alias = alias;
+        this.annotations = annotations;
     }
 
     /*
@@ -63,6 +69,11 @@ public class EventLoopGroup {
 
     @ThreadSafe
     public synchronized void add(String alias) throws AlreadyExistException, IOException, ClosedException {
+        add(alias, new Annotations());
+    }
+
+    @ThreadSafe
+    public synchronized void add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
         if (closed) {
             throw new ClosedException();
         }
@@ -71,8 +82,17 @@ public class EventLoopGroup {
             if (w.alias.equals(alias))
                 throw new AlreadyExistException("event-loop in event-loop-group " + this.alias, alias);
         }
-        SelectorEventLoop selectorEventLoop = SelectorEventLoop.open();
-        EventLoopWrapper el = new EventLoopWrapper(alias, selectorEventLoop);
+        SelectorEventLoop selectorEventLoop;
+        if (this.annotations.EventLoopGroup_PreferPoll && annotations.EventLoop_CoreAffinity != -1) {
+            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(true, annotations.EventLoop_CoreAffinity));
+        } else if (this.annotations.EventLoopGroup_PreferPoll) {
+            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(true, -1));
+        } else if (annotations.EventLoop_CoreAffinity != -1) {
+            selectorEventLoop = SelectorEventLoop.open(new SelectorEventLoop.InitOptions(false, annotations.EventLoop_CoreAffinity));
+        } else {
+            selectorEventLoop = SelectorEventLoop.open();
+        }
+        EventLoopWrapper el = new EventLoopWrapper(alias, selectorEventLoop, annotations);
         ArrayList<EventLoopWrapper> newLs = new ArrayList<>(ls.size() + 1);
         newLs.addAll(ls);
         newLs.add(el);
@@ -249,4 +269,9 @@ public class EventLoopGroup {
      * END group function
      * ========================
      */
+
+    @Override
+    public String toString() {
+        return alias + " -> annotations " + annotations.toString();
+    }
 }

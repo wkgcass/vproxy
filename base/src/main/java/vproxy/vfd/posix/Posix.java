@@ -16,7 +16,7 @@ public interface Posix {
 
     int[] openPipe() throws IOException;
 
-    long aeCreateEventLoop(int setsize) throws IOException;
+    long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException;
 
     int aeApiPoll(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException;
 
@@ -101,4 +101,6 @@ public interface Posix {
     boolean tunNonBlockingSupported() throws IOException;
 
     TapInfo createTapFD(String dev, boolean isTun) throws IOException;
+
+    void setCoreAffinityForCurrentThread(long mask) throws IOException;
 }

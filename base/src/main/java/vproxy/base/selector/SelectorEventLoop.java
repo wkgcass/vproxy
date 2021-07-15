@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.function.Function;
 
+@SuppressWarnings("rawtypes")
 public class SelectorEventLoop implements AutoCloseable {
     static class RegisterData {
         boolean connected = false;
@@ -51,6 +52,7 @@ public class SelectorEventLoop implements AutoCloseable {
 
     public final WrappedSelector selector;
     public final FDs fds;
+    private final InitOptions initOptions;
     private final TimeQueue<Runnable> timeQueue = TimeQueue.create();
     private final ConcurrentLinkedQueue<Runnable> runOnLoopEvents = new ConcurrentLinkedQueue<>();
 
@@ -67,14 +69,33 @@ public class SelectorEventLoop implements AutoCloseable {
     private final Lock CLOSE_LOCK;
     private List<Tuple<FD, RegisterData>> THE_KEY_SET_BEFORE_SELECTOR_CLOSE;
 
-    private SelectorEventLoop(FDs fds) throws IOException {
-        this.selector = new WrappedSelector(fds.openSelector());
+    public static final class InitOptions {
+        public static final InitOptions DEFAULT = new InitOptions(false, -1);
+
+        public final boolean preferPoll;
+        public final long coreAffinity;
+
+        public InitOptions(boolean preferPoll, long coreAffinity) {
+            this.preferPoll = preferPoll;
+            this.coreAffinity = coreAffinity;
+        }
+    }
+
+    private SelectorEventLoop(FDs fds, InitOptions opts) throws IOException {
+        FDSelector fdSelector;
+        if (fds instanceof FDsWithPoll) {
+            fdSelector = ((FDsWithPoll) fds).openSelector(opts.preferPoll);
+        } else {
+            fdSelector = fds.openSelector();
+        }
+        this.selector = new WrappedSelector(fdSelector);
         this.fds = fds;
         if (VFDConfig.useFStack) {
             CLOSE_LOCK = Lock.createMock();
         } else {
             CLOSE_LOCK = Lock.create();
         }
+        this.initOptions = opts;
     }
 
     private NetEventLoop netEventLoop = null;
@@ -105,6 +126,10 @@ public class SelectorEventLoop implements AutoCloseable {
     private static volatile SelectorEventLoop theLoop = null; // this field is used when using fstack
 
     public static SelectorEventLoop open() throws IOException {
+        return open(InitOptions.DEFAULT);
+    }
+
+    public static SelectorEventLoop open(InitOptions opts) throws IOException {
         if (VFDConfig.useFStack) {
             // we use only one event loop if it's using f-stack
             // considering the program code base, it will take too much time
@@ -114,7 +139,7 @@ public class SelectorEventLoop implements AutoCloseable {
             if (theLoop == null) {
                 synchronized (SelectorEventLoop.class) {
                     if (theLoop == null) {
-                        theLoop = new SelectorEventLoop(FDProvider.get().getProvided());
+                        theLoop = new SelectorEventLoop(FDProvider.get().getProvided(), opts);
                     }
                 }
             }
@@ -122,16 +147,20 @@ public class SelectorEventLoop implements AutoCloseable {
             // no need to consider whether the loop would be closed
             // when the loop closes, the program will exit
         }
-        return new SelectorEventLoop(FDProvider.get().getProvided());
+        return new SelectorEventLoop(FDProvider.get().getProvided(), opts);
     }
 
     public static SelectorEventLoop open(FDs fds) throws IOException {
+        return open(fds, InitOptions.DEFAULT);
+    }
+
+    public static SelectorEventLoop open(FDs fds, InitOptions opts) throws IOException {
         if (VFDConfig.useFStack) {
             if (FDProvider.get().getProvided() == fds) {
                 throw new IllegalArgumentException("should not call SelectorEventLoop.open(fds) with the default fds impl");
             }
         }
-        return new SelectorEventLoop(fds);
+        return new SelectorEventLoop(fds, opts);
     }
 
     private void tryRunnable(Runnable r) {
@@ -271,6 +300,7 @@ public class SelectorEventLoop implements AutoCloseable {
         constructThread.apply(this::loop).start();
         while (runningThread == null) {
             try {
+                //noinspection BusyWait
                 Thread.sleep(1);
             } catch (InterruptedException e) {
                 // ignore the interruption
@@ -349,6 +379,25 @@ public class SelectorEventLoop implements AutoCloseable {
 
     @Blocking
     public void loop() {
+        // try to set core affinity
+        if (this.initOptions.coreAffinity != -1) {
+            boolean set = false;
+            if (fds instanceof FDsWithCoreAffinity) {
+                try {
+                    ((FDsWithCoreAffinity) fds).setCoreAffinity(initOptions.coreAffinity);
+                    set = true;
+                } catch (IOException e) {
+                    Logger.error(LogType.SYS_ERROR, "setting core affinity to " + Long.toBinaryString(initOptions.coreAffinity) + " failed", e);
+                    // just keep running without affinity
+                }
+            }
+            if (set) {
+                Logger.alert("core affinity set: " + Long.toBinaryString(initOptions.coreAffinity));
+            } else {
+                Logger.warn(LogType.ALERT, "core affinity is not set (" + Long.toBinaryString(initOptions.coreAffinity) + "), continue without core affinity");
+            }
+        }
+
         if (VFDConfig.useFStack && fds == FDProvider.get().getProvided()) {
             // when using f-stack, the MAIN loop is started by ff_loop (non-main loops can still run)
             // we should not start any loop inside ff_loop
@@ -361,6 +410,7 @@ public class SelectorEventLoop implements AutoCloseable {
             //noinspection InfiniteLoopStatement
             while (true) {
                 try {
+                    //noinspection BusyWait
                     Thread.sleep(365L * 24 * 60 * 60 * 1000 /*very long time, 1 year*/);
                 } catch (Throwable ignore) {
                 }
@@ -457,6 +507,10 @@ public class SelectorEventLoop implements AutoCloseable {
 
     // a helper function for adding a channel into the selector
     private Promise<FD> add0(FD channel, EventSet ops, RegisterData registerData) throws IOException {
+        if (initOptions.preferPoll && Thread.currentThread() != runningThread) {
+            return add0PreferPoll(channel, ops, registerData);
+        }
+
         try {
             selector.register(channel, ops, registerData);
         } catch (CancelledKeyException e) {
@@ -479,7 +533,31 @@ public class SelectorEventLoop implements AutoCloseable {
         return null;
     }
 
+    private Promise<FD> add0PreferPoll(FD channel, EventSet ops, RegisterData registerData) {
+        assert Logger.lowLevelDebug("preferPoll enabled, so must wake it up to let the new fd take effect");
+        return Promise.wrap(cb -> runOnLoop(() -> {
+            Promise<FD> res;
+            try {
+                res = add0(channel, ops, registerData);
+            } catch (Throwable t) {
+                cb.failed(t);
+                return;
+            }
+            if (res == null) cb.succeeded(channel);
+            else res.setHandler((fd, err) -> {
+                if (err != null) cb.failed(err);
+                else cb.succeeded(fd);
+            });
+        }));
+    }
+
     private void doModify(FD fd, EventSet ops) {
+        if (initOptions.preferPoll && Thread.currentThread() != runningThread) {
+            assert Logger.lowLevelDebug("preferPoll enabled, so must wake it up to update the fd");
+            runOnLoop(() -> doModify(fd, ops));
+            return;
+        }
+
         if (selector.events(fd).equals(ops)) {
             return; // no need to update if they are the same
         }
@@ -508,6 +586,12 @@ public class SelectorEventLoop implements AutoCloseable {
 
     @ThreadSafe
     public void remove(FD channel) {
+        if (initOptions.preferPoll && Thread.currentThread() != runningThread) {
+            assert Logger.lowLevelDebug("preferPoll enabled, so must wake it up to let the fd removed");
+            runOnLoop(() -> remove(channel));
+            return;
+        }
+
         //noinspection unused
         try (var x = channelRegisteringLock.lock()) {
             channelsToBeRegisteredStep1.removeIf(e -> e.channel == channel);

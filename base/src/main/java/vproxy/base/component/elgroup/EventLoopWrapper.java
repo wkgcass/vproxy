@@ -104,14 +104,20 @@ public class EventLoopWrapper extends NetEventLoop {
 
     public final String alias;
     private final SelectorEventLoop selectorEventLoop;
+    public final Annotations annotations;
     private final ConcurrentHashSet<ServerSock> servers = new ConcurrentHashSet<>();
     private final ConcurrentHashSet<Connection> connections = new ConcurrentHashSet<>();
     private final ConcurrentHashSet<EventLoopAttach> attaches = new ConcurrentHashSet<>();
 
     public EventLoopWrapper(String alias, SelectorEventLoop selectorEventLoop) {
+        this(alias, selectorEventLoop, new Annotations());
+    }
+
+    public EventLoopWrapper(String alias, SelectorEventLoop selectorEventLoop, Annotations annotations) {
         super(selectorEventLoop);
         this.alias = alias;
         this.selectorEventLoop = selectorEventLoop;
+        this.annotations = annotations;
     }
 
     @Override
@@ -217,5 +223,10 @@ public class EventLoopWrapper extends NetEventLoop {
             r.run();
             removeResources();
         }, "EventLoopThread:" + alias));
+    }
+
+    @Override
+    public String toString() {
+        return alias + " -> annotations " + annotations.toString();
     }
 }

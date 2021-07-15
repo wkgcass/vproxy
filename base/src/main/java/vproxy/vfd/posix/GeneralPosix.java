@@ -25,7 +25,7 @@ public class GeneralPosix implements Posix {
     native public int[] openPipe() throws IOException;
 
     @Override
-    native public long aeCreateEventLoop(int setsize) throws IOException;
+    native public long aeCreateEventLoop(int setsize, boolean preferPoll) throws IOException;
 
     @Override
     public int aeApiPoll(long ae, long wait, int[] fdArray, int[] eventsArray) throws IOException {
@@ -168,4 +168,7 @@ public class GeneralPosix implements Posix {
 
     @Override
     native public TapInfo createTapFD(String dev, boolean isTun) throws IOException;
+
+    @Override
+    native public void setCoreAffinityForCurrentThread(long mask) throws IOException;
 }
