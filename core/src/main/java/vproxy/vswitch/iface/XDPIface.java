@@ -86,14 +86,20 @@ public class XDPIface extends AbstractIface implements Iface {
                 int pktaddr = chunk.addr() + pkb.pktOff;
                 int pktlen = pkb.fullbuf.length() - pkb.pktOff - pkb.pad;
                 if (pktaddr != chunk.pktaddr || pktlen != chunk.pktlen) {
+                    assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
                     chunk.pktaddr = pktaddr;
                     chunk.pktlen = pktlen;
-                    chunk.updateNative();
+                } else {
+                    assert Logger.lowLevelDebug("no modification on chunk packet addresses");
                 }
                 chunk.referenceInNative(); // no need to increase ref in java, it can be directly reused
 
+                assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
                 boolean wResult = xsk.writePacket(chunk);
-                assert wResult || Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
+                if (!wResult) {
+                    assert Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
+                    chunk.releaseRefInNative(umem);
+                }
                 return;
             }
         }
@@ -150,6 +156,7 @@ public class XDPIface extends AbstractIface implements Iface {
     @Override
     public void completeTx() {
         xsk.completeTx();
+        xsk.umem.fillUpFillRing();
     }
 
     @Override

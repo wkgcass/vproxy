@@ -78,6 +78,12 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createUMem0
     return (jlong) umem;
 }
 
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_shareUMem0
+  (JNIEnv* env, jclass self, jlong umem_o) {
+    struct vp_umem_info* umem = (struct vp_umem_info*)umem_o;
+    return (jlong) vp_umem_share(umem);
+}
+
 JNIEXPORT jobject JNICALL Java_vproxy_xdp_NativeXDP_getBufferFromUMem0
   (JNIEnv* env, jclass self, jlong umem_o) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
@@ -336,7 +342,7 @@ JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
 printf("normal Java_vproxy_xdp_NativeXDP_fetchChunk0\n");
 #endif
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
-    struct vp_chunk_info* chunk = vp_chunk_fetch(&umem->chunks);
+    struct vp_chunk_info* chunk = vp_chunk_fetch(umem->chunks);
     if (chunk == NULL) {
         return JNI_FALSE;
     }
@@ -373,7 +379,7 @@ JNIEXPORT jboolean JNICALL JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0
 printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0\n");
 #endif
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
-    struct vp_chunk_info* chunk = vp_chunk_fetch(&umem->chunks);
+    struct vp_chunk_info* chunk = vp_chunk_fetch(umem->chunks);
     if (chunk == NULL) {
         return JNI_FALSE;
     }
@@ -417,7 +423,7 @@ inline static void vproxy_xdp_NativeXDP_releaseChunk0
   (jlong umem_o, jlong chunk_o) {
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
     struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_o;
-    vp_chunk_release(&umem->chunks, chunk);
+    vp_chunk_release(umem->chunks, chunk);
 }
 JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_releaseChunk0
   (JNIEnv* env, jclass self, jlong umem_o, jlong chunk_o) {

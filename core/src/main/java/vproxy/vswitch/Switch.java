@@ -25,8 +25,8 @@ import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.SwitchUtils;
-import vproxy.vswitch.util.UserInfo;
 import vproxy.vswitch.util.UMemChunkByteArray;
+import vproxy.vswitch.util.UserInfo;
 import vproxy.xdp.BPFMap;
 import vproxy.xdp.BPFMode;
 import vproxy.xdp.UMem;
@@ -916,9 +916,6 @@ public class Switch {
 
         for (Iface iface : ifaces.keySet()) {
             iface.completeTx();
-        }
-        for (UMem umem : umems.values()) {
-            umem.fillUpFillRing();
         }
     }
 

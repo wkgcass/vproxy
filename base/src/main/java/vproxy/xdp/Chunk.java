@@ -59,8 +59,12 @@ public class Chunk {
     }
 
     public void releaseRef(UMem umem) {
-        NativeXDP.get().releaseChunk(umem.umem, chunk);
+        releaseRefInNative(umem);
         ref = (ref == 0) ? 0 : ref - 1;
+    }
+
+    public void releaseRefInNative(UMem umem) {
+        NativeXDP.get().releaseChunk(umem.umem, chunk);
     }
 
     public void returnToPool() {

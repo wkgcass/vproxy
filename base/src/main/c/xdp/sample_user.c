@@ -139,7 +139,7 @@ int main(int argc, char** argv) {
             vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
             printf("received packet: cnt=%d addr=%lu pkt=%lu len=%d umem_size=%d umem_used=%d\n",
                    ++cnt, chunk->addr, ((size_t) chunk->pkt) - ((size_t) umem->buffer), chunk->pktlen,
-                   umem->chunks.size, umem->chunks.used);
+                   umem->chunks->size, umem->chunks->used);
             hexDump("received", chunk->pkt, chunk->pktlen, 16);
 
             if (chunk->pktlen >= 12) {
@@ -154,10 +154,10 @@ int main(int argc, char** argv) {
                     vp_xdp_write_pkt(xsk, chunk);
                 } else {
                     printf("copy and echo the packet\n");
-                    struct vp_chunk_info* chunk2 = vp_chunk_fetch(&umem->chunks);
+                    struct vp_chunk_info* chunk2 = vp_chunk_fetch(umem->chunks);
                     if (chunk2 == NULL) {
                         printf("ERR! umem no enough chunks: size=%d used=%d\n",
-                               umem->chunks.size, umem->chunks.used);
+                               umem->chunks->size, umem->chunks->used);
                         continue;
                     }
                     chunk2->pktaddr = chunk2->addr;
@@ -169,7 +169,7 @@ int main(int argc, char** argv) {
                 }
             }
 
-            vp_chunk_release(&umem->chunks, chunk);
+            vp_chunk_release(umem->chunks, chunk);
 
             if (cnt == total) {
                 goto out_loop;

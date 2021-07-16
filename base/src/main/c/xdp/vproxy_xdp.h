@@ -37,10 +37,12 @@ struct vp_umem_info {
     struct xsk_ring_cons comp_ring;
     struct xsk_umem*     umem;
 
+    int is_shared;
+
     char* buffer;
     int buffer_size;
 
-    struct vp_chunk_array chunks;
+    struct vp_chunk_array* chunks;
 };
 
 struct vp_xsk_info {
@@ -60,6 +62,7 @@ struct bpf_map*    vp_bpfobj_find_map_by_name(struct bpf_object* bpfobj, char* n
 
 struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int comp_ring_size,
                                     uint64_t frame_size, int headroom);
+struct vp_umem_info* vp_umem_share (struct vp_umem_info* umem);
 struct vp_xsk_info*  vp_xsk_create (char* ifname, int queue_id, struct vp_umem_info* umem,
                                     int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags);
 

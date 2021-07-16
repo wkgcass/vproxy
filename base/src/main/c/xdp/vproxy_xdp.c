@@ -84,6 +84,7 @@ struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int com
     }
 
     umem = calloc(1, sizeof(struct vp_umem_info) +
+                     sizeof(struct vp_chunk_array) +
                      chunks_size * sizeof(struct vp_chunk_info));
     if (!umem) {
         fprintf(stderr, "ERR: allocating umem info failed");
@@ -108,19 +109,20 @@ struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int com
     umem->buffer = buffer;
     umem->buffer_size = mem_size;
 
-    umem->chunks.frame_size = frame_size;
-    umem->chunks.size = chunks_size;
-    umem->chunks.used = 0;
-    umem->chunks.idx = 0;
-    umem->chunks.array = (struct vp_chunk_info*) (((size_t)umem) + sizeof(struct vp_umem_info));
+    umem->chunks = (struct vp_chunk_array*) (((size_t)umem) + sizeof(struct vp_umem_info));
+    umem->chunks->frame_size = frame_size;
+    umem->chunks->size = chunks_size;
+    umem->chunks->used = 0;
+    umem->chunks->idx = 0;
+    umem->chunks->array = (struct vp_chunk_info*) (((size_t)umem) + sizeof(struct vp_umem_info) + sizeof(struct vp_chunk_array));
     for (int i = 0; i < chunks_size; ++i) {
-        umem->chunks.array[i].umem = umem;
-        umem->chunks.array[i].xsk = NULL;
-        umem->chunks.array[i].ref = 0;
-        umem->chunks.array[i].addr = i * frame_size;
-        umem->chunks.array[i].endaddr = (i + 1) * frame_size;
-        umem->chunks.array[i].realaddr = (char*) (((size_t)buffer) + umem->chunks.array[i].addr);
-        umem->chunks.array[i].pkt = NULL;
+        umem->chunks->array[i].umem = umem;
+        umem->chunks->array[i].xsk = NULL;
+        umem->chunks->array[i].ref = 0;
+        umem->chunks->array[i].addr = i * frame_size;
+        umem->chunks->array[i].endaddr = (i + 1) * frame_size;
+        umem->chunks->array[i].realaddr = (char*) (((size_t)buffer) + umem->chunks->array[i].addr);
+        umem->chunks->array[i].pkt = NULL;
     }
 
     // fillup the fill ring
@@ -138,6 +140,15 @@ err:
         free(buffer);
     }
     return NULL;
+}
+
+struct vp_umem_info* vp_umem_share(struct vp_umem_info* umem) {
+    struct vp_umem_info* ret = calloc(1, sizeof(struct vp_umem_info));
+    memcpy(ret, umem, sizeof(struct vp_umem_info));
+    memset(&ret->fill_ring, 0, sizeof(struct xsk_ring_prod));
+    memset(&ret->comp_ring, 0, sizeof(struct xsk_ring_cons));
+    ret->is_shared = 1;
+    return ret;
 }
 
 struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_info* umem,
@@ -166,7 +177,14 @@ struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_inf
     xsk_cfg.xdp_flags = xdp_flags;
     xsk_cfg.bind_flags = bind_flags;
 
-    int ret = xsk_socket__create(&xsk_info->xsk, ifname, queue_id, umem->umem, &xsk_info->rx, &xsk_info->tx, &xsk_cfg);
+    int ret;
+    if (umem->is_shared) {
+        ret = xsk_socket__create_shared(&xsk_info->xsk, ifname, queue_id, umem->umem, &xsk_info->rx, &xsk_info->tx, &umem->fill_ring, &umem->comp_ring, &xsk_cfg);
+
+        vp_xdp_fill_ring_fillup(umem);
+    } else {
+        ret = xsk_socket__create(&xsk_info->xsk, ifname, queue_id, umem->umem, &xsk_info->rx, &xsk_info->tx, &xsk_cfg);
+    }
     if (ret) {
         fprintf(stderr, "ERR: xsk_socket__create failed: %d %s\n",
                 -ret, strerror(-ret));
@@ -222,7 +240,7 @@ void vp_xsk_close(struct vp_xsk_info* xsk) {
         if (recv > 0) {
             for (int i = 0; i < recv; ++i) {
                 vp_xdp_fetch_pkt(xsk, &idx_rx, &chunk);
-                vp_chunk_release(&xsk->umem->chunks, chunk);
+                vp_chunk_release(xsk->umem->chunks, chunk);
             }
             vp_xdp_rx_release(xsk, recv);
         }
@@ -232,12 +250,12 @@ void vp_xsk_close(struct vp_xsk_info* xsk) {
         vp_xdp_complete_tx(xsk);
     }
     // ensure chunks are not associated with this xsk
-    for (int i = 0; i < xsk->umem->chunks.size; ++i) {
-        struct vp_chunk_info* chunk = &xsk->umem->chunks.array[i];
+    for (int i = 0; i < xsk->umem->chunks->size; ++i) {
+        struct vp_chunk_info* chunk = &xsk->umem->chunks->array[i];
         if (chunk->xsk == xsk) {
             fprintf(stderr, "releasing chunk %lu(ref:%d) due to xsk closing\n", (size_t)chunk->realaddr, chunk->ref);
             chunk->xsk = NULL;
-            vp_chunk_release(&xsk->umem->chunks, chunk);
+            vp_chunk_release(xsk->umem->chunks, chunk);
         }
     }
 
@@ -247,26 +265,27 @@ void vp_xsk_close(struct vp_xsk_info* xsk) {
 
 void vp_umem_close(struct vp_umem_info* umem, bool clean_buffer) {
     xsk_umem__delete(umem->umem);
-    if (clean_buffer) {
+    if (!umem->is_shared && clean_buffer) {
         free(umem->buffer);
     }
     free(umem);
 }
 
 void vp_xdp_fill_ring_fillup(struct vp_umem_info* umem) {
-    unsigned int stock_frames = xsk_prod_nb_free(&umem->fill_ring, umem->chunks.size - umem->chunks.used);
+    unsigned int stock_frames = xsk_prod_nb_free(&umem->fill_ring, umem->chunks->size - umem->chunks->used);
     if (stock_frames <= 0) {
         return;
     }
-    if (stock_frames > umem->chunks.size - umem->chunks.used) {
-        stock_frames = umem->chunks.size - umem->chunks.used;
+    if (stock_frames > umem->chunks->size - umem->chunks->used) {
+        stock_frames = umem->chunks->size - umem->chunks->used;
     }
     uint32_t idx_fr = 0;
     xsk_ring_prod__reserve(&umem->fill_ring, stock_frames, &idx_fr);
     int i = 0;
     for (; i < stock_frames; ++i) {
-        struct vp_chunk_info* chunk = vp_chunk_fetch(&umem->chunks);
+        struct vp_chunk_info* chunk = vp_chunk_fetch(umem->chunks);
         if (chunk == NULL) {
+            fprintf(stderr, "cannot fetch chunk to fill the fillring\n");
             break; // no free chunks, cannot fill up. however this should not happen
         }
         *xsk_ring_prod__fill_addr(&umem->fill_ring, idx_fr++) = chunk->addr;
@@ -292,7 +311,7 @@ int vp_xdp_fetch_pkt(struct vp_xsk_info* xsk, uint32_t* idx_rx_ptr, struct vp_ch
     *idx_rx_ptr = idx_rx + 1;
     char* pkt = xsk_umem__get_data(xsk->umem->buffer, addr);
 
-    struct vp_chunk_info* chunk = vp_chunk_seek(&xsk->umem->chunks, addr);
+    struct vp_chunk_info* chunk = vp_chunk_seek(xsk->umem->chunks, addr);
     // assert chunk != null
 
     chunk->pktaddr = addr;
@@ -339,13 +358,13 @@ void vp_xdp_complete_tx(struct vp_xsk_info* xsk) {
     if (completed > 0) {
         for (int i = 0; i < completed; ++i) {
             uint64_t addr = *xsk_ring_cons__comp_addr(&xsk->umem->comp_ring, idx_cr++);
-            struct vp_chunk_info* chunk = vp_chunk_seek(&xsk->umem->chunks, addr);
+            struct vp_chunk_info* chunk = vp_chunk_seek(xsk->umem->chunks, addr);
             // assert chunk != null
             chunk->xsk = NULL;
-            vp_chunk_release(&xsk->umem->chunks, chunk);
+            vp_chunk_release(xsk->umem->chunks, chunk);
             xsk_ring_cons__release(&xsk->umem->comp_ring, completed);
-            xsk->outstanding_tx -= completed;
         }
+        xsk->outstanding_tx -= completed;
     }
 }
 

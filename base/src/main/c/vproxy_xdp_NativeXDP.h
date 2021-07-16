@@ -33,6 +33,14 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createUMem0
 
 /*
  * Class:     vproxy_xdp_NativeXDP
+ * Method:    shareUMem0
+ * Signature: (J)J
+ */
+JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_shareUMem0
+  (JNIEnv *, jclass, jlong);
+
+/*
+ * Class:     vproxy_xdp_NativeXDP
  * Method:    getBufferFromUMem0
  * Signature: (J)Ljava/nio/ByteBuffer;
  */

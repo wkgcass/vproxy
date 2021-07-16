@@ -53,6 +53,12 @@ public class NativeXDP {
     private static native long createUMem0(int chunksSize, int fillRingSize, int compRingSize,
                                            int frameSize, int headroom) throws IOException;
 
+    public long shareUMem(long umem) {
+        return shareUMem0(umem);
+    }
+
+    private static native long shareUMem0(long umem);
+
     public ByteBuffer getBufferFromUMem(long umem) {
         return getBufferFromUMem0(umem);
     }

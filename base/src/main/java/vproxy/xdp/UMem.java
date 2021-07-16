@@ -24,7 +24,7 @@ public class UMem {
     private boolean referencedBySockets = false;
     private final Set<XDPSocket> referencedSockets = new ConcurrentHashSet<>();
 
-    private UMem(String alias, long umem, int chunksSize, int fillRingSize, int compRingSize, int frameSize, int headroom) {
+    protected UMem(String alias, long umem, int chunksSize, int fillRingSize, int compRingSize, int frameSize, int headroom) {
         this.alias = alias;
         this.umem = umem;
         this.chunksSize = chunksSize;
@@ -78,10 +78,18 @@ public class UMem {
         }
         released = true;
         NativeXDP.get().releaseUMem(umem, buffer == null);
+        releaseBuffer();
+        buffer = null;
+    }
+
+    protected void releaseBuffer() {
         if (buffer != null) {
             SunUnsafe.invokeCleaner(buffer);
         }
-        buffer = null;
+    }
+
+    public boolean isReferencedBySockets() {
+        return referencedBySockets;
     }
 
     public boolean isValid() {
