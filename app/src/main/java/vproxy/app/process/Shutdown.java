@@ -840,6 +840,7 @@ public class Shutdown {
                         + " rx-ring-size " + xdp.rxRingSize
                         + " tx-ring-size " + xdp.txRingSize
                         + " mode " + xdp.mode.name()
+                        + " busy-poll " + xdp.busyPollBudget
                         + " vni " + xdp.vni
                         + " bpf-map-key " + xdp.keySelector.alias();
                     if (xdp.zeroCopy) {

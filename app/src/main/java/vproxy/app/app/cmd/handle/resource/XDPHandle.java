@@ -35,6 +35,10 @@ public class XDPHandle {
         int txRingSize = RingSizeHandle.get(cmd, Param.txringsize, SwitchUtils.RX_TX_CHUNKS);
         BPFMode mode = BPFModeHandle.get(cmd, BPFMode.SKB);
         boolean zeroCopy = cmd.flags.contains(Flag.zerocopy);
+        int busyPollBudget = 0;
+        if (cmd.args.containsKey(Param.busypoll)) {
+            busyPollBudget = BusyPollHandle.get(cmd);
+        }
         int vni = VniHandle.get(cmd);
         BPFMapKeySelector keySelector;
         if (cmd.args.containsKey(Param.bpfmapkeyselector)) {
@@ -44,8 +48,8 @@ public class XDPHandle {
         }
 
         sw.addXDP(cmd.resource.alias, nic, bpfMap, umem, queueId,
-            rxRingSize, txRingSize, mode, zeroCopy, vni,
-            keySelector);
+            rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget,
+            vni, keySelector);
     }
 
     public static void remove(Command cmd) throws Exception {

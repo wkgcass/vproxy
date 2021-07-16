@@ -64,7 +64,8 @@ struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int com
                                     uint64_t frame_size, int headroom);
 struct vp_umem_info* vp_umem_share (struct vp_umem_info* umem);
 struct vp_xsk_info*  vp_xsk_create (char* ifname, int queue_id, struct vp_umem_info* umem,
-                                    int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags);
+                                    int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags,
+                                    int busy_poll_budget);
 
 int vp_xsk_add_into_map(struct bpf_map* map, int key, struct vp_xsk_info* xsk);
 

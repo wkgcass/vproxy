@@ -51,7 +51,7 @@ public class XDPPoc2 {
 
         UMem umem = sw.addUMem("poc-umem", 64, 32, 32, 4096);
         sw.addXDP("poc-xdp",
-            ifname, bpfMap, umem, 0, 32, 32, BPFMode.SKB, false, 1,
-            BPFMapKeySelectors.useQueueId.keySelector.get());
+            ifname, bpfMap, umem, 0, 32, 32, BPFMode.SKB, false, 0,
+            1, BPFMapKeySelectors.useQueueId.keySelector.get());
     }
 }

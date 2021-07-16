@@ -436,6 +436,8 @@ public class HelpCommand {
         framesize("frame-size", null, "size of a frame"),
         bpfmapkeyselector("bpf-map-key", null, "the method of " +
             "determining the key of the corresponding xsk when putting into a bpf map"),
+        busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
+            "and may set the SO_BUSY_POLL_BUDGET as well"),
         ;
         public final String param;
         public final String shortVer;
@@ -1348,6 +1350,7 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.txringsize, "tx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
+                    new ResActParamMan(ParamMan.busypoll, "whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll", "0"),
                     new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
                     new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
                         "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name())

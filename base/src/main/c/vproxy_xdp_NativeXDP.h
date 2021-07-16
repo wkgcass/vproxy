@@ -58,10 +58,10 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_getBufferAddressFromUMem0
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    createXSK0
- * Signature: (Ljava/lang/String;IJIIIZ)J
+ * Signature: (Ljava/lang/String;IJIIIZI)J
  */
 JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
-  (JNIEnv *, jclass, jstring, jint, jlong, jint, jint, jint, jboolean);
+  (JNIEnv *, jclass, jstring, jint, jlong, jint, jint, jint, jboolean, jint);
 
 /*
  * Class:     vproxy_xdp_NativeXDP

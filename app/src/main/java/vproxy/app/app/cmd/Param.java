@@ -56,6 +56,7 @@ public enum Param {
     compringsize("comp-ring-size"),
     framesize("frame-size"),
     bpfmapkeyselector("bpf-map-key"),
+    busypoll("busy-poll"),
     ;
     public final String fullname;
 

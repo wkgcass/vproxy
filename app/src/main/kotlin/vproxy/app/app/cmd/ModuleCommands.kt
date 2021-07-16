@@ -853,6 +853,7 @@ class ModuleCommands : Commands() {
           it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
           it + ResActParam(Param.txringsize) { RingSizeHandle.check(it, Param.txringsize) }
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
+          it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
           it + ResActParam(Param.bpfmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
         },

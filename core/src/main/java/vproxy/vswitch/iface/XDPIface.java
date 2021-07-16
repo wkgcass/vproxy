@@ -25,6 +25,7 @@ public class XDPIface extends AbstractIface implements Iface {
     public final int txRingSize;
     public final BPFMode mode;
     public final boolean zeroCopy;
+    public final int busyPollBudget;
     public final int queueId;
 
     private XDPSocket xsk;
@@ -34,6 +35,7 @@ public class XDPIface extends AbstractIface implements Iface {
 
     public XDPIface(String alias, String nic, BPFMap bpfMap, UMem umem,
                     int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
+                    int busyPollBudget,
                     int vni, BPFMapKeySelector keySelector) {
         this.alias = alias;
         this.nic = nic;
@@ -43,6 +45,7 @@ public class XDPIface extends AbstractIface implements Iface {
         this.txRingSize = txRingSize;
         this.mode = mode;
         this.zeroCopy = zeroCopy;
+        this.busyPollBudget = busyPollBudget;
         this.queueId = queue;
 
         this.vni = vni;
@@ -57,7 +60,7 @@ public class XDPIface extends AbstractIface implements Iface {
 
         XDPSocket xsk;
         try {
-            xsk = XDPSocket.create(nic, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy);
+            xsk = XDPSocket.create(nic, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "creating xsk of " + nic + "#" + queueId + " failed", e);
             throw e;

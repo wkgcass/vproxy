@@ -27,7 +27,7 @@ public class XDPPoc {
         var umem = UMem.create("poc-umem", 64, 32, 32, 4096, 0);
         var buf = umem.getBuffer();
         Logger.alert("buffer from umem: " + buf);
-        var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false);
+        var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0);
         map.put(0, xsk);
 
         bpfobj.release();

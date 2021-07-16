@@ -103,8 +103,9 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_getBufferAddressFromUMem0
 
 JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
   (JNIEnv* env, jclass self, jstring ifname, jint queue_id, jlong umem_o,
-                              jint rx_ring_size, jint tx_ring_size,
-                              jint mode, jboolean zero_copy) {
+                             jint rx_ring_size, jint tx_ring_size,
+                             jint mode, jboolean zero_copy,
+                             jint busy_poll_budget) {
     const char* ifname_chars = (*env)->GetStringUTFChars(env, ifname, NULL);
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
 
@@ -128,7 +129,8 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
     }
 
     struct vp_xsk_info* xsk = vp_xsk_create((char*)ifname_chars, queue_id, umem,
-                                            rx_ring_size, tx_ring_size, xdp_flags, bind_flags);
+                                            rx_ring_size, tx_ring_size, xdp_flags, bind_flags,
+                                            busy_poll_budget);
     if (xsk == NULL) {
         throwIOException(env, "vp_xsk_create failed");
     }

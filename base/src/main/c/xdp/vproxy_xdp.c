@@ -152,7 +152,8 @@ struct vp_umem_info* vp_umem_share(struct vp_umem_info* umem) {
 }
 
 struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_info* umem,
-                                  int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags) {
+                                  int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags,
+                                  int busy_poll_budget) {
     int ifindex = if_nametoindex((const char*)ifname);
     if (ifindex <= 0) {
         fprintf(stderr, "ERR: if_nametoindex(%s) failed: %d %s\n",
@@ -176,6 +177,7 @@ struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_inf
     xsk_cfg.libbpf_flags = XSK_LIBBPF_FLAGS__INHIBIT_PROG_LOAD;
     xsk_cfg.xdp_flags = xdp_flags;
     xsk_cfg.bind_flags = bind_flags;
+    xsk_cfg.busy_poll_budget = busy_poll_budget;
 
     int ret;
     if (umem->is_shared) {

@@ -556,6 +556,7 @@ public class Switch {
 
     public XDPIface addXDP(String alias, String nic, BPFMap map, UMem umem,
                            int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
+                           int busyPollBudget,
                            int vni, BPFMapKeySelector keySelector) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -579,6 +580,7 @@ public class Switch {
 
         var iface = new XDPIface(alias, nic, map, umem,
             queueId, rxRingSize, txRingSize, mode, zeroCopy,
+            busyPollBudget,
             vni, keySelector);
         try {
             initIface(iface);

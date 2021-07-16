@@ -74,14 +74,16 @@ public class NativeXDP {
     public long createXSK(String nicName, int queueId, long umem,
                           int rxRingSize, int txRingSize,
                           int mode, // defined in BPFMode
-                          boolean zeroCopy) throws IOException {
-        return createXSK0(nicName, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy);
+                          boolean zeroCopy,
+                          int busyPollBudget) throws IOException {
+        return createXSK0(nicName, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget);
     }
 
     private static native long createXSK0(String nicName, int queueId, long umem,
                                           int rxRingSize, int txRingSize,
                                           int mode, // defined in BPFMode
-                                          boolean zeroCopy) throws IOException;
+                                          boolean zeroCopy,
+                                          int busyPollBudget) throws IOException;
 
     public void addXSKIntoMap(long map, int key, long xsk) throws IOException {
         addXSKIntoMap0(map, key, xsk);
