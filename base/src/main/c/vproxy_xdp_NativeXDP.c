@@ -314,6 +314,33 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_writePacket0\n");
 }
 #endif
 
+inline static int vproxy_xdp_NativeXDP_writePackets0
+  (jlong xsk_o, jint size, jlong* ptrs) {
+    struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
+    return vp_xdp_write_pkts(xsk, size, (long*) ptrs);
+}
+JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_writePackets0
+  (JNIEnv* env, jclass self, jlong xsk_o, jint size, jlongArray jptrs) {
+#ifdef SHOW_CRITICAL
+printf("normal Java_vproxy_xdp_NativeXDP_writePackets0\n");
+#endif
+    jboolean is_copy = false;
+    jlong* ptrs = (jlong*) (*env)->GetPrimitiveArrayCritical(env, jptrs, &is_copy);
+    if (ptrs == NULL) {
+        return 0;
+    }
+    int ret = vproxy_xdp_NativeXDP_writePackets0(xsk_o, size, ptrs);
+    (*env)->ReleasePrimitiveArrayCritical(env, jptrs, ptrs, 0);
+    return ret;
+}
+JNIEXPORT jint JNICALL JavaCritical_vproxy_xdp_NativeXDP_writePackets0
+  (jlong xsk_o, jint size, jint ptrs_size, jlong* ptrs) {
+#ifdef SHOW_CRITICAL
+printf("critical JavaCritical_vproxy_xdp_NativeXDP_writePackets0\n");
+#endif
+    return vproxy_xdp_NativeXDP_writePackets0(xsk_o, size, ptrs);
+}
+
 inline static void vproxy_xdp_NativeXDP_completeTx0
   (jlong xsk_o) {
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;

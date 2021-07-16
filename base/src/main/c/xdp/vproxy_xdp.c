@@ -345,6 +345,25 @@ int vp_xdp_write_pkt(struct vp_xsk_info* xsk, struct vp_chunk_info* chunk) {
     return 0;
 }
 
+int vp_xdp_write_pkts(struct vp_xsk_info* xsk, int size, long* chunk_ptrs) {
+    uint32_t tx_idx = 0;
+    int ret = xsk_ring_prod__reserve(&xsk->tx, size, &tx_idx);
+    if (ret <= 0) {
+        return 0;
+    }
+    for (int i = 0; i < ret; ++i) {
+        struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_ptrs[i];
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->addr = chunk->pktaddr;
+        xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->len = chunk->pktlen;
+        chunk->xsk = xsk;
+    }
+    xsk_ring_prod__submit(&xsk->tx, ret);
+
+    xsk->outstanding_tx += ret;
+
+    return ret;
+}
+
 void vp_xdp_complete_tx(struct vp_xsk_info* xsk) {
     if (!xsk->outstanding_tx) {
         return;

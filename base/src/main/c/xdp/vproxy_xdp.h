@@ -81,9 +81,10 @@ void vp_xdp_fill_ring_fillup(struct vp_umem_info* umem);
 // if idx_rx is not -1, return value will always be 0
 // otherwise, returning 0 indicates that there's no packets
 // also, when idx_rx is -1, the chunk will not be set, and packets will not be retrieved
-int  vp_xdp_fetch_pkt(struct vp_xsk_info* xsk, uint32_t* idx_rx_ptr, struct vp_chunk_info** chunkptr);
-void vp_xdp_rx_release(struct vp_xsk_info* xsk, int cnt);
-int  vp_xdp_write_pkt(struct vp_xsk_info* xsk, struct vp_chunk_info* chunk);
+int  vp_xdp_fetch_pkt  (struct vp_xsk_info* xsk, uint32_t* idx_rx_ptr, struct vp_chunk_info** chunkptr);
+void vp_xdp_rx_release (struct vp_xsk_info* xsk, int cnt);
+int  vp_xdp_write_pkt  (struct vp_xsk_info* xsk, struct vp_chunk_info* chunk);
+int  vp_xdp_write_pkts (struct vp_xsk_info* xsk, int size, long* chunk_ptrs);
 void vp_xdp_complete_tx(struct vp_xsk_info* xsk);
 
 void vp_bpfobj_release(struct bpf_object* bpf_obj);

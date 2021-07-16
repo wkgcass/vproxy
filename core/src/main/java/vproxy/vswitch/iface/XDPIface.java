@@ -50,6 +50,8 @@ public class XDPIface extends AbstractIface implements Iface {
 
         this.vni = vni;
         this.keySelector = keySelector;
+
+        this.sendingChunkPointers = new long[txRingSize];
     }
 
     @Override
@@ -78,8 +80,16 @@ public class XDPIface extends AbstractIface implements Iface {
         bpfMap.put(key, xsk);
     }
 
+    private int sendingChunkSize = 0;
+    private final long[] sendingChunkPointers;
+
     @Override
     public void sendPacket(PacketBuffer pkb) {
+        if (sendingChunkSize == txRingSize) {
+            assert Logger.lowLevelDebug("unable to send packets more than tx ring size");
+            return;
+        }
+
         if (pkb.fullbuf instanceof UMemChunkByteArray) {
             Chunk chunk = ((UMemChunkByteArray) pkb.fullbuf).chunk;
             if (chunk.umem() == umem.umem) {
@@ -92,17 +102,14 @@ public class XDPIface extends AbstractIface implements Iface {
                     assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
                     chunk.pktaddr = pktaddr;
                     chunk.pktlen = pktlen;
+                    chunk.updateNative();
                 } else {
                     assert Logger.lowLevelDebug("no modification on chunk packet addresses");
                 }
-                chunk.referenceInNative(); // no need to increase ref in java, it can be directly reused
+                chunk.referenceInNative(); // no need to increase ref in java, only required in native
 
                 assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
-                boolean wResult = xsk.writePacket(chunk);
-                if (!wResult) {
-                    assert Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
-                    chunk.releaseRefInNative(umem);
-                }
+                sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
                 return;
             }
         }
@@ -119,12 +126,10 @@ public class XDPIface extends AbstractIface implements Iface {
         chunk.setPositionAndLimit(byteBuffer);
         pktData.byteBufferPut(byteBuffer, 0, pktData.length());
 
-        //noinspection RedundantIfStatement
-        if (!xsk.writePacket(chunk)) {
-            assert Logger.lowLevelDebug("write packet to " + xsk + " failed, probably tx queue is full");
-        }
+        chunk.updateNative();
+        sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
 
-        // the chunk is not used anymore
+        // the chunk is not used in java anymore
         chunk.returnToPool();
     }
 
@@ -158,6 +163,17 @@ public class XDPIface extends AbstractIface implements Iface {
 
     @Override
     public void completeTx() {
+        if (sendingChunkSize > 0) {
+            int n = NativeXDP.get().writePackets(xsk.xsk, sendingChunkSize, sendingChunkPointers);
+            if (n != sendingChunkSize) {
+                for (int i = n; i < sendingChunkSize; ++i) {
+                    long ptr = sendingChunkPointers[i];
+                    assert Logger.lowLevelDebug("writing chunk " + ptr + " failed, need to release them manually");
+                    NativeXDP.get().releaseChunk(umem.umem, ptr);
+                }
+            }
+            sendingChunkSize = 0; // reset
+        }
         xsk.completeTx();
         xsk.umem.fillUpFillRing();
     }

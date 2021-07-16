@@ -142,6 +142,13 @@ public class NativeXDP {
     @CriticalNative
     private static native boolean writePacket0(long xsk, long chunk);
 
+    public int writePackets(long xsk, int size, long[] chunkPtrs) {
+        return writePackets0(xsk, size, chunkPtrs);
+    }
+
+    @CriticalNative
+    private static native int writePackets0(long xsk, int size, long[] chunkPtrs);
+
     public void completeTx(long xsk) {
         completeTx0(xsk);
     }

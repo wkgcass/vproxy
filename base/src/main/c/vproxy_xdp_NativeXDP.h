@@ -113,6 +113,14 @@ JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_writePacket0
 
 /*
  * Class:     vproxy_xdp_NativeXDP
+ * Method:    writePackets0
+ * Signature: (JI[J)I
+ */
+JNIEXPORT jint JNICALL Java_vproxy_xdp_NativeXDP_writePackets0
+  (JNIEnv *, jclass, jlong, jint, jlongArray);
+
+/*
+ * Class:     vproxy_xdp_NativeXDP
  * Method:    completeTx0
  * Signature: (J)V
  */
