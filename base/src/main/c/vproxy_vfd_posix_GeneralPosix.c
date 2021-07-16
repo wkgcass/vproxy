@@ -1,4 +1,6 @@
+#ifdef __linux__
 #define _GNU_SOURCE
+#endif
 
 #include "vproxy_vfd_posix_GeneralPosix.h"
 #include "vfd_posix.h"
@@ -927,6 +929,7 @@ fail:
 
 JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurrentThread
   (JNIEnv* env, jobject self, jlong mask) {
+#ifdef __linux__
     // get current thread
     pthread_t current = pthread_self();
     cpu_set_t cpuset;
@@ -942,4 +945,6 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurr
         return; // succeeded
     }
     throwIOExceptionBasedOnErrno(env);
+#endif
+    throwIOException(env, "unsupported on current platform");
 }
