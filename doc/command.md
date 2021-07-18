@@ -462,6 +462,12 @@ description: A group of event loops.
 
 <br>
 
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|annotations|Extra info about the event loop group, e.g. use poll instead of epoll.|Y|{}|
+
 examples:
 
 ```
@@ -487,6 +493,21 @@ $ list event-loop-group
 ```
 $ list-detail event-loop-group
 1) "elg0"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Retrieve detailed info about all event loop groups.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail event-loop-group
+1) "elg0" -> annotations {}
 ```
 
 </details>
@@ -744,6 +765,12 @@ description: Event loop.
 
 <br>
 
+parameters:
+
+|name|description|opt|default|
+|---|---|:---:|---|
+|annotations|Extra info about the event loop, e.g. core affinity.|Y|{}|
+
 examples:
 
 ```
@@ -769,6 +796,21 @@ $ list event-loop in event-loop-group elg0
 ```
 $ list-detail event-loop in event-loop-group elg0
 1) "el0"
+```
+
+</details>
+
+##### list-detail
+
+<details><summary>Retrieve names of all event loops in a event loop group.</summary>
+
+<br>
+
+examples:
+
+```
+$ list-detail event-loop in event-loop-group elg0
+1) "el0" -> annotations {}
 ```
 
 </details>
@@ -1192,7 +1234,7 @@ parameters:
 |arp-table-timeout|Timeout for arp table (ms).|Y|14400000|
 |event-loop-group|The event loop group used for handling packets.|Y|(worker-elg)|
 |security-group|The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).|Y|(allow-all)|
-|mtu|Default mtu setting for new connected ports.|Y|1500|
+|mtu|Default mtu setting for new connected ports, or -1 to ignore this config.|Y|1500|
 |flood|Default flood setting for new connected ports.|Y|allow|
 
 examples:
@@ -1247,7 +1289,7 @@ parameters:
 |mac-table-timeout|Timeout for mac table (ms).|Y|not changed|
 |arp-table-timeout|Timeout for arp table (ms).|Y|not changed|
 |security-group|The security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected).|Y|not changed|
-|mtu|Default mtu setting for new connected ports, updating it will not affect the existing ones.|Y|not changed|
+|mtu|Default mtu setting for new connected ports, updating it will not affect the existing ones. set to -1 for ignoring this config.|Y|not changed|
 |flood|Default flood setting for new connected ports, updating it will not affect the existing ones.|Y|not changed|
 
 examples:
@@ -1437,7 +1479,7 @@ parameters:
 
 |name|description|opt|default|
 |---|---|:---:|---|
-|mtu|Mtu of this interface.|Y|1500|
+|mtu|Mtu of this interface, or -1 to ignore this config.|Y|1500|
 |flood|Whether to allow flooding traffic through this interface, allow or deny.|Y|allow|
 
 examples:
@@ -1529,7 +1571,7 @@ parameters:
 |---|---|:---:|---|
 |password|Password of the user.|||
 |vni|Vni assigned for the user.|||
-|mtu|Mtu for the user interface when the user is connected.|Y|mtu setting of the switch|
+|mtu|Mtu for the user interface when the user is connected, or -1 to ignore this config.|Y|mtu setting of the switch|
 |flood|Whether the user interface allows flooding traffic.|Y|flood setting of the switch|
 
 examples:
@@ -1581,7 +1623,7 @@ parameters:
 
 |name|description|opt|default|
 |---|---|:---:|---|
-|mtu|Mtu for the user interface when the user is connected, updating it will not affect connected ones.|Y|not changed|
+|mtu|Mtu for the user interface when the user is connected, updating it will not affect connected ones. -1 means ignoring this config.|Y|not changed|
 |flood|Whether the user interface allows flooding traffic, updating it will not affect connected ones.|Y|not changed|
 
 examples:
@@ -1626,7 +1668,7 @@ parameters:
 |---|---|:---:|---|
 |vni|Vni of the vpc which the tap device is attached to.|||
 |post-script|Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).|Y|(empty)|
-|mtu|Mtu of this tap device.|Y|mtu setting of the switch|
+|mtu|Mtu of this tap device, or -1 to ignore this config.|Y|mtu setting of the switch|
 |flood|Whether the tap device allows flooding traffic.|Y|flood setting of the switch|
 
 examples:
@@ -1672,7 +1714,7 @@ parameters:
 |vni|Vni of the vpc which the tun device is attached to.|||
 |mac|Mac address of this tun device. the switch requires l2 layer frames for handling packets.|||
 |post-script|Post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch).|Y|(empty)|
-|mtu|Mtu of this tun device.|Y|mtu setting of the switch|
+|mtu|Mtu of this tun device, or -1 to ignore this config.|Y|mtu setting of the switch|
 |flood|Whether the tun device allows flooding traffic.|Y|flood setting of the switch|
 
 examples:
@@ -1779,6 +1821,7 @@ parameters:
 |rx-ring-size|Rx ring size.|Y|2048|
 |tx-ring-size|Tx ring size.|Y|2048|
 |mode|Mode of the xsk, enum: {SKB, DRIVER}, see doc for more info.|Y|SKB|
+|busy-poll|Whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll.|Y|0|
 |vni|Vni which the iface is assigned to.|||
 |bpf-map-key|The method of determining the key of the corresponding xsk when putting into a bpf map.|Y|useQueueId|
 
@@ -1991,7 +2034,7 @@ parameters:
 |chunks|How many chunks are there in this umem.|Y|4096|
 |fill-ring-size|Size of the fill ring.|Y|2048|
 |comp-ring-size|Size of the comp ring.|Y|2048|
-|frame-size|Size of the frame, must be 2048 or 4096.|Y|4096|
+|frame-size|Size of the frame, must be 2048 or 4096.|Y|2048|
 
 examples:
 
@@ -2353,6 +2396,10 @@ description: Size of a frame.
 ### bpf-map-key
 
 description: The method of determining the key of the corresponding xsk when putting into a bpf map.
+
+### busy-poll
+
+description: A number indicating whether to enable busy poll, and may set the SO_BUSY_POLL_BUDGET as well.
 
 ## Flags
 
