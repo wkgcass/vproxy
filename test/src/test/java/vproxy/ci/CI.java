@@ -1379,6 +1379,13 @@ public class CI {
     public void defaultEventLoops() {
         List<String> ls = queryList(createReq(list_detail, "event-loop-group"));
         assertEquals(3 + 2 /*two event loop groups created in the CI test*/, ls.size());
+        { // only use names
+            List<String> newLs = new ArrayList<>();
+            for (String s : ls) {
+                newLs.add(s.split(" ")[0]);
+            }
+            ls = newLs;
+        }
         assertTrue(ls.contains(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME));
         assertTrue(ls.contains(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
         assertTrue(ls.contains(Application.DEFAULT_CONTROL_EVENT_LOOP_GROUP_NAME));
@@ -1407,11 +1414,7 @@ public class CI {
         execute(createReq(add, "tcp-lb", lbName, "address", "127.0.0.1:" + lbPort, "upstream", ups0));
         tlNames.add(lbName);
         Map<String, String> details = getDetail("tcp-lb", lbName);
-        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
-            assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
-        } else {
-            assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
-        }
+        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
 
         int socks5Port = 7002;
@@ -1419,11 +1422,7 @@ public class CI {
         execute(createReq(add, "socks5-server", socks5Name, "address", "127.0.0.1:" + socks5Port, "upstream", ups0));
         socks5Names.add(socks5Name);
         details = getDetail("tcp-lb", lbName);
-        if (ServerSock.supportReusePort() && Config.supportReusePortLB()) {
-            assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
-        } else {
-            assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
-        }
+        assertEquals(Application.DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, details.get("acceptor"));
         assertEquals(Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME, details.get("worker"));
 
         String serverGroupName = randomName("sg0");

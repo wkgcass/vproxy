@@ -1,5 +1,6 @@
 package vproxy.base.component.elgroup;
 
+import vproxy.base.component.elgroup.dummy.IEventLoopGroup;
 import vproxy.base.connection.NetEventLoop;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.*;
@@ -14,7 +15,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
 
-public class EventLoopGroup {
+public class EventLoopGroup implements IEventLoopGroup {
     public final String alias;
     public final Annotations annotations;
     private ArrayList<EventLoopWrapper> eventLoops = new ArrayList<>(0); // use array list to make code look better,
@@ -38,6 +39,7 @@ public class EventLoopGroup {
      * ========================
      */
 
+    @Override
     @ThreadSafe
     public List<EventLoopWrapper> list() {
         if (closed) {
@@ -46,6 +48,7 @@ public class EventLoopGroup {
         return new ArrayList<>(eventLoops);
     }
 
+    @Override
     @ThreadSafe
     public List<String> names() {
         if (closed) {
@@ -54,6 +57,7 @@ public class EventLoopGroup {
         return eventLoops.stream().map(el -> el.alias).collect(Collectors.toList());
     }
 
+    @Override
     @ThreadSafe
     public EventLoopWrapper get(String alias) throws NotFoundException {
         if (closed) {
@@ -67,11 +71,13 @@ public class EventLoopGroup {
         throw new NotFoundException("event-loop in event-loop-group " + this.alias, alias);
     }
 
+    @Override
     @ThreadSafe
     public synchronized void add(String alias) throws AlreadyExistException, IOException, ClosedException {
         add(alias, new Annotations());
     }
 
+    @Override
     @ThreadSafe
     public synchronized void add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
         if (closed) {
@@ -113,6 +119,7 @@ public class EventLoopGroup {
         }
     }
 
+    @Override
     @Blocking
     // closing selectorEventLoop is blocking, so this is blocking as well
     @ThreadSafe
@@ -149,6 +156,7 @@ public class EventLoopGroup {
      * ========================
      */
 
+    @Override
     @ThreadSafe
     public void attachResource(EventLoopGroupAttach resource) throws AlreadyExistException, ClosedException {
         if (closed)
@@ -158,6 +166,7 @@ public class EventLoopGroup {
         }
     }
 
+    @Override
     @ThreadSafe
     public void detachResource(EventLoopGroupAttach resource) throws NotFoundException {
         if (closed)
@@ -204,11 +213,13 @@ public class EventLoopGroup {
      * ========================
      */
 
+    @Override
     @ThreadSafe
     public EventLoopWrapper next() {
         return next(null);
     }
 
+    @Override
     @ThreadSafe
     public EventLoopWrapper next(NetEventLoop hint) {
         if (closed)
@@ -248,6 +259,7 @@ public class EventLoopGroup {
         return result;
     }
 
+    @Override
     @Blocking
     // closing selectorEventLoop is blocking, so this is blocking as well
     @ThreadSafe

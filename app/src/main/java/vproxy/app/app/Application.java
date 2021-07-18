@@ -2,6 +2,7 @@ package vproxy.app.app;
 
 import vproxy.base.Config;
 import vproxy.base.component.elgroup.EventLoopWrapper;
+import vproxy.base.component.elgroup.dummy.DelegateEventLoopGroup;
 import vproxy.base.connection.ServerSock;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.Logger;
@@ -104,7 +105,9 @@ public class Application {
         }
         if (VFDConfig.useFStack || (ServerSock.supportReusePort() && Config.supportReusePortLB())) {
             assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
-            application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME, application.eventLoopGroupHolder.map.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME));
+            application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,
+                new DelegateEventLoopGroup(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,
+                    application.eventLoopGroupHolder.map.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME)));
         } else {
             assert Logger.lowLevelDebug("create one thread for default acceptor");
             try {

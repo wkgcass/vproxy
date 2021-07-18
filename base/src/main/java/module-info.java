@@ -20,6 +20,7 @@ module vproxy.base {
     exports vproxy.base;
     exports vproxy.base.component.check;
     exports vproxy.base.component.elgroup;
+    exports vproxy.base.component.elgroup.dummy;
     exports vproxy.base.component.svrgroup;
     exports vproxy.base.connection;
     exports vproxy.base.connection.util;
