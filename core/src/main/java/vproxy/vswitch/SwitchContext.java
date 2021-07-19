@@ -10,17 +10,18 @@ import java.util.Collection;
 import java.util.function.Supplier;
 
 public class SwitchContext {
-    public SwitchContext(Switch sw,
-                         Supplier<NetworkStack> netStack,
-                         LoopRemovalStop loopRemovalStop,
-                         SendingPacket sendPacketFunc,
-                         GetIfaces getIfacesFunc,
-                         GetTable getTableFunc,
-                         GetUserInfo getUserInfo,
-                         GetSelectorEventLoop getSelectorEventLoopFunc,
-                         AlertPacketsArrive alertPacketsArriveFunc,
-                         DestroyIface destroyIfaceFunc,
-                         InitIface initIfaceFunc) {
+    SwitchContext(Switch sw,
+                  Supplier<NetworkStack> netStack,
+                  LoopRemovalStop loopRemovalStop,
+                  SendingPacket sendPacketFunc,
+                  GetIfaces getIfacesFunc,
+                  GetTable getTableFunc,
+                  GetUserInfo getUserInfo,
+                  GetSelectorEventLoop getSelectorEventLoopFunc,
+                  AlertPacketsArrive alertPacketsArriveFunc,
+                  DestroyIface destroyIfaceFunc,
+                  InitIface initIfaceFunc,
+                  RecordIface recordIfaceFunc) {
         this.sw = sw;
         this.netStack = netStack;
         this.loopRemovalStopFunc = loopRemovalStop;
@@ -32,6 +33,7 @@ public class SwitchContext {
         this.alertPacketsArriveFunc = alertPacketsArriveFunc;
         this.destroyIfaceFunc = destroyIfaceFunc;
         this.initIfaceFunc = initIfaceFunc;
+        this.recordIfaceFunc = recordIfaceFunc;
     }
 
     public final Switch sw;
@@ -125,5 +127,15 @@ public class SwitchContext {
 
     public void alertPacketsArrive(CursorList<PacketBuffer> pkb) {
         alertPacketsArriveFunc.alertPacketsArrive(pkb);
+    }
+
+    public interface RecordIface {
+        void recordIface(Iface iface);
+    }
+
+    private final RecordIface recordIfaceFunc;
+
+    public void recordIface(Iface iface) {
+        recordIfaceFunc.recordIface(iface);
     }
 }

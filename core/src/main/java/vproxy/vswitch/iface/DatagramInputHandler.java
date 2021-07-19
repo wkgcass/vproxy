@@ -141,6 +141,8 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
             if (packet.getType() == Consts.VPROXY_SWITCH_TYPE_PING) {
                 assert Logger.lowLevelDebug("is vproxy ping message, do reply");
                 sendPingTo(uiface);
+                // should reset timeout
+                swCtx.recordIface(uiface); // use record iface to reset the timer
                 return null;
             }
 

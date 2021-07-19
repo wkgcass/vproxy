@@ -74,7 +74,8 @@ public class Switch {
         () -> eventLoop.getSelectorEventLoop(),
         this::onIfacePacketsArrive,
         this::utilRemoveIface,
-        this::initIface
+        this::initIface,
+        this::recordIface
     );
     private final NetworkStack netStack = new NetworkStack(swCtx);
 
