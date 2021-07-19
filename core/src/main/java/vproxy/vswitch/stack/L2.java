@@ -238,7 +238,16 @@ public class L2 {
         if (dst.isUnicast()) {
             assert Logger.lowLevelDebug("packet is unicast");
 
-            // for unicast, we first search whether we have virtual hosts can accept the packet
+            // for unicast, we first check whether we can forward this packet out
+            Iface iface = pkb.table.macTable.lookup(dst);
+            if (iface != null) {
+                sendPacket(pkb, iface);
+                return;
+            }
+
+            assert Logger.lowLevelDebug("dst not recorded in mac table");
+
+            // then we search whether we have virtual hosts can accept the packet
 
             var ips = pkb.table.ips.lookupByMac(dst);
             if (ips != null) {
@@ -250,15 +259,6 @@ public class L2 {
             }
 
             assert Logger.lowLevelDebug("no synthetic ip found");
-            // then we check whether we can forward this packet out
-
-            Iface iface = pkb.table.macTable.lookup(dst);
-            if (iface != null) {
-                sendPacket(pkb, iface);
-                return;
-            }
-
-            assert Logger.lowLevelDebug("dst not recorded in mac table");
             // the packet will be dropped
 
         } else {

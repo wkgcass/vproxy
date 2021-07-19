@@ -24,6 +24,7 @@ import vproxy.dns.DNSServer;
 import vproxy.vmirror.Mirror;
 import vproxy.vswitch.RouteTable;
 import vproxy.vswitch.Switch;
+import vproxy.vswitch.Table;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.util.UserInfo;
 import vproxy.xdp.BPFObject;
@@ -705,19 +706,19 @@ public class Shutdown {
                     commands.add(cmd);
                 }
                 // create vpc
-                for (var entry : sw.getTables().entrySet()) {
-                    int vpc = entry.getKey();
-                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + entry.getValue().v4network;
-                    if (entry.getValue().v6network != null) {
-                        cmd += " v6network " + entry.getValue().v6network;
+                for (var key : sw.getTables().keySet()) {
+                    int vpc = key;
+                    Table table = sw.getTables().get(vpc);
+                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + table.v4network;
+                    if (table.v6network != null) {
+                        cmd += " v6network " + table.v6network;
                     }
-                    var anno = entry.getValue().getAnnotations();
+                    var anno = table.getAnnotations();
                     if (!anno.isEmpty()) {
                         cmd += " annotations " + anno;
                     }
                     commands.add(cmd);
 
-                    var table = entry.getValue();
                     // create ips
                     for (var ipmac : table.ips.entries()) {
                         cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ipmac.mac;

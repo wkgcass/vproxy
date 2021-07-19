@@ -2,10 +2,7 @@ package vproxy.app.controller;
 
 import vproxy.app.app.Application;
 import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.util.AnnotationKeys;
-import vproxy.base.util.Annotations;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Network;
+import vproxy.base.util.*;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vfd.*;
@@ -122,7 +119,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         // handle
         var sw = ensureSwitch();
-        Map<Integer, Table> tables = sw.getTables();
+        IntMap<Table> tables = sw.getTables();
         int n = 0;
         for (int i : tables.keySet()) {
             if (n < i) {
@@ -192,8 +189,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
     private Table findNetwork(Switch sw, String networkId) throws Exception {
         var tables = sw.getTables();
-        for (var entry : tables.entrySet()) {
-            var tbl = entry.getValue();
+        for (var tbl : tables.values()) {
             var netId = tbl.getAnnotations().other.get(TABLE_NETWORK_ID_ANNOTATION);
             if (netId != null && netId.equals(networkId)) {
                 return tbl;

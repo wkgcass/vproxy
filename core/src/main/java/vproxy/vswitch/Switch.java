@@ -33,7 +33,6 @@ import vproxy.xdp.UMem;
 
 import java.io.IOException;
 import java.util.*;
-import java.util.concurrent.ConcurrentHashMap;
 
 public class Switch {
     public final String alias;
@@ -54,10 +53,10 @@ public class Switch {
 
     private final Map<String, UserInfo> users = new HashMap<>();
     private DatagramFD sock;
-    private final Map<Integer, Table> tables = new ConcurrentHashMap<>();
+    private final IntMap<Table> tables = new IntMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
-    private final Map<String, UMem> umems = new ConcurrentHashMap<>();
+    private final Map<String, UMem> umems = new HashMap<>();
 
     private final SwitchContext swCtx = new SwitchContext(
         this,
@@ -243,7 +242,7 @@ public class Switch {
         }
     }
 
-    public Map<Integer, Table> getTables() {
+    public IntMap<Table> getTables() {
         return tables;
     }
 
@@ -262,7 +261,7 @@ public class Switch {
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        return tables.computeIfAbsent(vni, n -> new Table(n, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
+        return tables.put(vni, new Table(vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations));
     }
 
     public void delTable(int vni) throws NotFoundException {

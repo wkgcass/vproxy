@@ -1,5 +1,6 @@
 package vproxy.base.util;
 
+import vproxy.base.Config;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.selector.TimerEvent;
 import vproxy.vfd.FDProvider;
@@ -15,12 +16,28 @@ public class Timer {
         this.timeout = timeout;
     }
 
+    protected long currentTimeMillis() {
+        return Config.currentTimestamp;
+    }
+
     public void resetTimer() {
-        if (timer != null) {
-            timer.cancel();
+        if (timeout == -1) {
+            throw new IllegalArgumentException("timeout is not valid");
         }
-        lastStart = FDProvider.get().currentTimeMillis();
-        timer = loop.delay(timeout, this::cancel);
+        lastStart = currentTimeMillis();
+        if (timer == null) {
+            timer = loop.delay(timeout, this::checkAndCancel);
+        }
+    }
+
+    private void checkAndCancel() {
+        long current = currentTimeMillis();
+        if (current - lastStart > timeout) {
+            cancel();
+            return;
+        }
+        long timeLeft = timeout - (current - lastStart);
+        timer = loop.delay((int) timeLeft, this::checkAndCancel);
     }
 
     public void cancel() {
@@ -32,6 +49,9 @@ public class Timer {
     }
 
     public void setTimeout(int timeout) {
+        if (this.timeout == timeout) {
+            return; // not changed
+        }
         this.timeout = timeout;
         if (lastStart == -1) { // not started yet
             return;
@@ -53,7 +73,7 @@ public class Timer {
         }
         long nextDelay = lastStart + timeout - current;
         lastStart = current;
-        timer = loop.delay((int) nextDelay, this::cancel);
+        timer = loop.delay((int) nextDelay, this::checkAndCancel);
     }
 
     public int getTimeout() {

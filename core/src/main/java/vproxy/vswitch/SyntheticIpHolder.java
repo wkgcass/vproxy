@@ -1,7 +1,6 @@
 package vproxy.vswitch;
 
 import vproxy.base.util.Annotations;
-import vproxy.base.util.ConcurrentHashSet;
 import vproxy.base.util.Network;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
@@ -10,16 +9,14 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.MacAddress;
 
-import java.util.Collection;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
+import java.util.*;
 import java.util.stream.Collectors;
 
 public class SyntheticIpHolder {
     private final Network allowedV4Network;
     private final Network allowedV6Network;
-    private final ConcurrentHashMap<IP, IPMac> ipMap = new ConcurrentHashMap<>();
-    private final ConcurrentHashMap<MacAddress, Set<IPMac>> macMap = new ConcurrentHashMap<>();
+    private final Map<IP, IPMac> ipMap = new HashMap<>();
+    private final Map<MacAddress, Set<IPMac>> macMap = new HashMap<>();
 
     public SyntheticIpHolder(Table table) {
         allowedV4Network = table.v4network;
@@ -78,7 +75,7 @@ public class SyntheticIpHolder {
         if (oldInfo != null) {
             throw new AlreadyExistException("synthetic ip " + ip.formatToIPString() + " already exists in the requested switch");
         }
-        var set = macMap.computeIfAbsent(mac, m -> new ConcurrentHashSet<>());
+        var set = macMap.computeIfAbsent(mac, m -> new HashSet<>());
         set.add(info);
     }
 
