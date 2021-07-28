@@ -10,12 +10,16 @@ import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
 import vproxy.vswitch.PacketBuffer;
+import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.iface.LocalSideVniGetterSetter;
 import vproxy.vswitch.iface.RemoteSideVniGetterSetter;
+import vproxy.vswitch.plugin.FilterResult;
+import vproxy.vswitch.plugin.PacketFilter;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.List;
 import java.util.concurrent.TimeUnit;
 
 public class SwitchUtils {
@@ -273,5 +277,15 @@ public class SwitchUtils {
         ether.setPacket(ipPkt);
 
         return ether;
+    }
+
+    public static FilterResult applyFilters(List<PacketFilter> filters, SwitchContext swCtx, PacketBuffer pkb) {
+        for (var filter : filters) {
+            var res = filter.handle(swCtx, pkb);
+            if (res != FilterResult.PASS) {
+                return res;
+            }
+        }
+        return FilterResult.PASS;
     }
 }

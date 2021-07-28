@@ -46,7 +46,7 @@ public class Switch {
     public int defaultMtu;
     public boolean defaultFloodAllowed;
 
-    private IfaceWatcher ifaceWatcher;
+    private final List<IfaceWatcher> ifaceWatchers = new LinkedList<>();
 
     private boolean started = false;
     private boolean wantStart = false;
@@ -659,12 +659,12 @@ public class Switch {
         assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
 
         // handle it by packet filter
-        var egressFilter = iface.getEgressFilter();
-        if (egressFilter == null) {
+        var egressFilters = iface.getEgressFilter();
+        if (egressFilters.isEmpty()) {
             assert Logger.lowLevelDebug("no egress filter on " + iface);
         } else {
-            assert Logger.lowLevelDebug("run egress filter " + egressFilter + " on " + pkb);
-            var res = egressFilter.handle(swCtx, pkb);
+            assert Logger.lowLevelDebug("run egress filters " + egressFilters + " on " + pkb);
+            var res = SwitchUtils.applyFilters(egressFilters, swCtx, pkb);
             if (res != FilterResult.PASS) {
                 handleEgressFilterResult(pkb, res);
                 return;
@@ -774,13 +774,13 @@ public class Switch {
         assert pkb.pkt != null;
 
         // handle it by packet filter
-        var ingressFilter = pkb.devin.getIngressFilter();
-        if (ingressFilter == null) {
+        var ingressFilters = pkb.devin.getIngressFilter();
+        if (ingressFilters.isEmpty()) {
             assert Logger.lowLevelDebug("no ingress filter on " + pkb.devin);
         } else {
-            assert Logger.lowLevelDebug("run ingress filter " + ingressFilter + " on " + pkb);
+            assert Logger.lowLevelDebug("run ingress filters " + ingressFilters + " on " + pkb);
             var fullbufBackup = pkb.fullbuf;
-            var res = ingressFilter.handle(swCtx, pkb);
+            var res = SwitchUtils.applyFilters(ingressFilters, swCtx, pkb);
             if (res != FilterResult.PASS) {
                 handleIngressFilterResult(fullbufBackup, pkb, res);
                 return;
@@ -938,8 +938,8 @@ public class Switch {
     };
 
     private void ifaceAdded(Iface iface) {
-        var watcher = this.ifaceWatcher;
-        if (watcher != null) {
+        var watchers = this.ifaceWatchers;
+        for (var watcher : watchers) {
             watcher.ifaceAdded(iface);
         }
     }
@@ -957,28 +957,31 @@ public class Switch {
 
         iface.destroy();
 
-        var watcher = this.ifaceWatcher;
-        if (watcher != null) {
+        var watchers = this.ifaceWatchers;
+        for (var watcher : watchers) {
             watcher.ifaceRemoved(iface);
         }
     }
 
-    public IfaceWatcher getIfaceWatcher() {
-        return ifaceWatcher;
+    public List<IfaceWatcher> getIfaceWatchers() {
+        return ifaceWatchers;
     }
 
-    public boolean replaceIfaceWatcher(IfaceWatcher old, IfaceWatcher now) {
-        var foo = this.ifaceWatcher;
-        if (foo != old) {
+    public boolean addIfaceWatcher(IfaceWatcher watcher) {
+        if (ifaceWatchers.contains(watcher)) {
             return false;
         }
-        this.ifaceWatcher = now;
+        this.ifaceWatchers.add(watcher);
 
         // init with existing ifaces
         for (var iface : ifaces.keySet()) {
-            now.ifaceAdded(iface);
+            watcher.ifaceAdded(iface);
         }
         return true;
+    }
+
+    public boolean removeIfaceWatcher(IfaceWatcher watcher) {
+        return ifaceWatchers.remove(watcher);
     }
 
     private class SwitchEventLoopGroupAttach implements EventLoopGroupAttach {

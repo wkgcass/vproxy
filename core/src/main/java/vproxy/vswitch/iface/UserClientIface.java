@@ -20,7 +20,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface implements Iface, IfaceCanSendVProxyPacket {
+public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface implements IfaceCanSendVProxyPacket {
     public final UserInfo user;
     private final Aes256Key key;
 

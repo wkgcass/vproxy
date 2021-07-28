@@ -10,7 +10,7 @@ import vproxy.vswitch.util.SwitchUtils;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 
-public abstract class AbstractBaseSwitchSocketIface extends AbstractIface implements Iface {
+public abstract class AbstractBaseSwitchSocketIface extends Iface {
     protected DatagramFD sock;
     protected boolean sockConnected = false; // default sock is the server sock in switch, so it's not connected
     public final IPPort remote;

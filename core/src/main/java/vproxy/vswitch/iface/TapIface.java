@@ -15,7 +15,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class TapIface extends AbstractIface implements Iface {
+public class TapIface extends Iface {
     public final String devPattern;
     private TapDatagramFD tap;
     public final int localSideVni;

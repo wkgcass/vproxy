@@ -6,7 +6,7 @@ import vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 
-public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface implements Iface {
+public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface {
     public final String alias;
     public final IPPort udpSockAddress;
     public final boolean addSwitchFlag;

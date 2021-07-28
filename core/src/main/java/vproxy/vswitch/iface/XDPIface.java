@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.List;
 
-public class XDPIface extends AbstractIface implements Iface {
+public class XDPIface extends Iface {
     public final String alias;
     public final String nic;
     public final BPFMap bpfMap;

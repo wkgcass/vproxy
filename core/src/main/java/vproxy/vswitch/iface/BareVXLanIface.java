@@ -5,7 +5,7 @@ import vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 
-public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Iface, LocalSideVniGetterSetter {
+public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements LocalSideVniGetterSetter {
     public final IPPort udpSockAddress; // remote vxlan address
     private int localSideVni;
 

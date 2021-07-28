@@ -1,39 +1,96 @@
 package vproxy.vswitch.iface;
 
+import vproxy.base.util.objectpool.CursorList;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
 
-public interface Iface {
-    void init(IfaceInitParams params) throws Exception;
+import java.util.LinkedList;
+import java.util.List;
 
-    void sendPacket(PacketBuffer pkb);
+public abstract class Iface {
+    private int baseMTU;
+    private boolean floodAllowed;
+    protected IfaceInitParams.PacketCallback callback;
+    private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
+    private final List<PacketFilter> ingressFilters = new LinkedList<>();
+    private final List<PacketFilter> egressFilters = new LinkedList<>();
 
-    void destroy();
+    protected Iface() {
+    }
 
-    PacketBuffer pollPacket(); // nullable
+    public void init(IfaceInitParams params) throws Exception {
+        this.callback = params.callback;
+    }
 
-    int getLocalSideVni(int hint);
+    public abstract void sendPacket(PacketBuffer pkb);
 
-    int getOverhead();
+    public void completeTx() { // default do nothing
+    }
 
-    int getBaseMTU();
+    public abstract void destroy();
 
-    void setBaseMTU(int baseMTU);
+    public abstract int getLocalSideVni(int hint);
 
-    boolean isFloodAllowed();
+    public abstract int getOverhead();
 
-    void setFloodAllowed(boolean floodAllowed);
+    public final int getBaseMTU() {
+        return baseMTU;
+    }
 
-    String paramsToString();
+    public final void setBaseMTU(int baseMTU) {
+        this.baseMTU = baseMTU;
+    }
 
-    boolean replaceIngressFilter(PacketFilter old, PacketFilter now);
+    public final boolean isFloodAllowed() {
+        return floodAllowed;
+    }
 
-    PacketFilter getIngressFilter();
+    public final void setFloodAllowed(boolean floodAllowed) {
+        this.floodAllowed = floodAllowed;
+    }
 
-    boolean replaceEgressFilter(PacketFilter old, PacketFilter now);
+    public final PacketBuffer pollPacket() {
+        if (rcvQ.isEmpty()) return null;
+        return rcvQ.remove(rcvQ.size() - 1);
+    }
 
-    PacketFilter getEgressFilter();
+    public final boolean addIngressFilter(PacketFilter filter) {
+        if (ingressFilters.contains(filter)) {
+            return false;
+        }
+        ingressFilters.add(filter);
+        return true;
+    }
 
-    default void completeTx() { // default do nothing
+    public final boolean removeIngressFilter(PacketFilter filter) {
+        return ingressFilters.remove(filter);
+    }
+
+    public final List<PacketFilter> getIngressFilter() {
+        return ingressFilters;
+    }
+
+    public final boolean addEgressFilter(PacketFilter filter) {
+        if (egressFilters.contains(filter)) {
+            return false;
+        }
+        this.egressFilters.add(filter);
+        return true;
+    }
+
+    public final boolean removeEgressFilter(PacketFilter filter) {
+        return egressFilters.remove(filter);
+    }
+
+    public final List<PacketFilter> getEgressFilter() {
+        return egressFilters;
+    }
+
+    protected final void received(PacketBuffer pkb) {
+        rcvQ.add(pkb);
+    }
+
+    public final String paramsToString() {
+        return "mtu " + baseMTU + " flood " + (floodAllowed ? "allow" : "deny");
     }
 }

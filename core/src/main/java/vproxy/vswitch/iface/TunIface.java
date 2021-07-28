@@ -16,7 +16,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.util.Objects;
 
-public class TunIface extends AbstractIface implements Iface {
+public class TunIface extends Iface {
     private final ByteArray icmpPingPayloadPrefix = ByteArray.from("vpsrtunarp");
     private final ByteArray icmpPingPayloadPlaceHolder = ByteArray.from("macadd"); // 6 bytes mac of the original req pkt
     private final ByteArray icmpPingOtherPart = ByteArray.from("id").concat(ByteArray.from(0, 0))
