@@ -1339,7 +1339,7 @@ public class HelpCommand {
         xdp("xdp", null, "xdp socket, which is able to intercept packets from a net dev. " +
             "Note: 1) use list iface to see the xdp sockets/interfaces, " +
             "2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
-            "3) make sure your kernel supports xdp, recommend kernel version >= 5.4. " +
+            "3) make sure your kernel supports xdp, recommend kernel version >= 5.10. " +
             "See also `umem`, `bpf-object`. Check doc for more info",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
