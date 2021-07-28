@@ -945,6 +945,7 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_setCoreAffinityForCurr
         return; // succeeded
     }
     throwIOExceptionBasedOnErrno(env);
-#endif
+#else
     throwIOException(env, "unsupported on current platform");
+#endif
 }
