@@ -788,6 +788,12 @@ public class Switch {
             assert Logger.lowLevelDebug("the filter returns pass");
         }
 
+        // drop packets with vlan tag
+        if (pkb.pkt instanceof EthernetPacket && ((EthernetPacket) pkb.pkt).getVlan() >= 0) {
+            assert Logger.lowLevelDebug("vlan packets are dropped");
+            return;
+        }
+
         // mirror the packet
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);

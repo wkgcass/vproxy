@@ -20,7 +20,8 @@ public class ArpPacket extends AbstractPacket {
     private ByteArray targetIp;
 
     @Override
-    public String from(ByteArray bytes) {
+    public String from(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 2) {
             return "input packet length too short for an arp packet: no hardwareType found";
         }
@@ -64,13 +65,13 @@ public class ArpPacket extends AbstractPacket {
             if (Utils.allZerosAfter(bytes, expectedTotalLen)) {
                 assert Logger.lowLevelDebug("received arp packet has extra bytes, " +
                     "but all bytes are 0, consider them as padding");
-                bytes = bytes.sub(0, expectedTotalLen);
+                raw = raw.sub(0, expectedTotalLen);
             } else {
                 return "input packet has extra bytes for an arp packet: " + (bytes.length() - expectedTotalLen) + " bytes";
             }
         }
 
-        raw = bytes;
+        this.raw = raw;
         return null;
     }
 

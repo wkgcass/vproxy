@@ -8,8 +8,10 @@ import vproxy.vpacket.conntrack.tcp.TcpEntry;
 import vproxy.vswitch.iface.Iface;
 
 import java.util.Collection;
+import java.util.HashMap;
+import java.util.Map;
 
-public class PacketBuffer {
+public class PacketBuffer extends PacketDataBuffer {
     public static final int FLAG_VXLAN = 0x00000001;
     public static final int FLAG_IP = 0x00000004;
 
@@ -43,12 +45,6 @@ public class PacketBuffer {
     public Table table; // might be null
     public int flags;
 
-    // ----- buffer -----
-    public ByteArray fullbuf;
-    public int pktOff; // packet offset
-    public int pad; // padding length after the end of the packet
-    public ByteArray pktBuf; // sub buffer of buf
-
     // ----- packet -----
     public VXLanPacket vxlan;
     public AbstractEthernetPacket pkt; // not null if it's an input packet
@@ -67,48 +63,35 @@ public class PacketBuffer {
     public Iface devredirect; // the dev to redirect to
     public boolean reinput; // set to true to input the packet again
 
+    // ----- extra -----
+    private Map<Object, Object> userdata;
+
+    // fromVXLanBytes
     private PacketBuffer(Iface devin, ByteArray fullbuf, int pktOff, int pad) {
+        super(fullbuf, pktOff, pad);
         this.devin = devin;
         this.flags = FLAG_VXLAN;
-        this.fullbuf = fullbuf;
-        this.pktOff = pktOff;
-        this.pad = pad;
-        if (pktOff == 0 && pad == 0) {
-            this.pktBuf = fullbuf;
-        } else {
-            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
-        }
     }
 
+    // fromEtherBytes
     private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad) {
+        super(fullbuf, pktOff, pad);
         this.devin = devin;
         this.vni = vni;
         this.flags = 0;
-        this.fullbuf = fullbuf;
-        this.pktOff = pktOff;
-        this.pad = pad;
-        if (pktOff == 0 && pad == 0) {
-            this.pktBuf = fullbuf;
-        } else {
-            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
-        }
     }
 
+    // fromIpBytes
     private PacketBuffer(Iface devin, int vni, ByteArray fullbuf, int pktOff, int pad, int flags) {
+        super(fullbuf, pktOff, pad);
         this.devin = devin;
         this.vni = vni;
         this.flags = flags;
-        this.fullbuf = fullbuf;
-        this.pktOff = pktOff;
-        this.pad = pad;
-        if (pktOff == 0 && pad == 0) {
-            this.pktBuf = fullbuf;
-        } else {
-            this.pktBuf = fullbuf.sub(pktOff, fullbuf.length() - pad - pktOff);
-        }
     }
 
+    // fromPacket(VXLanPacket)
     private PacketBuffer(VXLanPacket pkt) {
+        super(null);
         this.devin = null;
         this.vni = pkt.getVni();
         this.flags = FLAG_VXLAN;
@@ -116,7 +99,9 @@ public class PacketBuffer {
         initPackets(true, false, false);
     }
 
+    // fromPacket(Table, AbstractEthernetPacket)
     private PacketBuffer(Table table, AbstractEthernetPacket pkt) {
+        super(null);
         this.devin = null;
         this.vni = table.vni;
         this.table = table;
@@ -125,7 +110,9 @@ public class PacketBuffer {
         initPackets(false, true, false);
     }
 
+    // fromPacket(Table, AbstractIpPacket)
     private PacketBuffer(Table table, AbstractIpPacket pkt) {
+        super(null);
         this.devin = null;
         this.vni = table.vni;
         this.table = table;
@@ -140,7 +127,7 @@ public class PacketBuffer {
         String err;
         if ((flags & FLAG_VXLAN) == FLAG_VXLAN) {
             var vxlan = new VXLanPacket();
-            err = vxlan.from(pktBuf, true);
+            err = vxlan.from(this, true);
             pkt = vxlan;
         } else if ((flags & FLAG_IP) == FLAG_IP) {
             byte b0 = pktBuf.get(0);
@@ -152,10 +139,10 @@ public class PacketBuffer {
             } else {
                 return "receiving packet with unknown ip version: " + version;
             }
-            err = pkt.from(pktBuf);
+            err = pkt.from(this);
         } else {
             var ether = new EthernetPacket();
-            err = ether.from(pktBuf, true);
+            err = ether.from(this, true);
             pkt = ether;
         }
         if (err != null) {
@@ -173,13 +160,6 @@ public class PacketBuffer {
             initPackets(false, true, false);
         }
         return null;
-    }
-
-    public void clearBuffers() {
-        this.fullbuf = null;
-        this.pktOff = 0;
-        this.pad = 0;
-        this.pktBuf = null;
     }
 
     public void clearHelperFields() {
@@ -292,6 +272,27 @@ public class PacketBuffer {
         }
         assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");
         return true;
+    }
+
+    public Object getUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.get(key);
+    }
+
+    public Object putUserData(Object key, Object value) {
+        if (userdata == null) {
+            userdata = new HashMap<>();
+        }
+        return userdata.put(key, value);
+    }
+
+    public Object removeUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.remove(key);
     }
 
     @Override

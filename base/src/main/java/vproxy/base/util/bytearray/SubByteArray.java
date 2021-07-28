@@ -5,9 +5,9 @@ import vproxy.base.util.ByteArray;
 import java.nio.ByteBuffer;
 
 public class SubByteArray extends AbstractByteArray implements ByteArray {
-    private final ByteArray source;
-    private final int from;
-    private final int len;
+    public final ByteArray source;
+    public final int from;
+    public final int len;
 
     private SubByteArray(ByteArray source, int from, int len) {
         this.source = source;

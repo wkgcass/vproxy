@@ -116,7 +116,7 @@ public class TestPacket {
         p.clearRawPacket();
         ByteArray bytes = p.getRawPacket();
         T p2 = constructor.get();
-        String err = p2.from(bytes);
+        String err = p2.from(new PacketDataBuffer(bytes));
         assertNull(err);
         assertEquals(p, p2);
         System.out.println("expect: " + p);
@@ -145,7 +145,7 @@ public class TestPacket {
             0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69
         );
         Ipv4Packet ipv4 = new Ipv4Packet();
-        String err = ipv4.from(bytes);
+        String err = ipv4.from(new PacketDataBuffer(bytes));
         assertNull(err);
         assertTrue(ipv4.getPacket() instanceof IcmpPacket);
         ipv4.getPacket().clearRawPacket();
@@ -180,7 +180,7 @@ public class TestPacket {
             0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69
         );
         Ipv6Packet ipv6 = new Ipv6Packet();
-        String err = ipv6.from(bytes);
+        String err = ipv6.from(new PacketDataBuffer(bytes));
         assertNull(err);
         assertTrue(ipv6.getPacket() instanceof IcmpPacket);
         ipv6.getPacket().clearRawPacket();
@@ -260,7 +260,7 @@ public class TestPacket {
         );
 
         EthernetPacket ether = new EthernetPacket();
-        String err = ether.from(bytes);
+        String err = ether.from(new PacketDataBuffer(bytes));
         assertNull(err);
 
         check(ether, EthernetPacket::new);
@@ -326,7 +326,7 @@ public class TestPacket {
         ByteArray bytes = header.concat(dataPart);
 
         EthernetPacket ether = new EthernetPacket();
-        String err = ether.from(bytes);
+        String err = ether.from(new PacketDataBuffer(bytes));
         assertNull(err);
 
         check(ether, EthernetPacket::new);

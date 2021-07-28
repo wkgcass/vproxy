@@ -9,6 +9,7 @@ import vproxy.vfd.EventSet;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.IcmpPacket;
 import vproxy.vpacket.Ipv6Packet;
+import vproxy.vpacket.PacketDataBuffer;
 import vproxy.xdp.*;
 
 import java.util.List;
@@ -48,7 +49,7 @@ public class XDPPoc {
                     Logger.printBytes(arr.toJavaArray());
 
                     EthernetPacket pkt = new EthernetPacket();
-                    String err = pkt.from(arr);
+                    String err = pkt.from(new PacketDataBuffer(arr));
                     if (err != null) {
                         Logger.alert("received invalid packet: " + err);
                         chunk.releaseRef(umem);

@@ -161,7 +161,8 @@ public class TcpPacket extends AbstractPacket {
     }
 
     @Override
-    public String from(ByteArray bytes) {
+    public String from(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 20) {
             return "input packet length too short for a tcp packet";
         }
@@ -224,7 +225,7 @@ public class TcpPacket extends AbstractPacket {
             }
         }
 
-        raw = bytes;
+        this.raw = raw;
         return null;
     }
 
@@ -338,18 +339,18 @@ public class TcpPacket extends AbstractPacket {
         common.int16(16, checksum);
 
         // done
-        this.raw = common;
+        this.raw = new PacketDataBuffer(common);
         return common;
     }
 
     protected void updateChecksumWithIPv4(Ipv4Packet ipv4) {
-        raw.int16(16, 0);
-        var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, raw.length());
-        var toCalculate = pseudo.concat(raw);
+        raw.pktBuf.int16(16, 0);
+        var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, raw.pktBuf.length());
+        var toCalculate = pseudo.concat(raw.pktBuf);
         var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
         checksum = cksum;
-        raw.int16(16, cksum);
+        raw.pktBuf.int16(16, cksum);
     }
 
     public ByteArray buildIPv6TcpPacket(Ipv6Packet ipv6) {
@@ -363,18 +364,18 @@ public class TcpPacket extends AbstractPacket {
         common.int16(16, checksum);
 
         // done
-        this.raw = common;
+        this.raw = new PacketDataBuffer(common);
         return common;
     }
 
     protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
-        raw.int16(16, 0);
-        var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, raw.length());
-        var toCalculate = pseudo.concat(raw);
+        raw.pktBuf.int16(16, 0);
+        var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, raw.pktBuf.length());
+        var toCalculate = pseudo.concat(raw.pktBuf);
         var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
         checksum = cksum;
-        raw.int16(16, cksum);
+        raw.pktBuf.int16(16, cksum);
     }
 
     public static class TcpOption extends AbstractPacket {
@@ -419,7 +420,7 @@ public class TcpPacket extends AbstractPacket {
             } else if (raw != null) {
                 clearChecksum();
                 for (int i = 0; i < data.length(); ++i) {
-                    raw.set(2 + i, data.get(i));
+                    raw.pktBuf.set(2 + i, data.get(i));
                 }
             }
             this.data = data;
@@ -450,6 +451,10 @@ public class TcpPacket extends AbstractPacket {
         }
 
         @Override
+        public String from(PacketDataBuffer raw) {
+            throw new UnsupportedOperationException("use from(ByteArray) instead");
+        }
+
         public String from(ByteArray bytes) {
             kind = bytes.get(0);
             if (CASE_1_OPTION_KINDS[kind]) {
@@ -466,7 +471,7 @@ public class TcpPacket extends AbstractPacket {
                 return err;
             }
 
-            raw = bytes;
+            raw = new PacketDataBuffer(bytes);
             return null;
         }
 

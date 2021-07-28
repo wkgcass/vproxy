@@ -7,6 +7,7 @@ import vproxy.vfd.FDs;
 import vproxy.vfd.FDsWithTap;
 import vproxy.vfd.TapDatagramFD;
 import vproxy.vpacket.EthernetPacket;
+import vproxy.vpacket.PacketDataBuffer;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -30,6 +31,7 @@ public class TapDevice {
                 n = fd.read(buf);
             } catch (IOException e) {
                 if ("Input/output error".equals(e.getMessage())) {
+                    //noinspection BusyWait
                     Thread.sleep(1000);
                     continue;
                 }
@@ -38,7 +40,7 @@ public class TapDevice {
             System.out.println("read " + n + " bytes from " + fd);
             ByteArray bytes = ByteArray.from(buf.array()).sub(0, n);
             EthernetPacket packet = new EthernetPacket();
-            String err = packet.from(bytes);
+            String err = packet.from(new PacketDataBuffer(bytes));
             if (err != null) {
                 System.out.println("got error when parsing the packet: " + err);
             } else {

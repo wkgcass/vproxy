@@ -9,8 +9,8 @@ public class PacketBytes extends AbstractPacket {
     private ByteArray bytes;
 
     @Override
-    public String from(ByteArray bytes) {
-        this.bytes = bytes;
+    public String from(PacketDataBuffer raw) {
+        this.bytes = raw.pktBuf;
         return null;
     }
 

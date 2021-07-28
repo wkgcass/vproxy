@@ -23,13 +23,13 @@ public class Ipv6Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
-    public String readIPProto(ByteArray bytes) {
-        if (bytes.length() < 40) {
+    public String readIPProto(PacketDataBuffer raw) {
+        if (raw.pktBuf.length() < 40) {
             return "input packet length too short for an ipv6 packet";
         }
-        nextHeader = bytes.uint8(6);
+        nextHeader = raw.pktBuf.uint8(6);
         if (Consts.IPv6_needs_next_header.contains(nextHeader)) {
-            return from(bytes); // must run a full load to ensure the upper level packet is parsed
+            return from(raw); // must run a full load to ensure the upper level packet is parsed
         } else {
             initUpperLayerPacket(nextHeader);
         }
@@ -37,12 +37,13 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     @Override
-    public String from(ByteArray bytes) {
-        return from(bytes, true);
+    public String from(PacketDataBuffer raw) {
+        return from(raw, true);
     }
 
-    public String from(ByteArray bytes, boolean mustParse) {
-        if (bytes == raw /* the same byte array */ && packet != null /* already parsed */ && !mustParse) {
+    public String from(PacketDataBuffer raw, boolean mustParse) {
+        ByteArray bytes = raw.pktBuf;
+        if (raw == this.raw /* the same byte array */ && packet != null /* already parsed */ && !mustParse) {
             return null;
         }
 
@@ -71,7 +72,8 @@ public class Ipv6Packet extends AbstractIpPacket {
         }
         if (40 + payloadLength < bytes.length()) {
             assert Logger.lowLevelDebug("ipv6 packet is cut shorter from " + bytes.length() + " to " + (40 + payloadLength));
-            bytes = bytes.sub(0, 40 + payloadLength);
+            setPktBufLen(raw, 40 + payloadLength);
+            bytes = raw.pktBuf;
         } else if (40 + payloadLength > bytes.length()) {
             return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
         }
@@ -105,13 +107,13 @@ public class Ipv6Packet extends AbstractIpPacket {
             }
         }
 
-        ByteArray bytesForPacket = bytes.sub(40 + skipLengthForExtHeaders, bytes.length() - 40 - skipLengthForExtHeaders);
+        PacketDataBuffer bytesForPacket = raw.sub(40 + skipLengthForExtHeaders, bytes.length() - 40 - skipLengthForExtHeaders);
         int protocol = nextHeader;
         if (!extHeaders.isEmpty()) {
             protocol = extHeaders.get(extHeaders.size() - 1).nextHeader;
         }
         if (protocol == Consts.IPv6_NEXT_HEADER_NO_NEXT_HEADER) {
-            if (bytesForPacket.length() != 0) {
+            if (bytesForPacket.pktBuf.length() != 0) {
                 return "invalid packet: getting next header " + protocol + "(NO_NEXT_HEADER) but the input bytes length for next packet is not 0";
             }
         }
@@ -122,7 +124,7 @@ public class Ipv6Packet extends AbstractIpPacket {
             return err;
         }
 
-        raw = bytes;
+        this.raw = raw;
 
         return null;
     }
@@ -242,7 +244,7 @@ public class Ipv6Packet extends AbstractIpPacket {
     @Override
     public void setHopLimit(int hopLimit) {
         if (raw != null) {
-            raw.set(7, (byte) hopLimit);
+            raw.pktBuf.set(7, (byte) hopLimit);
         }
         this.hopLimit = hopLimit;
     }
@@ -299,6 +301,10 @@ public class Ipv6Packet extends AbstractIpPacket {
         private ByteArray other;
 
         @Override
+        public String from(PacketDataBuffer raw) {
+            throw new UnsupportedOperationException("use from(ByteArray) instead");
+        }
+
         public String from(ByteArray bytes) {
             if (bytes.length() < 8) {
                 return "input packet length too short for an ipv6 ext hdr packet";
@@ -310,7 +316,7 @@ public class Ipv6Packet extends AbstractIpPacket {
             }
             other = bytes.sub(2, 6 + hdrExtLen);
 
-            raw = bytes.sub(0, 8 + hdrExtLen);
+            raw = new PacketDataBuffer(bytes.sub(0, 8 + hdrExtLen));
             return null;
         }
 

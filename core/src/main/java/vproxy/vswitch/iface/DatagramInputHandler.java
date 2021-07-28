@@ -8,6 +8,7 @@ import vproxy.base.util.objectpool.CursorList;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
+import vproxy.vpacket.PacketDataBuffer;
 import vproxy.vpacket.VProxyEncryptedPacket;
 import vproxy.vpacket.VXLanPacket;
 import vproxy.vswitch.PacketBuffer;
@@ -83,7 +84,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
         });
         PacketBuffer pkb;
 
-        String err = packet.from(data, true);
+        String err = packet.from(new PacketDataBuffer(data), true);
         assert Logger.lowLevelDebug("packet.from(data) = " + err);
         if (err == null) {
             String user = packet.getUser();

@@ -11,6 +11,7 @@ import vproxy.vfd.DatagramFD;
 import vproxy.vfd.EventSet;
 import vproxy.vfd.FDProvider;
 import vproxy.vfd.IPPort;
+import vproxy.vpacket.PacketDataBuffer;
 import vproxy.vpacket.VProxyEncryptedPacket;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.util.SwitchUtils;
@@ -212,7 +213,7 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
 
                 VProxyEncryptedPacket p = new VProxyEncryptedPacket(iface.user.key);
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
-                String err = p.from(arr, true);
+                String err = p.from(new PacketDataBuffer(arr), true);
                 if (err != null) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + iface + ": " + arr);
                     continue;

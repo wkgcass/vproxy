@@ -19,7 +19,8 @@ public class IcmpPacket extends AbstractPacket {
     }
 
     @Override
-    public String from(ByteArray bytes) {
+    public String from(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 8) {
             return "input packet length too short for a icmp packet";
         }
@@ -28,7 +29,7 @@ public class IcmpPacket extends AbstractPacket {
         checksum = bytes.uint16(2);
         other = bytes.sub(4, bytes.length() - 4);
 
-        raw = bytes;
+        this.raw = raw;
         return null;
     }
 
@@ -57,9 +58,9 @@ public class IcmpPacket extends AbstractPacket {
         if (!isIpv6)
             throw new UnsupportedOperationException("this packet is ICMP, not v6");
         if (raw == null) {
-            raw = buildICMPv6Packet(ipv6);
+            raw = new PacketDataBuffer(buildICMPv6Packet(ipv6));
         }
-        return raw;
+        return raw.pktBuf;
     }
 
     private ByteArray buildICMPv6Packet(Ipv6Packet ipv6) {

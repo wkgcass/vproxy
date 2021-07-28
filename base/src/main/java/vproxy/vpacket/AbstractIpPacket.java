@@ -1,10 +1,9 @@
 package vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
 import vproxy.vfd.IP;
 
 public abstract class AbstractIpPacket extends AbstractPacket {
-    public abstract String readIPProto(ByteArray bytes);
+    public abstract String readIPProto(PacketDataBuffer bytes);
 
     public abstract IP getSrc();
 

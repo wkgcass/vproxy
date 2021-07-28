@@ -8,22 +8,29 @@ import java.util.Objects;
 public class EthernetPacket extends AbstractEthernetPacket {
     private MacAddress dst;
     private MacAddress src;
+    private int vlan = -1; // -1 if no vlan tag
     private int type;
     private AbstractPacket packet;
-    private ByteArray packetBytes;
 
     @Override
-    public String from(ByteArray bytes) {
-        return from(bytes, false);
+    public String from(PacketDataBuffer raw) {
+        return from(raw, false);
     }
 
     @Override
-    public String from(ByteArray bytes, boolean skipIPPacket) {
+    public String from(PacketDataBuffer raw, boolean skipIPPacket) {
+        ByteArray bytes = raw.pktBuf;
         String err = from(bytes, null);
         if (err != null) {
             return err;
         }
-        ByteArray data = bytes.sub(14, bytes.length() - 14);
+        PacketDataBuffer data;
+        if (vlan < 0) {
+            data = raw.sub(14);
+        } else {
+            // with vlan tag
+            data = raw.sub(18);
+        }
         AbstractPacket packet;
         boolean isIPPacket = false;
         if (type == Consts.ETHER_TYPE_ARP) {
@@ -46,7 +53,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         }
         if (err != null) {
             if (isIPPacket) {
-                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.toHexString() + ": " + err);
+                Logger.warn(LogType.SYS_ERROR, "got l3 packet unable to parse, type=" + type + ", packet=" + data.pktBuf.toHexString() + ": " + err);
                 packet = new PacketBytes();
                 packet.from(data);
             } else {
@@ -55,7 +62,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         }
         this.packet = packet;
 
-        raw = bytes;
+        this.raw = raw;
         return null;
     }
 
@@ -66,6 +73,16 @@ public class EthernetPacket extends AbstractEthernetPacket {
         dst = new MacAddress(bytes.sub(0, 6));
         src = new MacAddress(bytes.sub(6, 6));
         type = bytes.uint16(12);
+        if (type == Consts.ETHER_TYPE_8021Q) {
+            // handle 802.1q tag
+            if (bytes.length() < (6 /*dst*/ + 6 /*src*/ + 2 /*8100*/ + 4 /*tag*/)) {
+                return "input packet length too short for 802.1q ethernet packet";
+            }
+            byte vlan1 = bytes.get(14);
+            byte vlan2 = bytes.get(15);
+            vlan = ((vlan1 & 0xf) << 8) | (vlan2 & 0xff);
+            type = bytes.uint16(16);
+        }
         if (packet != null) {
             this.packet = packet;
             packet.recordParent(this);
@@ -75,10 +92,19 @@ public class EthernetPacket extends AbstractEthernetPacket {
 
     @Override
     protected ByteArray buildPacket() {
-        return dst.bytes // dst
-            .concat(src.bytes) // src
-            .concat(ByteArray.allocate(2).int16(0, type)) // type
-            .concat(packet.getRawPacket()); // packet
+        ByteArray addrs = dst.bytes // dst
+            .concat(src.bytes); // src
+        if (vlan < 0) {
+            return addrs
+                .concat(ByteArray.allocate(2).int16(0, type)) // type
+                .concat(packet.getRawPacket()); // packet
+        }
+        // consider 802.1q
+        var tagAndType = ByteArray.allocate(6);
+        tagAndType.int16(0, Consts.ETHER_TYPE_8021Q);
+        tagAndType.int16(2, vlan); // ignore PCP and DEI, only fill in the vid
+        tagAndType.int16(4, type); // type
+        return addrs.concat(tagAndType).concat(packet.getRawPacket());
     }
 
     @Override
@@ -112,7 +138,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
     public void setSrc(MacAddress src) {
         if (raw != null) {
             for (int i = 0; i < src.bytes.length(); ++i) {
-                raw.set(6 + i, src.bytes.get(i));
+                raw.pktBuf.set(6 + i, src.bytes.get(i));
             }
         }
         this.src = src;
@@ -126,10 +152,38 @@ public class EthernetPacket extends AbstractEthernetPacket {
     public void setDst(MacAddress dst) {
         if (raw != null) {
             for (int i = 0; i < dst.bytes.length(); ++i) {
-                raw.set(i, dst.bytes.get(i));
+                raw.pktBuf.set(i, dst.bytes.get(i));
             }
         }
         this.dst = dst;
+    }
+
+    public int getVlan() {
+        return vlan;
+    }
+
+    public void setVlan(int vlan) {
+        if (raw != null) {
+            if (vlan < 0) {
+                if (this.vlan >= 0) {
+                    returnHeadroomAndMove(4, 12);
+                    raw.pktBuf.int16(12, type);
+                }
+            } else {
+                if (this.vlan < 0) {
+                    if (consumeHeadroomAndMove(4, 12)) {
+                        raw.pktBuf.int16(12, Consts.ETHER_TYPE_8021Q);
+                        raw.pktBuf.int16(14, vlan); // ignore PCP and DEI, only fill in the vid
+                        raw.pktBuf.int16(16, type); // type
+                    } else { // cannot get enough headroom
+                        clearPacketBytes();
+                    }
+                } else {
+                    raw.pktBuf.int16(14, vlan);
+                }
+            }
+        }
+        this.vlan = vlan;
     }
 
     public int getType() {
@@ -149,16 +203,6 @@ public class EthernetPacket extends AbstractEthernetPacket {
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;
-    }
-
-    @Override
-    public ByteArray getPacketBytes() {
-        return packetBytes;
-    }
-
-    @Override
-    public void clearPacketBytes() {
-        this.packetBytes = null;
     }
 
     @Override

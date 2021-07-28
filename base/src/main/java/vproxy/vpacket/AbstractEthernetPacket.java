@@ -1,10 +1,11 @@
 package vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
 import vproxy.vfd.MacAddress;
 
 public abstract class AbstractEthernetPacket extends AbstractPacket {
-    public abstract String from(ByteArray bytes, boolean skipIPPacket);
+    protected PacketDataBuffer packetBytes;
+
+    public abstract String from(PacketDataBuffer raw, boolean skipIPPacket);
 
     public abstract MacAddress getSrc();
 
@@ -16,7 +17,11 @@ public abstract class AbstractEthernetPacket extends AbstractPacket {
 
     public abstract AbstractPacket getPacket();
 
-    public abstract ByteArray getPacketBytes();
+    public PacketDataBuffer getPacketBytes() {
+        return packetBytes;
+    }
 
-    public abstract void clearPacketBytes();
+    public void clearPacketBytes() {
+        this.packetBytes = null;
+    }
 }

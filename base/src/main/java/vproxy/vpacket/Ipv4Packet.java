@@ -27,17 +27,18 @@ public class Ipv4Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
-    public String readIPProto(ByteArray bytes) {
-        if (bytes.length() < 20) {
+    public String readIPProto(PacketDataBuffer raw) {
+        if (raw.pktBuf.length() < 20) {
             return "input packet length too short for an ip packet";
         }
-        protocol = bytes.uint8(9);
+        protocol = raw.pktBuf.uint8(9);
         initUpperLayerPacket();
         return null;
     }
 
     @Override
-    public String from(ByteArray bytes) {
+    public String from(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 20) {
             return "input packet length too short for an ip packet";
         }
@@ -64,7 +65,8 @@ public class Ipv4Packet extends AbstractIpPacket {
         }
         if (totalLength < bytes.length()) {
             assert Logger.lowLevelDebug("ipv4 packet is cut shorter from " + bytes.length() + " to " + totalLength);
-            bytes = bytes.sub(0, totalLength);
+            setPktBufLen(raw, totalLength);
+            bytes = raw.pktBuf;
         } else if (totalLength > bytes.length()) {
             return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
         }
@@ -96,7 +98,7 @@ public class Ipv4Packet extends AbstractIpPacket {
         }
 
         // packet
-        ByteArray bytesForPacket = bytes.sub(ihl * 4, totalLength - ihl * 4);
+        PacketDataBuffer bytesForPacket = raw.sub(ihl * 4, totalLength - ihl * 4);
         initUpperLayerPacket();
         packet.recordParent(this);
         String err = packet.from(bytesForPacket);
@@ -104,7 +106,7 @@ public class Ipv4Packet extends AbstractIpPacket {
             return err;
         }
 
-        raw = bytes;
+        this.raw = raw;
 
         return null;
     }
@@ -148,10 +150,10 @@ public class Ipv4Packet extends AbstractIpPacket {
 
     @Override
     protected void updateChecksum() {
-        raw.int16(10, 0);
-        int cksum = calculateChecksum(raw.sub(0, 20));
+        raw.pktBuf.int16(10, 0);
+        int cksum = calculateChecksum(raw.pktBuf.sub(0, 20));
         headerChecksum = cksum;
-        raw.int16(10, cksum);
+        raw.pktBuf.int16(10, cksum);
 
         if (packet instanceof TcpPacket) {
             if (packet.requireUpdatingChecksum) {
@@ -293,7 +295,7 @@ public class Ipv4Packet extends AbstractIpPacket {
 
     public void setTtl(int ttl) {
         if (raw != null) {
-            raw.set(8, (byte) ttl);
+            raw.pktBuf.set(8, (byte) ttl);
             clearChecksum();
         }
         this.ttl = ttl;
