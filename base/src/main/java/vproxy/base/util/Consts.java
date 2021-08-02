@@ -81,6 +81,8 @@ public class Consts {
     public static final byte DHCP_MSG_TYPE_DHCPRELEASE = 7;
     public static final byte DHCP_MSG_TYPE_DHCPINFORM = 8;
 
+    public static final int XDP_HEADROOM_DRIVER_RESERVED = 256;
+
     public static final int I_DETECTED_A_POSSIBLE_LOOP =
         0b00001000_00000000_00000000;
     public static final int I_WILL_DISCONNECT_FROM_YOU_IF_I_RECEIVE_AGAIN =

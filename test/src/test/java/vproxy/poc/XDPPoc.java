@@ -108,15 +108,15 @@ public class XDPPoc {
                             chunk.releaseRef(umem);
                             continue;
                         }
-                        chunk2.pktaddr = chunk2.addr();
+                        chunk2.pktaddr = chunk2.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
                         chunk2.pktlen = chunk.pktlen;
 
                         Logger.alert("new chunk: " + chunk2);
 
-                        for (int i = 0; i < chunk.pktlen; ++i) {
-                            buf.put(chunk2.pktaddr + i,
-                                buf.get(chunk.pktaddr + i));
-                        }
+                        SunUnsafe.copyMemory(
+                            umem.getBufferAddress() + chunk2.pktaddr,
+                            umem.getBufferAddress() + chunk.pktaddr,
+                            chunk.pktlen);
                         xsk.writePacket(chunk2);
                     }
 

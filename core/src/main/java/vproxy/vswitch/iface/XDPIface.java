@@ -4,6 +4,7 @@ import vproxy.base.selector.Handler;
 import vproxy.base.selector.HandlerContext;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.ByteArray;
+import vproxy.base.util.Consts;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.vfd.EventSet;
@@ -96,8 +97,8 @@ public class XDPIface extends Iface {
                 assert Logger.lowLevelDebug("directly send packet without copying");
 
                 // modify chunk
-                int pktaddr = chunk.addr() + pkb.pktOff;
-                int pktlen = pkb.fullbuf.length() - pkb.pktOff - pkb.pad;
+                int pktaddr = chunk.addr() + pkb.pktOff + Consts.XDP_HEADROOM_DRIVER_RESERVED;
+                int pktlen = pkb.pktBuf.length();
                 if (pktaddr != chunk.pktaddr || pktlen != chunk.pktlen) {
                     assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
                     chunk.pktaddr = pktaddr;
@@ -120,7 +121,13 @@ public class XDPIface extends Iface {
             return;
         }
         ByteArray pktData = pkb.pkt.getRawPacket();
-        chunk.pktaddr = chunk.addr();
+        int availableSpace = chunk.endaddr() - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED;
+        if (pktData.length() > availableSpace) {
+            Logger.warn(LogType.ALERT, "umem chunk too small for packet, pkt: " + pktData.length() + ", available: " + availableSpace);
+            chunk.releaseRef(umem);
+            return;
+        }
+        chunk.pktaddr = chunk.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
         chunk.pktlen = pktData.length();
         ByteBuffer byteBuffer = umem.getBuffer();
         chunk.setPositionAndLimit(byteBuffer);
@@ -204,7 +211,8 @@ public class XDPIface extends Iface {
                 var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 
                 var pkb = PacketBuffer.fromEtherBytes(XDPIface.this, vni, fullBuffer,
-                    chunk.pktaddr - chunk.addr(), chunk.endaddr() - chunk.pktaddr - chunk.pktlen);
+                    chunk.pktaddr - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED,
+                    chunk.endaddr() - chunk.pktaddr - chunk.pktlen);
                 String err = pkb.init();
                 if (err != null) {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);

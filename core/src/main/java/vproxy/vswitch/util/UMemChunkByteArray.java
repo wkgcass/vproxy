@@ -1,6 +1,7 @@
 package vproxy.vswitch.util;
 
 import vproxy.base.util.ByteArray;
+import vproxy.base.util.Consts;
 import vproxy.base.util.bytearray.AbstractByteArray;
 import vproxy.base.util.unsafe.SunUnsafe;
 import vproxy.xdp.Chunk;
@@ -22,8 +23,8 @@ public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
         int len = chunk.endaddr() - chunk.addr();
 
         this.buffer = buffer;
-        this.off = off;
-        this.len = len;
+        this.off = off + Consts.XDP_HEADROOM_DRIVER_RESERVED;
+        this.len = len - Consts.XDP_HEADROOM_DRIVER_RESERVED;
 
         if (buffer.capacity() < off + len) {
             throw new IllegalArgumentException("buffer.cap=" + buffer.capacity() + ", off=" + off + ", len=" + len);
