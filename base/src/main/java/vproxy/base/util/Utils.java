@@ -287,6 +287,23 @@ public class Utils {
         return ret;
     }
 
+    public static byte[] binToBytes(String bin) {
+        char[] chars = bin.toCharArray();
+        if (chars.length % 8 != 0) throw new IllegalArgumentException("invalid bin string");
+        byte[] ret = allocateByteArray(chars.length / 8);
+        for (int i = 0; i < chars.length; i += 8) {
+            int b = 0;
+            for (int x = 0; x < 8; ++x) {
+                char c = chars[i + x];
+                if (c != '1' && c != '0') throw new IllegalArgumentException("char `" + c + "` cannot be bin");
+                int n = c == '1' ? 1 : 0;
+                b |= n << (7 - x);
+            }
+            ret[i / 8] = (byte) b;
+        }
+        return ret;
+    }
+
     private static final char[] HEX_ARRAY = "0123456789abcdef".toCharArray();
 
     public static String bytesToHex(byte[] bytes) {
@@ -314,7 +331,7 @@ public class Utils {
 
     private static byte parseHexChar(char c) {
         if ((c < '0' || c > '9') && (c < 'a' || c > 'z') && (c < 'A' || c > 'Z')) {
-            throw new IllegalArgumentException("char `" + c + "' cannot bev hex");
+            throw new IllegalArgumentException("char `" + c + "' cannot be hex");
         }
         //noinspection ConstantConditions
         if ('0' <= c && c <= '9') {
@@ -418,7 +435,12 @@ public class Utils {
     }
 
     public static String toHexString(int x) {
-        return "0x" + Integer.toHexString(x);
+        String s = Integer.toHexString(x);
+        if (s.length() % 2 == 0) {
+            return "0x" + s;
+        } else {
+            return "0x0" + s;
+        }
     }
 
     public static String toHexStringWithPadding(int x, int bits) {

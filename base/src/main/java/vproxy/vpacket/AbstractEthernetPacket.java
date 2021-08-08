@@ -15,13 +15,24 @@ public abstract class AbstractEthernetPacket extends AbstractPacket {
 
     public abstract void setDst(MacAddress dst);
 
+    public abstract int getType();
+
     public abstract AbstractPacket getPacket();
 
     public PacketDataBuffer getPacketBytes() {
         return packetBytes;
     }
 
+    @Override
+    public void clearAllRawPackets() {
+        clearRawPacket();
+        getPacket().clearAllRawPackets();
+    }
+
     public void clearPacketBytes() {
         this.packetBytes = null;
     }
+
+    @Override
+    public abstract AbstractEthernetPacket copy();
 }

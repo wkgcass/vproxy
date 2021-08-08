@@ -402,22 +402,22 @@ add tap tap101 to switch sw-pub vni 101 post-script /vproxy/tap101.sh
 EOL
 
 cat > /vproxy/tapns10.sh <<EOL
-\$NETNSUTIL add ns=ns1 sw=sw2 vni=1 addr=172.16.1.1/24 gate=172.16.1.254 v6addr=fd00::101/120 v6gate=fd00::1fe
+/usr/bin/env python \$NETNSUTIL add ns=ns1 sw=sw2 vni=1 addr=172.16.1.1/24 gate=172.16.1.254 v6addr=fd00::101/120 v6gate=fd00::1fe
 EOL
 chmod +x /vproxy/tapns10.sh
 
 cat > /vproxy/tapns20.sh <<EOL
-\$NETNSUTIL add ns=ns2 sw=sw2 vni=2 addr=172.16.2.2/24 gate=172.16.2.254 v6addr=fd00::202/120 v6gate=fd00::2fe
+/usr/bin/env python \$NETNSUTIL add ns=ns2 sw=sw2 vni=2 addr=172.16.2.2/24 gate=172.16.2.254 v6addr=fd00::202/120 v6gate=fd00::2fe
 EOL
 chmod +x /vproxy/tapns20.sh
 
 cat > /vproxy/tapns30.sh <<EOL
-\$NETNSUTIL add ns=ns3 sw=sw3 vni=1 addr=172.16.1.3/24 gate=172.16.1.254 v6addr=fd00::103/120 v6gate=fd00::1fe
+/usr/bin/env python \$NETNSUTIL add ns=ns3 sw=sw3 vni=1 addr=172.16.1.3/24 gate=172.16.1.254 v6addr=fd00::103/120 v6gate=fd00::1fe
 EOL
 chmod +x /vproxy/tapns30.sh
 
 cat > /vproxy/tapns40.sh <<EOL
-\$NETNSUTIL add ns=ns4 sw=sw3 vni=2 addr=172.16.2.4/24 gate=172.16.2.254 v6addr=fd00::204/120 v6gate=fd00::2fe
+/usr/bin/env python \$NETNSUTIL add ns=ns4 sw=sw3 vni=2 addr=172.16.2.4/24 gate=172.16.2.254 v6addr=fd00::204/120 v6gate=fd00::2fe
 EOL
 chmod +x /vproxy/tapns40.sh
 

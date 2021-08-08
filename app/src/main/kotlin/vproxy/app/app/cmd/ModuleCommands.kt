@@ -645,7 +645,6 @@ class ModuleCommands : Commands() {
       it + ResAct(
         relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         action = ActType.list,
-        check = { VpcHandle.checkVpcName(it.resource) },
         exec = {
           val vpcLs = VpcHandle.list(it.resource.parentResource)
           val ls = vpcLs.stream().map { it.vpc }.collect(Collectors.toList())
@@ -655,7 +654,6 @@ class ModuleCommands : Commands() {
       it + ResAct(
         relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
-        check = { VpcHandle.checkVpcName(it.resource) },
         exec = {
           val vpcLs = VpcHandle.list(it.resource.parentResource)
           val ls = vpcLs.stream().map { it.toString() }.collect(Collectors.toList())
@@ -846,7 +844,6 @@ class ModuleCommands : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.nic, required)
           it + ResActParam(Param.bpfmap, required)
           it + ResActParam(Param.umem, required)
           it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
@@ -887,7 +884,6 @@ class ModuleCommands : Commands() {
         relation = ResRelation(ResourceType.ip, ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw))),
         action = ActType.list,
         check = {
-          IpHandle.checkIpName(it.resource)
           VpcHandle.checkVpcName(it.resource.parentResource)
         },
         exec = {
@@ -900,7 +896,6 @@ class ModuleCommands : Commands() {
         relation = ResRelation(ResourceType.ip, ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw))),
         action = ActType.listdetail,
         check = {
-          IpHandle.checkIpName(it.resource)
           VpcHandle.checkVpcName(it.resource.parentResource)
         },
         exec = {

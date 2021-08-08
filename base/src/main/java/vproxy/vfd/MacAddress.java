@@ -14,7 +14,7 @@ public class MacAddress {
     }
 
     public MacAddress(ByteArray bytes) {
-        this.bytes = bytes.copy();
+        this.bytes = bytes.copy().unmodifiable();
         this.hashCode = Objects.hashCode(bytes);
     }
 
@@ -39,7 +39,7 @@ public class MacAddress {
             }
         }
 
-        this.bytes = ByteArray.from(bytes);
+        this.bytes = ByteArray.from(bytes).unmodifiable();
         this.hashCode = Objects.hashCode(this.bytes);
     }
 

@@ -20,8 +20,15 @@ public class PacketBytes extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         // do nothing
+    }
+
+    @Override
+    public PacketBytes copy() {
+        var ret = new PacketBytes();
+        ret.bytes = bytes;
+        return ret;
     }
 
     @Override

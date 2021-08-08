@@ -76,6 +76,9 @@ public class Switch {
         this::initIface,
         this::recordIface
     );
+    private final PacketFilterHelper packetFilterHelper = new PacketFilterHelper(
+        this::sendPacket
+    );
     private final NetworkStack netStack = new NetworkStack(swCtx);
 
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
@@ -556,7 +559,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public XDPIface addXDP(String alias, String nic, BPFMap map, UMem umem,
+    public XDPIface addXDP(String nic, BPFMap map, UMem umem,
                            int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                            int busyPollBudget,
                            int vni, BPFMapKeySelector keySelector) throws XException, AlreadyExistException {
@@ -575,12 +578,12 @@ public class Switch {
                 continue;
             }
             XDPIface xdpiface = (XDPIface) i;
-            if (alias.equals(xdpiface.alias)) {
+            if (nic.equals(xdpiface.nic)) {
                 throw new AlreadyExistException("xdp", alias);
             }
         }
 
-        var iface = new XDPIface(alias, nic, map, umem,
+        var iface = new XDPIface(nic, map, umem,
             queueId, rxRingSize, txRingSize, mode, zeroCopy,
             busyPollBudget,
             vni, keySelector);
@@ -596,20 +599,20 @@ public class Switch {
         return iface;
     }
 
-    public void delXDP(String alias) throws NotFoundException {
+    public void delXDP(String nic) throws NotFoundException {
         Iface iface = null;
         for (Iface i : ifaces.keySet()) {
             if (!(i instanceof XDPIface)) {
                 continue;
             }
             XDPIface xdp = (XDPIface) i;
-            if (alias.equals(xdp.alias)) {
+            if (nic.equals(xdp.nic)) {
                 iface = i;
                 break;
             }
         }
         if (iface == null) {
-            throw new NotFoundException("xdp", alias);
+            throw new NotFoundException("xdp", nic);
         }
         utilRemoveIface(iface);
     }
@@ -634,7 +637,7 @@ public class Switch {
             if (iface instanceof XDPIface) {
                 XDPIface xdp = ((XDPIface) iface);
                 if (xdp.umem.equals(umem)) {
-                    throw new XException("umem " + alias + " is used by xdp " + xdp.alias);
+                    throw new XException("umem " + alias + " is used by xdp " + xdp.nic);
                 }
             }
         }
@@ -661,12 +664,18 @@ public class Switch {
         assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
 
         // handle it by packet filter
-        var egressFilters = iface.getEgressFilter();
+        var egressFilters = iface.getEgressFilters();
         if (egressFilters.isEmpty()) {
             assert Logger.lowLevelDebug("no egress filter on " + iface);
         } else {
+            var devoutBackup = pkb.devout; // in case of recursive output
+            pkb.devout = iface;
+
             assert Logger.lowLevelDebug("run egress filters " + egressFilters + " on " + pkb);
-            var res = SwitchUtils.applyFilters(egressFilters, swCtx, pkb);
+            var res = SwitchUtils.applyFilters(egressFilters, packetFilterHelper, pkb);
+
+            pkb.devout = devoutBackup; // restore devout
+
             if (res != FilterResult.PASS) {
                 handleEgressFilterResult(pkb, res);
                 return;
@@ -722,7 +731,7 @@ public class Switch {
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet egress");
     }
 
-    private final CursorList<PacketBuffer> socketBuffersToBeHandled = new CursorList<>(128);
+    private final CursorList<PacketBuffer> packetBuffersToBeHandled = new CursorList<>(128);
 
     private void onIfacePacketsArrive() {
         for (Iface iface : ifaces.keySet()) {
@@ -776,13 +785,13 @@ public class Switch {
         assert pkb.pkt != null;
 
         // handle it by packet filter
-        var ingressFilters = pkb.devin.getIngressFilter();
+        var ingressFilters = pkb.devin.getIngressFilters();
         if (ingressFilters.isEmpty()) {
             assert Logger.lowLevelDebug("no ingress filter on " + pkb.devin);
         } else {
             assert Logger.lowLevelDebug("run ingress filters " + ingressFilters + " on " + pkb);
             var fullbufBackup = pkb.fullbuf;
-            var res = SwitchUtils.applyFilters(ingressFilters, swCtx, pkb);
+            var res = SwitchUtils.applyFilters(ingressFilters, packetFilterHelper, pkb);
             if (res != FilterResult.PASS) {
                 handleIngressFilterResult(fullbufBackup, pkb, res);
                 return;
@@ -807,7 +816,7 @@ public class Switch {
             return;
         }
 
-        socketBuffersToBeHandled.add(pkb);
+        packetBuffersToBeHandled.add(pkb);
     }
 
     private void releaseUMemChunkIfPossible(ByteArray fullBuf) {
@@ -910,7 +919,7 @@ public class Switch {
     }
 
     private void handleInputPkb() {
-        for (PacketBuffer pkb : socketBuffersToBeHandled) {
+        for (PacketBuffer pkb : packetBuffersToBeHandled) {
             // the umem chunk need to be released after processing
             var fullbufBackup = pkb.fullbuf;
 
@@ -922,7 +931,7 @@ public class Switch {
 
             releaseUMemChunkIfPossible(fullbufBackup);
         }
-        socketBuffersToBeHandled.clear();
+        packetBuffersToBeHandled.clear();
 
         for (Iface iface : ifaces.keySet()) {
             iface.completeTx();

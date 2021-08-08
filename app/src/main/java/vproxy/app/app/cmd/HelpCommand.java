@@ -1337,13 +1337,13 @@ public class HelpCommand {
                 ))
             )),
         xdp("xdp", null, "xdp socket, which is able to intercept packets from a net dev. " +
-            "Note: 1) use list iface to see the xdp sockets/interfaces, " +
-            "2) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
-            "3) make sure your kernel supports xdp, recommend kernel version >= 5.10. " +
+            "Note: 1) the name of the xdp iface is the nic name where this xdp handles, " +
+            "2) use list iface to see the xdp sockets/interfaces, " +
+            "3) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
+            "4) make sure your kernel supports xdp, recommend kernel version >= 5.10. " +
             "See also `umem`, `bpf-object`. Check doc for more info",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.nic, "nic to bind the xdp socket to. Note: a program must be loaded on the nic, see `bpf-object` for more info"),
                     new ResActParamMan(ParamMan.bpfmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP"),
                     new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
                     new ResActParamMan(ParamMan.queue, "the queue index to bind to"),

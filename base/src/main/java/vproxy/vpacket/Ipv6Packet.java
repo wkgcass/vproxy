@@ -23,16 +23,35 @@ public class Ipv6Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
-    public String readIPProto(PacketDataBuffer raw) {
-        if (raw.pktBuf.length() < 40) {
+    public String initPartial(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
+        if (bytes.length() < 40) {
             return "input packet length too short for an ipv6 packet";
         }
-        nextHeader = raw.pktBuf.uint8(6);
+
+        nextHeader = bytes.uint8(6);
         if (Consts.IPv6_needs_next_header.contains(nextHeader)) {
             return from(raw); // must run a full load to ensure the upper level packet is parsed
-        } else {
-            initUpperLayerPacket(nextHeader);
         }
+
+        payloadLength = bytes.uint16(4);
+        if (payloadLength == 0) {
+            return "we do not support Jumbo Payload for now";
+        }
+        if (40 + payloadLength > bytes.length()) {
+            return "40+payloadLength(" + payloadLength + ") > input.length(" + bytes.length() + ")";
+        }
+
+        byte[] srcBytes = bytes.sub(8, 16).toJavaArray();
+        byte[] dstBytes = bytes.sub(24, 16).toJavaArray();
+        src = IP.fromIPv6(srcBytes);
+        dst = IP.fromIPv6(dstBytes);
+        String err = initUpperLayerPacket(nextHeader, raw.sub(40, payloadLength));
+        if (err != null) {
+            return err;
+        }
+
+        this.raw = raw;
         return null;
     }
 
@@ -43,7 +62,7 @@ public class Ipv6Packet extends AbstractIpPacket {
 
     public String from(PacketDataBuffer raw, boolean mustParse) {
         ByteArray bytes = raw.pktBuf;
-        if (raw == this.raw /* the same byte array */ && packet != null /* already parsed */ && !mustParse) {
+        if (raw == this.raw /* the same byte array */ && extHeaders != null /* already parsed */ && !mustParse) {
             return null;
         }
 
@@ -117,8 +136,7 @@ public class Ipv6Packet extends AbstractIpPacket {
                 return "invalid packet: getting next header " + protocol + "(NO_NEXT_HEADER) but the input bytes length for next packet is not 0";
             }
         }
-        initUpperLayerPacket(protocol);
-        packet.recordParent(this);
+        initUpperLayerPacket(protocol, null);
         String err = packet.from(bytesForPacket);
         if (err != null) {
             return err;
@@ -129,14 +147,24 @@ public class Ipv6Packet extends AbstractIpPacket {
         return null;
     }
 
-    private void initUpperLayerPacket(int protocol) {
+    private String initUpperLayerPacket(int protocol, PacketDataBuffer raw) {
         if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
             packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
         } else if (protocol == Consts.IP_PROTOCOL_TCP) {
             packet = new TcpPacket();
+        } else if (protocol == Consts.IP_PROTOCOL_UDP) {
+            packet = new UdpPacket();
         } else {
             packet = new PacketBytes();
         }
+        if (raw != null && packet instanceof PartialPacket) {
+            String err = ((PartialPacket) packet).initPartial(raw);
+            if (err != null) {
+                return err;
+            }
+        }
+        packet.recordParent(this);
+        return null;
     }
 
     @Override
@@ -145,25 +173,74 @@ public class Ipv6Packet extends AbstractIpPacket {
         byte b1 = (byte) ((trafficClass << 4) | ((flowLabel >> 16) & 0x0f));
         ByteArray headers = ByteArray.allocate(8).set(0, b0).set(1, b1).int16(2, flowLabel)
             .int16(4, payloadLength).set(6, (byte) nextHeader).set(7, (byte) hopLimit)
-            .concat(ByteArray.from(src.getAddress())).concat(ByteArray.from(dst.getAddress()));
+            .concat(src.bytes.copy()).concat(dst.bytes.copy());
         for (var h : extHeaders) {
             headers = headers.concat(h.getRawPacket());
         }
         if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
-            return headers.concat(((IcmpPacket) packet).getRawICMPv6Packet(this));
+            ((IcmpPacket) packet).getRawICMPv6Packet(this);
+        } else if (packet instanceof TcpPacket) {
+            ((TcpPacket) packet).buildIPv6TcpPacket(this);
+        } else if (packet instanceof UdpPacket) {
+            ((UdpPacket) packet).buildIPv6UdpPacket(this);
+        }
+        return headers.concat(packet.getRawPacket());
+    }
+
+    @Override
+    protected void __updateChecksum() {
+        if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
+            if (packet.requireUpdatingChecksum) {
+                ((IcmpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else if (packet instanceof TcpPacket) {
+            if (packet.requireUpdatingChecksum) {
+                ((TcpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else if (packet instanceof UdpPacket) {
+            if (packet.requireUpdatingChecksum) {
+                ((UdpPacket) packet).updateChecksumWithIPv6(this);
+            }
         } else {
-            return headers.concat(packet.getRawPacket());
+            packet.checkAndUpdateChecksum();
         }
     }
 
     @Override
-    protected void updateChecksum() {
-        if (packet instanceof TcpPacket) {
-            if (packet.requireUpdatingChecksum) {
-                ((TcpPacket) packet).updateChecksumWithIPv6(this);
-            }
-        } else {
-            packet.checkAndUpdateChecksum();
+    public void clearChecksum() {
+        super.clearChecksum();
+        if (packet instanceof IcmpPacket || packet instanceof TcpPacket || packet instanceof UdpPacket) {
+            packet.clearChecksum();
+        }
+    }
+
+    @Override
+    public Ipv6Packet copy() {
+        var ret = new Ipv6Packet();
+        ret.version = version;
+        ret.trafficClass = trafficClass;
+        ret.flowLabel = flowLabel;
+        ret.payloadLength = payloadLength;
+        ret.nextHeader = nextHeader;
+        ret.hopLimit = hopLimit;
+        ret.src = src;
+        ret.dst = dst;
+        ret.extHeaders = new ArrayList<>(extHeaders.size());
+        for (var h : extHeaders) {
+            var x = h.copy();
+            ret.extHeaders.add(x);
+            x.recordParent(ret);
+        }
+        ret.packet = packet.copy();
+        ret.packet.recordParent(ret);
+        return ret;
+    }
+
+    @Override
+    public void clearAllRawPackets() {
+        super.clearAllRawPackets();
+        for (var h : extHeaders) {
+            h.clearAllRawPackets();
         }
     }
 
@@ -261,7 +338,12 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     public void setSrc(IPv6 src) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < 16; ++i) {
+                raw.pktBuf.set(8 + i, src.getAddress()[i]);
+            }
+            clearChecksum();
+        }
         this.src = src;
     }
 
@@ -271,7 +353,12 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     public void setDst(IPv6 dst) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < 16; ++i) {
+                raw.pktBuf.set(24 + i, dst.getAddress()[i]);
+            }
+            clearChecksum();
+        }
         this.dst = dst;
     }
 
@@ -326,8 +413,17 @@ public class Ipv6Packet extends AbstractIpPacket {
         }
 
         @Override
-        protected void updateChecksum() {
+        protected void __updateChecksum() {
             // do nothing
+        }
+
+        @Override
+        public ExtHeader copy() {
+            var ret = new ExtHeader();
+            ret.nextHeader = nextHeader;
+            ret.hdrExtLen = hdrExtLen;
+            ret.other = other;
+            return ret;
         }
 
         @Override

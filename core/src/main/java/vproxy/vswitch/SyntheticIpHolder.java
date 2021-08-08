@@ -91,4 +91,9 @@ public class SyntheticIpHolder {
             macMap.remove(info.mac);
         }
     }
+
+    @Override
+    public String toString() {
+        return "SyntheticIpHolder{" + ipMap.values() + '}';
+    }
 }

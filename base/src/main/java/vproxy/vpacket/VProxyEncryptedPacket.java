@@ -113,8 +113,25 @@ public class VProxyEncryptedPacket extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         vxlan.checkAndUpdateChecksum();
+    }
+
+    @Override
+    public VProxyEncryptedPacket copy() {
+        var ret = new VProxyEncryptedPacket(keyProvider);
+        ret.user = user;
+        ret.magic = magic;
+        ret.type = type;
+        ret.vxlan = vxlan.copy();
+        ret.vxlan.recordParent(ret);
+        return ret;
+    }
+
+    @Override
+    public void clearAllRawPackets() {
+        clearRawPacket();
+        vxlan.clearAllRawPackets();
     }
 
     @Override

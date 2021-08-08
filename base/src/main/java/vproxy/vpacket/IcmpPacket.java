@@ -6,7 +6,7 @@ import vproxy.base.util.Utils;
 
 import java.util.Objects;
 
-public class IcmpPacket extends AbstractPacket {
+public class IcmpPacket extends AbstractPacket implements PartialPacket {
     private int type;
     private int code;
     private int checksum;
@@ -16,6 +16,12 @@ public class IcmpPacket extends AbstractPacket {
 
     public IcmpPacket(boolean isIpv6) {
         this.isIpv6 = isIpv6;
+    }
+
+    @Override
+    public String initPartial(PacketDataBuffer raw) {
+        this.raw = raw;
+        return null;
     }
 
     @Override
@@ -45,8 +51,21 @@ public class IcmpPacket extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
+        if (isIpv6)
+            throw new UnsupportedOperationException("this packet is ICMPv6");
+
         // TODO not used for now
+    }
+
+    @Override
+    public IcmpPacket copy() {
+        var ret = new IcmpPacket(isIpv6);
+        ret.type = type;
+        ret.code = code;
+        ret.checksum = checksum;
+        ret.other = other;
+        return ret;
     }
 
     @Override
@@ -75,6 +94,19 @@ public class IcmpPacket extends AbstractPacket {
         checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
         ret.int16(2, checksum);
         return ret;
+    }
+
+    protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
+        if (!isIpv6)
+            throw new UnsupportedOperationException("this packet is ICMP, not v6");
+
+        raw.pktBuf.int16(2, 0);
+        ByteArray pseudoHeader = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_ICMPv6, raw.pktBuf.length());
+        ByteArray toCalculate = pseudoHeader.concat(raw.pktBuf);
+        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+        raw.pktBuf.int16(2, checksum);
+
+        requireUpdatingChecksum = false;
     }
 
     @Override

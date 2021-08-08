@@ -833,8 +833,7 @@ public class Shutdown {
                         continue;
                     }
                     var xdp = (XDPIface) iface;
-                    cmd = "add xdp " + xdp.alias + " to switch " + sw.alias
-                        + " nic " + xdp.nic
+                    cmd = "add xdp " + xdp.nic + " to switch " + sw.alias
                         + " bpf-map " + xdp.bpfMap.name
                         + " umem " + xdp.umem.alias
                         + " queue " + xdp.queueId
@@ -857,7 +856,7 @@ public class Shutdown {
                     } else if (iface instanceof UserClientIface) {
                         ifaceName = "ucli:" + ((UserClientIface) iface).user.user.replace(Consts.USER_PADDING, "");
                     } else if (iface instanceof XDPIface) {
-                        ifaceName = "xdp:" + ((XDPIface) iface).alias;
+                        ifaceName = "xdp:" + ((XDPIface) iface).nic;
                     } else {
                         continue;
                     }

@@ -18,7 +18,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     @Override
-    public String from(PacketDataBuffer raw, boolean skipIPPacket) {
+    public String from(PacketDataBuffer raw, boolean allowPartial) {
         ByteArray bytes = raw.pktBuf;
         String err = from(bytes, null);
         if (err != null) {
@@ -45,9 +45,11 @@ public class EthernetPacket extends AbstractEthernetPacket {
             packet = new PacketBytes();
         }
         packet.recordParent(this);
-        if (skipIPPacket && isIPPacket) {
-            err = ((AbstractIpPacket) packet).readIPProto(data);
-            this.packetBytes = data;
+        if (allowPartial && isIPPacket) {
+            err = ((AbstractIpPacket) packet).initPartial(data);
+            if (err == null) {
+                this.packetBytes = data;
+            }
         } else {
             err = packet.from(data);
         }
@@ -92,8 +94,8 @@ public class EthernetPacket extends AbstractEthernetPacket {
 
     @Override
     protected ByteArray buildPacket() {
-        ByteArray addrs = dst.bytes // dst
-            .concat(src.bytes); // src
+        ByteArray addrs = dst.bytes.copy() // dst
+            .concat(src.bytes.copy()); // src
         if (vlan < 0) {
             return addrs
                 .concat(ByteArray.allocate(2).int16(0, type)) // type
@@ -108,8 +110,20 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         packet.checkAndUpdateChecksum();
+    }
+
+    @Override
+    public EthernetPacket copy() {
+        var ret = new EthernetPacket();
+        ret.dst = dst;
+        ret.src = src;
+        ret.vlan = vlan;
+        ret.type = type;
+        ret.packet = packet.copy();
+        ret.packet.recordParent(ret);
+        return ret;
     }
 
     @Override
@@ -186,6 +200,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         this.vlan = vlan;
     }
 
+    @Override
     public int getType() {
         return type;
     }
@@ -213,6 +228,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         return type == that.type &&
             Objects.equals(dst, that.dst) &&
             Objects.equals(src, that.src) &&
+            vlan == that.vlan &&
             Objects.equals(packet, that.packet);
     }
 

@@ -41,6 +41,7 @@ public class PacketBuffer extends PacketDataBuffer {
 
     // ----- context -----
     public Iface devin; // not null if it's an input packet
+    public Iface devout; // this will only be set before passing to packet filters, and cleared after it's handled
     public int vni; // vni or vlan number, must always be valid
     public Table table; // might be null
     public int flags;
@@ -173,6 +174,18 @@ public class PacketBuffer extends PacketDataBuffer {
         reinput = false;
     }
 
+    @Override
+    public void clearBuffers() {
+        if (pkt != null) {
+            var pkt = this.pkt;
+            // prevent recursive invocation
+            this.pkt = null;
+            pkt.clearRawPacket();
+            this.pkt = pkt;
+        }
+        super.clearBuffers();
+    }
+
     public void replacePacket(EthernetPacket pkt) {
         clearBuffers();
         clearHelperFields();
@@ -245,7 +258,7 @@ public class PacketBuffer extends PacketDataBuffer {
         setTable(tableBackup);
     }
 
-    public void recordMatchedIps(Collection<IP> matchedIps) {
+    public void setMatchedIps(Collection<IP> matchedIps) {
         this.matchedIps = matchedIps;
     }
 
@@ -272,6 +285,10 @@ public class PacketBuffer extends PacketDataBuffer {
         }
         assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");
         return true;
+    }
+
+    public PacketBuffer copy() {
+        return new PacketBuffer(table, pkt.copy());
     }
 
     public Object getUserData(Object key) {
@@ -304,7 +321,7 @@ public class PacketBuffer extends PacketDataBuffer {
         if (pkt == null) {
             pkt = tcpPkt;
         }
-        return "SocketBuffer{" +
+        return "PacketBuffer{" +
             "in=" + devin +
             ", vni=" + vni +
             ", pktBuf=" + (pktBuf == null ? "" : pktBuf.toHexString()) +

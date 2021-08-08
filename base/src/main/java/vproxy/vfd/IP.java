@@ -65,14 +65,15 @@ public abstract class IP {
         return fromIPv6(bytes);
     }
 
-    private final byte[] bytes;
+    public final ByteArray bytes;
 
-    IP(byte[] bytes) {
-        this.bytes = bytes;
+    IP(ByteArray bytes) {
+        this.bytes = bytes.unmodifiable();
     }
 
     public boolean isAnyLocalAddress() {
-        for (byte b : bytes) {
+        for (int i = 0; i < bytes.length(); ++i) {
+            byte b = bytes.get(i);
             if (b != 0) {
                 return false;
             }
@@ -81,9 +82,7 @@ public abstract class IP {
     }
 
     public byte[] getAddress() {
-        byte[] ret = Utils.allocateByteArray(bytes.length);
-        System.arraycopy(bytes, 0, ret, 0, ret.length);
-        return ret;
+        return bytes.toJavaArray();
     }
 
     public InetAddress toInetAddress() {
@@ -91,7 +90,7 @@ public abstract class IP {
     }
 
     public String formatToIPString() {
-        return ipStr(bytes);
+        return ipStr(bytes.toJavaArray());
     }
 
     @Override
@@ -104,7 +103,7 @@ public abstract class IP {
 
     @Override
     public int hashCode() {
-        return Arrays.hashCode(bytes);
+        return Arrays.hashCode(bytes.toJavaArray());
     }
 
     // BEGIN UTILS:
@@ -484,5 +483,13 @@ public abstract class IP {
         ret[2] = (byte) ((ip >> 8) & 0xff);
         ret[3] = (byte) ((ip) & 0xff);
         return ret;
+    }
+
+    public abstract boolean isBroadcast();
+
+    public abstract boolean isMulticast();
+
+    public boolean isUnicast() {
+        return !isMulticast() && !isBroadcast();
     }
 }

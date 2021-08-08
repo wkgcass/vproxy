@@ -158,7 +158,7 @@ public class L3 {
         resp.setProtocolSize(arp.getProtocolSize());
         resp.setOpcode(Consts.ARP_PROTOCOL_OPCODE_RESP);
         resp.setSenderMac(mac.bytes);
-        resp.setSenderIp(ByteArray.from(ip.getAddress()));
+        resp.setSenderIp(ip.bytes);
         resp.setTargetMac(arp.getSenderMac());
         resp.setTargetIp(arp.getSenderIp());
 
@@ -397,6 +397,21 @@ public class L3 {
         assert Logger.lowLevelDebug("route(" + pkb + ")");
 
         var ippkt = (AbstractIpPacket) pkb.pkt.getPacket();
+
+        if (!ippkt.getDst().isUnicast()) {
+            assert Logger.lowLevelDebug("ip packet to be routed must be unicast, drop this packet");
+            return;
+        }
+        if (ippkt.getPacket() instanceof IcmpPacket &&
+            (
+                ((IcmpPacket) ippkt.getPacket()).getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation ||
+                    ((IcmpPacket) ippkt.getPacket()).getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement
+            )
+        ) {
+            assert Logger.lowLevelDebug("ndp ns/na cannot be routed, drop this packet");
+            return;
+        }
+
         var dst = ippkt.getDst();
 
         // reduce ip packet hop
@@ -481,7 +496,7 @@ public class L3 {
             pkb.pkt.setSrc(newSrcMac);
             pkb.pkt.setDst(targetMac);
             pkb.setTable(t);
-            L2.input(pkb);
+            L2.reinput(pkb);
         } else {
             // route based on ip
             var targetIp = rule.ip;
@@ -613,9 +628,9 @@ public class L3 {
         req.setProtocolSize(4);
         req.setOpcode(Consts.ARP_PROTOCOL_OPCODE_REQ);
         req.setSenderMac(reqMac.bytes);
-        req.setSenderIp(ByteArray.from(reqIp.getAddress()));
+        req.setSenderIp(reqIp.bytes);
         req.setTargetMac(ByteArray.allocate(6));
-        req.setTargetIp(ByteArray.from(dstIp.getAddress()));
+        req.setTargetIp(dstIp.bytes);
 
         EthernetPacket ether = new EthernetPacket();
         ether.setDst(dstMac);
@@ -693,7 +708,7 @@ public class L3 {
             pkb.pkt.setSrc(targetMac);
             pkb.pkt.setDst(targetMac);
             pkb.setTable(targetTable);
-            L2.input(pkb);
+            L2.reinput(pkb);
         } else {
             assert Logger.lowLevelDebug("route based on ip");
 

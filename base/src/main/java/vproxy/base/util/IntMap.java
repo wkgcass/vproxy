@@ -85,7 +85,8 @@ public class IntMap<V> {
     }
 
     public boolean containsKey(int n) {
-        return getRange(n) != null;
+        var range = getRange(n);
+        return range != null && range.get(n) != null;
     }
 
     public V get(int n) {

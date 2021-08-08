@@ -18,7 +18,6 @@ import java.nio.ByteBuffer;
 import java.util.List;
 
 public class XDPIface extends Iface {
-    public final String alias;
     public final String nic;
     public final BPFMap bpfMap;
     public final UMem umem;
@@ -34,11 +33,10 @@ public class XDPIface extends Iface {
     public final BPFMapKeySelector keySelector;
     private SelectorEventLoop loop;
 
-    public XDPIface(String alias, String nic, BPFMap bpfMap, UMem umem,
+    public XDPIface(String nic, BPFMap bpfMap, UMem umem,
                     int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                     int busyPollBudget,
                     int vni, BPFMapKeySelector keySelector) {
-        this.alias = alias;
         this.nic = nic;
         this.bpfMap = bpfMap;
         this.umem = umem;
@@ -186,8 +184,13 @@ public class XDPIface extends Iface {
     }
 
     @Override
+    public String name() {
+        return "xdp:" + nic;
+    }
+
+    @Override
     public String toString() {
-        return "Iface(xdp:" + alias + ",nic=" + nic + "#" + queueId + ",umem=" + umem.alias + ",vni:" + vni + ")";
+        return "Iface(xdp:" + nic + ",nic=" + nic + "#" + queueId + ",umem=" + umem.alias + ",vni:" + vni + ")";
     }
 
     private class XDPHandler implements Handler<XDPSocket> {

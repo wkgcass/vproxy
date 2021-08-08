@@ -47,6 +47,10 @@ public class Network {
         return ip;
     }
 
+    public byte[] getRawMaskBytes() {
+        return mask;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;

@@ -2,9 +2,7 @@ package vproxy.vpacket;
 
 import vproxy.vfd.IP;
 
-public abstract class AbstractIpPacket extends AbstractPacket {
-    public abstract String readIPProto(PacketDataBuffer bytes);
-
+public abstract class AbstractIpPacket extends AbstractPacket implements PartialPacket {
     public abstract IP getSrc();
 
     public abstract IP getDst();
@@ -18,4 +16,13 @@ public abstract class AbstractIpPacket extends AbstractPacket {
     public abstract int getProtocol();
 
     public abstract void setPacket(AbstractPacket packet);
+
+    @Override
+    public void clearAllRawPackets() {
+        clearRawPacket();
+        getPacket().clearAllRawPackets();
+    }
+
+    @Override
+    public abstract AbstractIpPacket copy();
 }

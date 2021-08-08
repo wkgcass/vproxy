@@ -10,7 +10,7 @@ import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
 import vproxy.vswitch.PacketBuffer;
-import vproxy.vswitch.SwitchContext;
+import vproxy.vswitch.PacketFilterHelper;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.iface.LocalSideVniGetterSetter;
 import vproxy.vswitch.iface.RemoteSideVniGetterSetter;
@@ -154,9 +154,9 @@ public class SwitchUtils {
         resp.setProtocolSize(4);
         resp.setOpcode(opcode);
         resp.setSenderMac(src.bytes);
-        resp.setSenderIp(ByteArray.from(srcIp.getAddress()));
+        resp.setSenderIp(srcIp.bytes);
         resp.setTargetMac(dst.bytes);
-        resp.setTargetIp(ByteArray.from(dstIp.getAddress()));
+        resp.setTargetIp(dstIp.bytes);
 
         return resp;
     }
@@ -175,7 +175,7 @@ public class SwitchUtils {
         icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Advertisement);
         icmp.setCode(0);
         icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(ByteArray.from(requestedIpOrSrc.getAddress()))
+            (ByteArray.allocate(4).set(0, (byte) 0b01100000 /*-R,+S,+O*/)).concat(requestedIpOrSrc.bytes)
                 .concat(( // the target link-layer address
                     ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address)
                         .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
@@ -201,7 +201,7 @@ public class SwitchUtils {
         icmp.setType(Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation);
         icmp.setCode(0);
         icmp.setOther(
-            (ByteArray.allocate(4).set(0, (byte) 0)).concat(ByteArray.from(targetIp.getAddress()))
+            (ByteArray.allocate(4).set(0, (byte) 0)).concat(targetIp.bytes)
                 .concat(( // the source link-layer address
                     ByteArray.allocate(1 + 1).set(0, (byte) Consts.ICMPv6_OPTION_TYPE_Source_Link_Layer_Address)
                         .set(1, (byte) 1) // mac address len = 6, (1 + 1 + 6)/8 = 1
@@ -279,9 +279,9 @@ public class SwitchUtils {
         return ether;
     }
 
-    public static FilterResult applyFilters(List<PacketFilter> filters, SwitchContext swCtx, PacketBuffer pkb) {
+    public static FilterResult applyFilters(List<PacketFilter> filters, PacketFilterHelper helper, PacketBuffer pkb) {
         for (var filter : filters) {
-            var res = filter.handle(swCtx, pkb);
+            var res = filter.handle(helper, pkb);
             if (res != FilterResult.PASS) {
                 return res;
             }

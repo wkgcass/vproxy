@@ -4,11 +4,12 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.Utils;
 
+import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Objects;
 
-public class TcpPacket extends AbstractPacket {
+public class TcpPacket extends TransportPacket {
     private int srcPort;
     private int dstPort;
     private long seqNum;
@@ -21,21 +22,31 @@ public class TcpPacket extends AbstractPacket {
     private List<TcpOption> options = new LinkedList<>();
     private ByteArray data;
 
+    @Override
     public int getSrcPort() {
         return srcPort;
     }
 
+    @Override
     public void setSrcPort(int srcPort) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.pktBuf.int16(0, srcPort);
+            clearChecksum();
+        }
         this.srcPort = srcPort;
     }
 
+    @Override
     public int getDstPort() {
         return dstPort;
     }
 
+    @Override
     public void setDstPort(int dstPort) {
-        clearRawPacket();
+        if (raw != null) {
+            raw.pktBuf.int16(2, dstPort);
+            clearChecksum();
+        }
         this.dstPort = dstPort;
     }
 
@@ -161,6 +172,19 @@ public class TcpPacket extends AbstractPacket {
     }
 
     @Override
+    public String initPartial(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
+        if (bytes.length() < 20) {
+            return "input packet length too short for a tcp packet";
+        }
+        srcPort = bytes.uint16(0);
+        dstPort = bytes.uint16(2);
+
+        this.raw = raw;
+        return null;
+    }
+
+    @Override
     public String from(PacketDataBuffer raw) {
         ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 20) {
@@ -255,8 +279,38 @@ public class TcpPacket extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    public TcpPacket copy() {
+        var ret = new TcpPacket();
+        ret.srcPort = srcPort;
+        ret.dstPort = dstPort;
+        ret.seqNum = seqNum;
+        ret.ackNum = ackNum;
+        ret.dataOffset = dataOffset;
+        ret.flags = flags;
+        ret.window = window;
+        ret.checksum = checksum;
+        ret.urgentPointer = urgentPointer;
+        ret.options = new ArrayList<>(options.size());
+        for (var o : options) {
+            var x = o.copy();
+            ret.options.add(x);
+            x.recordParent(ret);
+        }
+        ret.data = data;
+        return ret;
+    }
+
+    @Override
+    public void clearAllRawPackets() {
+        super.clearAllRawPackets();
+        for (var opt : options) {
+            opt.clearAllRawPackets();
+        }
     }
 
     @Override
@@ -351,6 +405,8 @@ public class TcpPacket extends AbstractPacket {
 
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);
+
+        requireUpdatingChecksum = false;
     }
 
     public ByteArray buildIPv6TcpPacket(Ipv6Packet ipv6) {
@@ -376,6 +432,8 @@ public class TcpPacket extends AbstractPacket {
 
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);
+
+        requireUpdatingChecksum = false;
     }
 
     public static class TcpOption extends AbstractPacket {
@@ -512,8 +570,17 @@ public class TcpPacket extends AbstractPacket {
         }
 
         @Override
-        protected void updateChecksum() {
+        protected void __updateChecksum() {
             // do nothing
+        }
+
+        @Override
+        public TcpOption copy() {
+            var ret = new TcpOption();
+            ret.kind = kind;
+            ret.length = length;
+            ret.data = data;
+            return ret;
         }
 
         @Override

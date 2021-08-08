@@ -116,5 +116,18 @@ public class ArpTable {
                 }
             }
         }
+
+        @Override
+        public String toString() {
+            return "ArpEntry{" +
+                "mac=" + mac +
+                ", ip=" + ip +
+                '}';
+        }
+    }
+
+    @Override
+    public String toString() {
+        return "ArpTable{" + entries + '}';
     }
 }

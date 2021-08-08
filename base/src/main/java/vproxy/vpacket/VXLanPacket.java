@@ -49,8 +49,26 @@ public class VXLanPacket extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         packet.checkAndUpdateChecksum();
+    }
+
+    @Override
+    public VXLanPacket copy() {
+        var ret = new VXLanPacket();
+        ret.flags = flags;
+        ret.reserved1 = reserved1;
+        ret.vni = vni;
+        ret.reserved2 = reserved2;
+        ret.packet = packet.copy();
+        ret.packet.recordParent(ret);
+        return ret;
+    }
+
+    @Override
+    public void clearAllRawPackets() {
+        clearRawPacket();
+        packet.clearAllRawPackets();
     }
 
     @Override

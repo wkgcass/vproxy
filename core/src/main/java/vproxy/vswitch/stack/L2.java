@@ -24,7 +24,7 @@ public class L2 {
     }
 
     public void input(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("L2.input(" + pkb + ")");
+        assert Logger.lowLevelDebug("L2.input(" + pkb + " :: " + pkb.table + ")");
 
         MacAddress src = pkb.pkt.getSrc();
 
@@ -44,19 +44,7 @@ public class L2 {
         if (dst.isUnicast()) {
             assert Logger.lowLevelDebug("packet is unicast");
 
-            // for unicast, we first search whether we have virtual hosts can accept the packet
-
-            var ips = pkb.table.ips.lookupByMac(dst);
-            if (ips != null) {
-                if (pkb.ensureIPPacketParsed()) return;
-
-                pkb.recordMatchedIps(ips);
-                L3.input(pkb);
-                return;
-            }
-
-            assert Logger.lowLevelDebug("no synthetic ip found");
-            // then we check whether we can forward this packet out
+            // for unicast, we first check whether we can forward this packet out
 
             Iface output = pkb.table.macTable.lookup(dst);
             if (output != null) {
@@ -65,6 +53,18 @@ public class L2 {
             }
 
             assert Logger.lowLevelDebug("dst not recorded in mac table");
+            // then we search whether we have virtual hosts can accept the packet
+
+            var ips = pkb.table.ips.lookupByMac(dst);
+            if (ips != null) {
+                if (pkb.ensureIPPacketParsed()) return;
+
+                pkb.setMatchedIps(ips);
+                L3.input(pkb);
+                return;
+            }
+
+            assert Logger.lowLevelDebug("no synthetic ip found");
             // the packet will be dropped or flooded
 
         } else {
@@ -79,6 +79,12 @@ public class L2 {
         handleInputDroppedPacket(pkb);
     }
 
+    public void reinput(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("reinput");
+        pkb.devin = null; // clear devin before re-input
+        input(pkb);
+    }
+
     private void handleInputDroppedPacket(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("no path for this packet in l2: " + pkb);
         flood(pkb);
@@ -88,6 +94,11 @@ public class L2 {
         if (pkb.pkt.getPacket() instanceof PacketBytes) {
             assert Logger.lowLevelDebug("do not flood packet with unknown ether type, maybe it's randomly generated: "
                 + pkb.pkt.description());
+            return;
+        }
+
+        if (pkb.table.macTable.tombstone(pkb.pkt.getDst())) {
+            Logger.warn(LogType.ALERT, "skip: flood packet: " + pkb);
             return;
         }
 
@@ -252,8 +263,7 @@ public class L2 {
             var ips = pkb.table.ips.lookupByMac(dst);
             if (ips != null) {
                 if (pkb.ensureIPPacketParsed()) return;
-
-                pkb.recordMatchedIps(ips);
+                pkb.setMatchedIps(ips);
                 L3.input(pkb);
                 return;
             }
@@ -305,6 +315,7 @@ public class L2 {
     }
 
     private void outputBroadcastLocal(PacketBuffer pkb) {
+        pkb.devin = null; // clear devin info before re-input
         broadcastLocal(pkb);
     }
 
@@ -326,8 +337,10 @@ public class L2 {
 
             if (pkb.ensureIPPacketParsed()) return;
 
-            pkb.recordMatchedIps(ips);
-            L3.input(pkb);
+            var copied = pkb.copy();
+
+            copied.setMatchedIps(ips);
+            L3.input(copied);
             handled = true;
         }
 

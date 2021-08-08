@@ -66,7 +66,7 @@ public abstract class Iface {
         return ingressFilters.remove(filter);
     }
 
-    public final List<PacketFilter> getIngressFilter() {
+    public final List<PacketFilter> getIngressFilters() {
         return ingressFilters;
     }
 
@@ -82,13 +82,15 @@ public abstract class Iface {
         return egressFilters.remove(filter);
     }
 
-    public final List<PacketFilter> getEgressFilter() {
+    public final List<PacketFilter> getEgressFilters() {
         return egressFilters;
     }
 
     protected final void received(PacketBuffer pkb) {
         rcvQ.add(pkb);
     }
+
+    public abstract String name();
 
     public final String paramsToString() {
         return "mtu " + baseMTU + " flood " + (floodAllowed ? "allow" : "deny");

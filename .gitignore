@@ -62,3 +62,6 @@ build/
 docker-plugin-rootfs
 docker-plugin/vproxy
 docker-plugin/libvfdposix.so
+
+# test packet filter gen
+test/src/test/java/vproxy/test/gen/packetfilters/*.java

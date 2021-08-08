@@ -25,6 +25,10 @@ public abstract class AbstractPacket {
         }
     }
 
+    public void clearAllRawPackets() {
+        clearRawPacket();
+    }
+
     public final void clearRawPacket() {
         if (raw != null) {
             raw.clearBuffers();
@@ -35,16 +39,28 @@ public abstract class AbstractPacket {
         }
     }
 
-    public final void clearChecksum() {
+    public void clearChecksum() {
+        if (requireUpdatingChecksum) {
+            return;
+        }
         requireUpdatingChecksum = true;
         if (parentPacket != null) {
             parentPacket.clearChecksum();
         }
     }
 
+    public abstract AbstractPacket copy();
+
     protected abstract ByteArray buildPacket();
 
-    protected abstract void updateChecksum();
+    protected final void updateChecksum() {
+        if (requireUpdatingChecksum) {
+            __updateChecksum();
+            requireUpdatingChecksum = false;
+        }
+    }
+
+    protected abstract void __updateChecksum();
 
     protected final void recordParent(AbstractPacket parentPacket) {
         this.parentPacket = parentPacket;

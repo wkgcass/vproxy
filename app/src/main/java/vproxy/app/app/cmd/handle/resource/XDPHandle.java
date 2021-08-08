@@ -19,7 +19,7 @@ public class XDPHandle {
     }
 
     public static void add(Command cmd) throws Exception {
-        String nic = cmd.args.get(Param.nic);
+        String nic = cmd.resource.alias;
         BPFObject bpfobj = Application.get().bpfObjectHolder.get(nic);
 
         String mapName = cmd.args.get(Param.bpfmap);
@@ -47,7 +47,7 @@ public class XDPHandle {
             keySelector = BPFMapKeySelectors.useQueueId.keySelector.get();
         }
 
-        sw.addXDP(cmd.resource.alias, nic, bpfMap, umem, queueId,
+        sw.addXDP(nic, bpfMap, umem, queueId,
             rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget,
             vni, keySelector);
     }

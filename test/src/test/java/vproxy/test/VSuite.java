@@ -29,6 +29,8 @@ import vproxy.test.cases.*;
     TestPromise.class,
     TestUtilities.class,
     TestByteArrayBuilder.class,
+    TestFlowParser.class,
+    TestFlowGen.class,
 
     AfterAll.class
 })

@@ -100,8 +100,23 @@ public class ArpPacket extends AbstractPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         // do nothing
+    }
+
+    @Override
+    public ArpPacket copy() {
+        var ret = new ArpPacket();
+        ret.hardwareType = hardwareType;
+        ret.protocolType = protocolType;
+        ret.hardwareSize = hardwareSize;
+        ret.protocolSize = protocolSize;
+        ret.opcode = opcode;
+        ret.senderMac = senderMac;
+        ret.senderIp = senderIp;
+        ret.targetMac = targetMac;
+        ret.targetIp = targetIp;
+        return ret;
     }
 
     @Override

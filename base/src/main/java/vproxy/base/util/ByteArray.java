@@ -61,6 +61,10 @@ public interface ByteArray {
         return from(Utils.hexToBytes(str));
     }
 
+    static ByteArray fromBinString(String str) throws IllegalArgumentException {
+        return from(Utils.binToBytes(str));
+    }
+
     byte get(int idx);
 
     ByteArray set(int idx, byte value);
@@ -94,6 +98,10 @@ public interface ByteArray {
 
     default ByteArray copy() {
         return ByteArray.from(toNewJavaArray());
+    }
+
+    default ByteArray unmodifiable() {
+        return new UnmodifiableByteArray(this);
     }
 
     default ByteArrayChannel toFullChannel() {

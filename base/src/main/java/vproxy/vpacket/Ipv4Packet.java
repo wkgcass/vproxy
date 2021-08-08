@@ -27,12 +27,37 @@ public class Ipv4Packet extends AbstractIpPacket {
     private AbstractPacket packet;
 
     @Override
-    public String readIPProto(PacketDataBuffer raw) {
-        if (raw.pktBuf.length() < 20) {
+    public String initPartial(PacketDataBuffer raw) {
+        ByteArray bytes = raw.pktBuf;
+        if (bytes.length() < 20) {
             return "input packet length too short for an ip packet";
         }
-        protocol = raw.pktBuf.uint8(9);
-        initUpperLayerPacket();
+        int versionAndIHL = bytes.uint8(0);
+        ihl = versionAndIHL & 0x0f;
+        if (bytes.length() < ihl * 4) {
+            return "input packet smaller than ihl(" + ihl + ") specified";
+        }
+        if (ihl < 5) {
+            return "input packet ihl(" + ihl + ") < 5";
+        }
+        totalLength = bytes.uint16(2);
+        if (totalLength < ihl * 4) {
+            return "input ihl(" + ihl + ") > totalLength(" + totalLength + ")";
+        }
+        if (totalLength > bytes.length()) {
+            return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
+        }
+        protocol = bytes.uint8(9);
+        byte[] srcBytes = bytes.sub(12, 4).toJavaArray();
+        src = IP.fromIPv4(srcBytes);
+        byte[] dstBytes = bytes.sub(16, 4).toJavaArray();
+        dst = IP.fromIPv4(dstBytes);
+        String err = initUpperLayerPacket(raw.sub(ihl * 4, totalLength - ihl * 4));
+        if (err != null) {
+            return err;
+        }
+
+        this.raw = raw;
         return null;
     }
 
@@ -99,8 +124,7 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // packet
         PacketDataBuffer bytesForPacket = raw.sub(ihl * 4, totalLength - ihl * 4);
-        initUpperLayerPacket();
-        packet.recordParent(this);
+        initUpperLayerPacket(null);
         String err = packet.from(bytesForPacket);
         if (err != null) {
             return err;
@@ -111,14 +135,24 @@ public class Ipv4Packet extends AbstractIpPacket {
         return null;
     }
 
-    private void initUpperLayerPacket() {
+    private String initUpperLayerPacket(PacketDataBuffer raw) {
         if (protocol == Consts.IP_PROTOCOL_ICMP) {
             packet = new IcmpPacket(false);
         } else if (protocol == Consts.IP_PROTOCOL_TCP) {
             packet = new TcpPacket();
+        } else if (protocol == Consts.IP_PROTOCOL_UDP) {
+            packet = new UdpPacket();
         } else {
             packet = new PacketBytes();
         }
+        if (raw != null && packet instanceof PartialPacket) {
+            String err = ((PartialPacket) packet).initPartial(raw);
+            if (err != null) {
+                return err;
+            }
+        }
+        packet.recordParent(this);
+        return null;
     }
 
     @Override
@@ -135,6 +169,11 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // fix values
         ihl = headerLen / 4;
+        if (packet instanceof TcpPacket) {
+            ((TcpPacket) packet).buildIPv4TcpPacket(this);
+        } else if (packet instanceof UdpPacket) {
+            ((UdpPacket) packet).buildIPv4UdpPacket(this);
+        }
         ByteArray packetByteArray = packet.getRawPacket();
         totalLength = headerLen + packetByteArray.length();
 
@@ -149,7 +188,7 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     @Override
-    protected void updateChecksum() {
+    protected void __updateChecksum() {
         raw.pktBuf.int16(10, 0);
         int cksum = calculateChecksum(raw.pktBuf.sub(0, 20));
         headerChecksum = cksum;
@@ -159,9 +198,43 @@ public class Ipv4Packet extends AbstractIpPacket {
             if (packet.requireUpdatingChecksum) {
                 ((TcpPacket) packet).updateChecksumWithIPv4(this);
             }
+        } else if (packet instanceof UdpPacket) {
+            if (packet.requireUpdatingChecksum) {
+                ((UdpPacket) packet).updateChecksumWithIPv4(this);
+            }
         } else {
             packet.checkAndUpdateChecksum();
         }
+    }
+
+    @Override
+    public void clearChecksum() {
+        super.clearChecksum();
+        if (packet instanceof TcpPacket || packet instanceof UdpPacket) {
+            packet.clearChecksum();
+        }
+    }
+
+    @Override
+    public Ipv4Packet copy() {
+        var ret = new Ipv4Packet();
+        ret.version = version;
+        ret.ihl = ihl;
+        ret.dscp = dscp;
+        ret.ecn = ecn;
+        ret.totalLength = totalLength;
+        ret.identification = identification;
+        ret.flags = flags;
+        ret.fragmentOffset = fragmentOffset;
+        ret.ttl = ttl;
+        ret.protocol = protocol;
+        ret.headerChecksum = headerChecksum;
+        ret.src = src;
+        ret.dst = dst;
+        ret.options = options;
+        ret.packet = packet.copy();
+        ret.packet.recordParent(ret);
+        return this;
     }
 
     @Override
@@ -184,8 +257,8 @@ public class Ipv4Packet extends AbstractIpPacket {
                 ByteArray.allocate(6)
                     .set(0, flagsAndFragmentOffsetFirstByte).set(1, (byte) fragmentOffset)
                     .set(2, (byte) ttl).set(3, (byte) protocol) /*skip the checksum here*/)
-            .concat(ByteArray.from(src.getAddress()))
-            .concat(ByteArray.from(dst.getAddress()));
+            .concat(src.bytes.copy())
+            .concat(dst.bytes.copy());
     }
 
     public int calculateChecksum() {
@@ -326,7 +399,12 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     public void setSrc(IPv4 src) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < 4; ++i) {
+                raw.pktBuf.set(12 + i, src.getAddress()[i]);
+            }
+            clearChecksum();
+        }
         this.src = src;
     }
 
@@ -336,7 +414,12 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     public void setDst(IPv4 dst) {
-        clearRawPacket();
+        if (raw != null) {
+            for (int i = 0; i < 4; ++i) {
+                raw.pktBuf.set(16 + i, dst.getAddress()[i]);
+            }
+            clearChecksum();
+        }
         this.dst = dst;
     }
 

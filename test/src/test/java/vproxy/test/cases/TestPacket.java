@@ -12,6 +12,8 @@ import vproxy.vpacket.*;
 
 import java.util.Collections;
 import java.util.Random;
+import java.util.function.BiFunction;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 
 import static org.junit.Assert.*;
@@ -56,9 +58,9 @@ public class TestPacket {
         arp.setProtocolSize(4);
         arp.setOpcode(Consts.ARP_PROTOCOL_OPCODE_REQ);
         arp.setSenderMac(randomMac().bytes);
-        arp.setSenderIp(ByteArray.from(randomIpv4().getAddress()));
+        arp.setSenderIp(randomIpv4().bytes);
         arp.setTargetMac(randomMac().bytes);
-        arp.setTargetIp(ByteArray.from(randomIpv4().getAddress()));
+        arp.setTargetIp(randomIpv4().bytes);
         return arp;
     }
 
@@ -113,7 +115,7 @@ public class TestPacket {
     }
 
     <T extends AbstractPacket> void check(T p, Supplier<T> constructor) {
-        p.clearRawPacket();
+        p.clearAllRawPackets();
         ByteArray bytes = p.getRawPacket();
         T p2 = constructor.get();
         String err = p2.from(new PacketDataBuffer(bytes));
@@ -121,9 +123,58 @@ public class TestPacket {
         assertEquals(p, p2);
         System.out.println("expect: " + p);
         System.out.println("actual: " + p2);
-        p2.clearRawPacket();
+        p2.clearAllRawPackets();
         ByteArray bytes2 = p2.getRawPacket();
         assertEquals(bytes, bytes2);
+
+        assertEquals(p, p.copy());
+        assertEquals(bytes, p.copy().getRawPacket());
+    }
+
+    <T extends AbstractPacket> void checkPartialAndModify(ByteArray bytes,
+                                                          Supplier<T> constructor,
+                                                          BiFunction<T, PacketDataBuffer, String> initPartial,
+                                                          Consumer<T> func) {
+        // ensure the original bytes won't be modified
+        bytes = bytes.copy();
+
+        T p = constructor.get();
+        ByteArray bytesX = bytes.copy();
+        String err = initPartial.apply(p, new PacketDataBuffer(bytesX));
+        assertNull(err);
+
+        // modify the partially initiated packet
+        func.accept(p);
+        // retrieve the bytes
+        ByteArray modified = p.getRawPacket();
+        // must be the same array
+        assertSame(bytesX, modified);
+
+        {
+            T px = constructor.get();
+            px.from(new PacketDataBuffer(bytesX));
+            System.out.println("partial: " + px);
+        }
+
+        T p2 = constructor.get();
+        err = p2.from(new PacketDataBuffer(bytes.copy()));
+        assertNull(err);
+
+        // clear raw packet to ensure a full re-gen
+        p2.clearAllRawPackets();
+        // modify packet field
+        func.accept(p2);
+        // generate the packet
+        ByteArray gen = p2.getRawPacket();
+
+        {
+            T px = constructor.get();
+            px.from(new PacketDataBuffer(gen));
+            System.out.println("full   : " + px);
+        }
+
+        // the bytes should be the same
+        assertEquals(gen, modified);
     }
 
     @Test
@@ -145,16 +196,26 @@ public class TestPacket {
             0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69
         );
         Ipv4Packet ipv4 = new Ipv4Packet();
-        String err = ipv4.from(new PacketDataBuffer(bytes));
+        String err = ipv4.initPartial(new PacketDataBuffer(bytes));
         assertNull(err);
         assertTrue(ipv4.getPacket() instanceof IcmpPacket);
-        ipv4.getPacket().clearRawPacket();
+        assertEquals(IP.from("192.168.3.96"), ipv4.getSrc());
+        assertEquals(IP.from("192.168.3.1"), ipv4.getDst());
 
-        ipv4.clearRawPacket();
+        ipv4 = new Ipv4Packet();
+        err = ipv4.from(new PacketDataBuffer(bytes));
+        assertNull(err);
+        assertTrue(ipv4.getPacket() instanceof IcmpPacket);
+
+        ipv4.clearAllRawPackets();
         ByteArray gen = ipv4.getRawPacket();
         assertEquals(bytes, gen);
 
         check(ipv4, Ipv4Packet::new);
+
+        checkPartialAndModify(bytes, Ipv4Packet::new, Ipv4Packet::initPartial, p -> p.setSrc((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, Ipv4Packet::new, Ipv4Packet::initPartial, p -> p.setDst((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, Ipv4Packet::new, Ipv4Packet::initPartial, p -> p.setTtl(5));
     }
 
     @Test
@@ -180,16 +241,25 @@ public class TestPacket {
             0x62, 0x63, 0x64, 0x65, 0x66, 0x67, 0x68, 0x69
         );
         Ipv6Packet ipv6 = new Ipv6Packet();
-        String err = ipv6.from(new PacketDataBuffer(bytes));
+        String err = ipv6.initPartial(new PacketDataBuffer(bytes));
+        assertNull(err);
+        assertEquals(IP.from("::1"), ipv6.getSrc());
+        assertEquals(IP.from("::1"), ipv6.getDst());
+
+        ipv6 = new Ipv6Packet();
+        err = ipv6.from(new PacketDataBuffer(bytes));
         assertNull(err);
         assertTrue(ipv6.getPacket() instanceof IcmpPacket);
-        ipv6.getPacket().clearRawPacket();
 
-        ipv6.clearRawPacket();
+        ipv6.clearAllRawPackets();
         ByteArray gen = ipv6.getRawPacket();
         assertEquals(bytes, gen);
 
         check(ipv6, Ipv6Packet::new);
+
+        checkPartialAndModify(bytes, Ipv6Packet::new, Ipv6Packet::initPartial, p -> p.setSrc((IPv6) IP.from("::2")));
+        checkPartialAndModify(bytes, Ipv6Packet::new, Ipv6Packet::initPartial, p -> p.setDst((IPv6) IP.from("::2")));
+        checkPartialAndModify(bytes, Ipv6Packet::new, Ipv6Packet::initPartial, p -> p.setHopLimit(5));
     }
 
     @Test
@@ -208,6 +278,9 @@ public class TestPacket {
         ether.setPacket(randomPacket());
 
         check(ether, EthernetPacket::new);
+
+        checkPartialAndModify(ether.getRawPacket(), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setSrc(new MacAddress("ab:cd:ef:01:23:45")));
+        checkPartialAndModify(ether.getRawPacket(), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setDst(new MacAddress("ab:cd:ef:01:23:45")));
     }
 
     @Test
@@ -260,12 +333,24 @@ public class TestPacket {
         );
 
         EthernetPacket ether = new EthernetPacket();
-        String err = ether.from(new PacketDataBuffer(bytes));
+        String err = ether.from(new PacketDataBuffer(bytes), true);
+        assertNull(err);
+        Ipv4Packet ipv4 = (Ipv4Packet) ether.getPacket();
+        TcpPacket tcp = (TcpPacket) ipv4.getPacket();
+        assertEquals(new MacAddress("cc:70:ed:c4:e4:f9"), ether.getDst());
+        assertEquals(new MacAddress("f8:ff:c2:07:89:6e"), ether.getSrc());
+        assertEquals(IP.from("10.242.194.112"), ipv4.getSrc());
+        assertEquals(IP.from("180.101.49.12"), ipv4.getDst());
+        assertEquals(62824, tcp.getSrcPort());
+        assertEquals(443, tcp.getDstPort());
+
+        ether = new EthernetPacket();
+        err = ether.from(new PacketDataBuffer(bytes));
         assertNull(err);
 
         check(ether, EthernetPacket::new);
 
-        TcpPacket tcp = (TcpPacket) ((Ipv4Packet) ether.getPacket()).getPacket();
+        tcp = (TcpPacket) ((Ipv4Packet) ether.getPacket()).getPacket();
 
         assertEquals(62824, tcp.getSrcPort());
         assertEquals(443, tcp.getDstPort());
@@ -278,6 +363,15 @@ public class TestPacket {
         assertEquals(0xf3ff, tcp.getChecksum());
         assertEquals(8, tcp.getOptions().size());
         assertEquals(0, tcp.getData().length());
+
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setSrc((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setDst((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((TcpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setSrcPort(121));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((TcpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setDstPort(121));
     }
 
     @Test
@@ -347,5 +441,52 @@ public class TestPacket {
         assertEquals(517, tcp.getData().length());
 
         assertEquals(dataPart, tcp.getData());
+
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setSrc((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setDst((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((TcpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setSrcPort(121));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((TcpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setDstPort(121));
+    }
+
+    @Test
+    public void udpIpv4Example() {
+        ByteArray header = ByteArray.fromHexString("" +
+            "f8ffc207896ed66292eecebf08004500" +
+            "005937bd400040117f41c0a80101c0a8" +
+            "01440035c9140045df0d");
+        ByteArray data = ByteArray.fromHexString("" +
+            "15bb8000000100010000000003313237" +
+            "013001300131077370656369616c0676" +
+            "70726f78790263630000010001c00c00" +
+            "01000100000bef00047f000001");
+        ByteArray bytes = header.concat(data);
+
+        EthernetPacket ether = new EthernetPacket();
+        String err = ether.from(new PacketDataBuffer(bytes));
+        assertNull(err);
+
+        check(ether, EthernetPacket::new);
+
+        UdpPacket udp = (UdpPacket) ((Ipv4Packet) ether.getPacket()).getPacket();
+
+        assertEquals(53, udp.getSrcPort());
+        assertEquals(51476, udp.getDstPort());
+        assertEquals(69, udp.getLength());
+        assertEquals(0xdf0d, udp.getChecksum());
+
+        assertEquals(data, udp.getData().getRawPacket());
+
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setSrc((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((Ipv4Packet) p.getPacket()).setDst((IPv4) IP.from("1.2.3.4")));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((UdpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setSrcPort(121));
+        checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
+            p -> ((UdpPacket) ((Ipv4Packet) p.getPacket()).getPacket()).setDstPort(121));
     }
 }
