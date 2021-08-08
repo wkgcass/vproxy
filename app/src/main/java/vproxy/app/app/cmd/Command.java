@@ -1,9 +1,9 @@
 package vproxy.app.app.cmd;
 
 import vproxy.app.app.Application;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 
 import java.lang.reflect.Field;
 import java.util.*;

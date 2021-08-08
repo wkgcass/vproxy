@@ -22,22 +22,31 @@ OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 SOFTWARE.
  */
 
-package vproxy.base.util.ex;
+package vproxy.base.util.coll;
 
-import java.util.Iterator;
+import java.util.ListIterator;
 
 /**
- * Reusable iterator
+ * Reusable list iterator
  *
  * @author <a href="mailto:szhnet@gmail.com">szh</a>
  */
-public interface ReusableIterator<E> extends Iterator<E> {
+public interface ReusableListIterator<E> extends ListIterator<E>, ReusableIterator<E> {
 
     /**
-     * Reset the iterator to initial state.
+     * This method is identical to {@code rewind(0)}.
      *
-     * @return this object
+     * @return this iterator
      */
-    ReusableIterator<E> rewind();
+    ReusableListIterator<E> rewind();
+
+
+    /**
+     * Reset the iterator and specify index of the first element to be returned from the iterator.
+     *
+     * @param index index of the first element to be returned from the iterator
+     * @return this iterator
+     */
+    ReusableListIterator<E> rewind(int index);
 
 }

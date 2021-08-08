@@ -2,7 +2,7 @@ package vproxyx.websocks.relay
 
 import vproxy.base.component.elgroup.EventLoopGroup
 import vproxy.base.connection.ServerSock
-import vproxy.base.util.ErrorPages
+import vproxy.base.util.web.ErrorPages
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.with
 import vproxy.lib.http.RoutingHandlerFunc

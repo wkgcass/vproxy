@@ -7,7 +7,7 @@ import vproxy.base.component.check.ConnectClient;
 import vproxy.base.component.check.ConnectResult;
 import vproxy.base.connection.NetEventLoop;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.BlockCallback;
+import vproxy.base.util.callback.BlockCallback;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.test.tool.DirectCloseServer;
 import vproxy.test.tool.IdServer;

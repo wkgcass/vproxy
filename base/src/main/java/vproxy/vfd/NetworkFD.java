@@ -1,6 +1,6 @@
 package vproxy.vfd;
 
-import vproxy.base.util.Comment;
+import vproxy.base.util.anno.Comment;
 
 import java.io.IOException;
 

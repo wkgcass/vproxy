@@ -1,7 +1,11 @@
 package vproxy.base.dns;
 
 import vproxy.base.Config;
-import vproxy.base.util.*;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.anno.Blocking;
+import vproxy.base.util.callback.BlockCallback;
+import vproxy.base.util.callback.Callback;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.IPv4;

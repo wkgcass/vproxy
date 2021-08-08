@@ -1,6 +1,6 @@
 package vproxy.lib.http
 
-import vproxy.base.util.Tree
+import vproxy.base.util.coll.Tree
 import vproxy.lib.http.route.SubPath
 
 abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutineHttpServer<CoroutineHttpServer>> {

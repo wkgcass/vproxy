@@ -5,6 +5,7 @@ import vproxy.base.processor.ConnectionDelegate;
 import vproxy.base.processor.Hint;
 import vproxy.base.processor.Processor;
 import vproxy.base.util.*;
+import vproxy.base.util.anno.ThreadSafe;
 import vproxy.base.util.nio.ByteArrayChannel;
 import vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
 

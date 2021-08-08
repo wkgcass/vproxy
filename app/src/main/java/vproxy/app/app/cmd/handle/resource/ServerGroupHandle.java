@@ -1,6 +1,5 @@
 package vproxy.app.app.cmd.handle.resource;
 
-import vjson.util.ObjectBuilder;
 import vproxy.app.app.Application;
 import vproxy.app.app.ServerGroupHolder;
 import vproxy.app.app.cmd.Command;
@@ -21,7 +20,6 @@ import vproxy.component.svrgroup.Upstream;
 
 import java.util.LinkedList;
 import java.util.List;
-import java.util.Map;
 import java.util.stream.Collectors;
 
 public class ServerGroupHandle {

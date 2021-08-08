@@ -12,6 +12,8 @@ import vproxy.base.component.svrgroup.ServerGroup;
 import vproxy.base.dns.DNSClient;
 import vproxy.base.dns.Resolver;
 import vproxy.base.util.*;
+import vproxy.base.util.anno.Blocking;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.component.app.Socks5Server;

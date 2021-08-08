@@ -1,8 +1,8 @@
 package vproxy.base.dns.dnsserverlistgetter;
 
 import vproxy.base.dns.DnsServerListGetter;
-import vproxy.base.util.Callback;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 

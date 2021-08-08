@@ -4,10 +4,10 @@ import vproxy.app.app.Main;
 import vproxy.app.app.MainCtx;
 import vproxy.app.app.MainOp;
 import vproxy.app.process.Shutdown;
-import vproxy.base.util.JoinCallback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.JoinCallback;
 
 import java.io.File;
 

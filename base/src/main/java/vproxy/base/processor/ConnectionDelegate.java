@@ -1,6 +1,6 @@
 package vproxy.base.processor;
 
-import vproxy.base.util.ThreadSafe;
+import vproxy.base.util.anno.ThreadSafe;
 import vproxy.vfd.IPPort;
 
 public abstract class ConnectionDelegate {

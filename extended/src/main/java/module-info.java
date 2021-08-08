@@ -6,6 +6,8 @@ module vproxy.extended {
     requires vproxy.lib;
 
     exports vproxyx;
+    exports vproxyx.pktfiltergen;
+    exports vproxyx.pktfiltergen.flow;
     exports vproxyx.util;
     exports vproxyx.websocks;
     exports vproxyx.websocks.relay;

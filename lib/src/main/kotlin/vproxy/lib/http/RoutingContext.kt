@@ -6,7 +6,7 @@ import vproxy.base.processor.http1.entity.Header
 import vproxy.base.util.ByteArray
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
-import vproxy.base.util.Tree
+import vproxy.base.util.coll.Tree
 import vproxy.lib.http.route.SubPath
 import vproxy.lib.http.route.WildcardSubPath
 

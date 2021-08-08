@@ -15,13 +15,13 @@ import vproxy.base.connection.ServerSock
 import vproxy.base.dns.Cache
 import vproxy.base.dns.Resolver
 import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.Callback
-import vproxy.base.util.ClasspathResourceHolder
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
+import vproxy.base.util.callback.Callback
 import vproxy.base.util.exception.AlreadyExistException
 import vproxy.base.util.exception.NotFoundException
 import vproxy.base.util.exception.XException
+import vproxy.base.util.web.ClasspathResourceHolder
 import vproxy.component.app.Socks5Server
 import vproxy.component.app.TcpLB
 import vproxy.component.secure.SecurityGroupRule

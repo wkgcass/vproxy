@@ -1,6 +1,6 @@
 package vproxy.base.redis.application;
 
-import vproxy.base.util.Callback;
+import vproxy.base.util.callback.Callback;
 
 import java.util.List;
 

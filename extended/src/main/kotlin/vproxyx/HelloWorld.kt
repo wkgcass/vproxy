@@ -4,7 +4,12 @@ import vproxy.base.Config
 import vproxy.base.connection.*
 import vproxy.base.dhcp.DHCPClientHelper
 import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.*
+import vproxy.base.util.LogType
+import vproxy.base.util.Logger
+import vproxy.base.util.RingBuffer
+import vproxy.base.util.Version
+import vproxy.base.util.callback.BlockCallback
+import vproxy.base.util.coll.Tuple
 import vproxy.base.util.nio.ByteArrayChannel
 import vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.coroutine
@@ -35,7 +40,8 @@ object HelloWorld {
       Logger.alert("You may set -DhcpGetDnsListNics=all or eth0,eth1,... to enable the feature.")
     } else {
       Logger.alert("Retrieving dns servers using DHCP ...")
-      val cb: BlockCallback<Set<IP>, IOException> = BlockCallback<Set<IP>, IOException>()
+      val cb: BlockCallback<Set<IP>, IOException> =
+        BlockCallback<Set<IP>, IOException>()
       DHCPClientHelper.getDomainNameServers(sLoop, Config.dhcpGetDnsListNics, 1, cb)
       try {
         val ips: Set<IP> = cb.block()

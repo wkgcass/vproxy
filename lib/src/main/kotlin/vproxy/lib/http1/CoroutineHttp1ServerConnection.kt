@@ -6,7 +6,7 @@ import vproxy.base.processor.http1.entity.Header
 import vproxy.base.processor.http1.entity.Request
 import vproxy.base.processor.http1.entity.Response
 import vproxy.base.util.ByteArray
-import vproxy.base.util.HttpStatusCodeReasonMap
+import vproxy.base.util.web.HttpStatusCodeReasonMap
 import vproxy.lib.http.HttpServerConnection
 import vproxy.lib.http.HttpServerResponse
 import vproxy.lib.tcp.CoroutineConnection

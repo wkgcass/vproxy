@@ -2,8 +2,8 @@ package vproxy.base.component.check;
 
 import vproxy.base.connection.NetEventLoop;
 import vproxy.base.selector.TimerEvent;
-import vproxy.base.util.Callback;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 import vproxy.vfd.IPPort;
 
 import java.io.IOException;

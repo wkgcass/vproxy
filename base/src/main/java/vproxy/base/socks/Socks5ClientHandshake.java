@@ -1,10 +1,10 @@
 package vproxy.base.socks;
 
 import vproxy.base.connection.Connection;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.nio.ByteArrayChannel;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.IPv4;

@@ -4,8 +4,8 @@ import vproxy.base.connection.*;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
-import vproxy.base.util.ThreadSafe;
 import vproxy.base.util.Utils;
+import vproxy.base.util.anno.ThreadSafe;
 
 import java.io.IOException;
 import java.util.LinkedList;

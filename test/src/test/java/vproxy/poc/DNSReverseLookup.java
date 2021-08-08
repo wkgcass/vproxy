@@ -2,8 +2,8 @@ package vproxy.poc;
 
 import vproxy.base.dns.*;
 import vproxy.base.dns.rdata.PTR;
-import vproxy.base.util.Callback;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.Callback;
 
 import java.io.IOException;
 import java.util.ArrayList;

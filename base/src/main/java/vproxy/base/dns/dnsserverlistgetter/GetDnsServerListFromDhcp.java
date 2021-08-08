@@ -5,9 +5,9 @@ import vproxy.base.dhcp.DHCPClientHelper;
 import vproxy.base.dns.AbstractResolver;
 import vproxy.base.dns.DnsServerListGetter;
 import vproxy.base.dns.Resolver;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 

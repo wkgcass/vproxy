@@ -20,8 +20,8 @@ import vproxy.base.Config;
 import vproxy.base.connection.ServerSock;
 import vproxy.base.util.AnnotationKeys;
 import vproxy.base.util.Logger;
-import vproxy.base.util.Tuple;
 import vproxy.base.util.Utils;
+import vproxy.base.util.coll.Tuple;
 import vproxy.test.cases.TestSSL;
 import vproxy.vfd.IPPort;
 

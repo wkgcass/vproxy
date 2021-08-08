@@ -1,6 +1,6 @@
 package vproxy.base.redis;
 
-import vproxy.base.util.Callback;
+import vproxy.base.util.callback.Callback;
 
 public interface RESPHandler<T> {
     T attachment();

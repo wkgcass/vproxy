@@ -28,8 +28,8 @@ import vproxy.base.selector.wrap.kcp.mock.*;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
-import vproxy.base.util.ex.ReItrLinkedList;
-import vproxy.base.util.ex.ReusableListIterator;
+import vproxy.base.util.coll.ReItrLinkedList;
+import vproxy.base.util.coll.ReusableListIterator;
 
 import java.util.Iterator;
 import java.util.LinkedList;

@@ -10,10 +10,10 @@ import vproxy.base.protocol.ProtocolServerHandler;
 import vproxy.base.redis.RESPConfig;
 import vproxy.base.redis.RESPProtocolHandler;
 import vproxy.base.redis.application.*;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.IPPort;
 

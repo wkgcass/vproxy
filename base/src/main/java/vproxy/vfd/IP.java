@@ -1,7 +1,12 @@
 package vproxy.vfd;
 
 import vproxy.base.dns.Resolver;
-import vproxy.base.util.*;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.IPType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
+import vproxy.base.util.callback.BlockCallback;
+import vproxy.base.util.callback.Callback;
 
 import java.io.IOException;
 import java.net.*;

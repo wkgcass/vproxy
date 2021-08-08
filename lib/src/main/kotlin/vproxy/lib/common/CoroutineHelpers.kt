@@ -6,9 +6,9 @@ import vproxy.base.connection.NetEventLoop
 import vproxy.base.connection.ServerSock
 import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.selector.TimerEvent
-import vproxy.base.util.Callback
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
+import vproxy.base.util.callback.Callback
 import vproxy.base.util.promise.Promise
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.lib.tcp.CoroutineServerSock

@@ -1,8 +1,8 @@
 package vproxy.base.selector.wrap;
 
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.Comment;
 import vproxy.base.util.Logger;
+import vproxy.base.util.anno.Comment;
 import vproxy.base.util.promise.Promise;
 import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;

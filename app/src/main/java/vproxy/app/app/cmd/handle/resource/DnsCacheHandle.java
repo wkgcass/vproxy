@@ -1,8 +1,6 @@
 package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
 import vproxy.base.dns.Cache;
 import vproxy.base.dns.Resolver;
 

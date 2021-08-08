@@ -5,7 +5,7 @@ import vproxy.app.app.MainCtx;
 import vproxy.app.app.MainOp;
 import vproxy.app.app.cmd.CmdResult;
 import vproxy.app.app.cmd.SystemCommand;
-import vproxy.base.util.BlockCallback;
+import vproxy.base.util.callback.BlockCallback;
 
 public class HttpControllerOp implements MainOp {
     @Override

@@ -7,7 +7,7 @@ import vproxy.base.connection.ConnectableConnectionHandler
 import vproxy.base.connection.ConnectableConnectionHandlerContext
 import vproxy.base.connection.ConnectionHandlerContext
 import vproxy.base.socks.Socks5ClientHandshake
-import vproxy.base.util.Callback
+import vproxy.base.util.callback.Callback
 import vproxy.lib.common.__getCurrentNetEventLoopOrFail
 import vproxy.vfd.IP
 import vproxy.vfd.IPPort

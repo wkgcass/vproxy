@@ -2,8 +2,8 @@ package vproxy.test.cases;
 
 import org.junit.Test;
 import vproxy.base.util.Network;
-import vproxy.base.util.Tuple;
 import vproxy.base.util.Utils;
+import vproxy.base.util.coll.Tuple;
 import vproxy.vfd.IP;
 
 import java.util.Arrays;

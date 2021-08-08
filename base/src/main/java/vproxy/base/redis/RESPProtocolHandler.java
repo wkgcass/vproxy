@@ -2,10 +2,10 @@ package vproxy.base.redis;
 
 import vproxy.base.protocol.ProtocolHandler;
 import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.Callback;
 
 public class RESPProtocolHandler implements ProtocolHandler<RESPContext> {
     private final RESPConfig config;

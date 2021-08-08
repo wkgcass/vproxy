@@ -1,8 +1,9 @@
 #!/usr/bin/env python
 
-import sys
-import subprocess
 import socket
+import subprocess
+import sys
+
 
 def runCommand(commands):
     p = subprocess.Popen(commands,

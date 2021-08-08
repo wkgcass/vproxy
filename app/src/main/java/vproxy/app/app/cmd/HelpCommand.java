@@ -3,7 +3,7 @@ package vproxy.app.app.cmd;
 import vproxy.app.app.Application;
 import vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import vproxy.base.Config;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.coll.Tuple;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import vproxy.vswitch.util.SwitchUtils;

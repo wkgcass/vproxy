@@ -4,7 +4,7 @@ import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Flag;
 import vproxy.app.app.cmd.Param;
 import vproxy.base.dns.Resolver;
-import vproxy.base.util.BlockCallback;
+import vproxy.base.util.callback.BlockCallback;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;

@@ -1,8 +1,8 @@
 package vproxy.base.redis.application;
 
 import vproxy.base.redis.RESPHandler;
-import vproxy.base.util.Callback;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 
 import java.util.*;
 

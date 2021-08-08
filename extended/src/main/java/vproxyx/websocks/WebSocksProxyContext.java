@@ -3,8 +3,8 @@ package vproxyx.websocks;
 import vproxy.base.connection.Connector;
 import vproxy.base.http.HttpContext;
 import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.util.Callback;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.callback.Callback;
+import vproxy.base.util.coll.Tuple;
 import vproxy.base.util.nio.ByteArrayChannel;
 import vproxy.socks.Socks5ProxyContext;
 

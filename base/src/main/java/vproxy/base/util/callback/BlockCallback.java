@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package vproxy.base.util.callback;
 
 public class BlockCallback<T, E extends Throwable> extends Callback<T, E> {
     private final Object lock = this; // lock for synchronizing t/ex/done/thread

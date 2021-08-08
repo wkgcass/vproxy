@@ -59,11 +59,14 @@ module vproxy.base {
     exports vproxy.base.selector.wrap.udp;
     exports vproxy.base.socks;
     exports vproxy.base.util;
+    exports vproxy.base.util.anno;
+    exports vproxy.base.util.bitwise;
     exports vproxy.base.util.bytearray;
+    exports vproxy.base.util.callback;
     exports vproxy.base.util.codec;
+    exports vproxy.base.util.coll;
     exports vproxy.base.util.crypto;
     exports vproxy.base.util.direct;
-    exports vproxy.base.util.ex;
     exports vproxy.base.util.exception;
     exports vproxy.base.util.functional;
     exports vproxy.base.util.io;
@@ -78,6 +81,7 @@ module vproxy.base {
     exports vproxy.base.util.time;
     exports vproxy.base.util.time.impl;
     exports vproxy.base.util.unsafe;
+    exports vproxy.base.util.web;
     exports vproxy.vfd;
     exports vproxy.vfd.abs;
     exports vproxy.vfd.jdk;
@@ -88,7 +92,6 @@ module vproxy.base {
     exports vproxy.vpacket.conntrack;
     exports vproxy.vpacket.conntrack.tcp;
     exports vproxy.xdp;
-    exports vproxy.base.util.bitwise;
 
     uses vproxy.vfd.FDs;
     uses vproxy.base.processor.ProcessorRegistry;

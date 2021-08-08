@@ -9,6 +9,7 @@ import vproxy.base.processor.http1.entity.Response;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.socks.AddressType;
 import vproxy.base.util.*;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.nio.ByteArrayChannel;
 import vproxy.base.util.ringbuffer.SSLUtils;
 import vproxy.pool.ConnectionPool;

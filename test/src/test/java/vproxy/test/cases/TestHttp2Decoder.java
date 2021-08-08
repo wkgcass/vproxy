@@ -13,10 +13,10 @@ import vproxy.base.processor.httpbin.BinaryHttpSubContext;
 import vproxy.base.processor.httpbin.HttpFrame;
 import vproxy.base.processor.httpbin.entity.Header;
 import vproxy.base.processor.httpbin.frame.*;
-import vproxy.base.util.BlockCallback;
 import vproxy.base.util.ByteArray;
-import vproxy.base.util.Callback;
 import vproxy.base.util.RingBuffer;
+import vproxy.base.util.callback.BlockCallback;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.NoException;
 import vproxy.base.util.nio.ByteArrayChannel;
 

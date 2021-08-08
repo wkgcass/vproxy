@@ -3,9 +3,9 @@ package vproxy.base.connection.util;
 import vproxy.base.connection.ConnectableConnectionHandler;
 import vproxy.base.connection.ConnectableConnectionHandlerContext;
 import vproxy.base.connection.ConnectionHandlerContext;
-import vproxy.base.util.Callback;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.callback.Callback;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;

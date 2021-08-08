@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 
-import sys
 import os
+import sys
 
 base_dir = sys.argv[1]
 base_dir = os.path.abspath(base_dir)

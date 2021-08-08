@@ -1,8 +1,8 @@
 package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.LRUMap;
 import vproxy.base.util.Timer;
+import vproxy.base.util.coll.LRUMap;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.util.SwitchUtils;

@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package vproxy.base.util.coll;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

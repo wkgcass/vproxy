@@ -11,8 +11,8 @@ import vproxy.base.processor.http1.entity.Request
 import vproxy.base.processor.http1.entity.Response
 import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.ByteArray
-import vproxy.base.util.Callback
 import vproxy.base.util.RingBuffer
+import vproxy.base.util.callback.Callback
 import vproxy.base.util.promise.Promise
 import vproxy.base.util.ringbuffer.SSLUtils
 import vproxy.base.util.thread.VProxyThread

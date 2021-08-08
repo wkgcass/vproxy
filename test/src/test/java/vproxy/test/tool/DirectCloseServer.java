@@ -2,7 +2,7 @@ package vproxy.test.tool;
 
 import vproxy.base.connection.*;
 import vproxy.base.util.RingBuffer;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.coll.Tuple;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
 

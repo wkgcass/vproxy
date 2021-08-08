@@ -5,7 +5,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import vproxy.base.connection.NetEventLoop
 import vproxy.base.connection.ServerSock
 import vproxy.base.util.RingBuffer
-import vproxy.base.util.Tuple
+import vproxy.base.util.coll.Tuple
 import vproxy.vfd.SocketFD
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException

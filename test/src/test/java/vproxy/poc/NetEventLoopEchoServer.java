@@ -4,7 +4,7 @@ import vproxy.base.connection.*;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.selector.wrap.udp.UDPBasedFDs;
 import vproxy.base.util.RingBuffer;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.coll.Tuple;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;

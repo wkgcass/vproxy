@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package vproxy.base.util.callback;
 
 public class JoinCallback<T, E extends Throwable> extends Callback<T, E> {
     private final Callback<T, E> cb;

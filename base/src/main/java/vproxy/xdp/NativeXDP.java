@@ -1,6 +1,6 @@
 package vproxy.xdp;
 
-import vproxy.base.util.CriticalNative;
+import vproxy.base.util.anno.CriticalNative;
 import vproxy.base.util.thread.VProxyThread;
 
 import java.io.IOException;

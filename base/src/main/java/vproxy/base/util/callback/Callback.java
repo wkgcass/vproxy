@@ -1,4 +1,7 @@
-package vproxy.base.util;
+package vproxy.base.util.callback;
+
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
 
 public abstract class
 Callback<T, E extends Throwable> {

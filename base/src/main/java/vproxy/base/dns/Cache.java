@@ -3,7 +3,7 @@ package vproxy.base.dns;
 import vproxy.base.selector.TimerEvent;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.coll.Tuple;
 import vproxy.vfd.FDProvider;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;

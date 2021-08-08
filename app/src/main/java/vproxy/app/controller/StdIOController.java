@@ -5,8 +5,8 @@ import vproxy.app.app.cmd.CmdResult;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.HelpCommand;
 import vproxy.app.app.cmd.SystemCommand;
-import vproxy.base.util.Callback;
 import vproxy.base.util.Utils;
+import vproxy.base.util.callback.Callback;
 
 import java.util.Scanner;
 

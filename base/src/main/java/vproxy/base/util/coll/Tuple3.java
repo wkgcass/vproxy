@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package vproxy.base.util.coll;
 
 public class Tuple3<A, B, C> {
     public final A _1;

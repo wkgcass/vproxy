@@ -1,4 +1,8 @@
-package vproxy.base.util;
+package vproxy.base.util.web;
+
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;

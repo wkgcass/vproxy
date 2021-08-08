@@ -5,8 +5,8 @@ import vproxy.base.connection.Connector;
 import vproxy.base.processor.Hint;
 import vproxy.base.processor.Processor;
 import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.util.Callback;
-import vproxy.base.util.Tuple;
+import vproxy.base.util.callback.Callback;
+import vproxy.base.util.coll.Tuple;
 
 import java.io.IOException;
 

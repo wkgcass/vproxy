@@ -3,7 +3,7 @@ package vproxy.base.dns;
 import vproxy.base.component.svrgroup.ServerGroup;
 import vproxy.base.component.svrgroup.ServerListener;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.Callback;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.vfd.DatagramFD;

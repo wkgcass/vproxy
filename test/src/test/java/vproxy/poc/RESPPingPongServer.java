@@ -8,7 +8,7 @@ import vproxy.base.redis.RESPConfig;
 import vproxy.base.redis.RESPHandler;
 import vproxy.base.redis.RESPProtocolHandler;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.Callback;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.IPPort;
 

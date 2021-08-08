@@ -4,7 +4,7 @@ import vproxy.base.connection.Connection
 import vproxy.base.connection.ServerHandler
 import vproxy.base.connection.ServerHandlerContext
 import vproxy.base.util.RingBuffer
-import vproxy.base.util.Tuple
+import vproxy.base.util.coll.Tuple
 import vproxy.vfd.SocketFD
 import java.io.IOException
 import java.util.*
