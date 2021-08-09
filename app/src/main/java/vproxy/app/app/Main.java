@@ -21,10 +21,7 @@ import vproxy.fstack.FStackUtil;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.VFDConfig;
 import vproxy.vmirror.Mirror;
-import vproxyx.HelloWorld;
-import vproxyx.KcpTun;
-import vproxyx.WebSocksProxyAgent;
-import vproxyx.WebSocksProxyServer;
+import vproxyx.*;
 
 import java.io.File;
 import java.io.IOException;
@@ -144,6 +141,9 @@ public class Main {
                     break;
                 case "GenerateCommandDoc":
                     GenerateCommandDoc.main0(args);
+                    break;
+                case "PacketFilterGenerator":
+                    PacketFilterGenerator.main0(args);
                     break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
