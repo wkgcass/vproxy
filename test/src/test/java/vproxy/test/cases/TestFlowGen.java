@@ -64,7 +64,7 @@ public class TestFlowGen {
         expected
             .append("package ").append(packageName).append(";\n")
             .append("\n")
-            .append("import vproxyx.pktfiltergen.BasePacketFilter;\n")
+            .append("import vproxy.app.plugin.impl.BasePacketFilter;\n")
             .append("import vproxy.vswitch.plugin.FilterResult;\n")
             .append("import vproxy.vswitch.PacketFilterHelper;\n")
             .append("import vproxy.vswitch.PacketBuffer;\n");
