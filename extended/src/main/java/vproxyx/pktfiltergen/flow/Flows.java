@@ -11,7 +11,6 @@ import vproxy.vfd.MacAddress;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.PacketFilterHelper;
 import vproxy.vswitch.plugin.FilterResult;
-import vproxyx.pktfiltergen.BasePacketFilter;
 import vproxyx.pktfiltergen.IfaceHolder;
 
 import java.util.*;
@@ -84,7 +83,7 @@ public class Flows {
         "\n" +
         "{{Imports}}" +
         "\n" +
-        "public class {{ClassSimpleName}} extends " + BasePacketFilter.class.getSimpleName() + " {\n" +
+        "public class {{ClassSimpleName}} extends BasePacketFilter {\n" +
         "{{Fields}}" +
         "    public {{ClassSimpleName}}() {\n" +
         "        super();" +
@@ -107,7 +106,7 @@ public class Flows {
     public String gen(String fullClassName) {
         GenContext ctx = new GenContext();
 
-        ctx.ensureImport(BasePacketFilter.class);
+        ctx.ensureImport("vproxy.app.plugin.impl.BasePacketFilter");
         ctx.ensureImport(FilterResult.class);
         ctx.ensureImport(PacketFilterHelper.class);
         ctx.ensureImport(PacketBuffer.class);
@@ -370,8 +369,8 @@ public class Flows {
 
     private String genImports(GenContext ctx) {
         StringBuilder sb = new StringBuilder();
-        for (Class<?> cls : ctx.imports) {
-            sb.append("import ").append(cls.getName()).append(";\n");
+        for (String cls : ctx.imports) {
+            sb.append("import ").append(cls).append(";\n");
         }
         return sb.toString();
     }
@@ -413,7 +412,7 @@ public class Flows {
     }
 
     static class GenContext {
-        private final Set<Class<?>> imports = new LinkedHashSet<>();
+        private final Set<String> imports = new LinkedHashSet<>();
         private final ArrayList<String> indexedIfaces = new ArrayList<>();
         private final Set<MacAddress> macFields = new HashSet<>();
         private final Set<IPv4> ipv4Fields = new HashSet<>();
@@ -425,6 +424,10 @@ public class Flows {
         private Flow currentFlow;
 
         public void ensureImport(Class<?> cls) {
+            imports.add(cls.getName());
+        }
+
+        public void ensureImport(String cls) {
             imports.add(cls);
         }
 

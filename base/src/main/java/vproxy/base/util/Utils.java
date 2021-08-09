@@ -1,5 +1,8 @@
 package vproxy.base.util;
 
+import vproxy.base.util.exception.AlreadyExistException;
+import vproxy.base.util.exception.NotFoundException;
+import vproxy.base.util.exception.XException;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.base.util.unsafe.JDKUnsafe;
 import vproxy.vfd.FDProvider;
@@ -74,9 +77,23 @@ public class Utils {
         return sb.toString();
     }
 
+    private static final Set<Class<?>> hideClassNameExceptions = Set.of(
+        Exception.class,
+        XException.class,
+        RuntimeException.class,
+        Error.class,
+        Throwable.class,
+        AlreadyExistException.class,
+        NotFoundException.class);
+
     private static String formatErrBase(Throwable err) {
         if (err.getMessage() != null && !err.getMessage().isBlank()) {
-            return err.getMessage().trim();
+            StringBuilder sb = new StringBuilder();
+            if (!hideClassNameExceptions.contains(err.getClass())) {
+                sb.append(err.getClass().getSimpleName()).append(": ");
+            }
+            sb.append(err.getMessage().trim());
+            return sb.toString();
         } else {
             return err.toString();
         }
@@ -85,7 +102,7 @@ public class Utils {
     public static String formatErr(Throwable err) {
         String base = formatErrBase(err);
         if (err instanceof RuntimeException) {
-            return base + Arrays.asList(err.getStackTrace()).toString();
+            return base + Arrays.asList(err.getStackTrace());
         } else {
             return base;
         }

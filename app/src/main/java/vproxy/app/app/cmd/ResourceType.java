@@ -39,6 +39,7 @@ public enum ResourceType {
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),
     dockernetworkplugincontroller("docker-network-plugin-controller"),
+    plugin("plugin"),
     ;
     public final String fullname;
 

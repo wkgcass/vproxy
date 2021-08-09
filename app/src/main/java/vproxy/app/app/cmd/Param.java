@@ -57,6 +57,9 @@ public enum Param {
     framesize("frame-size"),
     bpfmapkeyselector("bpf-map-key"),
     busypoll("busy-poll"),
+
+    url("url"),
+    cls("class"),
     ;
     public final String fullname;
 

@@ -1,5 +1,6 @@
 # Compiled class file
 *.class
+!test/src/main/resources/plugin.poc/**
 
 # Log file
 *.log

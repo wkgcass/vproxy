@@ -46,6 +46,7 @@ public class Application {
     public final RESPControllerHolder respControllerHolder;
     public final HttpControllerHolder httpControllerHolder;
     public final DockerNetworkPluginControllerHolder dockerNetworkPluginControllerHolder;
+    public final PluginHolder pluginHolder;
 
     private Application() throws IOException {
         this.version = Version.VERSION;
@@ -65,6 +66,7 @@ public class Application {
         this.dnsServerHolder = new DNSServerHolder();
         this.switchHolder = new SwitchHolder();
         this.bpfObjectHolder = new BPFObjectHolder();
+        this.pluginHolder = new PluginHolder();
     }
 
     public static boolean isDefaultEventLoopGroupName(String name) {

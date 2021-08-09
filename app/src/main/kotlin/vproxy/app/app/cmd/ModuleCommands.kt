@@ -1037,18 +1037,4 @@ class ModuleCommands : Commands() {
       )
     }
   } // end init
-
-  private fun utilJoinList(ls: List<*>): String {
-    val sb = StringBuilder()
-    var isFirst = true
-    for (o in ls) {
-      if (isFirst) {
-        isFirst = false
-      } else {
-        sb.append("\n")
-      }
-      sb.append(o)
-    }
-    return sb.toString()
-  }
 }

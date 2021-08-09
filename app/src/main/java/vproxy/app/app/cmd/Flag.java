@@ -11,6 +11,9 @@ public enum Flag {
 
     force("force"),
     zerocopy("zerocopy"),
+
+    enable("enable"),
+    disable("disable"),
     ;
     public final String fullname;
 

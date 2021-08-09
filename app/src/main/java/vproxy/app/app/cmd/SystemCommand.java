@@ -55,6 +55,7 @@ public class SystemCommand {
         "\n        System: list config                        show current config";
 
     public static boolean allowNonStdIOController = false;
+    private static final SystemCommands systemCommands = new SystemCommands();
 
     public static boolean isSystemCommand(String line) {
         return line.startsWith("System:");
@@ -247,7 +248,23 @@ public class SystemCommand {
                             break;
                     }
                 }
-                cb.failed(new Exception("unknown or invalid system cmd `" + cmd + "`"));
+
+                // run standard format commands
+                Command command;
+                try {
+                    command = Command.statm(Arrays.asList(cmd.split(" ")));
+                } catch (Exception e) {
+                    cb.failed(e);
+                    return;
+                }
+                CmdResult result;
+                try {
+                    result = systemCommands.execute(command);
+                } catch (Exception e) {
+                    cb.failed(e);
+                    return;
+                }
+                cb.succeeded(result);
         }
     }
 

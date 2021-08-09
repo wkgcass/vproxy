@@ -14,6 +14,8 @@ module vproxy.app {
     exports vproxy.app.app.cmd.handle.resource;
     exports vproxy.app.app.util;
     exports vproxy.app.controller;
+    exports vproxy.app.plugin;
+    exports vproxy.app.plugin.impl;
     exports vproxy.app.process;
     exports vproxy.app.vproxyx;
 }
