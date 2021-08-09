@@ -659,7 +659,7 @@ public class Shutdown {
                 }
 
                 String cmd = "add bpf-object " + bpfobj.nic
-                    + " path " + bpfobj.filename
+                    + (bpfobj.isAutogenEbpf ? "" : (" path " + bpfobj.filename))
                     + " program " + bpfobj.prog
                     + " mode " + bpfobj.mode.name()
                     + " force";

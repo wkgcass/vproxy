@@ -7,15 +7,17 @@ import java.util.concurrent.ConcurrentHashMap;
 public class BPFObject {
     public final String nic;
     public final String filename;
+    public final boolean isAutogenEbpf;
     public final String prog;
     public final BPFMode mode;
 
     public final long bpfobj;
     private final Map<String, BPFMap> maps = new ConcurrentHashMap<>();
 
-    BPFObject(String nic, String filename, String prog, BPFMode mode, long bpfobj) {
+    BPFObject(String nic, String filename, boolean isAutogenEbpf, String prog, BPFMode mode, long bpfobj) {
         this.nic = nic;
         this.filename = filename;
+        this.isAutogenEbpf = isAutogenEbpf;
         this.prog = prog;
         this.mode = mode;
 
@@ -24,8 +26,13 @@ public class BPFObject {
 
     public static BPFObject loadAndAttachToNic(String filepath, String programName, String nicName,
                                                BPFMode mode, boolean forceAttach) throws IOException {
+        return loadAndAttachToNic(filepath, programName, false, nicName, mode, forceAttach);
+    }
+
+    public static BPFObject loadAndAttachToNic(String filepath, String programName, boolean isAutogenEbpf, String nicName,
+                                               BPFMode mode, boolean forceAttach) throws IOException {
         long bpfobj = NativeXDP.get().loadAndAttachBPFProgramToNic(filepath, programName, nicName, mode.mode, forceAttach);
-        return new BPFObject(nicName, filepath, programName, mode, bpfobj);
+        return new BPFObject(nicName, filepath, isAutogenEbpf, programName, mode, bpfobj);
     }
 
     public BPFMap getMap(String name) throws IOException {

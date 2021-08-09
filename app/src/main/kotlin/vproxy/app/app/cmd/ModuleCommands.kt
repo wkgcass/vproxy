@@ -1004,8 +1004,8 @@ class ModuleCommands : Commands() {
         relation = ResourceType.bpfobj,
         action = ActType.add,
         params = {
-          it + ResActParam(Param.path, true)
-          it + ResActParam(Param.prog, true)
+          it + ResActParam(Param.path)
+          it + ResActParam(Param.prog)
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
         },
         flags = {
