@@ -41,6 +41,11 @@ public class RESPController {
     public void stop() {
         server.close();
     }
+
+    @Override
+    public String toString() {
+        return alias + " -> " + server.id();
+    }
 }
 
 class RESPControllerApplication implements RESPApplication<RESPApplicationContext> {

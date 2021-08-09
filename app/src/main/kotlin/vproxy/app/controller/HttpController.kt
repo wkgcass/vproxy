@@ -1918,6 +1918,10 @@ class HttpController(val alias: String, val address: IPPort) {
       return WrappedRoutingHandler(func, bodyTemplate, _requiredKeys as Array<String>)
     }
   }
+
+  override fun toString(): String {
+    return alias + " -> " + address.formatToIPPortString()
+  }
 }
 
 internal typealias Executor = (RoutingContext, Callback<JSON.Instance<*>, Throwable>) -> Unit

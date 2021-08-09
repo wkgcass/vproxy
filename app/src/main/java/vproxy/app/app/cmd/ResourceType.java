@@ -36,6 +36,7 @@ public enum ResourceType {
     umem("umem"),
     xdp("xdp"),
 
+    config("config"),
     respcontroller("resp-controller"),
     httpcontroller("http-controller"),
     dockernetworkplugincontroller("docker-network-plugin-controller"),
