@@ -48,7 +48,11 @@ public class L2 {
 
             Iface output = pkb.table.macTable.lookup(dst);
             if (output != null) {
-                sendPacket(pkb, output);
+                if (pkb.devin == null || pkb.devin != output) {
+                    sendPacket(pkb, output);
+                } else {
+                    assert Logger.lowLevelDebug("drop the packet which would be forwarded out to the same interface as the input interface: " + pkb);
+                }
                 return;
             }
 
@@ -94,11 +98,6 @@ public class L2 {
         if (pkb.pkt.getPacket() instanceof PacketBytes) {
             assert Logger.lowLevelDebug("do not flood packet with unknown ether type, maybe it's randomly generated: "
                 + pkb.pkt.description());
-            return;
-        }
-
-        if (pkb.table.macTable.tombstone(pkb.pkt.getDst())) {
-            Logger.warn(LogType.ALERT, "skip: flood packet: " + pkb);
             return;
         }
 

@@ -2,7 +2,6 @@ package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.Timer;
-import vproxy.base.util.coll.LRUMap;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.util.SwitchUtils;
@@ -21,7 +20,6 @@ public class MacTable {
     private final Set<MacEntry> entries = new HashSet<>();
     private final Map<MacAddress, MacEntry> macMap = new HashMap<>();
     private final Map<Iface, Set<MacEntry>> ifaceMap = new HashMap<>();
-    private final LRUMap<MacAddress, Boolean> tombstone = new LRUMap<>(2048);
 
     public MacTable(SelectorEventLoop loop, int timeout) {
         this.loop = loop;
@@ -57,10 +55,6 @@ public class MacTable {
             return null;
         }
         return entry.iface;
-    }
-
-    public boolean tombstone(MacAddress mac) {
-        return tombstone.containsKey(mac);
     }
 
     public void setLoop(SelectorEventLoop loop) {
@@ -117,7 +111,6 @@ public class MacTable {
                 ifaceMap.put(iface, set);
             }
             set.add(this);
-            tombstone.remove(mac);
             resetTimer();
         }
 
@@ -134,7 +127,6 @@ public class MacTable {
                     ifaceMap.remove(iface);
                 }
             }
-            tombstone.put(mac, true);
         }
 
         @Override
