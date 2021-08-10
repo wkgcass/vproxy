@@ -39,7 +39,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
         return from(raw, false);
     }
 
-    public String from(PacketDataBuffer raw, boolean skipIPPacket) {
+    public String from(PacketDataBuffer raw, boolean allowPartial) {
         ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 28) {
             return "input packet length too short for a vproxy switch packet";
@@ -67,7 +67,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
         if (type == Consts.VPROXY_SWITCH_TYPE_VXLAN) {
             ByteArray other = result.sub(2, result.length() - 2);
             VXLanPacket packet = new VXLanPacket();
-            String err = packet.from(new PacketDataBuffer(other), skipIPPacket);
+            String err = packet.from(new PacketDataBuffer(other), allowPartial);
             if (err != null) {
                 return err;
             }

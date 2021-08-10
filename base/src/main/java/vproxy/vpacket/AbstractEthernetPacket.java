@@ -5,7 +5,7 @@ import vproxy.vfd.MacAddress;
 public abstract class AbstractEthernetPacket extends AbstractPacket {
     protected PacketDataBuffer packetBytes;
 
-    public abstract String from(PacketDataBuffer raw, boolean skipIPPacket);
+    public abstract String from(PacketDataBuffer raw, boolean allowPartial);
 
     public abstract MacAddress getSrc();
 

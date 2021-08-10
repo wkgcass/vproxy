@@ -45,8 +45,8 @@ public class EthernetPacket extends AbstractEthernetPacket {
             packet = new PacketBytes();
         }
         packet.recordParent(this);
-        if (allowPartial && isIPPacket) {
-            err = ((AbstractIpPacket) packet).initPartial(data);
+        if (allowPartial && packet instanceof PartialPacket) {
+            err = ((PartialPacket) packet).initPartial(data);
             if (err == null) {
                 this.packetBytes = data;
             }
@@ -190,7 +190,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
                         raw.pktBuf.int16(14, vlan); // ignore PCP and DEI, only fill in the vid
                         raw.pktBuf.int16(16, type); // type
                     } else { // cannot get enough headroom
-                        clearPacketBytes();
+                        clearRawPacket();
                     }
                 } else {
                     raw.pktBuf.int16(14, vlan);

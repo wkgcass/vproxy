@@ -7,6 +7,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPv6;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Objects;
 
@@ -33,6 +34,7 @@ public class Ipv6Packet extends AbstractIpPacket {
         if (Consts.IPv6_needs_next_header.contains(nextHeader)) {
             return from(raw); // must run a full load to ensure the upper level packet is parsed
         }
+        extHeaders = Collections.emptyList();
 
         payloadLength = bytes.uint16(4);
         if (payloadLength == 0) {
@@ -62,7 +64,7 @@ public class Ipv6Packet extends AbstractIpPacket {
 
     public String from(PacketDataBuffer raw, boolean mustParse) {
         ByteArray bytes = raw.pktBuf;
-        if (raw == this.raw /* the same byte array */ && extHeaders != null /* already parsed */ && !mustParse) {
+        if (raw == this.raw /* the same byte array */ && version != 0 /* already parsed */ && !mustParse) {
             return null;
         }
 
@@ -73,7 +75,7 @@ public class Ipv6Packet extends AbstractIpPacket {
         byte b1 = bytes.get(1);
 
         // 0-3
-        version = (b0 >> 4) & 0x0f;
+        var version = (b0 >> 4) & 0x0f;
         trafficClass = ((b0 << 4) & 0xf0) | ((b1 >> 4) & 0x0f);
         flowLabel = ((b1 & 0x0f) << 16) | bytes.uint16(2);
 
@@ -142,6 +144,7 @@ public class Ipv6Packet extends AbstractIpPacket {
             return err;
         }
 
+        this.version = version; // the version field is used to indicate parsing done, so assign it last
         this.raw = raw;
 
         return null;

@@ -270,7 +270,6 @@ public class PacketBuffer extends PacketDataBuffer {
         if (bytes == null) {
             return false;
         }
-        pkt.clearPacketBytes();
 
         AbstractIpPacket ip = (AbstractIpPacket) pkt.getPacket(); // cast should succeed
         String err;
@@ -281,6 +280,7 @@ public class PacketBuffer extends PacketDataBuffer {
         }
 
         if (err == null) {
+            pkt.clearPacketBytes();
             return false;
         }
         assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");

@@ -299,11 +299,6 @@ public class L2 {
         if (pkb.devin != null) {
             sent.add(pkb.devin);
         }
-        for (var entry : pkb.table.macTable.listEntries()) {
-            if (sent.add(entry.iface)) {
-                sendPacket(pkb, entry.iface);
-            }
-        }
         for (Iface f : swCtx.getIfaces()) {
             if (f.getLocalSideVni(pkb.vni) == pkb.vni) { // send if vni matches or is a remote switch
                 if (sent.add(f)) {
