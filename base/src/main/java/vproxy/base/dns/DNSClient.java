@@ -350,8 +350,7 @@ public class DNSClient {
                 return null;
             }
             if (packet.tc) {
-                Logger.error(LogType.IMPROPER_USE, "we do not support truncation for now. packet is " + packet + ", req domain is " + domain);
-                return null;
+                Logger.warn(LogType.ALERT, "we do not support truncation for now. packet is " + packet + ", req domain is " + domain);
             }
             if (packet.answers.isEmpty()) {
                 assert Logger.lowLevelDebug("nothing found, so cannot find the requested domain");
