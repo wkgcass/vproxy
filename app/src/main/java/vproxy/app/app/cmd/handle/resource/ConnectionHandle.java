@@ -10,7 +10,7 @@ import vproxy.base.util.exception.NotFoundException;
 import vproxy.component.proxy.Session;
 import vproxy.vfd.IPPort;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -52,7 +52,7 @@ public class ConnectionHandle {
 
         } else if (parent.type == ResourceType.vpc) {
 
-            Table t = VpcHandle.get(parent);
+            VirtualNetwork t = VpcHandle.get(parent);
             return t.conntrack.countTcpEntries();
 
         } else
@@ -98,9 +98,9 @@ public class ConnectionHandle {
 
         } else if (parent.type == ResourceType.vpc) {
 
-            // try to get connections from switch-table
-            Table table = VpcHandle.get(parent);
-            Collection<TcpEntry> entries = table.conntrack.listTcpEntries();
+            // try to get connections from switch-network
+            VirtualNetwork network = VpcHandle.get(parent);
+            Collection<TcpEntry> entries = network.conntrack.listTcpEntries();
             connections = new ArrayList<>(entries.size());
             for (var t : entries) {
                 connections.add(new Conn(t));

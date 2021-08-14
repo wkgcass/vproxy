@@ -7,7 +7,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 public class NetworkStack {
     private final L2 L2;
@@ -45,7 +45,7 @@ public class NetworkStack {
 
             if (possibleLoop && willDisconnect) {
                 Logger.error(LogType.INVALID_EXTERNAL_DATA, "disconnect from " + pkb.devin + " due to possible loop");
-                pkb.table.macTable.disconnect(pkb.devin);
+                pkb.network.macTable.disconnect(pkb.devin);
                 return true; // drop
             }
             if (!possibleLoop && !willDisconnect) {
@@ -59,7 +59,7 @@ public class NetworkStack {
         return false;
     }
 
-    public void resolve(Table t, IP ip, MacAddress mac) {
+    public void resolve(VirtualNetwork t, IP ip, MacAddress mac) {
         L2.L3.resolve(t, ip, mac);
     }
 }

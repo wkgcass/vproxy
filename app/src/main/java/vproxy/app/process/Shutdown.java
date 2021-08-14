@@ -28,7 +28,7 @@ import vproxy.dns.DNSServer;
 import vproxy.vmirror.Mirror;
 import vproxy.vswitch.RouteTable;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.util.UserInfo;
 import vproxy.xdp.BPFObject;
@@ -718,21 +718,21 @@ public class Shutdown {
                     umemNames.add(umem.alias);
                 }
                 // create vpc
-                for (var key : sw.getTables().keySet()) {
+                for (var key : sw.getNetworks().keySet()) {
                     int vpc = key;
-                    Table table = sw.getTables().get(vpc);
-                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + table.v4network;
-                    if (table.v6network != null) {
-                        cmd += " v6network " + table.v6network;
+                    VirtualNetwork network = sw.getNetworks().get(vpc);
+                    cmd = "add vpc " + vpc + " to switch " + sw.alias + " v4network " + network.v4network;
+                    if (network.v6network != null) {
+                        cmd += " v6network " + network.v6network;
                     }
-                    var anno = table.getAnnotations();
+                    var anno = network.getAnnotations();
                     if (!anno.isEmpty()) {
                         cmd += " annotations " + anno;
                     }
                     commands.add(cmd);
 
                     // create ips
-                    for (var ipmac : table.ips.entries()) {
+                    for (var ipmac : network.ips.entries()) {
                         cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ipmac.mac;
                         if (!ipmac.annotations.isEmpty()) {
                             cmd += " annotations " + ipmac.annotations;
@@ -742,7 +742,7 @@ public class Shutdown {
                     // create|remove routes
                     boolean hasDefaultV4 = false;
                     boolean hasDefaultV6 = false;
-                    for (var r : table.routeTable.getRules()) {
+                    for (var r : network.routeTable.getRules()) {
                         if (r.alias.equals(RouteTable.defaultRuleName)) {
                             hasDefaultV4 = true;
                         }
@@ -754,11 +754,11 @@ public class Shutdown {
                         cmd = "remove route " + RouteTable.defaultRuleName + " from vpc " + vpc + " in switch " + sw.alias;
                         commands.add(cmd);
                     }
-                    if (!hasDefaultV6 && table.v6network != null) {
+                    if (!hasDefaultV6 && network.v6network != null) {
                         cmd = "remove route " + RouteTable.defaultRuleV6Name + " from vpc " + vpc + " in switch " + sw.alias;
                         commands.add(cmd);
                     }
-                    for (var r : table.routeTable.getRules()) {
+                    for (var r : network.routeTable.getRules()) {
                         if (r.alias.equals(RouteTable.defaultRuleName) || r.alias.equals(RouteTable.defaultRuleV6Name)) {
                             continue;
                         }

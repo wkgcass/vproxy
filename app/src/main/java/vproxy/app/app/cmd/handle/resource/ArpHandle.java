@@ -7,7 +7,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.MacTable;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.iface.Iface;
 
 import java.util.HashMap;
@@ -27,22 +27,22 @@ public class ArpHandle {
         String vpcStr = parent.alias;
         int vpc = Integer.parseInt(vpcStr);
         Switch sw = Application.get().switchHolder.get(parent.parentResource.alias);
-        var tables = sw.getTables().values();
+        var networks = sw.getNetworks().values();
 
-        Table table = null;
-        for (var tbl : tables) {
-            if (tbl.vni == vpc) {
-                table = tbl;
+        VirtualNetwork network = null;
+        for (var net : networks) {
+            if (net.vni == vpc) {
+                network = net;
                 break;
             }
         }
-        if (table == null) {
+        if (network == null) {
             throw new NotFoundException("vpc", vpcStr);
         }
 
         var macInArpEntries = new HashSet<MacAddress>();
-        var arpEntries = table.arpTable.listEntries();
-        var macEntries = table.macTable.listEntries();
+        var arpEntries = network.arpTable.listEntries();
+        var macEntries = network.macTable.listEntries();
         var macEntriesMap = new HashMap<MacAddress, MacTable.MacEntry>();
         for (var x : macEntries) {
             macEntriesMap.put(x.mac, x);

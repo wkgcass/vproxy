@@ -24,14 +24,14 @@ public class L2 {
     }
 
     public void input(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("L2.input(" + pkb + " :: " + pkb.table + ")");
+        assert Logger.lowLevelDebug("L2.input(" + pkb + " :: " + pkb.network + ")");
 
         MacAddress src = pkb.pkt.getSrc();
 
         // record iface in the mac table
         if (pkb.devin != null) {
             assert Logger.lowLevelDebug("record the mac -> iface info");
-            pkb.table.macTable.record(src, pkb.devin);
+            pkb.network.macTable.record(src, pkb.devin);
         } else {
             assert Logger.lowLevelDebug("no iface provided with this packet");
         }
@@ -46,7 +46,7 @@ public class L2 {
 
             // for unicast, we first check whether we can forward this packet out
 
-            Iface output = pkb.table.macTable.lookup(dst);
+            Iface output = pkb.network.macTable.lookup(dst);
             if (output != null) {
                 if (pkb.devin == null || pkb.devin != output) {
                     sendPacket(pkb, output);
@@ -59,7 +59,7 @@ public class L2 {
             assert Logger.lowLevelDebug("dst not recorded in mac table");
             // then we search whether we have virtual hosts can accept the packet
 
-            var ips = pkb.table.ips.lookupByMac(dst);
+            var ips = pkb.network.ips.lookupByMac(dst);
             if (ips != null) {
                 if (pkb.ensureIPPacketParsed()) return;
 
@@ -121,9 +121,9 @@ public class L2 {
 
             if (pkb.ensureIPPacketParsed()) return;
 
-            if (pkb.table.v4network.contains(ip.getDst()) || (pkb.table.v6network != null && pkb.table.v6network.contains(ip.getDst()))) {
+            if (pkb.network.v4network.contains(ip.getDst()) || (pkb.network.v6network != null && pkb.network.v6network.contains(ip.getDst()))) {
                 assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
-                L3.resolve(pkb.table, ip.getDst(), null);
+                L3.resolve(pkb.network, ip.getDst(), null);
             } else {
                 assert Logger.lowLevelDebug("cannot resolve " + ip.getDst() + " when flooding because dst is not in current network");
             }
@@ -169,11 +169,11 @@ public class L2 {
             }
             // only handle ipv4 in arp, v6 should be handled with ndp
             IP ip = IP.from(senderIp.toJavaArray());
-            if (!pkb.table.v4network.contains(ip)) {
-                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + pkb.table.v4network);
+            if (!pkb.network.v4network.contains(ip)) {
+                assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + pkb.network.v4network);
                 return;
             }
-            pkb.table.arpTable.record(pkb.pkt.getSrc(), ip);
+            pkb.network.arpTable.record(pkb.pkt.getSrc(), ip);
             // ============================================================
             // ============================================================
             assert Logger.lowLevelDebug("refresh arp table by arp done");
@@ -208,8 +208,8 @@ public class L2 {
             assert Logger.lowLevelDebug("ndp length is ok");
             var targetIp = IP.from(other.sub(4, 16).toJavaArray());
             // check the target ip
-            if (pkb.table.v6network == null || !pkb.table.v6network.contains(targetIp)) {
-                assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + targetIp + " not in " + pkb.table.v6network);
+            if (pkb.network.v6network == null || !pkb.network.v6network.contains(targetIp)) {
+                assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + targetIp + " not in " + pkb.network.v6network);
                 return;
             }
 
@@ -227,11 +227,11 @@ public class L2 {
                 // mac is the sender's mac, record with src ip in ip packet
                 // this ip address might be solicited node address, but it won't harm to record
                 IP ip = ipPkt.getSrc();
-                pkb.table.arpTable.record(mac, ip);
+                pkb.network.arpTable.record(mac, ip);
             } else if (optType == Consts.ICMPv6_OPTION_TYPE_Target_Link_Layer_Address) {
                 assert Logger.lowLevelDebug("ndp has opt target link layer address");
                 // mac is the target's mac, record with target ip in icmp packet
-                pkb.table.arpTable.record(mac, targetIp);
+                pkb.network.arpTable.record(mac, targetIp);
             }
             // ============================================================
             // ============================================================
@@ -249,7 +249,7 @@ public class L2 {
             assert Logger.lowLevelDebug("packet is unicast");
 
             // for unicast, we first check whether we can forward this packet out
-            Iface iface = pkb.table.macTable.lookup(dst);
+            Iface iface = pkb.network.macTable.lookup(dst);
             if (iface != null) {
                 sendPacket(pkb, iface);
                 return;
@@ -259,7 +259,7 @@ public class L2 {
 
             // then we search whether we have virtual hosts can accept the packet
 
-            var ips = pkb.table.ips.lookupByMac(dst);
+            var ips = pkb.network.ips.lookupByMac(dst);
             if (ips != null) {
                 if (pkb.ensureIPPacketParsed()) return;
                 pkb.setMatchedIps(ips);
@@ -316,13 +316,13 @@ public class L2 {
     private void broadcastLocal(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("broadcastLocal(" + pkb + ")");
 
-        var allMac = pkb.table.ips.allMac();
+        var allMac = pkb.network.ips.allMac();
         boolean handled = false;
         for (MacAddress mac : allMac) {
             if (mac.equals(pkb.pkt.getSrc())) { // skip the sender
                 continue;
             }
-            var ips = pkb.table.ips.lookupByMac(mac);
+            var ips = pkb.network.ips.lookupByMac(mac);
             if (ips == null) {
                 Logger.shouldNotHappen("cannot find synthetic ips by mac " + mac + " in vpc " + pkb.vni);
                 continue;

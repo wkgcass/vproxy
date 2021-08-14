@@ -14,7 +14,7 @@ import vproxy.vpacket.TcpPacket;
 import vproxy.vpacket.conntrack.tcp.*;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 import java.util.Collections;
 import java.util.List;
@@ -59,13 +59,13 @@ public class L4 {
             var tcpPkt = (TcpPacket) ipPkt.getPacket();
             IPPort src = new IPPort(ipPkt.getSrc(), tcpPkt.getSrcPort());
             IPPort dst = new IPPort(ipPkt.getDst(), tcpPkt.getDstPort());
-            var tcpEntry = pkb.table.conntrack.lookup(src, dst);
+            var tcpEntry = pkb.network.conntrack.lookup(src, dst);
             if (tcpEntry != null) {
                 pkb.tcp = tcpEntry;
                 result = true;
             } else if (tcpPkt.getFlags() == Consts.TCP_FLAGS_SYN) {
                 // only consider the packets with only SYN on it
-                var listenEntry = pkb.table.conntrack.lookupListen(dst);
+                var listenEntry = pkb.network.conntrack.lookupListen(dst);
                 if (listenEntry != null) {
                     assert Logger.lowLevelDebug("got new connection");
 
@@ -75,7 +75,7 @@ public class L4 {
                         // here we reset the connection instead of dropping it like linux
                         pkb.needTcpReset = true;
                     } else {
-                        tcpEntry = pkb.table.conntrack.create(listenEntry, src, dst, tcpPkt.getSeqNum());
+                        tcpEntry = pkb.network.conntrack.create(listenEntry, src, dst, tcpPkt.getSeqNum());
                         listenEntry.synBacklog.add(tcpEntry);
                         pkb.tcp = tcpEntry;
                     }
@@ -320,7 +320,7 @@ public class L4 {
             // because the window may forbid it from sending
             // ack resets the window so it might get chance to send data
             if (pkb.tcp.retransmissionTimer == null) {
-                tcpStartRetransmission(pkb.table, pkb.tcp);
+                tcpStartRetransmission(pkb.network, pkb.tcp);
             }
         }
         return false;
@@ -340,7 +340,7 @@ public class L4 {
         if (tcpPkt.isFin()) {
             pkb.tcp.setState(TcpState.CLOSE_WAIT);
             pkb.tcp.receivingQueue.incExpectingSeq();
-            tcpAck(pkb.table, pkb.tcp);
+            tcpAck(pkb.network, pkb.tcp);
         }
     }
 
@@ -388,7 +388,7 @@ public class L4 {
         if (tcpPkt.isFin()) {
             assert Logger.lowLevelDebug("received FIN again, maybe it's retransmission");
             if (tcpPkt.getSeqNum() == pkb.tcp.receivingQueue.getExpectingSeq() - 1) {
-                tcpAck(pkb.table, pkb.tcp);
+                tcpAck(pkb.network, pkb.tcp);
             }
         }
     }
@@ -414,8 +414,8 @@ public class L4 {
         L3.output(pkb);
     }
 
-    public void tcpAck(Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("tcpAck(" + ", " + table + ", " + tcp + ")");
+    public void tcpAck(VirtualNetwork network, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("tcpAck(" + ", " + network + ", " + tcp + ")");
 
         if (tcp.receivingQueue.getWindow() == 0) {
             assert Logger.lowLevelDebug("no window, very bad, need to ack immediately");
@@ -424,19 +424,19 @@ public class L4 {
                 tcp.delayedAckTimer.cancel();
                 tcp.delayedAckTimer = null;
             }
-            sendAck(table, tcp);
+            sendAck(network, tcp);
             return;
         }
         if (tcp.delayedAckTimer != null) {
             assert Logger.lowLevelDebug("delayed ack already scheduled");
             return;
         }
-        tcp.delayedAckTimer = swCtx.getSelectorEventLoop().delay(TcpEntry.DELAYED_ACK_TIMEOUT, () -> sendAck(table, tcp));
+        tcp.delayedAckTimer = swCtx.getSelectorEventLoop().delay(TcpEntry.DELAYED_ACK_TIMEOUT, () -> sendAck(network, tcp));
     }
 
-    private void sendAck(Table table, TcpEntry tcp) {
+    private void sendAck(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendAck(" + ", " + table + ", " + tcp + ")");
+        assert Logger.lowLevelDebug("sendAck(" + ", " + network + ", " + tcp + ")");
 
         if (tcp.delayedAckTimer != null) {
             tcp.delayedAckTimer.cancel();
@@ -446,17 +446,17 @@ public class L4 {
         TcpPacket respondTcp = TcpUtils.buildAckResponse(tcp);
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
 
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, respondIp);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
         L3.output(pkb);
     }
 
-    public void tcpStartRetransmission(Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("tcpStartRetransmission(" + table + "," + tcp + ")");
-        transmitTcp(table, tcp, 0, 0);
+    public void tcpStartRetransmission(VirtualNetwork network, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("tcpStartRetransmission(" + network + "," + tcp + ")");
+        transmitTcp(network, tcp, 0, 0);
     }
 
-    private void transmitTcp(Table table, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
-        assert Logger.lowLevelDebug("transmitTcp(" + table + "," + tcp + ")");
+    private void transmitTcp(VirtualNetwork network, TcpEntry tcp, long lastBeginSeq, int retransmissionCount) {
+        assert Logger.lowLevelDebug("transmitTcp(" + network + "," + tcp + ")");
 
         if (tcp.retransmissionTimer != null) { // reset timer
             tcp.retransmissionTimer.cancel();
@@ -466,7 +466,7 @@ public class L4 {
         // check whether need to reset the connection because of too many retransmits
         if (tcp.requireClosing() && retransmissionCount > TcpEntry.MAX_RETRANSMISSION_AFTER_CLOSING) {
             assert Logger.lowLevelDebug("conn " + tcp + " is closed due to too many retransmission after closing");
-            resetTcpConnection(table, tcp);
+            resetTcpConnection(network, tcp);
             return;
         }
 
@@ -482,7 +482,7 @@ public class L4 {
                     tcp.retransmissionTimer.cancel();
                     tcp.retransmissionTimer = null;
                 }
-                afterTransmission(table, tcp);
+                afterTransmission(network, tcp);
                 return;
             }
         }
@@ -500,42 +500,42 @@ public class L4 {
         assert Logger.lowLevelDebug("will delay " + delay + " ms then retransmit");
         final int finalRetransmissionCount = retransmissionCount;
         tcp.retransmissionTimer = swCtx.getSelectorEventLoop().delay(delay, () ->
-            transmitTcp(table, tcp, currentBeginSeq, finalRetransmissionCount + 1)
+            transmitTcp(network, tcp, currentBeginSeq, finalRetransmissionCount + 1)
         );
 
         if (segments.isEmpty()) {
             assert tcp.sendingQueue.needToSendFin();
-            sendTcpFin(table, tcp);
+            sendTcpFin(network, tcp);
         } else {
             for (var s : segments) {
-                sendTcpPsh(table, tcp, s);
+                sendTcpPsh(network, tcp, s);
             }
         }
     }
 
-    private void afterTransmission(Table table, TcpEntry tcp) {
-        assert Logger.lowLevelDebug("afterTransmission(" + table + "," + tcp + "," + ")");
+    private void afterTransmission(VirtualNetwork network, TcpEntry tcp) {
+        assert Logger.lowLevelDebug("afterTransmission(" + network + "," + tcp + "," + ")");
 
         if (tcp.requireClosing()) {
             assert Logger.lowLevelDebug("need to be closed");
-            resetTcpConnection(table, tcp);
+            resetTcpConnection(network, tcp);
         }
     }
 
-    public void resetTcpConnection(Table table, TcpEntry tcp) {
+    public void resetTcpConnection(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendTcpRst(" + table + "," + tcp + "," + ")");
+        assert Logger.lowLevelDebug("sendTcpRst(" + network + "," + tcp + "," + ")");
 
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp)));
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp)));
         output(pkb);
 
         tcp.setState(TcpState.CLOSED);
-        table.conntrack.remove(tcp.source, tcp.destination);
+        network.conntrack.remove(tcp.source, tcp.destination);
     }
 
-    private void sendTcpPsh(Table table, TcpEntry tcp, Segment s) {
+    private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendTcpPsh(" + table + "," + tcp + "," + s + ")");
+        assert Logger.lowLevelDebug("sendTcpPsh(" + network + "," + tcp + "," + s + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(s.seqBeginInclusive);
@@ -543,20 +543,20 @@ public class L4 {
         tcpPkt.setData(s.data);
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, ipPkt);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
         L3.output(pkb);
     }
 
-    private void sendTcpFin(Table table, TcpEntry tcp) {
+    private void sendTcpFin(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendTcpFin(" + table + "," + tcp + ")");
+        assert Logger.lowLevelDebug("sendTcpFin(" + network + "," + tcp + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
         tcpPkt.setSeqNum(tcp.sendingQueue.getFetchSeq());
         tcpPkt.setFlags(Consts.TCP_FLAGS_FIN | Consts.TCP_FLAGS_ACK);
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, ipPkt);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
         L3.output(pkb);
     }
 }

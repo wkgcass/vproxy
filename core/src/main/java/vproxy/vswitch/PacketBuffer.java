@@ -31,19 +31,19 @@ public class PacketBuffer extends PacketDataBuffer {
         return new PacketBuffer(pkt);
     }
 
-    public static PacketBuffer fromPacket(Table table, AbstractEthernetPacket pkt) {
-        return new PacketBuffer(table, pkt);
+    public static PacketBuffer fromPacket(VirtualNetwork network, AbstractEthernetPacket pkt) {
+        return new PacketBuffer(network, pkt);
     }
 
-    public static PacketBuffer fromPacket(Table table, AbstractIpPacket pkt) {
-        return new PacketBuffer(table, pkt);
+    public static PacketBuffer fromPacket(VirtualNetwork network, AbstractIpPacket pkt) {
+        return new PacketBuffer(network, pkt);
     }
 
     // ----- context -----
     public Iface devin; // not null if it's an input packet
     public Iface devout; // this will only be set before passing to packet filters, and cleared after it's handled
     public int vni; // vni or vlan number, must always be valid
-    public Table table; // might be null
+    public VirtualNetwork network; // might be null
     public int flags;
 
     // ----- packet -----
@@ -100,23 +100,23 @@ public class PacketBuffer extends PacketDataBuffer {
         initPackets(true, false, false);
     }
 
-    // fromPacket(Table, AbstractEthernetPacket)
-    private PacketBuffer(Table table, AbstractEthernetPacket pkt) {
+    // fromPacket(VirtualNetwork, AbstractEthernetPacket)
+    private PacketBuffer(VirtualNetwork network, AbstractEthernetPacket pkt) {
         super(null);
         this.devin = null;
-        this.vni = table.vni;
-        this.table = table;
+        this.vni = network.vni;
+        this.network = network;
         this.flags = 0;
         this.pkt = pkt;
         initPackets(false, true, false);
     }
 
-    // fromPacket(Table, AbstractIpPacket)
-    private PacketBuffer(Table table, AbstractIpPacket pkt) {
+    // fromPacket(VirtualNetwork, AbstractIpPacket)
+    private PacketBuffer(VirtualNetwork network, AbstractIpPacket pkt) {
         super(null);
         this.devin = null;
-        this.vni = table.vni;
-        this.table = table;
+        this.vni = network.vni;
+        this.network = network;
         this.flags = FLAG_IP;
         this.ipPkt = pkt;
         initPackets(false, false, true);
@@ -231,11 +231,11 @@ public class PacketBuffer extends PacketDataBuffer {
         }
     }
 
-    public void setTable(Table table) {
-        this.vni = table.vni;
-        this.table = table;
+    public void setNetwork(VirtualNetwork network) {
+        this.vni = network.vni;
+        this.network = network;
         if (vxlan != null) {
-            vxlan.setVni(table.vni);
+            vxlan.setVni(network.vni);
         }
     }
 
@@ -245,17 +245,17 @@ public class PacketBuffer extends PacketDataBuffer {
             return;
         }
 
-        Table tableBackup = this.table;
+        VirtualNetwork networkBackup = this.network;
 
         this.vni = vni;
-        this.table = null;
+        this.network = null;
         if (this.vxlan != null) {
             this.vxlan.setVni(vni);
         }
 
         r.run();
 
-        setTable(tableBackup);
+        setNetwork(networkBackup);
     }
 
     public void setMatchedIps(Collection<IP> matchedIps) {
@@ -288,7 +288,7 @@ public class PacketBuffer extends PacketDataBuffer {
     }
 
     public PacketBuffer copy() {
-        return new PacketBuffer(table, pkt.copy());
+        return new PacketBuffer(network, pkt.copy());
     }
 
     public Object getUserData(Object key) {

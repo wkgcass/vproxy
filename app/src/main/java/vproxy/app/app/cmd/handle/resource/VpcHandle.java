@@ -9,7 +9,7 @@ import vproxy.app.app.cmd.handle.param.NetworkHandle;
 import vproxy.base.util.Annotations;
 import vproxy.base.util.Network;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -28,10 +28,10 @@ public class VpcHandle {
         }
     }
 
-    public static Table get(Resource self) throws Exception {
+    public static VirtualNetwork get(Resource self) throws Exception {
         int vpc = Integer.parseInt(self.alias);
         Switch sw = SwitchHandle.get(self.parentResource);
-        return sw.getTable(vpc);
+        return sw.getNetwork(vpc);
     }
 
     public static void add(Command cmd) throws Exception {
@@ -45,21 +45,21 @@ public class VpcHandle {
         if (cmd.args.containsKey(Param.anno)) {
             annotations = AnnotationsHandle.get(cmd);
         }
-        sw.addTable(Integer.parseInt(cmd.resource.alias), v4net, v6net, annotations);
+        sw.addNetwork(Integer.parseInt(cmd.resource.alias), v4net, v6net, annotations);
     }
 
     public static void remove(Command cmd) throws Exception {
         Switch sw = SwitchHandle.get(cmd.prepositionResource);
-        sw.delTable(Integer.parseInt(cmd.resource.alias));
+        sw.delNetwork(Integer.parseInt(cmd.resource.alias));
     }
 
     public static List<VpcEntry> list(Resource parentResource) throws Exception {
         Switch sw = Application.get().switchHolder.get(parentResource.alias);
-        var tables = sw.getTables().values();
+        var networks = sw.getNetworks().values();
 
         List<VpcEntry> ls = new ArrayList<>();
-        for (var tbl : tables) {
-            ls.add(new VpcEntry(tbl.vni, tbl.v4network, tbl.v6network, tbl.getAnnotations()));
+        for (var net : networks) {
+            ls.add(new VpcEntry(net.vni, net.v4network, net.v6network, net.getAnnotations()));
         }
         ls.sort(Comparator.comparingInt(a -> a.vpc));
         return ls;

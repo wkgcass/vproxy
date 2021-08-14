@@ -11,7 +11,7 @@ import vproxy.vpacket.*;
 import vproxy.vswitch.IPMac;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.util.SwitchUtils;
 
 public class L3 {
@@ -34,36 +34,36 @@ public class L3 {
         }
     }
 
-    public void resolve(Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
+    public void resolve(VirtualNetwork network, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + network + "," + ip + "," + knownMac + ")");
         if (ip instanceof IPv4) {
-            arpResolve(table, ip, knownMac);
+            arpResolve(network, ip, knownMac);
         } else {
-            ndpResolve(table, ip, knownMac);
+            ndpResolve(network, ip, knownMac);
         }
     }
 
-    private void arpResolve(Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
-        var iface = knownMac == null ? null : table.macTable.lookup(knownMac);
+    private void arpResolve(VirtualNetwork network, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + network + "," + ip + "," + knownMac + ")");
+        var iface = knownMac == null ? null : network.macTable.lookup(knownMac);
         if (iface == null) {
             assert Logger.lowLevelDebug(" cannot find iface of the mac, try broadcast");
-            broadcastArp(table, ip);
+            broadcastArp(network, ip);
         } else {
             assert Logger.lowLevelDebug(" run unicast");
-            unicastArp(table, ip, knownMac);
+            unicastArp(network, ip, knownMac);
         }
     }
 
-    private void ndpResolve(Table table, IP ip, MacAddress knownMac) {
-        assert Logger.lowLevelDebug("lookupAddress(" + table + "," + ip + "," + knownMac + ")");
-        var iface = table.macTable.lookup(knownMac);
+    private void ndpResolve(VirtualNetwork network, IP ip, MacAddress knownMac) {
+        assert Logger.lowLevelDebug("lookupAddress(" + network + "," + ip + "," + knownMac + ")");
+        var iface = network.macTable.lookup(knownMac);
         if (iface == null) {
             assert Logger.lowLevelDebug("cannot find iface of the mac, try broadcast");
-            broadcastNdp(table, ip);
+            broadcastNdp(network, ip);
         } else {
             assert Logger.lowLevelDebug("run unicast");
-            unicastNdp(table, ip, knownMac);
+            unicastNdp(network, ip, knownMac);
         }
     }
 
@@ -148,7 +148,7 @@ public class L3 {
         }
 
         // handle
-        MacAddress mac = pkb.table.ips.lookup(ip);
+        MacAddress mac = pkb.network.ips.lookup(ip);
 
         assert Logger.lowLevelDebug("respond arp");
         ArpPacket resp = new ArpPacket();
@@ -273,7 +273,7 @@ public class L3 {
             return;
         }
 
-        MacAddress correspondingMac = pkb.table.ips.lookup(ndpNeighborSolicitation);
+        MacAddress correspondingMac = pkb.network.ips.lookup(ndpNeighborSolicitation);
         if (correspondingMac == null) {
             assert Logger.lowLevelDebug("requested ip is not synthetic ip");
             return;
@@ -302,7 +302,7 @@ public class L3 {
         var inIcmp = (IcmpPacket) inIpPkt.getPacket();
 
         var srcIp = inIpPkt.getDst();
-        var srcMac = pkb.table.ips.lookup(srcIp);
+        var srcMac = pkb.network.ips.lookup(srcIp);
         if (srcMac == null) {
             Logger.shouldNotHappen("cannot find src mac for sending the icmp echo resp packet");
             return;
@@ -326,7 +326,7 @@ public class L3 {
 
         boolean isIpv6 = inIpPkt instanceof Ipv6Packet;
         var srcIp = inIpPkt.getDst();
-        var srcMac = pkb.table.ips.lookup(srcIp);
+        var srcMac = pkb.network.ips.lookup(srcIp);
         if (srcMac == null) {
             Logger.shouldNotHappen("cannot find src mac for sending the icmp time exceeded packet");
             return;
@@ -362,7 +362,7 @@ public class L3 {
 
         var inIpPkt = (AbstractIpPacket) pkb.pkt.getPacket();
         boolean isIpv6 = inIpPkt instanceof Ipv6Packet;
-        var srcIpAndMac = getRoutedSrcIpAndMac(pkb.table, inIpPkt.getSrc());
+        var srcIpAndMac = getRoutedSrcIpAndMac(pkb.network, inIpPkt.getSrc());
         if (srcIpAndMac == null) {
             assert Logger.lowLevelDebug("cannot find src ip for sending the icmp time exceeded packet");
             return;
@@ -427,7 +427,7 @@ public class L3 {
         }
 
         // find ruling rule for the dst
-        var rule = pkb.table.routeTable.lookup(dst);
+        var rule = pkb.network.routeTable.lookup(dst);
         if (rule == null) {
             assert Logger.lowLevelDebug("no route rule found");
             return;
@@ -439,15 +439,15 @@ public class L3 {
             // direct route
             assert Logger.lowLevelDebug("in the same vpc");
 
-            MacAddress dstMac = pkb.table.lookup(dst);
+            MacAddress dstMac = pkb.network.lookup(dst);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug("cannot find correct mac");
-                broadcastArpOrNdp(pkb.table, dst);
+                broadcastArpOrNdp(pkb.network, dst);
                 return;
             }
             assert Logger.lowLevelDebug("found the correct mac");
 
-            var srcMac = getRoutedSrcMac(pkb.table, dst);
+            var srcMac = getRoutedSrcMac(pkb.network, dst);
             if (srcMac == null) {
                 assert Logger.lowLevelDebug("cannot route because src mac is not found");
                 return;
@@ -459,56 +459,56 @@ public class L3 {
         } else if (vni != 0) {
             // route to another network
             assert Logger.lowLevelDebug("routing to another vpc: " + vni);
-            Table t = swCtx.getTable(vni);
-            if (t == null) { // cannot handle if the table does no exist
-                assert Logger.lowLevelDebug("target table " + vni + " is not found");
+            VirtualNetwork n = swCtx.getNetwork(vni);
+            if (n == null) { // cannot handle if the network does no exist
+                assert Logger.lowLevelDebug("target network " + vni + " is not found");
                 return;
             }
-            assert Logger.lowLevelDebug("target table is found");
+            assert Logger.lowLevelDebug("target network is found");
 
             // get src mac
-            var newSrcMac = getRoutedSrcMac(t, dst);
+            var newSrcMac = getRoutedSrcMac(n, dst);
             if (newSrcMac == null) {
                 assert Logger.lowLevelDebug("cannot route because source mac is not found");
                 return;
             }
 
-            var targetRule = t.routeTable.lookup(dst);
-            if (!targetRule.isLocalDirect(t.vni)) {
-                assert Logger.lowLevelDebug("still require routing after switching the table");
-                pkb.setTable(t);
+            var targetRule = n.routeTable.lookup(dst);
+            if (!targetRule.isLocalDirect(n.vni)) {
+                assert Logger.lowLevelDebug("still require routing after switching the network");
+                pkb.setNetwork(n);
                 pkb.pkt.setSrc(newSrcMac);
                 routeOutput(pkb);
                 return;
             }
 
-            assert Logger.lowLevelDebug("direct route after switching the table");
+            assert Logger.lowLevelDebug("direct route after switching the network");
 
             // get target mac
-            var targetMac = t.lookup(dst);
+            var targetMac = n.lookup(dst);
             if (targetMac == null) {
                 assert Logger.lowLevelDebug("cannot route because dest mac is not found");
-                broadcastArpOrNdp(t, dst);
+                broadcastArpOrNdp(n, dst);
                 return;
             }
             assert Logger.lowLevelDebug("found dst mac: " + targetMac);
 
             pkb.pkt.setSrc(newSrcMac);
             pkb.pkt.setDst(targetMac);
-            pkb.setTable(t);
+            pkb.setNetwork(n);
             L2.reinput(pkb);
         } else {
             // route based on ip
             var targetIp = rule.ip;
             assert Logger.lowLevelDebug("gateway rule");
-            MacAddress dstMac = pkb.table.lookup(targetIp);
+            MacAddress dstMac = pkb.network.lookup(targetIp);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug("mac not found in arp table, run a broadcast");
-                broadcastArpOrNdp(pkb.table, targetIp);
+                broadcastArpOrNdp(pkb.network, targetIp);
                 return;
             }
 
-            var srcMac = getRoutedSrcMac(pkb.table, dst);
+            var srcMac = getRoutedSrcMac(pkb.network, dst);
             if (srcMac == null) {
                 assert Logger.lowLevelDebug("cannot route because src mac is not found");
                 return;
@@ -520,71 +520,71 @@ public class L3 {
         }
     }
 
-    private void broadcastArpOrNdp(Table table, IP dst) {
-        assert Logger.lowLevelDebug("getRoutedSrcMac(" + table + "," + dst + ")");
+    private void broadcastArpOrNdp(VirtualNetwork network, IP dst) {
+        assert Logger.lowLevelDebug("getRoutedSrcMac(" + network + "," + dst + ")");
         if (dst instanceof IPv4) {
-            broadcastArp(table, dst);
+            broadcastArp(network, dst);
         } else {
-            broadcastNdp(table, dst);
+            broadcastNdp(network, dst);
         }
     }
 
-    private void broadcastArp(Table table, IP dst) {
-        assert Logger.lowLevelDebug("broadcastArp(" + table + "," + dst + ")");
+    private void broadcastArp(VirtualNetwork network, IP dst) {
+        assert Logger.lowLevelDebug("broadcastArp(" + network + "," + dst + ")");
 
-        EthernetPacket packet = buildArpReq(table, dst, SwitchUtils.BROADCAST_MAC);
+        EthernetPacket packet = buildArpReq(network, dst, SwitchUtils.BROADCAST_MAC);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build arp packet");
             return;
         }
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, packet);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, packet);
         directOutput(pkb);
     }
 
-    private void unicastArp(Table table, IP dst, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("unicastArp(" + table + "," + dst + "," + dstMac + ")");
+    private void unicastArp(VirtualNetwork network, IP dst, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("unicastArp(" + network + "," + dst + "," + dstMac + ")");
 
-        EthernetPacket packet = buildArpReq(table, dst, dstMac);
+        EthernetPacket packet = buildArpReq(network, dst, dstMac);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build arp packet");
             return;
         }
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, packet);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, packet);
         directOutput(pkb);
     }
 
-    private void broadcastNdp(Table table, IP dst) {
-        assert Logger.lowLevelDebug("broadcastNdp(" + table + "," + dst + ")");
+    private void broadcastNdp(VirtualNetwork network, IP dst) {
+        assert Logger.lowLevelDebug("broadcastNdp(" + network + "," + dst + ")");
 
-        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, SwitchUtils.BROADCAST_MAC);
+        EthernetPacket packet = buildNdpNeighborSolicitation(network, dst, SwitchUtils.BROADCAST_MAC);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build ndp neighbor solicitation packet");
             return;
         }
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, packet);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, packet);
         directOutput(pkb);
     }
 
-    private void unicastNdp(Table table, IP dst, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("unicastNdp(" + table + "," + dst + "," + dstMac + ")");
+    private void unicastNdp(VirtualNetwork network, IP dst, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("unicastNdp(" + network + "," + dst + "," + dstMac + ")");
 
-        EthernetPacket packet = buildNdpNeighborSolicitation(table, dst, dstMac);
+        EthernetPacket packet = buildNdpNeighborSolicitation(network, dst, dstMac);
         if (packet == null) {
             assert Logger.lowLevelDebug("failed to build ndp neighbor solicitation packet");
             return;
         }
-        PacketBuffer pkb = PacketBuffer.fromPacket(table, packet);
+        PacketBuffer pkb = PacketBuffer.fromPacket(network, packet);
         directOutput(pkb);
     }
 
-    private IPMac getRoutedSrcIpAndMac(Table table, IP dstIp) {
-        assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + table + "," + dstIp + ")");
+    private IPMac getRoutedSrcIpAndMac(VirtualNetwork network, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + network + "," + dstIp + ")");
 
-        // find an ip in that table to be used for the src mac address
-        var ipsInTable = table.ips.entries();
+        // find an ip in that network to be used for the src mac address
+        var ipsInNetwork = network.ips.entries();
         boolean useIpv6 = dstIp instanceof IPv6;
         IPMac src = null;
-        for (var x : ipsInTable) {
+        for (var x : ipsInNetwork) {
             if (useIpv6 && x.ip instanceof IPv6) {
                 src = x;
                 break;
@@ -597,9 +597,9 @@ public class L3 {
         return src;
     }
 
-    private MacAddress getRoutedSrcMac(Table table, IP dstIp) {
-        assert Logger.lowLevelDebug("getRoutedSrcMac(" + table + "," + dstIp + ")");
-        var entry = getRoutedSrcIpAndMac(table, dstIp);
+    private MacAddress getRoutedSrcMac(VirtualNetwork network, IP dstIp) {
+        assert Logger.lowLevelDebug("getRoutedSrcMac(" + network + "," + dstIp + ")");
+        var entry = getRoutedSrcIpAndMac(network, dstIp);
         if (entry == null) {
             return null;
         }
@@ -610,12 +610,12 @@ public class L3 {
         return SwitchUtils.buildEtherIpIcmpPacket(dstMac, srcMac, srcIp, dstIp, icmp);
     }
 
-    private EthernetPacket buildArpReq(Table table, IP dstIp, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("buildArpReq(" + table + "," + dstIp + "," + dstMac + ")");
+    private EthernetPacket buildArpReq(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildArpReq(" + network + "," + dstIp + "," + dstMac + ")");
 
-        var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv4).findAny();
+        var optIp = network.ips.entries().stream().filter(x -> x.ip instanceof IPv4).findAny();
         if (optIp.isEmpty()) {
-            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the table");
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
             return null;
         }
         IP reqIp = optIp.get().ip;
@@ -641,12 +641,12 @@ public class L3 {
         return ether;
     }
 
-    private EthernetPacket buildNdpNeighborSolicitation(Table table, IP dstIp, MacAddress dstMac) {
-        assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + table + "," + dstIp + "," + dstMac + ")");
+    private EthernetPacket buildNdpNeighborSolicitation(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
+        assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + network + "," + dstIp + "," + dstMac + ")");
 
-        var optIp = table.ips.entries().stream().filter(x -> x.ip instanceof IPv6).findAny();
+        var optIp = network.ips.entries().stream().filter(x -> x.ip instanceof IPv6).findAny();
         if (optIp.isEmpty()) {
-            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the table");
+            assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
             return null;
         }
         IP reqIp = optIp.get().ip;
@@ -679,7 +679,7 @@ public class L3 {
 
         var ipPkt = (AbstractIpPacket) pkb.pkt.getPacket();
         var dst = ipPkt.getDst();
-        var routeRule = pkb.table.routeTable.lookup(dst);
+        var routeRule = pkb.network.routeTable.lookup(dst);
         if (routeRule == null) {
             assert Logger.lowLevelDebug("no route rule found for the ip dst, no need to route");
             directOutput(pkb);
@@ -695,28 +695,28 @@ public class L3 {
             assert Logger.lowLevelDebug("route to another vpc");
 
             // search for any synthetic ip in the target vpc
-            Table targetTable = swCtx.getTable(routeRule.toVni);
-            if (targetTable == null) {
+            VirtualNetwork targetNetwork = swCtx.getNetwork(routeRule.toVni);
+            if (targetNetwork == null) {
                 assert Logger.lowLevelDebug("target vpc not found");
                 return;
             }
-            MacAddress targetMac = getRoutedSrcMac(targetTable, dst);
+            MacAddress targetMac = getRoutedSrcMac(targetNetwork, dst);
             if (targetMac == null) {
                 assert Logger.lowLevelDebug("cannot find dst mac for sending this packet to another vpc");
                 return;
             }
             pkb.pkt.setSrc(targetMac);
             pkb.pkt.setDst(targetMac);
-            pkb.setTable(targetTable);
+            pkb.setNetwork(targetNetwork);
             L2.reinput(pkb);
         } else {
             assert Logger.lowLevelDebug("route based on ip");
 
             var targetIp = routeRule.ip;
-            MacAddress dstMac = pkb.table.lookup(targetIp);
+            MacAddress dstMac = pkb.network.lookup(targetIp);
             if (dstMac == null) {
                 assert Logger.lowLevelDebug("mac not found in arp table, run a broadcast");
-                broadcastArpOrNdp(pkb.table, targetIp);
+                broadcastArpOrNdp(pkb.network, targetIp);
                 return;
             }
 
@@ -729,7 +729,7 @@ public class L3 {
         assert Logger.lowLevelDebug("L3.output(" + pkb + ")");
 
         // assign mac to the packet
-        MacAddress srcMac = pkb.table.ips.lookup(pkb.ipPkt.getSrc());
+        MacAddress srcMac = pkb.network.ips.lookup(pkb.ipPkt.getSrc());
         if (srcMac == null) {
             Logger.shouldNotHappen("cannot find synthetic ip for sending the output packet");
             return;
@@ -737,16 +737,16 @@ public class L3 {
         MacAddress dstMac;
 
         // check routing rule
-        var rule = pkb.table.routeTable.lookup(pkb.ipPkt.getDst());
+        var rule = pkb.network.routeTable.lookup(pkb.ipPkt.getDst());
         if (rule == null || rule.toVni == pkb.vni) {
             assert Logger.lowLevelDebug("no route rule or route to current network");
 
             // try to find the mac address of the dst
-            dstMac = pkb.table.lookup(pkb.ipPkt.getDst());
+            dstMac = pkb.network.lookup(pkb.ipPkt.getDst());
 
             if (dstMac == null) {
                 assert Logger.lowLevelDebug("cannot find dst mac for sending the packet");
-                broadcastArpOrNdp(pkb.table, pkb.ipPkt.getDst());
+                broadcastArpOrNdp(pkb.network, pkb.ipPkt.getDst());
                 return;
             }
         } else {

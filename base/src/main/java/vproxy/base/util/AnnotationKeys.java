@@ -10,7 +10,7 @@ public enum AnnotationKeys {
     ServerGroup_HCHttpStatus("vproxy/hc-http-status"),
     ServerGroup_HCDnsDomain("vproxy/hc-dns-domain"),
 
-    SWTable_DockerNetworkDriverNetworkId("docker-network-driver/network-id"),
+    SWNetwork_DockerNetworkDriverNetworkId("docker-network-driver/network-id"),
     SWIp_DockerNetworkDriverGatewayIp("docker-network-driver/gateway-ip"),
     SWIface_DockerNetworkDriverEndpointId("docker-network-driver/endpoint-id"),
     SWIface_DockerNetworkDriverEndpointIpv4("docker-network-driver/endpoint-ipv4"),

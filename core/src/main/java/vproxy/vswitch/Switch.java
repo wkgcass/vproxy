@@ -56,7 +56,7 @@ public class Switch {
 
     private final Map<String, UserInfo> users = new HashMap<>();
     private DatagramFD sock;
-    private final IntMap<Table> tables = new IntMap<>();
+    private final IntMap<VirtualNetwork> networks = new IntMap<>();
     private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
 
     private final Map<String, UMem> umems = new HashMap<>();
@@ -71,7 +71,7 @@ public class Switch {
         },
         this::sendPacket,
         ifaces::keySet,
-        tables::get,
+        networks::get,
         users::get,
         () -> eventLoop.getSelectorEventLoop(),
         this::onIfacePacketsArrive,
@@ -143,7 +143,7 @@ public class Switch {
         loop.add(sock, EventSet.read(), null, new DatagramInputHandler(swCtx));
         eventLoop = netLoop;
         refreshCacheEvent = eventLoop.getSelectorEventLoop().period(40_000, this::refreshCache);
-        tables.values().forEach(t -> t.setLoop(loop));
+        networks.values().forEach(t -> t.setLoop(loop));
         started = true;
     }
 
@@ -165,21 +165,21 @@ public class Switch {
     }
 
     private void stopTcp() {
-        for (var tbl : tables.values()) {
-            for (var entry : tbl.conntrack.listListenEntries()) {
+        for (var net : networks.values()) {
+            for (var entry : net.conntrack.listListenEntries()) {
                 entry.destroy();
-                tbl.conntrack.removeListen(entry.listening);
+                net.conntrack.removeListen(entry.listening);
             }
-            for (var entry : tbl.conntrack.listTcpEntries()) {
+            for (var entry : net.conntrack.listTcpEntries()) {
                 entry.destroy();
-                tbl.conntrack.remove(entry.source, entry.destination);
+                net.conntrack.remove(entry.source, entry.destination);
             }
         }
     }
 
-    private void cancelTables() {
-        for (var tbl : tables.values()) {
-            tbl.clearCache();
+    private void cancelNetworks() {
+        for (var net : networks.values()) {
+            net.clearCache();
         }
     }
 
@@ -191,7 +191,7 @@ public class Switch {
         stopStack();
         cancelEventLoop();
         cancelAllIface();
-        cancelTables();
+        cancelNetworks();
         started = false;
     }
 
@@ -202,7 +202,7 @@ public class Switch {
     }
 
     private void refreshCache() {
-        for (Table t : tables.values()) {
+        for (VirtualNetwork t : networks.values()) {
             for (ArpTable.ArpEntry arp : t.arpTable.listEntries()) {
                 if (arp.getTTL() < ArpTable.ARP_REFRESH_CACHE_BEFORE_TTL_TIME) {
                     refreshArpCache(t, arp.ip, arp.mac);
@@ -219,7 +219,7 @@ public class Switch {
         }
     }
 
-    private void refreshArpCache(Table t, IP ip, MacAddress mac) {
+    private void refreshArpCache(VirtualNetwork t, IP ip, MacAddress mac) {
         VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("trigger arp cache refresh for " + ip.formatToIPString() + " " + mac);
 
@@ -236,44 +236,44 @@ public class Switch {
 
     public void setMacTableTimeout(int macTableTimeout) {
         this.macTableTimeout = macTableTimeout;
-        for (var tbl : tables.values()) {
-            tbl.setMacTableTimeout(macTableTimeout);
+        for (var net : networks.values()) {
+            net.setMacTableTimeout(macTableTimeout);
         }
     }
 
     public void setArpTableTimeout(int arpTableTimeout) {
         this.arpTableTimeout = arpTableTimeout;
-        for (var tbl : tables.values()) {
-            tbl.setArpTableTimeout(arpTableTimeout);
+        for (var net : networks.values()) {
+            net.setArpTableTimeout(arpTableTimeout);
         }
     }
 
-    public IntMap<Table> getTables() {
-        return tables;
+    public IntMap<VirtualNetwork> getNetworks() {
+        return networks;
     }
 
-    public Table getTable(int vni) throws NotFoundException {
-        Table t = tables.get(vni);
+    public VirtualNetwork getNetwork(int vni) throws NotFoundException {
+        VirtualNetwork t = networks.get(vni);
         if (t == null) {
             throw new NotFoundException("vni", "" + vni);
         }
         return t;
     }
 
-    public Table addTable(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
-        if (tables.containsKey(vni)) {
+    public VirtualNetwork addNetwork(int vni, Network v4network, Network v6network, Annotations annotations) throws AlreadyExistException, XException {
+        if (networks.containsKey(vni)) {
             throw new AlreadyExistException("vni " + vni + " already exists in switch " + alias);
         }
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        Table t = new Table(vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
-        tables.put(vni, t);
+        VirtualNetwork t = new VirtualNetwork(vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
+        networks.put(vni, t);
         return t;
     }
 
-    public void delTable(int vni) throws NotFoundException {
-        Table t = tables.remove(vni);
+    public void delNetwork(int vni) throws NotFoundException {
+        VirtualNetwork t = networks.remove(vni);
         if (t == null) {
             throw new NotFoundException("vni", "" + vni);
         }
@@ -717,7 +717,7 @@ public class Switch {
             pkb.clearFilterFields();
             if (reinput) {
                 assert Logger.lowLevelDebug("reinput the packet");
-                pkb.table = null;
+                pkb.network = null;
                 if (redirect != null) {
                     assert Logger.lowLevelDebug("set devin to " + redirect);
                     pkb.devin = redirect;
@@ -772,14 +772,14 @@ public class Switch {
         // ensure the dev is recorded
         recordIface(pkb.devin);
 
-        // init vpc table
+        // init vpc network
         int vni = pkb.vni;
-        Table table = swCtx.getTable(vni);
-        if (table == null) {
+        VirtualNetwork network = swCtx.getNetwork(vni);
+        if (network == null) {
             assert Logger.lowLevelDebug("vni not defined: " + vni);
             return false;
         }
-        pkb.table = table;
+        pkb.network = network;
 
         // init tun packets
         if (pkb.pkt == null) {
@@ -787,7 +787,7 @@ public class Switch {
                 Logger.shouldNotHappen("only tun interfaces can input non-ethernet packets, but got " + pkb.devin);
                 return false; // drop
             }
-            var mac = table.arpTable.lookup(pkb.ipPkt.getDst());
+            var mac = network.arpTable.lookup(pkb.ipPkt.getDst());
             if (mac != null) {
                 buildEthernetHeaderForTunDev(pkb, mac);
             } else {
@@ -856,7 +856,7 @@ public class Switch {
             pkb.clearFilterFields();
             if (reinput) {
                 assert Logger.lowLevelDebug("reinput the packet");
-                pkb.table = null;
+                pkb.network = null;
                 if (redirect != null) {
                     assert Logger.lowLevelDebug("set devin to " + redirect);
                     pkb.devin = redirect;
@@ -979,8 +979,8 @@ public class Switch {
             timer.cancel();
         }
 
-        for (var table : tables.values()) {
-            table.macTable.disconnect(iface);
+        for (var net : networks.values()) {
+            net.macTable.disconnect(iface);
         }
         Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
 

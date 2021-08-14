@@ -27,7 +27,7 @@ public class RouteTable {
         this.defaultV6Rule = null;
     }
 
-    public RouteTable(Table t) {
+    public RouteTable(VirtualNetwork t) {
         this.defaultV4Rule = new RouteRule(defaultRuleName, t.v4network, t.vni);
         RouteRule defaultV6Rule = null;
         if (t.v6network != null) {

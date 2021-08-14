@@ -11,7 +11,7 @@ import vproxy.base.util.exception.NotFoundException;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vfd.*;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import vproxy.vswitch.iface.XDPIface;
 import vproxy.xdp.BPFMode;
@@ -24,7 +24,7 @@ import java.util.Map;
 public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String SWITCH_NAME = "sw-docker";
     private static final String UMEM_NAME = "umem0";
-    private static final String TABLE_NETWORK_ID_ANNOTATION = AnnotationKeys.SWTable_DockerNetworkDriverNetworkId.name;
+    private static final String NETWORK_NETWORK_ID_ANNOTATION = AnnotationKeys.SWNetwork_DockerNetworkDriverNetworkId.name;
     private static final MacAddress GATEWAY_MAC_ADDRESS = new MacAddress("02:00:00:00:00:20");
     private static final String GATEWAY_IP_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewayIp.name;
     private static final String GATEWAY_IPv4_FLAG_VALUE = "gateway-ipv4";
@@ -128,9 +128,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         // handle
         var sw = ensureSwitch();
-        IntMap<Table> tables = sw.getTables();
+        IntMap<VirtualNetwork> networks = sw.getNetworks();
         int n = 0;
-        for (int i : tables.keySet()) {
+        for (int i : networks.keySet()) {
             if (n < i) {
                 n = i;
             }
@@ -145,15 +145,15 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         if (!req.ipv6Data.isEmpty()) {
             v6net = new Network(req.ipv6Data.get(0).pool);
         }
-        sw.addTable(n, v4net, v6net, new Annotations(Collections.singletonMap(TABLE_NETWORK_ID_ANNOTATION, req.networkId)));
-        Logger.alert("table added: vni=" + n + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
-        Table tbl = sw.getTable(n);
-        if (!req.networkId.equals(tbl.getAnnotations().other.get(TABLE_NETWORK_ID_ANNOTATION))) {
-            Logger.shouldNotHappen("adding table failed, maybe concurrent modification");
+        sw.addNetwork(n, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
+        Logger.alert("network added: vni=" + n + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
+        VirtualNetwork net = sw.getNetwork(n);
+        if (!req.networkId.equals(net.getAnnotations().other.get(NETWORK_NETWORK_ID_ANNOTATION))) {
+            Logger.shouldNotHappen("adding network failed, maybe concurrent modification");
             try {
-                sw.delTable(n);
+                sw.delNetwork(n);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback table " + n + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + n + " failed", e2);
             }
             throw new Exception("unexpected state");
         }
@@ -161,13 +161,13 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         // add entry veth
         try {
             var umem = ensureUMem();
-            createNetworkEntryVeth(sw, umem, tbl);
+            createNetworkEntryVeth(sw, umem, net);
         } catch (Exception e) {
-            Logger.error(LogType.SYS_ERROR, "creating network entry veth for table " + n + " failed", e);
+            Logger.error(LogType.SYS_ERROR, "creating network entry veth for network " + n + " failed", e);
             try {
-                sw.delTable(n);
+                sw.delNetwork(n);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback table " + n + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + n + " failed", e2);
             }
             throw e;
         }
@@ -176,7 +176,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         {
             var gateway = IP.from(req.ipv4Data.get(0).__transformedGateway);
             var mac = GATEWAY_MAC_ADDRESS;
-            tbl.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE)));
+            net.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE)));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
 
@@ -184,7 +184,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             // add ipv6 gateway ip
             var gateway = IP.from(req.ipv6Data.get(0).__transformedGateway);
             var mac = GATEWAY_MAC_ADDRESS;
-            tbl.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE)));
+            net.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE)));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
     }
@@ -241,10 +241,10 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         return umem;
     }
 
-    private void createNetworkEntryVeth(Switch sw, UMem umem, Table tbl) throws Exception {
+    private void createNetworkEntryVeth(Switch sw, UMem umem, VirtualNetwork net) throws Exception {
         int index = 0;
-        if (tbl != null) {
-            index = tbl.vni;
+        if (net != null) {
+            index = net.vni;
         }
 
         String hostNic = NETWORK_ENTRY_VETH_PREFIX + index;
@@ -255,7 +255,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         // add xdp for the veth
         try {
-            createXDPIface(sw, umem, tbl, swNic);
+            createXDPIface(sw, umem, net, swNic);
         } catch (Exception e) {
             try {
                 deleteNic(sw, swNic);
@@ -266,13 +266,13 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
     }
 
-    private XDPIface createXDPIface(Switch sw, UMem umem, Table tbl, String nicname) throws Exception {
+    private XDPIface createXDPIface(Switch sw, UMem umem, VirtualNetwork net, String nicname) throws Exception {
         var cmd = Command.parseStrCmd("add bpf-object " + nicname + " mode SKB force");
         var bpfobj = BPFObjectHandle.add(cmd);
         try {
             return sw.addXDP(nicname, bpfobj.getMap("xsks_map"), umem, 0,
                 32, 32, BPFMode.SKB, false, 0,
-                tbl != null ? tbl.vni : NETWORK_ENTRY_VNI,
+                net != null ? net.vni : NETWORK_ENTRY_VNI,
                 BPFMapKeySelectors.useQueueId.keySelector.get());
         } catch (Exception e) {
             try {
@@ -284,12 +284,12 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
     }
 
-    private Table findNetwork(Switch sw, String networkId) throws Exception {
-        var tables = sw.getTables();
-        for (var tbl : tables.values()) {
-            var netId = tbl.getAnnotations().other.get(TABLE_NETWORK_ID_ANNOTATION);
+    private VirtualNetwork findNetwork(Switch sw, String networkId) throws Exception {
+        var networks = sw.getNetworks();
+        for (var net : networks.values()) {
+            var netId = net.getAnnotations().other.get(NETWORK_NETWORK_ID_ANNOTATION);
             if (netId != null && netId.equals(networkId)) {
-                return tbl;
+                return net;
             }
         }
         throw new Exception("network " + networkId + " not found");
@@ -298,16 +298,16 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     @Override
     public synchronized void deleteNetwork(String networkId) throws Exception {
         var sw = ensureSwitch();
-        var tbl = findNetwork(sw, networkId);
+        var net = findNetwork(sw, networkId);
 
-        deleteNetworkEntryVeth(sw, tbl);
+        deleteNetworkEntryVeth(sw, net);
 
-        sw.delTable(tbl.vni);
-        Logger.alert("table deleted: vni=" + tbl.vni + ", docker:networkId=" + networkId);
+        sw.delNetwork(net.vni);
+        Logger.alert("network deleted: vni=" + net.vni + ", docker:networkId=" + networkId);
     }
 
-    private void deleteNetworkEntryVeth(Switch sw, Table tbl) throws Exception {
-        String swNic = NETWORK_ENTRY_VETH_PREFIX + tbl.vni + NETWORK_ENTRY_VETH_PEER_SUFFIX;
+    private void deleteNetworkEntryVeth(Switch sw, VirtualNetwork net) throws Exception {
+        String swNic = NETWORK_ENTRY_VETH_PREFIX + net.vni + NETWORK_ENTRY_VETH_PEER_SUFFIX;
         deleteNic(sw, swNic);
     }
 
@@ -321,9 +321,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
 
         var sw = ensureSwitch();
-        var tbl = findNetwork(sw, req.networkId);
+        var net = findNetwork(sw, req.networkId);
         if (req.netInterface.addressIPV6 != null && !req.netInterface.addressIPV6.isEmpty()) {
-            if (tbl.v6network == null) {
+            if (net.v6network == null) {
                 throw new Exception("network " + req.networkId + " does not support ipv6");
             }
         }
@@ -345,9 +345,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         try {
             var umem = ensureUMem();
 
-            XDPIface xdpIface = createXDPIface(sw, umem, tbl, swNic);
+            XDPIface xdpIface = createXDPIface(sw, umem, net, swNic);
             xdpIface.setAnnotations(new Annotations(anno));
-            Logger.alert("xdp added: " + xdpIface.nic + ", vni=" + tbl.vni
+            Logger.alert("xdp added: " + xdpIface.nic + ", vni=" + net.vni
                 + ", endpointId=" + req.endpointId
                 + ", ipv4=" + anno.get(VETH_ENDPOINT_IPv4_ANNOTATION)
                 + ", ipv6=" + anno.get(VETH_ENDPOINT_IPv6_ANNOTATION)
@@ -433,19 +433,19 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     @Override
     public synchronized JoinResponse join(String networkId, String endpointId, String sandboxKey) throws Exception {
         var sw = ensureSwitch();
-        var tbl = findNetwork(sw, networkId);
+        var net = findNetwork(sw, networkId);
         var xdp = findEndpoint(sw, endpointId);
         var ifName = xdp.nic + CONTAINER_VETH_SUFFIX;
         var ipv6 = xdp.getAnnotations().other.get(VETH_ENDPOINT_IPv6_ANNOTATION);
 
-        if (tbl.v6network == null && ipv6 != null) {
+        if (net.v6network == null && ipv6 != null) {
             throw new Exception("internal error: should not reach here: " +
                 "network " + networkId + " does not support ipv6 but the endpoint is assigned with ipv6 addr");
         }
 
         String gatewayV4 = null;
         String gatewayV6 = null;
-        for (var info : tbl.ips.entries()) {
+        for (var info : net.ips.entries()) {
             var value = info.annotations.other.get(GATEWAY_IP_ANNOTATION);
             if (value != null) {
                 if (value.equals(GATEWAY_IPv4_FLAG_VALUE)) {

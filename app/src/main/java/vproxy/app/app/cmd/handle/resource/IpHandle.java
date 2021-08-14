@@ -9,7 +9,7 @@ import vproxy.base.util.exception.XException;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.IPMac;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 import java.util.Collection;
 
@@ -25,13 +25,13 @@ public class IpHandle {
     }
 
     public static Collection<IP> names(Resource parent) throws Exception {
-        Table tbl = VpcHandle.get(parent);
-        return tbl.ips.allIps();
+        VirtualNetwork net = VpcHandle.get(parent);
+        return net.ips.allIps();
     }
 
     public static Collection<IPMac> list(Resource parent) throws Exception {
-        Table tbl = VpcHandle.get(parent);
-        return tbl.ips.entries();
+        VirtualNetwork net = VpcHandle.get(parent);
+        return net.ips.entries();
     }
 
     public static void add(Command cmd) throws Exception {

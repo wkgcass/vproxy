@@ -10,7 +10,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import vproxy.xdp.BPFMap;
 import vproxy.xdp.BPFMode;
@@ -41,7 +41,7 @@ public class XDPPoc2 {
             1500, true);
         sw.start();
 
-        Table t = sw.addTable(1,
+        VirtualNetwork t = sw.addNetwork(1,
             new Network("192.168.100.0/24"),
             new Network("fc00:dead:cafe:1::/64"),
             new Annotations());

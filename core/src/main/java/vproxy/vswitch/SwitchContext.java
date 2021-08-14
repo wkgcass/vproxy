@@ -70,12 +70,12 @@ public class SwitchContext {
     }
 
     public interface GetTable {
-        Table getTable(int vni);
+        VirtualNetwork getTable(int vni);
     }
 
     private final GetTable getTableFunc;
 
-    public Table getTable(int vni) {
+    public VirtualNetwork getNetwork(int vni) {
         return getTableFunc.getTable(vni);
     }
 

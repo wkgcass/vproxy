@@ -44,16 +44,16 @@ object SwitchTCP {
       fos.flush()
     }
     f.setExecutable(true)
-    sw.addTable(3, Network("172.16.3.0/24"), Network("[fd00::300]/120"), null)
+    sw.addNetwork(3, Network("172.16.3.0/24"), Network("[fd00::300]/120"), null)
     sw.addTap("tap1", 3, f.absolutePath)
-    val table = sw.getTable(3)
-    table.addIp(IP.from("172.16.3.254"), MacAddress("00:00:00:00:03:04"), null)
+    val network = sw.getNetwork(3)
+    network.addIp(IP.from("172.16.3.254"), MacAddress("00:00:00:00:03:04"), null)
     //
     val field = sw.javaClass.getDeclaredField("swCtx")
     field.trySetAccessible()
     val swCtx = field.get(sw) as SwitchContext
     //
-    val fds = VSwitchFDs(VSwitchFDContext(swCtx, table, loop.selector))
+    val fds = VSwitchFDs(VSwitchFDContext(swCtx, network, loop.selector))
     val serverSock = ServerSock.create(IPPort("0.0.0.0", 80), fds)
 
     val httpServer = CoroutineHttp1Server(serverSock.coroutine(el))

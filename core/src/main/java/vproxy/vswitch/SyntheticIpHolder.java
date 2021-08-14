@@ -18,9 +18,9 @@ public class SyntheticIpHolder {
     private final Map<IP, IPMac> ipMap = new HashMap<>();
     private final Map<MacAddress, Set<IPMac>> macMap = new HashMap<>();
 
-    public SyntheticIpHolder(Table table) {
-        allowedV4Network = table.v4network;
-        allowedV6Network = table.v6network;
+    public SyntheticIpHolder(VirtualNetwork network) {
+        allowedV4Network = network.v4network;
+        allowedV6Network = network.v6network;
     }
 
     public MacAddress lookup(IP ip) {

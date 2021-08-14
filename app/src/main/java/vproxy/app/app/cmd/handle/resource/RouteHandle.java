@@ -8,7 +8,7 @@ import vproxy.base.util.Network;
 import vproxy.base.util.Utils;
 import vproxy.vfd.IP;
 import vproxy.vswitch.RouteTable;
-import vproxy.vswitch.Table;
+import vproxy.vswitch.VirtualNetwork;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -18,13 +18,13 @@ public class RouteHandle {
     }
 
     public static List<String> names(Resource parent) throws Exception {
-        Table tbl = VpcHandle.get(parent);
-        return tbl.routeTable.getRules().stream().map(r -> r.alias).collect(Collectors.toList());
+        VirtualNetwork net = VpcHandle.get(parent);
+        return net.routeTable.getRules().stream().map(r -> r.alias).collect(Collectors.toList());
     }
 
     public static List<RouteTable.RouteRule> list(Resource parent) throws Exception {
-        Table tbl = VpcHandle.get(parent);
-        return tbl.routeTable.getRules();
+        VirtualNetwork net = VpcHandle.get(parent);
+        return net.routeTable.getRules();
     }
 
     public static void checkCreateRoute(Command cmd) throws Exception {
@@ -62,14 +62,14 @@ public class RouteHandle {
             rule = new RouteTable.RouteRule(alias, net, ip);
         }
 
-        Table tbl = VpcHandle.get(cmd.prepositionResource);
-        tbl.routeTable.addRule(rule);
+        VirtualNetwork vnet = VpcHandle.get(cmd.prepositionResource);
+        vnet.routeTable.addRule(rule);
     }
 
     public static void remove(Command cmd) throws Exception {
         String alias = cmd.resource.alias;
 
-        Table tbl = VpcHandle.get(cmd.prepositionResource);
-        tbl.routeTable.delRule(alias);
+        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+        net.routeTable.delRule(alias);
     }
 }

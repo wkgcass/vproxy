@@ -10,7 +10,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.conntrack.Conntrack;
 
-public class Table {
+public class VirtualNetwork {
     public final int vni;
     public final Network v4network;
     public final Network v6network;
@@ -22,10 +22,10 @@ public class Table {
 
     public final Conntrack conntrack = new Conntrack();
 
-    public Table(int vni, NetEventLoop loop,
-                 Network v4network, Network v6network,
-                 int macTableTimeout, int arpTableTimeout,
-                 Annotations annotations) {
+    public VirtualNetwork(int vni, NetEventLoop loop,
+                          Network v4network, Network v6network,
+                          int macTableTimeout, int arpTableTimeout,
+                          Annotations annotations) {
         this.vni = vni;
         this.v4network = v4network;
         this.v6network = v6network;
@@ -83,7 +83,7 @@ public class Table {
 
     @Override
     public String toString() {
-        return "Table{" +
+        return "VirtualNetwork{" +
             "vni=" + vni +
             ", v4network=" + v4network +
             ", v6network=" + v6network +
