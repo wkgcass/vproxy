@@ -7,6 +7,7 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.EventSet;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.dispatcher.BPFMapKeySelector;
@@ -209,6 +210,8 @@ public class XDPIface extends Iface {
 
         @Override
         public void readable(HandlerContext<XDPSocket> ctx) {
+            VProxyThread.current().newUuidDebugInfo();
+
             List<Chunk> ls = ctx.getChannel().fetchPackets();
             if (ls.isEmpty()) {
                 Logger.shouldNotHappen("xdp readable " + xsk + " but received nothing");
