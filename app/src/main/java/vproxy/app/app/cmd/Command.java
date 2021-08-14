@@ -17,8 +17,6 @@ public class Command {
     public final List<Flag> flags = new LinkedList<>();
     public final Map<Param, String> args = new HashMap<>();
 
-    private final ModuleCommands cmds = new ModuleCommands();
-
     public static String helpString() {
         return HelpCommand.helpString();
     }
@@ -324,10 +322,14 @@ public class Command {
     }
 
     public void run(Callback<CmdResult, Throwable> cb) {
+        run(ModuleCommands.Companion.getInstance(), cb);
+    }
+
+    public void run(Commands cmds, Callback<CmdResult, Throwable> cb) {
         Application.get().controlEventLoop.getSelectorEventLoop().nextTick(() -> {
             CmdResult res;
             try {
-                res = runThrow();
+                res = runThrow(cmds);
             } catch (Throwable e) {
                 cb.failed(e);
                 return;
@@ -336,7 +338,7 @@ public class Command {
         });
     }
 
-    private CmdResult runThrow() throws Exception {
+    private CmdResult runThrow(Commands cmds) throws Exception {
         return cmds.execute(this);
     }
 

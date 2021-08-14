@@ -6,38 +6,27 @@ import vproxy.base.util.exception.NotFoundException;
 import vproxy.vfd.UDSPath;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
 
 public class DockerNetworkPluginControllerHolder {
-    private final Map<String, DockerNetworkPluginController> map = new HashMap<>();
+    private DockerNetworkPluginController controller = null;
 
-    public List<String> names() {
-        return new ArrayList<>(map.keySet());
+    public DockerNetworkPluginController getController() {
+        return controller;
     }
 
-    public DockerNetworkPluginController add(String alias,
-                                             UDSPath path) throws AlreadyExistException, IOException {
-        if (map.containsKey(alias))
-            throw new AlreadyExistException("docker-network-plugin-controller", alias);
-        DockerNetworkPluginController rc = new DockerNetworkPluginController(alias, path);
-        map.put(alias, rc);
-        return rc;
+    public DockerNetworkPluginController create(UDSPath path) throws AlreadyExistException, IOException {
+        if (controller != null)
+            throw new AlreadyExistException("docker-network-plugin-controller");
+        DockerNetworkPluginController dnpc = new DockerNetworkPluginController(path);
+        controller = dnpc;
+        return dnpc;
     }
 
-    public DockerNetworkPluginController get(String alias) throws NotFoundException {
-        DockerNetworkPluginController rc = map.get(alias);
-        if (rc == null)
-            throw new NotFoundException("docker-network-plugin-controller", alias);
-        return rc;
-    }
-
-    public void removeAndStop(String alias) throws NotFoundException {
-        DockerNetworkPluginController g = map.remove(alias);
+    public void stop() throws NotFoundException {
+        DockerNetworkPluginController g = controller;
+        controller = null;
         if (g == null)
-            throw new NotFoundException("docker-network-plugin-controller", alias);
+            throw new NotFoundException("docker-network-plugin-controller");
         g.stop();
     }
 }

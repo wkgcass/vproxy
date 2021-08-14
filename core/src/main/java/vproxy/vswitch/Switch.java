@@ -310,11 +310,11 @@ public class Switch {
         }
     }
 
-    public TapIface addTap(String devPattern, int vni, String postScript, Annotations annotations) throws XException, IOException {
-        return addTap(devPattern, vni, postScript, annotations, null, null);
+    public TapIface addTap(String devPattern, int vni, String postScript) throws XException, IOException {
+        return addTap(devPattern, vni, postScript, null, null);
     }
 
-    public TapIface addTap(String devPattern, int vni, String postScript, Annotations annotations,
+    public TapIface addTap(String devPattern, int vni, String postScript,
                            Integer mtu, Boolean floodAllowed) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -326,7 +326,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TapIface iface = new TapIface(devPattern, vni, postScript, annotations);
+        TapIface iface = new TapIface(devPattern, vni, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -394,12 +394,12 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations)
+    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript)
         throws XException, IOException {
-        return addTun(devPattern, vni, mac, postScript, annotations, defaultMtu, defaultFloodAllowed);
+        return addTun(devPattern, vni, mac, postScript, defaultMtu, defaultFloodAllowed);
     }
 
-    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript, Annotations annotations,
+    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript,
                            Integer mtu, Boolean floodAllowed) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -411,7 +411,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tun is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TunIface iface = new TunIface(devPattern, vni, mac, postScript, annotations);
+        TunIface iface = new TunIface(devPattern, vni, mac, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -760,6 +760,15 @@ public class Switch {
     }
 
     private void preHandleInputPkb(PacketBuffer pkb) {
+        var fullbufBackup = pkb.fullbuf;
+        if (__preHandleInputPkb0(pkb)) {
+            packetBuffersToBeHandled.add(pkb);
+        } else {
+            releaseUMemChunkIfPossible(fullbufBackup);
+        }
+    }
+
+    private boolean __preHandleInputPkb0(PacketBuffer pkb) {
         // ensure the dev is recorded
         recordIface(pkb.devin);
 
@@ -768,7 +777,7 @@ public class Switch {
         Table table = swCtx.getTable(vni);
         if (table == null) {
             assert Logger.lowLevelDebug("vni not defined: " + vni);
-            return;
+            return false;
         }
         pkb.table = table;
 
@@ -776,7 +785,7 @@ public class Switch {
         if (pkb.pkt == null) {
             if (!(pkb.devin instanceof TunIface)) {
                 Logger.shouldNotHappen("only tun interfaces can input non-ethernet packets, but got " + pkb.devin);
-                return; // drop
+                return false; // drop
             }
             var mac = table.arpTable.lookup(pkb.ipPkt.getDst());
             if (mac != null) {
@@ -797,7 +806,7 @@ public class Switch {
             var res = SwitchUtils.applyFilters(ingressFilters, packetFilterHelper, pkb);
             if (res != FilterResult.PASS) {
                 handleIngressFilterResult(fullbufBackup, pkb, res);
-                return;
+                return false;
             }
             assert Logger.lowLevelDebug("the filter returns pass");
         }
@@ -805,7 +814,7 @@ public class Switch {
         // drop packets with vlan tag
         if (pkb.pkt instanceof EthernetPacket && ((EthernetPacket) pkb.pkt).getVlan() >= 0) {
             assert Logger.lowLevelDebug("vlan packets are dropped");
-            return;
+            return false;
         }
 
         // mirror the packet
@@ -816,10 +825,10 @@ public class Switch {
         // check whether the packet's src and dst mac are the same
         if (pkb.pkt.getSrc().equals(pkb.pkt.getDst())) {
             Logger.warn(LogType.INVALID_EXTERNAL_DATA, "input packet with the same src and dst: " + pkb.pkt.description());
-            return;
+            return false;
         }
 
-        packetBuffersToBeHandled.add(pkb);
+        return true;
     }
 
     private void releaseUMemChunkIfPossible(ByteArray fullBuf) {

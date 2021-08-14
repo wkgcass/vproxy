@@ -4,11 +4,13 @@ import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Flag;
 import vproxy.app.app.cmd.Param;
+import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.BPFModeHandle;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.MacAddress;
+import vproxy.vswitch.iface.XDPIface;
 import vproxy.xdp.BPFMode;
 import vproxy.xdp.BPFObject;
 
@@ -24,7 +26,7 @@ public class BPFObjectHandle {
     private BPFObjectHandle() {
     }
 
-    public static void add(Command cmd) throws Exception {
+    public static BPFObject add(Command cmd) throws Exception {
         String nic = cmd.resource.alias;
         String path;
         boolean isAutogenEbpf;
@@ -40,7 +42,7 @@ public class BPFObjectHandle {
         BPFMode mode = BPFModeHandle.get(cmd, BPFMode.SKB);
         boolean forceAttach = cmd.flags.contains(Flag.force);
 
-        Application.get().bpfObjectHolder.add(path, prog, isAutogenEbpf, nic, mode, forceAttach);
+        return Application.get().bpfObjectHolder.add(path, prog, isAutogenEbpf, nic, mode, forceAttach);
     }
 
     private static String genDefaultEbpf(String nicname) throws Exception {
@@ -202,6 +204,26 @@ public class BPFObjectHandle {
             ls.add(bpfObjectHolder.get(name));
         }
         return ls;
+    }
+
+    public static void preRemoveCheck(Command cmd) throws Exception {
+        var bpfObject = Application.get().bpfObjectHolder.get(cmd.resource.alias);
+        var swNames = Application.get().switchHolder.names();
+        for (var swName : swNames) {
+            var sw = Application.get().switchHolder.get(swName);
+            var ifaces = sw.getIfaces();
+            for (var iface : ifaces) {
+                if (!(iface instanceof XDPIface)) {
+                    continue;
+                }
+                var xdp = (XDPIface) iface;
+                if (xdp.bpfMap.bpfObject == bpfObject) {
+                    throw new XException(ResourceType.bpfobj.fullname + " " + bpfObject.nic
+                        + " is used by " + ResourceType.xdp.fullname + " " + xdp.nic
+                        + " in " + ResourceType.sw.fullname + " " + sw.alias);
+                }
+            }
+        }
     }
 
     public static void remove(Command cmd) throws Exception {

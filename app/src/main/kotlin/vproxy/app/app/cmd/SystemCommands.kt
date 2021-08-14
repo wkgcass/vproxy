@@ -10,7 +10,11 @@ import vproxy.app.process.Shutdown
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
-class SystemCommands : Commands() {
+class SystemCommands private constructor() : Commands() {
+  companion object {
+    val Instance = SystemCommands()
+  }
+
   init {
     val it = AddHelper(resources)
     it + Res(ResourceType.config) {
@@ -95,16 +99,6 @@ class SystemCommands : Commands() {
     it + Res(ResourceType.dockernetworkplugincontroller) {
       it + ResAct(
         relation = ResourceType.dockernetworkplugincontroller,
-        action = ActType.add,
-        params = {
-          it + ResActParam(Param.path, true)
-        }
-      ) {
-        DockerNetworkPluginControllerHandle.add(it)
-        CmdResult()
-      }
-      it + ResAct(
-        relation = ResourceType.dockernetworkplugincontroller,
         action = ActType.list,
       ) {
         val names = DockerNetworkPluginControllerHandle.names()
@@ -117,13 +111,6 @@ class SystemCommands : Commands() {
         val dcRefList = DockerNetworkPluginControllerHandle.details()
         val dcRefStrList = dcRefList.stream().map { it.toString() }.collect(Collectors.toList())
         CmdResult(dcRefList, dcRefStrList, utilJoinList(dcRefList))
-      }
-      it + ResAct(
-        relation = ResourceType.dockernetworkplugincontroller,
-        action = ActType.remove,
-      ) {
-        DockerNetworkPluginControllerHandle.removeAndStop(it)
-        CmdResult()
       }
     }
     it + Res(ResourceType.plugin) {

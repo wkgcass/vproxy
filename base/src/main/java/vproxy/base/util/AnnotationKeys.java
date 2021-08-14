@@ -12,10 +12,10 @@ public enum AnnotationKeys {
 
     SWTable_DockerNetworkDriverNetworkId("docker-network-driver/network-id"),
     SWIp_DockerNetworkDriverGatewayIp("docker-network-driver/gateway-ip"),
-    SWTap_DockerNetworkDriverEndpointId("docker-network-driver/endpoint-id"),
-    SWTap_DockerNetworkDriverEndpointIpv4("docker-network-driver/endpoint-ipv4"),
-    SWTap_DockerNetworkDriverEndpointIpv6("docker-network-driver/endpoint-ipv6"),
-    SWTap_DockerNetworkDriverEndpointMac("docker-network-driver/endpoint-mac"),
+    SWIface_DockerNetworkDriverEndpointId("docker-network-driver/endpoint-id"),
+    SWIface_DockerNetworkDriverEndpointIpv4("docker-network-driver/endpoint-ipv4"),
+    SWIface_DockerNetworkDriverEndpointIpv6("docker-network-driver/endpoint-ipv6"),
+    SWIface_DockerNetworkDriverEndpointMac("docker-network-driver/endpoint-mac"),
 
     EventLoopGroup_PreferPoll("vproxy/event-loop-group-prefer-poll"),
     EventLoop_CoreAffinity("vproxy/event-loop-core-affinity"),

@@ -27,6 +27,10 @@ public class MainCtx {
         return ops.stream().filter(foo -> foo.key().equals(key)).findFirst().orElse(null);
     }
 
+    public void removeOp(String key) {
+        ops.removeIf(foo -> foo.key().equals(key));
+    }
+
     public void addTodo(MainOp op, String[] args) {
         assert op.argCount() == args.length;
         int checkExitCode = op.pre(this, args);

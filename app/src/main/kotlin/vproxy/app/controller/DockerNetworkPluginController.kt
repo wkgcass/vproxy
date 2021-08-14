@@ -16,7 +16,7 @@ import vproxy.vfd.UDSPath
 import java.util.*
 
 @Suppress("DuplicatedCode")
-class DockerNetworkPluginController(val alias: String, val path: UDSPath) {
+class DockerNetworkPluginController(val path: UDSPath) {
   companion object {
     private const val dockerNetworkPluginBase = ""
     private val driver: DockerNetworkDriver = DockerNetworkDriverImpl()
@@ -291,5 +291,9 @@ class DockerNetworkPluginController(val alias: String, val path: UDSPath) {
   private suspend fun discoverDelete(rctx: RoutingContext) {
     // TODO do not care about this event, this driver only work on local for now
     rctx.conn.response(200).send(ObjectBuilder().build())
+  }
+
+  override fun toString(): String {
+    return "docker-network-plugin-controller -> path " + path.path
   }
 }

@@ -1,10 +1,10 @@
 package vproxy.app.app;
 
 import vjson.parser.ParserUtils;
-import vproxy.app.app.args.*;
 import vproxy.app.controller.StdIOController;
 import vproxy.app.process.Shutdown;
 import vproxy.app.vproxyx.Daemon;
+import vproxy.app.vproxyx.DockerNetworkPluginControllerInit;
 import vproxy.app.vproxyx.GenerateCommandDoc;
 import vproxy.app.vproxyx.Simple;
 import vproxy.base.Config;
@@ -28,7 +28,7 @@ import java.io.IOException;
 import java.util.*;
 
 public class Main {
-    private static final String _HELP_STR_ = "" +
+    static final String _HELP_STR_ = "" +
         "vproxy: usage java " + Main.class.getName() + " \\" +
         "\n\t\thelp                                         Show this message" +
         "\n" +
@@ -38,13 +38,6 @@ public class Main {
         "\n" +
         "\n\t\tcheck                                        check and exit" +
         "\n" +
-        "\n\t\tresp-controller ${address} ${password}       Start the resp-controller, will" +
-        "\n\t\t                                             be named as `resp-controller`" +
-        "\n\t\thttp-controller ${address}                   Start the http-controller, will" +
-        "\n\t\t                                             be named as `http-controller`" +
-        "\n\t\tdocker-network-plugin-controller ${path}     Start the docker-network-plugin-" +
-        "\n\t\t                                             controller, will be named as" +
-        "\n\t\t                                             `docker-network-plugin-controller`" +
         "\n\t\tallowSystemCommandInNonStdIOController       Allow system cmd in all controllers" +
         "\n" +
         "\n\t\tnoStdIOController                            StdIOController will not start" +
@@ -145,6 +138,12 @@ public class Main {
                 case "PacketFilterGenerator":
                     PacketFilterGenerator.main0(args);
                     break;
+                case "DockerNetworkPlugin":
+                case "DockerPlugin":
+                case "docker-plugin":
+                case "dockerplugin":
+                    DockerNetworkPluginControllerInit.main0(args);
+                    break;
                 default:
                     System.err.println("unknown AppClass: " + appClass);
                     Utils.exit(1);
@@ -221,7 +220,15 @@ public class Main {
             if (VFDConfig.useFStack) {
                 FStackUtil.run();
             }
-            return;
+            boolean exit = true;
+            if (DockerNetworkPluginControllerInit.isInitiated()) {
+                Logger.alert("Launch with docker network plugin controller");
+                exit = false;
+                args = DockerNetworkPluginControllerInit.getRebuiltArgs();
+            }
+            if (exit) {
+                return;
+            }
         }
 
         try {
@@ -240,68 +247,9 @@ public class Main {
         // every other thing should start after the loop
 
         // init ctx
-        MainCtx ctx = new MainCtx();
-        ctx.addOp(new AllowSystemCommandInNonStdIOControllerOp());
-        ctx.addOp(new CheckOp());
-        ctx.addOp(new HttpControllerOp());
-        ctx.addOp(new DockerNetworkPluginControllerOp());
-        ctx.addOp(new LoadOp());
-        ctx.addOp(new NoLoadLastOp());
-        ctx.addOp(new NoSaveOp());
-        ctx.addOp(new NoStartupBindCheckOp());
-        ctx.addOp(new NoStdIOControllerOp());
-        ctx.addOp(new PidFileOp());
-        ctx.addOp(new RespControllerOp());
-        ctx.addOp(new SigIntDirectlyShutdownOp());
-        ctx.addOp(new AutoSaveFileOp());
-
-        // load config if specified in args
-        for (int i = 0; i < args.length; ++i) {
-            String arg = args[i];
-            String next = i + 1 < args.length ? args[i + 1] : null;
-            String next2 = i + 2 < args.length ? args[i + 2] : null;
-            switch (arg) {
-                case "version":
-                    System.out.println(Application.get().version);
-                    Utils.exit(0);
-                    return;
-                case "help":
-                    System.out.println(_HELP_STR_);
-                    Utils.exit(0);
-                    return;
-                default:
-                    var op = ctx.seekOp(arg);
-                    if (op == null) {
-                        System.err.println("unknown argument `" + arg + "`");
-                        Utils.exit(1);
-                        return;
-                    }
-                    var cnt = op.argCount();
-                    assert cnt <= 2; // make it simple for now...
-                    if (cnt == 0) {
-                        ctx.addTodo(op, new String[0]);
-                    } else {
-                        // check next
-                        if (next == null) {
-                            System.err.println("`" + arg + "` expects more arguments");
-                            Utils.exit(1);
-                            return;
-                        }
-                        if (cnt == 1) {
-                            ctx.addTodo(op, new String[]{next});
-                            ++i;
-                        } else {
-                            assert cnt == 2;
-                            if (next2 == null) {
-                                System.err.println("`" + arg + "` expects more arguments");
-                                Utils.exit(1);
-                                return;
-                            }
-                            ctx.addTodo(op, new String[]{next, next2});
-                            i += 2;
-                        }
-                    }
-            }
+        MainCtx ctx = MainCtxHelper.buildDefault();
+        if (!MainCtxHelper.defaultFillArguments(ctx, args)) {
+            return;
         }
         ctx.executeAll();
 
@@ -325,25 +273,6 @@ public class Main {
                 cb.join();
             }
         }
-        // launch the default http controller
-        if (!ctx.get("hasHttpController", false)) {
-            String hostport = "127.0.0.1:18776";
-            int ret = new HttpControllerOp().execute(ctx, new String[]{hostport});
-            if (ret != 0) {
-                Utils.exit(ret);
-            }
-            Logger.alert("default http-controller started on " + hostport);
-        }
-        // launch the default resp controller
-        if (!ctx.get("hasRespController", false)) {
-            String hostport = "127.0.0.1:16309";
-            String pass = "123456";
-            int ret = new RespControllerOp().execute(ctx, new String[]{hostport, pass});
-            if (ret != 0) {
-                Utils.exit(ret);
-            }
-            Logger.alert("default resp-controller started on " + hostport + " with password " + pass);
-        }
 
         // write pid file
         if (!ctx.get("isCheck", false)) {
@@ -353,6 +282,17 @@ public class Main {
                 Logger.fatal(LogType.UNEXPECTED, "writing pid failed: " + Utils.formatErr(e));
                 // failed on writing pid file is not a critical error
                 // so we don't quit
+            }
+        }
+
+        // handle docker-network-plugin-controller
+        if (DockerNetworkPluginControllerInit.isInitiated()) {
+            try {
+                DockerNetworkPluginControllerInit.start();
+            } catch (Exception e) {
+                Logger.fatal(LogType.ALERT, "failed starting docker-network-plugin-controller", e);
+                System.exit(1);
+                return;
             }
         }
 

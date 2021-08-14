@@ -6,15 +6,8 @@
     "socket": "vproxy.sock"
   },
   "entrypoint": [
-    "/vproxy",
-    "-Dvfd=posix", "-Djava.library.path=/",
-    "allowSystemCommandInNonStdIOController",
-    "noStdIOController",
-    "sigIntDirectlyShutdown",
-
-    "docker-network-plugin-controller", "/run/docker/plugins/vproxy.sock",
-    "load", "/conf/vproxy.last",
-    "autoSaveFile", "/conf/vproxy.last"
+    "/bin/bash", "-c",
+    "ulimit -l 65536 && /vproxy-runtime/bin/java --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -XX:+CriticalJNINatives -Deploy=DockerNetworkPlugin -Dvfd=posix -Djava.library.path=/usr/lib/`uname -p`-linux-gnu:/ -jar /vproxy.jar allowSystemCommandInNonStdIOController noStdIOController sigIntDirectlyShutdown"
   ],
   "workdir": "/",
   "network": {
@@ -22,42 +15,16 @@
   },
   "mounts": [
     {
-      "name": "post-scripts",
-      "description": "directory of tap dev post scripts",
-      "source": "/var/vproxy/docker-network-plugin/post-scripts/",
-      "destination": "/var/vproxy/docker-network-plugin/post-scripts/",
-      "options": [ "rw", "rbind" ]
-    },
-    {
-      "name": "conf",
-      "description": "vproxy config auto-saving directory",
-      "source": "/var/vproxy/auto-save/",
-      "destination": "/conf",
-      "options": [ "rw", "rbind" ]
-    },
-    {
       "name": "docker-dir",
-      "description": "dir of docker, /var/run/docker/netns is required",
+      "description": "dir of docker, temporary files may write to this directory",
       "source": "/var/run/docker/",
       "destination": "/var/run/docker/",
       "options": [ "rw", "rbind" ]
-    },
-    {
-      "name": "tuntap",
-      "description": "tuntap device",
-      "source": "/dev/net",
-      "destination": "/dev/net",
-      "options": [ "ro", "rbind" ]
     }
   ],
   "linux": {
-    "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_ADMIN" ],
+    "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_RESOURCE", "CAP_SYS_ADMIN" ],
     "devices": [
-      {
-        "name": "tuntap",
-        "description": "tuntap device",
-        "path": "/dev/net/tun"
-      }
     ]
   }
 }

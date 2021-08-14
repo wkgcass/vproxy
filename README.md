@@ -90,8 +90,7 @@ docker run --rm vproxy -Deploy=HelloWorld
 <br>
 
 ```
-./gradlew clean jar
-native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fallback --no-server vproxy
+make image
 ./vproxy -Deploy=HelloWorld
 ```
 
@@ -108,6 +107,8 @@ make vfdposix
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
+To build `vfdposix` in linux docker, run `make vfdposix-linux`.
+
 For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
 And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
@@ -115,6 +116,25 @@ And there's a special version for windows to support Tap devices: `-Dvfd=windows
 ```
 make vfdwindows
 java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+```
+
+</details>
+
+<details><summary>xdp</summary>
+
+It's recommended to run a kernel with minimum version 5.10 in order to use xdp support in the switch module.  
+If using a lower version, you cannot share the same umem with different xdp interfaces.
+
+To build the xdp support, you will need these packages: `apt-get install -y linux-headers-$(uname -r) build-essential libelf-dev clang llvm`, then:
+
+```
+make vpxdp
+```
+
+Or compile it inside a docker container:
+
+```
+make vpxdp-docker
 ```
 
 </details>
@@ -155,6 +175,7 @@ cd ./misc/auto-setup/
 * Fast: performance is one of our main priorities.
 * TCP Loadbalancer: we now support TCP and TCP based protocols, also allow your own protocols.
 * Kubernetes: integrate vproxy resources into k8s.
+* SDN: modifying and forwarding packets with flows and routes.
 
 ## How to use
 

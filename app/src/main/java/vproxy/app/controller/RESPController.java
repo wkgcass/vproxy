@@ -18,11 +18,13 @@ import vproxy.base.util.exception.XException;
 import vproxy.vfd.IPPort;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.List;
 
 public class RESPController {
     public final String alias;
     public final ServerSock server;
+    public final byte[] password;
 
     public RESPController(String alias, IPPort address, byte[] password) throws IOException {
         this.alias = alias;
@@ -30,6 +32,7 @@ public class RESPController {
             ServerSock.checkBind(address);
         }
         server = ServerSock.create(address);
+        this.password = Arrays.copyOf(password, password.length);
         NetEventLoop loop = Application.get().controlEventLoop;
         ProtocolServerHandler.apply(loop, server,
             new ProtocolServerConfig().setInBufferSize(16384).setOutBufferSize(16384),

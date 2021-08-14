@@ -29,7 +29,6 @@ public class TunIface extends Iface {
     public final int localSideVni;
     public final MacAddress mac;
     public final String postScript;
-    public final Annotations annotations;
 
     private AbstractDatagramFD<?> operateTun;
     private SelectorEventLoop bondLoop;
@@ -39,16 +38,11 @@ public class TunIface extends Iface {
     public TunIface(String devPattern,
                     int localSideVni,
                     MacAddress mac,
-                    String postScript,
-                    Annotations annotations) {
+                    String postScript) {
         this.devPattern = devPattern;
         this.localSideVni = localSideVni;
         this.mac = mac;
         this.postScript = postScript;
-        if (annotations == null) {
-            annotations = new Annotations();
-        }
-        this.annotations = annotations;
     }
 
     public TapDatagramFD getTun() {

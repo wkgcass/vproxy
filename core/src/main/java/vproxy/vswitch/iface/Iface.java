@@ -1,5 +1,6 @@
 package vproxy.vswitch.iface;
 
+import vproxy.base.util.Annotations;
 import vproxy.base.util.objectpool.CursorList;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
@@ -14,6 +15,7 @@ public abstract class Iface {
     private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
     private final List<PacketFilter> ingressFilters = new LinkedList<>();
     private final List<PacketFilter> egressFilters = new LinkedList<>();
+    private Annotations annotations;
 
     protected Iface() {
     }
@@ -94,5 +96,16 @@ public abstract class Iface {
 
     public final String paramsToString() {
         return "mtu " + baseMTU + " flood " + (floodAllowed ? "allow" : "deny");
+    }
+
+    public Annotations getAnnotations() {
+        if (annotations == null) {
+            annotations = new Annotations();
+        }
+        return annotations;
+    }
+
+    public void setAnnotations(Annotations annotations) {
+        this.annotations = annotations;
     }
 }

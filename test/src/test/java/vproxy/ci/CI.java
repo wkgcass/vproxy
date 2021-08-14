@@ -29,6 +29,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.lang.reflect.Field;
 import java.net.NetworkInterface;
+import java.nio.file.Files;
 import java.util.*;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
@@ -167,13 +168,16 @@ public class CI {
         if (password == null)
             password = "123456";
 
+        File confFile = File.createTempFile("vproxy", ".conf");
+        confFile.deleteOnExit();
+        Files.writeString(confFile.toPath(), "" +
+            "System: add resp-controller resp-controller address localhost:" + vproxyRESPPort + " password " + password + "\n" +
+            "System: add http-controller http-controller address localhost:" + vproxyHTTPPort);
         if (Utils.getSystemProperty("vproxy_exists") == null) {
             vproxy.app.app.Main.main(new String[]{
-                "resp-controller", "localhost:" + vproxyRESPPort, password,
-                "http-controller", "localhost:" + vproxyHTTPPort,
                 "allowSystemCommandInNonStdIOController",
                 "noStdIOController",
-                "noLoadLast",
+                "load", confFile.getAbsolutePath(),
                 "noSave"
             });
         }

@@ -190,7 +190,7 @@ public class XDPIface extends Iface {
 
     @Override
     public String toString() {
-        return "Iface(xdp:" + nic + ",nic=" + nic + "#" + queueId + ",umem=" + umem.alias + ",vni:" + vni + ")";
+        return "Iface(xdp:" + nic + "#" + queueId + ",umem=" + umem.alias + ",vni:" + vni + ")";
     }
 
     private class XDPHandler implements Handler<XDPSocket> {
@@ -210,6 +210,11 @@ public class XDPIface extends Iface {
         @Override
         public void readable(HandlerContext<XDPSocket> ctx) {
             List<Chunk> ls = ctx.getChannel().fetchPackets();
+            if (ls.isEmpty()) {
+                Logger.shouldNotHappen("xdp readable " + xsk + " but received nothing");
+            } else {
+                assert Logger.lowLevelDebug("xdp readable: " + xsk + ", chunks=" + ls.size());
+            }
             for (Chunk chunk : ls) {
                 var fullBuffer = new UMemChunkByteArray(xsk, chunk);
 

@@ -20,7 +20,6 @@ public class TapIface extends Iface {
     private TapDatagramFD tap;
     public final int localSideVni;
     public final String postScript;
-    public final Annotations annotations;
 
     private AbstractDatagramFD<?> operateTap;
     private SelectorEventLoop bondLoop;
@@ -29,15 +28,10 @@ public class TapIface extends Iface {
 
     public TapIface(String devPattern,
                     int localSideVni,
-                    String postScript,
-                    Annotations annotations) {
+                    String postScript) {
         this.devPattern = devPattern;
         this.localSideVni = localSideVni;
         this.postScript = postScript;
-        if (annotations == null) {
-            annotations = new Annotations();
-        }
-        this.annotations = annotations;
     }
 
     public TapDatagramFD getTap() {

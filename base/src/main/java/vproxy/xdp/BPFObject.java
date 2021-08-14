@@ -44,7 +44,7 @@ public class BPFObject {
                 return maps.get(name);
             }
             long map = NativeXDP.get().findMapByNameInBPF(bpfobj, name);
-            var m = new BPFMap(name, map);
+            var m = new BPFMap(name, map, this);
             maps.put(name, m);
             return m;
         }

@@ -143,7 +143,7 @@ public class UdpPacket extends TransportPacket {
 
     @Override
     public String description() {
-        return "udp,tp_src=" + srcPort + ",tp_dst=" + dstPort + ",data=" + data.description();
+        return "udp,tp_src=" + srcPort + ",tp_dst=" + dstPort + ",data=" + (data == null ? "" : data.description());
     }
 
     @Override

@@ -7,7 +7,11 @@ import vproxy.base.util.exception.XException
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
-class ModuleCommands : Commands() {
+class ModuleCommands private constructor() : Commands() {
+  companion object {
+    val Instance = ModuleCommands()
+  }
+
   init {
     val it = AddHelper(resources)
     it + Res(ResourceType.tl) {
@@ -693,6 +697,7 @@ class ModuleCommands : Commands() {
         params = {
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
         exec = execUpdate { IfaceHandle.update(it) }
       )
@@ -844,7 +849,7 @@ class ModuleCommands : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.bpfmap, required)
+          it + ResActParam(Param.bpfmap)
           it + ResActParam(Param.umem, required)
           it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
           it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
@@ -1033,6 +1038,7 @@ class ModuleCommands : Commands() {
       it + ResAct(
         relation = ResourceType.bpfobj,
         action = ActType.remove,
+        check = { BPFObjectHandle.preRemoveCheck(it) },
         exec = execUpdate { BPFObjectHandle.remove(it) }
       )
     }

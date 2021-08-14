@@ -20,7 +20,6 @@ import vproxy.vswitch.plugin.PacketFilter;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
-import java.util.concurrent.TimeUnit;
 
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
@@ -120,18 +119,7 @@ public class SwitchUtils {
         env.put("DEV", dev);
         env.put("VNI", "" + vni);
         env.put("SWITCH", switchAlias);
-        Process p = pb.start();
-        Utils.pipeOutputOfSubProcess(p);
-        p.waitFor(10, TimeUnit.SECONDS);
-        if (p.isAlive()) {
-            p.destroyForcibly();
-            throw new Exception("the process took too long to execute");
-        }
-        int exit = p.exitValue();
-        if (exit == 0) {
-            return;
-        }
-        throw new Exception("exit code is " + exit);
+        Utils.execute(pb, 10 * 1000);
     }
 
     public static IPv6 extractTargetAddressFromNeighborSolicitation(IcmpPacket inIcmp) {

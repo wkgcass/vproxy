@@ -3,6 +3,7 @@ SHELL := /bin/bash
 
 VERSION := $(shell cat base/src/main/java/vproxy/base/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 OS := $(shell uname)
+DOCKER_PLUGIN_WORKDIR ?= "."
 
 .PHONY: clean
 clean:
@@ -15,13 +16,15 @@ clean:
 	cd ./base/src/main/c/xdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
-	rm -rf ./docker-plugin-rootfs
-	rm -f ./docker-plugin/vproxy
+	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+	rm -f ./docker-plugin/vproxy.jar
 	rm -f ./docker-plugin/libvfdposix.so
+	rm -f ./docker-plugin/libvpxdp.so
+	rm -f ./docker-plugin/libbpf.so
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
-	rm -rf ./docker-plugin-rootfs
+	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
 .PHONY: all
 all: clean jar jlink vfdposix image docker-network-plugin
@@ -51,12 +54,15 @@ xdp-sample-kern:
 	cd ./base/src/main/c/xdp && make kern
 
 .PHONY: vfdposix-linux
+.PHONY: vpxdp-linux
 ifeq ($(OS),Linux)
 vfdposix-linux: vfdposix
+vpxdp-linux: vpxdp
 else
 vfdposix-linux:
-	docker run --rm -v /Users/wkgcass/Downloads/graalvm-ce-linux:/graalvm-ce -v $(shell pwd)/base/src/main/c:/output gcc \
-		bash -c -- 'cd /output && JAVA_HOME=/graalvm-ce ./make-general.sh'
+	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest make vfdposix
+vpxdp-linux:
+	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest make vpxdp
 endif
 
 .PHONY: vfdwindows
@@ -81,8 +87,8 @@ image-linux: image
 else
 # run native-image inside a container to build linux executable file in other platforms
 image-linux: jar
-	docker run --rm -v /Users/wkgcass/Downloads/graalvm-ce-linux:/graalvm-ce -v $(shell pwd):/output gcc \
-		/bin/bash -c "/graalvm-ce/bin/gu install native-image && /graalvm-ce/bin/native-image -jar /output/build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=/output/misc/graal-reflect.json -H:JNIConfigurationFiles=/output/misc/graal-jni.json --enable-all-security-services --no-fallback --no-server /output/vproxy-linux"
+	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest \
+		native-image -jar build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy-linux
 endif
 
 vproxy-linux:
@@ -101,24 +107,26 @@ release:
 endif
 
 .PHONY: docker-network-plugin-rootfs
-docker-network-plugin-rootfs: vproxy-linux vfdposix-linux
-	cp vproxy-linux ./docker-plugin/vproxy
+docker-network-plugin-rootfs: jar vfdposix-linux vpxdp-linux
+	cp build/libs/vproxy.jar ./docker-plugin/vproxy.jar
 	cp base/src/main/c/libvfdposix.so ./docker-plugin/libvfdposix.so
+	cp base/src/main/c/libvpxdp.so ./docker-plugin/libvpxdp.so
+	cp base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./docker-plugin/libbpf.so
 	docker rmi -f vproxy-rootfs:latest
-	docker build -t vproxy-rootfs:latest ./docker-plugin
-	mkdir -p ./docker-plugin-rootfs/rootfs
-	docker create --name tmp vproxy-rootfs:latest
-	docker export tmp | tar -x -C ./docker-plugin-rootfs/rootfs
+	docker build --no-cache -t vproxy-rootfs:latest ./docker-plugin
+	docker create --name tmp vproxy-rootfs:latest /bin/bash
+	mkdir -p $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
+	docker export tmp | tar -x -C $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
 	docker rm -f tmp
 	docker rmi -f vproxy-rootfs:latest
 
-docker-plugin-rootfs/rootfs:
+$(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs:
 	make docker-network-plugin-rootfs
 
 .PHONY: docker-network-plugin
-docker-network-plugin: docker-network-plugin-rootfs
-	cp docker-plugin/config.json ./docker-plugin-rootfs
-	docker plugin create vproxy ./docker-plugin-rootfs
+docker-network-plugin: $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
+	cp docker-plugin/config.json $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+	docker plugin create vproxy $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
 .PHONY: dockertest
 dockertest:

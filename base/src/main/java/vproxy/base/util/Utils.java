@@ -10,10 +10,13 @@ import vproxy.vpacket.Ipv4Packet;
 import vproxy.vpacket.Ipv6Packet;
 
 import java.io.*;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
+import java.nio.file.Files;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.*;
+import java.util.concurrent.TimeUnit;
 import java.util.function.BooleanSupplier;
 import java.util.function.Supplier;
 import java.util.zip.Deflater;
@@ -490,6 +493,41 @@ public class Utils {
             return false;
         }
         return true;
+    }
+
+    public static void execute(String script) throws Exception {
+        execute(script, 10 * 1000);
+    }
+
+    public static void execute(String script, int timeout) throws Exception {
+        Logger.alert("trying to execute script:\n" + script);
+        File file = File.createTempFile("script", ".sh");
+        try {
+            Files.writeString(file.toPath(), script);
+            if (!file.setExecutable(true)) {
+                throw new Exception("setting executable to script " + file.getAbsolutePath() + " failed");
+            }
+            ProcessBuilder pb = new ProcessBuilder(file.getAbsolutePath());
+            execute(pb, timeout);
+        } finally {
+            //noinspection ResultOfMethodCallIgnored
+            file.delete();
+        }
+    }
+
+    public static void execute(ProcessBuilder pb, int timeout) throws Exception {
+        Process p = pb.start();
+        Utils.pipeOutputOfSubProcess(p);
+        p.waitFor(timeout, TimeUnit.MILLISECONDS);
+        if (p.isAlive()) {
+            p.destroyForcibly();
+            throw new Exception("the process took too long to execute");
+        }
+        int exit = p.exitValue();
+        if (exit == 0) {
+            return;
+        }
+        throw new Exception("exit code is " + exit);
     }
 
     public static void pipeOutputOfSubProcess(Process p) {

@@ -47,13 +47,12 @@ public class SystemCommand {
         "\n        System: list config                        show current config";
 
     public static boolean allowNonStdIOController = false;
-    private static final SystemCommands systemCommands = new SystemCommands();
 
     public static boolean isSystemCommand(String line) {
         return line.startsWith("System:");
     }
 
-    public static void handleSystemCommand(String line, Callback<CmdResult, ? super Throwable> cb) {
+    public static void handleSystemCommand(String line, Callback<CmdResult, Throwable> cb) {
         String from = Utils.stackTraceStartingFromThisMethodInclusive()[1].getClassName();
         String cmd = line.substring("System:".length()).trim();
         switch (cmd) {
@@ -138,13 +137,6 @@ public class SystemCommand {
             cb.failed(e);
             return;
         }
-        CmdResult result;
-        try {
-            result = systemCommands.execute(command);
-        } catch (Exception e) {
-            cb.failed(e);
-            return;
-        }
-        cb.succeeded(result);
+        command.run(SystemCommands.Companion.getInstance(), cb);
     }
 }

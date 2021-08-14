@@ -5,6 +5,7 @@ import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
 import vproxy.app.app.cmd.ResourceType;
+import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.app.app.cmd.handle.param.FloodHandle;
 import vproxy.app.app.cmd.handle.param.MTUHandle;
 import vproxy.base.util.exception.NotFoundException;
@@ -45,6 +46,9 @@ public class IfaceHandle {
         }
         if (cmd.args.containsKey(Param.flood)) {
             target.setFloodAllowed(FloodHandle.get(cmd));
+        }
+        if (cmd.args.containsKey(Param.anno)) {
+            target.setAnnotations(AnnotationsHandle.get(cmd));
         }
     }
 }

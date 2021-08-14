@@ -1,9 +1,10 @@
 package vproxy.app.process;
 
 import vproxy.app.app.*;
-import vproxy.app.app.cmd.CmdResult;
-import vproxy.app.app.cmd.Command;
+import vproxy.app.app.cmd.*;
 import vproxy.app.app.util.SignalHook;
+import vproxy.app.controller.HttpController;
+import vproxy.app.controller.RESPController;
 import vproxy.base.Config;
 import vproxy.base.component.check.HealthCheckConfig;
 import vproxy.base.component.elgroup.EventLoopGroup;
@@ -314,6 +315,8 @@ public class Shutdown {
 
         List<SecurityGroup> securityGroups = new LinkedList<>();
         Set<String> securityGroupNames = new HashSet<>();
+
+        Set<String> bpfobjectNames = new HashSet<>();
 
         {
             // create cert-key
@@ -664,6 +667,8 @@ public class Shutdown {
                     + " mode " + bpfobj.mode.name()
                     + " force";
                 commands.add(cmd);
+
+                bpfobjectNames.add(bpfobj.nic);
             }
         }
         {
@@ -698,6 +703,7 @@ public class Shutdown {
                 }
                 commands.add(cmd);
 
+                Set<String> umemNames = new HashSet<>();
                 // create umem
                 for (var umem : sw.getUMems()) {
                     cmd = "add umem " + umem.alias + " to switch " + sw.alias
@@ -706,6 +712,7 @@ public class Shutdown {
                         + " comp-ring-size " + umem.compRingSize
                         + " frame-size " + umem.frameSize;
                     commands.add(cmd);
+                    umemNames.add(umem.alias);
                 }
                 // create vpc
                 for (var key : sw.getTables().keySet()) {
@@ -806,9 +813,6 @@ public class Shutdown {
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
                         cmd += " post-script " + tap.postScript;
                     }
-                    if (!tap.annotations.isEmpty()) {
-                        cmd += " annotations " + tap.annotations;
-                    }
                     commands.add(cmd);
                 }
                 // create tun
@@ -824,9 +828,6 @@ public class Shutdown {
                     if (tun.postScript != null && !tun.postScript.isBlank()) {
                         cmd += " post-script " + tun.postScript;
                     }
-                    if (!tun.annotations.isEmpty()) {
-                        cmd += " annotations " + tun.annotations;
-                    }
                     commands.add(cmd);
                 }
                 // create xdp
@@ -835,6 +836,14 @@ public class Shutdown {
                         continue;
                     }
                     var xdp = (XDPIface) iface;
+                    if (!bpfobjectNames.contains(xdp.bpfMap.bpfObject.nic)) {
+                        Logger.warn(LogType.IMPROPER_USE, "the bpf-object " + xdp.bpfMap.bpfObject.nic + " already removed");
+                        continue;
+                    }
+                    if (!umemNames.contains(xdp.umem.alias)) {
+                        Logger.warn(LogType.IMPROPER_USE, "the umem " + xdp.umem.alias + " already removed");
+                        continue;
+                    }
                     cmd = "add xdp " + xdp.nic + " to switch " + sw.alias
                         + " bpf-map " + xdp.bpfMap.name
                         + " umem " + xdp.umem.alias
@@ -865,8 +874,39 @@ public class Shutdown {
                     cmd = "update iface " + ifaceName + " in switch " + sw.alias
                         + " mtu " + iface.getBaseMTU()
                         + " flood " + (iface.isFloodAllowed() ? "allow" : "deny");
+                    if (!iface.getAnnotations().isEmpty()) {
+                        cmd += " annotations " + iface.getAnnotations();
+                    }
                     commands.add(cmd);
                 }
+            }
+        }
+        {
+            // System commands
+            String cmd;
+            for (var name : app.respControllerHolder.names()) {
+                RESPController resp;
+                try {
+                    resp = app.respControllerHolder.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("resp-controller not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                cmd = "System: add resp-controller " + resp.alias + " address " + resp.server.bind.formatToIPPortString() + " password " + new String(resp.password);
+                commands.add(cmd);
+            }
+            for (var name : app.httpControllerHolder.names()) {
+                HttpController http;
+                try {
+                    http = app.httpControllerHolder.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("http-controller not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                cmd = "System: add http-controller " + http.getAlias() + " address " + http.getAddress().formatToIPPortString();
+                commands.add(cmd);
             }
         }
         StringBuilder sb = new StringBuilder();
@@ -893,7 +933,7 @@ public class Shutdown {
         while ((l = br.readLine()) != null) {
             lines.add(l);
         }
-        List<Command> commands = new ArrayList<>();
+        List<CommandWrapper> commands = new ArrayList<>();
         for (String line : lines) {
             line = line.trim();
             if (line.isEmpty()) { // skip empty lines
@@ -904,6 +944,10 @@ public class Shutdown {
             }
 
             assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + line);
+            boolean isSystemCommand = line.startsWith("System: ");
+            if (isSystemCommand) {
+                line = line.substring("System: ".length());
+            }
             Command cmd;
             try {
                 cmd = Command.parseStrCmd(line);
@@ -912,20 +956,43 @@ public class Shutdown {
                 throw e;
             }
             assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd);
-            commands.add(cmd);
+            commands.add(new CommandWrapper(isSystemCommand, cmd));
         }
         runCommandsOnLoading(commands, 0, cb);
     }
 
-    private static void runCommandsOnLoading(List<Command> commands, int idx, Callback<String, Throwable> cb) {
+    private static class CommandWrapper {
+        final boolean isSystemCommand;
+        final Command command;
+
+        private CommandWrapper(boolean isSystemCommand, Command command) {
+            this.isSystemCommand = isSystemCommand;
+            this.command = command;
+        }
+
+        public Commands getCommands() {
+            if (isSystemCommand) {
+                return SystemCommands.Companion.getInstance();
+            } else {
+                return ModuleCommands.Companion.getInstance();
+            }
+        }
+
+        @Override
+        public String toString() {
+            return (isSystemCommand ? "System: " : "") + command;
+        }
+    }
+
+    private static void runCommandsOnLoading(List<CommandWrapper> commands, int idx, Callback<String, Throwable> cb) {
         if (idx >= commands.size()) {
             // done
             cb.succeeded("");
             return;
         }
-        Command cmd = commands.get(idx);
+        CommandWrapper cmd = commands.get(idx);
         Logger.alert("loading command: " + cmd);
-        cmd.run(new Callback<>() {
+        cmd.command.run(cmd.getCommands(), new Callback<>() {
             @Override
             protected void onSucceeded(CmdResult value) {
                 runCommandsOnLoading(commands, idx + 1, cb);
