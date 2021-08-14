@@ -26,7 +26,7 @@ public class PluginHolder {
             throw new AlreadyExistException("plugin", alias);
         }
         Plugin plugin = PluginLoader.load(urls, classname);
-        PluginWrapper wrapper = new PluginWrapper(alias, plugin);
+        PluginWrapper wrapper = new PluginWrapper(alias, urls, plugin);
         try {
             wrapper.plugin.init(createPluginParams());
         } catch (Exception e) {

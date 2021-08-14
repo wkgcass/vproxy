@@ -5,6 +5,7 @@ import vproxy.app.app.cmd.*;
 import vproxy.app.app.util.SignalHook;
 import vproxy.app.controller.HttpController;
 import vproxy.app.controller.RESPController;
+import vproxy.app.plugin.PluginWrapper;
 import vproxy.base.Config;
 import vproxy.base.component.check.HealthCheckConfig;
 import vproxy.base.component.elgroup.EventLoopGroup;
@@ -33,10 +34,12 @@ import vproxy.vswitch.util.UserInfo;
 import vproxy.xdp.BPFObject;
 
 import java.io.*;
+import java.net.URL;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
 import java.util.*;
+import java.util.stream.Collectors;
 
 public class Shutdown {
     private Shutdown() {
@@ -907,6 +910,24 @@ public class Shutdown {
                 }
                 cmd = "System: add http-controller " + http.getAlias() + " address " + http.getAddress().formatToIPPortString();
                 commands.add(cmd);
+            }
+            for (var name : app.pluginHolder.names()) {
+                PluginWrapper plugin;
+                try {
+                    plugin = app.pluginHolder.get(name);
+                } catch (NotFoundException e) {
+                    assert Logger.lowLevelDebug("plugin not found " + name);
+                    assert Logger.printStackTrace(e);
+                    continue;
+                }
+                cmd = "System: add plugin " + plugin.alias
+                    + " url " + Arrays.stream(plugin.urls).map(URL::toString).collect(Collectors.joining(","))
+                    + " class " + plugin.plugin.getClass().getName();
+                commands.add(cmd);
+                if (plugin.isEnabled()) {
+                    cmd = "System: update plugin " + plugin.alias + " enable";
+                    commands.add(cmd);
+                }
             }
         }
         StringBuilder sb = new StringBuilder();

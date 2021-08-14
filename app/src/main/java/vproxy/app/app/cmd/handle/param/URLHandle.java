@@ -7,6 +7,8 @@ import vproxy.base.util.exception.XException;
 import java.io.File;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.List;
 
 public class URLHandle {
     private URLHandle() {
@@ -20,16 +22,24 @@ public class URLHandle {
         return get(url);
     }
 
-    public static URL[] get(String url) throws Exception {
-        if (!url.contains(":")) {
-            return new URL[]{new File(url).toURI().toURL()};
+    public static URL[] get(String urlsStr) throws Exception {
+        List<URL> urls = new ArrayList<>(1);
+        String[] split = urlsStr.split(",");
+        for (String url : split) {
+            if (url.isBlank()) continue;
+            if (!url.contains(":")) {
+                return new URL[]{new File(url).toURI().toURL()};
+            }
+            URL urlObj;
+            try {
+                urlObj = new URL(url);
+            } catch (MalformedURLException e) {
+                throw new XException(url + " is not a valid url");
+            }
+            urls.add(urlObj);
         }
-        URL urlObj;
-        try {
-            urlObj = new URL(url);
-        } catch (MalformedURLException e) {
-            throw new XException(url + " is not a valid url");
-        }
-        return new URL[]{urlObj};
+        URL[] ret = new URL[urls.size()];
+        urls.toArray(ret);
+        return ret;
     }
 }

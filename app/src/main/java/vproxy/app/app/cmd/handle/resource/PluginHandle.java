@@ -16,7 +16,7 @@ public class PluginHandle {
     }
 
     public static void add(Command cmd) throws Exception {
-        URL[] urls = URLHandle.get(cmd.args.get(Param.url));
+        URL[] urls = URLHandle.get(cmd);
         String cls = cmd.args.get(Param.cls);
         Application.get().pluginHolder.add(cmd.resource.alias, urls, cls);
     }

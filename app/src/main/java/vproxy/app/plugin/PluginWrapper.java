@@ -2,13 +2,17 @@ package vproxy.app.plugin;
 
 import vproxy.base.util.Logger;
 
+import java.net.URL;
+
 public class PluginWrapper {
     public final String alias;
+    public final URL[] urls;
     public final Plugin plugin;
     private boolean enabled;
 
-    public PluginWrapper(String alias, Plugin plugin) {
+    public PluginWrapper(String alias, URL[] urls, Plugin plugin) {
         this.alias = alias;
+        this.urls = urls;
         this.plugin = plugin;
     }
 
