@@ -878,6 +878,7 @@ class ModuleCommands private constructor() : Commands() {
         targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         params = {
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
         check = {
           IpHandle.checkIpName(it.resource)

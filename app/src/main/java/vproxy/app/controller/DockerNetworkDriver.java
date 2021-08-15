@@ -5,6 +5,10 @@ import java.util.List;
 import java.util.Map;
 
 public interface DockerNetworkDriver {
+    String PERSISTENT_CONFIG_FILE = "/x-etc/docker/.vproxy/vproxy.last"; // host /etc is mounted as /x-etc
+    String PERSISTENT_SCRIPT = "/x-etc/docker/.vproxy/setup.sh";
+    String TEMPORARY_CONFIG_FILE = "/var/run/docker/.vproxy/vproxy.last";
+
     void createNetwork(CreateNetworkRequest req) throws Exception;
 
     void deleteNetwork(String networkId) throws Exception;

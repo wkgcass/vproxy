@@ -4,6 +4,7 @@ import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.handle.resource.BPFObjectHandle;
 import vproxy.app.app.cmd.handle.resource.SwitchHandle;
+import vproxy.app.process.Shutdown;
 import vproxy.base.component.elgroup.EventLoopGroup;
 import vproxy.base.util.*;
 import vproxy.base.util.coll.IntMap;
@@ -17,9 +18,7 @@ import vproxy.vswitch.iface.XDPIface;
 import vproxy.xdp.BPFMode;
 import vproxy.xdp.UMem;
 
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
 public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String SWITCH_NAME = "sw-docker";
@@ -187,6 +186,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             net.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE)));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
+
+        persistConfig();
     }
 
     private Switch ensureSwitch() throws Exception {
@@ -304,6 +305,51 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         sw.delNetwork(net.vni);
         Logger.alert("network deleted: vni=" + net.vni + ", docker:networkId=" + networkId);
+
+        persistConfig();
+    }
+
+    private void persistConfig() {
+        List<String> netEntryIfaces = new ArrayList<>();
+        StringBuilder sb = new StringBuilder();
+        String currentConfig = Shutdown.currentConfig();
+        String[] split = currentConfig.split("\n");
+        for (String s : split) {
+            if (s.startsWith("add xdp ")) {
+                if (s.startsWith("add xdp " + NETWORK_ENTRY_VETH_PREFIX)) {
+                    netEntryIfaces.add(s.split(" ")[2]);
+                } else {
+                    continue;
+                }
+            }
+            if (s.startsWith("update iface xdp:") && !s.startsWith("update iface xdp:" + NETWORK_ENTRY_VETH_PREFIX)) {
+                continue;
+            }
+            sb.append(s).append("\n");
+        }
+        try {
+            Utils.writeFileWithBackup(PERSISTENT_CONFIG_FILE, sb.toString());
+        } catch (Exception e) {
+            Logger.error(LogType.FILE_ERROR, "persist configuration failed: " + PERSISTENT_CONFIG_FILE, e);
+            return;
+        }
+
+        sb.delete(0, sb.length());
+        sb.append("#!/bin/bash\n");
+        for (String iface : netEntryIfaces) {
+            iface = iface.substring(0, iface.length() - NETWORK_ENTRY_VETH_PEER_SUFFIX.length());
+            sb.append("ip link add ").append(iface)
+                .append(" type veth peer name ")
+                .append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX)
+                .append("\n");
+            sb.append("ip link set ").append(iface).append(" up\n");
+            sb.append("ip link set ").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append(" up\n");
+        }
+        try {
+            Utils.writeFileWithBackup(PERSISTENT_SCRIPT, sb.toString());
+        } catch (Exception e) {
+            Logger.error(LogType.FILE_ERROR, "persist script failed: " + PERSISTENT_SCRIPT, e);
+        }
     }
 
     private void deleteNetworkEntryVeth(Switch sw, VirtualNetwork net) throws Exception {

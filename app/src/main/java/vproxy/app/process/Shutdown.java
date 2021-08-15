@@ -1,7 +1,6 @@
 package vproxy.app.process;
 
 import vproxy.app.app.*;
-import vproxy.app.app.cmd.*;
 import vproxy.app.app.util.SignalHook;
 import vproxy.app.controller.HttpController;
 import vproxy.app.controller.RESPController;
@@ -33,11 +32,7 @@ import vproxy.vswitch.iface.*;
 import vproxy.vswitch.util.UserInfo;
 import vproxy.xdp.BPFObject;
 
-import java.io.*;
 import java.net.URL;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.StandardCopyOption;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -224,37 +219,13 @@ public class Shutdown {
         return Config.workingDirectoryFile("vproxy.last");
     }
 
-    private static void backupAndRemove(String filepath) throws Exception {
-        File f = new File(filepath);
-        File bakF = new File(filepath + ".bak");
-
-        if (!f.exists())
-            return; // do nothing if no need to backup
-        if (bakF.exists() && !bakF.delete()) // remove old backup file
-            throw new Exception("remove old backup file failed: " + bakF.getPath());
-        if (f.exists() && !f.renameTo(bakF)) // do rename (backup)
-            throw new Exception("backup the file failed: " + bakF.getPath());
-    }
-
     public static void writePid(String filepath) throws Exception {
         if (filepath == null) {
             filepath = Config.workingDirectoryFile("vproxy.pid");
         }
         filepath = Utils.filename(filepath);
-
-        backupAndRemove(filepath);
-        File f = new File(filepath);
-        if (!f.createNewFile()) {
-            throw new Exception("create new file failed");
-        }
-        FileOutputStream fos = new FileOutputStream(f);
-        BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
-
         long pid = ProcessHandle.current().pid();
-        bw.write(pid + "\n");
-        bw.flush();
-
-        fos.close();
+        Utils.writeFileWithBackup(filepath, pid + "\n");
     }
 
     @Blocking
@@ -275,30 +246,8 @@ public class Shutdown {
             filepath = defaultFilePath();
         }
         filepath = Utils.filename(filepath);
-        Logger.alert("Trying to save config into file: " + filepath + ".new");
-        File f = new File(filepath + ".new");
-        if (f.exists()) {
-            //noinspection ResultOfMethodCallIgnored
-            f.delete();
-        }
-        if (!f.createNewFile()) {
-            throw new Exception("create new file failed");
-        }
-        try (FileOutputStream fos = new FileOutputStream(f)) {
-            BufferedWriter bw = new BufferedWriter(new OutputStreamWriter(fos));
-
-            String fileContent = currentConfig();
-            bw.write(fileContent);
-            bw.flush();
-        }
-
-        Logger.alert("backup old config " + filepath);
-        backupAndRemove(filepath);
-
-        Logger.alert("move new config to " + filepath);
-        Files.move(Path.of(f.getAbsolutePath()), Path.of(filepath), StandardCopyOption.REPLACE_EXISTING);
-
-        Logger.alert("Saving config into file done: " + filepath);
+        Logger.alert("Trying to save config into file: " + filepath);
+        Utils.writeFileWithBackup(filepath, currentConfig());
     }
 
     public static String currentConfig() {
@@ -945,85 +894,7 @@ public class Shutdown {
         if (filepath == null) {
             filepath = defaultFilePath();
         }
-        filepath = Utils.filename(filepath);
-        File f = new File(filepath);
-        FileInputStream fis = new FileInputStream(f);
-        BufferedReader br = new BufferedReader(new InputStreamReader(fis));
-        List<String> lines = new ArrayList<>();
-        String l;
-        while ((l = br.readLine()) != null) {
-            lines.add(l);
-        }
-        List<CommandWrapper> commands = new ArrayList<>();
-        for (String line : lines) {
-            line = line.trim();
-            if (line.isEmpty()) { // skip empty lines
-                continue;
-            }
-            if (line.startsWith("#")) { // comment
-                continue;
-            }
-
-            assert Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD + " - " + line);
-            boolean isSystemCommand = line.startsWith("System: ");
-            if (isSystemCommand) {
-                line = line.substring("System: ".length());
-            }
-            Command cmd;
-            try {
-                cmd = Command.parseStrCmd(line);
-            } catch (Exception e) {
-                Logger.warn(LogType.AFTER_PARSING_CMD, "parse command `" + line + "` failed");
-                throw e;
-            }
-            assert Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD + " - " + cmd);
-            commands.add(new CommandWrapper(isSystemCommand, cmd));
-        }
-        runCommandsOnLoading(commands, 0, cb);
-    }
-
-    private static class CommandWrapper {
-        final boolean isSystemCommand;
-        final Command command;
-
-        private CommandWrapper(boolean isSystemCommand, Command command) {
-            this.isSystemCommand = isSystemCommand;
-            this.command = command;
-        }
-
-        public Commands getCommands() {
-            if (isSystemCommand) {
-                return SystemCommands.Companion.getInstance();
-            } else {
-                return ModuleCommands.Companion.getInstance();
-            }
-        }
-
-        @Override
-        public String toString() {
-            return (isSystemCommand ? "System: " : "") + command;
-        }
-    }
-
-    private static void runCommandsOnLoading(List<CommandWrapper> commands, int idx, Callback<String, Throwable> cb) {
-        if (idx >= commands.size()) {
-            // done
-            cb.succeeded("");
-            return;
-        }
-        CommandWrapper cmd = commands.get(idx);
-        Logger.alert("loading command: " + cmd);
-        cmd.command.run(cmd.getCommands(), new Callback<>() {
-            @Override
-            protected void onSucceeded(CmdResult value) {
-                runCommandsOnLoading(commands, idx + 1, cb);
-            }
-
-            @Override
-            protected void onFailed(Throwable err) {
-                cb.failed(err);
-            }
-        });
+        Loader.INSTANCE.loadCommands(filepath, cb);
     }
 
     @SuppressWarnings("unused")

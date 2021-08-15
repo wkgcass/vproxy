@@ -6,6 +6,7 @@ ADD libvpxdp.so /libvpxdp.so
 ADD libbpf.so /libbpf.so
 
 RUN mkdir -p /var/run/docker
+RUN mkdir -p /x-var
 
 ENTRYPOINT []
 CMD []

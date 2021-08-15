@@ -10,6 +10,7 @@ import vproxy.base.util.LogType
 import vproxy.base.util.Logger
 import vproxy.base.util.callback.Callback
 import vproxy.base.util.promise.Promise
+import vproxy.base.util.thread.VProxyThread
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.lib.tcp.CoroutineServerSock
 import java.time.Duration
@@ -18,6 +19,15 @@ import java.util.concurrent.*
 import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
+
+private val defaultCoroutineEventLoop = SelectorEventLoop.open()
+
+fun defaultCoroutineEventLoop(): SelectorEventLoop {
+  if (defaultCoroutineEventLoop.runningThread == null) {
+    defaultCoroutineEventLoop.loop { VProxyThread.create(it, "default-coroutine-event-loop") }
+  }
+  return defaultCoroutineEventLoop
+}
 
 fun SelectorEventLoop.dispatcher(): CoroutineDispatcher {
   return VProxyCoroutineExecutor(this).asCoroutineDispatcher()
@@ -139,7 +149,7 @@ suspend fun <T> Promise<T>.await(): T {
   }
 }
 
-suspend fun <T, E : Exception> awaitCallback(f: (Callback<T, E>) -> Unit): T {
+suspend fun <T, E : Throwable> awaitCallback(f: (Callback<T, E>) -> Unit): T {
   return suspendCancellableCoroutine { cont: CancellableContinuation<T> ->
     f(object : Callback<T, E>() {
       override fun onSucceeded(value: T) {

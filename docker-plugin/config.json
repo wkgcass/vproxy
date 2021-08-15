@@ -15,8 +15,15 @@
   },
   "mounts": [
     {
+      "name": "etc-dir",
+      "description": "/etc, vproxy persistent config will write to /etc/docker/.vproxy",
+      "source": "/etc",
+      "destination": "/x-etc",
+      "options": [ "rw", "rbind" ]
+    },
+    {
       "name": "docker-dir",
-      "description": "dir of docker, temporary files may write to this directory",
+      "description": "dir of docker, temporary config will write to /var/run/docker/.vproxy",
       "source": "/var/run/docker/",
       "destination": "/var/run/docker/",
       "options": [ "rw", "rbind" ]

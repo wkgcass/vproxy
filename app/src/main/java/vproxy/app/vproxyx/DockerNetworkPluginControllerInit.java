@@ -3,6 +3,7 @@ package vproxy.app.vproxyx;
 import vproxy.app.app.Application;
 import vproxy.app.app.MainCtx;
 import vproxy.app.app.MainCtxHelper;
+import vproxy.app.controller.DockerNetworkDriver;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.OS;
@@ -12,13 +13,15 @@ import java.io.File;
 import java.nio.file.Files;
 
 public class DockerNetworkPluginControllerInit {
-    private static final String configPath = "/var/run/docker/.vproxy/vproxy.last";
     private static final String dockerSock = "/var/run/docker/plugins/vproxy.sock";
     private static boolean initiated = false;
     private static String[] args;
 
-    private static final String DEFAULT_CONFIG = "" +
+    private static final String DEFAULT_PERSISTENT_CONFIG = "" +
         "System: add resp-controller resp-controller address 127.0.0.1:16309 password docker\n";
+    private static final String DEFAULT_TEMPORARY_CONFIG = "" +
+        "System: exec " + DockerNetworkDriver.PERSISTENT_SCRIPT + "\n" +
+        "System: load " + DockerNetworkDriver.PERSISTENT_CONFIG_FILE + "\n";
 
     public static void main0(String[] args) throws Exception {
         checkOSVersion();
@@ -38,18 +41,36 @@ public class DockerNetworkPluginControllerInit {
         String[] retArgs = new String[args.length + 4];
         System.arraycopy(args, 0, retArgs, 0, args.length);
         retArgs[retArgs.length - 4] = "load";
-        retArgs[retArgs.length - 3] = configPath;
+        retArgs[retArgs.length - 3] = DockerNetworkDriver.TEMPORARY_CONFIG_FILE;
         retArgs[retArgs.length - 2] = "autoSaveFile";
-        retArgs[retArgs.length - 1] = configPath;
+        retArgs[retArgs.length - 1] = DockerNetworkDriver.TEMPORARY_CONFIG_FILE;
         DockerNetworkPluginControllerInit.args = retArgs;
 
-        File configFile = new File(configPath);
+        File persistentFile = new File(DockerNetworkDriver.PERSISTENT_CONFIG_FILE);
+        if (!persistentFile.exists()) {
+            File persistentDir = persistentFile.getParentFile();
+            if (!persistentDir.exists()) {
+                Files.createDirectories(persistentDir.toPath());
+            }
+            Files.writeString(persistentFile.toPath(), DEFAULT_PERSISTENT_CONFIG);
+        }
+
+        File configFile = new File(DockerNetworkDriver.TEMPORARY_CONFIG_FILE);
         if (!configFile.exists()) {
             File configDir = configFile.getParentFile();
             if (!configDir.exists()) {
                 Files.createDirectories(configDir.toPath());
             }
-            Files.writeString(configFile.toPath(), DEFAULT_CONFIG);
+            Files.writeString(configFile.toPath(), DEFAULT_TEMPORARY_CONFIG);
+        }
+
+        File scriptFile = new File(DockerNetworkDriver.PERSISTENT_SCRIPT);
+        if (!scriptFile.exists()) {
+            File scriptDir = scriptFile.getParentFile();
+            if (!scriptDir.exists()) {
+                Files.createDirectories(scriptDir.toPath());
+            }
+            Files.writeString(scriptFile.toPath(), "\n");
         }
     }
 
