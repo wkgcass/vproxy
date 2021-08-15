@@ -126,7 +126,7 @@ $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs:
 .PHONY: docker-network-plugin
 docker-network-plugin: $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
 	cp docker-plugin/config.json $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
-	docker plugin create wkgcass/vproxy $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+	docker plugin create wkgcass/vproxy-docker-plugin $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
 .PHONY: dockertest
 dockertest:
