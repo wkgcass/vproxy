@@ -67,3 +67,6 @@ docker-plugin/libvfdposix.so
 
 # test packet filter gen
 test/src/test/java/vproxy/test/gen/packetfilters/*.java
+
+# vim
+*.swp
