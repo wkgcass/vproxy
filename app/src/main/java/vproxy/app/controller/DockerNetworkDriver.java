@@ -1,5 +1,7 @@
 package vproxy.app.controller;
 
+import vjson.JSON;
+
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -8,6 +10,10 @@ public interface DockerNetworkDriver {
     String PERSISTENT_CONFIG_FILE = "/x-etc/docker/.vproxy/vproxy.last"; // host /etc is mounted as /x-etc
     String PERSISTENT_SCRIPT = "/x-etc/docker/.vproxy/setup.sh";
     String TEMPORARY_CONFIG_FILE = "/var/run/docker/.vproxy/vproxy.last";
+
+    String VNI_OPTION = "docker-plugin.vproxy.cc/network-vni";
+    String SUBNET4_OPTION = "docker-plugin.vproxy.cc/network-subnet-v4";
+    String SUBNET6_OPTION = "docker-plugin.vproxy.cc/network-subnet-v6";
 
     void createNetwork(CreateNetworkRequest req) throws Exception;
 
@@ -25,6 +31,8 @@ public interface DockerNetworkDriver {
         public String networkId;
         public List<IPData> ipv4Data;
         public List<IPData> ipv6Data;
+        public JSON.Object options;
+        public Map<String, String> optionsDockerNetworkGeneric; // com.docker.network.generic
 
         @Override
         public String toString() {
@@ -32,6 +40,7 @@ public interface DockerNetworkDriver {
                 "networkId='" + networkId + '\'' +
                 ", ipv4Data=" + ipv4Data +
                 ", ipv6Data=" + ipv6Data +
+                ", options=" + (options == null ? "null" : options.pretty()) +
                 '}';
         }
     }

@@ -33,9 +33,10 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String VETH_ENDPOINT_IPv6_ANNOTATION = AnnotationKeys.SWIface_DockerNetworkDriverEndpointIpv6.name;
     private static final String VETH_ENDPOINT_MAC_ANNOTATION = AnnotationKeys.SWIface_DockerNetworkDriverEndpointMac.name;
     private static final String CONTAINER_VETH_SUFFIX = "pod";
-    private static final String NETWORK_ENTRY_VETH_PREFIX = "vp-docker";
+    private static final String NETWORK_ENTRY_VETH_PREFIX = "vproxy";
     private static final String NETWORK_ENTRY_VETH_PEER_SUFFIX = "sw";
-    private static final int NETWORK_ENTRY_VNI = 99999;
+    private static final int NETWORK_ENTRY_VNI = 15999999;
+    private static final int VNI_MAX = 9999999;
 
     @Override
     public synchronized void createNetwork(CreateNetworkRequest req) throws Exception {
@@ -48,6 +49,44 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
         if (req.ipv4Data.isEmpty()) {
             throw new Exception("no ipv4 network info provided");
+        }
+        // validate options
+        int optionVNI = 0;
+        if (req.optionsDockerNetworkGeneric.containsKey(VNI_OPTION)) {
+            String vniStr = req.optionsDockerNetworkGeneric.get(VNI_OPTION);
+            if (!Utils.isInteger(vniStr)) {
+                throw new Exception(VNI_OPTION + ": " + vniStr + " is not an integer");
+            }
+            optionVNI = Integer.parseInt(vniStr);
+            if (optionVNI < 1 || optionVNI > VNI_MAX) { // nic name limit
+                throw new Exception(VNI_OPTION + ": " + vniStr + " is not out of vni range: [1, " + VNI_MAX + "]");
+            }
+        }
+        Network optionV4Net = null;
+        if (req.optionsDockerNetworkGeneric.containsKey(SUBNET4_OPTION)) {
+            String net = req.optionsDockerNetworkGeneric.get(SUBNET4_OPTION);
+            if (!Network.validNetworkStr(net)) {
+                throw new Exception(SUBNET4_OPTION + ": " + net + " is not a valid network");
+            }
+            optionV4Net = new Network(net);
+            if (!(optionV4Net.getIp() instanceof IPv4)) {
+                throw new Exception(SUBNET4_OPTION + ": " + net + " is not v4 network");
+            }
+        }
+        Network optionV6Net = null;
+        if (req.optionsDockerNetworkGeneric.containsKey(SUBNET6_OPTION)) {
+            String net = req.optionsDockerNetworkGeneric.get(SUBNET6_OPTION);
+            if (!Network.validNetworkStr(net)) {
+                throw new Exception(SUBNET6_OPTION + ": " + net + " is not a valid network");
+            }
+            optionV6Net = new Network(net);
+            if (!(optionV6Net.getIp() instanceof IPv6)) {
+                throw new Exception(SUBNET4_OPTION + ": " + net + " is not v6 network");
+            }
+            // v6 should exist in ip data as well
+            if (req.ipv6Data.isEmpty()) {
+                throw new Exception(SUBNET6_OPTION + " is set but ipv6 network is not specified for docker");
+            }
         }
         // validate
         for (var ipv4Data : req.ipv4Data) {
@@ -86,6 +125,10 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 throw new Exception("the cidr " + ipv4Data.pool + " does not contain the gateway " + ipv4Data.gateway);
             }
             ipv4Data.__transformedGateway = gateway.formatToIPString();
+
+            if (optionV4Net != null && !optionV4Net.contains(net)) {
+                throw new Exception(SUBNET4_OPTION + ": " + optionV4Net + " does not contain ipv4Data network " + net);
+            }
         }
         for (var ipv6Data : req.ipv6Data) {
             if (ipv6Data.auxAddresses != null && ipv6Data.auxAddresses.isEmpty()) {
@@ -123,26 +166,49 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 throw new Exception("the cidr " + ipv6Data.pool + " does not contain the gateway " + ipv6Data.gateway);
             }
             ipv6Data.__transformedGateway = gateway.formatToIPString();
+
+            if (optionV6Net != null && !optionV6Net.contains(net)) {
+                throw new Exception(SUBNET6_OPTION + ": " + optionV6Net + " does not contain ipv6Data network " + net);
+            }
         }
 
         // handle
         var sw = ensureSwitch();
         IntMap<VirtualNetwork> networks = sw.getNetworks();
         int n = 0;
-        for (int i : networks.keySet()) {
-            if (n < i) {
-                n = i;
+        if (optionVNI == 0) {
+            for (int i : networks.keySet()) {
+                if (n < i) {
+                    n = i;
+                }
+            }
+            n += 1; // greater than the biggest recorded vni
+            if (n > VNI_MAX) {
+                throw new Exception("cannot use auto selected vni " + n + ", out of range: [1," + VNI_MAX + "]");
+            }
+        } else {
+            try {
+                sw.getNetwork(optionVNI);
+            } catch (NotFoundException ignore) {
+                n = optionVNI;
+            }
+            if (n == 0) {
+                throw new Exception(VNI_OPTION + ": " + optionVNI + " already exists");
             }
         }
-        n += 1; // greater than the biggest recorded vni
 
         Network v4net;
-        {
+        //noinspection ReplaceNullCheck
+        if (optionV4Net == null) {
             v4net = new Network(req.ipv4Data.get(0).pool);
+        } else {
+            v4net = optionV4Net;
         }
-        Network v6net = null;
-        if (!req.ipv6Data.isEmpty()) {
+        Network v6net;
+        if (optionV6Net == null && !req.ipv6Data.isEmpty()) {
             v6net = new Network(req.ipv6Data.get(0).pool);
+        } else {
+            v6net = optionV6Net;
         }
         sw.addNetwork(n, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
         Logger.alert("network added: vni=" + n + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
@@ -415,7 +481,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private void createVethPair(String hostVeth, String containerVeth, String mac) throws Exception {
-        String scriptContent = "" +
+        String scriptContent = "#!/bin/bash\n" +
+            "set -e\n" +
             "ip link add " + hostVeth + " type veth peer name " + containerVeth + "\n";
         if (mac != null && !mac.isBlank()) {
             scriptContent += "" +
@@ -468,7 +535,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         Utils.execute("" +
             "#!/bin/bash\n" +
+            "set +e\n" +
             "x=`ip link show dev " + swNic + " | wc -l`\n" +
+            "set -e\n" +
             "if [ \"$x\" == \"0\" ]\n" +
             "then\n" +
             "    exit 0\n" +

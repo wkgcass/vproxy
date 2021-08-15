@@ -41,6 +41,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
 
     // see https://github.com/moby/libnetwork/blob/master/docs/remote.md
     server.post("$dockerNetworkPluginBase/*", Tool.bodyJsonHandler())
+    server.post("$dockerNetworkPluginBase/*") { rctx: RoutingContext -> accessLog(rctx) }
     server.post("$dockerNetworkPluginBase/Plugin.Activate") { rctx: RoutingContext -> handshake(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.GetCapabilities") { rctx: RoutingContext -> capabilities(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.CreateNetwork") { rctx: RoutingContext -> createNetwork(rctx) }
@@ -61,6 +62,12 @@ class DockerNetworkPluginController(val path: UDSPath) {
 
   fun stop() {
     server.close()
+  }
+
+  private fun accessLog(rctx: RoutingContext) {
+    val body = rctx.get(Tool.bodyJson)
+    Logger.access("received request: " + rctx.req.method() + " " + rctx.req.uri() + " " + body?.stringify())
+    rctx.allowNext()
   }
 
   private suspend fun handshake(rctx: RoutingContext) {
@@ -86,6 +93,8 @@ class DockerNetworkPluginController(val path: UDSPath) {
       .build()
   }
 
+  private val optionsDockerNetworkGeneric = "com.docker.network.generic"
+
   private suspend fun createNetwork(rctx: RoutingContext) {
     val req = DockerNetworkDriver.CreateNetworkRequest()
     try {
@@ -97,6 +106,17 @@ class DockerNetworkPluginController(val path: UDSPath) {
       req.ipv6Data = LinkedList()
       val ipv6Data = body.getArray("IPv6Data")
       parseIPData(req.ipv6Data, ipv6Data)
+      req.options = body.getObject("Options")
+      req.optionsDockerNetworkGeneric = if (req.options.containsKey(optionsDockerNetworkGeneric)) {
+        val o = req.options.getObject(optionsDockerNetworkGeneric)
+        val m = HashMap<String, String>()
+        for (key in o.keySet()) {
+          m[key] = o.getString(key)
+        }
+        m
+      } else {
+        mapOf()
+      }
     } catch (e: RuntimeException) {
       Logger.warn(LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send(err("invalid request body"))

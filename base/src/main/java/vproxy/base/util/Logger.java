@@ -210,6 +210,10 @@ public class Logger {
         info(LogType.ALERT, msg);
     }
 
+    public static void access(String msg) {
+        info(LogType.ACCESS, msg);
+    }
+
     public static void probe(String msg) {
         String threadName = Thread.currentThread().getName();
         String log = DEBUG_COLOR + current() + threadName + " " + LogType.PROBE + " - " + RESET_COLOR + msg + "\r\n";

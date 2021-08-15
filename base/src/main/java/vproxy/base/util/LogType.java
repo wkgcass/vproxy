@@ -18,6 +18,7 @@ public enum LogType {
     DISCOVERY_EVENT,
     KHALA_EVENT,
     ALERT,
+    ACCESS,
     SSL_ERROR,
     SYS_ERROR,
     PROBE,

@@ -6,8 +6,7 @@
     "socket": "vproxy.sock"
   },
   "entrypoint": [
-    "/bin/bash", "-c",
-    "ulimit -l 65536 && /vproxy-runtime/bin/java --add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -XX:+CriticalJNINatives -Deploy=DockerNetworkPlugin -Dvfd=posix -Djava.library.path=/usr/lib/`uname -p`-linux-gnu:/ -jar /vproxy.jar allowSystemCommandInNonStdIOController noStdIOController sigIntDirectlyShutdown"
+    "/init.sh"
   ],
   "workdir": "/",
   "network": {
@@ -27,11 +26,23 @@
       "source": "/var/run/docker/",
       "destination": "/var/run/docker/",
       "options": [ "rw", "rbind" ]
+    },
+    {
+      "name": "tuntap",
+      "description": "tuntap device",
+      "source": "/dev/net",
+      "destination": "/dev/net",
+      "options": [ "ro", "rbind" ]
     }
   ],
   "linux": {
     "capabilities": [ "CAP_NET_ADMIN", "CAP_SYS_RESOURCE", "CAP_SYS_ADMIN" ],
     "devices": [
+      {
+        "name": "tuntap",
+        "description": "tuntap device",
+        "path": "/dev/net/tun"
+      }
     ]
   }
 }

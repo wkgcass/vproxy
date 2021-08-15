@@ -1,0 +1,17 @@
+{
+	"enabled": false,
+	"mirrors": [
+		{
+			"tap": "vproxy-mirror",
+			"mtu": 1500,
+			"origins": [
+				{
+					"origin": "switch",
+					"filters": [
+						{}
+					]
+				}
+			]
+		}
+	]
+}
