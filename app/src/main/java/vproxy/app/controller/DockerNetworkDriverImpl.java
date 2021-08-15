@@ -40,16 +40,6 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
     @Override
     public synchronized void createNetwork(CreateNetworkRequest req) throws Exception {
-        // check ipv4 data length
-        if (req.ipv4Data.size() > 1) {
-            throw new Exception("we only support at most one ipv4 cidr in one network");
-        }
-        if (req.ipv6Data.size() > 1) {
-            throw new Exception("we only support at most one ipv6 cidr in one network");
-        }
-        if (req.ipv4Data.isEmpty()) {
-            throw new Exception("no ipv4 network info provided");
-        }
         // validate options
         int optionVNI = 0;
         if (req.optionsDockerNetworkGeneric.containsKey(VNI_OPTION)) {
@@ -59,7 +49,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
             optionVNI = Integer.parseInt(vniStr);
             if (optionVNI < 1 || optionVNI > VNI_MAX) { // nic name limit
-                throw new Exception(VNI_OPTION + ": " + vniStr + " is not out of vni range: [1, " + VNI_MAX + "]");
+                throw new Exception(VNI_OPTION + ": " + vniStr + " is out of the plugin supported vni range: [1, " + VNI_MAX + "]");
             }
         }
         Network optionV4Net = null;
@@ -87,6 +77,20 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             if (req.ipv6Data.isEmpty()) {
                 throw new Exception(SUBNET6_OPTION + " is set but ipv6 network is not specified for docker");
             }
+        }
+        // check ipv4 data length
+        if (req.ipv4Data.size() > 1) {
+            if (optionV4Net == null) {
+                throw new Exception(SUBNET4_OPTION + " option must be specified when more than one ipv4 cidr in one network");
+            }
+        }
+        if (req.ipv6Data.size() > 1) {
+            if (optionV6Net == null) {
+                throw new Exception(SUBNET6_OPTION + " option must be specified when more than one ipv6 cidr in one network");
+            }
+        }
+        if (req.ipv4Data.isEmpty()) {
+            throw new Exception("no ipv4 network info provided");
         }
         // validate
         for (var ipv4Data : req.ipv4Data) {

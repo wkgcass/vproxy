@@ -57,7 +57,7 @@ public class Switch {
     private final Map<String, UserInfo> users = new HashMap<>();
     private DatagramFD sock;
     private final IntMap<VirtualNetwork> networks = new IntMap<>();
-    private final Map<Iface, IfaceTimer> ifaces = new HashMap<>();
+    private final Map<Iface, IfaceTimer> ifaces = new LinkedHashMap<>();
 
     private final Map<String, UMem> umems = new HashMap<>();
 
