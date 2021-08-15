@@ -406,12 +406,21 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
         sb.delete(0, sb.length());
         sb.append("#!/bin/bash\n");
+        sb.append("set -e\n");
         for (String iface : netEntryIfaces) {
             iface = iface.substring(0, iface.length() - NETWORK_ENTRY_VETH_PEER_SUFFIX.length());
             sb.append("ip link add ").append(iface)
                 .append(" type veth peer name ")
                 .append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX)
                 .append("\n");
+            sb.append("for nic in \"").append(iface).append("\" \"").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append("\"\n");
+            sb.append("do\n");
+            sb.append("  opts=`ethtool -k \"$nic\" | grep 'tx-checksum-' | awk '{print $1}' | cut -d ':' -f 1`\n");
+            sb.append("  for opt in $opts\n");
+            sb.append("  do\n");
+            sb.append("    ethtool -K \"$nic\" \"$opt\" off\n");
+            sb.append("  done\n");
+            sb.append("done\n");
             sb.append("ip link set ").append(iface).append(" up\n");
             sb.append("ip link set ").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append(" up\n");
         }
@@ -485,17 +494,26 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private void createVethPair(String hostVeth, String containerVeth, String mac) throws Exception {
-        String scriptContent = "#!/bin/bash\n" +
-            "set -e\n" +
-            "ip link add " + hostVeth + " type veth peer name " + containerVeth + "\n";
+        StringBuilder scriptContent = new StringBuilder();
+        scriptContent
+            .append("#!/bin/bash\n")
+            .append("set -e\n")
+            .append("ip link add ").append(hostVeth).append(" type veth peer name ").append(containerVeth).append("\n")
+            .append("for nic in \"").append(hostVeth).append("\" \"").append(containerVeth).append("\"\n")
+            .append("do\n")
+            .append("  opts=`ethtool -k \"$nic\" | grep 'tx-checksum-' | awk '{print $1}' | cut -d ':' -f 1`\n")
+            .append("  for opt in $opts\n")
+            .append("  do\n")
+            .append("    ethtool -K \"$nic\" \"$opt\" off\n")
+            .append("  done\n")
+            .append("done\n");
         if (mac != null && !mac.isBlank()) {
-            scriptContent += "" +
-                "ip link set " + containerVeth + " address " + mac + "\n";
+            scriptContent.append("ip link set ").append(containerVeth).append(" address ").append(mac).append("\n");
         }
-        scriptContent += "" +
-            "ip link set " + hostVeth + " up\n" +
-            "ip link set " + containerVeth + " up\n";
-        Utils.execute(scriptContent);
+        scriptContent
+            .append("ip link set ").append(hostVeth).append(" up\n")
+            .append("ip link set ").append(containerVeth).append(" up\n");
+        Utils.execute(scriptContent.toString());
     }
 
     private XDPIface findEndpoint(Switch sw, String endpointId) throws Exception {

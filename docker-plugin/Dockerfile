@@ -1,5 +1,7 @@
 FROM wkgcass/vproxy-runtime:latest
 
+RUN apt-get install -y ethtool
+
 ADD init.sh /init.sh
 ADD default-mirror.json /default-mirror.json
 ADD vproxy.jar /vproxy.jar
