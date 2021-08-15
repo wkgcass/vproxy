@@ -147,7 +147,7 @@ class RESPControllerApplication implements RESPApplication<RESPApplicationContex
                 cb.failed(e); // callback failed
                 return;
             }
-            isListAction[0] = cmd.action == Action.l || cmd.action == Action.L;
+            isListAction[0] = cmd.action == Action.ls || cmd.action == Action.ll;
             cmd.run(callback);
         }
     }

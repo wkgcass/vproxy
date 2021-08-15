@@ -77,6 +77,8 @@ public class HelpCommand {
         int maxLenOfShortName = 0;
         {
             for (ActMan actMan : ActMan.values()) {
+                if (actMan.shortVer == null)
+                    continue;
                 int len = actMan.shortVer.length();
                 if (len > maxLenOfShortName)
                     maxLenOfShortName = len;
@@ -189,10 +191,10 @@ public class HelpCommand {
     private static ActMan getAct(String s) {
         if (s.equals("add-to"))
             return ActMan.addto;
-        if (s.equals("remove-from"))
+        if (s.equals("remove-from") || s.equals("rm-from"))
             return ActMan.removefrom;
         for (ActMan actMan : ActMan.values()) {
-            if (actMan.act.equals(s) || s.equals(actMan.shortVer))
+            if (actMan.act.equals(s) || (actMan.shortVer != null && actMan.shortVer.equals(s)))
                 return actMan;
         }
         throw new IllegalArgumentException();
@@ -365,13 +367,13 @@ public class HelpCommand {
     }
 
     public enum ActMan {
-        add("add", "a", "create a resource"),
-        addto("add-to", "a-to", "attach a resource to another one"),
-        list("list", "l", "list names, or retrieve count of some resources"),
-        listdetail("list-detail", "L", "list detailed info of some resources"),
-        update("update", "u", "modify a resource"),
-        remove("remove", "r", "remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted"),
-        removefrom("remove-from", "r-from", "detach a resource from another one"),
+        add("add", null, "create a resource"),
+        addto("add-to", null, "attach a resource to another one"),
+        list("list", "ls", "list names, or retrieve count of some resources"),
+        listdetail("list-detail", "ll", "list detailed info of some resources"),
+        update("update", "mod", "modify a resource"),
+        remove("remove", "rm", "remove and destroy/stop a resource. If the resource is being used by another one, a warning will be returned and operation will be aborted"),
+        removefrom("remove-from", "rm-from", "detach a resource from another one"),
         ;
         public final String act;
         public final String shortVer;

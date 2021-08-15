@@ -24,11 +24,11 @@ abstract class Commands protected constructor() {
     }
     var actType: ActType? = null
     if (cmd.preposition != null) {
-      if (cmd.action == Action.a) {
+      if (cmd.action == Action.add) {
         if (cmd.preposition == Preposition.to) {
           actType = ActType.addto
         }
-      } else if (cmd.action == Action.r) {
+      } else if (cmd.action == Action.rm) {
         if (cmd.preposition == Preposition.from) {
           actType = ActType.removefrom
         }
@@ -38,11 +38,11 @@ abstract class Commands protected constructor() {
       }
     } else {
       actType = when (cmd.action) {
-        Action.l -> ActType.list
-        Action.L -> ActType.listdetail
-        Action.a -> ActType.add
-        Action.u -> ActType.update
-        Action.r -> ActType.remove
+        Action.ls -> ActType.list
+        Action.ll -> ActType.listdetail
+        Action.add -> ActType.add
+        Action.mod -> ActType.update
+        Action.rm -> ActType.remove
         else -> null
       }
       if (actType == null) {
@@ -73,7 +73,7 @@ abstract class Commands protected constructor() {
     if (act.action == ActType.list || act.action == ActType.listdetail) {
       // and obviously you cannot specify a name when retrieving a list
       if (cmd.resource.alias != null) {
-        throw XException("cannot specify preposition when action is " + Action.l.fullname + " or " + Action.L.fullname)
+        throw XException("cannot specify preposition when action is " + Action.ls.fullname + " or " + Action.ll.fullname)
       }
     } else {
       // for non list operations, i.e. modification operations
@@ -215,13 +215,13 @@ abstract class Commands protected constructor() {
 
   @Suppress("EnumEntryName", "unused")
   enum class ActType constructor(val action: Action, val fullname: String, val preposition: Boolean = false) {
-    list(Action.l, Action.l.fullname),
-    listdetail(Action.L, Action.L.fullname),
-    add(Action.a, Action.a.fullname),
-    update(Action.u, Action.u.fullname),
-    remove(Action.r, Action.r.fullname),
-    addto(Action.a, "add-to", true),
-    removefrom(Action.r, "remove-from", true);
+    list(Action.ls, Action.ls.fullname),
+    listdetail(Action.ll, Action.ll.fullname),
+    add(Action.add, Action.add.fullname),
+    update(Action.mod, Action.mod.fullname),
+    remove(Action.rm, Action.rm.fullname),
+    addto(Action.add, "add-to", true),
+    removefrom(Action.rm, "remove-from", true);
   }
 
   class ResRelation(val resType: ResourceType, val parent: ResRelation? = null)

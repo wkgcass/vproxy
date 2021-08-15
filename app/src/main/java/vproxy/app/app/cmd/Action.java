@@ -1,11 +1,11 @@
 package vproxy.app.app.cmd;
 
 public enum Action {
-    l("list"),
-    L("list-detail"),
-    a("add"),
-    r("remove"),
-    u("update"),
+    ls("list"),
+    ll("list-detail"),
+    add("add"),
+    rm("remove"),
+    mod("update"),
     ;
     public final String fullname;
 
