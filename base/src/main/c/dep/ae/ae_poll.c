@@ -100,6 +100,7 @@ static int aeApiPoll_poll(aeEventLoop *eventLoop, struct timeval *tvp) {
             int mask = 0;
             struct pollfd *e = state->fds+j;
 
+            if (e->revents == 0) continue;
             if (e->revents & POLLIN)  mask |= AE_READABLE;
             if (e->revents & POLLOUT) mask |= AE_WRITABLE;
             if (e->revents & POLLERR) mask |= AE_WRITABLE;
