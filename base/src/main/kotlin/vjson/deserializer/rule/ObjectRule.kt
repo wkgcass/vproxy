@@ -13,11 +13,14 @@ package vjson.deserializer.rule
 
 import vjson.util.CastUtils.cast
 import vjson.util.functional.`BiConsumer$`
+import vjson.util.functional.`TriConsumer$`
 
 open class ObjectRule<O : Any> : Rule<O> {
   val construct: () -> Any
   val build: (Any) -> Any
   protected val rules: MutableMap<String, ObjectField<Any, *>> = LinkedHashMap()
+  val extraRules: MutableList<(O, String, Any?) -> Unit> = ArrayList()
+    get
 
   // for both java and kotlin
   constructor(construct: () -> O) {
@@ -39,6 +42,7 @@ open class ObjectRule<O : Any> : Rule<O> {
       @Suppress("UNCHECKED_CAST")
       rules[key] = cast(value)
     }
+    extraRules.addAll(superRule.extraRules)
     f(this)
   }
 
@@ -112,6 +116,17 @@ open class ObjectRule<O : Any> : Rule<O> {
 
   // for simple rule and complex setter
   fun <V> put(key: String, type: Rule<V>, set: O.(V) -> Unit): ObjectRule<O> = put(key, set, type)
+
+  // for java
+  fun addExtraRule(func: `TriConsumer$`<O, String, Any?>): ObjectRule<O> {
+    return addExtraRule(func as O.(String, Any?) -> Unit)
+  }
+
+  // for both kotlin
+  fun addExtraRule(func: O.(String, Any?) -> Unit): ObjectRule<O> {
+    extraRules.add(func)
+    return this
+  }
 
   fun getRule(key: String): ObjectField<*, *>? {
     return rules[key]

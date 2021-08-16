@@ -131,7 +131,13 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
 
     val rule = cast<ObjectRule<*>>(ctx.rule)
     val field = rule.getRule(key)
-      ?: return  // ignore if the field is not registered
+    if (field == null) {
+      // handle extra
+      for (f in rule.extraRules) {
+        cast<(Any, String, Any?) -> Unit>(f)(ctx.`object`!!, key, lastObject)
+      }
+      return
+    }
     @Suppress("UNCHECKED_CAST")
     set(field.rule, ctx.`object`!!, cast(field.set), lastObject)
     nextRuleStack.pop()
