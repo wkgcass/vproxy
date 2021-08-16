@@ -13,7 +13,7 @@ RUN chmod +x /init.sh
 
 RUN mkdir -p /dev/net
 RUN mkdir -p /var/run/docker
-RUN mkdir -p /x-var
+RUN mkdir -p /x-etc
 
 ENTRYPOINT []
 CMD []

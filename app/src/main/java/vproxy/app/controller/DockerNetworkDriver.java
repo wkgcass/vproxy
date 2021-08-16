@@ -6,6 +6,8 @@ import java.util.*;
 
 public interface DockerNetworkDriver {
     String TEMPORARY_CONFIG_FILE = "/var/run/docker/.vproxy/vproxy.last";
+    String PERSISTENT_CONFIG_FILE = "/x-etc/docker/.vproxy/vproxy.last";
+    String PERSISTENT_SCRIPT = "/x-etc/docker/.vproxy/setup.sh";
 
     String VNI_OPTION = "docker-plugin.vproxy.cc/network-vni";
     String SUBNET4_OPTION = "docker-plugin.vproxy.cc/network-subnet-v4";

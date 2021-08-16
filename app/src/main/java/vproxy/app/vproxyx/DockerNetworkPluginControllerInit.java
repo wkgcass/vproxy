@@ -7,6 +7,7 @@ import vproxy.app.controller.DockerNetworkDriver;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.OS;
+import vproxy.base.util.Utils;
 import vproxy.vfd.UDSPath;
 
 import java.io.File;
@@ -61,12 +62,26 @@ public class DockerNetworkPluginControllerInit {
                 isFirstLaunch = true;
             }
         } else {
-            isFirstLaunch = true;
             File configDir = configFile.getParentFile();
             if (!configDir.exists()) {
                 Files.createDirectories(configDir.toPath());
             }
-            Files.writeString(configFile.toPath(), DEFAULT_TEMPORARY_CONFIG);
+
+            File scriptFile = new File(DockerNetworkDriver.PERSISTENT_SCRIPT);
+            if (scriptFile.exists()) {
+                if (!scriptFile.setExecutable(true)) {
+                    throw new Exception("setting executable on " + scriptFile.getAbsolutePath() + " failed");
+                }
+                ProcessBuilder pb = new ProcessBuilder(scriptFile.getAbsolutePath());
+                Utils.execute(pb, 5_000);
+            }
+            File persistFile = new File(DockerNetworkDriver.PERSISTENT_CONFIG_FILE);
+            if (persistFile.exists()) {
+                Files.copy(persistFile.toPath(), configFile.toPath());
+            } else {
+                isFirstLaunch = true;
+                Files.writeString(configFile.toPath(), DEFAULT_TEMPORARY_CONFIG);
+            }
         }
     }
 
