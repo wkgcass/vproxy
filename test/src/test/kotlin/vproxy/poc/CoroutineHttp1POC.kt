@@ -18,14 +18,14 @@ object CoroutineHttp1POC {
     loop.loop { VProxyThread.create(it, "coroutine-http1-poc") }
     loop.with(loop).launch {
       val listenPort = 30080
-      vproxy.coroutine.launch {
+      vplib.coroutine.launch {
         // start server
         val serverSock = unsafeIO { ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine() }
         defer { serverSock.close() }
         while (true) {
           val conn = serverSock.accept().asHttp1ServerConnection()
           println("accepted socket $conn")
-          vproxy.coroutine.with(conn).launch {
+          vplib.coroutine.with(conn).launch {
             while (true) {
               val req = conn.readRequest() ?: break
               println("server received request: $req")

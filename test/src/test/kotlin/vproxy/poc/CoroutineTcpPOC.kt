@@ -23,14 +23,14 @@ object CoroutineTcpPOC {
     loop.loop { VProxyThread.create(it, "coroutine-tcp-poc") }
     loop.with(loop).launch {
       val listenPort = 30080
-      vproxy.coroutine.launch {
+      vplib.coroutine.launch {
         // start server
         val serverSock = unsafeIO { ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine() }
         defer { serverSock.close() }
         while (true) {
           val sock = serverSock.accept()
           println("accepted socket $sock")
-          vproxy.coroutine.with(sock).launch {
+          vplib.coroutine.with(sock).launch {
             val rb = sock.read()
             val parser = HttpReqParser(true)
             parser.feed(rb) // expect to be completed in this example

@@ -14,7 +14,7 @@ import vproxy.base.util.Utils
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.common.sleep
-import vproxy.lib.common.vproxy
+import vproxy.lib.common.vplib
 import vproxy.lib.docker.DockerClient
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.http.Tool
@@ -380,7 +380,7 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
 
     if (!ready && !scheduled) {
       scheduled = true
-      vproxy.coroutine.launch {
+      vplib.coroutine.launch {
         val time = 10
         Logger.alert("re-sync $time seconds later ...")
         sleep(time * 1000)

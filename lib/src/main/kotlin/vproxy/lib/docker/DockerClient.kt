@@ -4,7 +4,7 @@ import vjson.JSON
 import vproxy.base.connection.ConnectableConnection
 import vproxy.base.connection.NetEventLoop
 import vproxy.lib.common.ByteArrayCharStream
-import vproxy.lib.common.vproxy
+import vproxy.lib.common.vplib
 import vproxy.lib.docker.entity.Network
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.tcp.CoroutineConnection
@@ -28,7 +28,7 @@ class DockerClient(val loop: NetEventLoop, val sock: String = "/var/run/docker.s
   suspend fun listNetworks(): List<Network> {
     @Suppress("BlockingMethodInNonBlockingContext")
     val tcpConn = CoroutineConnection(loop, ConnectableConnection.create(sockUds))
-    return vproxy.coroutine.with(tcpConn).run {
+    return vplib.coroutine.with(tcpConn).run {
       tcpConn.setTimeout(timeout)
       tcpConn.connect()
       val conn = CoroutineHttp1ClientConnection(tcpConn)

@@ -189,7 +189,7 @@ class VProxyCoroutineCodeBlock {
 }
 
 @Suppress("ClassName")
-object vproxy {
+object vplib {
   object coroutine {
     suspend fun <T> run(exec: suspend VProxyCoroutineCodeBlock.() -> T): T {
       val block = VProxyCoroutineCodeBlock()
@@ -242,7 +242,7 @@ class VProxyCoroutineLauncher internal constructor(
     }
     started = true
 
-    return vproxy.coroutine.run {
+    return vplib.coroutine.run {
       defer { release() }
       exec(this)
     }

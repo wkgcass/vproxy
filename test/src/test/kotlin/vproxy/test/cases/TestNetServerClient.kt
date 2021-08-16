@@ -53,7 +53,7 @@ class TestNetServerClient {
     val channel = Channel<String>()
     val promise = loop!!.execute {
       val conn = server!!.accept()
-      vproxy.coroutine.with(conn).launch {
+      vplib.coroutine.with(conn).launch {
         val buf = ByteArray.allocate(1024)
         while (true) {
           val n = conn.read(buf)
@@ -92,7 +92,7 @@ class TestNetServerClient {
     loop!!.launch {
       while (true) {
         val conn = server!!.accept()
-        vproxy.coroutine.with(conn).launch {
+        vplib.coroutine.with(conn).launch {
           val buf = ByteArray.allocate(1024)
           while (true) {
             val n = conn.read(buf)

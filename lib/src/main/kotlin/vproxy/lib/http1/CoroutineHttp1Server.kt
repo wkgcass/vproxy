@@ -4,7 +4,7 @@ import vproxy.base.processor.http1.entity.Request
 import vproxy.base.util.ByteArray
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
-import vproxy.lib.common.vproxy
+import vproxy.lib.common.vplib
 import vproxy.lib.http.GeneralCoroutineHttpServer
 import vproxy.lib.http.HttpHeaders
 import vproxy.lib.http.HttpServerRequest
@@ -21,7 +21,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
 
     while (true) {
       val conn = server.accept()
-      vproxy.coroutine.with(conn).launch {
+      vplib.coroutine.with(conn).launch {
         try {
           handleConnection(conn)
         } catch (e: Throwable) {

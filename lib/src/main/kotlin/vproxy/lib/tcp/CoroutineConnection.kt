@@ -8,7 +8,7 @@ import vproxy.base.connection.NetEventLoop
 import vproxy.base.util.ByteArray
 import vproxy.base.util.RingBuffer
 import vproxy.base.util.nio.ByteArrayChannel
-import vproxy.lib.common.vproxy
+import vproxy.lib.common.vplib
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1ServerConnection
 import vproxy.vfd.IPPort
@@ -76,7 +76,7 @@ class CoroutineConnection(
     }
 
     reading = true
-    return vproxy.coroutine.run {
+    return vplib.coroutine.run {
       defer { reading = false }
 
       ensureHandler()
@@ -132,7 +132,7 @@ class CoroutineConnection(
     }
 
     reading = true
-    return vproxy.coroutine.run {
+    return vplib.coroutine.run {
       defer { reading = false }
 
       ensureHandler()
@@ -159,7 +159,7 @@ class CoroutineConnection(
     handleExceptions()
 
     writing = true
-    vproxy.coroutine.run {
+    vplib.coroutine.run {
       defer { writing = false }
 
       if (conn.outBuffer.free() >= buf.length()) {
