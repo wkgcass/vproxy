@@ -71,6 +71,27 @@ public class Response {
         return ret.arrange();
     }
 
+    public ByteArray getBody() {
+        if (body != null) {
+            return body;
+        }
+        if (chunks == null || chunks.isEmpty()) {
+            return null;
+        }
+        ByteArray ret = null;
+        for (Chunk chunk : chunks) {
+            if (chunk.size == 0) {
+                continue;
+            }
+            if (ret == null) {
+                ret = chunk.content;
+            } else {
+                ret = ret.concat(chunk.content);
+            }
+        }
+        return ret;
+    }
+
     @Override
     public String toString() {
         return "Response{" +

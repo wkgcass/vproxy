@@ -2,13 +2,9 @@ package vproxy.app.controller;
 
 import vjson.JSON;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public interface DockerNetworkDriver {
-    String PERSISTENT_CONFIG_FILE = "/x-etc/docker/.vproxy/vproxy.last"; // host /etc is mounted as /x-etc
-    String PERSISTENT_SCRIPT = "/x-etc/docker/.vproxy/setup.sh";
     String TEMPORARY_CONFIG_FILE = "/var/run/docker/.vproxy/vproxy.last";
 
     String VNI_OPTION = "docker-plugin.vproxy.cc/network-vni";
@@ -34,13 +30,28 @@ public interface DockerNetworkDriver {
         public JSON.Object options;
         public Map<String, String> optionsDockerNetworkGeneric; // com.docker.network.generic
 
+        public static final String optionsDockerNetworkGenericKey = "com.docker.network.generic";
+
+        public void initGenericOptions() {
+            if (options.containsKey(optionsDockerNetworkGenericKey)) {
+                var o = options.getObject(optionsDockerNetworkGenericKey);
+                var m = new HashMap<String, String>();
+                for (var key : o.keySet()) {
+                    m.put(key, o.getString(key));
+                }
+                optionsDockerNetworkGeneric = m;
+            } else {
+                optionsDockerNetworkGeneric = Collections.emptyMap();
+            }
+        }
+
         @Override
         public String toString() {
             return "CreateNetworkRequest{" +
                 "networkId='" + networkId + '\'' +
                 ", ipv4Data=" + ipv4Data +
                 ", ipv6Data=" + ipv6Data +
-                ", options=" + (options == null ? "null" : options.pretty()) +
+                ", options=" + options +
                 '}';
         }
     }

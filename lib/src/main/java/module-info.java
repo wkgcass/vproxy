@@ -4,6 +4,8 @@ module vproxy.lib {
     requires vproxy.base;
 
     exports vproxy.lib.common;
+    exports vproxy.lib.docker;
+    exports vproxy.lib.docker.entity;
     exports vproxy.lib.http;
     exports vproxy.lib.http.route;
     exports vproxy.lib.http1;

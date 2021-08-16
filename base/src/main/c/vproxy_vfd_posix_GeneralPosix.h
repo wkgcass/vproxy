@@ -249,6 +249,14 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_connectIPv6
 
 /*
  * Class:     vproxy_vfd_posix_GeneralPosix
+ * Method:    connectUDS
+ * Signature: (ILjava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_connectUDS
+  (JNIEnv *, jobject, jint, jstring);
+
+/*
+ * Class:     vproxy_vfd_posix_GeneralPosix
  * Method:    finishConnect
  * Signature: (I)V
  */

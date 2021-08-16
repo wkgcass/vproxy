@@ -14,10 +14,10 @@ public class DockerNetworkPluginControllerHolder {
         return controller;
     }
 
-    public DockerNetworkPluginController create(UDSPath path) throws AlreadyExistException, IOException {
+    public DockerNetworkPluginController create(UDSPath path, boolean requireSync) throws AlreadyExistException, IOException {
         if (controller != null)
             throw new AlreadyExistException("docker-network-plugin-controller");
-        DockerNetworkPluginController dnpc = new DockerNetworkPluginController(path);
+        DockerNetworkPluginController dnpc = new DockerNetworkPluginController(path, requireSync);
         controller = dnpc;
         return dnpc;
     }

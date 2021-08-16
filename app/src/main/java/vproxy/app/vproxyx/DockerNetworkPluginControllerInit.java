@@ -13,15 +13,13 @@ import java.io.File;
 import java.nio.file.Files;
 
 public class DockerNetworkPluginControllerInit {
-    private static final String dockerSock = "/var/run/docker/plugins/vproxy.sock";
+    private static final String vproxySock = "/var/run/docker/plugins/vproxy.sock";
     private static boolean initiated = false;
     private static String[] args;
 
-    private static final String DEFAULT_PERSISTENT_CONFIG = "" +
-        "System: add resp-controller resp-controller address 127.0.0.1:16309 password docker\n";
     private static final String DEFAULT_TEMPORARY_CONFIG = "" +
-        "System: exec " + DockerNetworkDriver.PERSISTENT_SCRIPT + "\n" +
-        "System: load " + DockerNetworkDriver.PERSISTENT_CONFIG_FILE + "\n";
+        "System: add resp-controller resp-controller address 127.0.0.1:16309 password docker\n";
+    private static boolean isFirstLaunch = false;
 
     public static void main0(String[] args) throws Exception {
         checkOSVersion();
@@ -46,31 +44,29 @@ public class DockerNetworkPluginControllerInit {
         retArgs[retArgs.length - 1] = DockerNetworkDriver.TEMPORARY_CONFIG_FILE;
         DockerNetworkPluginControllerInit.args = retArgs;
 
-        File persistentFile = new File(DockerNetworkDriver.PERSISTENT_CONFIG_FILE);
-        if (!persistentFile.exists()) {
-            File persistentDir = persistentFile.getParentFile();
-            if (!persistentDir.exists()) {
-                Files.createDirectories(persistentDir.toPath());
-            }
-            Files.writeString(persistentFile.toPath(), DEFAULT_PERSISTENT_CONFIG);
-        }
-
         File configFile = new File(DockerNetworkDriver.TEMPORARY_CONFIG_FILE);
-        if (!configFile.exists()) {
+        if (configFile.exists()) {
+            // check whether nics require initializing
+            // if the nics already initialized, at lease one xdp should be added
+            String config = Files.readString(configFile.toPath());
+            String[] lines = config.split("\n");
+            boolean ifaceInitiated = false;
+            for (String line : lines) {
+                if (line.startsWith("add xdp ")) {
+                    ifaceInitiated = true;
+                    break;
+                }
+            }
+            if (!ifaceInitiated) {
+                isFirstLaunch = true;
+            }
+        } else {
+            isFirstLaunch = true;
             File configDir = configFile.getParentFile();
             if (!configDir.exists()) {
                 Files.createDirectories(configDir.toPath());
             }
             Files.writeString(configFile.toPath(), DEFAULT_TEMPORARY_CONFIG);
-        }
-
-        File scriptFile = new File(DockerNetworkDriver.PERSISTENT_SCRIPT);
-        if (!scriptFile.exists()) {
-            File scriptDir = scriptFile.getParentFile();
-            if (!scriptDir.exists()) {
-                Files.createDirectories(scriptDir.toPath());
-            }
-            Files.writeString(scriptFile.toPath(), "\n");
         }
     }
 
@@ -109,7 +105,7 @@ public class DockerNetworkPluginControllerInit {
     }
 
     public static void start() throws Exception {
-        Application.get().dockerNetworkPluginControllerHolder.create(new UDSPath(dockerSock));
+        Application.get().dockerNetworkPluginControllerHolder.create(new UDSPath(vproxySock), isFirstLaunch);
     }
 
     public static boolean isInitiated() {

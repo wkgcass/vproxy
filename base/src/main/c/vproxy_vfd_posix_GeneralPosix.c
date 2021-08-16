@@ -474,6 +474,21 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_connectIPv6
     }
 }
 
+JNIEXPORT void JNICALL Java_vproxy_vfd_posix_GeneralPosix_connectUDS
+  (JNIEnv* env, jobject self, jint fd, jstring sock) {
+    const char* sockChars = (*env)->GetStringUTFChars(env, sock, NULL);
+    v_sockaddr_un addr;
+    memset(&addr, 0, sizeof(v_sockaddr_un));
+    addr.sun_family = V_AF_UNIX;
+    strcpy(addr.sun_path, sockChars);
+    int err = connect(fd, (struct sockaddr *) &addr, sizeof(v_sockaddr_un));
+    (*env)->ReleaseStringUTFChars(env, sock, sockChars);
+
+    if (err) {
+        throwIOExceptionBasedOnErrno(env);
+    }
+}
+
 jint handleWriteIOOperationResult(JNIEnv* env, int res) {
     if (res < 0) {
         if (errno == V_EAGAIN || errno == V_EWOULDBLOCK) {

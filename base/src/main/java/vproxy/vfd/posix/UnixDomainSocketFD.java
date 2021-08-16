@@ -12,6 +12,11 @@ public class UnixDomainSocketFD extends PosixNetworkFD implements SocketFD {
     private UDSPath local;
     private UDSPath remote;
 
+    protected UnixDomainSocketFD(Posix posix) throws IOException {
+        super(posix);
+        this.fd = posix.createUnixDomainSocketFD();
+    }
+
     protected UnixDomainSocketFD(Posix posix, int fd) {
         super(posix);
         this.fd = fd;
@@ -26,8 +31,11 @@ public class UnixDomainSocketFD extends PosixNetworkFD implements SocketFD {
     }
 
     @Override
-    public void connect(IPPort l4addr) {
-        throw new UnsupportedOperationException("not supported yet");
+    public void connect(IPPort l4addr) throws IOException {
+        if (!(l4addr instanceof UDSPath)) {
+            throw new IOException("cannot use " + l4addr + " to establish a unix domain socket connection");
+        }
+        posix.connectUDS(fd, ((UDSPath) l4addr).path);
     }
 
     @Override

@@ -9,6 +9,8 @@ import vproxy.base.util.RingBuffer;
 import vproxy.vfd.FDProvider;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
+import vproxy.vfd.UDSPath;
+import vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;
@@ -40,7 +42,21 @@ public class ConnectableConnection extends Connection {
     public static ConnectableConnection create(IPPort remote,
                                                ConnectionOpts opts,
                                                RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        if (remote instanceof UDSPath) {
+            return createUDS(remote, opts, inBuffer, outBuffer);
+        }
         SocketFD channel = FDProvider.get().openSocketFD();
+        return create(channel, remote, opts, inBuffer, outBuffer);
+    }
+
+    private static ConnectableConnection createUDS(IPPort remote,
+                                                   ConnectionOpts opts,
+                                                   RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
+        var fds = FDProvider.get().getProvided();
+        if (!(fds instanceof PosixFDs)) {
+            throw new IOException("unix domain socket is not supported by " + fds + ", use -Dvfd=posix");
+        }
+        var channel = ((PosixFDs) fds).openUnixDomainSocketFD();
         return create(channel, remote, opts, inBuffer, outBuffer);
     }
 

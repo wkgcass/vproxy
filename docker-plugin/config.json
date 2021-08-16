@@ -14,13 +14,6 @@
   },
   "mounts": [
     {
-      "name": "etc-dir",
-      "description": "/etc, vproxy persistent config will write to /etc/docker/.vproxy",
-      "source": "/etc",
-      "destination": "/x-etc",
-      "options": [ "rw", "rbind" ]
-    },
-    {
       "name": "docker-dir",
       "description": "dir of docker, temporary config will write to /var/run/docker/.vproxy",
       "source": "/var/run/docker/",
@@ -32,6 +25,13 @@
       "description": "tuntap device",
       "source": "/dev/net",
       "destination": "/dev/net",
+      "options": [ "ro", "rbind" ]
+    },
+    {
+      "name": "docker.sock",
+      "description": "docker sock file",
+      "source": "/var/run/docker.sock",
+      "destination": "/var/run/docker.sock",
       "options": [ "ro", "rbind" ]
     }
   ],

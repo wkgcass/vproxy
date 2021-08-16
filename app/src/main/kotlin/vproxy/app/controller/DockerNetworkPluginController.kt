@@ -3,26 +3,42 @@ package vproxy.app.controller
 import vjson.JSON
 import vjson.util.ObjectBuilder
 import vproxy.app.app.Application
+import vproxy.app.process.Shutdown
 import vproxy.base.Config
 import vproxy.base.connection.ServerSock
+import vproxy.base.selector.SelectorEventLoop
 import vproxy.base.util.LogType
 import vproxy.base.util.Logger
+import vproxy.base.util.Network
+import vproxy.base.util.Utils
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
+import vproxy.lib.common.sleep
+import vproxy.lib.common.vproxy
+import vproxy.lib.docker.DockerClient
 import vproxy.lib.http.RoutingContext
 import vproxy.lib.http.Tool
 import vproxy.lib.http1.CoroutineHttp1Server
+import vproxy.vfd.IP
+import vproxy.vfd.IPv4
+import vproxy.vfd.IPv6
 import vproxy.vfd.UDSPath
+import java.net.SocketTimeoutException
+import java.nio.file.Files
+import java.nio.file.Path
 import java.util.*
+import kotlin.system.exitProcess
 
 @Suppress("DuplicatedCode")
-class DockerNetworkPluginController(val path: UDSPath) {
+class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
   companion object {
     private const val dockerNetworkPluginBase = ""
     private val driver: DockerNetworkDriver = DockerNetworkDriverImpl()
   }
 
   private val server: CoroutineHttp1Server
+  private var ready = !requireSync
+  private var syncing = false
 
   init {
     val loop = Application.get().controlEventLoop
@@ -44,6 +60,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
     server.post("$dockerNetworkPluginBase/*") { rctx: RoutingContext -> accessLog(rctx) }
     server.post("$dockerNetworkPluginBase/Plugin.Activate") { rctx: RoutingContext -> handshake(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.GetCapabilities") { rctx: RoutingContext -> capabilities(rctx) }
+    server.post("$dockerNetworkPluginBase/*") { rctx: RoutingContext -> routeSyncNetworks(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.CreateNetwork") { rctx: RoutingContext -> createNetwork(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.DeleteNetwork") { rctx: RoutingContext -> deleteNetwork(rctx) }
     server.post("$dockerNetworkPluginBase/NetworkDriver.CreateEndpoint") { rctx: RoutingContext -> createEndpoint(rctx) }
@@ -70,6 +87,11 @@ class DockerNetworkPluginController(val path: UDSPath) {
     rctx.allowNext()
   }
 
+  private suspend fun routeSyncNetworks(ctx: RoutingContext) {
+    scheduleSyncNetworks()
+    ctx.allowNext()
+  }
+
   private suspend fun handshake(rctx: RoutingContext) {
     rctx.conn.response(200).send(
       ObjectBuilder()
@@ -79,6 +101,8 @@ class DockerNetworkPluginController(val path: UDSPath) {
   }
 
   private suspend fun capabilities(rctx: RoutingContext) {
+    scheduleSyncNetworks()
+
     rctx.conn.response(200).send(
       ObjectBuilder()
         .put("Scope", "local")
@@ -93,8 +117,6 @@ class DockerNetworkPluginController(val path: UDSPath) {
       .build()
   }
 
-  private val optionsDockerNetworkGeneric = "com.docker.network.generic"
-
   private suspend fun createNetwork(rctx: RoutingContext) {
     val req = DockerNetworkDriver.CreateNetworkRequest()
     try {
@@ -107,16 +129,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       val ipv6Data = body.getArray("IPv6Data")
       parseIPData(req.ipv6Data, ipv6Data)
       req.options = body.getObject("Options")
-      req.optionsDockerNetworkGeneric = if (req.options.containsKey(optionsDockerNetworkGeneric)) {
-        val o = req.options.getObject(optionsDockerNetworkGeneric)
-        val m = HashMap<String, String>()
-        for (key in o.keySet()) {
-          m[key] = o.getString(key)
-        }
-        m
-      } else {
-        mapOf()
-      }
+      req.initGenericOptions()
     } catch (e: RuntimeException) {
       Logger.warn(LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send(err("invalid request body"))
@@ -129,6 +142,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
     return
   }
@@ -167,6 +181,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
@@ -196,6 +211,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     if (resp.netInterface == null) {
       rctx.conn.response(200).send(ObjectBuilder().build())
     } else {
@@ -234,6 +250,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
@@ -259,6 +276,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder()
       .putObject("InterfaceName") {
         put("SrcName", resp.interfaceName.srcName)
@@ -300,6 +318,7 @@ class DockerNetworkPluginController(val path: UDSPath) {
       rctx.conn.response(200).send(err(e.message))
       return
     }
+    Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
@@ -315,5 +334,124 @@ class DockerNetworkPluginController(val path: UDSPath) {
 
   override fun toString(): String {
     return "docker-network-plugin-controller -> path " + path.path
+  }
+
+  private suspend fun scheduleSyncNetworks() {
+    if (ready) {
+      return
+    }
+    if (syncing) {
+      while (syncing) {
+        sleep(1000)
+      }
+      if (ready) {
+        return
+      }
+      throw Exception("unable to sync networks from docker daemon")
+    }
+    syncing = true
+
+    val client = DockerClient(SelectorEventLoop.current().ensureNetEventLoop())
+    client.timeout = 1500
+    for (i in 0..2) {
+      if (i == 0) {
+        Logger.alert("sync networks from docker daemon")
+      } else {
+        Logger.alert("sync networks from docker daemon, already tried count: $i")
+      }
+      try {
+        syncNetworks(client)
+      } catch (e: SocketTimeoutException) {
+        Logger.warn(LogType.CONN_ERROR, "requesting docker daemon timed-out: " + Utils.formatErr(e))
+        continue
+      } catch (e: Throwable) {
+        Logger.error(LogType.SYS_ERROR, "failed to sync networks from docker daemon")
+        syncing = false
+        throw e
+      }
+      ready = true
+      break
+    }
+
+    if (!ready) {
+      vproxy.coroutine.launch {
+        val time = 10
+        Logger.alert("re-sync $time seconds later ...")
+        sleep(time * 1000)
+        if (!syncing) {
+          scheduleSyncNetworks()
+        }
+      }
+    }
+
+    syncing = false
+  }
+
+  /**
+   * request docker daemon for networks
+   */
+  private suspend fun syncNetworks(client: DockerClient) {
+    var cnt = 0
+    try {
+      val networks = client.listNetworks()
+      Logger.alert("retrieved docker networks: $networks")
+      for (network in networks) {
+        if (network.driver == null || network.driver!!.startsWith("wkgcass/vproxy-docker-plugin:").not()) {
+          continue
+        }
+        val createReq = DockerNetworkDriver.CreateNetworkRequest()
+        createReq.networkId = network.id
+        createReq.ipv4Data = LinkedList()
+        createReq.ipv6Data = LinkedList()
+        for (conf in network.ipam!!.config!!) {
+          val net = Network(conf.subnet!!)
+          val data = DockerNetworkDriver.IPData()
+          data.addressSpace = "" // not used
+          data.pool = net.toString()
+          data.gateway = conf.gateway ?: buildGateway(net)
+          data.auxAddresses = null // not used
+          if (net.ip is IPv4) {
+            createReq.ipv4Data!!.add(data)
+          } else {
+            assert(net.ip is IPv6)
+            createReq.ipv6Data!!.add(data)
+          }
+        }
+        createReq.options = ObjectBuilder()
+          .putObject(DockerNetworkDriver.CreateNetworkRequest.optionsDockerNetworkGenericKey) {
+            for ((k, v) in network.options!!) {
+              put(k, v)
+            }
+          }
+          .build()
+        createReq.initGenericOptions()
+
+        Logger.alert("creating network: $createReq")
+        driver.createNetwork(createReq)
+        cnt += 1
+      }
+      Shutdown.autoSave()
+
+      Logger.alert("$cnt networks created")
+    } catch (e: SocketTimeoutException) {
+      throw e
+    } catch (e: Throwable) {
+      Logger.error(LogType.SYS_ERROR, "failed to initiate networks ($cnt networks already created before error)", e)
+      try {
+        @Suppress("BlockingMethodInNonBlockingContext")
+        Files.delete(Path.of(DockerNetworkDriver.TEMPORARY_CONFIG_FILE))
+      } catch (e2: Throwable) {
+        Logger.error(LogType.FILE_ERROR, "failed to rollback " + DockerNetworkDriver.TEMPORARY_CONFIG_FILE, e2)
+      }
+      exitProcess(1)
+      @Suppress("UNREACHABLE_CODE")
+      throw e
+    }
+  }
+
+  private fun buildGateway(net: Network): String {
+    val bytes = net.ip.address.copyOf()
+    bytes[bytes.size - 1] = (bytes[bytes.size - 1] + 1).toByte()
+    return IP.from(bytes).formatToIPString() + "/" + net.mask
   }
 }

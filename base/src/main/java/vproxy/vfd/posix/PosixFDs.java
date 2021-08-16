@@ -91,6 +91,10 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffini
         return new UnixDomainServerSocketFD(posix);
     }
 
+    public UnixDomainSocketFD openUnixDomainSocketFD() throws IOException {
+        return new UnixDomainSocketFD(posix);
+    }
+
     @Override
     public TapDatagramFD openTap(String devPattern) throws IOException {
         TapInfo info = posix.createTapFD(devPattern, false);
