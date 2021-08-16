@@ -39,6 +39,7 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
   private val server: CoroutineHttp1Server
   private var ready = !requireSync
   private var syncing = false
+  private var scheduled = false
 
   init {
     val loop = Application.get().controlEventLoop
@@ -89,6 +90,9 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
 
   private suspend fun routeSyncNetworks(ctx: RoutingContext) {
     scheduleSyncNetworks()
+    if (!ready) {
+      throw Exception("sync networks failed")
+    }
     ctx.allowNext()
   }
 
@@ -336,24 +340,25 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
     return "docker-network-plugin-controller -> path " + path.path
   }
 
-  private suspend fun scheduleSyncNetworks() {
+  private suspend fun scheduleSyncNetworks(retries: Int = 2) {
     if (ready) {
       return
     }
     if (syncing) {
       while (syncing) {
-        sleep(1000)
+        sleep(500)
       }
       if (ready) {
         return
       }
-      throw Exception("unable to sync networks from docker daemon")
+      scheduleSyncNetworks(0)
+      return
     }
     syncing = true
 
     val client = DockerClient(SelectorEventLoop.current().ensureNetEventLoop())
     client.timeout = 1500
-    for (i in 0..2) {
+    for (i in 0..retries) {
       if (i == 0) {
         Logger.alert("sync networks from docker daemon")
       } else {
@@ -373,11 +378,13 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
       break
     }
 
-    if (!ready) {
+    if (!ready && !scheduled) {
+      scheduled = true
       vproxy.coroutine.launch {
         val time = 10
         Logger.alert("re-sync $time seconds later ...")
         sleep(time * 1000)
+        scheduled = false
         if (!syncing) {
           scheduleSyncNetworks()
         }
