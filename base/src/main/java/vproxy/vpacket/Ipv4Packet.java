@@ -4,7 +4,7 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
-import vproxy.vfd.IP;
+import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.IPv4;
 
 import java.util.Objects;
@@ -48,10 +48,10 @@ public class Ipv4Packet extends AbstractIpPacket {
             return "totalLength(" + totalLength + ") > input.length(" + bytes.length() + ")";
         }
         protocol = bytes.uint8(9);
-        byte[] srcBytes = bytes.sub(12, 4).toJavaArray();
-        src = IP.fromIPv4(srcBytes);
-        byte[] dstBytes = bytes.sub(16, 4).toJavaArray();
-        dst = IP.fromIPv4(dstBytes);
+        ByteArray srcBytes = bytes.sub(12, 4);
+        src = VProxyThread.current().getOrCacheIPv4(srcBytes);
+        ByteArray dstBytes = bytes.sub(16, 4);
+        dst = VProxyThread.current().getOrCacheIPv4(dstBytes);
         String err = initUpperLayerPacket(raw.sub(ihl * 4, totalLength - ihl * 4));
         if (err != null) {
             return err;
@@ -110,10 +110,10 @@ public class Ipv4Packet extends AbstractIpPacket {
         headerChecksum = bytes.uint16(10);
 
         // 12-20
-        byte[] srcBytes = bytes.sub(12, 4).toJavaArray();
-        src = IP.fromIPv4(srcBytes);
-        byte[] dstBytes = bytes.sub(16, 4).toJavaArray();
-        dst = IP.fromIPv4(dstBytes);
+        ByteArray srcBytes = bytes.sub(12, 4);
+        src = VProxyThread.current().getOrCacheIPv4(srcBytes);
+        ByteArray dstBytes = bytes.sub(16, 4);
+        dst = VProxyThread.current().getOrCacheIPv4(dstBytes);
 
         // options
         if (ihl > 5) {

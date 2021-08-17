@@ -104,6 +104,10 @@ public interface ByteArray {
         return new UnmodifiableByteArray(this);
     }
 
+    default ByteArray persist() {
+        return new PersistByteArray(this);
+    }
+
     default ByteArrayChannel toFullChannel() {
         return ByteArrayChannel.fromFull(this);
     }
