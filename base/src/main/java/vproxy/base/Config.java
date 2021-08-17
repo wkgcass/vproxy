@@ -11,8 +11,8 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 public class Config {
-    // a volatile long field is atomic, and we only read/assign this value, not increase
-    public static volatile long currentTimestamp = System.currentTimeMillis();
+    // we only read/assign this value, not increase
+    public static long currentTimestamp = System.currentTimeMillis();
     // initially we use the java impl because the FDProvider is not initiated yet
 
     // the default udpTimeout is the same as LVS
