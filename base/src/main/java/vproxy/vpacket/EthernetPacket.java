@@ -1,7 +1,6 @@
 package vproxy.vpacket;
 
 import vproxy.base.util.*;
-import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.MacAddress;
 
 import java.util.Objects;
@@ -73,8 +72,8 @@ public class EthernetPacket extends AbstractEthernetPacket {
         if (bytes.length() < (6 /*dst*/ + 6 /*src*/ + 2 /*type*/)) {
             return "input packet length too short for a ethernet packet";
         }
-        dst = VProxyThread.current().getOrCacheMac(bytes.sub(0, 6));
-        src = VProxyThread.current().getOrCacheMac(bytes.sub(6, 6));
+        dst = new MacAddress(bytes.sub(0, 6));
+        src = new MacAddress(bytes.sub(6, 6));
         type = bytes.uint16(12);
         if (type == Consts.ETHER_TYPE_8021Q) {
             // handle 802.1q tag

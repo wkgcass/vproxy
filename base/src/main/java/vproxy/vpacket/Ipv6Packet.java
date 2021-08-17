@@ -3,7 +3,7 @@ package vproxy.vpacket;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
-import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.IP;
 import vproxy.vfd.IPv6;
 
 import java.util.ArrayList;
@@ -46,8 +46,8 @@ public class Ipv6Packet extends AbstractIpPacket {
 
         ByteArray srcBytes = bytes.sub(8, 16);
         ByteArray dstBytes = bytes.sub(24, 16);
-        src = VProxyThread.current().getOrCacheIPv6(srcBytes);
-        dst = VProxyThread.current().getOrCacheIPv6(dstBytes);
+        src = IP.fromIPv6(srcBytes.toJavaArray());
+        dst = IP.fromIPv6(dstBytes.toJavaArray());
         String err = initUpperLayerPacket(nextHeader, raw.sub(40, payloadLength));
         if (err != null) {
             return err;
@@ -101,8 +101,8 @@ public class Ipv6Packet extends AbstractIpPacket {
 
         ByteArray srcBytes = bytes.sub(8, 16);
         ByteArray dstBytes = bytes.sub(24, 16);
-        src = VProxyThread.current().getOrCacheIPv6(srcBytes);
-        dst = VProxyThread.current().getOrCacheIPv6(dstBytes);
+        src = IP.fromIPv6(srcBytes.toJavaArray());
+        dst = IP.fromIPv6(dstBytes.toJavaArray());
 
         int skipLengthForExtHeaders = 0;
         extHeaders = new ArrayList<>();

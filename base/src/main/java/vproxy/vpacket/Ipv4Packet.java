@@ -4,7 +4,7 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
-import vproxy.base.util.thread.VProxyThread;
+import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
 
 import java.util.Objects;
@@ -49,9 +49,9 @@ public class Ipv4Packet extends AbstractIpPacket {
         }
         protocol = bytes.uint8(9);
         ByteArray srcBytes = bytes.sub(12, 4);
-        src = VProxyThread.current().getOrCacheIPv4(srcBytes);
+        src = IP.fromIPv4(srcBytes.toJavaArray());
         ByteArray dstBytes = bytes.sub(16, 4);
-        dst = VProxyThread.current().getOrCacheIPv4(dstBytes);
+        dst = IP.fromIPv4(dstBytes.toJavaArray());
         String err = initUpperLayerPacket(raw.sub(ihl * 4, totalLength - ihl * 4));
         if (err != null) {
             return err;
@@ -111,9 +111,9 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // 12-20
         ByteArray srcBytes = bytes.sub(12, 4);
-        src = VProxyThread.current().getOrCacheIPv4(srcBytes);
+        src = IP.fromIPv4(srcBytes.toJavaArray());
         ByteArray dstBytes = bytes.sub(16, 4);
-        dst = VProxyThread.current().getOrCacheIPv4(dstBytes);
+        dst = IP.fromIPv4(dstBytes.toJavaArray());
 
         // options
         if (ihl > 5) {
