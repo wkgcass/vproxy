@@ -6,14 +6,13 @@ import vproxyx.pktfiltergen.flow.Flows;
 
 import java.io.File;
 import java.nio.file.Files;
-import java.nio.file.StandardOpenOption;
 
 public class PacketFilterGenerator {
     private static final String HELP_STR = "" +
         "PacketFilterGenerator:" +
         "\n    class={classname}             class name to be generated" +
-        "\n    in={filename}                 input file name" +
-        "\n    out={filename}                output file name";
+        "\n    in={filename}                 the input file which contains flow tables" +
+        "\n    out={filename}                output java code file";
 
     public static void main0(String[] args) throws Exception {
         if (args.length == 0) {
