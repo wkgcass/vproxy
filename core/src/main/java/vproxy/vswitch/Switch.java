@@ -802,10 +802,9 @@ public class Switch {
             assert Logger.lowLevelDebug("no ingress filter on " + pkb.devin);
         } else {
             assert Logger.lowLevelDebug("run ingress filters " + ingressFilters + " on " + pkb);
-            var fullbufBackup = pkb.fullbuf;
             var res = SwitchUtils.applyFilters(ingressFilters, packetFilterHelper, pkb);
             if (res != FilterResult.PASS) {
-                handleIngressFilterResult(fullbufBackup, pkb, res);
+                handleIngressFilterResult(pkb, res);
                 return false;
             }
             assert Logger.lowLevelDebug("the filter returns pass");
@@ -838,10 +837,9 @@ public class Switch {
         }
     }
 
-    private void handleIngressFilterResult(ByteArray fullbufBackup, PacketBuffer pkb, FilterResult res) {
+    private void handleIngressFilterResult(PacketBuffer pkb, FilterResult res) {
         if (res == FilterResult.DROP) {
             assert Logger.lowLevelDebug("ingress filter drops the packet: " + pkb);
-            releaseUMemChunkIfPossible(fullbufBackup);
             return;
         }
         if (res == FilterResult.REDIRECT) {
@@ -850,7 +848,6 @@ public class Switch {
             var reinput = pkb.reinput;
             if (redirect == null && !reinput) {
                 Logger.error(LogType.IMPROPER_USE, "filter returns REDIRECT, but devredirect is not set and reinput is false");
-                releaseUMemChunkIfPossible(fullbufBackup);
                 return; // drop the packet
             }
             pkb.clearFilterFields();
@@ -864,12 +861,10 @@ public class Switch {
                 preHandleInputPkb(pkb); // the packet is not actually handled yet, so run the preHandle would be enough
             } else {
                 sendPacket(pkb, redirect);
-                releaseUMemChunkIfPossible(fullbufBackup);
             }
             return;
         }
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");
-        releaseUMemChunkIfPossible(fullbufBackup);
     }
 
     private void buildEthernetHeaderForTunDev(PacketBuffer pkb, MacAddress mac) {

@@ -5,16 +5,15 @@ import vproxy.base.util.objectpool.CursorList;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
 
-import java.util.LinkedList;
-import java.util.List;
+import java.util.ArrayList;
 
 public abstract class Iface {
     private int baseMTU;
     private boolean floodAllowed;
     protected IfaceInitParams.PacketCallback callback;
     private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
-    private final List<PacketFilter> ingressFilters = new LinkedList<>();
-    private final List<PacketFilter> egressFilters = new LinkedList<>();
+    private final ArrayList<PacketFilter> ingressFilters = new ArrayList<>();
+    private final ArrayList<PacketFilter> egressFilters = new ArrayList<>();
     private Annotations annotations;
 
     protected Iface() {
@@ -68,7 +67,7 @@ public abstract class Iface {
         return ingressFilters.remove(filter);
     }
 
-    public final List<PacketFilter> getIngressFilters() {
+    public final ArrayList<PacketFilter> getIngressFilters() {
         return ingressFilters;
     }
 
@@ -84,7 +83,7 @@ public abstract class Iface {
         return egressFilters.remove(filter);
     }
 
-    public final List<PacketFilter> getEgressFilters() {
+    public final ArrayList<PacketFilter> getEgressFilters() {
         return egressFilters;
     }
 

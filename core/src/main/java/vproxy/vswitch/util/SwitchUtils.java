@@ -19,7 +19,6 @@ import vproxy.vswitch.plugin.PacketFilter;
 
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 
 public class SwitchUtils {
     public static final int TOTAL_RCV_BUF_LEN = 4096;
@@ -267,8 +266,10 @@ public class SwitchUtils {
         return ether;
     }
 
-    public static FilterResult applyFilters(List<PacketFilter> filters, PacketFilterHelper helper, PacketBuffer pkb) {
-        for (var filter : filters) {
+    public static FilterResult applyFilters(ArrayList<PacketFilter> filters, PacketFilterHelper helper, PacketBuffer pkb) {
+        //noinspection ForLoopReplaceableByForEach
+        for (int i = 0; i < filters.size(); i++) {
+            PacketFilter filter = filters.get(i);
             var res = filter.handle(helper, pkb);
             if (res != FilterResult.PASS) {
                 return res;
