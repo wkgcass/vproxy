@@ -12,6 +12,7 @@ public enum AnnotationKeys {
 
     SWNetwork_DockerNetworkDriverNetworkId("docker-network-driver/network-id"),
     SWIp_DockerNetworkDriverGatewayIp("docker-network-driver/gateway-ip"),
+    SWIp_DockerNetworkDriverGatewaySubnet("docker-network-driver/gateway-subnet"),
     SWIface_DockerNetworkDriverEndpointId("docker-network-driver/endpoint-id"),
     SWIface_DockerNetworkDriverEndpointIpv4("docker-network-driver/endpoint-ipv4"),
     SWIface_DockerNetworkDriverEndpointIpv6("docker-network-driver/endpoint-ipv6"),

@@ -26,6 +26,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String NETWORK_NETWORK_ID_ANNOTATION = AnnotationKeys.SWNetwork_DockerNetworkDriverNetworkId.name;
     private static final MacAddress GATEWAY_MAC_ADDRESS = new MacAddress("02:00:00:00:00:20");
     private static final String GATEWAY_IP_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewayIp.name;
+    private static final String GATEWAY_SUBNET_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewaySubnet.name;
     private static final String GATEWAY_IPv4_FLAG_VALUE = "gateway-ipv4";
     private static final String GATEWAY_IPv6_FLAG_VALUE = "gateway-ipv6";
     private static final String VETH_ENDPOINT_ID_ANNOTATION = AnnotationKeys.SWIface_DockerNetworkDriverEndpointId.name;
@@ -242,19 +243,27 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
 
         // add ipv4 gateway ip
-        {
-            var gateway = IP.from(req.ipv4Data.get(0).__transformedGateway);
+        for (var data : req.ipv4Data) {
+            var gateway = IP.from(data.__transformedGateway);
             var mac = GATEWAY_MAC_ADDRESS;
-            net.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE)));
+            net.addIp(gateway, mac, new Annotations(Map.of(
+                GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE,
+                GATEWAY_SUBNET_ANNOTATION, data.pool
+            )));
             Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
         }
 
         if (!req.ipv6Data.isEmpty()) {
             // add ipv6 gateway ip
-            var gateway = IP.from(req.ipv6Data.get(0).__transformedGateway);
-            var mac = GATEWAY_MAC_ADDRESS;
-            net.addIp(gateway, mac, new Annotations(Collections.singletonMap(GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE)));
-            Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
+            for (var data : req.ipv6Data) {
+                var gateway = IP.from(data.__transformedGateway);
+                var mac = GATEWAY_MAC_ADDRESS;
+                net.addIp(gateway, mac, new Annotations(Map.of(
+                    GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE,
+                    GATEWAY_SUBNET_ANNOTATION, data.pool
+                )));
+                Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
+            }
         }
 
         persistConfig();
@@ -573,7 +582,29 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var net = findNetwork(sw, networkId);
         var xdp = findEndpoint(sw, endpointId);
         var ifName = xdp.nic + CONTAINER_VETH_SUFFIX;
+        var ipv4 = xdp.getAnnotations().other.get(VETH_ENDPOINT_IPv4_ANNOTATION);
         var ipv6 = xdp.getAnnotations().other.get(VETH_ENDPOINT_IPv6_ANNOTATION);
+
+        IPv4 ipv4Obj;
+        IPv6 ipv6Obj = null;
+        try {
+            if (ipv4.contains("/")) {
+                ipv4 = ipv4.substring(0, ipv4.indexOf("/"));
+            }
+            ipv4Obj = (IPv4) IP.from(ipv4);
+        } catch (RuntimeException e) {
+            throw new Exception("invalid value for " + VETH_ENDPOINT_IPv4_ANNOTATION + ": " + ipv4);
+        }
+        try {
+            if (ipv6 != null) {
+                if (ipv6.contains("/")) {
+                    ipv6 = ipv6.substring(0, ipv6.indexOf("/"));
+                }
+                ipv6Obj = (IPv6) IP.from(ipv6);
+            }
+        } catch (RuntimeException e) {
+            throw new Exception("invalid value for " + VETH_ENDPOINT_IPv6_ANNOTATION + ": " + ipv6);
+        }
 
         if (net.v6network == null && ipv6 != null) {
             throw new Exception("internal error: should not reach here: " +
@@ -584,12 +615,23 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         String gatewayV6 = null;
         for (var info : net.ips.entries()) {
             var value = info.annotations.other.get(GATEWAY_IP_ANNOTATION);
-            if (value != null) {
-                if (value.equals(GATEWAY_IPv4_FLAG_VALUE)) {
-                    gatewayV4 = info.ip.formatToIPString();
-                } else if (value.equals(GATEWAY_IPv6_FLAG_VALUE)) {
-                    gatewayV6 = info.ip.formatToIPString();
-                }
+            if (value == null) {
+                continue;
+            }
+            Network network;
+            String subnet = info.annotations.other.get(GATEWAY_SUBNET_ANNOTATION);
+            try {
+                network = new Network(subnet);
+            } catch (RuntimeException e) {
+                throw new Exception("invalid value for " + GATEWAY_SUBNET_ANNOTATION + ": " + subnet, e);
+            }
+            if (!network.contains(ipv4Obj) && (ipv6Obj == null || !network.contains(ipv6Obj))) {
+                continue;
+            }
+            if (value.equals(GATEWAY_IPv4_FLAG_VALUE)) {
+                gatewayV4 = info.ip.formatToIPString();
+            } else if (value.equals(GATEWAY_IPv6_FLAG_VALUE)) {
+                gatewayV6 = info.ip.formatToIPString();
             }
         }
         if (gatewayV4 == null) {
