@@ -30,7 +30,6 @@ public class MacTable {
         var entry = macMap.get(mac);
         if (entry != null && entry.iface.equals(iface)) {
             entry.resetTimer();
-            SwitchUtils.updateBothSideVni(entry.iface, iface);
             return;
         }
         // otherwise need to overwrite the entry

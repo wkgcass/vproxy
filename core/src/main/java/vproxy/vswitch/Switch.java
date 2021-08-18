@@ -372,8 +372,10 @@ public class Switch {
         var timer = ifaces.get(iface);
         if (timer == null) {
             timer = new Switch.IfaceTimer(eventLoop.getSelectorEventLoop(), IFACE_TIMEOUT, iface);
+            timer.record();
+        } else {
+            timer.resetTimer();
         }
-        timer.record(iface);
     }
 
     public void delTap(String devName) throws NotFoundException {
@@ -1047,8 +1049,7 @@ public class Switch {
             super.resetTimer();
         }
 
-        void record(Iface newIface) {
-            SwitchUtils.updateBothSideVni(iface, newIface);
+        void record() {
             if (ifaces.putIfAbsent(iface, this) == null) {
                 Logger.alert(iface + " connected to Switch:" + alias);
                 ifaceAdded(iface);
