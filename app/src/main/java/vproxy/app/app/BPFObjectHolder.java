@@ -18,11 +18,11 @@ public class BPFObjectHolder {
         return new ArrayList<>(map.keySet());
     }
 
-    public BPFObject add(String filepath, String programName, boolean isAutogenEbpf, String nicName,
+    public BPFObject add(String filepath, String programName, String nicName,
                          BPFMode mode, boolean forceAttach) throws AlreadyExistException, IOException {
         if (map.containsKey(nicName))
             throw new AlreadyExistException("bpf-object", nicName);
-        var bpf = BPFObject.loadAndAttachToNic(filepath, programName, isAutogenEbpf, nicName, mode, forceAttach);
+        var bpf = BPFObject.loadAndAttachToNic(filepath, programName, nicName, mode, forceAttach);
         map.put(bpf.nic, bpf);
         return bpf;
     }
