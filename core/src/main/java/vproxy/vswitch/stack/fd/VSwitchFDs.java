@@ -21,7 +21,7 @@ public class VSwitchFDs implements FDs {
 
     @Override
     public DatagramFD openDatagramFD() {
-        throw new UnsupportedOperationException("not supported");
+        return new VSwitchDatagramFD(ctx);
     }
 
     @Override

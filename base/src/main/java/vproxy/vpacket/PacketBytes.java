@@ -8,6 +8,13 @@ import java.util.Objects;
 public class PacketBytes extends AbstractPacket {
     private ByteArray bytes;
 
+    public PacketBytes() {
+    }
+
+    public PacketBytes(ByteArray bytes) {
+        setBytes(bytes);
+    }
+
     @Override
     public String from(PacketDataBuffer raw) {
         this.bytes = raw.pktBuf;

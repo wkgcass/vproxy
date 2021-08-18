@@ -292,7 +292,7 @@ public class DNSServer {
     protected IP getLocalAddressFor(IPPort remote) {
         // we may create a new sock to respond to the remote
         {
-            try (DatagramFD channel = FDProvider.get().openDatagramFD()) {
+            try (DatagramFD channel = getFDs().openDatagramFD()) {
                 channel.connect(remote);
                 IP addr = channel.getLocalAddress().getAddress();
                 if (!addr.isAnyLocalAddress()) {
@@ -403,7 +403,7 @@ public class DNSServer {
         if (sock == null) { // udp sock not created yet
             // need to check whether it's bond
             if (Config.checkBind) {
-                ServerSock.checkBind(bindAddress);
+                ServerSock.checkBind(bindAddress, getFDs());
             }
         }
         if (!needToStart) {
@@ -438,7 +438,7 @@ public class DNSServer {
 
         Logger.alert("dns server " + alias + " " + bindAddress + " starts on loop " + ((EventLoopWrapper) loop).alias);
 
-        sock = FDProvider.get().openDatagramFD();
+        sock = getFDs().openDatagramFD();
         sock.configureBlocking(false);
         if (ServerSock.supportReusePort()) {
             sock.setOption(StandardSocketOptions.SO_REUSEPORT, true);
@@ -523,6 +523,10 @@ public class DNSServer {
 
         // start reloading hosts
         loop.getSelectorEventLoop().period(30_000, () -> hosts = Resolver.getHosts());
+    }
+
+    protected FDs getFDs() {
+        return FDProvider.get().getProvided();
     }
 
     public void stop() {

@@ -168,11 +168,11 @@ public class Switch {
         for (var net : networks.values()) {
             for (var entry : net.conntrack.listListenEntries()) {
                 entry.destroy();
-                net.conntrack.removeListen(entry.listening);
+                net.conntrack.removeTcpListen(entry.listening);
             }
             for (var entry : net.conntrack.listTcpEntries()) {
                 entry.destroy();
-                net.conntrack.remove(entry.source, entry.destination);
+                net.conntrack.removeTcp(entry.source, entry.destination);
             }
         }
     }

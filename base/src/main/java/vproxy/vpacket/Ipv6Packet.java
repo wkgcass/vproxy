@@ -151,6 +151,9 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     private String initUpperLayerPacket(int protocol, PacketDataBuffer raw) {
+        if (packet != null) {
+            return null;
+        }
         if (protocol == Consts.IP_PROTOCOL_ICMP || protocol == Consts.IP_PROTOCOL_ICMPv6) {
             packet = new IcmpPacket(protocol == Consts.IP_PROTOCOL_ICMPv6);
         } else if (protocol == Consts.IP_PROTOCOL_TCP) {

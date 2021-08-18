@@ -3,8 +3,9 @@ package vproxy.vswitch.stack.fd;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.ServerSocketFD;
 import vproxy.vfd.SocketFD;
-import vproxy.vpacket.conntrack.tcp.ListenEntry;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
+import vproxy.vpacket.conntrack.tcp.TcpListenEntry;
+import vproxy.vpacket.conntrack.tcp.TcpListenHandler;
 import vproxy.vpacket.conntrack.tcp.TcpUtils;
 import vproxy.vswitch.PacketBuffer;
 
@@ -12,7 +13,7 @@ import java.io.IOException;
 
 public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
     private IPPort local;
-    private ListenEntry entry;
+    private TcpListenEntry entry;
 
     private boolean isReadable = false;
 
@@ -63,11 +64,11 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
         if (local != null) {
             throw new IOException("already bond " + local);
         }
-        var lsnCtx = ctx.conntrack.lookupListen(l4addr);
+        var lsnCtx = ctx.conntrack.lookupTcpListen(l4addr);
         if (lsnCtx != null) {
             throw new IOException("already listening on " + l4addr);
         }
-        this.entry = ctx.conntrack.listen(l4addr, new ListenHandler());
+        this.entry = ctx.conntrack.listenTcp(l4addr, new ListenHandler());
         this.local = l4addr;
     }
 
@@ -102,13 +103,13 @@ public class VSwitchServerSocketFD extends VSwitchFD implements ServerSocketFD {
             PacketBuffer pkb = PacketBuffer.fromPacket(ctx.network, TcpUtils.buildIpResponse(e, TcpUtils.buildRstResponse(e)));
             ctx.L4.output(pkb);
         }
-        ctx.conntrack.removeListen(local);
+        ctx.conntrack.removeTcpListen(local);
         entry.destroy();
     }
 
-    private class ListenHandler implements vproxy.vpacket.conntrack.tcp.ListenHandler {
+    private class ListenHandler implements TcpListenHandler {
         @Override
-        public void readable(ListenEntry entry) {
+        public void readable(TcpListenEntry entry) {
             setReadable();
         }
     }

@@ -59,7 +59,7 @@ public class UdpPacket extends TransportPacket {
         ret.int16(0, srcPort);
         ret.int16(2, dstPort);
         ret.int16(4, length);
-        ret.int16(6, 0);
+        ret.int16(6, 0); // leave the checksum empty
         ret = ret.concat(data.getRawPacket());
         return ret;
     }
@@ -71,7 +71,10 @@ public class UdpPacket extends TransportPacket {
         var toCalculate = pseudo.concat(common);
         checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        // build checksum
+        if (checksum == 0) {
+            checksum = 0xffff;
+        }
+        // write checksum
         common.int16(6, checksum);
 
         // done
@@ -86,7 +89,10 @@ public class UdpPacket extends TransportPacket {
         var toCalculate = pseudo.concat(common);
         checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        // build checksum
+        if (checksum == 0) {
+            checksum = 0xffff;
+        }
+        // write checksum
         common.int16(6, checksum);
 
         // done
@@ -106,7 +112,7 @@ public class UdpPacket extends TransportPacket {
         var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
         if (cksum == 0) {
-            cksum = -1;
+            cksum = 0xffff;
         }
         checksum = cksum;
         raw.pktBuf.int16(6, cksum);
@@ -121,7 +127,7 @@ public class UdpPacket extends TransportPacket {
         var cksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
         if (cksum == 0) {
-            cksum = -1;
+            cksum = 0xffff;
         }
         checksum = cksum;
         raw.pktBuf.int16(6, cksum);

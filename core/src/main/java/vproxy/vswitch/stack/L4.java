@@ -7,11 +7,11 @@ import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
-import vproxy.vpacket.AbstractIpPacket;
-import vproxy.vpacket.Ipv4Packet;
-import vproxy.vpacket.Ipv6Packet;
-import vproxy.vpacket.TcpPacket;
+import vproxy.vpacket.*;
 import vproxy.vpacket.conntrack.tcp.*;
+import vproxy.vpacket.conntrack.udp.Datagram;
+import vproxy.vpacket.conntrack.udp.UdpListenEntry;
+import vproxy.vpacket.conntrack.udp.UdpUtils;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.VirtualNetwork;
@@ -43,6 +43,10 @@ public class L4 {
             handleTcp(pkb);
             return true;
         }
+        if (pkb.udp != null) {
+            handleUdp(pkb);
+            return true;
+        }
         // implement more L4 protocols in the future
         assert Logger.lowLevelDebug("this packet is not handled by L4");
         return true;
@@ -59,23 +63,23 @@ public class L4 {
             var tcpPkt = (TcpPacket) ipPkt.getPacket();
             IPPort src = new IPPort(ipPkt.getSrc(), tcpPkt.getSrcPort());
             IPPort dst = new IPPort(ipPkt.getDst(), tcpPkt.getDstPort());
-            var tcpEntry = pkb.network.conntrack.lookup(src, dst);
+            var tcpEntry = pkb.network.conntrack.lookupTcp(src, dst);
             if (tcpEntry != null) {
                 pkb.tcp = tcpEntry;
                 result = true;
             } else if (tcpPkt.getFlags() == Consts.TCP_FLAGS_SYN) {
                 // only consider the packets with only SYN on it
-                var listenEntry = pkb.network.conntrack.lookupListen(dst);
+                var listenEntry = pkb.network.conntrack.lookupTcpListen(dst);
                 if (listenEntry != null) {
                     assert Logger.lowLevelDebug("got new connection");
 
                     // check backlog
-                    if (listenEntry.synBacklog.size() >= ListenEntry.MAX_SYN_BACKLOG_SIZE) {
+                    if (listenEntry.synBacklog.size() >= TcpListenEntry.MAX_SYN_BACKLOG_SIZE) {
                         assert Logger.lowLevelDebug("syn-backlog is full");
                         // here we reset the connection instead of dropping it like linux
                         pkb.needTcpReset = true;
                     } else {
-                        tcpEntry = pkb.network.conntrack.create(listenEntry, src, dst, tcpPkt.getSeqNum());
+                        tcpEntry = pkb.network.conntrack.createTcp(listenEntry, src, dst, tcpPkt.getSeqNum());
                         listenEntry.synBacklog.add(tcpEntry);
                         pkb.tcp = tcpEntry;
                     }
@@ -84,6 +88,14 @@ public class L4 {
             } else {
                 assert Logger.lowLevelDebug("need to reset");
                 pkb.needTcpReset = true;
+                result = true;
+            }
+        } else if (ipPkt.getPacket() instanceof UdpPacket) {
+            var udpPkt = (UdpPacket) ipPkt.getPacket();
+            IPPort dst = new IPPort(ipPkt.getDst(), udpPkt.getDstPort());
+            var listenEntry = pkb.network.conntrack.lookupUdpListen(dst);
+            if (listenEntry != null) {
+                pkb.udp = listenEntry;
                 result = true;
             }
         }
@@ -409,6 +421,11 @@ public class L4 {
         Logger.shouldNotHappen("unsupported yet: time-wait state");
     }
 
+    private void handleUdp(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("handleUdp");
+        pkb.udp.receivingQueue.store(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(), pkb.udpPkt.getData().getRawPacket());
+    }
+
     public void output(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("L4.output(" + pkb + ")");
         L3.output(pkb);
@@ -530,11 +547,10 @@ public class L4 {
         output(pkb);
 
         tcp.setState(TcpState.CLOSED);
-        network.conntrack.remove(tcp.source, tcp.destination);
+        network.conntrack.removeTcp(tcp.source, tcp.destination);
     }
 
     private void sendTcpPsh(VirtualNetwork network, TcpEntry tcp, Segment s) {
-        VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("sendTcpPsh(" + network + "," + tcp + "," + s + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
@@ -548,7 +564,6 @@ public class L4 {
     }
 
     private void sendTcpFin(VirtualNetwork network, TcpEntry tcp) {
-        VProxyThread.current().newUuidDebugInfo();
         assert Logger.lowLevelDebug("sendTcpFin(" + network + "," + tcp + ")");
 
         TcpPacket tcpPkt = TcpUtils.buildCommonTcpResponse(tcp);
@@ -558,5 +573,22 @@ public class L4 {
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
         L3.output(pkb);
+    }
+
+    public void sendUdp(VirtualNetwork network, UdpListenEntry udp) {
+        VProxyThread.current().newUuidDebugInfo();
+        assert Logger.lowLevelDebug("sendUdp(" + network + "," + udp + ")");
+
+        while (true) {
+            Datagram dg = udp.sendingQueue.fetch();
+            if (dg == null) {
+                break;
+            }
+            UdpPacket udpPkt = UdpUtils.buildCommonUdpResponse(udp, dg);
+            AbstractIpPacket ipPkt = UdpUtils.buildIpResponse(udp, dg, udpPkt);
+
+            PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
+            L3.output(pkb);
+        }
     }
 }

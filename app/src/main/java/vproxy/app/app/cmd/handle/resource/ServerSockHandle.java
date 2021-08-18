@@ -5,7 +5,7 @@ import vproxy.app.app.cmd.ResourceType;
 import vproxy.base.connection.ServerSock;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.vfd.IPPort;
-import vproxy.vpacket.conntrack.tcp.ListenEntry;
+import vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
@@ -79,7 +79,7 @@ public class ServerSockHandle {
             this.serverSock = serverSock;
         }
 
-        public ServerSock2(ListenEntry listenEntry) {
+        public ServerSock2(TcpListenEntry listenEntry) {
             this.listeningAddress = listenEntry.listening;
             this.serverSock = null;
         }

@@ -136,6 +136,9 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     private String initUpperLayerPacket(PacketDataBuffer raw) {
+        if (packet != null) {
+            return null;
+        }
         if (protocol == Consts.IP_PROTOCOL_ICMP) {
             packet = new IcmpPacket(false);
         } else if (protocol == Consts.IP_PROTOCOL_TCP) {

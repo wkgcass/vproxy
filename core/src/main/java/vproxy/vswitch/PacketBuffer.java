@@ -5,6 +5,7 @@ import vproxy.base.util.Logger;
 import vproxy.vfd.IP;
 import vproxy.vpacket.*;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
+import vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import vproxy.vswitch.iface.Iface;
 
 import java.util.Collection;
@@ -51,6 +52,7 @@ public class PacketBuffer extends PacketDataBuffer {
     public AbstractEthernetPacket pkt; // not null if it's an input packet
     public AbstractIpPacket ipPkt;
     public TcpPacket tcpPkt;
+    public UdpPacket udpPkt;
 
     // ----- helper fields -----
     // l3
@@ -58,6 +60,7 @@ public class PacketBuffer extends PacketDataBuffer {
     // l4
     public TcpEntry tcp = null;
     public boolean needTcpReset = false; // this field is only used in L4.input
+    public UdpListenEntry udp = null;
 
     // ----- used by packet filters -----
     // redirect
@@ -226,6 +229,11 @@ public class PacketBuffer extends PacketDataBuffer {
             } else {
                 this.tcpPkt = null;
             }
+            if (ipPkt.getPacket() instanceof UdpPacket) {
+                this.udpPkt = (UdpPacket) ipPkt.getPacket();
+            } else {
+                this.udpPkt = null;
+            }
         } else {
             this.ipPkt = null;
         }
@@ -320,6 +328,9 @@ public class PacketBuffer extends PacketDataBuffer {
         }
         if (pkt == null) {
             pkt = tcpPkt;
+        }
+        if (pkt == null) {
+            pkt = udpPkt;
         }
         return "PacketBuffer{" +
             "in=" + devin +

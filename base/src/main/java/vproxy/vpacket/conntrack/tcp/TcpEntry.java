@@ -40,10 +40,10 @@ public class TcpEntry {
     // only one of these fields can be null
     // {
     private ConnectionHandler connectionHandler;
-    private ListenEntry parent;
+    private TcpListenEntry parent;
     // }
 
-    public TcpEntry(ListenEntry listenEntry, IPPort source, IPPort destination, long seq) {
+    public TcpEntry(TcpListenEntry listenEntry, IPPort source, IPPort destination, long seq) {
         this.parent = listenEntry;
         this.source = source;
         this.destination = destination;
@@ -52,7 +52,7 @@ public class TcpEntry {
         this.receivingQueue = new ReceivingQueue(seq + 1 /* the sequence is syn_packet.seq + 1 */);
     }
 
-    public ListenEntry getParent() {
+    public TcpListenEntry getParent() {
         return parent;
     }
 

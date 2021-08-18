@@ -3,12 +3,15 @@ package vproxy.vswitch;
 import vproxy.base.connection.NetEventLoop;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.Annotations;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Network;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.XException;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
+import vproxy.vfd.*;
 import vproxy.vpacket.conntrack.Conntrack;
+import vproxy.vpacket.conntrack.udp.UdpListenEntry;
+
+import java.util.concurrent.ThreadLocalRandom;
 
 public class VirtualNetwork {
     public final int vni;
@@ -68,6 +71,37 @@ public class VirtualNetwork {
             mac = ips.lookup(ip);
         }
         return mac;
+    }
+
+    private static final int IP_LOCAL_PORT_MIN = 32768;
+    private static final int IP_LOCAL_PORT_MAX = 61000;
+
+    public IPPort findFreeUdpIPPort(IPPort remote) {
+        for (var ip : ips.allIps()) {
+            if (remote.getAddress() instanceof IPv4) {
+                if (!(ip instanceof IPv4)) continue;
+            } else {
+                if (!(ip instanceof IPv6)) continue;
+            }
+            IPPort ipport = findFreeUdpIPPort(ip);
+            if (ipport != null) {
+                return ipport;
+            }
+        }
+        return null;
+    }
+
+    private IPPort findFreeUdpIPPort(IP ip) {
+        for (int i = 0; i < 100; ++i) { // randomly retry 100 times
+            int port = ThreadLocalRandom.current().nextInt(IP_LOCAL_PORT_MAX - IP_LOCAL_PORT_MIN) + IP_LOCAL_PORT_MIN;
+            var ipport = new IPPort(ip, port);
+            UdpListenEntry entry = conntrack.lookupUdpListen(ipport);
+            if (entry == null) {
+                return ipport;
+            }
+        }
+        assert Logger.lowLevelDebug("unable to allocate a free port for udp from " + ip);
+        return null;
     }
 
     public Annotations getAnnotations() {
