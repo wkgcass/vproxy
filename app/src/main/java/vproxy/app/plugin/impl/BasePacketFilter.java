@@ -34,6 +34,20 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
 
     @Override
     public final void init(PluginInitParams params) throws Exception {
+        // parse arguments
+        String selectSwitch = null;
+        for (String s : params.arguments) {
+            if (s.startsWith("switch=")) {
+                selectSwitch = s.substring("switch=".length()).trim();
+                if (selectSwitch.isEmpty()) {
+                    throw new Exception("invalid value for switch: should not be an empty string");
+                }
+            }
+        }
+        if (selectSwitch == null) {
+            Logger.warn(LogType.ALERT, "switch={...} is not provided, the plugin will try to select any available switch");
+        }
+
         var app = Application.get();
         if (app == null) {
             throw new Exception("Application is not initiated");
@@ -45,6 +59,9 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
                 sw = app.switchHolder.get(name);
             } catch (NotFoundException e) {
                 Logger.warn(LogType.ALERT, "failed to retrieve switch " + name, e);
+                continue;
+            }
+            if (selectSwitch != null && !selectSwitch.equals(sw.alias)) {
                 continue;
             }
             if (handleSwitch(sw)) {
