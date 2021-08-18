@@ -40,6 +40,7 @@ public class SystemCommand {
         "\n        System: add plugin ${alias}                load a plugin" +
         "\n                           url   ${url}" +
         "\n                           class ${classname}" +
+        "\n                           [arguments ${xx,yy,zz,...}]" +
         "\n        System: list-detail plugin                 check plugins" +
         "\n        System: update plugin ${alias}             enable or disable a plugin" +
         "\n                              {enable|disable}" +

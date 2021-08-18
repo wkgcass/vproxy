@@ -60,6 +60,7 @@ public enum Param {
 
     url("url"),
     cls("class"),
+    args("arguments"),
     ;
     public final String fullname;
 

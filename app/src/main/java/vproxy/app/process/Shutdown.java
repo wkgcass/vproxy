@@ -872,6 +872,9 @@ public class Shutdown {
                 cmd = "System: add plugin " + plugin.alias
                     + " url " + Arrays.stream(plugin.urls).map(URL::toString).collect(Collectors.joining(","))
                     + " class " + plugin.plugin.getClass().getName();
+                if (plugin.args.length > 0) {
+                    cmd += " arguments " + Utils.formatArrayToStringCompact(plugin.args);
+                }
                 commands.add(cmd);
                 if (plugin.isEnabled()) {
                     cmd = "System: update plugin " + plugin.alias + " enable";

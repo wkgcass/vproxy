@@ -4,6 +4,7 @@ import vproxy.app.app.Application;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Flag;
 import vproxy.app.app.cmd.Param;
+import vproxy.app.app.cmd.handle.param.ArgsHandle;
 import vproxy.app.app.cmd.handle.param.URLHandle;
 import vproxy.app.plugin.PluginWrapper;
 
@@ -18,7 +19,11 @@ public class PluginHandle {
     public static void add(Command cmd) throws Exception {
         URL[] urls = URLHandle.get(cmd);
         String cls = cmd.args.get(Param.cls);
-        Application.get().pluginHolder.add(cmd.resource.alias, urls, cls);
+        String[] args = new String[0];
+        if (cmd.args.containsKey(Param.args)) {
+            args = ArgsHandle.get(cmd);
+        }
+        Application.get().pluginHolder.add(cmd.resource.alias, urls, cls, args);
     }
 
     public static List<String> names() {

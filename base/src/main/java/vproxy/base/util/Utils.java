@@ -112,6 +112,20 @@ public class Utils {
         }
     }
 
+    public static <T> String formatArrayToStringCompact(T[] arr) {
+        StringBuilder sb = new StringBuilder();
+        boolean isFirst = true;
+        for (T s : arr) {
+            if (isFirst) {
+                isFirst = false;
+            } else {
+                sb.append(",");
+            }
+            sb.append(s);
+        }
+        return sb.toString();
+    }
+
     public static int zeros(byte b) {
         if ((b & /*-------*/0b1) == /*-------*/0b1) return 0;
         if ((b & /*------*/0b10) == /*------*/0b10) return 1;

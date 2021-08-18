@@ -1,18 +1,21 @@
 package vproxy.app.plugin;
 
 import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 
 import java.net.URL;
 
 public class PluginWrapper {
     public final String alias;
     public final URL[] urls;
+    public final String[] args;
     public final Plugin plugin;
     private boolean enabled;
 
-    public PluginWrapper(String alias, URL[] urls, Plugin plugin) {
+    public PluginWrapper(String alias, URL[] urls, String[] args, Plugin plugin) {
         this.alias = alias;
         this.urls = urls;
+        this.args = args;
         this.plugin = plugin;
     }
 
@@ -43,6 +46,7 @@ public class PluginWrapper {
         return alias + " ->" +
             " id " + plugin.id() +
             " class " + plugin.getClass().getName() +
+            " arguments " + Utils.formatArrayToStringCompact(args) +
             " " + (enabled ? "enabled" : "disabled");
     }
 }

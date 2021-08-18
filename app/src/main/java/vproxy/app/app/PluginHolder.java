@@ -21,14 +21,14 @@ public class PluginHolder {
     }
 
     @SuppressWarnings("DuplicateThrows")
-    public PluginWrapper add(String alias, URL[] urls, String classname) throws AlreadyExistException, Exception {
+    public PluginWrapper add(String alias, URL[] urls, String classname, String[] args) throws AlreadyExistException, Exception {
         if (map.containsKey(alias)) {
             throw new AlreadyExistException("plugin", alias);
         }
         Plugin plugin = PluginLoader.load(urls, classname);
-        PluginWrapper wrapper = new PluginWrapper(alias, urls, plugin);
+        PluginWrapper wrapper = new PluginWrapper(alias, urls, args, plugin);
         try {
-            wrapper.plugin.init(createPluginParams());
+            wrapper.plugin.init(createPluginParams(args));
         } catch (Exception e) {
             throw new Exception("init plugin failed, err: " + e.getMessage(), e);
         }
@@ -36,8 +36,8 @@ public class PluginHolder {
         return wrapper;
     }
 
-    private PluginInitParams createPluginParams() {
-        return new PluginInitParams();
+    private PluginInitParams createPluginParams(String[] args) {
+        return new PluginInitParams(args);
     }
 
     public PluginWrapper get(String alias) throws NotFoundException {

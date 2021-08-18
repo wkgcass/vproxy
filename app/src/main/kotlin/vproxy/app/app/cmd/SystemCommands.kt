@@ -120,6 +120,7 @@ class SystemCommands private constructor() : Commands() {
         params = {
           it + ResActParam(Param.url, required) { URLHandle.get(it) }
           it + ResActParam(Param.cls, required)
+          it + ResActParam(Param.args)
         }
       ) {
         PluginHandle.add(it)
