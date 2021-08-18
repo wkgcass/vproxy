@@ -26,12 +26,29 @@ public class ArpTable {
     }
 
     public void record(MacAddress mac, IP ip) {
+        record(mac, ip, false);
+    }
+
+    public void record(MacAddress mac, IP ip, boolean persist) {
         var entry = ipMap.get(ip);
         if (entry != null && entry.mac.equals(mac)) {
-            entry.resetTimer();
-            return;
+            if (persist) {
+                if (entry.getTimeout() == -1) {
+                    return;
+                } else {
+                    entry.cancel();
+                }
+            } else {
+                if (entry.getTimeout() == -1) {
+                    entry.cancel();
+                } else {
+                    entry.resetTimer();
+                    return;
+                }
+            }
         }
-        entry = new ArpEntry(mac, ip);
+        // otherwise need to overwrite the entry
+        entry = new ArpEntry(mac, ip, persist);
         entry.record();
     }
 
@@ -73,12 +90,19 @@ public class ArpTable {
         return entries;
     }
 
+    public void remove(MacAddress mac) {
+        Set<ArpEntry> entries = new HashSet<>(macMap.get(mac));
+        for (ArpEntry entry : entries) {
+            entry.cancel();
+        }
+    }
+
     public class ArpEntry extends Timer {
         public final MacAddress mac;
         public final IP ip;
 
-        private ArpEntry(MacAddress mac, IP ip) {
-            super(ArpTable.this.loop, timeout);
+        private ArpEntry(MacAddress mac, IP ip, boolean persist) {
+            super(ArpTable.this.loop, persist ? -1 : timeout);
             this.mac = mac;
             this.ip = ip;
         }
@@ -115,6 +139,14 @@ public class ArpTable {
                     }
                 }
             }
+        }
+
+        @Override
+        public void resetTimer() {
+            if (getTimeout() == -1) {
+                return;
+            }
+            super.resetTimer();
         }
 
         @Override

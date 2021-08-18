@@ -440,6 +440,8 @@ public class HelpCommand {
             "determining the key of the corresponding xsk when putting into a bpf map"),
         busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
             "and may set the SO_BUSY_POLL_BUDGET as well"),
+        ip("ip", null, "ip address"),
+        iface("iface", null, "connected interface in switch"),
         ;
         public final String param;
         public final String shortVer;
@@ -1215,6 +1217,15 @@ public class HelpCommand {
             )),
         arp("arp", null, "arp and mac table entries",
             Arrays.asList(
+                new ResActMan(ActMan.addto, "create a mac entry and/or an arp entry", Arrays.asList(
+                    new ResActParamMan(ParamMan.ip, "create arp entry with the specified ip", ""),
+                    new ResActParamMan(ParamMan.iface, "create mac entry with the specified iface", "")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "add arp 11:22:33:44:55:66 to vpc 1 in switch sw0 iface xdp:b1 ip 9.8.7.6",
+                        "\"OK\""
+                    )
+                )),
                 new ResActMan(ActMan.list, "count entries in a vpc", Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "list arp in vpc 1314 in switch sw0",
@@ -1226,6 +1237,12 @@ public class HelpCommand {
                         "list-detail arp in vpc 1314 in switch sw0",
                         "1) \"aa:92:96:2f:3b:7d        10.213.0.1             Iface(127.0.0.1:54042)        ARP-TTL:14390        MAC-TTL:299\"\n" +
                             "2) \"fa:e8:aa:6c:45:f4        10.213.0.2             Iface(127.0.0.1:57374)        ARP-TTL:14390        MAC-TTL:299\""
+                    )
+                )),
+                new ResActMan(ActMan.removefrom, "remove arp and mac table entries from a vpc", Collections.emptyList(), Collections.singletonList(
+                    new Tuple<>(
+                        "remove arp 11:22:33:44:55:66 from vpc 1 in switch sw0",
+                        "\"OK\""
                     )
                 ))
             )),

@@ -8,6 +8,7 @@ public enum Param {
     elg("event-loop-group"),
     aelg("acceptor-elg"),
     addr("address"),
+    ip("ip"),
     via("via"),
     ups("upstream"),
     inbuffersize("in-buffer-size"),
@@ -36,6 +37,7 @@ public enum Param {
     arptabletimeout("arp-table-timeout"),
     mac("mac"),
     vni("vni"),
+    iface("iface"),
     postscript("post-script"),
 
     path("path"),

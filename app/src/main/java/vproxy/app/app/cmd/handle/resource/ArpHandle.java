@@ -1,7 +1,10 @@
 package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.Application;
+import vproxy.app.app.cmd.Command;
+import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
+import vproxy.app.app.cmd.handle.param.IpParamHandle;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
@@ -17,6 +20,34 @@ import java.util.List;
 
 public class ArpHandle {
     private ArpHandle() {
+    }
+
+    public static void checkMacName(Resource self) throws Exception {
+        try {
+            new MacAddress(self.alias);
+        } catch (RuntimeException e) {
+            throw new Exception("arp name should be mac address");
+        }
+    }
+
+    public static void add(Command cmd) throws Exception {
+        MacAddress mac = new MacAddress(cmd.resource.alias);
+        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+
+        IP ip = null;
+        if (cmd.args.containsKey(Param.ip)) {
+            ip = IpParamHandle.get(cmd);
+        }
+        Iface iface = null;
+        if (cmd.args.containsKey(Param.iface)) {
+            iface = IfaceHandle.get(cmd.prepositionResource.parentResource, cmd.args.get(Param.iface));
+        }
+        if (ip != null) {
+            net.arpTable.record(mac, ip, true);
+        }
+        if (iface != null) {
+            net.macTable.record(mac, iface, true);
+        }
     }
 
     public static int count(Resource parent) throws Exception {
@@ -106,6 +137,13 @@ public class ArpHandle {
         return result;
     }
 
+    public static void remove(Command cmd) throws Exception {
+        MacAddress mac = new MacAddress(cmd.resource.alias);
+        VirtualNetwork net = VpcHandle.get(cmd.prepositionResource);
+        net.macTable.remove(mac);
+        net.arpTable.remove(mac);
+    }
+
     public static class ArpEntry {
         public final MacAddress mac;
         public final IP ip;
@@ -132,11 +170,11 @@ public class ArpHandle {
         }
 
         private String strForArpTTL(ArpEntry e) {
-            return "" + (e.arpTTL / 1000);
+            return "" + (e.arpTTL == -1 ? -1 : e.arpTTL / 1000);
         }
 
         private String strForMacTTL(ArpEntry e) {
-            return "" + (e.macTTL / 1000);
+            return "" + (e.macTTL == -1 ? -1 : e.macTTL / 1000);
         }
 
         public String toString(List<ArpEntry> all) {

@@ -831,6 +831,27 @@ public class Shutdown {
                     }
                     commands.add(cmd);
                 }
+                // add persistent arp records
+                var networks = sw.getNetworks();
+                for (var vni : networks.keySet()) {
+                    var network = networks.get(vni);
+                    var macEntries = network.macTable.listEntries();
+                    for (var mac : macEntries) {
+                        if (mac.getTimeout() != -1) {
+                            continue;
+                        }
+                        cmd = "add arp " + mac.mac + " to vpc " + network.vni + " in sw " + sw.alias + " iface " + mac.iface.name();
+                        commands.add(cmd);
+                    }
+                    var ipEntries = network.arpTable.listEntries();
+                    for (var ip : ipEntries) {
+                        if (ip.getTimeout() != -1) {
+                            continue;
+                        }
+                        cmd = "add arp " + ip.mac + " to vpc " + network.vni + " in sw " + sw.alias + " ip " + ip.ip.formatToIPString();
+                        commands.add(cmd);
+                    }
+                }
             }
         }
         {

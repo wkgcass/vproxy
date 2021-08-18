@@ -4,7 +4,6 @@ import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.Timer;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.iface.Iface;
-import vproxy.vswitch.util.SwitchUtils;
 
 import java.util.HashMap;
 import java.util.HashSet;
@@ -27,13 +26,29 @@ public class MacTable {
     }
 
     public void record(MacAddress mac, Iface iface) {
+        record(mac, iface, false);
+    }
+
+    public void record(MacAddress mac, Iface iface, boolean persist) {
         var entry = macMap.get(mac);
         if (entry != null && entry.iface.equals(iface)) {
-            entry.resetTimer();
-            return;
+            if (persist) {
+                if (entry.getTimeout() == -1) {
+                    return;
+                } else {
+                    entry.cancel();
+                }
+            } else {
+                if (entry.getTimeout() == -1) {
+                    entry.cancel();
+                } else {
+                    entry.resetTimer();
+                    return;
+                }
+            }
         }
         // otherwise need to overwrite the entry
-        entry = new MacEntry(mac, iface);
+        entry = new MacEntry(mac, iface, persist);
         entry.record();
     }
 
@@ -84,12 +99,20 @@ public class MacTable {
         });
     }
 
+    public void remove(MacAddress mac) {
+        var entry = macMap.get(mac);
+        if (entry == null) {
+            return;
+        }
+        entry.cancel();
+    }
+
     public class MacEntry extends Timer {
         public final MacAddress mac;
         public final Iface iface;
 
-        MacEntry(MacAddress mac, Iface iface) {
-            super(MacTable.this.loop, timeout);
+        MacEntry(MacAddress mac, Iface iface, boolean persist) {
+            super(MacTable.this.loop, persist ? -1 : timeout);
             this.mac = mac;
             this.iface = iface;
         }
@@ -126,6 +149,14 @@ public class MacTable {
                     ifaceMap.remove(iface);
                 }
             }
+        }
+
+        @Override
+        public void resetTimer() {
+            if (getTimeout() == -1) {
+                return;
+            }
+            super.resetTimer();
         }
 
         @Override

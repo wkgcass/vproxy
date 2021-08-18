@@ -704,6 +704,26 @@ class ModuleCommands private constructor() : Commands() {
     }
     it + Res(ResourceType.arp) {
       it + ResAct(
+        relation = ResourceType.arp,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        params = {
+          it + ResActParam(Param.ip) { IpParamHandle.check(it) }
+          it + ResActParam(Param.iface)
+        },
+        check = {
+          ArpHandle.checkMacName(it.resource)
+          if (!it.args.containsKey(Param.ip) && !(it.args.containsKey(Param.iface))) {
+            throw XException("at lease one of ip|iface should be specified")
+          }
+          VpcHandle.checkVpcName(it.prepositionResource)
+        },
+        exec = {
+          ArpHandle.add(it)
+          CmdResult()
+        }
+      )
+      it + ResAct(
         relation = ResRelation(ResourceType.arp, ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw))),
         action = ActType.list,
         check = { VpcHandle.checkVpcName(it.resource.parentResource) },
@@ -720,6 +740,16 @@ class ModuleCommands private constructor() : Commands() {
           val arpLs = ArpHandle.list(it.resource.parentResource)
           val ls = arpLs.stream().map { it.toString(arpLs) }.collect(Collectors.toList())
           CmdResult(arpLs, ls, utilJoinList(ls))
+        }
+      )
+      it + ResAct(
+        relation = ResourceType.arp,
+        action = ActType.removefrom,
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        check = { ArpHandle.checkMacName(it.resource) },
+        exec = {
+          ArpHandle.remove(it)
+          CmdResult()
         }
       )
     }

@@ -18,6 +18,26 @@ public class IfaceHandle {
     private IfaceHandle() {
     }
 
+    public static Iface get(Resource self) throws Exception {
+        return get(self.parentResource, self.alias);
+    }
+
+    public static Iface get(Resource parent, String name) throws Exception {
+        List<Iface> ifaces = list(parent);
+
+        Iface target = null;
+        for (Iface iface : ifaces) {
+            if (iface.name().equals(name)) {
+                target = iface;
+                break;
+            }
+        }
+        if (target == null) {
+            throw new NotFoundException(ResourceType.iface.fullname, name);
+        }
+        return target;
+    }
+
     public static int count(Resource parent) throws Exception {
         return list(parent).size();
     }
@@ -28,19 +48,7 @@ public class IfaceHandle {
     }
 
     public static void update(Command cmd) throws Exception {
-        List<Iface> ifaces = list(cmd.resource.parentResource);
-        String name = cmd.resource.alias;
-
-        Iface target = null;
-        for (Iface iface : ifaces) {
-            if (iface.name().equals(name)) {
-                target = iface;
-                break;
-            }
-        }
-        if (target == null) {
-            throw new NotFoundException(ResourceType.iface.fullname, cmd.resource.alias);
-        }
+        Iface target = get(cmd.resource);
         if (cmd.args.containsKey(Param.mtu)) {
             target.setBaseMTU(MTUHandle.get(cmd));
         }
