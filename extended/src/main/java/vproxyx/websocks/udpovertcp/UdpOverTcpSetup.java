@@ -7,10 +7,7 @@ import vproxy.base.util.Network;
 import vproxy.base.util.Utils;
 import vproxy.base.util.coll.Tuple;
 import vproxy.component.secure.SecurityGroup;
-import vproxy.vfd.FDs;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.MacAddress;
+import vproxy.vfd.*;
 import vproxy.vswitch.RouteTable;
 import vproxy.vswitch.Switch;
 import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
@@ -34,25 +31,11 @@ public class UdpOverTcpSetup {
     // port: not used if client == true
     // port: the kcp port if client == false
     public static FDs setup(boolean client, int port, String nicname, EventLoopGroup elg) throws Exception {
-        var interfaces = NetworkInterface.getNetworkInterfaces();
-        NetworkInterface nic = null;
-        while (interfaces.hasMoreElements()) {
-            var n = interfaces.nextElement();
-            if (n.getName().equals(nicname)) {
-                nic = n;
-                break;
-            }
-        }
-        if (nic == null) {
-            throw new Exception(nicname + " not found");
-        }
+        var nic = selectNic(nicname);
         var localMac = new MacAddress(nic.getHardwareAddress());
         var ips = nic.getInterfaceAddresses();
         var localIp4 = getIPv4(ips);
         var localIp6 = getIPv6(ips);
-        if (localIp4 == null) {
-            throw new Exception("cannot find proper local ipv4 to use");
-        }
 
         Switch sw = new Switch("udp-over-tcp",
             new IPPort("255.255.255.255:0"),
@@ -121,7 +104,35 @@ public class UdpOverTcpSetup {
         return network.fds();
     }
 
-    private static InterfaceAddress getIPv4(List<InterfaceAddress> ips) {
+    public static Tuple<IPv4, IPv6> chooseIPs(String nicname) throws Exception {
+        var nic = selectNic(nicname);
+        var v4 = getIPv4(nic.getInterfaceAddresses());
+        var v6 = getIPv6(nic.getInterfaceAddresses());
+        IPv4 ipv4 = IP.fromIPv4(v4.getAddress().getAddress());
+        IPv6 ipv6 = null;
+        if (v6 != null) {
+            ipv6 = IP.fromIPv6(v6.getAddress().getAddress());
+        }
+        return new Tuple<>(ipv4, ipv6);
+    }
+
+    private static NetworkInterface selectNic(String nicname) throws Exception {
+        var interfaces = NetworkInterface.getNetworkInterfaces();
+        NetworkInterface nic = null;
+        while (interfaces.hasMoreElements()) {
+            var n = interfaces.nextElement();
+            if (n.getName().equals(nicname)) {
+                nic = n;
+                break;
+            }
+        }
+        if (nic == null) {
+            throw new Exception(nicname + " not found");
+        }
+        return nic;
+    }
+
+    private static InterfaceAddress getIPv4(List<InterfaceAddress> ips) throws Exception {
         for (var ip : ips) {
             if (!(ip.getAddress() instanceof Inet4Address)) {
                 continue;
@@ -131,7 +142,7 @@ public class UdpOverTcpSetup {
             }
             return ip;
         }
-        return null;
+        throw new Exception("cannot find proper local ipv4 to use");
     }
 
     private static InterfaceAddress getIPv6(List<InterfaceAddress> ips) {
@@ -196,13 +207,13 @@ public class UdpOverTcpSetup {
 
     private static Tuple<MacAddress, IP> getIPv4GW(Network v4net) throws Exception {
         return getIPvXGW(v4net, "ip route get 1.1.1.1",
-            ip -> "ping -c 1 " + ip,
+            ip -> "ping -c 1 -W 1 " + ip,
             ip -> "ip neigh show " + ip);
     }
 
     private static Tuple<MacAddress, IP> getIPv6GW(Network v6net) throws Exception {
         return getIPvXGW(v6net, "ip -6 route get 2606:4700:4700::1111",
-            ip -> "ping6 -c 1 " + ip,
+            ip -> "ping6 -c 1 -W 1 " + ip,
             ip -> "ip -6 neigh show " + ip);
     }
 

@@ -97,8 +97,8 @@ public class WrappedSelector implements FDSelector {
                         selectedEntryList.add().set(fd, eventSet, entry.attachment);
                     }
 
-                    if (fd instanceof WritableAware) {
-                        if (writableFired.contains(fd)) {
+                    if (writable) {
+                        if (fd instanceof WritableAware) {
                             ((WritableAware) fd).writable();
                         }
                     }
@@ -191,12 +191,14 @@ public class WrappedSelector implements FDSelector {
         }
 
         if (fd instanceof VirtualFD) {
+            assert Logger.lowLevelDebug("register virtual fd to selector");
             //noinspection unused
             try (var unused = VIRTUAL_LOCK.lock()) {
                 virtualSocketFDs.put((VirtualFD) fd, new REntry(ops, registerData));
             }
             ((VirtualFD) fd).onRegister();
         } else if (fd.real() instanceof VirtualFD) {
+            assert Logger.lowLevelDebug("register hybrid fd to selector");
             //noinspection unused
             try (var unused = VIRTUAL_LOCK.lock()) {
                 hybridSocketFDs.put(fd, new REntry(ops, registerData));
@@ -204,6 +206,7 @@ public class WrappedSelector implements FDSelector {
             }
             ((VirtualFD) fd.real()).onRegister();
         } else {
+            assert Logger.lowLevelDebug("register real fd to selector");
             selector.register(fd, ops, registerData);
         }
     }
@@ -354,7 +357,7 @@ public class WrappedSelector implements FDSelector {
             return;
         }
         if (!virtualSocketFDs.containsKey(vfd) && !virtual2hybridMap.containsKey(vfd)) {
-            Logger.trace(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector" +
+            Logger.trace(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector." +
                 " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
             return;
         }

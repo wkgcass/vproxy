@@ -10,6 +10,7 @@ import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.selector.wrap.VirtualFD;
 import vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
 import vproxy.base.selector.wrap.kcp.KCPFDs;
+import vproxy.base.selector.wrap.udp.UDPFDs;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.base.util.callback.Callback;
@@ -22,6 +23,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.VFDConfig;
 import vproxyx.websocks.*;
+import vproxyx.websocks.udpovertcp.UdpOverTcpSetup;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -45,6 +47,8 @@ public class WebSocksProxyServer {
         String domain = null;
         int redirectPort = -1;
         boolean useKcp = false;
+        int udpOverTcpPort = -1;
+        String udpOverTcpNic = "eth0";
         String webroot = null;
         for (int i = 0; i < args.length; i++) {
             String arg = args[i];
@@ -122,6 +126,25 @@ public class WebSocksProxyServer {
                 ++i;
             } else if (arg.equals("kcp")) {
                 useKcp = true;
+            } else if (arg.equals("udpovertcp.port")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`udpovertcp.port` should be followed with a port number");
+                }
+                try {
+                    udpOverTcpPort = Integer.parseInt(next);
+                } catch (NumberFormatException e) {
+                    throw new IllegalArgumentException("udpovertcp.port is not a number");
+                }
+                if (udpOverTcpPort < 1 || udpOverTcpPort > 65535) {
+                    throw new IllegalArgumentException("udpovertcp.port is not valid");
+                }
+                ++i;
+            } else if (arg.equals("udpovertcp.nic")) {
+                if (next == null) {
+                    throw new IllegalArgumentException("`udpovertcp.nic` should be followed with nic to bind");
+                }
+                udpOverTcpNic = next;
+                ++i;
             } else if (arg.equals("webroot")) {
                 if (next == null) {
                     throw new IllegalArgumentException("`webroot` should be followed with a directory path");
@@ -135,7 +158,7 @@ public class WebSocksProxyServer {
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
                     "argument: listen {} auth {} \\\n" +
                     "          [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\\n" +
-                    "          [redirectport {}] [kcp] \\\n" +
+                    "          [redirectport {}] [kcp [udpovertcp.port {} [udpovertcp.nic {eth0}]]] \\\n" +
                     "          [webroot {}] \n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     "          listen 443 auth alice:pasSw0rD ssl \\\n" +
@@ -184,6 +207,9 @@ public class WebSocksProxyServer {
         if (port == redirectPort) {
             throw new IllegalArgumentException("listen port and redirectport are the same.");
         }
+        if (!useKcp && udpOverTcpPort != -1) {
+            throw new IllegalArgumentException("kcp is not enabled but udpovertcp is set");
+        }
 
         assert Logger.lowLevelDebug("listen: " + port);
         assert Logger.lowLevelDebug("auth: " + auth);
@@ -195,6 +221,8 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("domain: " + domain);
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
         assert Logger.lowLevelDebug("useKcp: " + useKcp);
+        assert Logger.lowLevelDebug("udpovertcp.port: " + udpOverTcpPort);
+        assert Logger.lowLevelDebug("udpovertcp.nic: " + udpOverTcpNic);
         assert Logger.lowLevelDebug("webroot: " + webroot);
 
         // init event loops
@@ -205,6 +233,9 @@ public class WebSocksProxyServer {
         int workers = threads;
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors
+        }
+        if (udpOverTcpPort != -1) {
+            workers = 1;
         }
         // initiate the acceptor event loop(s)
         EventLoopGroup acceptor = new EventLoopGroup("acceptor-group");
@@ -231,6 +262,24 @@ public class WebSocksProxyServer {
             H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, listeningServerL4addr);
             ServerSock server = ServerSock.createUDP(listeningServerL4addr, loopForKcp, serverFds);
             servers.add(server);
+        }
+        if (udpOverTcpPort != -1) {
+            var ipv4v6 = UdpOverTcpSetup.chooseIPs(udpOverTcpNic);
+            var fds = UdpOverTcpSetup.setup(false, udpOverTcpPort, udpOverTcpNic, acceptor);
+            // v4
+            var v4ipport = new IPPort(ipv4v6.left, udpOverTcpPort);
+            KCPFDs kcpFDs = new KCPFDs(KCPFDs.optionsFast4(), new UDPFDs(fds));
+            H2StreamedServerFDs serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, v4ipport);
+            ServerSock server = ServerSock.createUDP(v4ipport, loopForKcp, serverFds);
+            servers.add(server);
+            // v6
+            if (ipv4v6.right != null) {
+                var v6ipport = new IPPort(ipv4v6.right, udpOverTcpPort);
+                kcpFDs = new KCPFDs(KCPFDs.optionsFast4(), new UDPFDs(fds));
+                serverFds = new H2StreamedServerFDs(kcpFDs, loopForKcp, v6ipport);
+                server = ServerSock.createUDP(v6ipport, loopForKcp, serverFds);
+                servers.add(server);
+            }
         }
         ServerSock redirectServer = null;
         if (redirectPort != -1) {
@@ -342,6 +391,9 @@ public class WebSocksProxyServer {
         }
         if (useKcp) {
             Logger.alert("kcp server started on " + port);
+        }
+        if (udpOverTcpPort != -1) {
+            Logger.alert("udp over tcp kcp server started on " + udpOverTcpPort);
         }
     }
 }

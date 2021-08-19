@@ -134,8 +134,11 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
             return;
         }
         closed = true;
-        udpListenEntry.destroy();
-        ctx.conntrack.removeUdpListen(udpListenEntry.bind);
+        if (udpListenEntry != null) {
+            udpListenEntry.destroy();
+            ctx.conntrack.removeUdpListen(udpListenEntry.bind);
+            udpListenEntry = null;
+        }
     }
 
     @Override

@@ -349,8 +349,8 @@ class HandlerForConnection implements Handler<SocketFD> {
             }
             return;
         }
-        if (read == 0) {
-            Logger.shouldNotHappen("read nothing, the event should not be fired");
+        if (read == 0) { // libae will reach here when every connection connects
+            assert Logger.lowLevelDebug("read nothing, the event should not be fired");
             return;
         }
 
