@@ -19,6 +19,7 @@ import vproxy.base.util.objectpool.CursorList;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.component.secure.SecurityGroup;
 import vproxy.vfd.*;
+import vproxy.vfd.posix.PosixDatagramFD;
 import vproxy.vmirror.Mirror;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.Ipv4Packet;
@@ -132,7 +133,13 @@ public class Switch {
             sock = FDProvider.get().openDatagramFD();
             try {
                 sock.configureBlocking(false);
-                sock.bind(vxlanBindingAddress);
+                if (vxlanBindingAddress.getAddress().isBroadcast()) {
+                    if (sock instanceof PosixDatagramFD) {
+                        ((PosixDatagramFD) sock).ensureDummyFD();
+                    }
+                } else {
+                    sock.bind(vxlanBindingAddress);
+                }
             } catch (IOException e) {
                 releaseSock();
                 throw e;
@@ -267,7 +274,7 @@ public class Switch {
         if (eventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vni");
         }
-        VirtualNetwork t = new VirtualNetwork(vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
+        VirtualNetwork t = new VirtualNetwork(swCtx, vni, eventLoop, v4network, v6network, macTableTimeout, arpTableTimeout, annotations);
         networks.put(vni, t);
         return t;
     }
@@ -742,6 +749,7 @@ public class Switch {
         for (Iface iface : ifaces.keySet()) {
             PacketBuffer pkb;
             while ((pkb = iface.pollPacket()) != null) {
+                pkb.ifaceInput = true;
                 preHandleInputPkb(pkb);
             }
         }
@@ -751,12 +759,14 @@ public class Switch {
     private void onIfacePacketsArrive(CursorList<PacketBuffer> ls) {
         while (!ls.isEmpty()) {
             PacketBuffer pkb = ls.remove(ls.size() - 1);
+            pkb.ifaceInput = true;
             preHandleInputPkb(pkb);
         }
         handleInputPkb();
     }
 
     private void onIfacePacketsArrive(PacketBuffer pkb) {
+        pkb.ifaceInput = true;
         preHandleInputPkb(pkb);
         handleInputPkb();
     }

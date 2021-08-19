@@ -175,4 +175,13 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
             setReadable();
         }
     }
+
+    @Override
+    public String toString() {
+        return "VSwitchDatagramFD{" +
+            "connect=" + connectedAddress +
+            ", bind=" + (udpListenEntry == null ? "null" : udpListenEntry.bind) +
+            ", closed=" + closed +
+            '}';
+    }
 }

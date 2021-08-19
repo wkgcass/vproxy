@@ -11,7 +11,7 @@ import java.nio.charset.StandardCharsets;
 
 public class UDPNetEventLoopEchoServer {
     public static void main(String[] args) throws IOException, InterruptedException {
-        NetEventLoop loop = NetEventLoopEchoServer.create(18080, UDPFDs.get());
+        NetEventLoop loop = NetEventLoopEchoServer.create(18080, UDPFDs.getDefault());
 
         ConnectableConnection conn = ConnectableConnection.createUDP(new IPPort(18080),
             new ConnectionOpts(), RingBuffer.allocateDirect(1024), RingBuffer.allocateDirect(3));

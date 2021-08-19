@@ -1,6 +1,7 @@
 package vproxy.base.util;
 
 import vproxy.vfd.IP;
+import vproxy.vfd.IPv4;
 
 import java.util.Arrays;
 
@@ -146,6 +147,21 @@ public class Network {
             m += cnt;
         }
         return mask.length * 8 - m;
+    }
+
+    public static Network eraseToNetwork(IP ip, int mask) {
+        byte[] ipbytes;
+        byte[] maskbytes;
+        if (ip instanceof IPv4) {
+            ipbytes = ip.bytes.toNewJavaArray();
+            maskbytes = new byte[4];
+        } else {
+            ipbytes = ip.bytes.toNewJavaArray();
+            maskbytes = new byte[16];
+        }
+        getMask(maskbytes, mask);
+        eraseToNetwork(ipbytes, maskbytes);
+        return new Network(ipbytes, maskbytes);
     }
 
     public static void eraseToNetwork(byte[] addr, byte[] mask) {

@@ -16,6 +16,7 @@ import vproxy.vswitch.VirtualNetwork;
 import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import vproxy.vswitch.iface.XDPIface;
 import vproxy.xdp.BPFMode;
+import vproxy.xdp.BPFObject;
 import vproxy.xdp.UMem;
 
 import java.util.*;
@@ -350,7 +351,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var cmd = Command.parseStrCmd("add bpf-object " + nicname + " mode SKB force");
         var bpfobj = BPFObjectHandle.add(cmd);
         try {
-            return sw.addXDP(nicname, bpfobj.getMap("xsks_map"), umem, 0,
+            return sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), umem, 0,
                 32, 32, BPFMode.SKB, false, 0,
                 net != null ? net.vni : NETWORK_ENTRY_VNI,
                 BPFMapKeySelectors.useQueueId.keySelector.get());

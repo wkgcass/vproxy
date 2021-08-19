@@ -12,12 +12,10 @@ public class VSwitchFDContext {
     public final Conntrack conntrack;
     public final WrappedSelector selector;
 
-    public VSwitchFDContext(SwitchContext swCtx,
-                            VirtualNetwork network,
-                            WrappedSelector selector) {
+    public VSwitchFDContext(SwitchContext swCtx, VirtualNetwork network) {
         this.L4 = swCtx.netStack.get().L4;
         this.network = network;
         this.conntrack = network.conntrack;
-        this.selector = selector;
+        this.selector = swCtx.getSelectorEventLoop().selector;
     }
 }

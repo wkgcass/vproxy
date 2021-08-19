@@ -110,6 +110,11 @@ public class XDPIface extends Iface {
 
                 assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
                 sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
+
+                // ensure the packet is transmitted
+                if (!pkb.ifaceInput) {
+                    completeTx();
+                }
                 return;
             }
         }
@@ -137,6 +142,11 @@ public class XDPIface extends Iface {
 
         // the chunk is not used in java anymore
         chunk.returnToPool();
+
+        // ensure the packet is transmitted
+        if (!pkb.ifaceInput) {
+            completeTx();
+        }
     }
 
     @Override

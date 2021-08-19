@@ -10,6 +10,8 @@ import vproxy.base.util.exception.XException;
 import vproxy.vfd.*;
 import vproxy.vpacket.conntrack.Conntrack;
 import vproxy.vpacket.conntrack.udp.UdpListenEntry;
+import vproxy.vswitch.stack.fd.VSwitchFDContext;
+import vproxy.vswitch.stack.fd.VSwitchFDs;
 
 import java.util.concurrent.ThreadLocalRandom;
 
@@ -25,7 +27,10 @@ public class VirtualNetwork {
 
     public final Conntrack conntrack = new Conntrack();
 
-    public VirtualNetwork(int vni, NetEventLoop loop,
+    private final FDs fds;
+
+    public VirtualNetwork(SwitchContext swCtx,
+                          int vni, NetEventLoop loop,
                           Network v4network, Network v6network,
                           int macTableTimeout, int arpTableTimeout,
                           Annotations annotations) {
@@ -41,6 +46,8 @@ public class VirtualNetwork {
         arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
         routeTable = new RouteTable(this);
+
+        this.fds = new VSwitchFDs(new VSwitchFDContext(swCtx, this));
     }
 
     public void setMacTableTimeout(int macTableTimeout) {
@@ -73,8 +80,8 @@ public class VirtualNetwork {
         return mac;
     }
 
-    private static final int IP_LOCAL_PORT_MIN = 32768;
-    private static final int IP_LOCAL_PORT_MAX = 61000;
+    private static final int IP_LOCAL_PORT_MIN = 30720;
+    private static final int IP_LOCAL_PORT_MAX = 32768;
 
     public IPPort findFreeUdpIPPort(IPPort remote) {
         for (var ip : ips.allIps()) {
@@ -102,6 +109,10 @@ public class VirtualNetwork {
         }
         assert Logger.lowLevelDebug("unable to allocate a free port for udp from " + ip);
         return null;
+    }
+
+    public FDs fds() {
+        return fds;
     }
 
     public Annotations getAnnotations() {

@@ -1,5 +1,7 @@
 package vproxy.base.util;
 
+import vproxy.base.util.callback.BlockCallback;
+import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.base.util.exception.XException;
@@ -511,10 +513,18 @@ public class Utils {
     }
 
     public static void execute(String script) throws Exception {
-        execute(script, 10 * 1000);
+        execute(script, false);
+    }
+
+    public static ExecuteResult execute(String script, boolean getResult) throws Exception {
+        return execute(script, 10 * 1000, getResult);
     }
 
     public static void execute(String script, int timeout) throws Exception {
+        execute(script, timeout, false);
+    }
+
+    public static ExecuteResult execute(String script, int timeout, boolean getResult) throws Exception {
         Logger.alert("trying to execute script:\n" + script);
         File file = File.createTempFile("script", ".sh");
         try {
@@ -523,7 +533,7 @@ public class Utils {
                 throw new Exception("setting executable to script " + file.getAbsolutePath() + " failed");
             }
             ProcessBuilder pb = new ProcessBuilder(file.getAbsolutePath());
-            execute(pb, timeout);
+            return execute(pb, timeout, getResult);
         } finally {
             //noinspection ResultOfMethodCallIgnored
             file.delete();
@@ -531,18 +541,43 @@ public class Utils {
     }
 
     public static void execute(ProcessBuilder pb, int timeout) throws Exception {
+        execute(pb, timeout, false);
+    }
+
+    public static ExecuteResult execute(ProcessBuilder pb, int timeout, boolean getResult) throws Exception {
         Process p = pb.start();
-        Utils.pipeOutputOfSubProcess(p);
+        BlockCallback<String, Exception> stdoutCB = new BlockCallback<>();
+        BlockCallback<String, Exception> stderrCB = new BlockCallback<>();
+        if (getResult) {
+            Utils.readOutputOfSubProcess(p, stdoutCB, stderrCB);
+        } else {
+            Utils.pipeOutputOfSubProcess(p);
+        }
         p.waitFor(timeout, TimeUnit.MILLISECONDS);
         if (p.isAlive()) {
             p.destroyForcibly();
             throw new Exception("the process took too long to execute");
         }
         int exit = p.exitValue();
+        if (getResult) {
+            return new ExecuteResult(exit, stdoutCB.block(), stderrCB.block());
+        }
         if (exit == 0) {
-            return;
+            return null;
         }
         throw new Exception("exit code is " + exit);
+    }
+
+    public static class ExecuteResult {
+        public final int exitCode;
+        public final String stdout;
+        public final String stderr;
+
+        public ExecuteResult(int exitCode, String stdout, String stderr) {
+            this.exitCode = exitCode;
+            this.stdout = stdout;
+            this.stderr = stderr;
+        }
     }
 
     public static void pipeOutputOfSubProcess(Process p) {
@@ -567,6 +602,37 @@ public class Utils {
             } catch (Throwable ignore) {
             }
         }, "pipe-output-of-stream-" + descr).start();
+    }
+
+    public static void readOutputOfSubProcess(Process p,
+                                              Callback<String, Exception> stdoutCB,
+                                              Callback<String, Exception> stderrCB) {
+        var stdout = p.getInputStream();
+        var stderr = p.getErrorStream();
+        readOutputOfStream(stdout, "stdout", stdoutCB);
+        readOutputOfStream(stderr, "stderr", stderrCB);
+    }
+
+    private static void readOutputOfStream(InputStream stdout, String descr, Callback<String, Exception> cb) {
+        VProxyThread.create(() -> {
+            var sb = new StringBuilder();
+            var reader = new InputStreamReader(stdout);
+            char[] buf = new char[1024];
+            try {
+                int n;
+                while ((n = reader.read(buf)) >= 0) {
+                    if (n > 0) {
+                        sb.append(buf, 0, n);
+                    }
+                }
+            } catch (Throwable ignore) {
+            }
+            try {
+                stdout.close();
+            } catch (Throwable ignore) {
+            }
+            cb.succeeded(sb.toString());
+        }, "read-output-of-stream-" + descr).start();
     }
 
     public static void writeFileWithBackup(String filepath, String content) throws Exception {
@@ -604,6 +670,22 @@ public class Utils {
             throw new Exception("remove old backup file failed: " + bakF.getPath());
         if (f.exists() && !f.renameTo(bakF)) // do rename (backup)
             throw new Exception("backup the file failed: " + bakF.getPath());
+    }
+
+    public static String writeTemporaryFile(String prefix, String suffix, byte[] content) throws IOException {
+        return writeTemporaryFile(prefix, suffix, content, false);
+    }
+
+    @SuppressWarnings("ResultOfMethodCallIgnored")
+    public static String writeTemporaryFile(String prefix, String suffix, byte[] content, boolean executable) throws IOException {
+        File f = File.createTempFile("vproxy-" + ProcessHandle.current().pid() + "-" + prefix, "." + suffix);
+        f.deleteOnExit();
+        Files.write(f.toPath(), content);
+        f.setReadable(true);
+        if (executable) {
+            f.setExecutable(true);
+        }
+        return f.getAbsolutePath();
     }
 
     // the returned array would be without getStackTrace() and this method

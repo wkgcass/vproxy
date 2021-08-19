@@ -12,6 +12,7 @@ import java.util.Optional;
 
 public class SecurityGroup {
     public static final String defaultName = "(allow-all)";
+    public static final String defaultDenyName = "(deny-all)";
 
     public final String alias;
     public boolean defaultAllow;
@@ -25,6 +26,10 @@ public class SecurityGroup {
 
     public static SecurityGroup allowAll() {
         return new SecurityGroup(defaultName, true);
+    }
+
+    public static SecurityGroup denyAll() {
+        return new SecurityGroup(defaultDenyName, true);
     }
 
     public boolean allow(Protocol protocol, IP address, int port) {

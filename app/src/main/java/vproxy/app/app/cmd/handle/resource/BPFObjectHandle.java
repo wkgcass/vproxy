@@ -28,7 +28,7 @@ public class BPFObjectHandle {
             path = null;
         }
         String prog;
-        prog = cmd.args.getOrDefault(Param.prog, "xdp_sock");
+        prog = cmd.args.getOrDefault(Param.prog, BPFObject.DEFAULT_XDP_PROG_NAME);
         BPFMode mode = BPFModeHandle.get(cmd, BPFMode.SKB);
         boolean forceAttach = cmd.flags.contains(Flag.force);
 

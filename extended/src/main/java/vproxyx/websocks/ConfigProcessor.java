@@ -10,12 +10,15 @@ import vproxy.base.dns.Resolver;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
 import vproxy.base.selector.wrap.kcp.KCPFDs;
+import vproxy.base.selector.wrap.udp.UDPFDs;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Network;
 import vproxy.base.util.callback.BlockCallback;
 import vproxy.component.ssl.CertKey;
 import vproxy.util.CoreUtils;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
+import vproxyx.websocks.udpovertcp.UdpOverTcpSetup;
 
 import java.io.File;
 import java.io.IOException;
@@ -174,10 +177,19 @@ public class ConfigProcessor {
 
         // handle servers
         var serverListMap = configLoader.getServers();
+        String nic = configLoader.getUdpOverTcpNic();
+        Logger.alert("enhancing kcp with udp-over-tcp on " + nic);
+        KCPFDs kcpFDs;
+        if (configLoader.isUdpOverTcpEnabled()) {
+            kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(),
+                new UDPFDs(UdpOverTcpSetup.setup(true, -1, nic, workerLoopGroup)));
+        } else {
+            kcpFDs = KCPFDs.getClientDefault();
+        }
         for (String alias : serverListMap.keySet()) {
             ServerList serverList = serverListMap.get(alias);
             for (ServerList.Server svr : serverList.getServers()) {
-                addIntoServerGroup(alias, svr);
+                addIntoServerGroup(alias, svr, kcpFDs);
             }
         }
         // check for https relay
@@ -226,7 +238,7 @@ public class ConfigProcessor {
         }
     }
 
-    private void addIntoServerGroup(String currentAlias, ServerList.Server svr) throws Exception {
+    private void addIntoServerGroup(String currentAlias, ServerList.Server svr, KCPFDs kcpFDs) throws Exception {
         ServerGroup.ServerHandle handle;
         if (IP.isIpLiteral(svr.host)) {
             IP inet = IP.from(svr.host);
@@ -251,7 +263,6 @@ public class ConfigProcessor {
                         break;
                     }
                     // build for this remote server
-                    KCPFDs kcpFDs = KCPFDs.getClientDefault();
                     H2StreamedClientFDs h2sFDs = new H2StreamedClientFDs(kcpFDs, l.getSelectorEventLoop(),
                         handle.server);
                     fds.put(l.getSelectorEventLoop(), h2sFDs);

@@ -63,7 +63,7 @@ public class ConnectableConnection extends Connection {
     public static ConnectableConnection createUDP(IPPort remote,
                                                   ConnectionOpts opts,
                                                   RingBuffer inBuffer, RingBuffer outBuffer) throws IOException {
-        return createUDP(remote, opts, inBuffer, outBuffer, null, UDPFDs.get());
+        return createUDP(remote, opts, inBuffer, outBuffer, null, UDPFDs.getDefault());
     }
 
     public static ConnectableConnection createUDP(IPPort remote,

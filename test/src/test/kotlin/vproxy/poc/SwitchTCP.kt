@@ -13,9 +13,6 @@ import vproxy.vfd.IP
 import vproxy.vfd.IPPort
 import vproxy.vfd.MacAddress
 import vproxy.vswitch.Switch
-import vproxy.vswitch.SwitchContext
-import vproxy.vswitch.stack.fd.VSwitchFDContext
-import vproxy.vswitch.stack.fd.VSwitchFDs
 import java.io.File
 import java.io.FileOutputStream
 
@@ -48,12 +45,7 @@ object SwitchTCP {
     sw.addTap("tap1", 3, f.absolutePath)
     val network = sw.getNetwork(3)
     network.addIp(IP.from("172.16.3.254"), MacAddress("00:00:00:00:03:04"), null)
-    //
-    val field = sw.javaClass.getDeclaredField("swCtx")
-    field.trySetAccessible()
-    val swCtx = field.get(sw) as SwitchContext
-    //
-    val fds = VSwitchFDs(VSwitchFDContext(swCtx, network, loop.selector))
+    val fds = network.fds()
     val serverSock = ServerSock.create(IPPort("0.0.0.0", 80), fds)
 
     val httpServer = CoroutineHttp1Server(serverSock.coroutine(el))

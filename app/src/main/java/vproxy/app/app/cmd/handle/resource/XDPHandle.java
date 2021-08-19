@@ -22,7 +22,7 @@ public class XDPHandle {
         String nic = cmd.resource.alias;
         BPFObject bpfobj = Application.get().bpfObjectHolder.get(nic);
 
-        String mapName = cmd.args.getOrDefault(Param.bpfmap, "xsks_map");
+        String mapName = cmd.args.getOrDefault(Param.bpfmap, BPFObject.DEFAULT_XSKS_MAP_NAME);
         BPFMap bpfMap = bpfobj.getMap(mapName);
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);

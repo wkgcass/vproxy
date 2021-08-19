@@ -109,6 +109,9 @@ public class WebSocksProxyAgent {
         if (threads > 3) {
             workers -= 1; // one core for acceptor if there are at least 4 processors
         }
+        if (configLoader.isUdpOverTcpEnabled()) {
+            workers = 1; // restrict to one thread
+        }
 
         // initiate the acceptor event loop(s)
         acceptor = new EventLoopGroup("acceptor-group");

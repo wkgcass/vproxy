@@ -41,6 +41,7 @@ public class PacketBuffer extends PacketDataBuffer {
     }
 
     // ----- context -----
+    public boolean ifaceInput; // the packet is input into switch from iface
     public Iface devin; // not null if it's an input packet
     public Iface devout; // this will only be set before passing to packet filters, and cleared after it's handled
     public int vni; // vni or vlan number, must always be valid

@@ -39,12 +39,8 @@ public class ArpTable {
                     entry.cancel();
                 }
             } else {
-                if (entry.getTimeout() == -1) {
-                    entry.cancel();
-                } else {
-                    entry.resetTimer();
-                    return;
-                }
+                entry.resetTimer();
+                return;
             }
         }
         // otherwise need to overwrite the entry

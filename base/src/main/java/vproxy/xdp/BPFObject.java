@@ -5,11 +5,9 @@ import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.vfd.MacAddress;
 
-import java.io.File;
 import java.io.IOException;
 import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.nio.file.Files;
 import java.util.Enumeration;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -69,10 +67,7 @@ public class BPFObject {
         Logger.alert("generating ebpf object for nic " + nicname + " with mac " + mac);
 
         byte[] bytes = BPFObject.skipDstMacProgram(mac).toJavaArray();
-        File f = File.createTempFile("kern", ".o");
-        f.deleteOnExit();
-        Files.write(f.toPath(), bytes);
-        return f.getAbsolutePath();
+        return Utils.writeTemporaryFile("kern", "o", bytes);
     }
 
     public BPFMap getMap(String name) throws IOException {
@@ -100,6 +95,9 @@ public class BPFObject {
             + " prog " + prog
             + " mode " + mode.name();
     }
+
+    public static final String DEFAULT_XDP_PROG_NAME = "xdp_sock";
+    public static final String DEFAULT_XSKS_MAP_NAME = "xsks_map";
 
     /**
      * <pre>

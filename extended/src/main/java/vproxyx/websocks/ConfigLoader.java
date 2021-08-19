@@ -25,6 +25,8 @@ public class ConfigLoader {
     private int dnsListenPort = 0;
     private boolean gateway = false;
     private int pacServerPort;
+    private boolean udpOverTcpEnabled;
+    private String udpOverTcpNic;
     private final Map<String, ServerList> servers = new HashMap<>();
     private final Map<String, List<DomainChecker>> domains = new HashMap<>();
     private final Map<String, List<DomainChecker>> proxyResolves = new HashMap<>();
@@ -76,6 +78,14 @@ public class ConfigLoader {
 
     public int getPacServerPort() {
         return pacServerPort;
+    }
+
+    public boolean isUdpOverTcpEnabled() {
+        return udpOverTcpEnabled;
+    }
+
+    public String getUdpOverTcpNic() {
+        return udpOverTcpNic;
     }
 
     public Map<String, ServerList> getServers() {
@@ -399,6 +409,17 @@ public class ConfigLoader {
                         throw new Exception("invalid agent.gateway.pac.listen, the port is invalid");
                     }
                     pacServerPort = port;
+                } else if (line.startsWith("proxy.server.udp-over-tcp ")) {
+                    String val = line.substring("proxy.server.udp-over-tcp ".length()).trim();
+                    if (val.equals("on")) {
+                        udpOverTcpEnabled = true;
+                    } else if (val.equals("off")) {
+                        udpOverTcpEnabled = false;
+                    } else {
+                        throw new Exception("invalid value for proxy.server.udp-over-tcp: " + val);
+                    }
+                } else if (line.startsWith("proxy.server.udp-over-tcp.nic ")) {
+                    udpOverTcpNic = line.substring("proxy.server.udp-over-tcp.nic ".length()).trim();
                 } else if (line.startsWith("agent.https-sni-erasure.cert-key.auto-sign ")) {
                     line = line.substring("agent.https-sni-erasure.cert-key.auto-sign ".length());
                     var args = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
@@ -615,6 +636,16 @@ public class ConfigLoader {
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             failReasons.add("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
         }
+        // check udp over tcp
+        if (udpOverTcpEnabled) {
+            if (udpOverTcpNic == null) {
+                udpOverTcpNic = "eth0";
+            }
+        } else {
+            if (udpOverTcpNic != null) {
+                failReasons.add("proxy.server.udp-over-tcp is disabled but proxy.server.udp-over-tcp.nic is set: " + udpOverTcpNic);
+            }
+        }
 
         return failReasons;
     }
@@ -717,6 +748,11 @@ public class ConfigLoader {
                 .put("network", directRelayIpRange.toString())
                 .put("listen", directRelayListen.formatToIPPortString())
                 .put("timeout", directRelayIpBondTimeout));
+        }
+        if (udpOverTcpEnabled) {
+            builder.putObject("udpovertcp", o -> o
+                .put("enabled", true)
+                .put("nic", udpOverTcpNic));
         }
         if (user != null) {
             builder.put("serverUser", user);

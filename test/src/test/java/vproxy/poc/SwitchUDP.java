@@ -16,9 +16,6 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.Switch;
-import vproxy.vswitch.SwitchContext;
-import vproxy.vswitch.stack.fd.VSwitchFDContext;
-import vproxy.vswitch.stack.fd.VSwitchFDs;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -33,8 +30,6 @@ public class SwitchUDP {
         );
         sw.start();
         elg.add("el0");
-        var el = elg.get("el0");
-        var loop = el.getSelectorEventLoop();
         var script = ("" +
             "sudo ifconfig tap1 172.16.3.55/24\n" +
             "sudo ifconfig tap1 inet6 add fd00::337/120\n").trim();
@@ -50,12 +45,7 @@ public class SwitchUDP {
         sw.addTap("tap1", 3, f.getAbsolutePath());
         var network = sw.getNetwork(3);
         network.addIp(IP.from("172.16.3.254"), new MacAddress("00:00:00:00:03:04"), null);
-        //
-        var field = sw.getClass().getDeclaredField("swCtx");
-        field.trySetAccessible();
-        var swCtx = (SwitchContext) field.get(sw);
-        //
-        var fds = new VSwitchFDs(new VSwitchFDContext(swCtx, network, loop.selector));
+        var fds = network.fds();
 
         var sg = new ServerGroup("sg0", elg, new HealthCheckConfig(2000, 5000, 1, 1, CheckProtocol.none), Method.wrr);
         sg.setAnnotations(new Annotations(Map.of(
