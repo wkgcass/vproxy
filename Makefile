@@ -21,6 +21,7 @@ clean:
 	rm -f ./docker-plugin/libvfdposix.so
 	rm -f ./docker-plugin/libvpxdp.so
 	rm -f ./docker-plugin/libbpf.so
+	rm -f ./*.build_artifacts.txt
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
