@@ -99,7 +99,7 @@ public class StreamedArqUDPClientFDs implements UDPBasedFDs {
     private void ready(ArqUDPSocketFD fd) {
         ready = true;
         Logger.alert("streamed arq udp is ready: " + currentHandler.getClass().getSimpleName() + "(" + fd + ")");
-        keepaliveEvent = loop.period(30_000, currentHandler::keepalive);
+        keepaliveEvent = loop.period(10_000, currentHandler::keepalive);
     }
 
     @Override

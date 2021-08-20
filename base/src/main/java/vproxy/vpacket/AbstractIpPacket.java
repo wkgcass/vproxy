@@ -17,6 +17,8 @@ public abstract class AbstractIpPacket extends AbstractPacket implements Partial
 
     public abstract void setPacket(AbstractPacket packet);
 
+    public abstract void setPacket(int protocol, AbstractPacket packet);
+
     @Override
     public void clearAllRawPackets() {
         clearRawPacket();

@@ -192,12 +192,22 @@ public class Ipv6Packet extends AbstractIpPacket {
         for (var h : extHeaders) {
             headers = headers.concat(h.getRawPacket());
         }
-        if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
-            ((IcmpPacket) packet).getRawICMPv6Packet(this);
-        } else if (packet instanceof TcpPacket) {
-            ((TcpPacket) packet).buildIPv6TcpPacket(this);
-        } else if (packet instanceof UdpPacket) {
-            ((UdpPacket) packet).buildIPv6UdpPacket(this);
+        if (packet.raw == null) {
+            if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
+                ((IcmpPacket) packet).getRawICMPv6Packet(this);
+            } else if (packet instanceof TcpPacket) {
+                ((TcpPacket) packet).buildIPv6TcpPacket(this);
+            } else if (packet instanceof UdpPacket) {
+                ((UdpPacket) packet).buildIPv6UdpPacket(this);
+            }
+        } else {
+            if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
+                ((IcmpPacket) packet).updateChecksumWithIPv6(this);
+            } else if (packet instanceof TcpPacket) {
+                ((TcpPacket) packet).updateChecksumWithIPv6(this);
+            } else if (packet instanceof UdpPacket) {
+                ((UdpPacket) packet).updateChecksumWithIPv6(this);
+            }
         }
         return headers.concat(packet.getRawPacket());
     }
@@ -395,6 +405,13 @@ public class Ipv6Packet extends AbstractIpPacket {
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;
+    }
+
+    @Override
+    public void setPacket(int protocol, AbstractPacket packet) {
+        setPacket(packet);
+        if (extHeaders.isEmpty()) nextHeader = protocol;
+        else extHeaders.get(extHeaders.size() - 1).nextHeader = protocol;
     }
 
     public static class ExtHeader extends AbstractPacket {

@@ -91,8 +91,12 @@ public class UdpOverTcpSetup {
         BPFMap bpfMap = obj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME);
 
         // make it small so that it's able to run in docker by default
-        UMem umem = sw.addUMem("umem0", 16, 8, 8, 2048);
-        XDPIface iface = sw.addXDP(nicname, bpfMap, umem, 0, 8, 8, BPFMode.SKB, false, 0, 1, BPFMapKeySelectors.useQueueId.keySelector.get());
+        UMem umem = sw.addUMem("umem0", 256, 128, 128, 2048);
+        XDPIface iface = sw.addXDP(nicname, bpfMap, umem, 0, 128, 128, BPFMode.SKB, false, 0, 1, BPFMapKeySelectors.useQueueId.keySelector.get());
+
+        UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
+        iface.addIngressFilter(filter);
+        iface.addEgressFilter(filter);
 
         network.macTable.record(v4gw.left, iface, true);
         Logger.alert("adding persistent mac entry for v4 gateway " + v4gw.left);

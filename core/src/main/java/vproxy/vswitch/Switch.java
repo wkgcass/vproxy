@@ -775,6 +775,9 @@ public class Switch {
         var fullbufBackup = pkb.fullbuf;
         if (__preHandleInputPkb0(pkb)) {
             packetBuffersToBeHandled.add(pkb);
+            if (pkb.fullbuf != fullbufBackup) {
+                releaseUMemChunkIfPossible(fullbufBackup);
+            }
         } else {
             releaseUMemChunkIfPossible(fullbufBackup);
         }
@@ -844,7 +847,7 @@ public class Switch {
 
     private void releaseUMemChunkIfPossible(ByteArray fullBuf) {
         if (fullBuf instanceof UMemChunkByteArray) {
-            assert Logger.lowLevelDebug("releasing the umem chunk after packet handled or dropped");
+            assert Logger.lowLevelDebug("releasing the umem chunk after packet handled or dropped or rewrote");
             ((UMemChunkByteArray) fullBuf).releaseRef();
         }
     }
@@ -874,6 +877,10 @@ public class Switch {
             } else {
                 sendPacket(pkb, redirect);
             }
+            return;
+        } else if (res == FilterResult.TX) {
+            assert Logger.lowLevelDebug("ingress filter returns TX: " + pkb);
+            sendPacket(pkb, pkb.devin);
             return;
         }
         Logger.error(LogType.IMPROPER_USE, "filter returns unexpected result " + res + " on packet ingress");

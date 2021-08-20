@@ -4,4 +4,6 @@ public enum FilterResult {
     PASS,
     DROP,
     REDIRECT,
+    TX,
+    ABORT,
 }

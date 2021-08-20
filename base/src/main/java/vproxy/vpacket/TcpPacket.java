@@ -239,7 +239,7 @@ public class TcpPacket extends TransportPacket {
             int off = 20;
             while (off < dataOffset) {
                 byte kind = bytes.get(off);
-                if (TcpOption.CASE_1_OPTION_KINDS[kind]) {
+                if (TcpOption.CASE_1_OPTION_KINDS[kind & 0xff]) {
                     var opt = new TcpOption();
                     var err = opt.from(ByteArray.from(new byte[]{kind}));
                     if (err != null) {
@@ -464,7 +464,7 @@ public class TcpPacket extends TransportPacket {
 
         static {
             for (byte b : List.of(Consts.TCP_OPTION_END, Consts.TCP_OPTION_NOP)) {
-                CASE_1_OPTION_KINDS[b] = true;
+                CASE_1_OPTION_KINDS[b & 0xff] = true;
             }
         }
 
@@ -495,7 +495,7 @@ public class TcpPacket extends TransportPacket {
         }
 
         public void setData(ByteArray data) {
-            if (CASE_1_OPTION_KINDS[kind] || data.length() != length - 2) {
+            if (CASE_1_OPTION_KINDS[kind & 0xff] || data.length() != length - 2) {
                 clearRawPacket();
             } else if (raw != null) {
                 clearChecksum();
@@ -537,7 +537,7 @@ public class TcpPacket extends TransportPacket {
 
         public String from(ByteArray bytes) {
             kind = bytes.get(0);
-            if (CASE_1_OPTION_KINDS[kind]) {
+            if (CASE_1_OPTION_KINDS[kind & 0xff]) {
                 return null;
             }
             length = bytes.uint8(1);
@@ -573,7 +573,7 @@ public class TcpPacket extends TransportPacket {
 
         @Override
         protected ByteArray buildPacket() {
-            if (CASE_1_OPTION_KINDS[kind]) {
+            if (CASE_1_OPTION_KINDS[kind & 0xff]) {
                 return ByteArray.from(new byte[]{kind});
             }
             if (data.length() == 0) {

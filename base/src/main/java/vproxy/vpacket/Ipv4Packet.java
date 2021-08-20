@@ -186,6 +186,19 @@ public class Ipv4Packet extends AbstractIpPacket {
         } else if (packet instanceof UdpPacket) {
             ((UdpPacket) packet).buildIPv4UdpPacket(this);
         }
+        if (packet.raw == null) {
+            if (packet instanceof TcpPacket) {
+                ((TcpPacket) packet).buildIPv4TcpPacket(this);
+            } else if (packet instanceof UdpPacket) {
+                ((UdpPacket) packet).buildIPv4UdpPacket(this);
+            }
+        } else {
+            if (packet instanceof TcpPacket) {
+                ((TcpPacket) packet).updateChecksumWithIPv4(this);
+            } else if (packet instanceof UdpPacket) {
+                ((UdpPacket) packet).updateChecksumWithIPv4(this);
+            }
+        }
         ByteArray packetByteArray = packet.getRawPacket();
         totalLength = headerLen + packetByteArray.length();
 
@@ -463,6 +476,12 @@ public class Ipv4Packet extends AbstractIpPacket {
     public void setPacket(AbstractPacket packet) {
         clearRawPacket();
         this.packet = packet;
+    }
+
+    @Override
+    public void setPacket(int protocol, AbstractPacket packet) {
+        setProtocol(protocol);
+        setPacket(packet);
     }
 
     @Override
