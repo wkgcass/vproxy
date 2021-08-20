@@ -357,7 +357,7 @@ public class WrappedSelector implements FDSelector {
             return;
         }
         if (!virtualSocketFDs.containsKey(vfd) && !virtual2hybridMap.containsKey(vfd)) {
-            Logger.trace(LogType.IMPROPER_USE, "cannot register readable for " + vfd + " when the fd not handled by this selector." +
+            assert Logger.lowLevelDebug("cannot register readable for " + vfd + " when the fd not handled by this selector." +
                 " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
             return;
         }
@@ -403,7 +403,7 @@ public class WrappedSelector implements FDSelector {
             return;
         }
         if (!virtualSocketFDs.containsKey(vfd) && !virtual2hybridMap.containsKey(vfd)) {
-            Logger.trace(LogType.IMPROPER_USE, "cannot register writable for " + vfd + " when the fd not handled by this selector." +
+            assert Logger.lowLevelDebug("cannot register writable for " + vfd + " when the fd not handled by this selector." +
                 " Maybe it comes from a pre-registration process. You may ignore this warning if it does not keep printing.");
             return;
         }
