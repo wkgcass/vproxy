@@ -1,4 +1,4 @@
-package vproxyx.websocks.udpovertcp;
+package vproxyx.websocks.uot;
 
 import vproxy.base.component.elgroup.EventLoopGroup;
 import vproxy.base.util.ByteArray;
@@ -37,7 +37,7 @@ public class UdpOverTcpSetup {
         var localIp4 = getIPv4(ips);
         var localIp6 = getIPv6(ips);
 
-        Switch sw = new Switch("udp-over-tcp",
+        Switch sw = new Switch("uot",
             new IPPort("255.255.255.255:0"),
             elg, 300_000, 4 * 3600 * 1000,
             SecurityGroup.denyAll(), -1, false);

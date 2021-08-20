@@ -1,4 +1,4 @@
-package vproxyx.websocks.udpovertcp;
+package vproxyx.websocks.uot;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;

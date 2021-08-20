@@ -409,17 +409,17 @@ public class ConfigLoader {
                         throw new Exception("invalid agent.gateway.pac.listen, the port is invalid");
                     }
                     pacServerPort = port;
-                } else if (line.startsWith("proxy.server.udp-over-tcp ")) {
-                    String val = line.substring("proxy.server.udp-over-tcp ".length()).trim();
+                } else if (line.startsWith("proxy.server.uot ")) {
+                    String val = line.substring("proxy.server.uot ".length()).trim();
                     if (val.equals("on")) {
                         udpOverTcpEnabled = true;
                     } else if (val.equals("off")) {
                         udpOverTcpEnabled = false;
                     } else {
-                        throw new Exception("invalid value for proxy.server.udp-over-tcp: " + val);
+                        throw new Exception("invalid value for proxy.server.uot: " + val);
                     }
-                } else if (line.startsWith("proxy.server.udp-over-tcp.nic ")) {
-                    udpOverTcpNic = line.substring("proxy.server.udp-over-tcp.nic ".length()).trim();
+                } else if (line.startsWith("proxy.server.uot.nic ")) {
+                    udpOverTcpNic = line.substring("proxy.server.uot.nic ".length()).trim();
                 } else if (line.startsWith("agent.https-sni-erasure.cert-key.auto-sign ")) {
                     line = line.substring("agent.https-sni-erasure.cert-key.auto-sign ".length());
                     var args = Arrays.stream(line.split(" ")).map(String::trim).filter(s -> !s.isEmpty()).collect(Collectors.toList());
@@ -643,7 +643,7 @@ public class ConfigLoader {
             }
         } else {
             if (udpOverTcpNic != null) {
-                failReasons.add("proxy.server.udp-over-tcp is disabled but proxy.server.udp-over-tcp.nic is set: " + udpOverTcpNic);
+                failReasons.add("proxy.server.uot is disabled but proxy.server.uot.nic is set: " + udpOverTcpNic);
             }
         }
 
@@ -750,7 +750,7 @@ public class ConfigLoader {
                 .put("timeout", directRelayIpBondTimeout));
         }
         if (udpOverTcpEnabled) {
-            builder.putObject("udpovertcp", o -> o
+            builder.putObject("uot", o -> o
                 .put("enabled", true)
                 .put("nic", udpOverTcpNic));
         }

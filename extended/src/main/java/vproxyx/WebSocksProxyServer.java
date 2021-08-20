@@ -23,7 +23,7 @@ import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.VFDConfig;
 import vproxyx.websocks.*;
-import vproxyx.websocks.udpovertcp.UdpOverTcpSetup;
+import vproxyx.websocks.uot.UdpOverTcpSetup;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;
@@ -126,22 +126,22 @@ public class WebSocksProxyServer {
                 ++i;
             } else if (arg.equals("kcp")) {
                 useKcp = true;
-            } else if (arg.equals("udpovertcp.port")) {
+            } else if (arg.equals("uot.port")) {
                 if (next == null) {
-                    throw new IllegalArgumentException("`udpovertcp.port` should be followed with a port number");
+                    throw new IllegalArgumentException("`uot.port` should be followed with a port number");
                 }
                 try {
                     udpOverTcpPort = Integer.parseInt(next);
                 } catch (NumberFormatException e) {
-                    throw new IllegalArgumentException("udpovertcp.port is not a number");
+                    throw new IllegalArgumentException("uot.port is not a number");
                 }
                 if (udpOverTcpPort < 1 || udpOverTcpPort > 65535) {
-                    throw new IllegalArgumentException("udpovertcp.port is not valid");
+                    throw new IllegalArgumentException("uot.port is not valid");
                 }
                 ++i;
-            } else if (arg.equals("udpovertcp.nic")) {
+            } else if (arg.equals("uot.nic")) {
                 if (next == null) {
-                    throw new IllegalArgumentException("`udpovertcp.nic` should be followed with nic to bind");
+                    throw new IllegalArgumentException("`uot.nic` should be followed with nic to bind");
                 }
                 udpOverTcpNic = next;
                 ++i;
@@ -158,7 +158,7 @@ public class WebSocksProxyServer {
                 throw new IllegalArgumentException("unknown argument: " + arg + ".\n" +
                     "argument: listen {} auth {} \\\n" +
                     "          [ssl (pkcs12 {} pkcs12pswd {})|(certpem {} keypem {})] [domain {}] \\\n" +
-                    "          [redirectport {}] [kcp [udpovertcp.port {} [udpovertcp.nic {eth0}]]] \\\n" +
+                    "          [redirectport {}] [kcp [uot.port {} [uot.nic {eth0}]]] \\\n" +
                     "          [webroot {}] \n" +
                     "examples: listen 443 auth alice:pasSw0rD ssl pkcs12 ~/my.p12 pkcs12pswd paSsWorD domain example.com redirectport 80\n" +
                     "          listen 443 auth alice:pasSw0rD ssl \\\n" +
@@ -208,7 +208,7 @@ public class WebSocksProxyServer {
             throw new IllegalArgumentException("listen port and redirectport are the same.");
         }
         if (!useKcp && udpOverTcpPort != -1) {
-            throw new IllegalArgumentException("kcp is not enabled but udpovertcp is set");
+            throw new IllegalArgumentException("kcp is not enabled but uot is set");
         }
 
         assert Logger.lowLevelDebug("listen: " + port);
@@ -221,8 +221,8 @@ public class WebSocksProxyServer {
         assert Logger.lowLevelDebug("domain: " + domain);
         assert Logger.lowLevelDebug("redirectport: " + redirectPort);
         assert Logger.lowLevelDebug("useKcp: " + useKcp);
-        assert Logger.lowLevelDebug("udpovertcp.port: " + udpOverTcpPort);
-        assert Logger.lowLevelDebug("udpovertcp.nic: " + udpOverTcpNic);
+        assert Logger.lowLevelDebug("uot.port: " + udpOverTcpPort);
+        assert Logger.lowLevelDebug("uot.nic: " + udpOverTcpNic);
         assert Logger.lowLevelDebug("webroot: " + webroot);
 
         // init event loops
@@ -393,7 +393,7 @@ public class WebSocksProxyServer {
             Logger.alert("kcp server started on " + port);
         }
         if (udpOverTcpPort != -1) {
-            Logger.alert("udp over tcp kcp server started on " + udpOverTcpPort);
+            Logger.alert("uot kcp server started on " + udpOverTcpPort);
         }
     }
 }

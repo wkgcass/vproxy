@@ -18,7 +18,7 @@ import vproxy.component.ssl.CertKey;
 import vproxy.util.CoreUtils;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
-import vproxyx.websocks.udpovertcp.UdpOverTcpSetup;
+import vproxyx.websocks.uot.UdpOverTcpSetup;
 
 import java.io.File;
 import java.io.IOException;
@@ -178,7 +178,7 @@ public class ConfigProcessor {
         // handle servers
         var serverListMap = configLoader.getServers();
         String nic = configLoader.getUdpOverTcpNic();
-        Logger.alert("enhancing kcp with udp-over-tcp on " + nic);
+        Logger.alert("enhancing kcp with uot on " + nic);
         KCPFDs kcpFDs;
         if (configLoader.isUdpOverTcpEnabled()) {
             kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(),

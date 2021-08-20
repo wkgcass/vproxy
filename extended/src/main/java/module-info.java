@@ -13,5 +13,5 @@ module vproxy.extended {
     exports vproxyx.websocks.relay;
     exports vproxyx.websocks.ss;
     exports vproxyx.websocks.ssl;
-    exports vproxyx.websocks.udpovertcp;
+    exports vproxyx.websocks.uot;
 }
