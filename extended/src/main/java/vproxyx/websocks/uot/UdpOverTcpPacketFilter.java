@@ -162,8 +162,8 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
                 conntrack.put(key, entry);
                 Logger.alert("creating new connection: " + key);
             } else {
-                Logger.warn(LogType.ALERT, "server is sending unrecorded packet, drop it: " + pkb.pkt.description());
-                return FilterResult.DROP;
+                assert Logger.lowLevelDebug("output pass: server is sending unrecorded packet");
+                return FilterResult.PASS;
             }
         }
 
