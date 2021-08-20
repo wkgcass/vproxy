@@ -48,10 +48,10 @@ public class SwitchUtils {
         if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket)) {
             return; // only tcp requires modification
         }
-        if (pkb.ensureIPPacketParsed()) return;
         if (!(((AbstractIpPacket) pkb.pkt.getPacket()).getPacket() instanceof TcpPacket)) {
             return; // only tcp requires modification
         }
+        if (pkb.ensurePartialPacketParsed()) return;
         AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
         TcpPacket tcp = (TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket();
         if ((tcp.getFlags() & Consts.TCP_FLAGS_SYN) != Consts.TCP_FLAGS_SYN) {

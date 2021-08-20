@@ -258,6 +258,7 @@ public class L3 {
     }
 
     private void handleNeighborSolicitation(PacketBuffer pkb) {
+        if (pkb.ensurePartialPacketParsed()) return;
         assert Logger.lowLevelDebug("handleNeighborSolicitation(" + pkb + ")");
 
         var inIpPkt = (Ipv6Packet) pkb.pkt.getPacket();
@@ -296,6 +297,7 @@ public class L3 {
     }
 
     private void respondIcmpPong(PacketBuffer pkb) {
+        if(pkb.ensurePartialPacketParsed()) return;
         assert Logger.lowLevelDebug("respondIcmpPong(" + pkb + ")");
 
         var inIpPkt = (AbstractIpPacket) pkb.pkt.getPacket();
@@ -320,6 +322,7 @@ public class L3 {
     }
 
     private void respondIcmpPortUnreachable(PacketBuffer pkb) {
+        if (pkb.ensurePartialPacketParsed()) return;
         assert Logger.lowLevelDebug("respondIcmpPortUnreachable(" + pkb + ")");
 
         var inIpPkt = (AbstractIpPacket) pkb.pkt.getPacket();
@@ -358,6 +361,7 @@ public class L3 {
     }
 
     private void respondIcmpTimeExceeded(PacketBuffer pkb) {
+        if (pkb.ensurePartialPacketParsed()) return;
         assert Logger.lowLevelDebug("respondIcmpTimeExceeded(" + pkb + ")");
 
         var inIpPkt = (AbstractIpPacket) pkb.pkt.getPacket();

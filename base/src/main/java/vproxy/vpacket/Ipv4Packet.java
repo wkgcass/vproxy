@@ -56,8 +56,17 @@ public class Ipv4Packet extends AbstractIpPacket {
         if (err != null) {
             return err;
         }
+        ttl = bytes.uint8(8);
 
         this.raw = raw;
+        return null;
+    }
+
+    @Override
+    public String initPartial(int level) {
+        if (packet instanceof PartialPacket) {
+            return ((PartialPacket) packet).initPartial(level);
+        }
         return null;
     }
 

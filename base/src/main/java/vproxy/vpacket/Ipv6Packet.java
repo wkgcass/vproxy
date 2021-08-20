@@ -52,8 +52,17 @@ public class Ipv6Packet extends AbstractIpPacket {
         if (err != null) {
             return err;
         }
+        hopLimit = bytes.uint8(7);
 
         this.raw = raw;
+        return null;
+    }
+
+    @Override
+    public String initPartial(int level) {
+        if (packet instanceof PartialPacket) {
+            return ((PartialPacket) packet).initPartial(level);
+        }
         return null;
     }
 

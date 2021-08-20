@@ -274,7 +274,7 @@ public class PacketBuffer extends PacketDataBuffer {
     /**
      * @return true when parsing failed, false otherwise
      */
-    public boolean ensureIPPacketParsed() {
+    public boolean ensurePartialPacketParsed() {
         var bytes = pkt.getPacketBytes();
         if (bytes == null) {
             return false;
@@ -287,6 +287,23 @@ public class PacketBuffer extends PacketDataBuffer {
         } else {
             err = ip.from(bytes);
         }
+
+        if (err == null) {
+            pkt.clearPacketBytes();
+            return false;
+        }
+        assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");
+        return true;
+    }
+
+    public boolean ensurePartialPacketParsed(int level) {
+        var bytes = pkt.getPacketBytes();
+        if (bytes == null) {
+            return false;
+        }
+
+        AbstractIpPacket ip = (AbstractIpPacket) pkt.getPacket(); // cast should succeed
+        String err = ip.initPartial(level);
 
         if (err == null) {
             pkt.clearPacketBytes();

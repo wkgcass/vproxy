@@ -53,6 +53,7 @@ public class L4 {
     }
 
     private boolean wantToHandle(PacketBuffer pkb) {
+        if (pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS)) return false;
         assert Logger.lowLevelDebug("wantToHandle(" + pkb + ")");
 
         // implement more L4 protocols in the future
@@ -231,6 +232,8 @@ public class L4 {
             assert Logger.lowLevelDebug("not SYN packet");
             return;
         }
+        if (pkb.ensurePartialPacketParsed()) return;
+
         pkb.tcp.setState(TcpState.SYN_RECEIVED);
         // get tcp options from the syn
         int mss = TcpEntry.SND_DEFAULT_MSS;

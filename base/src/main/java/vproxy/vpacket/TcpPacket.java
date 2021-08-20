@@ -185,6 +185,28 @@ public class TcpPacket extends TransportPacket {
     }
 
     @Override
+    public String initPartial(int level) {
+        ByteArray bytes = raw.pktBuf;
+        if (level > LEVEL_KEY_FIELDS) {
+            seqNum = bytes.uint32(4);
+            ackNum = bytes.uint32(8);
+
+            var dataOffsetReservedFlags = bytes.uint16(12);
+            dataOffset = ((dataOffsetReservedFlags >> 12) & 0xf) * 4;
+            flags = (dataOffsetReservedFlags & 0b0011_1111);
+
+            window = bytes.uint16(14);
+
+            if (bytes.length() > dataOffset) {
+                data = bytes.sub(dataOffset, bytes.length() - dataOffset);
+            } else {
+                data = ByteArray.allocate(0);
+            }
+        }
+        return null;
+    }
+
+    @Override
     public String from(PacketDataBuffer raw) {
         ByteArray bytes = raw.pktBuf;
         if (bytes.length() < 20) {

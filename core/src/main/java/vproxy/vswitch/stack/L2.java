@@ -61,8 +61,6 @@ public class L2 {
 
             var ips = pkb.network.ips.lookupByMac(dst);
             if (ips != null) {
-                if (pkb.ensureIPPacketParsed()) return;
-
                 pkb.setMatchedIps(ips);
                 L3.input(pkb);
                 return;
@@ -118,8 +116,6 @@ public class L2 {
         // also, send arp/ndp request for these addresses if they are ip packet
         if (pkb.pkt.getPacket() instanceof AbstractIpPacket) {
             AbstractIpPacket ip = (AbstractIpPacket) pkb.pkt.getPacket();
-
-            if (pkb.ensureIPPacketParsed()) return;
 
             if (pkb.network.v4network.contains(ip.getDst()) || (pkb.network.v6network != null && pkb.network.v6network.contains(ip.getDst()))) {
                 assert Logger.lowLevelDebug("try to resolve " + ip.getDst() + " when flooding");
@@ -190,8 +186,6 @@ public class L2 {
             }
             assert Logger.lowLevelDebug("is icmp packet");
 
-            if (pkb.ensureIPPacketParsed()) return;
-
             var icmp = (IcmpPacket) ipPkt.getPacket();
             if (icmp.getType() != Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation
                 &&
@@ -199,6 +193,9 @@ public class L2 {
                 assert Logger.lowLevelDebug("is not ndp");
                 return;
             }
+
+            if (pkb.ensurePartialPacketParsed()) return;
+
             assert Logger.lowLevelDebug("is ndp");
             var other = icmp.getOther();
             if (other.length() < 28) { // 4 reserved and 16 target address and 8 option
@@ -261,7 +258,6 @@ public class L2 {
 
             var ips = pkb.network.ips.lookupByMac(dst);
             if (ips != null) {
-                if (pkb.ensureIPPacketParsed()) return;
                 pkb.setMatchedIps(ips);
                 L3.input(pkb);
                 return;
@@ -329,7 +325,7 @@ public class L2 {
             }
             assert Logger.lowLevelDebug("broadcast to " + ips);
 
-            if (pkb.ensureIPPacketParsed()) return;
+            if (pkb.ensurePartialPacketParsed()) return;
 
             var copied = pkb.copy();
 

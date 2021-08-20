@@ -27,6 +27,17 @@ public class UdpPacket extends TransportPacket {
     }
 
     @Override
+    public String initPartial(int level) {
+        ByteArray bytes = raw.pktBuf;
+        if (level > LEVEL_KEY_FIELDS) {
+            PacketBytes pktBytes = new PacketBytes();
+            pktBytes.from(new PacketDataBuffer(bytes.sub(8, bytes.length() - 8)));
+            data = pktBytes;
+        }
+        return null;
+    }
+
+    @Override
     public String from(PacketDataBuffer raw) {
         ByteArray bytes = raw.pktBuf;
 

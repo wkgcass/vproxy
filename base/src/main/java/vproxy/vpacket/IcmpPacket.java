@@ -21,6 +21,12 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
     @Override
     public String initPartial(PacketDataBuffer raw) {
         this.raw = raw;
+        type = raw.pktBuf.uint8(0);
+        return null;
+    }
+
+    @Override
+    public String initPartial(int level) {
         return null;
     }
 
