@@ -157,6 +157,9 @@ public class XDPIface extends Iface {
         super.destroy();
 
         var xsk = this.xsk;
+        if (xsk == null) {
+            return;
+        }
         this.xsk = null;
         try {
             loop.remove(xsk);
