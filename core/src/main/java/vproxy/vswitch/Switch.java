@@ -23,11 +23,14 @@ import vproxy.vfd.posix.PosixDatagramFD;
 import vproxy.vmirror.Mirror;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vpacket.Ipv4Packet;
+import vproxy.vpacket.PartialPacket;
 import vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import vproxy.vswitch.iface.*;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.stack.NetworkStack;
+import vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
+import vproxy.vswitch.stack.conntrack.Fastpath;
 import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UMemChunkByteArray;
 import vproxy.vswitch.util.UserInfo;
@@ -675,6 +678,16 @@ public class Switch {
     private void sendPacket(PacketBuffer pkb, Iface iface) {
         assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
 
+        // handle fastpath
+        if (pkb.fastpath) {
+            pkb.fastpath = false;
+            if (pkb.udp instanceof EnhancedUDPEntry) {
+                var udp = (EnhancedUDPEntry) pkb.udp;
+                udp.fastpath = new Fastpath(iface, pkb.vni, pkb.pkt.getSrc(), pkb.pkt.getDst());
+                assert Logger.lowLevelDebug("recording fastpath on output: " + udp.fastpath);
+            }
+        }
+
         // handle it by packet filter
         var egressFilters = iface.getEgressFilters();
         if (egressFilters.isEmpty()) {
@@ -949,10 +962,32 @@ public class Switch {
             // the umem chunk need to be released after processing
             var fullbufBackup = pkb.fullbuf;
 
-            try {
-                netStack.devInput(pkb);
-            } catch (Throwable t) {
-                Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
+            // try fastpath
+            boolean fastpathHandled = false;
+            if (pkb.fastpath) {
+                pkb.fastpath = false; // clear the field
+                if (pkb.udp != null) {
+                    assert Logger.lowLevelDebug("fastpath for udp on input: " + pkb);
+                    pkb.udp.update();
+                    pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS);
+                    pkb.udp.listenEntry.receivingQueue.store(
+                        pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(),
+                        pkb.udpPkt.getData().getRawPacket());
+                    fastpathHandled = true;
+                } else {
+                    assert Logger.lowLevelDebug("fastpath set but pkb.udp is null");
+                }
+            }
+
+            if (!fastpathHandled) {
+                assert Logger.lowLevelDebug("no fastpath, handle normally: " + pkb);
+
+                // normal input
+                try {
+                    netStack.devInput(pkb);
+                } catch (Throwable t) {
+                    Logger.error(LogType.IMPROPER_USE, "unexpected exception in devInput", t);
+                }
             }
 
             releaseUMemChunkIfPossible(fullbufBackup);

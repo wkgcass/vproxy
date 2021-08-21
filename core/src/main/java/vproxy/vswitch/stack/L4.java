@@ -15,6 +15,7 @@ import vproxy.vpacket.conntrack.udp.UdpUtils;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.VirtualNetwork;
+import vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 
 import java.util.Collections;
 import java.util.List;
@@ -43,7 +44,7 @@ public class L4 {
             handleTcp(pkb);
             return true;
         }
-        if (pkb.udp != null) {
+        if (pkb.udpListen != null) {
             handleUdp(pkb);
             return true;
         }
@@ -96,7 +97,7 @@ public class L4 {
             IPPort dst = new IPPort(ipPkt.getDst(), udpPkt.getDstPort());
             var listenEntry = pkb.network.conntrack.lookupUdpListen(dst);
             if (listenEntry != null) {
-                pkb.udp = listenEntry;
+                pkb.udpListen = listenEntry;
                 result = true;
             }
         }
@@ -220,7 +221,7 @@ public class L4 {
         }
 
         pkb.replacePacket(ipPkt);
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
     private void handleTcpClosed(PacketBuffer pkb) {
@@ -258,7 +259,7 @@ public class L4 {
         pkb.tcp.sendingQueue.incAllSeq();
 
         pkb.replacePacket(respondIp);
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
     private void handleTcpSynSent(@SuppressWarnings("unused") PacketBuffer pkb) {
@@ -278,7 +279,7 @@ public class L4 {
                 AbstractIpPacket respondIp = TcpUtils.buildIpResponse(pkb.tcp, respondTcp);
                 pkb.tcp.sendingQueue.incAllSeq();
                 pkb.replacePacket(respondIp);
-                L3.output(pkb);
+                outputL3(pkb);
                 return;
             }
         }
@@ -425,13 +426,23 @@ public class L4 {
     }
 
     private void handleUdp(PacketBuffer pkb) {
-        assert Logger.lowLevelDebug("handleUdp");
-        pkb.udp.receivingQueue.store(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(), pkb.udpPkt.getData().getRawPacket());
+        assert Logger.lowLevelDebug("handleUdp(" + pkb + ")");
+        boolean ok = pkb.udpListen.receivingQueue.store(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(), pkb.udpPkt.getData().getRawPacket());
+        if (ok) {
+            assert Logger.lowLevelDebug("recording udp entry: " + pkb);
+            var remote = new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort());
+            var local = new IPPort(pkb.ipPkt.getDst(), pkb.udpPkt.getDstPort());
+            pkb.udp = pkb.network.conntrack.recordUdp(remote, local, () -> {
+                var entry = new EnhancedUDPEntry(pkb.udpListen, remote, local, pkb.network, swCtx.getSelectorEventLoop());
+                entry.userData = pkb.fastpathUserData;
+                return entry;
+            });
+        }
     }
 
     public void output(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("L4.output(" + pkb + ")");
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
     public void tcpAck(VirtualNetwork network, TcpEntry tcp) {
@@ -467,7 +478,7 @@ public class L4 {
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
     public void tcpStartRetransmission(VirtualNetwork network, TcpEntry tcp) {
@@ -563,7 +574,7 @@ public class L4 {
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
     private void sendTcpFin(VirtualNetwork network, TcpEntry tcp) {
@@ -575,23 +586,57 @@ public class L4 {
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
-        L3.output(pkb);
+        outputL3(pkb);
     }
 
-    public void sendUdp(VirtualNetwork network, UdpListenEntry udp) {
+    public void sendUdp(VirtualNetwork network, UdpListenEntry udpListen) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendUdp(" + network + "," + udp + ")");
+        assert Logger.lowLevelDebug("sendUdp(" + network + "," + udpListen + ")");
 
         while (true) {
-            Datagram dg = udp.sendingQueue.fetch();
+            Datagram dg = udpListen.sendingQueue.fetch();
             if (dg == null) {
                 break;
             }
-            UdpPacket udpPkt = UdpUtils.buildCommonUdpResponse(udp, dg);
-            AbstractIpPacket ipPkt = UdpUtils.buildIpResponse(udp, dg, udpPkt);
+            UdpPacket udpPkt = UdpUtils.buildCommonUdpResponse(udpListen, dg);
+            AbstractIpPacket ipPkt = UdpUtils.buildIpResponse(udpListen, dg, udpPkt);
+
+            var remote = new IPPort(ipPkt.getDst(), udpPkt.getDstPort());
+            var local = new IPPort(ipPkt.getSrc(), udpPkt.getSrcPort());
 
             PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
-            L3.output(pkb);
+
+            assert Logger.lowLevelDebug("recording udp entry: " + pkb);
+            pkb.udp = network.conntrack.recordUdp(remote, local,
+                () -> new EnhancedUDPEntry(udpListen, remote, local, network, swCtx.getSelectorEventLoop()));
+
+            outputL3(pkb);
         }
+    }
+
+    private void outputL3(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("outputL3(" + pkb + ")");
+
+        if (pkb.udp != null) {
+            assert Logger.lowLevelDebug("trying fastpath for udp");
+            if (pkb.udp instanceof EnhancedUDPEntry) {
+                var fastpath = ((EnhancedUDPEntry) pkb.udp).fastpath;
+                if (fastpath != null && !fastpath.validateAndSetInto(swCtx, pkb)) {
+                    fastpath = null;
+                    ((EnhancedUDPEntry) pkb.udp).fastpath = null;
+                }
+                if (fastpath != null) {
+                    assert Logger.lowLevelDebug("using fastpath for udp: " + fastpath);
+                    swCtx.sendPacket(pkb, fastpath.output);
+                    return;
+                } else {
+                    assert Logger.lowLevelDebug("set recordFastPath for udp");
+                    pkb.fastpath = true;
+                }
+            }
+        }
+
+        assert Logger.lowLevelDebug("no fastpath, normal L3 output");
+        L3.output(pkb);
     }
 }

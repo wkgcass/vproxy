@@ -8,10 +8,12 @@ import vproxy.vfd.IPv4;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
 import vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import vproxy.vpacket.conntrack.tcp.TcpListenHandler;
+import vproxy.vpacket.conntrack.udp.UdpEntry;
 import vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import vproxy.vpacket.conntrack.udp.UdpListenHandler;
 
 import java.util.*;
+import java.util.function.Supplier;
 
 public class Conntrack {
     private final Map<IPPort, TcpListenEntry> tcpListenEntries = new HashMap<>();
@@ -19,6 +21,7 @@ public class Conntrack {
     // dstIPPort => srcIPPort => TcpEntry
     // make dstIPPort to be the first key for better performance
     private final Map<IPPort, Map<IPPort, TcpEntry>> tcpEntries = new HashMap<>();
+    private final Map<IPPort, Map<IPPort, UdpEntry>> udpEntries = new HashMap<>();
 
     private static final IP ipv4BindAny = IP.from("0.0.0.0");
     private static final IP ipv6BindAny = IP.from("::");
@@ -73,6 +76,14 @@ public class Conntrack {
         return map.get(src);
     }
 
+    public UdpEntry lookupUdp(IPPort remote, IPPort local) {
+        var map = udpEntries.get(local);
+        if (map == null) {
+            return null;
+        }
+        return map.get(remote);
+    }
+
     public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
         var map = tcpEntries.computeIfAbsent(dst, x -> new HashMap<>());
         TcpEntry entry = new TcpEntry(listenEntry, src, dst, seq);
@@ -82,6 +93,18 @@ public class Conntrack {
             old.destroy();
         }
         return entry;
+    }
+
+    public UdpEntry recordUdp(IPPort remote, IPPort local, Supplier<UdpEntry> entrySupplier) {
+        var map = udpEntries.computeIfAbsent(local, x -> new HashMap<>());
+        var old = map.get(remote);
+        if (old == null) {
+            old = entrySupplier.get();
+            map.put(remote, old);
+        } else {
+            old.update();
+        }
+        return old;
     }
 
     public TcpListenEntry listenTcp(IPPort dst, TcpListenHandler handler) {
@@ -110,6 +133,13 @@ public class Conntrack {
 
     public void removeUdpListen(IPPort dst) {
         udpListenEntries.remove(dst);
+        // remove udp entries as well
+        var map = udpEntries.remove(dst);
+        if (map != null) {
+            for (var x : map.values()) {
+                x.destroy();
+            }
+        }
     }
 
     public void removeTcp(IPPort src, IPPort dst) {
@@ -120,6 +150,17 @@ public class Conntrack {
         map.remove(src);
         if (map.isEmpty()) {
             tcpEntries.remove(dst);
+        }
+    }
+
+    public void removeUdp(IPPort remote, IPPort local) {
+        var map = udpEntries.get(local);
+        if (map == null) {
+            return;
+        }
+        map.remove(remote);
+        if (map.isEmpty()) {
+            udpEntries.remove(local);
         }
     }
 }

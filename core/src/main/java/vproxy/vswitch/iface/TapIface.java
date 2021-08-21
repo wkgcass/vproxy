@@ -133,6 +133,10 @@ public class TapIface extends Iface {
 
     @Override
     public void destroy() {
+        if (isDestroyed()) {
+            return;
+        }
+        super.destroy();
         if (operateTap != null) {
             try {
                 bondLoop.remove(operateTap);

@@ -151,9 +151,11 @@ public class XDPIface extends Iface {
 
     @Override
     public void destroy() {
-        if (xsk == null) {
+        if (isDestroyed()) {
             return;
         }
+        super.destroy();
+
         var xsk = this.xsk;
         this.xsk = null;
         try {

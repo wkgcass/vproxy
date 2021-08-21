@@ -14,6 +14,7 @@ import java.nio.ByteBuffer;
 public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualFD {
     private IPPort connectedAddress = null;
     private UdpListenEntry udpListenEntry;
+    private IPPort bindIPPort;
     private boolean isReadable = false;
 
     protected VSwitchDatagramFD(VSwitchFDContext ctx) {
@@ -86,6 +87,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
             throw new IOException("any local address is not allowed when using VSwitchDatagramFD");
         }
         udpListenEntry = ctx.network.conntrack.listenUdp(l4addr, new ListenHandler());
+        bindIPPort = udpListenEntry.bind;
     }
 
     @Override
@@ -183,7 +185,7 @@ public class VSwitchDatagramFD extends VSwitchFD implements DatagramFD, VirtualF
     public String toString() {
         return "VSwitchDatagramFD{" +
             "connect=" + connectedAddress +
-            ", bind=" + (udpListenEntry == null ? "null" : udpListenEntry.bind) +
+            ", bind=" + bindIPPort +
             ", closed=" + closed +
             '}';
     }

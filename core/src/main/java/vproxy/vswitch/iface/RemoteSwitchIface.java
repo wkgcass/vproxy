@@ -61,11 +61,6 @@ public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface {
     }
 
     @Override
-    public void destroy() {
-        // do nothing
-    }
-
-    @Override
     public int getLocalSideVni(int hint) {
         return hint;
     }

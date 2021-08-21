@@ -2,9 +2,11 @@ package vproxy.vswitch;
 
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 import vproxy.vfd.IP;
 import vproxy.vpacket.*;
 import vproxy.vpacket.conntrack.tcp.TcpEntry;
+import vproxy.vpacket.conntrack.udp.UdpEntry;
 import vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import vproxy.vswitch.iface.Iface;
 
@@ -61,7 +63,14 @@ public class PacketBuffer extends PacketDataBuffer {
     // l4
     public TcpEntry tcp = null;
     public boolean needTcpReset = false; // this field is only used in L4.input
-    public UdpListenEntry udp = null;
+    public UdpListenEntry udpListen = null;
+    public UdpEntry udp = null;
+
+    // 1. set to true in L4, set to false before handling egress filters
+    // 2. set to true in ingress filters, set to false before handling
+    public boolean fastpath = false;
+
+    public Object fastpathUserData = null; // set in ingress filters, used in L4 when creating entry
 
     // ----- used by packet filters -----
     // redirect
@@ -306,7 +315,6 @@ public class PacketBuffer extends PacketDataBuffer {
         String err = ip.initPartial(level);
 
         if (err == null) {
-            pkt.clearPacketBytes();
             return false;
         }
         assert Logger.lowLevelDebug("received invalid ip packet: " + err + ", drop it");
@@ -355,6 +363,6 @@ public class PacketBuffer extends PacketDataBuffer {
             ", vni=" + vni +
             ", pktBuf=" + (pktBuf == null ? "" : pktBuf.toHexString()) +
             ", pkt=" + (pkt == null ? "" : pkt.description()) +
-            '}';
+            "}@" + Utils.toHexString(super.hashCode());
     }
 }

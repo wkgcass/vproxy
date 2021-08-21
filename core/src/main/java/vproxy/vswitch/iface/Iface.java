@@ -8,6 +8,7 @@ import vproxy.vswitch.plugin.PacketFilter;
 import java.util.ArrayList;
 
 public abstract class Iface {
+    private boolean destroyed = false;
     private int baseMTU;
     private boolean floodAllowed;
     protected IfaceInitParams.PacketCallback callback;
@@ -28,7 +29,9 @@ public abstract class Iface {
     public void completeTx() { // default do nothing
     }
 
-    public abstract void destroy();
+    public void destroy() {
+        destroyed = true;
+    }
 
     public abstract int getLocalSideVni(int hint);
 
@@ -106,5 +109,9 @@ public abstract class Iface {
 
     public void setAnnotations(Annotations annotations) {
         this.annotations = annotations;
+    }
+
+    public boolean isDestroyed() {
+        return destroyed;
     }
 }

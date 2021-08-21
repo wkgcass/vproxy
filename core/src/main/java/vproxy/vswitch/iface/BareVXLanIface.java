@@ -52,11 +52,6 @@ public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Loc
     }
 
     @Override
-    public void destroy() {
-        // do nothing
-    }
-
-    @Override
     public int getLocalSideVni(int hint) {
         return localSideVni;
     }

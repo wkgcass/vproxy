@@ -74,10 +74,6 @@ public class UserIface extends AbstractBaseEncryptedSwitchSocketIface implements
     }
 
     @Override
-    public void destroy() {
-    }
-
-    @Override
     public int getLocalSideVni(int hint) {
         return localSideVni;
     }

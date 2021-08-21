@@ -35,19 +35,20 @@ public class UdpListenEntry {
     public class ReceivingQueue {
         private final LinkedList<Datagram> q = new LinkedList<>();
 
-        public void store(IP src, int srcPort, ByteArray data) {
+        public boolean store(IP src, int srcPort, ByteArray data) {
             if (connect != null) {
                 if (!src.equals(connect.getAddress())) {
                     assert Logger.lowLevelDebug("packet ip " + src + " not matching the connected addr " + connect);
-                    return; // drop
+                    return false; // drop
                 }
                 if (srcPort != connect.getPort()) {
                     assert Logger.lowLevelDebug("packet port " + srcPort + " not matching the connected addr " + connect);
-                    return; // drop
+                    return false; // drop
                 }
             }
             q.add(new Datagram(src, srcPort, data.copy()));
             handler.readable(UdpListenEntry.this);
+            return true;
         }
 
         public Datagram apiRecv() {

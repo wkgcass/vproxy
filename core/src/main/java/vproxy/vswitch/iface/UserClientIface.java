@@ -129,6 +129,10 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
 
     @Override
     public void destroy() {
+        if (isDestroyed()) {
+            return;
+        }
+        super.destroy();
         if (bondLoop != null) {
             try {
                 bondLoop.remove(sock);

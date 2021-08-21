@@ -4,6 +4,7 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.vfd.IPPort;
 import vproxy.vpacket.PacketBytes;
 import vproxy.vpacket.TcpPacket;
 import vproxy.vpacket.UdpPacket;
@@ -12,14 +13,10 @@ import vproxy.vswitch.PacketFilterHelper;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.PacketFilter;
 
-import java.util.HashMap;
-import java.util.Map;
-
 public class UdpOverTcpPacketFilter implements PacketFilter {
     private static final byte TCP_OPTION_VPROXY_UOT = (byte) 132;
 
     private final boolean isClient;
-    private final Map<LocalRemoteIPPort, UEntry> conntrack = new HashMap<>();
 
     public UdpOverTcpPacketFilter(boolean isClient) {
         this.isClient = isClient;
@@ -39,6 +36,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             assert Logger.lowLevelDebug("input pass: no tcpPkt");
             return FilterResult.PASS;
         }
+        assert Logger.lowLevelDebug("uot input got packet: " + pkb);
         var pkt = pkb.tcpPkt;
 
         pkb.ensurePartialPacketParsed();
@@ -61,15 +59,26 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             return FilterResult.DROP;
         }
 
-        var key = new LocalRemoteIPPort(pkb.ipPkt.getDst(), pkb.ipPkt.getSrc(), pkt.getDstPort(), pkt.getSrcPort());
-        var entry = conntrack.get(key);
+        var remote = new IPPort(pkb.ipPkt.getSrc(), pkt.getSrcPort());
+        var local = new IPPort(pkb.ipPkt.getDst(), pkt.getDstPort());
+        var udpEntry = pkb.network.conntrack.lookupUdp(remote, local);
+
+        if (udpEntry != null) {
+            assert Logger.lowLevelDebug("use fastpath");
+            pkb.fastpath = true;
+            pkb.udp = udpEntry;
+        } else {
+            assert Logger.lowLevelDebug("use normal handle");
+        }
+
+        var entry = (udpEntry != null) ? (UEntry) udpEntry.userData : null;
 
         if (pkt.isSyn() && !pkt.isAck()) {
             // is trying to establish a connection
             if (entry == null) {
-                entry = new UEntry(key, this::removeEntry);
-                conntrack.put(key, entry);
-                Logger.alert("received new connection: " + key);
+                entry = new UEntry();
+                pkb.fastpathUserData = entry;
+                Logger.alert("received new connection: " + remote + "/" + local);
             }
         } else {
             if (entry == null) {
@@ -77,8 +86,6 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
                 return FilterResult.DROP;
             }
         }
-
-        entry.resetTimer();
 
         long pktSeq = pkt.getSeqNum();
         entry.ackId = pktSeq + pkt.getData().length();
@@ -151,16 +158,24 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             assert Logger.lowLevelDebug("output pass: no udpPkt");
             return FilterResult.PASS;
         }
+        assert Logger.lowLevelDebug("uot output got packet: " + pkb);
         var pkt = pkb.udpPkt;
 
-        var key = new LocalRemoteIPPort(pkb.ipPkt.getSrc(), pkb.ipPkt.getDst(), pkt.getSrcPort(), pkt.getDstPort());
-        var entry = conntrack.get(key);
+        var remote = new IPPort(pkb.ipPkt.getDst(), pkt.getDstPort());
+        var local = new IPPort(pkb.ipPkt.getSrc(), pkt.getSrcPort());
+        var udpEntry = pkb.network.conntrack.lookupUdp(remote, local);
 
+        if (udpEntry == null) {
+            assert Logger.lowLevelDebug("output pass: unrecorded packet");
+            return FilterResult.PASS;
+        }
+
+        var entry = (UEntry) udpEntry.userData;
         if (entry == null) {
             if (isClient) {
-                entry = new UEntry(key, this::removeEntry);
-                conntrack.put(key, entry);
-                Logger.alert("creating new connection: " + key);
+                entry = new UEntry();
+                udpEntry.userData = entry;
+                Logger.alert("creating new connection: " + remote + "/" + local);
             } else {
                 assert Logger.lowLevelDebug("output pass: server is sending unrecorded packet");
                 return FilterResult.PASS;
@@ -224,10 +239,5 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
 
         assert Logger.lowLevelDebug("output formatted packet: " + pkb);
         return FilterResult.PASS;
-    }
-
-    private void removeEntry(UEntry entry) {
-        var key = new LocalRemoteIPPort(entry.local.getAddress(), entry.remote.getAddress(), entry.local.getPort(), entry.remote.getPort());
-        conntrack.remove(key);
     }
 }
