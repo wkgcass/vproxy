@@ -1,6 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vproxy.base.util.coll.RingQueue;
 import vproxy.base.util.objectpool.ConcurrentObjectPool;
 import vproxy.base.util.objectpool.CursorList;
 import vproxy.base.util.objectpool.PrototypeObjectList;
@@ -10,6 +11,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNull;
 
 public class TestUtilities {
     @Test
@@ -110,5 +112,103 @@ public class TestUtilities {
         for (Thread t : threads) {
             t.join();
         }
+    }
+
+    @Test
+    public void ringQueue() {
+        RingQueue<Integer> q = new RingQueue<>(5);
+        assertEquals("[]", q.toString());
+        assertEquals(5, q.currentCapacity());
+
+        q.add(1);
+        assertEquals("[1]", q.toString());
+        assertEquals(1, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        q.add(2);
+        assertEquals("[1, 2]", q.toString());
+        assertEquals(2, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        assertEquals(1, q.poll().intValue());
+        assertEquals(1, q.size());
+        assertEquals(5, q.currentCapacity());
+        assertEquals(2, q.poll().intValue());
+        assertEquals(0, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        assertNull(q.poll());
+        assertEquals(0, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        q.add(1);
+        q.add(2);
+        q.add(3);
+        q.add(4);
+        assertEquals("[1, 2, 3, 4]", q.toString());
+        assertEquals(4, q.size());
+        assertEquals(5, q.currentCapacity());
+        q.poll();
+        assertEquals("[2, 3, 4]", q.toString());
+        assertEquals(3, q.size());
+        assertEquals(5, q.currentCapacity());
+        q.poll();
+        assertEquals("[3, 4]", q.toString());
+        assertEquals(2, q.size());
+        assertEquals(5, q.currentCapacity());
+        q.add(5);
+        assertEquals("[3, 4, 5]", q.toString());
+        assertEquals(3, q.size());
+        assertEquals(5, q.currentCapacity());
+        q.add(6);
+        assertEquals("[3, 4, 5, 6]", q.toString());
+        assertEquals(4, q.size());
+        assertEquals(5, q.currentCapacity());
+        q.add(7);
+        assertEquals("[3, 4, 5, 6, 7]", q.toString());
+        assertEquals(5, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        assertEquals(3, q.poll().intValue());
+        assertEquals(4, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        q.add(8);
+        assertEquals("[4, 5, 6, 7, 8]", q.toString());
+        assertEquals(5, q.size());
+        assertEquals(5, q.currentCapacity());
+
+        q.add(9);
+        assertEquals("[4, 5, 6, 7, 8, 9]", q.toString());
+        assertEquals(6, q.size());
+        assertEquals(15, q.currentCapacity());
+        q.add(10);
+        assertEquals("[4, 5, 6, 7, 8, 9, 10]", q.toString());
+        assertEquals(7, q.size());
+        assertEquals(15, q.currentCapacity());
+
+        assertEquals(4, q.poll().intValue());
+        assertEquals(5, q.poll().intValue());
+        assertEquals(6, q.poll().intValue());
+        assertEquals(7, q.poll().intValue());
+        assertEquals(8, q.poll().intValue());
+        assertEquals(9, q.poll().intValue());
+        assertEquals(10, q.poll().intValue());
+        assertNull(q.poll());
+        assertEquals(0, q.size());
+        assertEquals(15, q.currentCapacity());
+
+        q = new RingQueue<>(2);
+        q.add(1);
+        q.add(2);
+        assertEquals("[1, 2]", q.toString());
+        assertEquals(1, q.poll().intValue());
+        assertEquals(2, q.poll().intValue());
+
+        q.add(1);
+        q.add(2);
+        q.add(3);
+        assertEquals("[1, 2, 3]", q.toString());
+        assertEquals(12, q.currentCapacity());
     }
 }

@@ -4,7 +4,7 @@ import vproxy.base.connection.Protocol;
 import vproxy.base.selector.Handler;
 import vproxy.base.selector.HandlerContext;
 import vproxy.base.util.*;
-import vproxy.base.util.objectpool.CursorList;
+import vproxy.base.util.coll.RingQueue;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.DatagramFD;
 import vproxy.vfd.IPPort;
@@ -26,7 +26,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
     private final SwitchContext swCtx;
     private final ByteBuffer rcvBuf = Utils.allocateByteBuffer(TOTAL_LEN);
     private final ByteArray raw = ByteArray.from(rcvBuf.array());
-    private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
+    private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
 
     public DatagramInputHandler(SwitchContext swCtx) {
         this.swCtx = swCtx;

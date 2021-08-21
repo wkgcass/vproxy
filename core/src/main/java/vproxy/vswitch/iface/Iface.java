@@ -1,7 +1,7 @@
 package vproxy.vswitch.iface;
 
 import vproxy.base.util.Annotations;
-import vproxy.base.util.objectpool.CursorList;
+import vproxy.base.util.coll.RingQueue;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
 
@@ -12,7 +12,7 @@ public abstract class Iface {
     private int baseMTU;
     private boolean floodAllowed;
     protected IfaceInitParams.PacketCallback callback;
-    private final CursorList<PacketBuffer> rcvQ = new CursorList<>(1);
+    private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
     private final ArrayList<PacketFilter> ingressFilters = new ArrayList<>();
     private final ArrayList<PacketFilter> egressFilters = new ArrayList<>();
     private Annotations annotations;
@@ -54,8 +54,7 @@ public abstract class Iface {
     }
 
     public final PacketBuffer pollPacket() {
-        if (rcvQ.isEmpty()) return null;
-        return rcvQ.remove(rcvQ.size() - 1);
+        return rcvQ.poll();
     }
 
     public final boolean addIngressFilter(PacketFilter filter) {

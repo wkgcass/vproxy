@@ -1,7 +1,7 @@
 package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.objectpool.CursorList;
+import vproxy.base.util.coll.RingQueue;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.stack.NetworkStack;
 import vproxy.vswitch.util.UserInfo;
@@ -120,13 +120,13 @@ public class SwitchContext {
     }
 
     public interface AlertPacketsArrive {
-        void alertPacketsArrive(CursorList<PacketBuffer> pkb);
+        void alertPacketsArrive(RingQueue<PacketBuffer> queue);
     }
 
     private final AlertPacketsArrive alertPacketsArriveFunc;
 
-    public void alertPacketsArrive(CursorList<PacketBuffer> pkb) {
-        alertPacketsArriveFunc.alertPacketsArrive(pkb);
+    public void alertPacketsArrive(RingQueue<PacketBuffer> queue) {
+        alertPacketsArriveFunc.alertPacketsArrive(queue);
     }
 
     public interface RecordIface {

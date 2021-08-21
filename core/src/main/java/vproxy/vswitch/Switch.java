@@ -10,6 +10,7 @@ import vproxy.base.util.*;
 import vproxy.base.util.anno.Blocking;
 import vproxy.base.util.callback.BlockCallback;
 import vproxy.base.util.coll.IntMap;
+import vproxy.base.util.coll.RingQueue;
 import vproxy.base.util.crypto.Aes256Key;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.ClosedException;
@@ -769,9 +770,9 @@ public class Switch {
         handleInputPkb();
     }
 
-    private void onIfacePacketsArrive(CursorList<PacketBuffer> ls) {
-        while (!ls.isEmpty()) {
-            PacketBuffer pkb = ls.remove(ls.size() - 1);
+    private void onIfacePacketsArrive(RingQueue<PacketBuffer> ls) {
+        PacketBuffer pkb;
+        while ((pkb = ls.poll()) != null) {
             pkb.ifaceInput = true;
             preHandleInputPkb(pkb);
         }
