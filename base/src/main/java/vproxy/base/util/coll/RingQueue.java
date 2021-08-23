@@ -24,13 +24,14 @@ public class RingQueue<E> {
         Object[] arr = new Object[newLen];
         if (eAfterS) {
             System.arraycopy(array, start, arr, 0, end - start);
+            end = end - start;
         } else {
             System.arraycopy(array, start, arr, 0, array.length - start);
             if (end > 0) {
                 System.arraycopy(array, 0, arr, array.length - start, end);
             }
+            end = array.length - start + end;
         }
-        end = array.length - start + end;
         start = 0;
         array = arr;
         eAfterS = true;
