@@ -37,6 +37,19 @@ public class Utils {
     public static final String NO_ROUTE_TO_HOST_MSG = "No route to host";
     @SuppressWarnings("unused")
     private static volatile int sync = 0; // this filed is used to sync cpu cache into memory
+    private static final boolean assertOn;
+
+    static {
+        boolean _assertOn;
+        try {
+            assert false;
+            _assertOn = false;
+        } catch (AssertionError ignore) {
+            _assertOn = true;
+        }
+        //noinspection ConstantConditions
+        assertOn = _assertOn;
+    }
 
     private Utils() {
     }
@@ -429,12 +442,7 @@ public class Utils {
     }
 
     public static boolean assertOn() {
-        try {
-            assert false;
-            return false;
-        } catch (AssertionError ignore) {
-            return true;
-        }
+        return assertOn;
     }
 
     private static final int UNINITIALIZED_BYTE_ARRAY_THRESHOLD = 512;

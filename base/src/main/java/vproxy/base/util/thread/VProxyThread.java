@@ -10,6 +10,7 @@ import vproxy.base.util.objectpool.PrototypeObjectList;
 import vproxy.xdp.Chunk;
 
 import java.util.UUID;
+import java.util.function.BooleanSupplier;
 
 public interface VProxyThread {
     ThreadLocal<VProxyThreadVariable> threadLocal = new ThreadLocal<>();
@@ -73,9 +74,12 @@ public interface VProxyThread {
         public String debugInfo;
 
         public void newUuidDebugInfo() {
-            if (Logger.debugOn()) {
-                debugInfo = UUID.randomUUID().toString();
-            }
+            assert ((BooleanSupplier) (() -> {
+                if (Logger.debugOn()) {
+                    debugInfo = UUID.randomUUID().toString();
+                }
+                return true;
+            })).getAsBoolean();
         }
     }
 }
