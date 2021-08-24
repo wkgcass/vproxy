@@ -13,15 +13,16 @@ struct vp_chunk_info {
     struct vp_umem_info* umem;
     struct vp_xsk_info*  xsk;
 
-    uint8_t  ref;  // reference count, 0 means it can be used by the rings
-    uint64_t addr; // offset of this chunk
-    uint64_t endaddr; // offset of the end cursor (exclusive) of this chunk
-    char*    realaddr; // memory location
+    uint8_t  ref;      // reference count, 0 means it can be used by the rings
+    uint64_t addr;     // xsk addr, offset of this chunk
+    uint64_t endaddr;  // xsk addr, offset of the end cursor (exclusive) of this chunk
+    char*    realaddr; // pointer to the real mem location of this chunk
 
-    // used when receiving
-    uint64_t pktaddr;
-    char*    pkt;
-    uint32_t pktlen;
+    uint64_t pktaddr; // xsk addr, used when sending and receiving
+    char*    pkt;     // used when receiving, pointer to the real mem of the packet
+    uint32_t pktlen;  // xsk addr, used when sending and receiving
+
+    int csum_flags; // used when sending for calculating checksums
 };
 
 struct vp_chunk_array {
@@ -55,6 +56,9 @@ struct vp_xsk_info {
     int tx_ring_size;
 
     int outstanding_tx;
+
+#define VP_XSK_FLAG_RX_GEN_CSUM (1)
+    int flags;
 };
 
 struct bpf_object* vp_bpfobj_attach_to_if    (char* filepath, char* prog, char* ifname, int attach_flags);
@@ -65,7 +69,7 @@ struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int com
 struct vp_umem_info* vp_umem_share (struct vp_umem_info* umem);
 struct vp_xsk_info*  vp_xsk_create (char* ifname, int queue_id, struct vp_umem_info* umem,
                                     int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags,
-                                    int busy_poll_budget);
+                                    int busy_poll_budget, int vp_flags);
 
 int vp_xsk_add_into_map(struct bpf_map* map, int key, struct vp_xsk_info* xsk);
 
@@ -106,6 +110,7 @@ static inline struct vp_chunk_info* vp_chunk_fetch(struct vp_chunk_array* chunks
         if (info->ref == 0) {
             info->ref = 1;
             chunks->used++;
+            info->csum_flags = 0;
             return info;
         }
         if (chunks->idx == last) { // runs a whole loop

@@ -7,6 +7,14 @@
 #ifdef __cplusplus
 extern "C" {
 #endif
+#undef vproxy_xdp_NativeXDP_VP_CSUM_NO
+#define vproxy_xdp_NativeXDP_VP_CSUM_NO 0L
+#undef vproxy_xdp_NativeXDP_VP_CSUM_IP
+#define vproxy_xdp_NativeXDP_VP_CSUM_IP 1L
+#undef vproxy_xdp_NativeXDP_VP_CSUM_UP
+#define vproxy_xdp_NativeXDP_VP_CSUM_UP 2L
+#undef vproxy_xdp_NativeXDP_VP_CSUM_ALL
+#define vproxy_xdp_NativeXDP_VP_CSUM_ALL 3L
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    loadAndAttachBPFProgramToNic0
@@ -58,10 +66,10 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_getBufferAddressFromUMem0
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    createXSK0
- * Signature: (Ljava/lang/String;IJIIIZI)J
+ * Signature: (Ljava/lang/String;IJIIIZIZ)J
  */
 JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
-  (JNIEnv *, jclass, jstring, jint, jlong, jint, jint, jint, jboolean, jint);
+  (JNIEnv *, jclass, jstring, jint, jlong, jint, jint, jint, jboolean, jint, jboolean);
 
 /*
  * Class:     vproxy_xdp_NativeXDP
@@ -138,10 +146,10 @@ JNIEXPORT jboolean JNICALL Java_vproxy_xdp_NativeXDP_fetchChunk0
 /*
  * Class:     vproxy_xdp_NativeXDP
  * Method:    setChunk0
- * Signature: (JII)V
+ * Signature: (JIII)V
  */
 JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_setChunk0
-  (JNIEnv *, jclass, jlong, jint, jint);
+  (JNIEnv *, jclass, jlong, jint, jint, jint);
 
 /*
  * Class:     vproxy_xdp_NativeXDP

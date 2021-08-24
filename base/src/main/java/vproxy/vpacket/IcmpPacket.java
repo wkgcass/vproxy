@@ -46,13 +46,18 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         if (isIpv6)
             throw new UnsupportedOperationException("this packet is ICMPv6");
 
         ByteArray ret = ByteArray.allocate(4).set(0, (byte) type).set(1, (byte) code)/*skip checksum here*/.concat(other);
-        checksum = Utils.calculateChecksum(ret, ret.length());
-        ret.int16(2, checksum);
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            checksum = Utils.calculateChecksum(ret, ret.length());
+            ret.int16(2, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
+        }
         return ret;
     }
 
@@ -62,6 +67,11 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
             throw new UnsupportedOperationException("this packet is ICMPv6");
 
         // TODO not used for now
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        // do nothing
     }
 
     @Override
@@ -79,16 +89,16 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
         return isIpv6 ? "icmp6" : "icmp";
     }
 
-    public ByteArray getRawICMPv6Packet(Ipv6Packet ipv6) {
+    public ByteArray getRawICMPv6Packet(Ipv6Packet ipv6, int flags) {
         if (!isIpv6)
             throw new UnsupportedOperationException("this packet is ICMP, not v6");
         if (raw == null) {
-            raw = new PacketDataBuffer(buildICMPv6Packet(ipv6));
+            raw = new PacketDataBuffer(buildICMPv6Packet(ipv6, flags));
         }
         return raw.pktBuf;
     }
 
-    private ByteArray buildICMPv6Packet(Ipv6Packet ipv6) {
+    private ByteArray buildICMPv6Packet(Ipv6Packet ipv6, int flags) {
         if (!isIpv6)
             throw new UnsupportedOperationException("this packet is ICMP, not v6");
 
@@ -96,9 +106,14 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
 
         ByteArray pseudoHeader = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_ICMPv6, ret.length());
 
-        ByteArray toCalculate = pseudoHeader.concat(ret);
-        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
-        ret.int16(2, checksum);
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            ByteArray toCalculate = pseudoHeader.concat(ret);
+            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+            ret.int16(2, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
+        }
         return ret;
     }
 
@@ -112,7 +127,7 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
         checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
         raw.pktBuf.int16(2, checksum);
 
-        requireUpdatingChecksum = false;
+        checksumCalculated();
     }
 
     @Override

@@ -352,7 +352,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var bpfobj = BPFObjectHandle.add(cmd);
         try {
             return sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), umem, 0,
-                32, 32, BPFMode.SKB, false, 0,
+                32, 32, BPFMode.SKB, false, 0, true,
                 net != null ? net.vni : NETWORK_ENTRY_VNI,
                 BPFMapKeySelectors.useQueueId.keySelector.get());
         } catch (Exception e) {
@@ -423,14 +423,6 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 .append(" type veth peer name ")
                 .append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX)
                 .append("\n");
-            sb.append("for nic in \"").append(iface).append("\" \"").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append("\"\n");
-            sb.append("do\n");
-            sb.append("  opts=`ethtool -k \"$nic\" | grep 'tx-checksum-' | awk '{print $1}' | cut -d ':' -f 1`\n");
-            sb.append("  for opt in $opts\n");
-            sb.append("  do\n");
-            sb.append("    ethtool -K \"$nic\" \"$opt\" off\n");
-            sb.append("  done\n");
-            sb.append("done\n");
             sb.append("ip link set ").append(iface).append(" up\n");
             sb.append("ip link set ").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append(" up\n");
         }
@@ -508,15 +500,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         scriptContent
             .append("#!/bin/bash\n")
             .append("set -e\n")
-            .append("ip link add ").append(hostVeth).append(" type veth peer name ").append(containerVeth).append("\n")
-            .append("for nic in \"").append(hostVeth).append("\" \"").append(containerVeth).append("\"\n")
-            .append("do\n")
-            .append("  opts=`ethtool -k \"$nic\" | grep 'tx-checksum-' | awk '{print $1}' | cut -d ':' -f 1`\n")
-            .append("  for opt in $opts\n")
-            .append("  do\n")
-            .append("    ethtool -K \"$nic\" \"$opt\" off\n")
-            .append("  done\n")
-            .append("done\n");
+            .append("ip link add ").append(hostVeth).append(" type veth peer name ").append(containerVeth).append("\n");
         if (mac != null && !mac.isBlank()) {
             scriptContent.append("ip link set ").append(containerVeth).append(" address ").append(mac).append("\n");
         }

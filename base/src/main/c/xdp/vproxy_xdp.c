@@ -7,6 +7,8 @@
 #include <stdio.h>
 #include <unistd.h>
 
+#include "vproxy_checksum.h"
+
 extern struct bpf_object* load_bpf_object_file(const char* filename, int ifindex);
 extern int xdp_link_attach(int ifindex, __u32 xdp_flags, int prog_fd);
 
@@ -153,7 +155,8 @@ struct vp_umem_info* vp_umem_share(struct vp_umem_info* umem) {
 
 struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_info* umem,
                                   int rx_ring_size, int tx_ring_size, int xdp_flags, int bind_flags,
-                                  int busy_poll_budget) {
+                                  int busy_poll_budget,
+                                  int vp_flags) {
     int ifindex = if_nametoindex((const char*)ifname);
     if (ifindex <= 0) {
         fprintf(stderr, "ERR: if_nametoindex(%s) failed: %d %s\n",
@@ -197,6 +200,7 @@ struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_inf
     xsk_info->rx_ring_size = rx_ring_size;
     xsk_info->tx_ring_size = tx_ring_size;
     xsk_info->outstanding_tx = 0;
+    xsk_info->flags = vp_flags;
 
     return xsk_info;
 err:
@@ -321,6 +325,12 @@ int vp_xdp_fetch_pkt(struct vp_xsk_info* xsk, uint32_t* idx_rx_ptr, struct vp_ch
     chunk->pkt = pkt;
     chunk->pktlen = len;
 
+    if (xsk->flags & VP_XSK_FLAG_RX_GEN_CSUM) {
+        vp_pkt_ether_csum(pkt, len, VP_CSUM_ALL);
+    }
+
+    chunk->csum_flags = 0;
+
     *chunkptr = chunk;
 
     return 0;
@@ -336,6 +346,11 @@ int vp_xdp_write_pkt(struct vp_xsk_info* xsk, struct vp_chunk_info* chunk) {
     if (ret != 1) {
         return -1;
     }
+
+    if (chunk->csum_flags) {
+        vp_pkt_ether_csum(chunk->realaddr + (chunk->pktaddr - chunk->addr), chunk->pktlen, chunk->csum_flags);
+    }
+
     xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->addr = chunk->pktaddr;
     xsk_ring_prod__tx_desc(&xsk->tx, tx_idx)->len = chunk->pktlen;
     xsk_ring_prod__submit(&xsk->tx, 1);
@@ -354,6 +369,11 @@ int vp_xdp_write_pkts(struct vp_xsk_info* xsk, int size, long* chunk_ptrs) {
     }
     for (int i = 0; i < ret; ++i) {
         struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_ptrs[i];
+
+        if (chunk->csum_flags) {
+            vp_pkt_ether_csum(chunk->realaddr + (chunk->pktaddr - chunk->addr), chunk->pktlen, chunk->csum_flags);
+        }
+
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->addr = chunk->pktaddr;
         xsk_ring_prod__tx_desc(&xsk->tx, tx_idx + i)->len = chunk->pktlen;
         chunk->xsk = xsk;

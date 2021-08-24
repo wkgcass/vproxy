@@ -101,7 +101,7 @@ int main(int argc, char** argv) {
     if (umem == NULL) {
         return 1;
     }
-    struct vp_xsk_info* xsk = vp_xsk_create(ifname, 0, umem, 32, 32, XDP_FLAGS_SKB_MODE, XDP_COPY, 0);
+    struct vp_xsk_info* xsk = vp_xsk_create(ifname, 0, umem, 32, 32, XDP_FLAGS_SKB_MODE, XDP_COPY, 0, 0);
     if (xsk == NULL) {
         return 1;
     }

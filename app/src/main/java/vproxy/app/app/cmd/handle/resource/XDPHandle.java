@@ -39,6 +39,7 @@ public class XDPHandle {
         if (cmd.args.containsKey(Param.busypoll)) {
             busyPollBudget = BusyPollHandle.get(cmd);
         }
+        boolean rxGenChecksum = cmd.flags.contains(Flag.rxgencchecksum);
         int vni = VniHandle.get(cmd);
         BPFMapKeySelector keySelector;
         if (cmd.args.containsKey(Param.bpfmapkeyselector)) {
@@ -48,7 +49,7 @@ public class XDPHandle {
         }
 
         sw.addXDP(nic, bpfMap, umem, queueId,
-            rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget,
+            rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum,
             vni, keySelector);
     }
 

@@ -4,25 +4,21 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Logger;
 
 public abstract class AbstractPacket {
+    public static final int FLAG_CHECKSUM_UNNECESSARY = 0x01;
+
     protected PacketDataBuffer raw;
     private AbstractPacket parentPacket;
-    protected boolean requireUpdatingChecksum = false;
+    private boolean requireUpdatingChecksum = false;
 
     public abstract String from(PacketDataBuffer raw);
 
-    public final ByteArray getRawPacket() {
+    public final ByteArray getRawPacket(int flags) {
         if (raw == null) {
-            raw = new PacketDataBuffer(buildPacket());
-        } else {
-            checkAndUpdateChecksum();
-        }
-        return raw.pktBuf;
-    }
-
-    protected final void checkAndUpdateChecksum() {
-        if (requireUpdatingChecksum) {
+            raw = new PacketDataBuffer(buildPacket(flags));
+        } else if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
             updateChecksum();
         }
+        return raw.pktBuf;
     }
 
     public void clearAllRawPackets() {
@@ -39,28 +35,34 @@ public abstract class AbstractPacket {
         }
     }
 
-    public void clearChecksum() {
-        if (requireUpdatingChecksum) {
-            return;
-        }
-        requireUpdatingChecksum = true;
-        if (parentPacket != null) {
-            parentPacket.clearChecksum();
-        }
+    public boolean isRequireUpdatingChecksum() {
+        return requireUpdatingChecksum;
+    }
+
+    protected final void checksumCalculated() {
+        this.requireUpdatingChecksum = false;
+    }
+
+    protected final void checksumSkipped() {
+        this.requireUpdatingChecksum = true;
     }
 
     public abstract AbstractPacket copy();
 
-    protected abstract ByteArray buildPacket();
+    protected abstract ByteArray buildPacket(int flags);
 
     protected final void updateChecksum() {
         if (requireUpdatingChecksum) {
             __updateChecksum();
-            requireUpdatingChecksum = false;
+            checksumCalculated();
+        } else {
+            __updateChildrenChecksum();
         }
     }
 
     protected abstract void __updateChecksum();
+
+    protected abstract void __updateChildrenChecksum();
 
     protected final void recordParent(AbstractPacket parentPacket) {
         this.parentPacket = parentPacket;

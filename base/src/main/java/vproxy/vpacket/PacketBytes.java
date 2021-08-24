@@ -22,12 +22,17 @@ public class PacketBytes extends AbstractPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         return bytes;
     }
 
     @Override
     protected void __updateChecksum() {
+        // do nothing
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
         // do nothing
     }
 

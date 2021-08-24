@@ -809,6 +809,9 @@ public class Shutdown {
                     if (xdp.zeroCopy) {
                         cmd += " zerocopy";
                     }
+                    if (xdp.rxGenChecksum) {
+                        cmd += " rx-gen-checksum";
+                    }
                     commands.add(cmd);
                 }
                 // set iface options

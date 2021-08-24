@@ -84,7 +84,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         byte[] x = Base64.getDecoder().decode(user);
         if (x.length != 6) {
             throw new IllegalArgumentException("the user decoded binary length is not 6");
@@ -104,7 +104,7 @@ public class VProxyEncryptedPacket extends AbstractPacket {
         other.int32(0, magic);
         other.int16(4, type);
         if (vxlan != null) {
-            other = other.concat(vxlan.getRawPacket());
+            other = other.concat(vxlan.getRawPacket(flags));
         }
         byte[] otherBytes = other.toJavaArray();
         StreamingCFBCipher cipher = new StreamingCFBCipher(key, true, ivBytes);
@@ -114,7 +114,12 @@ public class VProxyEncryptedPacket extends AbstractPacket {
 
     @Override
     protected void __updateChecksum() {
-        vxlan.checkAndUpdateChecksum();
+        __updateChildrenChecksum();
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        vxlan.updateChecksum();
     }
 
     @Override

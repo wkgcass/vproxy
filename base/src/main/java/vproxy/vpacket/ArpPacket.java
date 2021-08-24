@@ -76,7 +76,7 @@ public class ArpPacket extends AbstractPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         // pre-check
         if (senderMac.length() != targetMac.length())
             throw new IllegalArgumentException("sender mac and target mac length not the same");
@@ -101,6 +101,11 @@ public class ArpPacket extends AbstractPacket {
 
     @Override
     protected void __updateChecksum() {
+        // do nothing
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
         // do nothing
     }
 

@@ -90,9 +90,8 @@ public class UdpOverTcpSetup {
         BPFObject obj = BPFObject.loadAndAttachToNic(bpfpath, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
         BPFMap bpfMap = obj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME);
 
-        // make it small so that it's able to run in docker by default
         UMem umem = sw.addUMem("umem0", 256, 128, 128, 2048);
-        XDPIface iface = sw.addXDP(nicname, bpfMap, umem, 0, 128, 128, BPFMode.SKB, false, 0, 1, BPFMapKeySelectors.useQueueId.keySelector.get());
+        XDPIface iface = sw.addXDP(nicname, bpfMap, umem, 0, 128, 128, BPFMode.SKB, false, 0, false, 1, BPFMapKeySelectors.useQueueId.keySelector.get());
 
         UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
         iface.addIngressFilter(filter);

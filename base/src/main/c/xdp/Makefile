@@ -27,7 +27,7 @@ kern:
 	make sample_kern.o
 
 sample_user: .libbpf
-	gcc -O2 -L$(linux-gnu-lib) -L./libbpf/src -I./libbpf/src -g -o sample_user sample_user.c vproxy_xdp.c vproxy_xdp_util.c -lbpf -lelf
+	gcc -O2 -L$(linux-gnu-lib) -L./libbpf/src -I./libbpf/src -g -o sample_user sample_user.c vproxy_xdp.c vproxy_xdp_util.c vproxy_checksum.c -lbpf -lelf
 
 .PHONY: user
 user:

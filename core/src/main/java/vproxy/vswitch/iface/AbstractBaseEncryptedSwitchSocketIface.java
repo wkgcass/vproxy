@@ -49,7 +49,7 @@ public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBas
         pkt.setUser(user);
 
         sndBuf.limit(sndBuf.capacity()).position(0);
-        byte[] bytes = pkt.getRawPacket().toJavaArray();
+        byte[] bytes = pkt.getRawPacket(0).toJavaArray();
         sndBuf.put(bytes);
         sndBuf.flip();
 

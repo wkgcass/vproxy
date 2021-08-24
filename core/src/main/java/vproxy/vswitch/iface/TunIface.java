@@ -148,7 +148,7 @@ public class TunIface extends Iface {
         assert Logger.lowLevelDebug(this + ".sendPacket(" + ipPkt + ")");
 
         sndBuf.position(0).limit(sndBuf.capacity());
-        var bytes = ipPkt.getRawPacket().toJavaArray();
+        var bytes = ipPkt.getRawPacket(0).toJavaArray();
         if (OS.isMac()) { // add AF header for macos
             if (ipPkt instanceof Ipv4Packet) {
                 sndBuf.putInt(Consts.AF_INET);

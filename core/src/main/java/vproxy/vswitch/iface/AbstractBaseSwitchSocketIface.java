@@ -40,7 +40,7 @@ public abstract class AbstractBaseSwitchSocketIface extends Iface {
 
         sndBuf.limit(sndBuf.capacity()).position(0);
 
-        byte[] bytes = vxlan.getRawPacket().toJavaArray();
+        byte[] bytes = vxlan.getRawPacket(0).toJavaArray();
         sndBuf.put(bytes);
         sndBuf.flip();
 

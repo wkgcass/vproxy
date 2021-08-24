@@ -105,7 +105,8 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
   (JNIEnv* env, jclass self, jstring ifname, jint queue_id, jlong umem_o,
                              jint rx_ring_size, jint tx_ring_size,
                              jint mode, jboolean zero_copy,
-                             jint busy_poll_budget) {
+                             jint busy_poll_budget,
+                             jboolean rx_gen_csum) {
     const char* ifname_chars = (*env)->GetStringUTFChars(env, ifname, NULL);
     struct vp_umem_info* umem = (struct vp_umem_info*) umem_o;
 
@@ -128,9 +129,14 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_createXSK0
         bind_flags |= XDP_COPY;
     }
 
+    int flags = 0;
+    if (rx_gen_csum) {
+        flags |= VP_XSK_FLAG_RX_GEN_CSUM;
+    }
     struct vp_xsk_info* xsk = vp_xsk_create((char*)ifname_chars, queue_id, umem,
                                             rx_ring_size, tx_ring_size, xdp_flags, bind_flags,
-                                            busy_poll_budget);
+                                            busy_poll_budget,
+                                            flags);
     if (xsk == NULL) {
         throwIOException(env, "vp_xsk_create failed");
     }
@@ -426,25 +432,26 @@ printf("critical JavaCritical_vproxy_xdp_NativeXDP_fetchChunk0\n");
 #endif
 
 inline static void vproxy_xdp_NativeXDP_setChunk0
-  (jlong chunk_o, jint pktaddr, jint pktlen) {
+  (jlong chunk_o, jint pktaddr, jint pktlen, jint csumFlags) {
     struct vp_chunk_info* chunk = (struct vp_chunk_info*) chunk_o;
     chunk->pktaddr = pktaddr;
     chunk->pktlen = pktlen;
+    chunk->csum_flags = csumFlags;
 }
 JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_setChunk0
-  (JNIEnv* env, jclass self, jlong chunk_o, jint pktaddr, jint pktlen) {
+  (JNIEnv* env, jclass self, jlong chunk_o, jint pktaddr, jint pktlen, jint csumFlags) {
 #ifdef SHOW_CRITICAL
 printf("normal Java_vproxy_xdp_NativeXDP_setChunk0\n");
 #endif
-    vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen);
+    vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen, csumFlags);
 }
 #ifdef USE_CRITICAL
 JNIEXPORT void JNICALL JavaCritical_vproxy_xdp_NativeXDP_setChunk0
-  (jlong chunk_o, jint pktaddr, jint pktlen) {
+  (jlong chunk_o, jint pktaddr, jint pktlen, jint csumFlags) {
 #ifdef SHOW_CRITICAL
 printf("critical JavaCritical_vproxy_xdp_NativeXDP_setChunk0\n");
 #endif
-    vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen);
+    vproxy_xdp_NativeXDP_setChunk0(chunk_o, pktaddr, pktlen, csumFlags);
 }
 #endif
 

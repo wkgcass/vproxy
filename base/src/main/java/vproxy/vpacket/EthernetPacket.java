@@ -93,25 +93,30 @@ public class EthernetPacket extends AbstractEthernetPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         ByteArray addrs = dst.bytes.copy() // dst
             .concat(src.bytes.copy()); // src
         if (vlan < 0) {
             return addrs
                 .concat(ByteArray.allocate(2).int16(0, type)) // type
-                .concat(packet.getRawPacket()); // packet
+                .concat(packet.getRawPacket(flags)); // packet
         }
         // consider 802.1q
         var tagAndType = ByteArray.allocate(6);
         tagAndType.int16(0, Consts.ETHER_TYPE_8021Q);
         tagAndType.int16(2, vlan); // ignore PCP and DEI, only fill in the vid
         tagAndType.int16(4, type); // type
-        return addrs.concat(tagAndType).concat(packet.getRawPacket());
+        return addrs.concat(tagAndType).concat(packet.getRawPacket(flags));
     }
 
     @Override
     protected void __updateChecksum() {
-        packet.checkAndUpdateChecksum();
+        __updateChildrenChecksum();
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        packet.updateChecksum();
     }
 
     @Override

@@ -61,50 +61,62 @@ public class UdpPacket extends TransportPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         throw new UnsupportedOperationException();
     }
 
-    private ByteArray buildCommonPart() {
+    private ByteArray buildCommonPart(int flags) {
         ByteArray ret = ByteArray.allocate(8);
         ret.int16(0, srcPort);
         ret.int16(2, dstPort);
         ret.int16(4, length);
         ret.int16(6, 0); // leave the checksum empty
-        ret = ret.concat(data.getRawPacket());
+        ret = ret.concat(data.getRawPacket(flags));
         return ret;
     }
 
-    public ByteArray buildIPv4UdpPacket(Ipv4Packet ipv4) {
-        var common = buildCommonPart();
+    public ByteArray buildIPv4UdpPacket(Ipv4Packet ipv4, int flags) {
+        var common = buildCommonPart(flags);
 
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_UDP, common.length());
         var toCalculate = pseudo.concat(common);
-        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        if (checksum == 0) {
-            checksum = 0xffff;
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+            if (checksum == 0) {
+                checksum = 0xffff;
+            }
+            // write checksum
+            common.int16(6, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
         }
-        // write checksum
-        common.int16(6, checksum);
 
         // done
         this.raw = new PacketDataBuffer(common);
         return common;
     }
 
-    public ByteArray buildIPv6UdpPacket(Ipv6Packet ipv6) {
-        var common = buildCommonPart();
+    public ByteArray buildIPv6UdpPacket(Ipv6Packet ipv6, int flags) {
+        var common = buildCommonPart(flags);
 
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_UDP, common.length());
         var toCalculate = pseudo.concat(common);
-        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        if (checksum == 0) {
-            checksum = 0xffff;
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+            if (checksum == 0) {
+                checksum = 0xffff;
+            }
+            // write checksum
+            common.int16(6, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
         }
-        // write checksum
-        common.int16(6, checksum);
 
         // done
         this.raw = new PacketDataBuffer(common);
@@ -114,6 +126,11 @@ public class UdpPacket extends TransportPacket {
     @Override
     protected void __updateChecksum() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        // do nothing
     }
 
     protected void updateChecksumWithIPv4(Ipv4Packet ipv4) {
@@ -128,7 +145,7 @@ public class UdpPacket extends TransportPacket {
         checksum = cksum;
         raw.pktBuf.int16(6, cksum);
 
-        requireUpdatingChecksum = false;
+        checksumCalculated();
     }
 
     protected void updateChecksumWithIPv6(Ipv6Packet ipv6) {
@@ -143,7 +160,7 @@ public class UdpPacket extends TransportPacket {
         checksum = cksum;
         raw.pktBuf.int16(6, cksum);
 
-        requireUpdatingChecksum = false;
+        checksumCalculated();
     }
 
     @Override
@@ -172,7 +189,7 @@ public class UdpPacket extends TransportPacket {
     public void setSrcPort(int srcPort) {
         if (raw != null) {
             raw.pktBuf.int16(0, srcPort);
-            clearChecksum();
+            checksumSkipped();
         }
         this.srcPort = srcPort;
     }
@@ -186,7 +203,7 @@ public class UdpPacket extends TransportPacket {
     public void setDstPort(int dstPort) {
         if (raw != null) {
             raw.pktBuf.int16(2, dstPort);
-            clearChecksum();
+            checksumSkipped();
         }
         this.dstPort = dstPort;
     }

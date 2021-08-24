@@ -39,18 +39,23 @@ public class VXLanPacket extends AbstractPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         return ByteArray.allocate(8)
-            .set(0, (byte) flags)
+            .set(0, (byte) this.flags)
             .int24(1, reserved1)
             .int24(4, vni)
             .set(7, (byte) reserved2)
-            .concat(packet.getRawPacket());
+            .concat(packet.getRawPacket(flags));
     }
 
     @Override
     protected void __updateChecksum() {
-        packet.checkAndUpdateChecksum();
+        __updateChildrenChecksum();
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        packet.updateChecksum();
     }
 
     @Override

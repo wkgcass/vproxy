@@ -116,7 +116,7 @@ public class TestPacket {
 
     <T extends AbstractPacket> void check(T p, Supplier<T> constructor) {
         p.clearAllRawPackets();
-        ByteArray bytes = p.getRawPacket();
+        ByteArray bytes = p.getRawPacket(0);
         T p2 = constructor.get();
         String err = p2.from(new PacketDataBuffer(bytes));
         assertNull(err);
@@ -124,11 +124,11 @@ public class TestPacket {
         System.out.println("expect: " + p);
         System.out.println("actual: " + p2);
         p2.clearAllRawPackets();
-        ByteArray bytes2 = p2.getRawPacket();
+        ByteArray bytes2 = p2.getRawPacket(0);
         assertEquals(bytes, bytes2);
 
         assertEquals(p, p.copy());
-        assertEquals(bytes, p.copy().getRawPacket());
+        assertEquals(bytes, p.copy().getRawPacket(0));
     }
 
     <T extends AbstractPacket> void checkPartialAndModify(ByteArray bytes,
@@ -146,7 +146,7 @@ public class TestPacket {
         // modify the partially initiated packet
         func.accept(p);
         // retrieve the bytes
-        ByteArray modified = p.getRawPacket();
+        ByteArray modified = p.getRawPacket(0);
         // must be the same array
         assertSame(bytesX, modified);
 
@@ -165,7 +165,7 @@ public class TestPacket {
         // modify packet field
         func.accept(p2);
         // generate the packet
-        ByteArray gen = p2.getRawPacket();
+        ByteArray gen = p2.getRawPacket(0);
 
         {
             T px = constructor.get();
@@ -208,7 +208,7 @@ public class TestPacket {
         assertTrue(ipv4.getPacket() instanceof IcmpPacket);
 
         ipv4.clearAllRawPackets();
-        ByteArray gen = ipv4.getRawPacket();
+        ByteArray gen = ipv4.getRawPacket(0);
         assertEquals(bytes, gen);
 
         check(ipv4, Ipv4Packet::new);
@@ -252,7 +252,7 @@ public class TestPacket {
         assertTrue(ipv6.getPacket() instanceof IcmpPacket);
 
         ipv6.clearAllRawPackets();
-        ByteArray gen = ipv6.getRawPacket();
+        ByteArray gen = ipv6.getRawPacket(0);
         assertEquals(bytes, gen);
 
         check(ipv6, Ipv6Packet::new);
@@ -279,8 +279,8 @@ public class TestPacket {
 
         check(ether, EthernetPacket::new);
 
-        checkPartialAndModify(ether.getRawPacket(), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setSrc(new MacAddress("ab:cd:ef:01:23:45")));
-        checkPartialAndModify(ether.getRawPacket(), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setDst(new MacAddress("ab:cd:ef:01:23:45")));
+        checkPartialAndModify(ether.getRawPacket(0), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setSrc(new MacAddress("ab:cd:ef:01:23:45")));
+        checkPartialAndModify(ether.getRawPacket(0), EthernetPacket::new, (p, b) -> p.from(b, true), p -> p.setDst(new MacAddress("ab:cd:ef:01:23:45")));
     }
 
     @Test
@@ -478,7 +478,7 @@ public class TestPacket {
         assertEquals(69, udp.getLength());
         assertEquals(0xdf0d, udp.getChecksum());
 
-        assertEquals(data, udp.getData().getRawPacket());
+        assertEquals(data, udp.getData().getRawPacket(0));
 
         checkPartialAndModify(bytes, EthernetPacket::new, (p, b) -> p.from(b, true),
             p -> ((Ipv4Packet) p.getPacket()).setSrc((IPv4) IP.from("1.2.3.4")));

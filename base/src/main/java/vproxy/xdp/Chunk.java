@@ -14,12 +14,16 @@ public class Chunk {
     public int pktaddr;
     public int pktlen;
 
+    public int csumFlags = 0;
+
     public Chunk() {
     }
 
     public static Chunk fetch() {
         var variables = VProxyThread.current();
-        return variables.XDPChunk_chunkPool.poll();
+        Chunk chunk = variables.XDPChunk_chunkPool.poll();
+        chunk.csumFlags = 0;
+        return chunk;
     }
 
     public void set() {
@@ -46,7 +50,7 @@ public class Chunk {
     }
 
     public void updateNative() {
-        NativeXDP.get().setChunk(chunk, pktaddr, pktlen);
+        NativeXDP.get().setChunk(chunk, pktaddr, pktlen, csumFlags);
     }
 
     public void reference() {

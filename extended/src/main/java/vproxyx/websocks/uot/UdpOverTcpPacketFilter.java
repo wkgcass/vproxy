@@ -5,6 +5,7 @@ import vproxy.base.util.Consts;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.vfd.IPPort;
+import vproxy.vpacket.AbstractPacket;
 import vproxy.vpacket.PacketBytes;
 import vproxy.vpacket.TcpPacket;
 import vproxy.vpacket.UdpPacket;
@@ -203,7 +204,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             tpkt.setFlags(Consts.TCP_FLAGS_PSH | Consts.TCP_FLAGS_ACK);
         }
 
-        ByteArray data = pkt.getData().getRawPacket();
+        ByteArray data = pkt.getData().getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         if (entry.needToSendSyn) {
             ByteArray bytes = data;
             while (true) {
@@ -214,7 +215,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
                 } else {
                     arr = bytes;
                 }
-                TcpPacket.TcpOption opt = new TcpPacket.TcpOption();
+                TcpPacket.TcpOption opt = new TcpPacket.TcpOption(tpkt);
                 opt.setKind(TCP_OPTION_VPROXY_UOT);
                 opt.setData(arr);
                 tpkt.getOptions().add(opt);
@@ -224,7 +225,7 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             }
             tpkt.setData(ByteArray.allocate(0));
         } else {
-            TcpPacket.TcpOption opt = new TcpPacket.TcpOption();
+            TcpPacket.TcpOption opt = new TcpPacket.TcpOption(tpkt);
             opt.setKind(TCP_OPTION_VPROXY_UOT);
             opt.setData(ByteArray.allocate(0));
             tpkt.getOptions().add(opt);

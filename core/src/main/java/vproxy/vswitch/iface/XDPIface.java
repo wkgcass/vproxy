@@ -9,8 +9,10 @@ import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.EventSet;
+import vproxy.vpacket.AbstractPacket;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.dispatcher.BPFMapKeySelector;
+import vproxy.vswitch.util.SwitchUtils;
 import vproxy.vswitch.util.UMemChunkByteArray;
 import vproxy.xdp.*;
 
@@ -27,6 +29,7 @@ public class XDPIface extends Iface {
     public final BPFMode mode;
     public final boolean zeroCopy;
     public final int busyPollBudget;
+    public final boolean rxGenChecksum;
     public final int queueId;
 
     private XDPSocket xsk;
@@ -36,7 +39,7 @@ public class XDPIface extends Iface {
 
     public XDPIface(String nic, BPFMap bpfMap, UMem umem,
                     int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
-                    int busyPollBudget,
+                    int busyPollBudget, boolean rxGenChecksum,
                     int vni, BPFMapKeySelector keySelector) {
         this.nic = nic;
         this.bpfMap = bpfMap;
@@ -46,6 +49,7 @@ public class XDPIface extends Iface {
         this.mode = mode;
         this.zeroCopy = zeroCopy;
         this.busyPollBudget = busyPollBudget;
+        this.rxGenChecksum = rxGenChecksum;
         this.queueId = queue;
 
         this.vni = vni;
@@ -62,7 +66,7 @@ public class XDPIface extends Iface {
 
         XDPSocket xsk;
         try {
-            xsk = XDPSocket.create(nic, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget);
+            xsk = XDPSocket.create(nic, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "creating xsk of " + nic + "#" + queueId + " failed", e);
             throw e;
@@ -102,6 +106,7 @@ public class XDPIface extends Iface {
                     assert Logger.lowLevelDebug("update pktaddr(" + pktaddr + ") and pktlen(" + pktlen + ")");
                     chunk.pktaddr = pktaddr;
                     chunk.pktlen = pktlen;
+                    chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
                     chunk.updateNative();
                 } else {
                     assert Logger.lowLevelDebug("no modification on chunk packet addresses");
@@ -124,7 +129,7 @@ public class XDPIface extends Iface {
             assert Logger.lowLevelDebug("packet dropped because there are no free chunks available");
             return;
         }
-        ByteArray pktData = pkb.pkt.getRawPacket();
+        ByteArray pktData = pkb.pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         int availableSpace = chunk.endaddr() - chunk.addr() - Consts.XDP_HEADROOM_DRIVER_RESERVED;
         if (pktData.length() > availableSpace) {
             Logger.warn(LogType.ALERT, "umem chunk too small for packet, pkt: " + pktData.length() + ", available: " + availableSpace);
@@ -133,6 +138,7 @@ public class XDPIface extends Iface {
         }
         chunk.pktaddr = chunk.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
         chunk.pktlen = pktData.length();
+        chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
         ByteBuffer byteBuffer = umem.getBuffer();
         chunk.setPositionAndLimit(byteBuffer);
         pktData.byteBufferPut(byteBuffer, 0, pktData.length());

@@ -168,12 +168,9 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         // prepare
-        int headerLen = 20;
-        if (options != null) {
-            headerLen += options.length();
-        }
+        int headerLen = 20 + options.length();
 
         // pre-check
         if (headerLen % 4 != 0)
@@ -181,62 +178,66 @@ public class Ipv4Packet extends AbstractIpPacket {
 
         // fix values
         ihl = headerLen / 4;
-        if (packet instanceof TcpPacket) {
-            ((TcpPacket) packet).buildIPv4TcpPacket(this);
-        } else if (packet instanceof UdpPacket) {
-            ((UdpPacket) packet).buildIPv4UdpPacket(this);
-        }
         if (packet.raw == null) {
             if (packet instanceof TcpPacket) {
-                ((TcpPacket) packet).buildIPv4TcpPacket(this);
+                ((TcpPacket) packet).buildIPv4TcpPacket(this, flags);
             } else if (packet instanceof UdpPacket) {
-                ((UdpPacket) packet).buildIPv4UdpPacket(this);
+                ((UdpPacket) packet).buildIPv4UdpPacket(this, flags);
             }
-        } else {
+        } else if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
             if (packet instanceof TcpPacket) {
                 ((TcpPacket) packet).updateChecksumWithIPv4(this);
             } else if (packet instanceof UdpPacket) {
                 ((UdpPacket) packet).updateChecksumWithIPv4(this);
             }
         }
-        ByteArray packetByteArray = packet.getRawPacket();
+        ByteArray packetByteArray = packet.getRawPacket(flags);
         totalLength = headerLen + packetByteArray.length();
 
         // generate
         ByteArray arr = genHeaderWithChecksumUnfilled()
-            .concat(options)
             .concat(packetByteArray);
 
-        headerChecksum = calculateChecksum(arr);
-        arr.int16(10, headerChecksum);
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            headerChecksum = calculateChecksum(arr);
+            arr.int16(10, headerChecksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
+        }
         return arr;
     }
 
     @Override
     protected void __updateChecksum() {
         raw.pktBuf.int16(10, 0);
-        int cksum = calculateChecksum(raw.pktBuf.sub(0, 20));
+        int cksum = calculateChecksum(raw.pktBuf);
         headerChecksum = cksum;
         raw.pktBuf.int16(10, cksum);
 
-        if (packet instanceof TcpPacket) {
-            if (packet.requireUpdatingChecksum) {
-                ((TcpPacket) packet).updateChecksumWithIPv4(this);
-            }
-        } else if (packet instanceof UdpPacket) {
-            if (packet.requireUpdatingChecksum) {
-                ((UdpPacket) packet).updateChecksumWithIPv4(this);
-            }
-        } else {
-            packet.checkAndUpdateChecksum();
-        }
+        __updateChildrenChecksum();
     }
 
     @Override
-    public void clearChecksum() {
-        super.clearChecksum();
+    protected void __updateChildrenChecksum() {
+        if (packet instanceof TcpPacket) {
+            if (packet.isRequireUpdatingChecksum()) {
+                ((TcpPacket) packet).updateChecksumWithIPv4(this);
+            }
+        } else if (packet instanceof UdpPacket) {
+            if (packet.isRequireUpdatingChecksum()) {
+                ((UdpPacket) packet).updateChecksumWithIPv4(this);
+            } else {
+                packet.__updateChildrenChecksum();
+            }
+        } else {
+            packet.updateChecksum();
+        }
+    }
+
+    private void pseudoHeaderChanges() {
         if (packet instanceof TcpPacket || packet instanceof UdpPacket) {
-            packet.clearChecksum();
+            packet.checksumSkipped();
         }
     }
 
@@ -283,7 +284,8 @@ public class Ipv4Packet extends AbstractIpPacket {
                     .set(0, flagsAndFragmentOffsetFirstByte).set(1, (byte) fragmentOffset)
                     .set(2, (byte) ttl).set(3, (byte) protocol) /*skip the checksum here*/)
             .concat(src.bytes.copy())
-            .concat(dst.bytes.copy());
+            .concat(dst.bytes.copy())
+            .concat(options);
     }
 
     public int calculateChecksum() {
@@ -291,7 +293,7 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     private int calculateChecksum(ByteArray arr) {
-        return Utils.calculateChecksum(arr, 20);
+        return Utils.calculateChecksum(arr, ihl * 4);
     }
 
     @Override
@@ -394,7 +396,7 @@ public class Ipv4Packet extends AbstractIpPacket {
     public void setTtl(int ttl) {
         if (raw != null) {
             raw.pktBuf.set(8, (byte) ttl);
-            clearChecksum();
+            checksumSkipped();
         }
         this.ttl = ttl;
     }
@@ -428,8 +430,9 @@ public class Ipv4Packet extends AbstractIpPacket {
             for (int i = 0; i < 4; ++i) {
                 raw.pktBuf.set(12 + i, src.getAddress()[i]);
             }
-            clearChecksum();
+            checksumSkipped();
         }
+        pseudoHeaderChanges();
         this.src = src;
     }
 
@@ -443,8 +446,9 @@ public class Ipv4Packet extends AbstractIpPacket {
             for (int i = 0; i < 4; ++i) {
                 raw.pktBuf.set(16 + i, dst.getAddress()[i]);
             }
-            clearChecksum();
+            checksumSkipped();
         }
+        pseudoHeaderChanges();
         this.dst = dst;
     }
 

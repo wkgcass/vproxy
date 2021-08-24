@@ -31,7 +31,7 @@ public class TcpPacket extends TransportPacket {
     public void setSrcPort(int srcPort) {
         if (raw != null) {
             raw.pktBuf.int16(0, srcPort);
-            clearChecksum();
+            checksumSkipped();
         }
         this.srcPort = srcPort;
     }
@@ -45,7 +45,7 @@ public class TcpPacket extends TransportPacket {
     public void setDstPort(int dstPort) {
         if (raw != null) {
             raw.pktBuf.int16(2, dstPort);
-            clearChecksum();
+            checksumSkipped();
         }
         this.dstPort = dstPort;
     }
@@ -240,7 +240,7 @@ public class TcpPacket extends TransportPacket {
             while (off < dataOffset) {
                 byte kind = bytes.get(off);
                 if (TcpOption.CASE_1_OPTION_KINDS[kind & 0xff]) {
-                    var opt = new TcpOption();
+                    var opt = new TcpOption(this);
                     var err = opt.from(ByteArray.from(new byte[]{kind}));
                     if (err != null) {
                         return err;
@@ -259,7 +259,7 @@ public class TcpPacket extends TransportPacket {
                     if (off + len > dataOffset) {
                         return "invalid tcp option, length is too long";
                     }
-                    var opt = new TcpOption();
+                    var opt = new TcpOption(this);
                     var err = opt.from(bytes.sub(off, len));
                     if (err != null) {
                         return err;
@@ -296,13 +296,18 @@ public class TcpPacket extends TransportPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         throw new UnsupportedOperationException();
     }
 
     @Override
     protected void __updateChecksum() {
         throw new UnsupportedOperationException();
+    }
+
+    @Override
+    protected void __updateChildrenChecksum() {
+        // do nothing
     }
 
     @Override
@@ -319,7 +324,7 @@ public class TcpPacket extends TransportPacket {
         ret.urgentPointer = urgentPointer;
         ret.options = new ArrayList<>(options.size());
         for (var o : options) {
-            var x = o.copy();
+            var x = o.copy(ret);
             ret.options.add(x);
             x.recordParent(ret);
         }
@@ -360,12 +365,12 @@ public class TcpPacket extends TransportPacket {
         ByteArray optBytes = null;
         if (options != null && !options.isEmpty()) {
             if (options.get(options.size() - 1).kind != Consts.TCP_OPTION_END) {
-                var end = new TcpOption();
+                var end = new TcpOption(this);
                 end.kind = Consts.TCP_OPTION_END;
                 options.add(end);
             }
             for (var o : options) {
-                var b = o.getRawPacket();
+                var b = o.getRawPacket(0);
                 if (optBytes == null) {
                     optBytes = b;
                 } else {
@@ -404,15 +409,21 @@ public class TcpPacket extends TransportPacket {
         }
     }
 
-    public ByteArray buildIPv4TcpPacket(Ipv4Packet ipv4) {
+    public ByteArray buildIPv4TcpPacket(Ipv4Packet ipv4, int flags) {
         var common = buildCommonPart();
 
         var pseudo = Utils.buildPseudoIPv4Header(ipv4, Consts.IP_PROTOCOL_TCP, common.length());
         var toCalculate = pseudo.concat(common);
-        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        // build checksum
-        common.int16(16, checksum);
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+            // build checksum
+            common.int16(16, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
+        }
 
         // done
         this.raw = new PacketDataBuffer(common);
@@ -428,18 +439,24 @@ public class TcpPacket extends TransportPacket {
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);
 
-        requireUpdatingChecksum = false;
+        checksumCalculated();
     }
 
-    public ByteArray buildIPv6TcpPacket(Ipv6Packet ipv6) {
+    public ByteArray buildIPv6TcpPacket(Ipv6Packet ipv6, int flags) {
         var common = buildCommonPart();
 
         var pseudo = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_TCP, common.length());
         var toCalculate = pseudo.concat(common);
-        checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
 
-        // build checksum
-        common.int16(16, checksum);
+        if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
+            checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
+
+            // build checksum
+            common.int16(16, checksum);
+            checksumCalculated();
+        } else {
+            checksumSkipped();
+        }
 
         // done
         this.raw = new PacketDataBuffer(common);
@@ -455,7 +472,7 @@ public class TcpPacket extends TransportPacket {
         checksum = cksum;
         raw.pktBuf.int16(16, cksum);
 
-        requireUpdatingChecksum = false;
+        checksumCalculated();
     }
 
     public static class TcpOption extends AbstractPacket {
@@ -468,9 +485,14 @@ public class TcpPacket extends TransportPacket {
             }
         }
 
+        private final TcpPacket tcpPacket;
         private byte kind;
         private int length;
         private ByteArray data;
+
+        public TcpOption(TcpPacket tcp) {
+            this.tcpPacket = tcp;
+        }
 
         public byte getKind() {
             return kind;
@@ -498,7 +520,7 @@ public class TcpPacket extends TransportPacket {
             if (CASE_1_OPTION_KINDS[kind & 0xff] || data.length() != length - 2) {
                 clearRawPacket();
             } else if (raw != null) {
-                clearChecksum();
+                tcpPacket.checksumSkipped();
                 for (int i = 0; i < data.length(); ++i) {
                     raw.pktBuf.set(2 + i, data.get(i));
                 }
@@ -572,7 +594,7 @@ public class TcpPacket extends TransportPacket {
         }
 
         @Override
-        protected ByteArray buildPacket() {
+        protected ByteArray buildPacket(int flags) {
             if (CASE_1_OPTION_KINDS[kind & 0xff]) {
                 return ByteArray.from(new byte[]{kind});
             }
@@ -597,8 +619,17 @@ public class TcpPacket extends TransportPacket {
         }
 
         @Override
+        protected void __updateChildrenChecksum() {
+            // do nothing
+        }
+
+        @Override
         public TcpOption copy() {
-            var ret = new TcpOption();
+            throw new UnsupportedOperationException();
+        }
+
+        public TcpOption copy(TcpPacket tcp) {
+            var ret = new TcpOption(tcp);
             ret.kind = kind;
             ret.length = length;
             ret.data = data;

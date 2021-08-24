@@ -3,13 +3,13 @@ package vproxy.poc;
 import vproxy.base.selector.Handler;
 import vproxy.base.selector.HandlerContext;
 import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.*;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.Consts;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
 import vproxy.base.util.unsafe.SunUnsafe;
 import vproxy.vfd.EventSet;
-import vproxy.vpacket.EthernetPacket;
-import vproxy.vpacket.IcmpPacket;
-import vproxy.vpacket.Ipv6Packet;
-import vproxy.vpacket.PacketDataBuffer;
+import vproxy.vpacket.*;
 import vproxy.xdp.*;
 
 import java.util.List;
@@ -28,7 +28,7 @@ public class XDPPoc {
         var umem = UMem.create("poc-umem", 64, 32, 32, 4096, 0);
         var buf = umem.getBuffer();
         Logger.alert("buffer from umem: " + buf);
-        var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0);
+        var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0, true);
         map.put(0, xsk);
 
         bpfobj.release();
@@ -75,29 +75,20 @@ public class XDPPoc {
                             IcmpPacket icmpPacket = (IcmpPacket) ipv6.getPacket();
                             if (icmpPacket.getType() == Consts.ICMPv6_PROTOCOL_TYPE_ECHO_REQ) {
                                 buf.put(chunk.pktaddr + 14 + 40, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
-                                ByteArray icmpRaw = icmpPacket.getRawPacket();
+                                ByteArray icmpRaw = icmpPacket.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
                                 {
                                     var foo = ipv6.getSrc();
                                     ipv6.setSrc(ipv6.getDst());
                                     ipv6.setDst(foo);
                                 }
-                                var pesudoHeader = Utils.buildPseudoIPv6Header(ipv6, Consts.IP_PROTOCOL_ICMPv6,
-                                    icmpRaw.length());
                                 icmpRaw.set(0, (byte) Consts.ICMPv6_PROTOCOL_TYPE_ECHO_RESP);
-                                icmpRaw.set(2, (byte) 0);
-                                icmpRaw.set(3, (byte) 0);
-                                var toCalculate = pesudoHeader.concat(icmpRaw);
-                                int checksum = Utils.calculateChecksum(toCalculate, toCalculate.length());
-                                byte b1 = (byte) ((checksum >> 8) & 0xff);
-                                byte b2 = (byte) (checksum & 0xff);
-                                buf.put(chunk.pktaddr + 14 + 40 + 2, b1);
-                                buf.put(chunk.pktaddr + 14 + 40 + 3, b2);
                             }
                         }
                     }
 
                     if (cnt[0] % 2 == 0) {
                         Logger.alert("echo the packet without copying");
+                        chunk.csumFlags = NativeXDP.VP_CSUM_UP;
                         chunk.reference();
                         xsk.writePacket(chunk);
                     } else {
@@ -110,6 +101,7 @@ public class XDPPoc {
                         }
                         chunk2.pktaddr = chunk2.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
                         chunk2.pktlen = chunk.pktlen;
+                        chunk2.csumFlags = NativeXDP.VP_CSUM_UP;
 
                         Logger.alert("new chunk: " + chunk2);
 

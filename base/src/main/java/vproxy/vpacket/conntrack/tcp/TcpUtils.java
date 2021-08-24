@@ -4,10 +4,7 @@ import vproxy.base.util.ByteArray;
 import vproxy.base.util.Consts;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
-import vproxy.vpacket.AbstractIpPacket;
-import vproxy.vpacket.Ipv4Packet;
-import vproxy.vpacket.Ipv6Packet;
-import vproxy.vpacket.TcpPacket;
+import vproxy.vpacket.*;
 
 import java.util.Collections;
 
@@ -31,7 +28,7 @@ public class TcpUtils {
             var ipv4 = new Ipv4Packet();
             ipv4.setSrc((IPv4) tcp.destination.getAddress());
             ipv4.setDst((IPv4) tcp.source.getAddress());
-            var tcpBytes = tcpPkt.buildIPv4TcpPacket(ipv4);
+            var tcpBytes = tcpPkt.buildIPv4TcpPacket(ipv4, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv4.setVersion(4);
             ipv4.setIhl(5);
@@ -46,7 +43,7 @@ public class TcpUtils {
             var ipv6 = new Ipv6Packet();
             ipv6.setSrc((IPv6) tcp.destination.getAddress());
             ipv6.setDst((IPv6) tcp.source.getAddress());
-            var tcpBytes = tcpPkt.buildIPv6TcpPacket(ipv6);
+            var tcpBytes = tcpPkt.buildIPv6TcpPacket(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv6.setVersion(6);
             ipv6.setNextHeader(Consts.IP_PROTOCOL_TCP);

@@ -28,14 +28,15 @@ public class XDPSocket extends PosixFD implements FD {
     public static XDPSocket create(String nicName, int queueId, UMem umem,
                                    int rxRingSize, int txRingSize,
                                    BPFMode mode, boolean zeroCopy,
-                                   int busyPollBudget) throws IOException {
+                                   int busyPollBudget,
+                                   boolean rxGenChecksum) throws IOException {
         if (!umem.isValid()) {
             throw new IOException("umem " + umem + " is not valid, create a new one instead");
         }
         if (umem.isReferencedBySockets()) {
             umem = SharedUMem.share(umem);
         }
-        long xsk = NativeXDP.get().createXSK(nicName, queueId, umem.umem, rxRingSize, txRingSize, mode.mode, zeroCopy, busyPollBudget);
+        long xsk = NativeXDP.get().createXSK(nicName, queueId, umem.umem, rxRingSize, txRingSize, mode.mode, zeroCopy, busyPollBudget, rxGenChecksum);
         int fd = NativeXDP.get().getFDFromXSK(xsk);
         XDPSocket sock = new XDPSocket(nicName, queueId, xsk, umem, fd, rxRingSize);
         umem.reference(sock);

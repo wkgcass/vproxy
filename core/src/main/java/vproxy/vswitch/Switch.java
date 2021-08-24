@@ -577,7 +577,7 @@ public class Switch {
 
     public XDPIface addXDP(String nic, BPFMap map, UMem umem,
                            int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
-                           int busyPollBudget,
+                           int busyPollBudget, boolean rxGenChecksum,
                            int vni, BPFMapKeySelector keySelector) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -601,7 +601,7 @@ public class Switch {
 
         var iface = new XDPIface(nic, map, umem,
             queueId, rxRingSize, txRingSize, mode, zeroCopy,
-            busyPollBudget,
+            busyPollBudget, rxGenChecksum,
             vni, keySelector);
         try {
             initIface(iface);
@@ -973,7 +973,7 @@ public class Switch {
                     pkb.ensurePartialPacketParsed(PartialPacket.LEVEL_HANDLED_FIELDS);
                     pkb.udp.listenEntry.receivingQueue.store(
                         pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(),
-                        pkb.udpPkt.getData().getRawPacket());
+                        pkb.udpPkt.getData().getRawPacket(0));
                     fastpathHandled = true;
                 } else {
                     assert Logger.lowLevelDebug("fastpath set but pkb.udp is null");

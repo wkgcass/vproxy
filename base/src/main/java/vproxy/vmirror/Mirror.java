@@ -244,7 +244,7 @@ public class Mirror {
                 ext.setHdrExtLen((other.length() - 6) / 8);
                 ext.setOther(other);
 
-                ipPacketPayloadLenField += ext.getRawPacket().length();
+                ipPacketPayloadLenField += ext.getRawPacket(0).length();
                 ip.getExtHeaders().add(ext);
             }
             {
@@ -263,7 +263,7 @@ public class Mirror {
                 ext.setHdrExtLen((other.length() - 6) / 8);
                 ext.setOther(other);
 
-                ipPacketPayloadLenField += ext.getRawPacket().length();
+                ipPacketPayloadLenField += ext.getRawPacket(0).length();
                 ip.getExtHeaders().add(ext);
             }
             // set length
@@ -610,7 +610,7 @@ public class Mirror {
         for (AbstractEthernetPacket pkt : packets) {
             try {
                 writeBuffer.limit(writeBuffer.capacity()).position(0);
-                writeBuffer.put(pkt.getRawPacket().toJavaArray());
+                writeBuffer.put(pkt.getRawPacket(0).toJavaArray());
                 writeBuffer.flip();
                 tap.write(writeBuffer.realBuffer());
                 // ignore write result

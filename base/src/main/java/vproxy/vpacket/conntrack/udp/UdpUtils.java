@@ -27,7 +27,7 @@ public class UdpUtils {
             var ipv4 = new Ipv4Packet();
             ipv4.setSrc((IPv4) udp.bind.getAddress());
             ipv4.setDst((IPv4) dg.remoteIp);
-            var udpBytes = udpPkt.buildIPv4UdpPacket(ipv4);
+            var udpBytes = udpPkt.buildIPv4UdpPacket(ipv4, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv4.setVersion(4);
             ipv4.setIhl(5);
@@ -42,7 +42,7 @@ public class UdpUtils {
             var ipv6 = new Ipv6Packet();
             ipv6.setSrc((IPv6) udp.bind.getAddress());
             ipv6.setDst((IPv6) dg.remoteIp);
-            var udpBytes = udpPkt.buildIPv6UdpPacket(ipv6);
+            var udpBytes = udpPkt.buildIPv6UdpPacket(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv6.setVersion(6);
             ipv6.setNextHeader(Consts.IP_PROTOCOL_UDP);

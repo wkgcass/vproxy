@@ -717,7 +717,7 @@ public class Utils {
     }
 
     public static ByteArray buildPseudoIPv4Header(Ipv4Packet ipv4, int upperType, int upperLength) {
-        ByteArray pseudoHeaderTail = ByteArray.allocate(8);
+        ByteArray pseudoHeaderTail = ByteArray.allocate(4);
         ByteArray pseudoHeader = ByteArray.from(ipv4.getSrc().getAddress())
             .concat(ByteArray.from(ipv4.getDst().getAddress()))
             .concat(pseudoHeaderTail);

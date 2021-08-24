@@ -335,11 +335,11 @@ public class L3 {
             return;
         }
         // build the icmp time exceeded packet content
-        var bytesOfTheOriginalIpPacket = inIpPkt.getRawPacket();
+        var bytesOfTheOriginalIpPacket = inIpPkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         var foo = new PacketBytes();
         foo.setBytes(ByteArray.allocate(0));
         inIpPkt.setPacket(foo);
-        int headerLen = inIpPkt.getRawPacket().length();
+        int headerLen = inIpPkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length();
         var bytesToSetIntoTheIcmpPacket = headerLen + 64;
         var toSet = bytesOfTheOriginalIpPacket;
         if (toSet.length() > bytesToSetIntoTheIcmpPacket) {
@@ -372,11 +372,11 @@ public class L3 {
             return;
         }
         // build the icmp time exceeded packet content
-        var bytesOfTheOriginalIpPacket = inIpPkt.getRawPacket();
+        var bytesOfTheOriginalIpPacket = inIpPkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         var foo = new PacketBytes();
         foo.setBytes(ByteArray.allocate(0));
         inIpPkt.setPacket(foo);
-        int headerLen = inIpPkt.getRawPacket().length();
+        int headerLen = inIpPkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length();
         var bytesToSetIntoTheIcmpPacket = headerLen + 64;
         var toSet = bytesOfTheOriginalIpPacket;
         if (toSet.length() > bytesToSetIntoTheIcmpPacket) {

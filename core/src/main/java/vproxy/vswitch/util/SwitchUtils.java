@@ -14,6 +14,7 @@ import vproxy.vswitch.PacketFilterHelper;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.PacketFilter;
+import vproxy.xdp.NativeXDP;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -77,15 +78,15 @@ public class SwitchUtils {
         }
         // need to add mss
         assert Logger.lowLevelDebug("add tcp mss: " + maxMss);
-        TcpPacket.TcpOption opt = new TcpPacket.TcpOption();
+        TcpPacket.TcpOption opt = new TcpPacket.TcpOption(tcp);
         opt.setKind(Consts.TCP_OPTION_MSS);
         opt.setData(ByteArray.allocate(2).int16(0, maxMss));
         tcp.getOptions().add(opt);
         tcp.clearRawPacket();
         if (ip instanceof Ipv4Packet) {
-            tcp.buildIPv4TcpPacket((Ipv4Packet) ip);
+            tcp.buildIPv4TcpPacket((Ipv4Packet) ip, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         } else {
-            tcp.buildIPv6TcpPacket((Ipv6Packet) ip);
+            tcp.buildIPv6TcpPacket((Ipv6Packet) ip, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
         }
     }
 
@@ -158,7 +159,7 @@ public class SwitchUtils {
         ipv6.setDst(dstIp);
         ipv6.setExtHeaders(Collections.emptyList());
         ipv6.setPacket(icmp);
-        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length());
 
         return ipv6;
     }
@@ -189,7 +190,7 @@ public class SwitchUtils {
         ipv6.setDst(IP.fromIPv6(foo));
         ipv6.setExtHeaders(Collections.emptyList());
         ipv6.setPacket(icmp);
-        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6).length());
+        ipv6.setPayloadLength(icmp.getRawICMPv6Packet(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length());
 
         return ipv6;
     }
@@ -200,7 +201,7 @@ public class SwitchUtils {
             var ipv4 = new Ipv4Packet();
             ipv4.setVersion(4);
             ipv4.setIhl(5);
-            ipv4.setTotalLength(20 + icmp.getRawPacket().length());
+            ipv4.setTotalLength(20 + icmp.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length());
             ipv4.setTtl(64);
             ipv4.setProtocol(Consts.IP_PROTOCOL_ICMP);
             ipv4.setSrc((IPv4) srcIp);
@@ -219,8 +220,9 @@ public class SwitchUtils {
             ipv6.setExtHeaders(Collections.emptyList());
             ipv6.setPacket(icmp);
             ipv6.setPayloadLength(
-                (
-                    icmp.isIpv6() ? icmp.getRawICMPv6Packet(ipv6) : icmp.getRawPacket()
+                (icmp.isIpv6()
+                    ? icmp.getRawICMPv6Packet(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY)
+                    : icmp.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY)
                 ).length()
             );
             ipPkt = ipv6;
@@ -256,5 +258,22 @@ public class SwitchUtils {
             }
         }
         return FilterResult.PASS;
+    }
+
+    public static int checksumFlagsFor(AbstractEthernetPacket pkt) {
+        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ")");
+        if (!(pkt.getPacket() instanceof AbstractIpPacket)) {
+            return 0;
+        }
+        var ip = (AbstractIpPacket) pkt.getPacket();
+        int ret = 0;
+        if (ip.isRequireUpdatingChecksum()) {
+            ret |= NativeXDP.VP_CSUM_IP;
+        }
+        if (ip.getPacket().isRequireUpdatingChecksum()) {
+            ret |= NativeXDP.VP_CSUM_UP;
+        }
+        assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ") return " + ret);
+        return ret;
     }
 }

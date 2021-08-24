@@ -7,6 +7,11 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 
 public class NativeXDP {
+    public static final int VP_CSUM_NO = 0;
+    public static final int VP_CSUM_IP = 1;
+    public static final int VP_CSUM_UP = 2;
+    public static final int VP_CSUM_ALL = VP_CSUM_IP | VP_CSUM_UP;
+
     private static NativeXDP instance;
 
     private NativeXDP() {
@@ -75,15 +80,17 @@ public class NativeXDP {
                           int rxRingSize, int txRingSize,
                           int mode, // defined in BPFMode
                           boolean zeroCopy,
-                          int busyPollBudget) throws IOException {
-        return createXSK0(nicName, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget);
+                          int busyPollBudget,
+                          boolean rxGenChecksum) throws IOException {
+        return createXSK0(nicName, queueId, umem, rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum);
     }
 
     private static native long createXSK0(String nicName, int queueId, long umem,
                                           int rxRingSize, int txRingSize,
                                           int mode, // defined in BPFMode
                                           boolean zeroCopy,
-                                          int busyPollBudget) throws IOException;
+                                          int busyPollBudget,
+                                          boolean rxGenChecksum) throws IOException;
 
     public void addXSKIntoMap(long map, int key, long xsk) throws IOException {
         addXSKIntoMap0(map, key, xsk);
@@ -183,12 +190,12 @@ public class NativeXDP {
         int[] pktaddr,
         int[] pktlen);
 
-    public void setChunk(long chunk, int pktaddr, int pktlen) {
-        setChunk0(chunk, pktaddr, pktlen);
+    public void setChunk(long chunk, int pktaddr, int pktlen, int csumFlags) {
+        setChunk0(chunk, pktaddr, pktlen, csumFlags);
     }
 
     @CriticalNative
-    private static native void setChunk0(long chunk, int pktaddr, int pktlen);
+    private static native void setChunk0(long chunk, int pktaddr, int pktlen, int csumFlags);
 
     public void releaseChunk(long umem, long chunk) {
         releaseChunk0(umem, chunk);

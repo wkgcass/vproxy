@@ -150,7 +150,7 @@ public class L4 {
         respondTcp.setFlags(Consts.TCP_FLAGS_SYN | Consts.TCP_FLAGS_ACK);
         respondTcp.setWindow(65535);
         {
-            var optMss = new TcpPacket.TcpOption();
+            var optMss = new TcpPacket.TcpOption(respondTcp);
             optMss.setKind(Consts.TCP_OPTION_MSS);
             optMss.setData(ByteArray.allocate(2).int16(0, TcpEntry.RCV_MSS));
             respondTcp.getOptions().add(optMss);
@@ -163,7 +163,7 @@ public class L4 {
                 cnt += 1;
             }
             if (cnt != 0) {
-                var optWindowScale = new TcpPacket.TcpOption();
+                var optWindowScale = new TcpPacket.TcpOption(respondTcp);
                 optWindowScale.setKind(Consts.TCP_OPTION_WINDOW_SCALE);
                 optWindowScale.setData(ByteArray.allocate(1).set(0, (byte) cnt));
                 respondTcp.getOptions().add(optWindowScale);
@@ -193,7 +193,7 @@ public class L4 {
             var ipv4 = new Ipv4Packet();
             ipv4.setSrc((IPv4) pkb.ipPkt.getDst());
             ipv4.setDst((IPv4) pkb.ipPkt.getSrc());
-            var tcpBytes = respondTcp.buildIPv4TcpPacket(ipv4);
+            var tcpBytes = respondTcp.buildIPv4TcpPacket(ipv4, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv4.setVersion(4);
             ipv4.setIhl(5);
@@ -208,7 +208,7 @@ public class L4 {
             var ipv6 = new Ipv6Packet();
             ipv6.setSrc((IPv6) pkb.ipPkt.getDst());
             ipv6.setDst((IPv6) pkb.ipPkt.getSrc());
-            var tcpBytes = respondTcp.buildIPv6TcpPacket(ipv6);
+            var tcpBytes = respondTcp.buildIPv6TcpPacket(ipv6, AbstractPacket.FLAG_CHECKSUM_UNNECESSARY);
 
             ipv6.setVersion(6);
             ipv6.setNextHeader(Consts.IP_PROTOCOL_TCP);
@@ -427,7 +427,7 @@ public class L4 {
 
     private void handleUdp(PacketBuffer pkb) {
         assert Logger.lowLevelDebug("handleUdp(" + pkb + ")");
-        boolean ok = pkb.udpListen.receivingQueue.store(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(), pkb.udpPkt.getData().getRawPacket());
+        boolean ok = pkb.udpListen.receivingQueue.store(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort(), pkb.udpPkt.getData().getRawPacket(0));
         if (ok) {
             assert Logger.lowLevelDebug("recording udp entry: " + pkb);
             var remote = new IPPort(pkb.ipPkt.getSrc(), pkb.udpPkt.getSrcPort());

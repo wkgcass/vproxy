@@ -128,7 +128,7 @@ public class Ipv6Packet extends AbstractIpPacket {
                 extHeaders.add(h);
 
                 xh = h.nextHeader;
-                int len = h.getRawPacket().length();
+                int len = h.getRawPacket(0).length();
                 if (xhBuf.length() < len) {
                     return "invalid packet length too short for next header";
                 }
@@ -183,24 +183,24 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     @Override
-    protected ByteArray buildPacket() {
+    protected ByteArray buildPacket(int flags) {
         byte b0 = (byte) ((version << 4) | ((trafficClass >> 4) & 0x0f));
         byte b1 = (byte) ((trafficClass << 4) | ((flowLabel >> 16) & 0x0f));
         ByteArray headers = ByteArray.allocate(8).set(0, b0).set(1, b1).int16(2, flowLabel)
             .int16(4, payloadLength).set(6, (byte) nextHeader).set(7, (byte) hopLimit)
             .concat(src.bytes.copy()).concat(dst.bytes.copy());
         for (var h : extHeaders) {
-            headers = headers.concat(h.getRawPacket());
+            headers = headers.concat(h.getRawPacket(flags));
         }
         if (packet.raw == null) {
             if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
-                ((IcmpPacket) packet).getRawICMPv6Packet(this);
+                ((IcmpPacket) packet).getRawICMPv6Packet(this, flags);
             } else if (packet instanceof TcpPacket) {
-                ((TcpPacket) packet).buildIPv6TcpPacket(this);
+                ((TcpPacket) packet).buildIPv6TcpPacket(this, flags);
             } else if (packet instanceof UdpPacket) {
-                ((UdpPacket) packet).buildIPv6UdpPacket(this);
+                ((UdpPacket) packet).buildIPv6UdpPacket(this, flags);
             }
-        } else {
+        } else if ((flags & FLAG_CHECKSUM_UNNECESSARY) == 0) {
             if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
                 ((IcmpPacket) packet).updateChecksumWithIPv6(this);
             } else if (packet instanceof TcpPacket) {
@@ -209,33 +209,36 @@ public class Ipv6Packet extends AbstractIpPacket {
                 ((UdpPacket) packet).updateChecksumWithIPv6(this);
             }
         }
-        return headers.concat(packet.getRawPacket());
+        return headers.concat(packet.getRawPacket(flags));
     }
 
     @Override
     protected void __updateChecksum() {
-        if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
-            if (packet.requireUpdatingChecksum) {
-                ((IcmpPacket) packet).updateChecksumWithIPv6(this);
-            }
-        } else if (packet instanceof TcpPacket) {
-            if (packet.requireUpdatingChecksum) {
-                ((TcpPacket) packet).updateChecksumWithIPv6(this);
-            }
-        } else if (packet instanceof UdpPacket) {
-            if (packet.requireUpdatingChecksum) {
-                ((UdpPacket) packet).updateChecksumWithIPv6(this);
-            }
-        } else {
-            packet.checkAndUpdateChecksum();
-        }
+        __updateChildrenChecksum();
     }
 
     @Override
-    public void clearChecksum() {
-        super.clearChecksum();
+    protected void __updateChildrenChecksum() {
+        if (packet instanceof IcmpPacket && ((IcmpPacket) packet).isIpv6()) {
+            if (packet.isRequireUpdatingChecksum()) {
+                ((IcmpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else if (packet instanceof TcpPacket) {
+            if (packet.isRequireUpdatingChecksum()) {
+                ((TcpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else if (packet instanceof UdpPacket) {
+            if (packet.isRequireUpdatingChecksum()) {
+                ((UdpPacket) packet).updateChecksumWithIPv6(this);
+            }
+        } else {
+            packet.updateChecksum();
+        }
+    }
+
+    private void pseudoHeaderChanges() {
         if (packet instanceof IcmpPacket || packet instanceof TcpPacket || packet instanceof UdpPacket) {
-            packet.clearChecksum();
+            packet.checksumSkipped();
         }
     }
 
@@ -367,8 +370,8 @@ public class Ipv6Packet extends AbstractIpPacket {
             for (int i = 0; i < 16; ++i) {
                 raw.pktBuf.set(8 + i, src.getAddress()[i]);
             }
-            clearChecksum();
         }
+        pseudoHeaderChanges();
         this.src = src;
     }
 
@@ -382,8 +385,8 @@ public class Ipv6Packet extends AbstractIpPacket {
             for (int i = 0; i < 16; ++i) {
                 raw.pktBuf.set(24 + i, dst.getAddress()[i]);
             }
-            clearChecksum();
         }
+        pseudoHeaderChanges();
         this.dst = dst;
     }
 
@@ -440,12 +443,17 @@ public class Ipv6Packet extends AbstractIpPacket {
         }
 
         @Override
-        protected ByteArray buildPacket() {
+        protected ByteArray buildPacket(int flags) {
             return ByteArray.allocate(2).set(0, (byte) nextHeader).set(1, (byte) hdrExtLen).concat(other);
         }
 
         @Override
         protected void __updateChecksum() {
+            // do nothing
+        }
+
+        @Override
+        protected void __updateChildrenChecksum() {
             // do nothing
         }
 

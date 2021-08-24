@@ -121,7 +121,7 @@ public class TapIface extends Iface {
     @Override
     public void sendPacket(PacketBuffer pkb) {
         sndBuf.position(0).limit(sndBuf.capacity());
-        var bytes = pkb.pkt.getRawPacket().toJavaArray();
+        var bytes = pkb.pkt.getRawPacket(0).toJavaArray();
         sndBuf.put(bytes);
         sndBuf.flip();
         try {
