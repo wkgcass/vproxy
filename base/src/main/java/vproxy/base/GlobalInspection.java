@@ -14,9 +14,10 @@ import vproxy.base.util.callback.Callback;
 import vproxy.base.util.callback.RunOnLoopCallback;
 import vproxy.base.util.coll.AppendableMap;
 import vproxy.base.util.coll.ConcurrentHashSet;
+import vproxy.base.util.display.TR;
+import vproxy.base.util.display.TableBuilder;
+import vproxy.base.util.display.TreeBuilder;
 import vproxy.base.util.exception.NoException;
-import vproxy.base.util.table.TR;
-import vproxy.base.util.table.TableBuilder;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.FD;
 import vproxy.vfd.NetworkFD;
@@ -209,7 +210,7 @@ public class GlobalInspection {
         var loops = new HashSet<>(runningLoops);
         TableBuilder table = new TableBuilder();
         var tr = table.tr();
-        tr.td("TID").td("WATCHED").td("FIRED").td("FD").td("VIRTUAL").td("LOCAL").td("REMOTE").td("REAL").td("REAL-VIRTUAL").td("REAL-LOCAL").td("REAL-REMOTE");
+        tr.td("TID").td("WATCHED").td("FIRED").td("FD").td("VIRTUAL").td("HYBRID").td("LOCAL").td("REMOTE").td("REAL").td("REAL-VIRTUAL").td("REAL-LOCAL").td("REAL-REMOTE");
         var ite = loops.iterator();
         var callback = new RunOnLoopCallback<>(new Callback<String, NoException>() {
             @Override
@@ -236,15 +237,17 @@ public class GlobalInspection {
             return;
         }
         var set = new HashSet<FDInspection>();
-        loop.copyChannels(set, () -> {
+        var currentLoop = SelectorEventLoop.current();
+        loop.copyChannels(set, () -> currentLoop.runOnLoop(() -> {
             for (var f : set) {
                 var tr = table.tr();
                 tr.td(thread.getId() + "");
                 var fd = f.fd;
-                tr.td(f.watchedEvents.toString());
+                tr.td(f.watchedEvents == null ? "-" : f.watchedEvents.toString());
                 tr.td(f.firedEvents == null ? "-" : f.firedEvents.toString());
                 appendFDType(tr, fd);
                 tr.td(fd instanceof VirtualFD ? "Y" : "N");
+                tr.td(!(fd instanceof VirtualFD) && fd.real() instanceof VirtualFD ? "Y" : "N");
                 appendLocalRemote(tr, fd);
                 FD real = null;
                 try {
@@ -260,7 +263,7 @@ public class GlobalInspection {
                 }
             }
             recursiveGetOpenFds(ite, table, cb);
-        });
+        }));
     }
 
     private void appendFDType(TR tr, FD fd) {
@@ -279,6 +282,7 @@ public class GlobalInspection {
         tr.td(s);
     }
 
+    @SuppressWarnings("rawtypes")
     private void appendLocalRemote(TR tr, FD fd) {
         if (fd instanceof NetworkFD) {
             SockAddr local = null;
@@ -313,5 +317,72 @@ public class GlobalInspection {
         } else {
             tr.td("-").td("-");
         }
+    }
+
+    public void getOpenFDsTree(Consumer<String> cb) {
+        var loops = new HashSet<>(runningLoops);
+        TreeBuilder tree = new TreeBuilder();
+        var ite = loops.iterator();
+        var callback = new RunOnLoopCallback<>(new Callback<String, NoException>() {
+            @Override
+            protected void onSucceeded(String value) {
+                cb.accept(value);
+            }
+
+            @Override
+            protected void onFailed(NoException err) {
+            }
+        });
+        recursiveGetOpenFdsTree(ite, tree, callback::succeeded);
+    }
+
+    private void recursiveGetOpenFdsTree(Iterator<SelectorEventLoop> ite, TreeBuilder tree, Consumer<String> cb) {
+        if (!ite.hasNext()) {
+            cb.accept(tree.toString());
+            return;
+        }
+        var loop = ite.next();
+        var thread = loop.getRunningThread();
+        if (thread == null) { // not running
+            recursiveGetOpenFdsTree(ite, tree, cb);
+            return;
+        }
+        var set = new HashSet<FDInspection>();
+        var currentLoop = SelectorEventLoop.current();
+        loop.copyChannels(set, () -> currentLoop.runOnLoop(() -> {
+            var branch = tree.branch(thread.getName() + "#" + thread.getId());
+            getOpenFDsTree(branch, set);
+            recursiveGetOpenFdsTree(ite, tree, cb);
+        }));
+    }
+
+    private void getOpenFDsTree(TreeBuilder.BranchBuilder branch, HashSet<FDInspection> set) {
+        var root = new HashSet<FDInspection>();
+        for (var fd : set) {
+            boolean isSub = false;
+            for (var fd2 : set) {
+                if (fd2.fd.contains(fd.fd)) {
+                    isSub = true;
+                    break;
+                }
+            }
+            if (!isSub) {
+                root.add(fd);
+            }
+        }
+        for (var fd : root) {
+            var br = branch.branch(fd.toString());
+            getOpenFDsTree(br, fd, set);
+        }
+    }
+
+    private void getOpenFDsTree(TreeBuilder.BranchBuilder br, FDInspection fd, HashSet<FDInspection> set) {
+        var subSet = new HashSet<FDInspection>();
+        for (FDInspection fd2 : set) {
+            if (fd.fd.contains(fd2.fd)) {
+                subSet.add(fd2);
+            }
+        }
+        getOpenFDsTree(br, subSet);
     }
 }

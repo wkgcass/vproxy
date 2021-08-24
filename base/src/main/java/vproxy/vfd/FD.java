@@ -23,6 +23,8 @@ public interface FD extends Closeable {
      */
     FD real();
 
+    boolean contains(FD fd);
+
     /**
      * @param loop the loop which this fd is attaching to
      * @return true if the fd allows attaching, false otherwise

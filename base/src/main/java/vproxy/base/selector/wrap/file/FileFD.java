@@ -7,6 +7,7 @@ import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.direct.DirectByteBuffer;
 import vproxy.base.util.direct.DirectMemoryUtils;
+import vproxy.vfd.FD;
 import vproxy.vfd.IPPort;
 import vproxy.vfd.SocketFD;
 
@@ -162,5 +163,10 @@ public class FileFD extends AbstractBaseVirtualSocketFD implements VirtualFD, So
     @Override
     protected String formatToString() {
         return "FileFD(" + filepath + " ::: " + openOptions + ")";
+    }
+
+    @Override
+    public boolean contains(FD fd) {
+        return false;
     }
 }

@@ -1,4 +1,4 @@
-package vproxy.base.util.table;
+package vproxy.base.util.display;
 
 import java.util.ArrayList;
 import java.util.List;

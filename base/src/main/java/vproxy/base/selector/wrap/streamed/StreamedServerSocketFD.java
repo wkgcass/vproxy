@@ -111,6 +111,11 @@ public class StreamedServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return this.realFD == fd || this.realFD.contains(fd);
+    }
+
+    @Override
     public boolean isOpen() {
         return isOpen;
     }

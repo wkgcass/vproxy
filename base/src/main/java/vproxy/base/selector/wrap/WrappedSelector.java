@@ -459,6 +459,9 @@ public class WrappedSelector implements FDSelector {
                 coll.add(new FDInspection(fd, watch, fire));
             }
         }
+        for (var fd : virtual2hybridMap.keySet()) {
+            coll.add(new FDInspection(fd, null, null));
+        }
         for (var entry : selector.entries()) {
             var fd = entry.fd;
             var watch = entry.eventSet;

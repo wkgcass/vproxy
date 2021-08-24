@@ -96,6 +96,11 @@ public class PosixFD extends AbstractBaseFD implements FD {
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return false;
+    }
+
+    @Override
     public boolean isOpen() {
         return !closed;
     }

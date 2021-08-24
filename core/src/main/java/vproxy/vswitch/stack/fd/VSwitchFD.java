@@ -38,6 +38,11 @@ public abstract class VSwitchFD implements FD, VirtualFD {
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return false;
+    }
+
+    @Override
     public boolean isOpen() {
         return !closed;
     }

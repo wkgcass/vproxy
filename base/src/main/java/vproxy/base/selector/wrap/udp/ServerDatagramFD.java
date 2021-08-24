@@ -140,6 +140,11 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return this.server == fd || this.server.contains(fd);
+    }
+
+    @Override
     public boolean isOpen() {
         return server.isOpen();
     }
@@ -287,6 +292,11 @@ public final class ServerDatagramFD implements FD, ServerSocketFD, WritableAware
         @Override
         public FD real() {
             return serverSelf.server.real();
+        }
+
+        @Override
+        public boolean contains(FD fd) {
+            return ServerDatagramFD.this.contains(fd);
         }
 
         @Override

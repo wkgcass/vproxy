@@ -324,6 +324,11 @@ public class StreamedFD implements SocketFD, VirtualFD {
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return this.realFD == fd || this.realFD.contains(fd);
+    }
+
+    @Override
     public boolean isOpen() {
         return state != State.real_closed;
     }

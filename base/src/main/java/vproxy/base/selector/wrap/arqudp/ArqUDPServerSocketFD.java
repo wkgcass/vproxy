@@ -120,6 +120,11 @@ public class ArqUDPServerSocketFD implements ServerSocketFD, VirtualFD {
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return this.fd == fd || this.fd.contains(fd);
+    }
+
+    @Override
     public boolean isOpen() {
         return fd.isOpen();
     }

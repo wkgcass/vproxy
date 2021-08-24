@@ -39,6 +39,11 @@ public class ChannelFD implements FD {
         return this;
     }
 
+    @Override
+    public boolean contains(FD fd) {
+        return false;
+    }
+
     public SelectableChannel getChannel() {
         return channel;
     }

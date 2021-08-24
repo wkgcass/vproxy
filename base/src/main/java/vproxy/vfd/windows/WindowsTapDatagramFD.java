@@ -113,6 +113,11 @@ public class WindowsTapDatagramFD extends AbstractBaseFD implements TapDatagramF
     }
 
     @Override
+    public boolean contains(FD fd) {
+        return false;
+    }
+
+    @Override
     public boolean isOpen() {
         return !closed;
     }

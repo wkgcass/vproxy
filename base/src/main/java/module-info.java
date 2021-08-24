@@ -67,6 +67,7 @@ module vproxy.base {
     exports vproxy.base.util.coll;
     exports vproxy.base.util.crypto;
     exports vproxy.base.util.direct;
+    exports vproxy.base.util.display;
     exports vproxy.base.util.exception;
     exports vproxy.base.util.functional;
     exports vproxy.base.util.io;
@@ -76,7 +77,6 @@ module vproxy.base {
     exports vproxy.base.util.promise;
     exports vproxy.base.util.ringbuffer;
     exports vproxy.base.util.ringbuffer.ssl;
-    exports vproxy.base.util.table;
     exports vproxy.base.util.thread;
     exports vproxy.base.util.time;
     exports vproxy.base.util.time.impl;

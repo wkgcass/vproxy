@@ -4,6 +4,7 @@ import kotlinx.coroutines.suspendCancellableCoroutine
 import vproxy.base.GlobalInspection
 import vproxy.base.connection.ServerSock
 import vproxy.base.selector.SelectorEventLoop
+import vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.http1.CoroutineHttp1Server
@@ -23,6 +24,7 @@ class GlobalInspectionHttpServerLauncher private constructor() {
     val serverSock = ServerSock.create(l4addr)
     if (loop == null) {
       loop = SelectorEventLoop.open()
+      loop!!.loop { VProxyThread.create(it, "global-inspection") }
     }
     val app = CoroutineHttp1Server(serverSock.coroutine(loop!!.ensureNetEventLoop()))
 
@@ -30,6 +32,12 @@ class GlobalInspectionHttpServerLauncher private constructor() {
     app.get("/lsof") {
       val data = suspendCancellableCoroutine<String> { cont ->
         GlobalInspection.getInstance().getOpenFDs { data -> cont.resume(data) }
+      }
+      it.conn.response(200).send(data)
+    }
+    app.get("/lsof/tree") {
+      val data = suspendCancellableCoroutine<String> { cont ->
+        GlobalInspection.getInstance().getOpenFDsTree { data -> cont.resume(data) }
       }
       it.conn.response(200).send(data)
     }

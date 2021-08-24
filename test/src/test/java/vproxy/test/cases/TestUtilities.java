@@ -2,6 +2,7 @@ package vproxy.test.cases;
 
 import org.junit.Test;
 import vproxy.base.util.coll.RingQueue;
+import vproxy.base.util.display.TreeBuilder;
 import vproxy.base.util.objectpool.ConcurrentObjectPool;
 import vproxy.base.util.objectpool.CursorList;
 import vproxy.base.util.objectpool.PrototypeObjectList;
@@ -210,5 +211,43 @@ public class TestUtilities {
         q.add(3);
         assertEquals("[1, 2, 3]", q.toString());
         assertEquals(12, q.currentCapacity());
+    }
+
+    @Test
+    public void treeBuilder() {
+        TreeBuilder tb = new TreeBuilder();
+        var a = tb.branch("a");
+        var b = a.branch("b");
+        var c = b.branch("c");
+        c.leaf("d");
+        c.leaf("e");
+        var f = b.branch("f");
+        f.leaf("g");
+        var h = a.branch("h");
+        h.branch("i");
+        h.leaf("j");
+        assertEquals("" +
+            "o\n" +
+            "|\n" +
+            "+---> a\n" +
+            "      |\n" +
+            "      +---> b\n" +
+            "      |     |\n" +
+            "      |     +---> c\n" +
+            "      |     |     |\n" +
+            "      |     |     +---> d\n" +
+            "      |     |     |\n" +
+            "      |     |     +---> e\n" +
+            "      |     |\n" +
+            "      |     +---> f\n" +
+            "      |           |\n" +
+            "      |           +---> g\n" +
+            "      |\n" +
+            "      +---> h\n" +
+            "            |\n" +
+            "            +---> i\n" +
+            "            |\n" +
+            "            +---> j\n" +
+            "", tb.toString());
     }
 }
