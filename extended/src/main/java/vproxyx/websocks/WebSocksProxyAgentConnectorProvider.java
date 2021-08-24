@@ -106,7 +106,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
             SharedData shared = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
             ConnectableConnection conn;
             try {
-                if (shared.useSSL) {
+                if (shared.svr.useSSL()) {
                     conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector, shared);
                 } else {
                     conn = CommonProcess.makeRawConnection(loop.getSelectorEventLoop(), connector, shared);
@@ -499,10 +499,10 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
 
     static class CommonProcess {
         static ConnectableConnection makeRawConnection(SelectorEventLoop loop, SvrHandleConnector connector, SharedData sharedData) throws IOException {
-            if (loop == null && sharedData.useKCP) {
+            if (loop == null && sharedData.svr.useKCP()) {
                 throw new IllegalArgumentException("loop must be specified when using kcp");
             }
-            if (sharedData.useKCP) {
+            if (sharedData.svr.useKCP()) {
                 var fds = sharedData.fds.get(loop);
                 if (fds == null) {
                     String msg = "cannot find corresponding FDs for loop " + loop;
@@ -520,7 +520,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
         }
 
         static ConnectableConnection makeSSLConnection(SelectorEventLoop loop, SvrHandleConnector connector, SharedData sharedData) throws IOException {
-            if (loop == null && sharedData.useKCP) {
+            if (loop == null && sharedData.svr.useKCP()) {
                 throw new IllegalArgumentException("loop must be specified when using kcp");
             }
             SSLEngine engine;
@@ -557,7 +557,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     loop,
                     connector.remote);
             }
-            if (sharedData.useKCP) {
+            if (sharedData.svr.useKCP()) {
                 var fds = sharedData.fds.get(loop);
                 if (fds == null) {
                     String msg = "cannot find corresponding FDs for loop " + loop;
@@ -731,7 +731,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                 }
                 try {
                     SharedData sharedData = (SharedData) connector.getData(); /*sharedData, see ConfigProcessor*/
-                    if (sharedData.useSSL) {
+                    if (sharedData.svr.useSSL()) {
                         conn = CommonProcess.makeSSLConnection(loop.getSelectorEventLoop(), connector, sharedData);
                     } else {
                         conn = CommonProcess.makeRawConnection(loop.getSelectorEventLoop(), connector, sharedData);

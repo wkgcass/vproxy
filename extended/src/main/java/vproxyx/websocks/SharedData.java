@@ -7,13 +7,11 @@ import java.util.Collections;
 import java.util.Map;
 
 public class SharedData {
-    public final boolean useSSL;
-    public final boolean useKCP;
+    public final ServerList.Server svr;
     public final Map<SelectorEventLoop, H2StreamedClientFDs> fds;
 
-    public SharedData(boolean useSSL, boolean useKCP, Map<SelectorEventLoop, H2StreamedClientFDs> fds) {
-        this.useSSL = useSSL;
-        this.useKCP = useKCP;
+    public SharedData(ServerList.Server svr, Map<SelectorEventLoop, H2StreamedClientFDs> fds) {
+        this.svr = svr;
         this.fds = Collections.unmodifiableMap(fds);
     }
 }

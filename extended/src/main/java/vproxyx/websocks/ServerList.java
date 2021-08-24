@@ -6,16 +6,40 @@ import java.util.Objects;
 
 public class ServerList {
     public static class Server {
-        public final boolean useSSL;
-        public final boolean useKCP;
+        public static final int USE_SSL = 0x1;
+        public static final int USE_KCP = 0x2;
+        public static final int USE_UOT = 0x4;
+
+        public final int flags;
         public final String host;
         public final int port;
 
-        public Server(boolean useSSL, boolean useKCP, String host, int port) {
-            this.useSSL = useSSL;
-            this.useKCP = useKCP;
+        public Server(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
+            int flags = 0;
+            if (useSSL) {
+                flags |= Server.USE_SSL;
+            }
+            if (useKCP) {
+                flags |= Server.USE_KCP;
+            }
+            if (useUOT) {
+                flags |= Server.USE_UOT;
+            }
+            this.flags = flags;
             this.host = host;
             this.port = port;
+        }
+
+        public boolean useSSL() {
+            return (flags & USE_SSL) != 0;
+        }
+
+        public boolean useKCP() {
+            return (flags & USE_KCP) != 0;
+        }
+
+        public boolean useUOT() {
+            return (flags & USE_UOT) != 0;
         }
 
         @Override
@@ -23,22 +47,21 @@ public class ServerList {
             if (this == o) return true;
             if (o == null || getClass() != o.getClass()) return false;
             Server server = (Server) o;
-            return useSSL == server.useSSL &&
-                useKCP == server.useKCP &&
+            return flags == server.flags &&
                 port == server.port &&
                 Objects.equals(host, server.host);
         }
 
         @Override
         public int hashCode() {
-            return Objects.hash(useSSL, useKCP, host, port);
+            return Objects.hash(flags, host, port);
         }
     }
 
     private final List<Server> servers = new LinkedList<>();
 
-    public boolean add(boolean useSSL, boolean useKCP, String host, int port) {
-        var svr = new Server(useSSL, useKCP, host, port);
+    public boolean add(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
+        var svr = new Server(useSSL, useKCP, useUOT, host, port);
         if (servers.contains(svr)) {
             return false;
         }
@@ -46,8 +69,8 @@ public class ServerList {
         return true;
     }
 
-    public boolean remove(boolean useSSL, boolean useKCP, String host, int port) {
-        var foo = new Server(useSSL, useKCP, host, port);
+    public boolean remove(boolean useSSL, boolean useKCP, boolean useUOT, String host, int port) {
+        var foo = new Server(useSSL, useKCP, useUOT, host, port);
         return servers.remove(foo);
     }
 

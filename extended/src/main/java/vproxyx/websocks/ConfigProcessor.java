@@ -178,19 +178,23 @@ public class ConfigProcessor {
         // handle servers
         var serverListMap = configLoader.getServers();
         String nic = configLoader.getUdpOverTcpNic();
-        Logger.alert("enhancing kcp with uot on " + nic);
-        KCPFDs kcpFDs;
-        if (configLoader.isUdpOverTcpEnabled()) {
-            kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(),
-                new UDPFDs(UdpOverTcpSetup.setup(true, -1, nic, workerLoopGroup)));
-        } else {
-            kcpFDs = KCPFDs.getClientDefault();
-        }
+        boolean hasUOT = false;
         for (String alias : serverListMap.keySet()) {
             ServerList serverList = serverListMap.get(alias);
             for (ServerList.Server svr : serverList.getServers()) {
+                KCPFDs kcpFDs;
+                if (svr.useUOT()) {
+                    hasUOT = true;
+                    kcpFDs = new KCPFDs(KCPFDs.optionsClientFast4(),
+                        new UDPFDs(UdpOverTcpSetup.setup(true, -1, nic, workerLoopGroup)));
+                } else {
+                    kcpFDs = KCPFDs.getClientDefault();
+                }
                 addIntoServerGroup(alias, svr, kcpFDs);
             }
+        }
+        if (hasUOT) {
+            Logger.alert("enhancing kcp with uot on " + nic);
         }
         // check for https relay
         if (!configLoader.getHttpsSniErasureCertKeyFiles().isEmpty()) {
@@ -252,7 +256,7 @@ public class ConfigProcessor {
 
         // init streamed fds
         Map<SelectorEventLoop, H2StreamedClientFDs> fds = new HashMap<>();
-        if (svr.useKCP) {
+        if (svr.useKCP()) {
             {
                 // build fds map
                 Set<NetEventLoop> set = new HashSet<>();
@@ -272,7 +276,7 @@ public class ConfigProcessor {
         // this will be used when connection establishes to remote
         // in WebSocksProxyAgentConnectorProvider.java
         // also in HttpDNSServer.java
-        handle.data = new SharedData(svr.useSSL, svr.useKCP, fds);
+        handle.data = new SharedData(svr, fds);
     }
 
     private void loadCertKeyInAutoSignWorkingDirectory(File autoSignWorkingDirectory, String domain) throws Exception {

@@ -277,7 +277,7 @@ public class AgentDNSServer extends DNSServer {
         }
         // see ConfigProcessor.java
         SharedData data = (SharedData) svr.getData();
-        CoroutineHttp1ClientConnection.simpleGet((data.useSSL ? "https" : "http") + "://"
+        CoroutineHttp1ClientConnection.simpleGet((data.svr.useSSL() ? "https" : "http") + "://"
             + svr.remote.formatToIPPortString() + "/tools/resolve?domain=" + domain).setHandler((bytes, err) -> {
             if (err != null) {
                 Logger.error(LogType.CONN_ERROR, "request " + svr.remote + " to resolve " + domain + " failed", err);

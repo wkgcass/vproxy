@@ -491,22 +491,32 @@ public class ConfigLoader {
                     continue;
                 }
                 if (!line.startsWith("websocks://") && !line.startsWith("websockss://")
-                    && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")) {
+                    && !line.startsWith("websocks:kcp://") && !line.startsWith("websockss:kcp://")
+                    && !line.startsWith("websocks:uot:kcp://") && !line.startsWith("websockss:uot:kcp://")) {
                     throw new Exception("unknown protocol: " + line);
                 }
 
                 boolean useSSL = line.startsWith("websockss");
                 boolean useKCP = line.contains(":kcp://");
+                boolean useUOT = line.contains(":uot:");
                 // format line
                 if (useSSL) {
                     if (useKCP) {
-                        line = line.substring("websockss:kcp://".length());
+                        if (useUOT) {
+                            line = line.substring("websockss:uot:kcp://".length());
+                        } else {
+                            line = line.substring("websockss:kcp://".length());
+                        }
                     } else {
                         line = line.substring("websockss://".length());
                     }
                 } else {
                     if (useKCP) {
-                        line = line.substring("websocks:kcp://".length());
+                        if (useUOT) {
+                            line = line.substring("websocks:uot:kcp://".length());
+                        } else {
+                            line = line.substring("websocks:kcp://".length());
+                        }
                     } else {
                         line = line.substring("websocks://".length());
                     }
@@ -529,7 +539,7 @@ public class ConfigLoader {
                     throw new Exception("invalid port: " + line);
                 }
 
-                getGroup(currentAlias).add(useSSL, useKCP, hostPart, port);
+                getGroup(currentAlias).add(useSSL, useKCP, useUOT, hostPart, port);
             } else if (step == 2) {
                 if (line.equals("proxy.domain.list.end")) {
                     step = 0;
@@ -636,7 +646,7 @@ public class ConfigLoader {
         if (ssListenPort != 0 && ssPassword.isEmpty()) {
             failReasons.add("ss is enabled by agent.ss.listen, but agent.ss.password is not set");
         }
-        // check udp over tcp
+        // check udp over tcp (uot)
         if (udpOverTcpEnabled) {
             if (udpOverTcpNic == null) {
                 udpOverTcpNic = "eth0";
@@ -644,6 +654,20 @@ public class ConfigLoader {
         } else {
             if (udpOverTcpNic != null) {
                 failReasons.add("proxy.server.uot is disabled but proxy.server.uot.nic is set: " + udpOverTcpNic);
+            }
+        }
+        // uot servers should not exist if uot not enabled
+        if (!udpOverTcpEnabled) {
+            out:
+            for (var entry : servers.entrySet()) {
+                var group = entry.getKey();
+                var ls = entry.getValue().getServers();
+                for (var svr : ls) {
+                    if (svr.useUOT()) {
+                        failReasons.add("proxy.server.uot is not enabled, but server group " + group + " has server using uot");
+                        continue out;
+                    }
+                }
             }
         }
 
@@ -774,12 +798,15 @@ public class ConfigLoader {
                     .putArray("serverList", ls -> {
                         for (var server : group.getServers()) {
                             ls.addObject(svr -> {
-                                if (server.useSSL) {
+                                if (server.useSSL()) {
                                     svr.put("protocol", "websockss");
                                 } else {
                                     svr.put("protocol", "websocks");
                                 }
-                                svr.putObject("kcp", o -> o.put("enabled", server.useKCP));
+                                svr.putObject("kcp", o -> o
+                                    .put("enabled", server.useKCP())
+                                    .putObject("uot", o2 -> o2.put("enabled", server.useUOT()))
+                                );
                                 svr.put("ip", server.host);
                                 svr.put("port", server.port);
                             });
