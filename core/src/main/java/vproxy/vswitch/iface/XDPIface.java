@@ -107,6 +107,9 @@ public class XDPIface extends Iface {
                     chunk.pktaddr = pktaddr;
                     chunk.pktlen = pktlen;
                     chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
+                    if (chunk.csumFlags != 0) {
+                        statistics.incrCsumSkip();
+                    }
                     chunk.updateNative();
                 } else {
                     assert Logger.lowLevelDebug("no modification on chunk packet addresses");
@@ -115,6 +118,9 @@ public class XDPIface extends Iface {
 
                 assert Logger.lowLevelDebug("directly write packet " + chunk + " without copying");
                 sendingChunkPointers[sendingChunkSize++] = chunk.chunk();
+
+                statistics.incrTxPkts();
+                statistics.incrTxBytes(pktlen);
 
                 // ensure the packet is transmitted
                 if (!pkb.ifaceInput) {
@@ -139,6 +145,9 @@ public class XDPIface extends Iface {
         chunk.pktaddr = chunk.addr() + Consts.XDP_HEADROOM_DRIVER_RESERVED;
         chunk.pktlen = pktData.length();
         chunk.csumFlags = SwitchUtils.checksumFlagsFor(pkb.pkt);
+        if (chunk.csumFlags != 0) {
+            statistics.incrCsumSkip();
+        }
         ByteBuffer byteBuffer = umem.getBuffer();
         chunk.setPositionAndLimit(byteBuffer);
         pktData.byteBufferPut(byteBuffer, 0, pktData.length());
@@ -148,6 +157,9 @@ public class XDPIface extends Iface {
 
         // the chunk is not used in java anymore
         chunk.returnToPool();
+
+        statistics.incrTxPkts();
+        statistics.incrTxBytes(pktData.length());
 
         // ensure the packet is transmitted
         if (!pkb.ifaceInput) {
@@ -198,6 +210,7 @@ public class XDPIface extends Iface {
                     assert Logger.lowLevelDebug("writing chunk " + ptr + " failed, need to release them manually");
                     NativeXDP.get().releaseChunk(umem.umem, ptr);
                 }
+                statistics.incrTxErr(sendingChunkSize - n);
             }
             sendingChunkSize = 0; // reset
         }
@@ -251,6 +264,9 @@ public class XDPIface extends Iface {
                     fullBuffer.releaseRef();
                     continue;
                 }
+
+                statistics.incrRxPkts();
+                statistics.incrRxBytes(chunk.pktlen);
 
                 received(pkb);
             }

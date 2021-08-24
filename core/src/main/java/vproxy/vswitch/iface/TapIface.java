@@ -4,7 +4,10 @@ import vproxy.base.selector.Handler;
 import vproxy.base.selector.HandlerContext;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.selector.wrap.blocking.BlockingDatagramFD;
-import vproxy.base.util.*;
+import vproxy.base.util.ByteArray;
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 import vproxy.base.util.exception.XException;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.*;
@@ -124,10 +127,15 @@ public class TapIface extends Iface {
         var bytes = pkb.pkt.getRawPacket(0).toJavaArray();
         sndBuf.put(bytes);
         sndBuf.flip();
+
+        statistics.incrTxPkts();
+        statistics.incrTxBytes(bytes.length);
+
         try {
             operateTap.write(sndBuf);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "sending packet to " + this + " failed", e);
+            statistics.incrTxErr();
         }
     }
 
@@ -201,6 +209,9 @@ public class TapIface extends Iface {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
                     continue;
                 }
+
+                statistics.incrRxPkts();
+                statistics.incrRxBytes(pkb.pktBuf.length());
 
                 received(pkb);
                 callback.alertPacketsArrive();

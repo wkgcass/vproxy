@@ -46,6 +46,9 @@ public abstract class AbstractBaseSwitchSocketIface extends Iface {
 
         manipulate();
 
+        statistics.incrTxPkts();
+        statistics.incrTxBytes(sndBuf.limit() - sndBuf.position());
+
         try {
             if (sockConnected) {
                 sock.write(sndBuf);
@@ -54,6 +57,7 @@ public abstract class AbstractBaseSwitchSocketIface extends Iface {
             }
         } catch (IOException e) {
             assert Logger.lowLevelDebug("sending packet to " + this + " failed: " + e);
+            statistics.incrTxErr();
         }
     }
 

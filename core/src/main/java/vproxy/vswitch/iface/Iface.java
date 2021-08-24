@@ -11,6 +11,7 @@ public abstract class Iface {
     private boolean destroyed = false;
     private int baseMTU;
     private boolean floodAllowed;
+    public final IfaceStatistics statistics = new IfaceStatistics();
     protected IfaceInitParams.PacketCallback callback;
     private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
     private final ArrayList<PacketFilter> ingressFilters = new ArrayList<>();

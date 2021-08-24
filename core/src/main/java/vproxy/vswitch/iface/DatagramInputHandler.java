@@ -69,6 +69,12 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 assert Logger.lowLevelDebug("no pkb provided, ignore");
                 continue;
             }
+
+            pkb.devin.statistics.incrRxPkts();
+            if (pkb.pktBuf != null) {
+                pkb.devin.statistics.incrRxBytes(pkb.pktBuf.length());
+            }
+
             rcvQ.add(pkb);
             swCtx.alertPacketsArrive(rcvQ);
         }

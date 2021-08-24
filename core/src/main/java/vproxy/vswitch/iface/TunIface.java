@@ -156,12 +156,17 @@ public class TunIface extends Iface {
                 sndBuf.putInt(Consts.AF_INET6);
             }
         }
+
+        statistics.incrTxPkts();
+        statistics.incrTxBytes(bytes.length);
+
         sndBuf.put(bytes);
         sndBuf.flip();
         try {
             operateTun.write(sndBuf);
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "sending packet to " + this + " failed", e);
+            statistics.incrTxErr();
         }
     }
 
@@ -355,6 +360,9 @@ public class TunIface extends Iface {
                     assert Logger.lowLevelDebug("got invalid packet: " + err);
                     continue;
                 }
+
+                statistics.incrRxPkts();
+                statistics.incrRxBytes(pkb.pktBuf.length());
 
                 transformToArpOrNdpInput(pkb);
 
