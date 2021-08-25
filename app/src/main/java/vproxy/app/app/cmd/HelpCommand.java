@@ -462,6 +462,7 @@ public class HelpCommand {
         noswitchflag("no-switch-flag", null, "do not add switch flag on vxlan packet"),
         force("force", null, "forcibly to do something"),
         zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
+        rxgencsum("rx-gen-csum", null, "generate checksum before receiving the packet into vswitch"),
         ;
         public final String flag;
         public final String shortVer;
@@ -1373,8 +1374,9 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
                     new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
                         "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name())
-                ), Collections.singletonList(
-                    new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false)
+                ), Arrays.asList(
+                    new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
+                    new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet", false)
                 ), Arrays.asList(
                     new Tuple<>(
                         "add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy",

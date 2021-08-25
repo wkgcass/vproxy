@@ -15,7 +15,7 @@ public enum Flag {
     enable("enable"),
     disable("disable"),
 
-    rxgencchecksum("rx-gen-checksum"),
+    rxgencsum("rx-gen-csum"),
     ;
     public final String fullname;
 

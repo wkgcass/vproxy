@@ -810,7 +810,7 @@ public class Shutdown {
                         cmd += " zerocopy";
                     }
                     if (xdp.rxGenChecksum) {
-                        cmd += " rx-gen-checksum";
+                        cmd += " rx-gen-csum";
                     }
                     commands.add(cmd);
                 }
