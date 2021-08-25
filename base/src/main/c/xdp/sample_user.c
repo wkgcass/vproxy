@@ -8,6 +8,8 @@
 #include <linux/if_link.h>
 #include <poll.h>
 
+#include "vproxy_checksum.h"
+
 // Usage:
 //     hexDump(desc, addr, len, perLine);
 //         desc:    if non-NULL, printed as a description before hex dump.
@@ -142,15 +144,24 @@ int main(int argc, char** argv) {
                    umem->chunks->size, umem->chunks->used);
             hexDump("received", chunk->pkt, chunk->pktlen, 16);
 
-            if (chunk->pktlen >= 12) {
+            if (chunk->pktlen >= 14 + 40 /* xdp-tutorial uses ipv6 only */
+                && (((chunk->pkt[12] & 0xff) << 8) | (chunk->pkt[13] & 0xff)) == 0x86dd) {
+                // swap mac dst and src
                 for (int i = 0; i < 6; ++i) {
                     char b = chunk->pkt[i];
                     chunk->pkt[i] = chunk->pkt[6 + i];
                     chunk->pkt[6 + i] = b;
                 }
+                // swap ipv6 src and dst
+                for (int i = 0; i < 16; ++i) {
+                    char b = chunk->pkt[14 + 8 + i];
+                    chunk->pkt[14 + 8 + i] = chunk->pkt[14 + 8 + 16 + i];
+                    chunk->pkt[14 + 8 + 16 + i] = b;
+                }
                 if (cnt %2 == 0) {
                     printf("echo the packet without copying\n");
                     chunk->ref++;
+                    chunk->csum_flags = VP_CSUM_ALL;
                     vp_xdp_write_pkt(xsk, chunk);
                 } else {
                     printf("copy and echo the packet\n");
@@ -163,6 +174,7 @@ int main(int argc, char** argv) {
                     chunk2->pktaddr = chunk2->addr;
                     chunk2->pkt = chunk2->realaddr;
                     chunk2->pktlen = chunk->pktlen;
+                    chunk2->csum_flags = VP_CSUM_ALL;
                     memcpy(chunk2->pkt, chunk->pkt, chunk->pktlen);
 
                     vp_xdp_write_pkt(xsk, chunk2);
