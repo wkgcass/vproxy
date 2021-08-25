@@ -19,7 +19,7 @@ public class TcpPacket extends TransportPacket {
     private int window;
     private int checksum;
     private int urgentPointer;
-    private List<TcpOption> options = new LinkedList<>();
+    private List<TcpOption> options;
     private ByteArray data;
 
     @Override
@@ -114,6 +114,9 @@ public class TcpPacket extends TransportPacket {
     }
 
     public List<TcpOption> getOptions() {
+        if (options == null) {
+            options = new LinkedList<>();
+        }
         return options;
     }
 
@@ -234,6 +237,7 @@ public class TcpPacket extends TransportPacket {
             data = ByteArray.allocate(0);
         }
 
+        options = new LinkedList<>();
         if (dataOffset > 20) {
             // parse tcp options
             int off = 20;
