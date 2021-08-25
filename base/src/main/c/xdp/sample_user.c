@@ -144,8 +144,9 @@ int main(int argc, char** argv) {
                    umem->chunks->size, umem->chunks->used);
             hexDump("received", chunk->pkt, chunk->pktlen, 16);
 
-            if (chunk->pktlen >= 14 + 40 /* xdp-tutorial uses ipv6 only */
-                && (((chunk->pkt[12] & 0xff) << 8) | (chunk->pkt[13] & 0xff)) == 0x86dd) {
+            if (chunk->pktlen >= 14 + 40 /* xdp-tutorial uses ipv6 only */ + 1 /* icmp type */
+                && (((chunk->pkt[12] & 0xff) << 8) | (chunk->pkt[13] & 0xff)) == 0x86dd
+                && (chunk->pkt[14 + 6] & 0xff) == 58) {
                 // swap mac dst and src
                 for (int i = 0; i < 6; ++i) {
                     char b = chunk->pkt[i];
@@ -158,6 +159,8 @@ int main(int argc, char** argv) {
                     chunk->pkt[14 + 8 + i] = chunk->pkt[14 + 8 + 16 + i];
                     chunk->pkt[14 + 8 + 16 + i] = b;
                 }
+                // set icmp type
+                chunk->pkt[14 + 40] = 129;
                 if (cnt %2 == 0) {
                     printf("echo the packet without copying\n");
                     chunk->ref++;
