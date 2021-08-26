@@ -99,11 +99,15 @@ public class GetDnsServerListFromConfigFile implements DnsServerListGetter {
                     // need to remove localhost addresses because it might be vproxy itself
                     {
                         String ipName = addr.getAddress().formatToIPString();
-                        if (ipName.startsWith("127.") ||
+                        if (ipName.startsWith("127.") || // v4 loopback address
                             ipName.equals("[::1]") || // only one ipv6 loopback address
                             ipName.startsWith("[::ffff:7f") || // v4-mapped v6
                             ipName.startsWith("[::7f")) { // v4-compatible v6
-                            continue;
+                            // special cases to exclude
+                            if (!ipName.equals("127.0.0.53") // commonly used by ubuntu dns masq
+                            ) {
+                                continue;
+                            }
                         }
                     }
                     ret.add(addr);
