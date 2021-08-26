@@ -25,7 +25,9 @@ import vproxyx.*;
 
 import java.io.File;
 import java.io.IOException;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 
 public class Main {
     static final String _HELP_STR_ = "" +
@@ -155,17 +157,6 @@ public class Main {
     }
 
     private static String[] checkFlagDeployInArguments(String[] args) {
-        Map<String, String> specialHandles = new HashMap<>();
-        specialHandles.put("deploy", null);
-        specialHandles.put("dhcp_get_dns_list_nics", null);
-
-        for (String key : specialHandles.keySet()) {
-            String value = Utils.getSystemProperty(key);
-            if (value != null) {
-                specialHandles.put(key, value);
-            }
-        }
-
         List<String> returnArgs = new ArrayList<>(args.length);
         for (final var arg : args) {
             if (!arg.startsWith("-D")) {
@@ -186,14 +177,11 @@ public class Main {
                     "and in program arguments");
             }
 
-            if (specialHandles.containsKey(key)) {
-                specialHandles.put(key, value);
-            }
             System.setProperty(key, value);
         }
         // set dhcpGetDnsListNics if not specified in some conditions
-        String deploy = specialHandles.get("eploy");
-        String dhcpGetDnsListNics = specialHandles.get("hcpGetDnsListNics");
+        String deploy = Utils.getSystemProperty("deploy");
+        String dhcpGetDnsListNics = Utils.getSystemProperty("dhcp_get_dns_list_nics");
         if (dhcpGetDnsListNics == null) {
             if (deploy != null) {
                 if (OS.isWindows() && Arrays.asList("WebSocksProxyAgent", "WebSocksAgent", "wsagent").contains(deploy)) {
@@ -201,7 +189,7 @@ public class Main {
                 }
             }
             if (dhcpGetDnsListNics != null) {
-                System.setProperty("hcpGetDnsListNics", dhcpGetDnsListNics);
+                System.setProperty("vproxy.DhcpGetDnsListNics", dhcpGetDnsListNics);
             }
         }
         //noinspection ToArrayCallWithZeroLengthArrayArgument
