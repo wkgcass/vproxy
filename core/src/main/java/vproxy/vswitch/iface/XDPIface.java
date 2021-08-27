@@ -272,7 +272,7 @@ public class XDPIface extends Iface {
             }
             ctx.getChannel().rxRelease(ls.size());
             ls.clear();
-            callback.alertPacketsArrive();
+            callback.alertPacketsArrive(XDPIface.this);
         }
 
         @Override

@@ -367,7 +367,7 @@ public class TunIface extends Iface {
                 transformToArpOrNdpInput(pkb);
 
                 received(pkb);
-                callback.alertPacketsArrive();
+                callback.alertPacketsArrive(TunIface.this);
             }
         }
 

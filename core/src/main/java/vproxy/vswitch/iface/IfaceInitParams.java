@@ -27,7 +27,7 @@ public class IfaceInitParams {
     }
 
     public interface PacketCallback {
-        void alertPacketsArrive();
+        void alertPacketsArrive(Iface iface);
 
         void alertDeviceDown(Iface iface);
     }

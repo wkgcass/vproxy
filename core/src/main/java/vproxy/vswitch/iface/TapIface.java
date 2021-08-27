@@ -214,7 +214,7 @@ public class TapIface extends Iface {
                 statistics.incrRxBytes(pkb.pktBuf.length());
 
                 received(pkb);
-                callback.alertPacketsArrive();
+                callback.alertPacketsArrive(TapIface.this);
             }
         }
 

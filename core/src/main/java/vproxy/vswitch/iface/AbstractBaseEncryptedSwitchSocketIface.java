@@ -53,6 +53,9 @@ public abstract class AbstractBaseEncryptedSwitchSocketIface extends AbstractBas
         sndBuf.put(bytes);
         sndBuf.flip();
 
+        statistics.incrTxPkts();
+        statistics.incrTxBytes(sndBuf.limit() - sndBuf.position());
+
         try {
             if (sockConnected) {
                 sock.write(sndBuf);

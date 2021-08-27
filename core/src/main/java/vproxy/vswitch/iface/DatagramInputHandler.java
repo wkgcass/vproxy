@@ -155,6 +155,8 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
 
             pkb = PacketBuffer.fromPacket(vxLanPacket);
             pkb.devin = uiface;
+
+            uiface.statistics.incrRxBytes(data.length());
             // fall through
         } else {
             assert Logger.lowLevelDebug("is vxlan packet");

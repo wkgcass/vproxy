@@ -759,13 +759,11 @@ public class Switch {
 
     private final CursorList<PacketBuffer> packetBuffersToBeHandled = new CursorList<>(128);
 
-    private void onIfacePacketsArrive() {
-        for (Iface iface : ifaces.keySet()) {
-            PacketBuffer pkb;
-            while ((pkb = iface.pollPacket()) != null) {
-                pkb.ifaceInput = true;
-                preHandleInputPkb(pkb);
-            }
+    private void onIfacePacketsArrive(Iface iface) {
+        PacketBuffer pkb;
+        while ((pkb = iface.pollPacket()) != null) {
+            pkb.ifaceInput = true;
+            preHandleInputPkb(pkb);
         }
         handleInputPkb();
     }
@@ -1006,8 +1004,8 @@ public class Switch {
 
     private final IfaceInitParams.PacketCallback packetCallback = new IfaceInitParams.PacketCallback() {
         @Override
-        public void alertPacketsArrive() {
-            onIfacePacketsArrive();
+        public void alertPacketsArrive(Iface iface) {
+            onIfacePacketsArrive(iface);
         }
 
         @Override

@@ -244,8 +244,12 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
                 }
                 PacketBuffer pkb = PacketBuffer.fromPacket(p.getVxlan());
                 pkb.devin = iface;
+
+                iface.statistics.incrRxPkts();
+                iface.statistics.incrRxBytes(arr.length());
+
                 received(pkb);
-                callback.alertPacketsArrive();
+                callback.alertPacketsArrive(iface);
             }
         }
 
