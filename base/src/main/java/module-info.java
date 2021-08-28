@@ -72,6 +72,7 @@ module vproxy.base {
     exports vproxy.base.util.functional;
     exports vproxy.base.util.io;
     exports vproxy.base.util.kt;
+    exports vproxy.base.util.net;
     exports vproxy.base.util.nio;
     exports vproxy.base.util.objectpool;
     exports vproxy.base.util.promise;

@@ -5,13 +5,16 @@ import vproxy.base.util.callback.Callback;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
 import vproxy.base.util.exception.XException;
+import vproxy.base.util.net.Nic;
 import vproxy.base.util.thread.VProxyThread;
 import vproxy.base.util.unsafe.JDKUnsafe;
 import vproxy.vfd.FDProvider;
+import vproxy.vfd.MacAddress;
 import vproxy.vpacket.Ipv4Packet;
 import vproxy.vpacket.Ipv6Packet;
 
 import java.io.*;
+import java.net.NetworkInterface;
 import java.nio.ByteBuffer;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -906,5 +909,40 @@ public class Utils {
         } else {
             return String.join("", split);
         }
+    }
+
+    public static List<Nic> getNetworkInterfaces() throws IOException {
+        var ret = new ArrayList<Nic>();
+        if (!OS.isLinux()) {
+            var ifaces = NetworkInterface.getNetworkInterfaces();
+            while (ifaces.hasMoreElements()) {
+                var iface = ifaces.nextElement();
+                ret.add(new Nic(iface.getName(), new MacAddress(iface.getHardwareAddress())));
+            }
+            return ret;
+        }
+        String[] lines = Files.readString(Path.of("/proc/net/dev")).split("\n");
+        // skip first two lines, they are column names
+        for (int i = 2; i < lines.length; ++i) {
+            String line = lines[i];
+            if (line.isBlank()) {
+                continue;
+            }
+            line = line.trim();
+            int idx = line.indexOf(":");
+            if (idx == -1) { // unexpected
+                continue;
+            }
+            String name = line.substring(0, idx);
+            String macStr = Files.readString(Path.of("/sys/class/net/" + name + "/address")).trim();
+            MacAddress mac;
+            try {
+                mac = new MacAddress(macStr);
+            } catch (IllegalArgumentException e) {
+                throw new IOException(e);
+            }
+            ret.add(new Nic(name, mac));
+        }
+        return ret;
     }
 }

@@ -3,12 +3,12 @@ package vproxy.xdp;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
+import vproxy.base.util.net.Nic;
 import vproxy.vfd.MacAddress;
 
 import java.io.IOException;
-import java.net.NetworkInterface;
 import java.net.SocketException;
-import java.util.Enumeration;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -42,16 +42,15 @@ public class BPFObject {
     }
 
     private static String generateDefault(String nicname) throws IOException {
-        Enumeration<NetworkInterface> nics;
+        List<Nic> nics;
         try {
-            nics = NetworkInterface.getNetworkInterfaces();
+            nics = Utils.getNetworkInterfaces();
         } catch (SocketException e) {
             throw new IOException("failed to retrieve nics, err: " + Utils.formatErr(e), e);
         }
-        NetworkInterface chosenNic = null;
-        while (nics.hasMoreElements()) {
-            var nic = nics.nextElement();
-            if (nic.getName().equals(nicname)) {
+        Nic chosenNic = null;
+        for (var nic : nics) {
+            if (nic.name.equals(nicname)) {
                 chosenNic = nic;
                 break;
             }
@@ -59,11 +58,7 @@ public class BPFObject {
         if (chosenNic == null) {
             throw new IOException("nic " + nicname + " not found");
         }
-        byte[] macBytes = chosenNic.getHardwareAddress();
-        if (macBytes == null || macBytes.length != 6) {
-            throw new IOException("nic " + nicname + " doesn't have mac or mac is invalid");
-        }
-        var mac = new MacAddress(macBytes);
+        var mac = chosenNic.mac;
         Logger.alert("generating ebpf object for nic " + nicname + " with mac " + mac);
 
         byte[] bytes = BPFObject.skipDstMacProgram(mac).toJavaArray();
