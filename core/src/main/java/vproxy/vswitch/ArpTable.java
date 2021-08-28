@@ -1,6 +1,7 @@
 package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Timer;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
@@ -123,6 +124,8 @@ public class ArpTable {
         @Override
         public void cancel() {
             super.cancel();
+
+            Logger.alert("arp entry " + ip.formatToIPString() + " -> " + mac + " removed");
 
             entries.remove(this);
             var entry = ipMap.remove(ip);

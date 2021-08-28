@@ -1,6 +1,7 @@
 package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Timer;
 import vproxy.vfd.MacAddress;
 import vproxy.vswitch.iface.Iface;
@@ -135,6 +136,8 @@ public class MacTable {
         @Override
         public void cancel() {
             super.cancel();
+
+            Logger.alert("mac entry " + mac + " -> " + iface.name() + " removed");
 
             entries.remove(this);
             macMap.remove(mac);
