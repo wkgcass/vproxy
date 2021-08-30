@@ -31,7 +31,7 @@ public class XDPPoc {
         var xsk = XDPSocket.create(ifname, 0, umem, 32, 32, BPFMode.SKB, false, 0, true);
         map.put(0, xsk);
 
-        bpfobj.release();
+        bpfobj.release(false);
 
         Logger.alert("ready to poll");
 

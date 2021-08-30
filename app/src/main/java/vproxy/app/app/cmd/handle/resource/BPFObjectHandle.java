@@ -69,6 +69,6 @@ public class BPFObjectHandle {
     }
 
     public static void remove(Command cmd) throws Exception {
-        Application.get().bpfObjectHolder.removeAndRelease(cmd.resource.alias);
+        Application.get().bpfObjectHolder.removeAndRelease(cmd.resource.alias, true);
     }
 }

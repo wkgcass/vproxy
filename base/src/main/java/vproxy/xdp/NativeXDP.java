@@ -44,6 +44,12 @@ public class NativeXDP {
                                                              int mode, // defined in BPFMode
                                                              boolean forceAttach) throws IOException;
 
+    public void detachBPFProgramFromNic(String nicName) throws IOException {
+        detachBPFProgramFromNic0(nicName);
+    }
+
+    private static native void detachBPFProgramFromNic0(String nicName) throws IOException;
+
     public long findMapByNameInBPF(long bpfobj, String mapName) throws IOException {
         return findMapByNameInBPF0(bpfobj, mapName);
     }

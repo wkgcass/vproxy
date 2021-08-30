@@ -1,5 +1,7 @@
 #include "vproxy_xdp.h"
 
+#include <linux/if_link.h>
+
 #include <errno.h>
 #include <net/if.h>
 #include <string.h>
@@ -56,6 +58,28 @@ err:
         bpf_object__close(bpf_obj);
     }
     return NULL;
+}
+
+int vp_bpfobj_detach_from_if(char* ifname) {
+    int ifindex = if_nametoindex((const char*)ifname);
+    if (ifindex <= 0) {
+        fprintf(stderr, "ERR: if_nametoindex(%s) failed: %d %s\n",
+            ifname, errno, strerror(errno));
+        return -1;
+    }
+    int err = xdp_link_attach(ifindex, XDP_FLAGS_SKB_MODE, -1);
+    int err2 = xdp_link_attach(ifindex, XDP_FLAGS_DRV_MODE, -1);
+    if (!err || !err2) {
+        err = 0;
+    } else if (err2 != 0) {
+        err = err2;
+    }
+    if (err) {
+        fprintf(stderr, "ERR: xdp_link_attach(%d, XDP_FLAGS_UPDATE_IF_NOEXIST, -1) failed: %d %s\n",
+            ifindex, -err, strerror(-err));
+        return err;
+    }
+    return 0;
 }
 
 struct bpf_map* vp_bpfobj_find_map_by_name(struct bpf_object* bpfobj, char* name) {

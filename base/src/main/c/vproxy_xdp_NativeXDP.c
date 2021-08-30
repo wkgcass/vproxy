@@ -52,6 +52,16 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic0
     return (jlong) bpfobj;
 }
 
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_detachBPFProgramFromNic0
+  (JNIEnv* env, jclass self, jstring ifname) {
+    const char* ifname_chars = (*env)->GetStringUTFChars(env, ifname, NULL);
+    int err = vp_bpfobj_detach_from_if((char*)ifname_chars);
+    (*env)->ReleaseStringUTFChars(env, ifname, ifname_chars);
+    if (err) {
+        throwIOExceptionBasedOnErrno(env);
+    }
+}
+
 JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_findMapByNameInBPF0
   (JNIEnv* env, jclass self, jlong bpfobj_o, jstring name) {
     const char* name_chars = (*env)->GetStringUTFChars(env, name, NULL);

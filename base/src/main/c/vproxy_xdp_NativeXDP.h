@@ -25,6 +25,14 @@ JNIEXPORT jlong JNICALL Java_vproxy_xdp_NativeXDP_loadAndAttachBPFProgramToNic0
 
 /*
  * Class:     vproxy_xdp_NativeXDP
+ * Method:    detachBPFProgramFromNic0
+ * Signature: (Ljava/lang/String;)V
+ */
+JNIEXPORT void JNICALL Java_vproxy_xdp_NativeXDP_detachBPFProgramFromNic0
+  (JNIEnv *, jclass, jstring);
+
+/*
+ * Class:     vproxy_xdp_NativeXDP
  * Method:    findMapByNameInBPF0
  * Signature: (JLjava/lang/String;)J
  */

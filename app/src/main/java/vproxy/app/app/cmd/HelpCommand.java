@@ -1380,11 +1380,11 @@ public class HelpCommand {
                     new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet", false)
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add xdp xdp0 to switch sw0 nic xdptut-4667 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy",
+                        "add xdp xdptut-4667 to switch sw0 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add xdp xdp1 to switch sw0 nic enp4s0 bpf-map xsk_map umem umem0 queue 0 vni 1",
+                        "add xdp xdptut-4667 to switch sw0 bpf-map xsk_map umem umem0 queue 0 vni 1",
                         "\"OK\""
                     )
                 )),
@@ -1537,8 +1537,8 @@ public class HelpCommand {
                             "2) \"xdptut-4667 -> path /vproxy/vproxy/base/src/main/c/xdp/sample_kern.o prog xdp_sock mode SKB\""
                     )
                 )),
-                new ResActMan(ActMan.removefrom, "remove bpf-object. " +
-                    "Note that the loaded program will not be detached from the nic, so xdp will not be affected", Collections.emptyList(), Collections.singletonList(
+                new ResActMan(ActMan.removefrom, "remove bpf-object. The loaded program will be detached from the nic.",
+                    Collections.emptyList(), Collections.singletonList(
                     new Tuple<>(
                         "remove bpf-object enp0s6",
                         "\"OK\""

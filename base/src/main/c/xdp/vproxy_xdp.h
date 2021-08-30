@@ -62,6 +62,7 @@ struct vp_xsk_info {
 };
 
 struct bpf_object* vp_bpfobj_attach_to_if    (char* filepath, char* prog, char* ifname, int attach_flags);
+int                vp_bpfobj_detach_from_if  (char* ifname);
 struct bpf_map*    vp_bpfobj_find_map_by_name(struct bpf_object* bpfobj, char* name);
 
 struct vp_umem_info* vp_umem_create(int chunks_size, int fill_ring_size, int comp_ring_size,

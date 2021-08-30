@@ -34,10 +34,10 @@ public class BPFObjectHolder {
         return bpfobj;
     }
 
-    public void removeAndRelease(String alias) throws NotFoundException {
+    public void removeAndRelease(String alias, boolean detach) throws NotFoundException {
         BPFObject g = map.remove(alias);
         if (g == null)
             throw new NotFoundException("bpf-object", alias);
-        g.release();
+        g.release(detach);
     }
 }

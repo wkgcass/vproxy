@@ -1,6 +1,7 @@
 package vproxy.xdp;
 
 import vproxy.base.util.ByteArray;
+import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.base.util.net.Nic;
@@ -80,8 +81,15 @@ public class BPFObject {
         }
     }
 
-    public void release() {
+    public void release(boolean detach) {
         NativeXDP.get().releaseBPFObject(bpfobj);
+        if (detach) {
+            try {
+                NativeXDP.get().detachBPFProgramFromNic(nic);
+            } catch (IOException e) {
+                Logger.error(LogType.SYS_ERROR, "detaching bpf object from nic " + nic + " failed", e);
+            }
+        }
     }
 
     public String toString() {

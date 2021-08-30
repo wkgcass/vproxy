@@ -357,7 +357,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 BPFMapKeySelectors.useQueueId.keySelector.get());
         } catch (Exception e) {
             try {
-                Application.get().bpfObjectHolder.removeAndRelease(bpfobj.nic);
+                Application.get().bpfObjectHolder.removeAndRelease(bpfobj.nic, true);
             } catch (Exception e2) {
                 Logger.error(LogType.SYS_ERROR, "rollback bpf-object " + bpfobj.nic + " failed", e2);
             }
@@ -559,7 +559,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
     private void deleteNic(Switch sw, String swNic) throws Exception {
         try {
-            Application.get().bpfObjectHolder.removeAndRelease(swNic);
+            Application.get().bpfObjectHolder.removeAndRelease(swNic, true);
         } catch (NotFoundException ignore) {
         }
         try {
