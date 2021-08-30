@@ -818,14 +818,10 @@ public class Shutdown {
                 }
                 // set iface options
                 for (var iface : sw.getIfaces()) {
-                    String ifaceName;
-                    if (iface instanceof RemoteSwitchIface) {
-                        ifaceName = "remote:" + ((RemoteSwitchIface) iface).alias;
-                    } else if (iface instanceof UserClientIface) {
-                        ifaceName = "ucli:" + ((UserClientIface) iface).user.user.replace(Consts.USER_PADDING, "");
-                    } else if (iface instanceof XDPIface) {
-                        ifaceName = "xdp:" + ((XDPIface) iface).nic;
-                    } else {
+                    String ifaceName = iface.name();
+                    if (!(iface instanceof RemoteSwitchIface) &&
+                        !(iface instanceof UserClientIface) &&
+                        !(iface instanceof XDPIface)) {
                         continue;
                     }
                     cmd = "update iface " + ifaceName + " in switch " + sw.alias

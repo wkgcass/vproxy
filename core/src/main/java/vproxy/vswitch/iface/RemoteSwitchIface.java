@@ -38,8 +38,8 @@ public class RemoteSwitchIface extends AbstractBaseSwitchSocketIface {
     }
 
     @Override
-    public String toString() {
-        return "Iface(remote:" + alias + "," + udpSockAddress.formatToIPPortString() + ")";
+    protected String toStringExtra() {
+        return "," + udpSockAddress.formatToIPPortString();
     }
 
     @Override

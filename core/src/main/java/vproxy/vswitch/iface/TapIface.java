@@ -60,8 +60,8 @@ public class TapIface extends Iface {
     }
 
     @Override
-    public String toString() {
-        return "Iface(tap:" + tap.getTap().dev + ",vni:" + localSideVni + ")";
+    protected String toStringExtra() {
+        return ",vni:" + localSideVni;
     }
 
     @Override

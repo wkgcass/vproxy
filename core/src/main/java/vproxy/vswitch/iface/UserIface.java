@@ -44,8 +44,8 @@ public class UserIface extends AbstractBaseEncryptedSwitchSocketIface implements
     }
 
     @Override
-    public String toString() {
-        return "Iface(user:" + user.replace(Consts.USER_PADDING, "") + "," + udpSockAddress.formatToIPPortString() + ",lvni:" + localSideVni + ",rvni:" + remoteSideVni + ')';
+    protected String toStringExtra() {
+        return "," + udpSockAddress.formatToIPPortString() + ",lvni:" + localSideVni + ",rvni:" + remoteSideVni;
     }
 
     @Override

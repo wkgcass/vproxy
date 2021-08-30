@@ -224,8 +224,8 @@ public class XDPIface extends Iface {
     }
 
     @Override
-    public String toString() {
-        return "Iface(xdp:" + nic + "#" + queueId + ",umem=" + umem.alias + ",vni:" + vni + ")";
+    protected String toStringExtra() {
+        return "#q=" + queueId + ",umem=" + umem.alias + ",vni:" + vni;
     }
 
     private class XDPHandler implements Handler<XDPSocket> {

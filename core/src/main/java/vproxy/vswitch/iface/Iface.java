@@ -100,6 +100,10 @@ public abstract class Iface {
         return "mtu " + baseMTU + " flood " + (floodAllowed ? "allow" : "deny");
     }
 
+    protected String toStringExtra() {
+        return "";
+    }
+
     public Annotations getAnnotations() {
         if (annotations == null) {
             annotations = new Annotations();
@@ -113,5 +117,15 @@ public abstract class Iface {
 
     public boolean isDestroyed() {
         return destroyed;
+    }
+
+    @Override
+    public final String toString() {
+        String extra = toStringExtra();
+        return name()
+            + (extra == null || extra.isEmpty() ? "" : extra)
+            + " " + paramsToString()
+            + " " + statistics
+            + (annotations == null ? "" : " annotations " + annotations);
     }
 }

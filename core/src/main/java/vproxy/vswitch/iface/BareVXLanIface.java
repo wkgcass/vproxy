@@ -33,11 +33,6 @@ public class BareVXLanIface extends AbstractBaseSwitchSocketIface implements Loc
     }
 
     @Override
-    public String toString() {
-        return "Iface(" + udpSockAddress.formatToIPPortString() + ')';
-    }
-
-    @Override
     public void sendPacket(PacketBuffer pkb) {
         super.sendPacket(pkb);
     }

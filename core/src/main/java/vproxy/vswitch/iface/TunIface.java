@@ -68,8 +68,8 @@ public class TunIface extends Iface {
     }
 
     @Override
-    public String toString() {
-        return "Iface(tun:" + tun.getTap().dev + ",vni:" + localSideVni + ",mac:" + mac + ")";
+    protected String toStringExtra() {
+        return ",vni:" + localSideVni + ",mac:" + mac;
     }
 
     @Override

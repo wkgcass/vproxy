@@ -166,7 +166,7 @@ public class ArpHandle {
 
         private String strForIface(ArpEntry e) {
             if (e.iface == null) return "";
-            return e.iface.toString();
+            return e.iface.name();
         }
 
         private String strForArpTTL(ArpEntry e) {

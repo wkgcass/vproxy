@@ -73,9 +73,8 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
     }
 
     @Override
-    public String toString() {
-        return "Iface(ucli:" + user.user.replace(Consts.USER_PADDING, "") + "," + remote.formatToIPPortString() + ",vni:" + user.vni
-            + ")" + (connected ? "[UP]" : "[DOWN]");
+    protected String toStringExtra() {
+        return "," + remote.formatToIPPortString() + ",vni:" + user.vni + (connected ? "[UP]" : "[DOWN]");
     }
 
     @Override
