@@ -58,8 +58,8 @@ public class VirtualNetwork {
         arpTable.setTimeout(arpTableTimeout);
     }
 
-    public void addIp(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
-        ips.add(ip, mac, annotations);
+    public IPMac addIp(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
+        return ips.add(ip, mac, annotations);
     }
 
     public void clearCache() {
@@ -84,7 +84,7 @@ public class VirtualNetwork {
     private static final int IP_LOCAL_PORT_MAX = 32768;
 
     public IPPort findFreeUdpIPPort(IPPort remote) {
-        for (var ip : ips.allIps()) {
+        for (var ip : ips.allRoutableIps()) {
             if (remote.getAddress() instanceof IPv4) {
                 if (!(ip instanceof IPv4)) continue;
             } else {

@@ -9,6 +9,7 @@ import java.util.Objects;
 public class IPMac {
     public final IP ip;
     public final MacAddress mac;
+    public boolean routing = true; // can be used when running ip routing
     public final Annotations annotations;
 
     IPMac(IP ip, MacAddress mac, Annotations annotations) {
@@ -42,6 +43,7 @@ public class IPMac {
         return "IPInfo{" +
             "ip=" + ip +
             ", mac=" + mac +
+            ", routing=" + routing +
             ", annotations='" + annotations + '\'' +
             '}';
     }

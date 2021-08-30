@@ -682,7 +682,9 @@ public class Shutdown {
 
                     // create ips
                     for (var ipmac : network.ips.entries()) {
-                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias + " mac " + ipmac.mac;
+                        cmd = "add ip " + ipmac.ip.formatToIPString() + " to vpc " + vpc + " in switch " + sw.alias
+                            + " mac " + ipmac.mac
+                            + " routing " + (ipmac.routing ? "on" : "off");
                         if (!ipmac.annotations.isEmpty()) {
                             cmd += " annotations " + ipmac.annotations;
                         }

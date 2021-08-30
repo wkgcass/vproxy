@@ -7,6 +7,7 @@ import vproxy.base.util.exception.NotFoundException;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
+import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 
 import java.util.*;
@@ -43,12 +44,27 @@ public class SyntheticIpHolder {
         return ipMap.keySet();
     }
 
+    public Collection<IP> allRoutableIps() {
+        Set<IP> ret = new HashSet<>();
+        for (var ipmac : ipMap.values()) {
+            if (ipmac.routing) {
+                ret.add(ipmac.ip);
+            }
+        }
+        return ret;
+    }
+
     public Collection<IPMac> entries() {
         return ipMap.values();
     }
 
-    public IPMac findAny() {
-        var opt = ipMap.values().stream().findAny();
+    public IPMac findAnyIPv4ForRouting() {
+        var opt = ipMap.values().stream().filter(ipmac -> ipmac.routing && ipmac.ip instanceof IPv4).findAny();
+        return opt.orElse(null);
+    }
+
+    public IPMac findAnyIPv6ForRouting() {
+        var opt = ipMap.values().stream().filter(ipmac -> ipmac.routing && ipmac.ip instanceof IPv6).findAny();
         return opt.orElse(null);
     }
 
@@ -56,7 +72,7 @@ public class SyntheticIpHolder {
         return macMap.keySet();
     }
 
-    public void add(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
+    public IPMac add(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
         if (ip instanceof IPv4) {
             if (!allowedV4Network.contains(ip)) {
                 throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV4Network);
@@ -77,6 +93,7 @@ public class SyntheticIpHolder {
         }
         var set = macMap.computeIfAbsent(mac, m -> new HashSet<>());
         set.add(info);
+        return info;
     }
 
     public void del(IP ip) throws NotFoundException {

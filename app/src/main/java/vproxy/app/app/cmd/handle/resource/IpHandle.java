@@ -3,8 +3,11 @@ package vproxy.app.app.cmd.handle.resource;
 import vproxy.app.app.cmd.Command;
 import vproxy.app.app.cmd.Param;
 import vproxy.app.app.cmd.Resource;
+import vproxy.app.app.cmd.ResourceType;
 import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
+import vproxy.app.app.cmd.handle.param.RoutingHandle;
 import vproxy.base.util.Annotations;
+import vproxy.base.util.exception.NotFoundException;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.IP;
 import vproxy.vfd.MacAddress;
@@ -38,11 +41,7 @@ public class IpHandle {
         String ip = cmd.resource.alias;
         String mac = cmd.args.get(Param.mac);
 
-        byte[] ipBytes = IP.parseIpString(ip);
-        if (ipBytes == null) {
-            throw new XException("invalid ip address: " + ip);
-        }
-        IP inet = IP.from(ipBytes);
+        IP inet = IP.from(ip);
         MacAddress macO;
         try {
             macO = new MacAddress(mac);
@@ -55,7 +54,25 @@ public class IpHandle {
             anno = AnnotationsHandle.get(cmd);
         }
 
-        VpcHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
+        IPMac info = VpcHandle.get(cmd.prepositionResource).addIp(inet, macO, anno);
+        if (cmd.args.containsKey(Param.routing)) {
+            info.routing = RoutingHandle.get(cmd);
+        } else {
+            info.routing = true;
+        }
+    }
+
+    public static void update(Command cmd) throws Exception {
+        IP ip = IP.from(cmd.resource.alias);
+        VirtualNetwork net = VpcHandle.get(cmd.resource.parentResource);
+        var opt = net.ips.entries().stream().filter(ipmac -> ipmac.ip.equals(ip)).findFirst();
+        if (opt.isEmpty()) {
+            throw new NotFoundException(ResourceType.ip.fullname, cmd.resource.alias);
+        }
+        IPMac info = opt.get();
+        if (cmd.args.containsKey(Param.routing)) {
+            info.routing = RoutingHandle.get(cmd);
+        }
     }
 
     public static void remove(Command cmd) throws Exception {

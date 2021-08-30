@@ -419,6 +419,7 @@ public class HelpCommand {
         arptabletimeout("arp-table-timeout", null, "timeout of arp table in a switch"),
         pass("password", "pass", "password"),
         mac("mac", null, "mac address"),
+        routing("routing", null, "routing functions"),
         vni("vni", null, "vni number"),
         postscript("post-script", null, "the script to run after added"),
         mtu("mtu", null, "max transmission unit"),
@@ -1396,8 +1397,9 @@ public class HelpCommand {
             )),
         ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
-                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Collections.singletonList(
-                    new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on")
+                new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Arrays.asList(
+                    new ResActParamMan(ParamMan.mac, "mac address that the ip assigned on"),
+                    new ResActParamMan(ParamMan.routing, "enable or disable routing functions on this ip, set to on/off", "on")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add ip 172.16.0.21 to vpc 1314 in switch sw0 mac e2:8b:11:00:00:22",
@@ -1416,6 +1418,14 @@ public class HelpCommand {
                         "list-detail ip in vpc 1314 in switch sw0",
                         "1) \"172.16.0.21 -> mac e2:8b:11:00:00:22\"\n" +
                             "2) \"[2001:0db8:0000:f101:0000:0000:0000:0002] -> mac e2:8b:11:00:00:33\""
+                    )
+                )),
+                new ResActMan(ActMan.update, "modify a synthetic ip in a vpc of a switch", List.of(
+                    new ResActParamMan(ParamMan.routing, "enable or disable routing functions on this ip, set to on/off", "not changed")
+                ), Collections.singletonList(
+                    new Tuple<>(
+                        "update ip 172.16.0.21 in vpc 1314 in switch sw0 routing off",
+                        "\"OK\""
                     )
                 )),
                 new ResActMan(ActMan.removefrom, "remove a synthetic ip from a vpc of a switch", Collections.emptyList(), Collections.singletonList(

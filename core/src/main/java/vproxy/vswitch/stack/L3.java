@@ -297,7 +297,7 @@ public class L3 {
     }
 
     private void respondIcmpPong(PacketBuffer pkb) {
-        if(pkb.ensurePartialPacketParsed()) return;
+        if (pkb.ensurePartialPacketParsed()) return;
         assert Logger.lowLevelDebug("respondIcmpPong(" + pkb + ")");
 
         var inIpPkt = (AbstractIpPacket) pkb.pkt.getPacket();
@@ -585,20 +585,11 @@ public class L3 {
         assert Logger.lowLevelDebug("getRoutedSrcIpAndMac(" + network + "," + dstIp + ")");
 
         // find an ip in that network to be used for the src mac address
-        var ipsInNetwork = network.ips.entries();
-        boolean useIpv6 = dstIp instanceof IPv6;
-        IPMac src = null;
-        for (var x : ipsInNetwork) {
-            if (useIpv6 && x.ip instanceof IPv6) {
-                src = x;
-                break;
-            }
-            if (!useIpv6 && x.ip instanceof IPv4) {
-                src = x;
-                break;
-            }
+        if (dstIp instanceof IPv4) {
+            return network.ips.findAnyIPv4ForRouting();
+        } else {
+            return network.ips.findAnyIPv6ForRouting();
         }
-        return src;
     }
 
     private MacAddress getRoutedSrcMac(VirtualNetwork network, IP dstIp) {
@@ -617,13 +608,13 @@ public class L3 {
     private EthernetPacket buildArpReq(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
         assert Logger.lowLevelDebug("buildArpReq(" + network + "," + dstIp + "," + dstMac + ")");
 
-        var optIp = network.ips.entries().stream().filter(x -> x.ip instanceof IPv4).findAny();
-        if (optIp.isEmpty()) {
+        var optIp = network.ips.findAnyIPv4ForRouting();
+        if (optIp == null) {
             assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
             return null;
         }
-        IP reqIp = optIp.get().ip;
-        MacAddress reqMac = optIp.get().mac;
+        IP reqIp = optIp.ip;
+        MacAddress reqMac = optIp.mac;
 
         ArpPacket req = new ArpPacket();
         req.setHardwareType(Consts.ARP_HARDWARE_TYPE_ETHER);
@@ -648,13 +639,13 @@ public class L3 {
     private EthernetPacket buildNdpNeighborSolicitation(VirtualNetwork network, IP dstIp, MacAddress dstMac) {
         assert Logger.lowLevelDebug("buildNdpNeighborSolicitation(" + network + "," + dstIp + "," + dstMac + ")");
 
-        var optIp = network.ips.entries().stream().filter(x -> x.ip instanceof IPv6).findAny();
-        if (optIp.isEmpty()) {
+        var optIp = network.ips.findAnyIPv6ForRouting();
+        if (optIp == null) {
             assert Logger.lowLevelDebug("cannot find synthetic ipv4 in the network");
             return null;
         }
-        IP reqIp = optIp.get().ip;
-        MacAddress reqMac = optIp.get().mac;
+        IP reqIp = optIp.ip;
+        MacAddress reqMac = optIp.mac;
 
         Ipv6Packet ipv6 = SwitchUtils.buildNeighborSolicitationPacket((IPv6) dstIp, reqMac, (IPv6) reqIp);
 

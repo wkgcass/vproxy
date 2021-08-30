@@ -909,6 +909,7 @@ class ModuleCommands private constructor() : Commands() {
         params = {
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
+          it + ResActParam(Param.routing) { RoutingHandle.check(it) }
         },
         check = {
           IpHandle.checkIpName(it.resource)
@@ -937,10 +938,29 @@ class ModuleCommands private constructor() : Commands() {
         exec = {
           val tuples = IpHandle.list(it.resource.parentResource)
           val strTuples = tuples.stream().map {
-            it.ip.formatToIPString() + " -> mac " + it.mac +
+            it.ip.formatToIPString() + " -> mac " + it.mac + " routing " + if (it.routing) {
+              "on"
+            } else {
+              "off"
+            } +
                 if (it.annotations.isEmpty) "" else " annotations " + it.annotations
           }.collect(Collectors.toList())
           CmdResult(tuples, strTuples, utilJoinList(strTuples))
+        }
+      )
+      it + ResAct(
+        relation = ResRelation(ResourceType.ip, ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw))),
+        action = ActType.update,
+        params = {
+          it + ResActParam(Param.routing) { RoutingHandle.check(it) }
+        },
+        check = {
+          IpHandle.checkIpName(it.resource)
+          VpcHandle.checkVpcName(it.resource.parentResource)
+        },
+        exec = {
+          IpHandle.update(it)
+          CmdResult()
         }
       )
       it + ResAct(
