@@ -9,9 +9,9 @@ public interface DockerNetworkDriver {
     String PERSISTENT_CONFIG_FILE = "/x-etc/docker/.vproxy/vproxy.last";
     String PERSISTENT_SCRIPT = "/x-etc/docker/.vproxy/setup.sh";
 
-    String VNI_OPTION = "docker-plugin.vproxy.cc/network-vni";
-    String SUBNET4_OPTION = "docker-plugin.vproxy.cc/network-subnet-v4";
-    String SUBNET6_OPTION = "docker-plugin.vproxy.cc/network-subnet-v6";
+    String VNI_OPTION = "docker-plugin.vproxy.io/network-vni";
+    String SUBNET4_OPTION = "docker-plugin.vproxy.io/network-subnet-v4";
+    String SUBNET6_OPTION = "docker-plugin.vproxy.io/network-subnet-v6";
 
     void createNetwork(CreateNetworkRequest req) throws Exception;
 
