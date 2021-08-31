@@ -27,10 +27,4 @@ public class TapHandle {
         var tap = sw.addTap(devPattern, vni, postScript, mtu, flood);
         return tap.getTap().getTap().dev;
     }
-
-    public static void remove(Command cmd) throws Exception {
-        String devPattern = cmd.resource.alias;
-        Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.delTap(devPattern);
-    }
 }

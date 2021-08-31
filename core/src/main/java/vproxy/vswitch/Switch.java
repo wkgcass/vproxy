@@ -389,20 +389,16 @@ public class Switch {
         }
     }
 
-    public void delTap(String devName) throws NotFoundException {
+    public void delIface(String ifaceName) throws NotFoundException {
         Iface iface = null;
         for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof TapIface)) {
-                continue;
-            }
-            TapIface tapIface = (TapIface) i;
-            if (tapIface.getTap().getTap().dev.equals(devName)) {
+            if (i.name().equals(ifaceName)) {
                 iface = i;
                 break;
             }
         }
         if (iface == null) {
-            throw new NotFoundException("tap", devName);
+            throw new NotFoundException("iface", ifaceName);
         }
         utilRemoveIface(iface);
     }
@@ -440,24 +436,6 @@ public class Switch {
         }
         Logger.alert("tun device added: " + iface.getTun().getTap().dev);
         return iface;
-    }
-
-    public void delTun(String devName) throws NotFoundException {
-        Iface iface = null;
-        for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof TunIface)) {
-                continue;
-            }
-            TunIface tunIface = (TunIface) i;
-            if (tunIface.getTun().getTap().dev.equals(devName)) {
-                iface = i;
-                break;
-            }
-        }
-        if (iface == null) {
-            throw new NotFoundException("tun", devName);
-        }
-        utilRemoveIface(iface);
     }
 
     public UserClientIface addUserClient(String user, String password, int vni, IPPort remoteAddr) throws AlreadyExistException, XException {
@@ -507,25 +485,6 @@ public class Switch {
         return user;
     }
 
-    public void delUserClient(String user, IPPort remoteAddr) throws NotFoundException {
-        UserClientIface iface = null;
-        for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof UserClientIface)) {
-                continue;
-            }
-            UserClientIface ucliIface = (UserClientIface) i;
-            if (ucliIface.user.user.equals(user) && ucliIface.remote.equals(remoteAddr)) {
-                iface = ucliIface;
-                break;
-            }
-        }
-
-        if (iface == null) {
-            throw new NotFoundException("user-client", user);
-        }
-        utilRemoveIface(iface);
-    }
-
     public RemoteSwitchIface addRemoteSwitch(String alias, IPPort vxlanSockAddr, boolean addSwitchFlag) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
@@ -555,24 +514,6 @@ public class Switch {
         blockAndAddPersistentIface(loop, iface);
 
         return iface;
-    }
-
-    public void delRemoteSwitch(String alias) throws NotFoundException {
-        Iface iface = null;
-        for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof RemoteSwitchIface)) {
-                continue;
-            }
-            RemoteSwitchIface rsi = (RemoteSwitchIface) i;
-            if (alias.equals(rsi.alias)) {
-                iface = i;
-                break;
-            }
-        }
-        if (iface == null) {
-            throw new NotFoundException("switch", alias);
-        }
-        utilRemoveIface(iface);
     }
 
     public XDPIface addXDP(String nic, BPFMap map, UMem umem,
@@ -613,24 +554,6 @@ public class Switch {
         blockAndAddPersistentIface(loop, iface);
 
         return iface;
-    }
-
-    public void delXDP(String nic) throws NotFoundException {
-        Iface iface = null;
-        for (Iface i : ifaces.keySet()) {
-            if (!(i instanceof XDPIface)) {
-                continue;
-            }
-            XDPIface xdp = (XDPIface) i;
-            if (nic.equals(xdp.nic)) {
-                iface = i;
-                break;
-            }
-        }
-        if (iface == null) {
-            throw new NotFoundException("xdp", nic);
-        }
-        utilRemoveIface(iface);
     }
 
     public UMem addUMem(String alias, int chunksSize, int fillRingSize, int compRingSize,

@@ -122,11 +122,6 @@ public class SwitchHandle {
         Application.get().switchHolder.removeAndStop(cmd.resource.alias);
     }
 
-    public static void detach(Command cmd) throws Exception {
-        // remove the remote switch ref inside the switch
-        Application.get().switchHolder.get(cmd.prepositionResource.alias).delRemoteSwitch(cmd.resource.alias);
-    }
-
     public static class SwitchRef {
         public final Switch sw;
 

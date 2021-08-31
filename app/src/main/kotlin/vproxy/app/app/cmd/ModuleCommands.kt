@@ -614,12 +614,6 @@ class ModuleCommands private constructor() : Commands() {
         },
         exec = execUpdate { SwitchHandle.attach(it) }
       )
-      it + ResAct(
-        relation = ResourceType.sw,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        exec = execUpdate { SwitchHandle.detach(it) }
-      )
     }
     it + Res(ResourceType.vpc) {
       it + ResAct(
@@ -700,6 +694,15 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
         exec = execUpdate { IfaceHandle.update(it) }
+      )
+      it + ResAct(
+        relation = ResourceType.iface,
+        action = ActType.removefrom,
+        targetRelation = ResRelation(ResourceType.sw),
+        exec = {
+          IfaceHandle.remove(it)
+          CmdResult()
+        }
       )
     }
     it + Res(ResourceType.arp) {
@@ -818,12 +821,6 @@ class ModuleCommands private constructor() : Commands() {
         },
         exec = execUpdate { TapHandle.add(it) }
       )
-      it + ResAct(
-        relation = ResourceType.tap,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        exec = execUpdate { TapHandle.remove(it) }
-      )
     }
     it + Res(ResourceType.tun) {
       it + ResAct(
@@ -844,12 +841,6 @@ class ModuleCommands private constructor() : Commands() {
         },
         exec = execUpdate { TunHandle.add(it) }
       )
-      it + ResAct(
-        relation = ResourceType.tun,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        exec = execUpdate { TunHandle.remove(it) }
-      )
     }
     it + Res(ResourceType.ucli) {
       it + ResAct(
@@ -862,15 +853,6 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
         },
         exec = execUpdate { UserClientHandle.add(it) }
-      )
-      it + ResAct(
-        relation = ResourceType.ucli,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        params = {
-          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
-        },
-        exec = execUpdate { UserClientHandle.forceRemove(it) }
       )
     }
     it + Res(ResourceType.xdp) {
@@ -893,12 +875,6 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActFlag(Flag.zerocopy)
         },
         exec = execUpdate { XDPHandle.add(it) }
-      )
-      it + ResAct(
-        relation = ResourceType.xdp,
-        action = ActType.removefrom,
-        targetRelation = ResRelation(ResourceType.sw),
-        exec = execUpdate { XDPHandle.remove(it) }
       )
     }
     it + Res(ResourceType.ip) {

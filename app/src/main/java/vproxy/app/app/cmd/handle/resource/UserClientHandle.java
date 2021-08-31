@@ -19,11 +19,4 @@ public class UserClientHandle {
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
         sw.addUserClient(user, pass, vni, addr);
     }
-
-    public static void forceRemove(Command cmd) throws Exception {
-        String user = cmd.resource.alias;
-        IPPort addr = AddrHandle.get(cmd);
-        Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.delUserClient(user, addr);
-    }
 }

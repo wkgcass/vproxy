@@ -563,7 +563,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         } catch (NotFoundException ignore) {
         }
         try {
-            sw.delXDP(swNic);
+            sw.delIface("xdp:" + swNic);
         } catch (NotFoundException ignore) {
         }
 

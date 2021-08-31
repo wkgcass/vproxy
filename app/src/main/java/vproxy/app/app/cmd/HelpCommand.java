@@ -1113,14 +1113,6 @@ public class HelpCommand {
                             "\"OK\""
                         )
                     )),
-                new ResActMan(ActMan.remove, "stop and remove a switch",
-                    Collections.emptyList(),
-                    Collections.singletonList(
-                        new Tuple<>(
-                            "remove switch sw0",
-                            "\"OK\""
-                        )
-                    )),
                 new ResActMan(ActMan.addto, "add a remote switch ref to a local switch. note: use list iface to see these remote switches",
                     Collections.singletonList(
                         new ResActParamMan(ParamMan.address, "the remote switch address")
@@ -1215,6 +1207,24 @@ public class HelpCommand {
                         "update iface 10.0.0.1:8472 in switch sw0 mtu 1500 flood allow",
                         "\"OK\""
                     )
+                )),
+                new ResActMan(ActMan.removefrom, "remove interface from switch", Collections.emptyList(), Arrays.asList(
+                    new Tuple<>(
+                        "remove iface tap:tap0 from switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "remove iface tun:utun9 from switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "remove iface remote:sw-x from switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "remove iface ucli:hello from switch sw0",
+                        "\"OK\""
+                    )
                 ))
             )),
         arp("arp", null, "arp and mac table entries",
@@ -1290,8 +1300,8 @@ public class HelpCommand {
                 ))
             )),
         tap("tap", null, "add/remove a tap device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
-            "Note: 1) use list iface to see these tap devices, 2) should set -Dvfd=posix or -Dvfd=windows",
-            Arrays.asList(
+            "Note: should set -Dvfd=posix or -Dvfd=windows",
+            Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
                     new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
@@ -1302,17 +1312,11 @@ public class HelpCommand {
                         "add tap tap%d to switch sw0 vni 1314",
                         "\"tap0\""
                     )
-                )),
-                new ResActMan(ActMan.removefrom, "remove and close a tap from a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "remove tap tap0 from switch sw0",
-                        "\"OK\""
-                    )
                 ))
             )),
         tun("tun", null, "add/remove a tun device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
-            "Note: 1) use list iface to see these tun devices, 2) should set -Dvfd=posix",
-            Arrays.asList(
+            "Note: should set -Dvfd=posix",
+            Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
@@ -1328,16 +1332,10 @@ public class HelpCommand {
                         "add tun utun9 to switch sw0 vni 1314",
                         "\"utun9\""
                     )
-                )),
-                new ResActMan(ActMan.removefrom, "remove and close a tun from a switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "remove tun tun0 from switch sw0",
-                        "\"OK\""
-                    )
                 ))
             )),
         usercli("user-client", "ucli", "user client of an encrypted tunnel to remote switch. Note: use list iface to see these clients",
-            Arrays.asList(
+            Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a user client to a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.pass, "password of the user"),
                     new ResActParamMan(ParamMan.vni, "vni which the user is assigned to"),
@@ -1345,14 +1343,6 @@ public class HelpCommand {
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add user-client hello to switch sw0 password p@sSw0rD vni 1314 address 192.168.77.1:18472",
-                        "\"OK\""
-                    )
-                )),
-                new ResActMan(ActMan.removefrom, "remove a user client from a switch", Collections.singletonList(
-                    new ResActParamMan(ParamMan.address, "remote switch address the client connected to")
-                ), Collections.singletonList(
-                    new Tuple<>(
-                        "remove user-client hello from switch sw0 address 192.168.77.1:18472",
                         "\"OK\""
                     )
                 ))
@@ -1363,7 +1353,7 @@ public class HelpCommand {
             "3) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
             "4) make sure your kernel supports xdp, recommend kernel version >= 5.10. " +
             "See also `umem`, `bpf-object`. Check doc for more info",
-            Arrays.asList(
+            Collections.singletonList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
                     new ResActParamMan(ParamMan.bpfmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP"),
                     new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
@@ -1385,12 +1375,6 @@ public class HelpCommand {
                     ),
                     new Tuple<>(
                         "add xdp xdptut-4667 to switch sw0 bpf-map xsk_map umem umem0 queue 0 vni 1",
-                        "\"OK\""
-                    )
-                )),
-                new ResActMan(ActMan.removefrom, "remove xdp socket from the switch", Collections.emptyList(), Collections.singletonList(
-                    new Tuple<>(
-                        "remove xdp xdp0 from switch sw0",
                         "\"OK\""
                     )
                 ))

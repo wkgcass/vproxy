@@ -30,10 +30,4 @@ public class TunHandle {
         var tun = sw.addTun(devPattern, vni, mac, postScript, mtu, flood);
         return tun.getTun().getTap().dev;
     }
-
-    public static void remove(Command cmd) throws Exception {
-        String devPattern = cmd.resource.alias;
-        Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.delTun(devPattern);
-    }
 }

@@ -52,9 +52,4 @@ public class XDPHandle {
             rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum,
             vni, keySelector);
     }
-
-    public static void remove(Command cmd) throws Exception {
-        Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
-        sw.delXDP(cmd.resource.alias);
-    }
 }
