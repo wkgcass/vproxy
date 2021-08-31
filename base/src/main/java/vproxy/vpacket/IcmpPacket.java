@@ -66,7 +66,11 @@ public class IcmpPacket extends AbstractPacket implements PartialPacket {
         if (isIpv6)
             throw new UnsupportedOperationException("this packet is ICMPv6");
 
-        // TODO not used for now
+        var buf = raw.pktBuf;
+        buf.int16(2, 0);
+        int csum = Utils.calculateChecksum(buf, buf.length());
+        buf.int16(2, csum);
+        this.checksum = csum;
     }
 
     @Override
