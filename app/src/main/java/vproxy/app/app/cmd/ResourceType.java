@@ -31,6 +31,7 @@ public enum ResourceType {
     ip("ip"),
     route("route"),
     ucli("user-client"),
+    vlan("vlan-adaptor"),
 
     bpfobj("bpf-object"),
     umem("umem"),

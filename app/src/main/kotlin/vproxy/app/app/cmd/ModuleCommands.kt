@@ -873,6 +873,17 @@ class ModuleCommands private constructor() : Commands() {
         exec = execUpdate { XDPHandle.add(it) }
       )
     }
+    it + Res(ResourceType.vlan) {
+      it + ResAct(
+        relation = ResourceType.vlan,
+        action = ActType.addto,
+        targetRelation = ResRelation(ResourceType.sw),
+        params = {
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+        },
+        exec = execUpdate { VLanAdaptorHandle.add(it) }
+      )
+    }
     it + Res(ResourceType.ip) {
       it + ResAct(
         relation = ResourceType.ip,

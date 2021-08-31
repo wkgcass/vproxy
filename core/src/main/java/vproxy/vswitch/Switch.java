@@ -493,6 +493,39 @@ public class Switch {
         return iface;
     }
 
+    public VLanAdaptorIface addVLanAdaptor(String parentIfaceName, int vlan, int localVni) throws XException, AlreadyExistException, NotFoundException {
+        NetEventLoop netEventLoop = eventLoop;
+        if (netEventLoop == null) {
+            throw new XException("the switch " + alias + " is not bond to any event loop, cannot add vlan adaptor");
+        }
+        SelectorEventLoop loop = netEventLoop.getSelectorEventLoop();
+
+        Iface parentIface = null;
+        for (var iface : ifaces.keySet()) {
+            if (iface.name().equals(parentIfaceName)) {
+                parentIface = iface;
+                break;
+            }
+        }
+        if (parentIface == null) {
+            throw new NotFoundException("iface", parentIfaceName);
+        }
+        var vif = new VLanAdaptorIface(parentIface, vlan, localVni);
+        parentIface.addVLanAdaptor(vif);
+
+        try {
+            initIface(vif);
+        } catch (Exception e) {
+            vif.destroy();
+            throw new XException(Utils.formatErr(e));
+        }
+
+        blockAndAddPersistentIface(loop, vif);
+        vif.setReady();
+
+        return vif;
+    }
+
     public XDPIface addXDP(String nic, BPFMap map, UMem umem,
                            int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                            int busyPollBudget, boolean rxGenChecksum,
@@ -610,6 +643,14 @@ public class Switch {
         }
 
         SwitchUtils.checkAndUpdateMss(pkb, iface);
+
+        // need to remove unused vlan
+        if (pkb.pkt.getVlan() == EthernetPacket.PENDING_VLAN_CODE) {
+            if (!(iface instanceof VLanAdaptorIface)) {
+                pkb.pkt.setVlan(EthernetPacket.NO_VLAN_CODE);
+            }
+        }
+
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);
         }
@@ -684,6 +725,7 @@ public class Switch {
     }
 
     private void preHandleInputPkb(PacketBuffer pkb) {
+        assert Logger.lowLevelDebug("received packet: " + pkb);
         var fullbufBackup = pkb.fullbuf;
         if (__preHandleInputPkb0(pkb)) {
             packetBuffersToBeHandled.add(pkb);
@@ -698,6 +740,20 @@ public class Switch {
     private boolean __preHandleInputPkb0(PacketBuffer pkb) {
         // ensure the dev is recorded
         recordIface(pkb.devin);
+
+        // try to handle vlan
+        if (pkb.pkt != null) { // note that tun dev will generate ip pkt only
+            int vlan = pkb.pkt.getVlan();
+            if (vlan >= 0) {
+                VLanAdaptorIface vif = pkb.devin.lookupVLanAdaptor(vlan);
+                if (vif == null) {
+                    assert Logger.lowLevelDebug("unable to find proper vlan adaptor for " + pkb);
+                    return false;
+                } else {
+                    vif.handle(pkb);
+                }
+            }
+        }
 
         // init vpc network
         int vni = pkb.vni;
@@ -735,12 +791,6 @@ public class Switch {
                 return false;
             }
             assert Logger.lowLevelDebug("the filter returns pass");
-        }
-
-        // drop packets with vlan tag
-        if (pkb.pkt instanceof EthernetPacket && ((EthernetPacket) pkb.pkt).getVlan() >= 0) {
-            assert Logger.lowLevelDebug("vlan packets are dropped");
-            return false;
         }
 
         // mirror the packet

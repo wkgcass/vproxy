@@ -70,7 +70,7 @@ public class Mirror {
         return mirror.enabledOrigins.contains(origin);
     }
 
-    public static void switchPacket(AbstractEthernetPacket packet) {
+    public static void switchPacket(EthernetPacket packet) {
         if (!mirror.enabled) return;
 
         Set<MirrorConfig> mirrors = new HashSet<>();
@@ -600,14 +600,14 @@ public class Mirror {
         });
     }
 
-    private void sendPacket(TapDatagramFD tap, AbstractEthernetPacket pkt) {
+    private void sendPacket(TapDatagramFD tap, EthernetPacket pkt) {
         sendPacket(tap, Collections.singletonList(pkt));
     }
 
     private final DirectByteBuffer writeBuffer = DirectMemoryUtils.allocateDirectBuffer(2048);
 
-    private void sendPacket(TapDatagramFD tap, List<? extends AbstractEthernetPacket> packets) {
-        for (AbstractEthernetPacket pkt : packets) {
+    private void sendPacket(TapDatagramFD tap, List<? extends EthernetPacket> packets) {
+        for (EthernetPacket pkt : packets) {
             try {
                 writeBuffer.limit(writeBuffer.capacity()).position(0);
                 writeBuffer.put(pkt.getRawPacket(0).toJavaArray());

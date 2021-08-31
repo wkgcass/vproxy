@@ -5,19 +5,23 @@ import vproxy.vfd.MacAddress;
 
 import java.util.Objects;
 
-public class EthernetPacket extends AbstractEthernetPacket {
+public class EthernetPacket extends AbstractPacket {
+    public static final int NO_VLAN_CODE = -1;
+    public static final int PENDING_VLAN_CODE = -2;
+
     private MacAddress dst;
     private MacAddress src;
-    private int vlan = -1; // -1 if no vlan tag
+    private int vlan = NO_VLAN_CODE;
     private int type;
     private AbstractPacket packet;
+
+    private PacketDataBuffer packetBytes;
 
     @Override
     public String from(PacketDataBuffer raw) {
         return from(raw, false);
     }
 
-    @Override
     public String from(PacketDataBuffer raw, boolean allowPartial) {
         ByteArray bytes = raw.pktBuf;
         String err = from(bytes, null);
@@ -119,6 +123,20 @@ public class EthernetPacket extends AbstractEthernetPacket {
         packet.updateChecksum();
     }
 
+    public PacketDataBuffer getPacketBytes() {
+        return packetBytes;
+    }
+
+    @Override
+    public void clearAllRawPackets() {
+        clearRawPacket();
+        getPacket().clearAllRawPackets();
+    }
+
+    public void clearPacketBytes() {
+        this.packetBytes = null;
+    }
+
     @Override
     public EthernetPacket copy() {
         var ret = new EthernetPacket();
@@ -136,6 +154,7 @@ public class EthernetPacket extends AbstractEthernetPacket {
         return "ether"
             + ",dl_dst=" + dst
             + ",dl_src=" + src
+            + (vlan >= 0 ? ",vlan=" + vlan : "")
             + "," + packet.description();
     }
 
@@ -149,7 +168,6 @@ public class EthernetPacket extends AbstractEthernetPacket {
             '}';
     }
 
-    @Override
     public MacAddress getSrc() {
         return src;
     }
@@ -163,7 +181,6 @@ public class EthernetPacket extends AbstractEthernetPacket {
         this.src = src;
     }
 
-    @Override
     public MacAddress getDst() {
         return dst;
     }
@@ -184,12 +201,13 @@ public class EthernetPacket extends AbstractEthernetPacket {
     public void setVlan(int vlan) {
         if (raw != null) {
             if (vlan < 0) {
-                if (this.vlan >= 0) {
+                if ((this.vlan >= 0 || this.vlan == PENDING_VLAN_CODE) && vlan != PENDING_VLAN_CODE) {
                     returnHeadroomAndMove(4, 12);
                     raw.pktBuf.int16(12, type);
                 }
+                this.vlan = vlan;
             } else {
-                if (this.vlan < 0) {
+                if (this.vlan < 0 && this.vlan != PENDING_VLAN_CODE) {
                     if (consumeHeadroomAndMove(4, 12)) {
                         raw.pktBuf.int16(12, Consts.ETHER_TYPE_8021Q);
                         raw.pktBuf.int16(14, vlan); // ignore PCP and DEI, only fill in the vid
@@ -205,7 +223,6 @@ public class EthernetPacket extends AbstractEthernetPacket {
         this.vlan = vlan;
     }
 
-    @Override
     public int getType() {
         return type;
     }
@@ -215,7 +232,6 @@ public class EthernetPacket extends AbstractEthernetPacket {
         this.type = type;
     }
 
-    @Override
     public AbstractPacket getPacket() {
         return packet;
     }

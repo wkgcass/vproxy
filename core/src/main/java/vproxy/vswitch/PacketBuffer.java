@@ -34,7 +34,7 @@ public class PacketBuffer extends PacketDataBuffer {
         return new PacketBuffer(pkt);
     }
 
-    public static PacketBuffer fromPacket(VirtualNetwork network, AbstractEthernetPacket pkt) {
+    public static PacketBuffer fromPacket(VirtualNetwork network, EthernetPacket pkt) {
         return new PacketBuffer(network, pkt);
     }
 
@@ -52,7 +52,7 @@ public class PacketBuffer extends PacketDataBuffer {
 
     // ----- packet -----
     public VXLanPacket vxlan;
-    public AbstractEthernetPacket pkt; // not null if it's an input packet
+    public EthernetPacket pkt; // not null if it's an input packet
     public AbstractIpPacket ipPkt;
     public TcpPacket tcpPkt;
     public UdpPacket udpPkt;
@@ -113,8 +113,8 @@ public class PacketBuffer extends PacketDataBuffer {
         initPackets(true, false, false);
     }
 
-    // fromPacket(VirtualNetwork, AbstractEthernetPacket)
-    private PacketBuffer(VirtualNetwork network, AbstractEthernetPacket pkt) {
+    // fromPacket(VirtualNetwork, EthernetPacket)
+    private PacketBuffer(VirtualNetwork network, EthernetPacket pkt) {
         super(null);
         this.devin = null;
         this.vni = network.vni;
@@ -170,7 +170,7 @@ public class PacketBuffer extends PacketDataBuffer {
             this.ipPkt = (AbstractIpPacket) pkt;
             initPackets(false, false, true);
         } else {
-            this.pkt = (AbstractEthernetPacket) pkt;
+            this.pkt = (EthernetPacket) pkt;
             initPackets(false, true, false);
         }
         return null;

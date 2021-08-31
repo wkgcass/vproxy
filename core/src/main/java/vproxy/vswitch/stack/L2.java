@@ -110,7 +110,9 @@ public class L2 {
             if (!iface.isFloodAllowed()) {
                 continue;
             }
-            sendPacket(pkb, iface);
+            if (pkb.ensurePartialPacketParsed()) return;
+            var copied = pkb.copy();
+            sendPacket(copied, iface);
         }
 
         // also, send arp/ndp request for these addresses if they are ip packet
@@ -298,7 +300,9 @@ public class L2 {
         for (Iface f : swCtx.getIfaces()) {
             if (f.getLocalSideVni(pkb.vni) == pkb.vni) { // send if vni matches or is a remote switch
                 if (sent.add(f)) {
-                    sendPacket(pkb, f);
+                    if (pkb.ensurePartialPacketParsed()) return;
+                    var copied = pkb.copy();
+                    sendPacket(copied, f);
                 }
             }
         }

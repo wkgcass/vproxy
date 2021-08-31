@@ -10,7 +10,7 @@ public class VXLanPacket extends AbstractPacket {
     private int reserved1 = 0;
     private int vni;
     private int reserved2 = 0;
-    private AbstractEthernetPacket packet;
+    private EthernetPacket packet;
 
     @Override
     public String from(PacketDataBuffer raw) {
@@ -130,11 +130,11 @@ public class VXLanPacket extends AbstractPacket {
         this.reserved2 = reserved2;
     }
 
-    public AbstractEthernetPacket getPacket() {
+    public EthernetPacket getPacket() {
         return packet;
     }
 
-    public void setPacket(AbstractEthernetPacket packet) {
+    public void setPacket(EthernetPacket packet) {
         clearRawPacket();
         this.packet = packet;
     }

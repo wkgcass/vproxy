@@ -83,6 +83,7 @@ public abstract class AbstractPacket {
         for (int i = 0; i < moveLen; ++i) {
             raw.pktBuf.set(i, raw.pktBuf.get(room + i));
         }
+        raw.pktOff -= room;
         return true;
     }
 
@@ -97,6 +98,7 @@ public abstract class AbstractPacket {
             raw.pktBuf.set(room + i, raw.pktBuf.get(i));
         }
         raw.pktBuf = raw.pktBuf.sub(room, raw.pktBuf.length() - room);
+        raw.pktOff += room;
     }
 
     protected final void setPktBufLen(PacketDataBuffer raw, int len) {

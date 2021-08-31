@@ -260,7 +260,7 @@ public class SwitchUtils {
         return FilterResult.PASS;
     }
 
-    public static int checksumFlagsFor(AbstractEthernetPacket pkt) {
+    public static int checksumFlagsFor(EthernetPacket pkt) {
         assert Logger.lowLevelDebug("checksumFlagsFor(" + pkt + ")");
         if (!(pkt.getPacket() instanceof AbstractIpPacket)) {
             return 0;

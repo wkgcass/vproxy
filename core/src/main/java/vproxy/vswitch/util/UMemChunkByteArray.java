@@ -78,12 +78,10 @@ public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
             throw new IndexOutOfBoundsException("buffer.cap=" + buffer.capacity() + ", this.off=" + this.off + ", off=" + off + ", len=" + len);
         }
         if (dst == buffer) {
-            if (dst.position() == this.off + off) {
-                // same memory region, nothing to be copied
-                dst.position(dst.position() + len);
-            } else {
+            if (dst.position() != this.off + off) {
                 SunUnsafe.copyMemory(xsk.umem.getBufferAddress() + dst.position(), xsk.umem.getBufferAddress() + this.off + off, len);
-            }
+            } // else same memory region, nothing to be copied
+            dst.position(dst.position() + len);
             return;
         }
 
@@ -100,12 +98,10 @@ public class UMemChunkByteArray extends AbstractByteArray implements ByteArray {
             throw new IndexOutOfBoundsException("src.lim=" + src.limit() + ", src.pos=" + src.position() + ", len=" + len);
         }
         if (src == buffer) {
-            if (src.position() == this.off + off) {
-                // same memory region, nothing to be copied
-                src.position(src.position() + len);
-            } else {
+            if (src.position() != this.off + off) {
                 SunUnsafe.copyMemory(xsk.umem.getBufferAddress() + this.off + off, xsk.umem.getBufferAddress() + src.position(), len);
-            }
+            } // else same memory region, nothing to be copied
+            src.position(src.position() + len);
             return;
         }
 

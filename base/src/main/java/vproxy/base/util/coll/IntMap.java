@@ -3,8 +3,8 @@ package vproxy.base.util.coll;
 import java.util.*;
 
 public class IntMap<V> {
-    private static final int CHUNK_SIZE = 8192;
-    private final LinkedList<Range> ranges = new LinkedList<>();
+    private static final int CHUNK_SIZE = 64;
+    private final ArrayList<Range> ranges = new ArrayList<>();
     private final Set<Integer> keySet = new HashSet<>();
     private final LinkedList<V> values = new LinkedList<>();
 
@@ -64,19 +64,9 @@ public class IntMap<V> {
         if (ranges.isEmpty()) {
             return null;
         }
-        if (ranges.getFirst().contains(n)) {
-            return ranges.getFirst();
-        }
-        if (ranges.size() == 1) {
-            return null; // already searched the whole list because there's only one range chunk
-        }
-        if (ranges.getLast().contains(n)) {
-            return ranges.getLast();
-        }
-        var ite = ranges.iterator();
-        ite.next(); // the first range already searched, so skip
-        while (ite.hasNext()) {
-            var range = ite.next();
+        //noinspection ForLoopReplaceableByForEach
+        for (int i = 0, size = ranges.size(); i < size; ++i) {
+            var range = ranges.get(i);
             if (range.contains(n)) {
                 return range;
             }
@@ -103,7 +93,7 @@ public class IntMap<V> {
         var range = getRange(n);
         if (range != null) return range.put(n, value);
         int initial = (n / CHUNK_SIZE) * CHUNK_SIZE;
-        if (ranges.isEmpty() || ranges.getLast().initial < initial) {
+        if (ranges.isEmpty() || ranges.get(ranges.size() - 1).initial < initial) {
             range = new Range(initial);
             ranges.add(range);
             return range.put(n, value);

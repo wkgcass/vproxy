@@ -1375,6 +1375,21 @@ public class HelpCommand {
                     )
                 ))
             )),
+        vlanadaptor("vlan-adaptor", "vlan", "vlan adaptor which adds or removes 802.1q tag",
+            Collections.singletonList(
+                new ResActMan(ActMan.addto, "add vlan adaptor into the switch", Collections.singletonList(
+                    new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to", "same as vlan id")
+                ), Arrays.asList(
+                    new Tuple<>(
+                        "add vlan 101@xdp:veth0 to switch sw0",
+                        "\"OK\""
+                    ),
+                    new Tuple<>(
+                        "add vlan 102@tap:tap1 to switch sw0 vni 202",
+                        "\"OK\""
+                    )
+                ))
+            )),
         ip("ip", null, "synthetic ip in a vpc of a switch",
             Arrays.asList(
                 new ResActMan(ActMan.addto, "add a synthetic ip to a vpc of a switch", Arrays.asList(

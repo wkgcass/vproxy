@@ -1,7 +1,9 @@
 package vproxy.vswitch.iface;
 
 import vproxy.base.util.Annotations;
+import vproxy.base.util.coll.IntMap;
 import vproxy.base.util.coll.RingQueue;
+import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
 
@@ -17,6 +19,8 @@ public abstract class Iface {
     private final ArrayList<PacketFilter> ingressFilters = new ArrayList<>();
     private final ArrayList<PacketFilter> egressFilters = new ArrayList<>();
     private Annotations annotations;
+
+    private final IntMap<VLanAdaptorIface> vlanIfaces = new IntMap<>();
 
     protected Iface() {
     }
@@ -88,6 +92,37 @@ public abstract class Iface {
 
     public final ArrayList<PacketFilter> getEgressFilters() {
         return egressFilters;
+    }
+
+    public final void addVLanAdaptor(VLanAdaptorIface vif) throws AlreadyExistException {
+        if (this instanceof VLanAdaptorIface) {
+            throw new AlreadyExistException("this interface is a vlan adaptor, cannot add a new vlan adaptor to it");
+        }
+        if (vlanIfaces.containsKey(vif.remoteVLan)) {
+            throw new AlreadyExistException("vlan-adaptor", "vlan." + vif.remoteVLan + ":" + name());
+        }
+        if (getLocalSideVni(vif.remoteVLan) == vif.remoteVLan) {
+            throw new AlreadyExistException(name() + " is already able to handle vlan " + vif.remoteVLan);
+        }
+        vlanIfaces.put(vif.remoteVLan, vif);
+    }
+
+    public final void removeVLanAdaptor(VLanAdaptorIface vif) {
+        var holding = vlanIfaces.remove(vif.remoteVLan);
+        if (holding != vif) {
+            vlanIfaces.put(holding.remoteVLan, holding);
+        }
+    }
+
+    public VLanAdaptorIface lookupVLanAdaptor(int vlan) {
+        VLanAdaptorIface vif = vlanIfaces.get(vlan);
+        if (vif == null) {
+            return null;
+        }
+        if (!vif.isReady()) {
+            return null;
+        }
+        return vif;
     }
 
     protected final void received(PacketBuffer pkb) {
