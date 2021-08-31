@@ -321,12 +321,7 @@ public class Switch {
         }
     }
 
-    public TapIface addTap(String devPattern, int vni, String postScript) throws XException, IOException {
-        return addTap(devPattern, vni, postScript, null, null);
-    }
-
-    public TapIface addTap(String devPattern, int vni, String postScript,
-                           Integer mtu, Boolean floodAllowed) throws XException, IOException {
+    public TapIface addTap(String dev, int vni, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tap device");
@@ -337,7 +332,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tap is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TapIface iface = new TapIface(devPattern, vni, postScript);
+        TapIface iface = new TapIface(dev, vni, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -345,12 +340,6 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         blockAndAddPersistentIface(loop, iface);
-        if (mtu != null) {
-            iface.setBaseMTU(mtu);
-        }
-        if (floodAllowed != null) {
-            iface.setFloodAllowed(floodAllowed);
-        }
         Logger.alert("tap device added: " + iface.getTap().getTap().dev);
         return iface;
     }
@@ -403,13 +392,7 @@ public class Switch {
         utilRemoveIface(iface);
     }
 
-    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript)
-        throws XException, IOException {
-        return addTun(devPattern, vni, mac, postScript, defaultMtu, defaultFloodAllowed);
-    }
-
-    public TunIface addTun(String devPattern, int vni, MacAddress mac, String postScript,
-                           Integer mtu, Boolean floodAllowed) throws XException, IOException {
+    public TunIface addTun(String dev, int vni, MacAddress mac, String postScript) throws XException, IOException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + alias + " is not bond to any event loop, cannot add tun device");
@@ -420,7 +403,7 @@ public class Switch {
         if (!(fds instanceof FDsWithTap)) {
             throw new IOException("tun is not supported by " + fds + ", use -Dvfd=posix or -Dvfd=windows");
         }
-        TunIface iface = new TunIface(devPattern, vni, mac, postScript);
+        TunIface iface = new TunIface(dev, vni, mac, postScript);
         try {
             initIface(iface);
         } catch (Exception e) {
@@ -428,12 +411,6 @@ public class Switch {
             throw new XException(Utils.formatErr(e));
         }
         blockAndAddPersistentIface(loop, iface);
-        if (mtu != null) {
-            iface.setBaseMTU(mtu);
-        }
-        if (floodAllowed != null) {
-            iface.setFloodAllowed(floodAllowed);
-        }
         Logger.alert("tun device added: " + iface.getTun().getTap().dev);
         return iface;
     }

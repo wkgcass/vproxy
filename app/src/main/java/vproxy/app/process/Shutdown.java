@@ -761,9 +761,7 @@ public class Shutdown {
                         continue;
                     }
                     var tap = (TapIface) iface;
-                    cmd = "add tap " + tap.devPattern + " to switch " + sw.alias + " vni " + tap.localSideVni
-                        + " mtu " + sw.defaultMtu
-                        + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
+                    cmd = "add tap " + tap.dev + " to switch " + sw.alias + " vni " + tap.localSideVni;
                     if (tap.postScript != null && !tap.postScript.isBlank()) {
                         cmd += " post-script " + tap.postScript;
                     }
@@ -775,10 +773,8 @@ public class Shutdown {
                         continue;
                     }
                     var tun = (TunIface) iface;
-                    cmd = "add tun " + tun.devPattern + " to switch " + sw.alias + " vni " + tun.localSideVni
-                        + " mac " + tun.mac
-                        + " mtu " + sw.defaultMtu
-                        + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
+                    cmd = "add tun " + tun.dev + " to switch " + sw.alias + " vni " + tun.localSideVni
+                        + " mac " + tun.mac;
                     if (tun.postScript != null && !tun.postScript.isBlank()) {
                         cmd += " post-script " + tun.postScript;
                     }
@@ -821,7 +817,9 @@ public class Shutdown {
                     String ifaceName = iface.name();
                     if (!(iface instanceof RemoteSwitchIface) &&
                         !(iface instanceof UserClientIface) &&
-                        !(iface instanceof XDPIface)) {
+                        !(iface instanceof XDPIface) &&
+                        !(iface instanceof TapIface) &&
+                        !(iface instanceof TunIface)) {
                         continue;
                     }
                     cmd = "update iface " + ifaceName + " in switch " + sw.alias

@@ -811,8 +811,6 @@ class ModuleCommands private constructor() : Commands() {
         params = {
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
           it + ResActParam(Param.postscript)
-          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
-          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
         check = {
           if (it.resource.alias.length > 15) {
@@ -831,8 +829,6 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
           it + ResActParam(Param.mac, required) { MacHandle.check(it) }
           it + ResActParam(Param.postscript)
-          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
-          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
         check = {
           if (it.resource.alias.length > 15) {

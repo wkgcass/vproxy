@@ -24,7 +24,7 @@ public class TunIface extends Iface {
         .concat(icmpPingPayloadPlaceHolder)
         .arrange();
 
-    public final String devPattern;
+    public final String dev;
     private TapDatagramFD tun;
     public final int localSideVni;
     public final MacAddress mac;
@@ -35,11 +35,11 @@ public class TunIface extends Iface {
 
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
-    public TunIface(String devPattern,
+    public TunIface(String dev,
                     int localSideVni,
                     MacAddress mac,
                     String postScript) {
-        this.devPattern = devPattern;
+        this.dev = dev;
         this.localSideVni = localSideVni;
         this.mac = mac;
         this.postScript = postScript;
@@ -79,7 +79,7 @@ public class TunIface extends Iface {
         bondLoop = params.loop;
         FDs fds = FDProvider.get().getProvided();
         FDsWithTap tapFDs = (FDsWithTap) fds;
-        tun = tapFDs.openTun(devPattern);
+        tun = tapFDs.openTun(dev);
         try {
             if (tapFDs.tunNonBlockingSupported()) {
                 operateTun = tun;

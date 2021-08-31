@@ -1299,38 +1299,34 @@ public class HelpCommand {
                     )
                 ))
             )),
-        tap("tap", null, "add/remove a tap device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
+        tap("tap", null, "add/remove a tap device and bind/detach it to/from a switch. " +
             "Note: should set -Dvfd=posix or -Dvfd=windows",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tap device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tap device is attached to"),
-                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
-                    new ResActParamMan(ParamMan.mtu, "mtu of this tap device, or -1 to ignore this config", "mtu setting of the switch"),
-                    new ResActParamMan(ParamMan.flood, "whether the tap device allows flooding traffic", "flood setting of the switch")
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Collections.singletonList(
                     new Tuple<>(
-                        "add tap tap%d to switch sw0 vni 1314",
-                        "\"tap0\""
+                        "add tap tap0 to switch sw0 vni 1314",
+                        "\"OK\""
                     )
                 ))
             )),
-        tun("tun", null, "add/remove a tun device and bind/detach it to/from a switch. The input alias may also be a pattern, see linux tuntap manual. " +
+        tun("tun", null, "add/remove a tun device and bind/detach it to/from a switch. " +
             "Note: should set -Dvfd=posix",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add a user to a switch. Note: the result string is the name of the tun device because might be generated", Arrays.asList(
                     new ResActParamMan(ParamMan.vni, "vni of the vpc which the tun device is attached to"),
                     new ResActParamMan(ParamMan.mac, "mac address of this tun device. the switch requires l2 layer frames for handling packets"),
-                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)"),
-                    new ResActParamMan(ParamMan.mtu, "mtu of this tun device, or -1 to ignore this config", "mtu setting of the switch"),
-                    new ResActParamMan(ParamMan.flood, "whether the tun device allows flooding traffic", "flood setting of the switch")
+                    new ResActParamMan(ParamMan.postscript, "post script. the vproxy will give env variables: VNI, DEV (the generated device name), SWITCH (name of the switch)", "(empty)")
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add tun tun%d to switch sw0 vni 1314",
-                        "\"tun0\""
+                        "add tun tun0 to switch sw0 vni 1314",
+                        "\"OK\""
                     ),
                     new Tuple<>(
                         "add tun utun9 to switch sw0 vni 1314",
-                        "\"utun9\""
+                        "\"OK\""
                     )
                 ))
             )),

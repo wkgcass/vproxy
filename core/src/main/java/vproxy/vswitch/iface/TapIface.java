@@ -19,7 +19,7 @@ import java.nio.ByteBuffer;
 import java.util.Objects;
 
 public class TapIface extends Iface {
-    public final String devPattern;
+    public final String dev;
     private TapDatagramFD tap;
     public final int localSideVni;
     public final String postScript;
@@ -29,10 +29,10 @@ public class TapIface extends Iface {
 
     private final ByteBuffer sndBuf = ByteBuffer.allocateDirect(2048);
 
-    public TapIface(String devPattern,
+    public TapIface(String dev,
                     int localSideVni,
                     String postScript) {
-        this.devPattern = devPattern;
+        this.dev = dev;
         this.localSideVni = localSideVni;
         this.postScript = postScript;
     }
@@ -71,7 +71,7 @@ public class TapIface extends Iface {
         bondLoop = params.loop;
         FDs fds = FDProvider.get().getProvided();
         FDsWithTap tapFDs = (FDsWithTap) fds;
-        tap = tapFDs.openTap(devPattern);
+        tap = tapFDs.openTap(dev);
         try {
             if (tapFDs.tapNonBlockingSupported()) {
                 operateTap = tap;
