@@ -54,11 +54,11 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
         this.connected = connected;
         if (connected) {
             if (!oldConnected) {
-                Logger.alert("connected to switch: " + this);
+                Logger.alert("connected to switch: " + this.name());
             }
         } else {
             if (oldConnected) {
-                Logger.warn(LogType.ALERT, "lost connection to switch: " + this);
+                Logger.warn(LogType.ALERT, "lost connection to switch: " + this.name());
             }
         }
     }
@@ -223,11 +223,11 @@ public class UserClientIface extends AbstractBaseEncryptedSwitchSocketIface impl
                 ByteArray arr = ByteArray.from(rcvBuf.array()).sub(0, rcvBuf.position());
                 String err = p.from(new PacketDataBuffer(arr), true);
                 if (err != null) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + iface + ": " + arr);
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "received invalid packet from " + iface.name() + ": " + arr);
                     continue;
                 }
                 if (!p.getUser().equals(iface.user.user)) {
-                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet from " + iface + " mismatches, got " + p.getUser());
+                    Logger.warn(LogType.INVALID_EXTERNAL_DATA, "user in received packet from " + iface.name() + " mismatches, got " + p.getUser());
                     continue;
                 }
                 if (connectedToSwitchTimer == null) {

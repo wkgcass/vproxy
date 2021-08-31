@@ -162,7 +162,7 @@ public class MacTable {
         public String toString() {
             return "MacEntry{" +
                 "mac=" + mac +
-                ", iface=" + iface +
+                ", iface=" + iface.name() +
                 '}';
         }
     }

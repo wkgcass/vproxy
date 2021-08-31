@@ -41,7 +41,7 @@ public class SwitchUtils {
 
     public static void checkAndUpdateMss(PacketBuffer pkb, Iface iface) {
         if (iface.getBaseMTU() < 0) {
-            assert Logger.lowLevelDebug("iface " + iface + " has mtu < 0, skip mss updating");
+            assert Logger.lowLevelDebug("iface " + iface.name() + " has mtu < 0, skip mss updating");
             return;
         }
         int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */

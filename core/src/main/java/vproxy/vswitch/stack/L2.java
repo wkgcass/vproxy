@@ -286,7 +286,7 @@ public class L2 {
     }
 
     private void sendPacket(PacketBuffer pkb, Iface iface) {
-        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
+        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface.name() + ")");
         swCtx.sendPacket(pkb, iface);
     }
 

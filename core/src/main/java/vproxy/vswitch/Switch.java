@@ -610,7 +610,7 @@ public class Switch {
     }
 
     private void sendPacket(PacketBuffer pkb, Iface iface) {
-        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface + ")");
+        assert Logger.lowLevelDebug("sendPacket(" + pkb + ", " + iface.name() + ")");
 
         // handle fastpath
         if (pkb.fastpath) {
@@ -980,7 +980,7 @@ public class Switch {
         for (var net : networks.values()) {
             net.macTable.disconnect(iface);
         }
-        Logger.warn(LogType.ALERT, iface + " disconnected from Switch:" + alias);
+        Logger.warn(LogType.ALERT, iface.name() + " disconnected from Switch:" + alias);
 
         iface.destroy();
 
@@ -1052,7 +1052,7 @@ public class Switch {
 
         void record() {
             if (ifaces.putIfAbsent(iface, this) == null) {
-                Logger.alert(iface + " connected to Switch:" + alias);
+                Logger.alert(iface.name() + " connected to Switch:" + alias);
                 ifaceAdded(iface);
             }
             resetTimer();

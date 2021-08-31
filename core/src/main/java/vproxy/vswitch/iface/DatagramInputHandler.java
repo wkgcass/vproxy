@@ -125,7 +125,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 try {
                     swCtx.initIface(uiface);
                 } catch (Exception e) {
-                    Logger.error(LogType.SYS_ERROR, "init " + uiface + " failed", e);
+                    Logger.error(LogType.SYS_ERROR, "init " + uiface.name() + " failed", e);
                     return null;
                 }
                 uiface.setBaseMTU(info.defaultMtu);
@@ -233,7 +233,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 if ((r1 & I_AM_FROM_SWITCH) == I_AM_FROM_SWITCH) {
                     Logger.warn(LogType.INVALID_EXTERNAL_DATA,
                         "received a packet which should come from a remote switch, " +
-                            "but actually coming from bare vxlan sock: " + iface + " with packet " + pkb.vxlan);
+                            "but actually coming from bare vxlan sock: " + iface.name() + " with packet " + pkb.vxlan);
                     return null; // drop
                 }
             }
@@ -242,7 +242,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                 try {
                     swCtx.initIface(iface);
                 } catch (Exception e) {
-                    Logger.error(LogType.SYS_ERROR, "init " + iface + " failed", e);
+                    Logger.error(LogType.SYS_ERROR, "init " + iface.name() + " failed", e);
                     return null;
                 }
             }
@@ -252,7 +252,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
     }
 
     private void sendPingTo(UserIface iface) {
-        assert Logger.lowLevelDebug("sendPingTo(" + iface + ")");
+        assert Logger.lowLevelDebug("sendPingTo(" + iface.name() + ")");
         VProxyEncryptedPacket p = new VProxyEncryptedPacket(uname -> {
             var info = swCtx.getUserInfo(uname);
             if (info == null) return null;
