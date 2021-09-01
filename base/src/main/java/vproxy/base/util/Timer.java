@@ -56,6 +56,12 @@ public class Timer {
         if (lastStart == -1) { // not started yet
             return;
         }
+        if (timeout == -1) { // no timeout
+            timer.cancel();
+            timer = null;
+            lastStart = -1;
+            return;
+        }
         long current = FDProvider.get().currentTimeMillis();
         if (current - lastStart > timeout) {
             // should timeout immediately

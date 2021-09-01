@@ -358,7 +358,12 @@ public class Switch {
     private void blockAndAddPersistentIface(SelectorEventLoop loop, Iface iface) {
         BlockCallback<Void, RuntimeException> cb = new BlockCallback<>();
         loop.runOnLoop(() -> {
-            ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+            IfaceTimer timer = ifaces.get(iface);
+            if (timer != null) {
+                timer.setTimeout(-1);
+            } else {
+                ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+            }
             cb.succeeded();
 
             ifaceAdded(iface);
