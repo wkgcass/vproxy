@@ -178,6 +178,8 @@ public class FlowParser {
 
     private void parseAction(FlowAction action, String s) throws Exception {
         switch (s) {
+            case "pass":
+            case "PASS":
             case "normal":
             case "NORMAL":
                 action.normal = true;
@@ -199,7 +201,7 @@ public class FlowParser {
         }
         switch (key) {
             case "goto_table":
-                action.table = parseNonNegativeInt(value);
+                action.table = parsePositiveInt(value);
                 return;
             case "mod_dl_dst":
                 action.mod_dl_dst = parseMac(value);
@@ -226,6 +228,12 @@ public class FlowParser {
             case "output":
                 action.output = value;
                 return;
+            case "limit_bps":
+                action.limit_bps = parsePositiveInt(value);
+                return;
+            case "limit_pps":
+                action.limit_pps = parsePositiveInt(value);
+                return;
         }
         throw new Exception("unknown action: " + s);
     }
@@ -243,6 +251,14 @@ public class FlowParser {
         }
         if (n < 0) {
             throw new Exception(value + " is negative");
+        }
+        return n;
+    }
+
+    private int parsePositiveInt(String value) throws Exception {
+        int n = parseNonNegativeInt(value);
+        if (n == 0) {
+            throw new Exception("zero not allowed");
         }
         return n;
     }

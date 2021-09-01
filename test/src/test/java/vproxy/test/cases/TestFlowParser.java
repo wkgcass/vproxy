@@ -255,6 +255,18 @@ public class TestFlowParser {
     }
 
     @Test
+    public void testRateLimitBPS() throws Exception {
+        testFlow("action=limit_bps:1048576,pass",
+            "table=0,priority=0,actions=limit_bps:1048576,normal");
+    }
+
+    @Test
+    public void testRateLimitPPS() throws Exception {
+        testFlow("action=limit_pps:1000000,pass",
+            "table=0,priority=0,actions=limit_pps:1000000,normal");
+    }
+
+    @Test
     public void tableJump() throws Exception {
         testFlowBunch("" +
                 "action=goto_table:1\n" +

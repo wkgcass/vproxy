@@ -4,6 +4,8 @@ import org.junit.Test;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.bitwise.BitwiseIntMatcher;
 import vproxy.base.util.bitwise.BitwiseMatcher;
+import vproxy.base.util.ratelimit.RateLimiter;
+import vproxy.base.util.ratelimit.SimpleRateLimiter;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
@@ -166,9 +168,10 @@ public class TestFlowGen {
     public void in_port() throws Exception {
         fullname("vproxy.test.gen.packetfilters.InPort");
         imports = List.of(IfaceHolder.class);
-        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[1];";
+        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
+            "    new IfaceHolder(\"xdp:veth0\", null)\n" +
+            "};";
         constructor = "" +
-            "this.ifaces[0] = new IfaceHolder(\"xdp:veth0\", null);\n" +
             "registerIfaceHolder(this.ifaces[0]);";
         tables = genTable(0, "" +
             "if (pkb.devin == ifaces[0].iface) {\n" +
@@ -571,11 +574,12 @@ public class TestFlowGen {
             "new BitwiseMatcher(" +
             "ByteArray.fromHexString(\"fedcba098765\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));\n" +
-            "private final IfaceHolder[] ifaces = new IfaceHolder[2];\n";
+            "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
+            "    new IfaceHolder(\"xdp:veth0\", null),\n" +
+            "    new IfaceHolder(\"xdp:veth1\", null)\n" +
+            "};";
         constructor = "" +
-            "this.ifaces[0] = new IfaceHolder(\"xdp:veth0\", null);\n" +
             "registerIfaceHolder(this.ifaces[0]);\n" +
-            "this.ifaces[1] = new IfaceHolder(\"xdp:veth1\", null);\n" +
             "registerIfaceHolder(this.ifaces[1]);";
         tables = genTable(0, "" +
             "if (pkb.devin == ifaces[0].iface) {\n" +
@@ -912,9 +916,10 @@ public class TestFlowGen {
     public void output() throws Exception {
         fullname("vproxy.test.gen.packetfilters.Output");
         imports = List.of(IfaceHolder.class);
-        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[1];";
+        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
+            "    new IfaceHolder(\"xdp:veth0\", null)\n" +
+            "};";
         constructor = "" +
-            "this.ifaces[0] = new IfaceHolder(\"xdp:veth0\", null);\n" +
             "registerIfaceHolder(this.ifaces[0]);";
         tables = genTable(0, EXECUTE0);
         actions = List.of("return helper.redirect(pkb, ifaces[0].iface);");
@@ -932,11 +937,12 @@ public class TestFlowGen {
     public void multiOutput() throws Exception {
         fullname("vproxy.test.gen.packetfilters.MultiOutput");
         imports = List.of(IfaceHolder.class);
-        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[2];";
+        fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
+            "    new IfaceHolder(\"xdp:veth0\", null),\n" +
+            "    new IfaceHolder(\"xdp:veth1\", null)\n" +
+            "};";
         constructor = "" +
-            "this.ifaces[0] = new IfaceHolder(\"xdp:veth0\", null);\n" +
             "registerIfaceHolder(this.ifaces[0]);\n" +
-            "this.ifaces[1] = new IfaceHolder(\"xdp:veth1\", null);\n" +
             "registerIfaceHolder(this.ifaces[1]);";
         tables = genTable(0, EXECUTE0);
         actions = List.of("" +
@@ -951,6 +957,27 @@ public class TestFlowGen {
             "}\n" +
             "return FilterResult.DROP;");
         check("ip,actions=output:xdp:veth0,output:xdp:veth1");
+    }
+
+    @Test
+    public void ratelimit() throws Exception {
+        fullname("vproxy.test.gen.packetfilters.RateLimit");
+        imports = List.of(RateLimiter.class, SimpleRateLimiter.class);
+        fields = "private final RateLimiter[] ratelimiters = new RateLimiter[]{\n" +
+            "    new SimpleRateLimiter(1048576, 1049),\n" +
+            "    new SimpleRateLimiter(1000000, 1000)\n" +
+            "};";
+        actions = List.of("" +
+            "if (!helper.ratelimitByBitsPerSecond(pkb, ratelimiters[0])) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "if (!helper.ratelimitByPacketsPerSecond(pkb, ratelimiters[1])) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}\n" +
+            "return FilterResult.PASS;");
+
+        tables = genTable(0, EXECUTE0);
+        check("actions=limit_bps:1048576,limit_pps:1000000,normal");
     }
 
     @Test
@@ -979,19 +1006,20 @@ public class TestFlowGen {
             "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = new BitwiseIntMatcher(68, -1);\n" +
             "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_1 = new BitwiseIntMatcher(67, -1);\n" +
             "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_2 = new BitwiseIntMatcher(53, -1);\n" +
-            "private final IfaceHolder[] ifaces = new IfaceHolder[6];";
+            "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
+            "    new IfaceHolder(\"enp1s0\", null),\n" +
+            "    new IfaceHolder(\"gw0-in-br\", null),\n" +
+            "    new IfaceHolder(\"vp-veth0-in-br\", null),\n" +
+            "    new IfaceHolder(\"wifi0-in-br\", null),\n" +
+            "    new IfaceHolder(\"wifi1-in-br\", null),\n" +
+            "    new IfaceHolder(\"enp5s0\", null)\n" +
+            "};";
         constructor = "" +
-            "this.ifaces[0] = new IfaceHolder(\"enp1s0\", null);\n" +
             "registerIfaceHolder(this.ifaces[0]);\n" +
-            "this.ifaces[1] = new IfaceHolder(\"gw0-in-br\", null);\n" +
             "registerIfaceHolder(this.ifaces[1]);\n" +
-            "this.ifaces[2] = new IfaceHolder(\"vp-veth0-in-br\", null);\n" +
             "registerIfaceHolder(this.ifaces[2]);\n" +
-            "this.ifaces[3] = new IfaceHolder(\"wifi0-in-br\", null);\n" +
             "registerIfaceHolder(this.ifaces[3]);\n" +
-            "this.ifaces[4] = new IfaceHolder(\"wifi1-in-br\", null);\n" +
             "registerIfaceHolder(this.ifaces[4]);\n" +
-            "this.ifaces[5] = new IfaceHolder(\"enp5s0\", null);\n" +
             "registerIfaceHolder(this.ifaces[5]);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525) {\n" +

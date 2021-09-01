@@ -4,6 +4,8 @@ import vjson.simple.SimpleString;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.bitwise.BitwiseIntMatcher;
 import vproxy.base.util.bitwise.BitwiseMatcher;
+import vproxy.base.util.ratelimit.RateLimiter;
+import vproxy.base.util.ratelimit.SimpleRateLimiter;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
@@ -147,8 +149,6 @@ public class Flows {
         StringBuilder sb = new StringBuilder();
         for (int i = 0; i < ctx.indexedIfaces.size(); ++i) {
             genNewLine(sb, 8);
-            sb.append("this.ifaces[").append(i).append("] = ").append("new IfaceHolder(").append(new SimpleString(ctx.indexedIfaces.get(i)).stringify()).append(", null);");
-            genNewLine(sb, 8);
             sb.append("registerIfaceHolder(this.ifaces[").append(i).append("]);");
         }
         sb.append("\n");
@@ -229,8 +229,7 @@ public class Flows {
                 if (action.table != 0) {
                     break;
                 }
-                String stmt = action.toStatementString(ctx);
-                actions.append(stmt).append(";\n");
+                String stmt = formatAndAppendActionStatementString(actions, action.toStatementString(ctx));
                 if (stmt.startsWith("return ")) {
                     break;
                 }
@@ -244,8 +243,7 @@ public class Flows {
                 if (action.table != 0) {
                     break;
                 }
-                String stmt = action.toStatementString(ctx);
-                actions.append(stmt).append(";\n");
+                String stmt = formatAndAppendActionStatementString(actions, action.toStatementString(ctx));
                 if (stmt.startsWith("return ")) {
                     hasReturn = true;
                     break;
@@ -275,6 +273,23 @@ public class Flows {
             sb.append("}");
         }
         return cond.isEmpty();
+    }
+
+    private String formatAndAppendActionStatementString(StringBuilder actions, String stmt) {
+        String[] lines = stmt.split("\n");
+        if (lines.length == 1) {
+            actions.append(stmt).append(";\n");
+            return stmt;
+        }
+        actions.append(lines[0]);
+        for (int i = 1; i < lines.length; ++i) {
+            genNewLine(actions, 0);
+            var line = lines[i];
+            line = line.replace("\t", "    ");
+            actions.append(line);
+        }
+        actions.append("\n");
+        return stmt;
     }
 
     private String genTable(int index, Consumer<StringBuilder> run) {
@@ -358,8 +373,32 @@ public class Flows {
         if (!ctx.indexedIfaces.isEmpty()) {
             genIndent(sb, 4);
             ctx.ensureImport(IfaceHolder.class);
-            sb.append("private final IfaceHolder[] ifaces = new IfaceHolder[")
-                .append(ctx.indexedIfaces.size()).append("];\n");
+            sb.append("private final IfaceHolder[] ifaces = new IfaceHolder[]{");
+            for (int i = 0; i < ctx.indexedIfaces.size(); ++i) {
+                if (i != 0) {
+                    sb.append(",");
+                }
+                genNewLine(sb, 8);
+                sb.append("new IfaceHolder(").append(new SimpleString(ctx.indexedIfaces.get(i)).stringify()).append(", null)");
+            }
+            genNewLine(sb, 4);
+            sb.append("};\n");
+        }
+        if (!ctx.rateLimiters.isEmpty()) {
+            genIndent(sb, 4);
+            ctx.ensureImport(RateLimiter.class);
+            ctx.ensureImport(SimpleRateLimiter.class);
+            sb.append("private final RateLimiter[] ratelimiters = new RateLimiter[]{");
+            for (int i = 0; i < ctx.rateLimiters.size(); ++i) {
+                if (i != 0) {
+                    sb.append(",");
+                }
+                genNewLine(sb, 8);
+                var rl = ctx.rateLimiters.get(i);
+                sb.append("new SimpleRateLimiter(").append(rl.capacity).append(", ").append(rl.fillRate).append(")");
+            }
+            genNewLine(sb, 4);
+            sb.append("};\n");
         }
         if (sb.length() != 0) {
             sb.append("\n");
@@ -411,9 +450,10 @@ public class Flows {
         return sb.toString();
     }
 
-    static class GenContext {
+    public static class GenContext {
         private final Set<String> imports = new LinkedHashSet<>();
         private final ArrayList<String> indexedIfaces = new ArrayList<>();
+        private final List<SimpleRateLimiter> rateLimiters = new ArrayList<>();
         private final Set<MacAddress> macFields = new HashSet<>();
         private final Set<IPv4> ipv4Fields = new HashSet<>();
         private final Set<IPv6> ipv6Fields = new HashSet<>();
@@ -495,6 +535,18 @@ public class Flows {
 
         public Flow getCurrentFlow() {
             return currentFlow;
+        }
+
+        public int newBPSRateLimiter(int bps) {
+            int idx = rateLimiters.size();
+            rateLimiters.add(new SimpleRateLimiter(bps, bps / 1000 + (bps % 1000 == 0 ? 0 : 1)));
+            return idx;
+        }
+
+        public int newPPSRateLimiter(int pps) {
+            int idx = rateLimiters.size();
+            rateLimiters.add(new SimpleRateLimiter(pps, pps / 1000 + (pps % 1000 == 0 ? 0 : 1)));
+            return idx;
         }
     }
 }

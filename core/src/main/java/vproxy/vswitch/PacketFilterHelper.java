@@ -1,5 +1,7 @@
 package vproxy.vswitch;
 
+import vproxy.base.util.ratelimit.RateLimiter;
+import vproxy.vpacket.AbstractPacket;
 import vproxy.vswitch.iface.Iface;
 import vproxy.vswitch.plugin.FilterResult;
 
@@ -27,5 +29,20 @@ public class PacketFilterHelper {
         if (iface == null) return FilterResult.DROP;
         pkb.devredirect = iface;
         return FilterResult.REDIRECT;
+    }
+
+    public boolean ratelimitByBitsPerSecond(PacketBuffer pkb, RateLimiter rl) {
+        int bytes;
+        if (pkb.pktBuf != null) {
+            bytes = pkb.pktBuf.length();
+        } else {
+            bytes = pkb.pkt.getRawPacket(AbstractPacket.FLAG_CHECKSUM_UNNECESSARY).length();
+        }
+        int bits = bytes * 8;
+        return rl.acquire(bits);
+    }
+
+    public boolean ratelimitByPacketsPerSecond(@SuppressWarnings("unused") PacketBuffer pkb, RateLimiter rl) {
+        return rl.acquire(1);
     }
 }

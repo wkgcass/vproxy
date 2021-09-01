@@ -20,6 +20,9 @@ public class FlowAction {
 
     public String output;
 
+    public int limit_bps;
+    public int limit_pps;
+
     public String toStatementString(Flows.GenContext ctx) {
         if (normal) {
             return "return FilterResult.PASS";
@@ -41,6 +44,14 @@ public class FlowAction {
             return castTransport(ctx) + ".setDstPort(" + mod_tp_dst + ")";
         } else if (output != null) {
             return "helper.sendPacket(pkb, ifaces[" + ctx.ifaceIndex(output) + "].iface)";
+        } else if (limit_bps != 0) {
+            return "if (!helper.ratelimitByBitsPerSecond(pkb, ratelimiters[" + ctx.newBPSRateLimiter(limit_bps) + "])) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
+        } else if (limit_pps != 0) {
+            return "if (!helper.ratelimitByPacketsPerSecond(pkb, ratelimiters[" + ctx.newPPSRateLimiter(limit_pps) + "])) {\n" +
+                "\treturn FilterResult.DROP;\n" +
+                "}";
         } else {
             throw new IllegalStateException("cannot generate statement for " + this);
         }
@@ -89,6 +100,10 @@ public class FlowAction {
             return "mod_tp_dst:" + mod_tp_dst;
         } else if (output != null) {
             return "output:" + output;
+        } else if (limit_bps != 0) {
+            return "limit_bps:" + limit_bps;
+        } else if (limit_pps != 0) {
+            return "limit_pps:" + limit_pps;
         } else {
             return "???";
         }
