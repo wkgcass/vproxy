@@ -408,7 +408,9 @@ public class Flows {
 
     private String genImports(GenContext ctx) {
         StringBuilder sb = new StringBuilder();
-        for (String cls : ctx.imports) {
+        var imports = new ArrayList<>(ctx.imports);
+        imports.sort(String::compareTo);
+        for (String cls : imports) {
             sb.append("import ").append(cls).append(";\n");
         }
         return sb.toString();

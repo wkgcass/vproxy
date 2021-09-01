@@ -1,6 +1,7 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vproxy.app.plugin.impl.BasePacketFilter;
 import vproxy.base.util.ByteArray;
 import vproxy.base.util.bitwise.BitwiseIntMatcher;
 import vproxy.base.util.bitwise.BitwiseMatcher;
@@ -11,12 +12,16 @@ import vproxy.vfd.IPv4;
 import vproxy.vfd.IPv6;
 import vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
+import vproxy.vswitch.PacketBuffer;
+import vproxy.vswitch.PacketFilterHelper;
+import vproxy.vswitch.plugin.FilterResult;
 import vproxyx.pktfiltergen.IfaceHolder;
 import vproxyx.pktfiltergen.flow.Flows;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.nio.charset.StandardCharsets;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
@@ -65,13 +70,18 @@ public class TestFlowGen {
         StringBuilder expected = new StringBuilder();
         expected
             .append("package ").append(packageName).append(";\n")
-            .append("\n")
-            .append("import vproxy.app.plugin.impl.BasePacketFilter;\n")
-            .append("import vproxy.vswitch.plugin.FilterResult;\n")
-            .append("import vproxy.vswitch.PacketFilterHelper;\n")
-            .append("import vproxy.vswitch.PacketBuffer;\n");
-        for (Class<?> cls : imports) {
-            expected.append("import ").append(cls.getName()).append(";\n");
+            .append("\n");
+        var imports = new ArrayList<String>();
+        imports.add(BasePacketFilter.class.getName());
+        imports.add(FilterResult.class.getName());
+        imports.add(PacketFilterHelper.class.getName());
+        imports.add(PacketBuffer.class.getName());
+        for (Class<?> cls : this.imports) {
+            imports.add(cls.getName());
+        }
+        imports.sort(String::compareTo);
+        for (String cls : imports) {
+            expected.append("import ").append(cls).append(";\n");
         }
         expected
             .append("\n")
