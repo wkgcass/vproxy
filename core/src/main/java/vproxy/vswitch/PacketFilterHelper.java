@@ -22,7 +22,8 @@ public class PacketFilterHelper {
         if (toIface == null) {
             return;
         }
-        sendPacketFunc.send(pkb, toIface);
+        pkb.ensurePartialPacketParsed();
+        sendPacketFunc.send(pkb.copy(), toIface);
     }
 
     public FilterResult redirect(PacketBuffer pkb, Iface iface) {
