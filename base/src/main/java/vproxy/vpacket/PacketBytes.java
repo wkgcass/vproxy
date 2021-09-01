@@ -45,7 +45,7 @@ public class PacketBytes extends AbstractPacket {
 
     @Override
     public String description() {
-        return "packet,len=" + bytes.length();
+        return "packet" + (bytes != null ? ",len=" + bytes.length() : "");
     }
 
     @Override
