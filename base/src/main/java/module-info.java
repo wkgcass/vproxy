@@ -76,6 +76,7 @@ module vproxy.base {
     exports vproxy.base.util.nio;
     exports vproxy.base.util.objectpool;
     exports vproxy.base.util.promise;
+    exports vproxy.base.util.ratelimit;
     exports vproxy.base.util.ringbuffer;
     exports vproxy.base.util.ringbuffer.ssl;
     exports vproxy.base.util.thread;

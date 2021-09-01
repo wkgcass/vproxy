@@ -1,18 +1,21 @@
 package vproxy.test.cases;
 
 import org.junit.Test;
+import vproxy.base.Config;
 import vproxy.base.util.coll.RingQueue;
 import vproxy.base.util.display.TreeBuilder;
 import vproxy.base.util.objectpool.ConcurrentObjectPool;
 import vproxy.base.util.objectpool.CursorList;
 import vproxy.base.util.objectpool.PrototypeObjectList;
+import vproxy.base.util.ratelimit.RateLimiter;
+import vproxy.base.util.ratelimit.SimpleRateLimiter;
+import vproxy.base.util.ratelimit.StatisticsRateLimiter;
 
 import java.util.LinkedList;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNull;
+import static org.junit.Assert.*;
 
 public class TestUtilities {
     @Test
@@ -249,5 +252,38 @@ public class TestUtilities {
             "            |\n" +
             "            +---> j\n" +
             "", tb.toString());
+    }
+
+    @Test
+    public void statistics() {
+        RateLimiter rl = new SimpleRateLimiter(-1, 0);
+        Config.currentTimestamp = 10_000;
+        StatisticsRateLimiter srl = new StatisticsRateLimiter(rl, 30_000, 5_000);
+        Config.currentTimestamp = 11_100;
+        srl.acquire(1801);
+        Config.currentTimestamp = 12_200;
+        srl.acquire(2402);
+        Config.currentTimestamp = 18_300;
+        srl.acquire(1001);
+        Config.currentTimestamp = 27_800;
+        srl.acquire(8008);
+        assertArrayEquals(new Long[]{0L, 0L, 4203L, 1001L, 0L, 8008L}, srl.getStatistics(0, 25_000)._1);
+        Config.currentTimestamp = 37_400;
+        srl.acquire(7007);
+        assertArrayEquals(new Long[]{null, null, 4203L, 1001L, 0L, 8008L, 0L, 7007L}, srl.getStatistics(0, 35_000)._1);
+        Config.currentTimestamp = 42_500;
+        srl.acquire(6006);
+        Config.currentTimestamp = 47_600;
+        srl.acquire(5005);
+        Config.currentTimestamp = 49_700;
+        srl.acquire(4004);
+        Config.currentTimestamp = 52_800;
+        srl.acquire(1122);
+        assertArrayEquals(new Long[]{null, null, null, null, null, 8008L, 0L, 7007L, 6006L, 9009L, 1122L, null, null}, srl.getStatistics(0, 60_000)._1);
+        Config.currentTimestamp = 57_900;
+        srl.acquire(3003);
+        Config.currentTimestamp = 59_000;
+        srl.acquire(2002);
+        assertArrayEquals(new Long[]{null, null, null, null, null, null, 0L, 7007L, 6006L, 9009L, 1122L, 5005L, null}, srl.getStatistics(0, 60_000)._1);
     }
 }
