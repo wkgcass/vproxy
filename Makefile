@@ -30,9 +30,26 @@ clean-docker-plugin-rootfs:
 .PHONY: all
 all: clean jar jlink vfdposix image docker-network-plugin
 
+.PHONY: generate-module-info
+generate-module-info:
+	./gradlew GenerateModuleInfo
+
+.PHONY: jar-no-kt-runtime
+jar-no-kt-runtime: jar
+	cp build/libs/vproxy.jar build/libs/vproxy-no-kt-runtime.jar
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/intellij/*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/jetbrains/*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'kotlin*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'DebugProbesKt.bin'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/kotlin*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/maven/*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/proguard/*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/versions/*'
+
 .PHONY: jar
-jar:
+jar: generate-module-info
 	/usr/bin/env bash ./gradlew jar
+	zip build/libs/vproxy.jar module-info.class
 
 .PHONY: jlink
 jlink: jar

@@ -133,6 +133,7 @@ project(':test') {
         testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
         testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
         testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
+        testCompile group: 'org.ow2.asm', name: 'asm', version: '9.2'
     }
 
     task runSuite(type: Test) {
@@ -217,6 +218,12 @@ project(':test') {
         if (System.getProperty("ifname") != null) {
             args = [System.getProperty("ifname")]
         }
+    }
+
+    task GenerateModuleInfo(type: JavaExec) {
+        classpath = sourceSets.test.runtimeClasspath
+        workingDir = project.rootProject.rootDir.getAbsolutePath()
+        main = "vproxy.buildtools.ModuleInfoGenerator"
     }
 }
 
