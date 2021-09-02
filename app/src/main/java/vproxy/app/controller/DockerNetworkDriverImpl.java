@@ -1,8 +1,6 @@
 package vproxy.app.controller;
 
 import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.handle.resource.BPFObjectHandle;
 import vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import vproxy.app.process.Shutdown;
 import vproxy.base.component.elgroup.EventLoopGroup;
@@ -348,8 +346,8 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private XDPIface createXDPIface(Switch sw, UMem umem, VirtualNetwork net, String nicname) throws Exception {
-        var cmd = Command.parseStrCmd("add bpf-object " + nicname + " mode SKB force");
-        var bpfobj = BPFObjectHandle.add(cmd);
+        String ebpffile = Utils.writeTemporaryFile("bpf", ".o", BPFObject.handleAllProgram().toJavaArray());
+        var bpfobj = Application.get().bpfObjectHolder.add(ebpffile, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
         try {
             return sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), umem, 0,
                 32, 32, BPFMode.SKB, false, 0, false,
