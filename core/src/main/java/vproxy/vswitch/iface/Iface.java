@@ -110,9 +110,6 @@ public abstract class Iface {
         if (vlanIfaces.containsKey(vif.remoteVLan)) {
             throw new AlreadyExistException("vlan-adaptor", "vlan." + vif.remoteVLan + ":" + name());
         }
-        if (getLocalSideVni(vif.remoteVLan) == vif.remoteVLan) {
-            throw new AlreadyExistException(name() + " is already able to handle vlan " + vif.remoteVLan);
-        }
         vlanIfaces.put(vif.remoteVLan, vif);
     }
 
