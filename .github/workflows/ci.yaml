@@ -1,0 +1,19 @@
+name: vproxy ci
+on:
+  push:
+    branches:
+      - master
+      - dev
+  pull_request:
+    branches:
+      - master
+      - dev
+jobs:
+  ci:
+    runs-on: ubuntu-20.04
+    steps:
+      - uses: actions/checkout@v2
+      - run: echo '{"ipv6":true,"fixed-cidr-v6":"fd00::/120"}' | sudo tee /etc/docker/daemon.json
+      - run: sudo service docker restart
+      - run: sleep 5s
+      - run: ./misc/run-tests-in-docker.sh
