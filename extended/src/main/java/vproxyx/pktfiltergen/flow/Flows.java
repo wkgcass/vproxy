@@ -539,13 +539,13 @@ public class Flows {
             return currentFlow;
         }
 
-        public int newBPSRateLimiter(int bps) {
+        public int newBPSRateLimiter(long bps) {
             int idx = rateLimiters.size();
             rateLimiters.add(new SimpleRateLimiter(bps, bps / 1000 + (bps % 1000 == 0 ? 0 : 1)));
             return idx;
         }
 
-        public int newPPSRateLimiter(int pps) {
+        public int newPPSRateLimiter(long pps) {
             int idx = rateLimiters.size();
             rateLimiters.add(new SimpleRateLimiter(pps, pps / 1000 + (pps % 1000 == 0 ? 0 : 1)));
             return idx;

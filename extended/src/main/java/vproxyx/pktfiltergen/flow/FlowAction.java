@@ -20,8 +20,8 @@ public class FlowAction {
 
     public String output;
 
-    public int limit_bps;
-    public int limit_pps;
+    public long limit_bps;
+    public long limit_pps;
 
     public String toStatementString(Flows.GenContext ctx) {
         if (normal) {

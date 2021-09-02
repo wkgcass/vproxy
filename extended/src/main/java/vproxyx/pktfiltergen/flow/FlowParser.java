@@ -229,22 +229,22 @@ public class FlowParser {
                 action.output = value;
                 return;
             case "limit_bps":
-                action.limit_bps = parsePositiveInt(value);
+                action.limit_bps = parsePositiveLong(value);
                 return;
             case "limit_pps":
-                action.limit_pps = parsePositiveInt(value);
+                action.limit_pps = parsePositiveLong(value);
                 return;
         }
         throw new Exception("unknown action: " + s);
     }
 
-    private int parseNonNegativeInt(String value) throws Exception {
-        int n;
+    private long parseNonNegativeLong(String value) throws Exception {
+        long n;
         try {
             if (value.startsWith("0x")) {
-                n = Integer.parseInt(value.substring("0x".length()), 16);
+                n = Long.parseLong(value.substring("0x".length()), 16);
             } else {
-                n = Integer.parseInt(value);
+                n = Long.parseLong(value);
             }
         } catch (NumberFormatException e) {
             throw new Exception(value + " is not a valid integer");
@@ -255,8 +255,25 @@ public class FlowParser {
         return n;
     }
 
+    private int parseNonNegativeInt(String value) throws Exception {
+        long nl = parseNonNegativeLong(value);
+        int n = (int) nl;
+        if ((long) n != nl) {
+            throw new Exception(value + " too large");
+        }
+        return n;
+    }
+
     private int parsePositiveInt(String value) throws Exception {
         int n = parseNonNegativeInt(value);
+        if (n == 0) {
+            throw new Exception("zero not allowed");
+        }
+        return n;
+    }
+
+    private long parsePositiveLong(String value) throws Exception {
+        long n = parseNonNegativeLong(value);
         if (n == 0) {
             throw new Exception("zero not allowed");
         }
