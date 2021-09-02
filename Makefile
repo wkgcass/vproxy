@@ -32,7 +32,7 @@ all: clean jar jlink vfdposix image docker-network-plugin
 
 .PHONY: generate-module-info
 generate-module-info:
-	./gradlew GenerateModuleInfo
+	/usr/bin/env bash ./gradlew GenerateModuleInfo
 
 .PHONY: jar-no-kt-runtime
 jar-no-kt-runtime: jar
