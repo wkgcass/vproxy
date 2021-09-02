@@ -1,6 +1,6 @@
 # vproxy
 
-[![Build Status](https://travis-ci.com/wkgcass/vproxy.svg?branch=dev)](https://travis-ci.com/wkgcass/vproxy)
+[![Build Status](https://github.com/wkgcass/vproxy/actions/workflows/ci.yaml/badge.svg?branch=dev)](https://github.com/wkgcass/vproxy/actions/workflows/ci.yaml)
 
 [中文文档](https://github.com/wkgcass/vproxy/blob/master/README_ZH.md)
 
