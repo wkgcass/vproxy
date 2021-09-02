@@ -693,6 +693,15 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
+        flags = {
+          it + ResActFlag(Flag.enable)
+          it + ResActFlag(Flag.disable)
+        },
+        check = {
+          if (it.flags.contains(Flag.enable) && it.flags.contains(Flag.disable)) {
+            throw XException("cannot specify enable and disable at the same time")
+          }
+        },
         exec = execUpdate { IfaceHandle.update(it) }
       )
       it + ResAct(

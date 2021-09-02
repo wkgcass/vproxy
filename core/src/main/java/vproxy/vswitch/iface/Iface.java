@@ -13,6 +13,7 @@ public abstract class Iface {
     private boolean destroyed = false;
     private int baseMTU;
     private boolean floodAllowed;
+    private boolean disabled;
     public final IfaceStatistics statistics = new IfaceStatistics();
     protected IfaceInitParams.PacketCallback callback;
     private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
@@ -48,6 +49,14 @@ public abstract class Iface {
 
     public final void setBaseMTU(int baseMTU) {
         this.baseMTU = baseMTU;
+    }
+
+    public boolean isDisabled() {
+        return disabled;
+    }
+
+    public void setDisabled(boolean disabled) {
+        this.disabled = disabled;
     }
 
     public final boolean isFloodAllowed() {
@@ -131,8 +140,10 @@ public abstract class Iface {
 
     public abstract String name();
 
-    public final String paramsToString() {
-        return "mtu " + baseMTU + " flood " + (floodAllowed ? "allow" : "deny");
+    private String paramsToString() {
+        return "mtu " + baseMTU
+            + " flood " + (floodAllowed ? "allow" : "deny")
+            + " " + (disabled ? "disabled" : "enabled");
     }
 
     protected String toStringExtra() {

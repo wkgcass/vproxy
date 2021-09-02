@@ -1,10 +1,7 @@
 package vproxy.app.app.cmd.handle.resource;
 
 import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
+import vproxy.app.app.cmd.*;
 import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
 import vproxy.app.app.cmd.handle.param.FloodHandle;
 import vproxy.app.app.cmd.handle.param.MTUHandle;
@@ -57,6 +54,12 @@ public class IfaceHandle {
         }
         if (cmd.args.containsKey(Param.anno)) {
             target.setAnnotations(AnnotationsHandle.get(cmd));
+        }
+        if (cmd.flags.contains(Flag.enable)) {
+            target.setDisabled(false);
+        }
+        if (cmd.flags.contains(Flag.disable)) {
+            target.setDisabled(true);
         }
     }
 

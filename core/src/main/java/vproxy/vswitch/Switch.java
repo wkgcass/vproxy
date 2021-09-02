@@ -656,6 +656,12 @@ public class Switch {
             }
         }
 
+        // check whether the iface is disabled
+        if (iface.isDisabled()) {
+            assert Logger.lowLevelDebug("iface " + iface.name() + " is disabled, drop the packet when sending");
+            return;
+        }
+
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);
         }
@@ -746,6 +752,12 @@ public class Switch {
         // ensure the dev is recorded
         recordIface(pkb.devin);
 
+        // check whether the iface is disabled
+        if (pkb.devin.isDisabled()) {
+            assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled, drop the packet when receiving");
+            return false;
+        }
+
         // try to handle vlan
         if (pkb.pkt != null) { // note that tun dev will generate ip pkt only
             int vlan = pkb.pkt.getVlan();
@@ -757,6 +769,12 @@ public class Switch {
                 } else {
                     vif.handle(pkb);
                 }
+            }
+
+            // check whether the iface is disabled
+            if (pkb.devin.isDisabled()) {
+                assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled");
+                return false;
             }
         }
 

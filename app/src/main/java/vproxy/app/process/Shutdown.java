@@ -831,7 +831,8 @@ public class Shutdown {
                     }
                     cmd = "update iface " + iface.name() + " in switch " + sw.alias
                         + " mtu " + iface.getBaseMTU()
-                        + " flood " + (iface.isFloodAllowed() ? "allow" : "deny");
+                        + " flood " + (iface.isFloodAllowed() ? "allow" : "deny")
+                        + " " + (iface.isDisabled() ? "disable" : "enable");
                     if (!iface.getAnnotations().isEmpty()) {
                         cmd += " annotations " + iface.getAnnotations();
                     }

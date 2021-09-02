@@ -464,6 +464,8 @@ public class HelpCommand {
         force("force", null, "forcibly to do something"),
         zerocopy("zerocopy", null, "indicate to perform zerocopy operations"),
         rxgencsum("rx-gen-csum", null, "generate checksum before receiving the packet into vswitch"),
+        enable("enable", null, "enable the resource"),
+        disable("disable", null, "disable the resource"),
         ;
         public final String flag;
         public final String shortVer;
@@ -1182,6 +1184,9 @@ public class HelpCommand {
                 new ResActMan(ActMan.update, "update interface config", Arrays.asList(
                     new ResActParamMan(ParamMan.mtu, "mtu of this interface, or -1 to ignore this config", "1500"),
                     new ResActParamMan(ParamMan.flood, "whether to allow flooding traffic through this interface, allow or deny", "allow")
+                ), Arrays.asList(
+                    new ResActFlagMan(FlagMan.enable, "enable the iface", false),
+                    new ResActFlagMan(FlagMan.disable, "disable the iface", false)
                 ), Arrays.asList(
                     new Tuple<>(
                         "update iface tap:tap0 in switch sw0 mtu 9000 flood allow",
