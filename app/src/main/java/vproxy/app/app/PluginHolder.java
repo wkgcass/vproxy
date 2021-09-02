@@ -4,6 +4,7 @@ import vproxy.app.plugin.Plugin;
 import vproxy.app.plugin.PluginInitParams;
 import vproxy.app.plugin.PluginLoader;
 import vproxy.app.plugin.PluginWrapper;
+import vproxy.base.util.Logger;
 import vproxy.base.util.exception.AlreadyExistException;
 import vproxy.base.util.exception.NotFoundException;
 
@@ -33,6 +34,7 @@ public class PluginHolder {
             throw new Exception("init plugin failed, err: " + e.getMessage(), e);
         }
         map.put(wrapper.alias, wrapper);
+        Logger.alert("plugin " + wrapper.alias + " loaded");
         return wrapper;
     }
 
@@ -53,5 +55,6 @@ public class PluginHolder {
             throw new NotFoundException("plugin", alias);
         plugin.disable();
         plugin.plugin.destroy();
+        Logger.alert("plugin " + alias + " unloaded");
     }
 }
