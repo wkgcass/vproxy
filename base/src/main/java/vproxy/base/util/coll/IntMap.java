@@ -55,6 +55,11 @@ public class IntMap<V> {
             }
             return true;
         }
+
+        @Override
+        public String toString() {
+            return "Range[" + initial + ", " + (initial + CHUNK_SIZE) + ")";
+        }
     }
 
     public IntMap() {
@@ -98,6 +103,11 @@ public class IntMap<V> {
             ranges.add(range);
             return range.put(n, value);
         }
+        if (ranges.get(0).initial > initial) {
+            range = new Range(initial);
+            ranges.add(0, range);
+            return range.put(n, value);
+        }
         var ite = ranges.listIterator();
         while (ite.hasNext()) {
             range = ite.next();
@@ -109,7 +119,7 @@ public class IntMap<V> {
             }
         }
         // should not reach here
-        throw new Error("should not reach here!!!");
+        throw new Error("should not reach here!!! n=" + n + ", ranges=" + ranges);
     }
 
     public V remove(int n) {
