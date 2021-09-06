@@ -31,6 +31,7 @@ clean: clean-jar
 	rm -f ./docker-plugin/libvpxdp.so
 	rm -f ./docker-plugin/libbpf.so
 	rm -f ./*.build_artifacts.txt
+	rm -f ./module-info.class
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
