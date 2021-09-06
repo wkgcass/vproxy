@@ -37,6 +37,10 @@ public abstract class Iface {
 
     public void destroy() {
         destroyed = true;
+        // destroy vlans
+        for (var vlan : new ArrayList<>(vlanIfaces.values())) {
+            vlan.destroy();
+        }
     }
 
     public abstract int getLocalSideVni(int hint);

@@ -78,13 +78,13 @@ public class EventLoopGroup implements IEventLoopGroup {
 
     @Override
     @ThreadSafe
-    public synchronized void add(String alias) throws AlreadyExistException, IOException, ClosedException {
-        add(alias, new Annotations());
+    public synchronized EventLoopWrapper add(String alias) throws AlreadyExistException, IOException, ClosedException {
+        return add(alias, new Annotations());
     }
 
     @Override
     @ThreadSafe
-    public synchronized void add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
+    public synchronized EventLoopWrapper add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
         if (closed) {
             throw new ClosedException();
         }
@@ -113,6 +113,8 @@ public class EventLoopGroup implements IEventLoopGroup {
         assert Logger.lowLevelDebug("event loop added " + alias);
 
         invokeResourcesOnAdd();
+
+        return el;
     }
 
     @Blocking

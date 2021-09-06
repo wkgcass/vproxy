@@ -346,7 +346,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private XDPIface createXDPIface(Switch sw, UMem umem, VirtualNetwork net, String nicname) throws Exception {
-        String ebpffile = Utils.writeTemporaryFile("bpf", ".o", BPFObject.handleAllProgram().toJavaArray());
+        String ebpffile = Utils.writeTemporaryFile("bpf", "o", BPFObject.handleAllProgram().toJavaArray());
         var bpfobj = Application.get().bpfObjectHolder.add(ebpffile, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
         try {
             return sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), umem, 0,

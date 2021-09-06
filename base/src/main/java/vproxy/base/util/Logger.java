@@ -12,9 +12,9 @@ import java.util.Date;
 import java.util.Set;
 
 public class Logger {
-    private static final boolean stackTraceOn;
-    private static final boolean lowLevelDebugOn;
-    private static final boolean lowLevelNetDebugOn;
+    public static final boolean stackTraceOn;
+    public static final boolean lowLevelDebugOn;
+    public static final boolean lowLevelNetDebugOn;
 
     public static final String DEBUG_COLOR = "\033[0;36m";
     public static final String INFO_COLOR = "\033[0;32m";

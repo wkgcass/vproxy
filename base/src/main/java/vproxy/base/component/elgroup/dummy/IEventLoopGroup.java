@@ -21,9 +21,9 @@ public interface IEventLoopGroup {
 
     EventLoopWrapper get(String alias) throws NotFoundException;
 
-    void add(String alias) throws AlreadyExistException, IOException, ClosedException;
+    EventLoopWrapper add(String alias) throws AlreadyExistException, IOException, ClosedException;
 
-    void add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException;
+    EventLoopWrapper add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException;
 
     void remove(String alias) throws NotFoundException;
 

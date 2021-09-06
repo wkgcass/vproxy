@@ -28,7 +28,7 @@ public class MainCtxHelper {
             String next = i + 1 < args.length ? args[i + 1] : null;
             switch (arg) {
                 case "version":
-                    System.out.println(Application.get().version);
+                    System.err.println(Application.get().version);
                     Utils.exit(0);
                     return false;
                 case "help":

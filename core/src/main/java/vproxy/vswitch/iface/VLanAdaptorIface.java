@@ -20,6 +20,7 @@ public class VLanAdaptorIface extends Iface {
     public void destroy() {
         super.destroy();
         parentIface.removeVLanAdaptor(this);
+        callback.alertDeviceDown(this);
     }
 
     @Override

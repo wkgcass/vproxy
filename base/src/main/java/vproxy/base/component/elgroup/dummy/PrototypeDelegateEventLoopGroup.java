@@ -40,13 +40,13 @@ public class PrototypeDelegateEventLoopGroup implements IEventLoopGroup {
     }
 
     @Override
-    public synchronized void add(String alias) throws AlreadyExistException, IOException, ClosedException {
-        elg.add(alias);
+    public synchronized EventLoopWrapper add(String alias) throws AlreadyExistException, IOException, ClosedException {
+        return elg.add(alias);
     }
 
     @Override
-    public synchronized void add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
-        elg.add(alias, annotations);
+    public synchronized EventLoopWrapper add(String alias, Annotations annotations) throws AlreadyExistException, IOException, ClosedException {
+        return elg.add(alias, annotations);
     }
 
     @Override
