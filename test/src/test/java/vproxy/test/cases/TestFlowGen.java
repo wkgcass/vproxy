@@ -60,6 +60,7 @@ public class TestFlowGen {
     private String constructor = "";
     private String tables = "";
     private List<String> actions = List.of("return FilterResult.PASS;");
+    private String extra = "";
 
     private void check(String input) throws Exception {
         Flows flows = new Flows();
@@ -126,6 +127,12 @@ public class TestFlowGen {
                 expected.append("        ").append(s).append("\n");
             }
             expected.append("    }\n");
+        }
+        if (!extra.isEmpty()) {
+            for (String line : extra.split("\n")) {
+                expected.append("\n    ").append(line);
+            }
+            expected.append("\n");
         }
         expected
             .append("}\n");
@@ -568,6 +575,21 @@ public class TestFlowGen {
     }
 
     @Test
+    public void predicate() throws Exception {
+        fullname("vproxy.test.gen.packetfilters.Predicate");
+        tables = genTable(0, "" +
+            "if (predicate_myMethod(helper, pkb)) {\n" +
+            "    " + EXECUTE0 + "\n" +
+            "}\n" +
+            "return FilterResult.DROP;");
+        extra = "" +
+            "protected boolean predicate_myMethod(PacketFilterHelper helper, PacketBuffer pkb) {\n" +
+            "    return false;\n" +
+            "}";
+        check("predicate=myMethod,action=normal");
+    }
+
+    @Test
     public void multiMatchers() throws Exception {
         fullname("vproxy.test.gen.packetfilters.MultiMatchers");
         imports = List.of(
@@ -988,6 +1010,31 @@ public class TestFlowGen {
 
         tables = genTable(0, EXECUTE0);
         check("actions=limit_bps:1048576,limit_pps:1000000,normal");
+    }
+
+    @Test
+    public void run() throws Exception {
+        fullname("vproxy.test.gen.packetfilters.Run");
+        actions = List.of("" +
+            "run_myMethod(helper, pkb);\n" +
+            "return FilterResult.DROP;");
+        tables = genTable(0, EXECUTE0);
+        extra = "" +
+            "protected void run_myMethod(PacketFilterHelper helper, PacketBuffer pkb) {\n" +
+            "}";
+        check("actions=run:myMethod,drop");
+    }
+
+    @Test
+    public void invoke() throws Exception {
+        fullname("vproxy.test.gen.packetfilters.Invoke");
+        actions = List.of("return invoke_myMethod(helper, pkb);");
+        tables = genTable(0, EXECUTE0);
+        extra = "" +
+            "protected FilterResult invoke_myMethod(PacketFilterHelper helper, PacketBuffer pkb) {\n" +
+            "    return FilterResult.DROP;\n" +
+            "}";
+        check("actions=invoke:myMethod");
     }
 
     @Test

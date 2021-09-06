@@ -267,6 +267,18 @@ public class TestFlowParser {
     }
 
     @Test
+    public void testRun() throws Exception {
+        testFlow("action=run:my_method,pass",
+            "table=0,priority=0,actions=run:my_method,normal");
+    }
+
+    @Test
+    public void testInvoke() throws Exception {
+        testFlow("action=invoke:my_method",
+            "table=0,priority=0,actions=invoke:my_method");
+    }
+
+    @Test
     public void tableJump() throws Exception {
         testFlowBunch("" +
                 "action=goto_table:1\n" +

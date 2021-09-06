@@ -434,6 +434,28 @@ public class Flows {
             sb.append("}");
             sb.append("\n");
         }
+        for (String method : ctx.predicateMethods) {
+            genNewLine(sb, 4);
+            sb.append("protected boolean predicate_").append(method).append("(PacketFilterHelper helper, PacketBuffer pkb) {");
+            genNewLine(sb, 8);
+            sb.append("return false;");
+            genNewLine(sb, 4);
+            sb.append("}\n");
+        }
+        for (String method : ctx.runnableMethods) {
+            genNewLine(sb, 4);
+            sb.append("protected void run_").append(method).append("(PacketFilterHelper helper, PacketBuffer pkb) {");
+            genNewLine(sb, 4);
+            sb.append("}\n");
+        }
+        for (String method : ctx.invocationMethods) {
+            genNewLine(sb, 4);
+            sb.append("protected FilterResult invoke_").append(method).append("(PacketFilterHelper helper, PacketBuffer pkb) {");
+            genNewLine(sb, 8);
+            sb.append("return FilterResult.DROP;");
+            genNewLine(sb, 4);
+            sb.append("}\n");
+        }
         return sb.toString();
     }
 
@@ -462,6 +484,9 @@ public class Flows {
         private final List<BitwiseMatcher> bitwiseMatcherFields = new ArrayList<>();
         private final List<BitwiseIntMatcher> bitwiseIntMatcherFields = new ArrayList<>();
         private final List<String> actions = new ArrayList<>();
+        private final LinkedHashSet<String> predicateMethods = new LinkedHashSet<>();
+        private final LinkedHashSet<String> runnableMethods = new LinkedHashSet<>();
+        private final LinkedHashSet<String> invocationMethods = new LinkedHashSet<>();
 
         private Flow currentFlow;
 
@@ -549,6 +574,18 @@ public class Flows {
             int idx = rateLimiters.size();
             rateLimiters.add(new SimpleRateLimiter(pps, pps / 1000 + (pps % 1000 == 0 ? 0 : 1)));
             return idx;
+        }
+
+        public void registerPredicateMethod(String name) {
+            predicateMethods.add(name);
+        }
+
+        public void registerRunnableMethods(String name) {
+            runnableMethods.add(name);
+        }
+
+        public void registerInvocationMethods(String name) {
+            invocationMethods.add(name);
         }
     }
 }

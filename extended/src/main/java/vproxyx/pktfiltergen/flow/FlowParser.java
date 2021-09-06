@@ -164,6 +164,10 @@ public class FlowParser {
                 isNotSet(flow.matcher.tp_dst, "tp_dst");
                 flow.matcher.tp_dst = portMatcher(value);
                 return;
+            case "predicate":
+                assertValidMethodName(value);
+                flow.matcher.predicate = value;
+                return;
 
             case "action":
             case "actions":
@@ -234,6 +238,14 @@ public class FlowParser {
             case "limit_pps":
                 action.limit_pps = parsePositiveLong(value);
                 return;
+            case "run":
+                assertValidMethodName(value);
+                action.run = value;
+                return;
+            case "invoke":
+                assertValidMethodName(value);
+                action.invoke = value;
+                return;
         }
         throw new Exception("unknown action: " + s);
     }
@@ -278,6 +290,19 @@ public class FlowParser {
             throw new Exception("zero not allowed");
         }
         return n;
+    }
+
+    private void assertValidMethodName(String value) throws Exception {
+        char[] chars = value.toCharArray();
+        for (char c : chars) {
+            if (('a' <= c && c <= 'z')
+                || ('A' <= c && c <= 'Z')
+                || c == '$'
+                || c == '_') {
+                continue;
+            }
+            throw new Exception(c + "(" + ((int) c) + ")" + " is not allowed in a method name: " + value);
+        }
     }
 
     private void dlTypeIsIPOrNotSet() throws Exception {

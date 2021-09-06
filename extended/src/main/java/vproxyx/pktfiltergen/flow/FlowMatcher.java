@@ -38,6 +38,9 @@ public class FlowMatcher {
     public BitwiseIntMatcher tp_src;
     public BitwiseIntMatcher tp_dst;
 
+    // customized
+    public String predicate;
+
     public String toIfConditionString(Flows.GenContext ctx) {
         StringBuilder sb = new StringBuilder();
         if (in_port != null) {
@@ -81,6 +84,10 @@ public class FlowMatcher {
         }
         if (tp_dst != null) {
             appendAnd(sb).append(ctx.fieldName(tp_dst)).append(".match(").append(castTransport(ctx)).append(".getDstPort()").append(")");
+        }
+        if (predicate != null) {
+            ctx.registerPredicateMethod(predicate);
+            appendAnd(sb).append("predicate_").append(predicate).append("(helper, pkb)");
         }
         return sb.toString();
     }
@@ -157,6 +164,9 @@ public class FlowMatcher {
         }
         if (tp_dst != null) {
             appendSplit(sb).append("tp_dst=").append(formatPort(tp_dst));
+        }
+        if (predicate != null) {
+            appendSplit(sb).append("predicate=").append(predicate);
         }
         return sb.toString();
     }

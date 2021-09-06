@@ -23,6 +23,9 @@ public class FlowAction {
     public long limit_bps;
     public long limit_pps;
 
+    public String run;
+    public String invoke;
+
     public String toStatementString(Flows.GenContext ctx) {
         if (normal) {
             return "return FilterResult.PASS";
@@ -52,6 +55,12 @@ public class FlowAction {
             return "if (!helper.ratelimitByPacketsPerSecond(pkb, ratelimiters[" + ctx.newPPSRateLimiter(limit_pps) + "])) {\n" +
                 "\treturn FilterResult.DROP;\n" +
                 "}";
+        } else if (run != null) {
+            ctx.registerRunnableMethods(run);
+            return "run_" + run + "(helper, pkb)";
+        } else if (invoke != null) {
+            ctx.registerInvocationMethods(invoke);
+            return "return invoke_" + invoke + "(helper, pkb)";
         } else {
             throw new IllegalStateException("cannot generate statement for " + this);
         }
@@ -104,6 +113,10 @@ public class FlowAction {
             return "limit_bps:" + limit_bps;
         } else if (limit_pps != 0) {
             return "limit_pps:" + limit_pps;
+        } else if (run != null) {
+            return "run:" + run;
+        } else if (invoke != null) {
+            return "invoke:" + invoke;
         } else {
             return "???";
         }
@@ -119,7 +132,7 @@ public class FlowAction {
     }
 
     public boolean isTerminator() {
-        return normal || drop || table != 0;
+        return normal || drop || table != 0 || invoke != null;
     }
 
     public boolean allowTerminating() {
