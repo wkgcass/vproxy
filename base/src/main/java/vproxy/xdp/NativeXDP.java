@@ -1,5 +1,7 @@
 package vproxy.xdp;
 
+import vproxy.base.util.LogType;
+import vproxy.base.util.Logger;
 import vproxy.base.util.Utils;
 import vproxy.base.util.anno.CriticalNative;
 import vproxy.base.util.thread.VProxyThread;
@@ -27,7 +29,12 @@ public class NativeXDP {
                 return instance;
             }
 
-            Utils.loadDynamicLibrary("elf");
+            try {
+                Utils.loadDynamicLibrary("elf");
+            } catch (UnsatisfiedLinkError e) {
+                Logger.error(LogType.SYS_ERROR, "unable to load libelf, you may need to add startup argument -Djava.library.path=/usr/lib/`uname -m`-linux-gnu");
+                throw e;
+            }
             Utils.loadDynamicLibrary("bpf");
             Utils.loadDynamicLibrary("vpxdp");
             instance = new NativeXDP();
