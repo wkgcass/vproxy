@@ -14,6 +14,9 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 public class BPFObject {
+    public static final String PREBUILT_SKIP_DST_MAC = ":prebuilt:skip-dst-mac";
+    public static final String PREBUILT_HANDLE_ALL = ":prebuilt:handle-all";
+
     public final String nic;
     public final String filename;
     public final String prog;
@@ -34,8 +37,11 @@ public class BPFObject {
     public static BPFObject loadAndAttachToNic(String filepath, String programName, String nicName,
                                                BPFMode mode, boolean forceAttach) throws IOException {
         String genfilename = filepath;
-        if (filepath == null) {
+        if (filepath == null || filepath.equals(PREBUILT_SKIP_DST_MAC)) {
             genfilename = generateDefault(nicName);
+        } else if (filepath.equals(PREBUILT_HANDLE_ALL)) {
+            byte[] bytes = BPFObject.handleAllProgram().toJavaArray();
+            genfilename = Utils.writeTemporaryFile("kern", "o", bytes);
         }
 
         long bpfobj = NativeXDP.get().loadAndAttachBPFProgramToNic(genfilename, programName, nicName, mode.mode, forceAttach);
