@@ -3,6 +3,7 @@ package vproxy.fstack;
 import vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.Utils;
 import vproxy.vfd.VFDConfig;
 
 import java.io.IOException;
@@ -18,7 +19,7 @@ public class FStackUtil {
     public static void init() throws IOException {
         // try to load vproxy fstack lib
         try {
-            System.loadLibrary("vfdfstack");
+            Utils.loadDynamicLibrary("vfdfstack");
             fstack = new FStack();
             Logger.alert("RUNNING F-STACK");
         } catch (UnsatisfiedLinkError e) {

@@ -3,11 +3,20 @@ SHELL := /bin/bash
 
 VERSION := $(shell cat base/src/main/java/vproxy/base/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 OS := $(shell uname)
+ARCH := $(shell uname -m)
+ifeq ($(OS),Linux)
+LINUX_ARCH = $(ARCH)
+else
+LINUX_ARCH = $(shell docker run --rm wkgcass/vproxy-compile:latest uname -m)
+endif
 DOCKER_PLUGIN_WORKDIR ?= "."
 
-.PHONY: clean
-clean:
+.PHONY: clean-jar
+clean-jar:
 	/usr/bin/env bash ./gradlew clean
+
+.PHONY: clean
+clean: clean-jar
 	rm -f ./base/src/main/c/libvfdposix.dylib
 	rm -f ./base/src/main/c/libvfdposix.so
 	rm -f ./base/src/main/c/libvfdfstack.so
@@ -34,8 +43,31 @@ all: clean jar jlink vfdposix image docker-network-plugin
 generate-module-info:
 	/usr/bin/env bash ./gradlew GenerateModuleInfo
 
+.PHONY: jar
+jar: generate-module-info
+	/usr/bin/env bash ./gradlew jar
+	zip build/libs/vproxy.jar module-info.class
+
+.PHONY: _add_linux_so_to_zip
+_add_linux_so_to_zip:
+	cp ./base/src/main/c/libvfdposix.so ./libvfdposix-$(LINUX_ARCH).so
+	cp ./base/src/main/c/libvpxdp.so ./libvpxdp-$(LINUX_ARCH).so
+	cp base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./libbpf-$(LINUX_ARCH).so
+	zip build/libs/vproxy.jar ./libvfdposix-$(LINUX_ARCH).so ./libvpxdp-$(LINUX_ARCH).so ./libbpf-$(LINUX_ARCH).so
+	rm ./libvfdposix-$(LINUX_ARCH).so ./libvpxdp-$(LINUX_ARCH).so ./libbpf-$(LINUX_ARCH).so
+
+.PHONY: jar-with-lib
+ifeq ($(OS),Linux)
+jar-with-lib: jar vfdposix vpxdp _add_linux_so_to_zip
+else
+jar-with-lib: jar vfdposix-linux vpxdp-linux vfdposix _add_linux_so_to_zip
+	cp ./base/src/main/c/libvfdposix.dylib ./libvfdposix-$(ARCH).dylib
+	zip build/libs/vproxy.jar ./libvfdposix-$(ARCH).dylib
+	rm ./libvfdposix-$(ARCH).dylib
+endif
+
 .PHONY: jar-no-kt-runtime
-jar-no-kt-runtime: jar
+jar-no-kt-runtime: jar-with-lib
 	cp build/libs/vproxy.jar build/libs/vproxy-no-kt-runtime.jar
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/intellij/*'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/jetbrains/*'
@@ -45,11 +77,6 @@ jar-no-kt-runtime: jar
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/maven/*'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/proguard/*'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/versions/*'
-
-.PHONY: jar
-jar: generate-module-info
-	/usr/bin/env bash ./gradlew jar
-	zip build/libs/vproxy.jar module-info.class
 
 .PHONY: jlink
 jlink: jar

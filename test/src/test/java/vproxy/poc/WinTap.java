@@ -12,7 +12,7 @@ import java.util.LinkedList;
 
 public class WinTap {
     public static void main(String[] args) throws IOException {
-        System.loadLibrary("vfdwindows");
+        Utils.loadDynamicLibrary("vfdwindows");
         WindowsFDs windowsFDs = new WindowsFDs();
         TapDatagramFD fd = windowsFDs.openTap("tap0");
 

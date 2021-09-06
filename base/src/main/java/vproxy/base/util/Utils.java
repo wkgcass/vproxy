@@ -123,7 +123,7 @@ public class Utils {
 
     public static String formatErr(Throwable err) {
         String base = formatErrBase(err);
-        if (err instanceof RuntimeException) {
+        if (err instanceof RuntimeException || Logger.stackTraceOn) {
             return base + Arrays.asList(err.getStackTrace());
         } else {
             return base;
@@ -589,6 +589,16 @@ public class Utils {
             this.stdout = stdout;
             this.stderr = stderr;
         }
+
+        @Override
+        public String toString() {
+            return "ExecuteResult{exitCode=" + exitCode + "\n" +
+                "----- stdout -----\n" +
+                stdout + "\n" +
+                "----- stderr -----\n" +
+                stderr + "\n" +
+                "}";
+        }
     }
 
     public static void pipeOutputOfSubProcess(Process p) {
@@ -917,7 +927,8 @@ public class Utils {
             var ifaces = NetworkInterface.getNetworkInterfaces();
             while (ifaces.hasMoreElements()) {
                 var iface = ifaces.nextElement();
-                ret.add(new Nic(iface.getName(), new MacAddress(iface.getHardwareAddress())));
+                ret.add(new Nic(iface.getName(), new MacAddress(iface.getHardwareAddress()),
+                    -1, iface.isVirtual()));
             }
             return ret;
         }
@@ -941,8 +952,63 @@ public class Utils {
             } catch (IllegalArgumentException e) {
                 throw new IOException(e);
             }
-            ret.add(new Nic(name, mac));
+            int speed = -1;
+            try {
+                String speedStr = Files.readString(Path.of("/sys/class/net/" + name + "/speed")).trim();
+                speed = Integer.parseInt(speedStr);
+            } catch (Exception ignore) {
+            }
+            File virtualPath = new File("/sys/devices/virtual/net/" + name + "/");
+            boolean isVirtual = virtualPath.exists();
+            ret.add(new Nic(name, mac, speed, isVirtual));
         }
         return ret;
+    }
+
+    public static void loadDynamicLibrary(String name) throws UnsatisfiedLinkError {
+        // check and use bundled binaries
+        String filename = "lib" + name + "-" + OS.arch();
+        String suffix;
+        if (OS.isMac()) {
+            suffix = ".dylib";
+        } else if (OS.isWindows()) {
+            filename = name;
+            suffix = ".dll";
+        } else {
+            suffix = ".so";
+        }
+
+        InputStream is = Utils.class.getResourceAsStream("/" + filename + suffix);
+        if (is == null) {
+            System.out.println("System.loadLibrary(" + name + ")");
+            System.loadLibrary(name);
+            return;
+        }
+        File f;
+        try {
+            f = File.createTempFile(filename, suffix);
+        } catch (IOException e) {
+            throw new UnsatisfiedLinkError(Utils.formatErr(e));
+        }
+        f.deleteOnExit();
+        try (is) {
+            byte[] buf = new byte[1024];
+            try (FileOutputStream fos = new FileOutputStream(f)) {
+                int n;
+                while ((n = is.read(buf)) > 0) {
+                    fos.write(buf, 0, n);
+                }
+                fos.flush();
+            }
+        } catch (IOException e) {
+            throw new UnsatisfiedLinkError(Utils.formatErr(e));
+        }
+        if (!f.setExecutable(true)) {
+            throw new UnsatisfiedLinkError("failed setting executable on tmp file " + f.getAbsolutePath());
+        }
+        System.out.println("System.load(" + f.getAbsolutePath() + ")");
+        System.load(f.getAbsolutePath());
+        //noinspection ResultOfMethodCallIgnored
+        f.delete();
     }
 }

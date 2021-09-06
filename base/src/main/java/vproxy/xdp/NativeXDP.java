@@ -1,5 +1,6 @@
 package vproxy.xdp;
 
+import vproxy.base.util.Utils;
 import vproxy.base.util.anno.CriticalNative;
 import vproxy.base.util.thread.VProxyThread;
 
@@ -26,9 +27,9 @@ public class NativeXDP {
                 return instance;
             }
 
-            System.loadLibrary("elf");
-            System.loadLibrary("bpf");
-            System.loadLibrary("vpxdp");
+            Utils.loadDynamicLibrary("elf");
+            Utils.loadDynamicLibrary("bpf");
+            Utils.loadDynamicLibrary("vpxdp");
             instance = new NativeXDP();
         }
         return instance;

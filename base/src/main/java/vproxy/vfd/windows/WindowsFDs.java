@@ -19,7 +19,7 @@ public class WindowsFDs implements FDs, FDsWithTap {
         assert VFDConfig.vfdlibname != null;
         String lib = VFDConfig.vfdlibname;
         try {
-            System.loadLibrary(lib);
+            Utils.loadDynamicLibrary(lib);
         } catch (UnsatisfiedLinkError e) {
             System.out.println(lib + " not found, requires lib" + lib + ".dylib or lib" + lib + ".so or " + lib + ".dll on java.library.path");
             e.printStackTrace(System.out);
