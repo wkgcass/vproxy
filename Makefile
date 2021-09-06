@@ -27,9 +27,6 @@ clean: clean-jar
 	rm -f ./vproxy-*
 	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 	rm -f ./docker-plugin/vproxy.jar
-	rm -f ./docker-plugin/libvfdposix.so
-	rm -f ./docker-plugin/libvpxdp.so
-	rm -f ./docker-plugin/libbpf.so
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
 
@@ -153,11 +150,8 @@ release:
 endif
 
 .PHONY: docker-network-plugin-rootfs
-docker-network-plugin-rootfs: jar vfdposix-linux vpxdp-linux
+docker-network-plugin-rootfs: jar-with-lib
 	cp build/libs/vproxy.jar ./docker-plugin/vproxy.jar
-	cp base/src/main/c/libvfdposix.so ./docker-plugin/libvfdposix.so
-	cp base/src/main/c/libvpxdp.so ./docker-plugin/libvpxdp.so
-	cp base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./docker-plugin/libbpf.so
 	docker rmi -f vproxy-rootfs:latest
 	docker build --no-cache -t vproxy-rootfs:latest ./docker-plugin
 	docker create --name tmp vproxy-rootfs:latest /bin/bash
