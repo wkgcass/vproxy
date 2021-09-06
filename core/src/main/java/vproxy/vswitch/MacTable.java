@@ -131,13 +131,15 @@ public class MacTable {
             }
             set.add(this);
             resetTimer();
+
+            Logger.alert("mac entry " + iface.name() + " -> " + mac + " recorded");
         }
 
         @Override
         public void cancel() {
             super.cancel();
 
-            Logger.alert("mac entry " + mac + " -> " + iface.name() + " removed");
+            Logger.alert("mac entry " + iface.name() + " -> " + mac + " removed");
 
             entries.remove(this);
             macMap.remove(mac);

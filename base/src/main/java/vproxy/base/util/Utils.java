@@ -986,7 +986,7 @@ public class Utils {
         }
         File f;
         try {
-            f = File.createTempFile(filename, suffix);
+            f = File.createTempFile(filename + "-", suffix);
         } catch (IOException e) {
             throw new UnsatisfiedLinkError(Utils.formatErr(e));
         }

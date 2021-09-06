@@ -119,13 +119,15 @@ public class ArpTable {
             }
             set.add(this);
             resetTimer();
+
+            Logger.alert("arp entry " + mac + " -> " + ip.formatToIPString() + " recorded");
         }
 
         @Override
         public void cancel() {
             super.cancel();
 
-            Logger.alert("arp entry " + ip.formatToIPString() + " -> " + mac + " removed");
+            Logger.alert("arp entry " + mac + " -> " + ip.formatToIPString() + " removed");
 
             entries.remove(this);
             var entry = ipMap.remove(ip);
