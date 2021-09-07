@@ -79,8 +79,8 @@ make jlink
 <br>
 
 ```
-docker build --no-cache -t vproxy:latest https://raw.githubusercontent.com/wkgcass/vproxy/master/docker/Dockerfile
-docker run --rm vproxy -Deploy=HelloWorld
+make docker
+docker run --rm vproxyio/vproxy -Deploy=HelloWorld
 ```
 
 </details>
@@ -134,7 +134,7 @@ make vpxdp
 Or compile it inside a docker container:
 
 ```
-make vpxdp-docker
+make vpxdp-linux
 ```
 
 </details>

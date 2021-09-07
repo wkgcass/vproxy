@@ -3,7 +3,7 @@
 set -e
 
 testclasses=`cat test/src/test/java/vproxy/test/VSuite.java | grep '\bTest' | cut -d '.' -f 1 | xargs`
-image="wkgcass/vproxy-test:latest"
+image="vproxyio/test:latest"
 
 docker pull "$image"
 

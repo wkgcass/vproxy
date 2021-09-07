@@ -1,4 +1,4 @@
-FROM wkgcass/vproxy-runtime:latest
+FROM vproxyio/runtime:latest
 
 RUN apt-get install -y ethtool
 

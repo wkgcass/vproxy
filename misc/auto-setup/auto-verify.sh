@@ -58,7 +58,7 @@ if [ "$RUN_VPCTL" == "1" ]
 then
 	xecho "build vpctl"
 	./exec-it 'cd vpctl && make all'
-	./exec-it 'docker image tag wkgcass/vproxy:latest 127.0.0.1:32000/vproxy:latest'
+	./exec-it 'docker image tag vproxyio/vproxy:latest 127.0.0.1:32000/vproxy:latest'
 	./exec-it 'docker push 127.0.0.1:32000/vproxy:latest'
 	./exec-it 'docker image tag wkgcass/vpctl:latest 127.0.0.1:32000/vpctl:latest'
 	./exec-it 'docker push 127.0.0.1:32000/vpctl:latest'

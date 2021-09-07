@@ -403,7 +403,7 @@ class DockerNetworkPluginController(val path: UDSPath, requireSync: Boolean) {
       val networks = client.listNetworks()
       Logger.alert("retrieved docker networks: $networks")
       for (network in networks) {
-        if (network.driver == null || network.driver!!.startsWith("wkgcass/vproxy-docker-plugin:").not()) {
+        if (network.driver == null || network.driver!!.startsWith("vproxyio/docker-plugin:").not()) {
           continue
         }
         val createReq = DockerNetworkDriver.CreateNetworkRequest()

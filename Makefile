@@ -7,7 +7,7 @@ ARCH := $(shell uname -m)
 ifeq ($(OS),Linux)
 LINUX_ARCH = $(ARCH)
 else
-LINUX_ARCH = $(shell docker run --rm wkgcass/vproxy-compile:latest uname -m)
+LINUX_ARCH = $(shell docker run --rm vproxyio/compile:latest uname -m)
 endif
 DOCKER_PLUGIN_WORKDIR ?= "."
 
@@ -25,6 +25,7 @@ clean: clean-jar
 	cd ./base/src/main/c/xdp && make clean
 	rm -f ./vproxy
 	rm -f ./vproxy-*
+	rm -f ./docker/vproxy.jar
 	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 	rm -f ./docker-plugin/vproxy.jar
 	rm -f ./*.build_artifacts.txt
@@ -35,7 +36,7 @@ clean-docker-plugin-rootfs:
 	rm -rf $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
 .PHONY: all
-all: clean jar jlink vfdposix image docker-network-plugin
+all: clean jar-with-lib jlink vfdposix image docker docker-network-plugin
 
 .PHONY: generate-module-info
 generate-module-info:
@@ -103,9 +104,9 @@ vfdposix-linux: vfdposix
 vpxdp-linux: vpxdp
 else
 vfdposix-linux:
-	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest make vfdposix
+	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vfdposix
 vpxdp-linux:
-	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest make vpxdp
+	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest make vpxdp
 endif
 
 .PHONY: vfdwindows
@@ -130,7 +131,7 @@ image-linux: image
 else
 # run native-image inside a container to build linux executable file in other platforms
 image-linux: jar
-	docker run --rm -v $(shell pwd):/vproxy wkgcass/vproxy-compile:latest \
+	docker run --rm -v $(shell pwd):/vproxy vproxyio/compile:latest \
 		native-image -jar build/libs/vproxy.jar -J--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED -H:ReflectionConfigurationFiles=misc/graal-reflect.json -H:JNIConfigurationFiles=misc/graal-jni.json --enable-all-security-services --no-fallback --no-server vproxy-linux
 endif
 
@@ -140,7 +141,7 @@ vproxy-linux:
 # used for releasing
 .PHONY: release
 ifeq ($(OS),Darwin)
-release: clean jar image image-linux
+release: clean jar-with-lib image image-linux docker docker-network-plugin
 	cp vproxy vproxy-macos
 	cp build/libs/vproxy.jar ./vproxy-$(VERSION).jar
 else
@@ -148,6 +149,12 @@ release:
 	@echo "Please use macos to release"
 	@exit 1
 endif
+
+.PHONY: docker
+docker: jar-with-lib
+	cp build/libs/vproxy.jar ./docker/vproxy.jar
+	docker rmi -f vproxyio/vproxy:latest
+	docker build --no-cache -t vproxyio/vproxy:latest ./docker
 
 .PHONY: docker-network-plugin-rootfs
 docker-network-plugin-rootfs: jar-with-lib
@@ -166,7 +173,7 @@ $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs:
 .PHONY: docker-network-plugin
 docker-network-plugin: $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs/rootfs
 	cp docker-plugin/config.json $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
-	docker plugin create wkgcass/vproxy-docker-plugin $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
+	docker plugin create vproxyio/docker-plugin $(DOCKER_PLUGIN_WORKDIR)/docker-plugin-rootfs
 
 .PHONY: dockertest
 dockertest:

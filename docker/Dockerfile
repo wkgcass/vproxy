@@ -1,26 +1,6 @@
-FROM alpine:3.9.2
+FROM vproxyio/runtime
 
-## apk
-RUN apk add wget curl
+ADD preset /preset
+ADD vproxy.jar /vproxy.jar
 
-## use the / directory
-WORKDIR /
-
-## download the vproxy runtime
-## extract (the extract result would be a directory "./vproxy-runtime-musl")
-## remove the tar.gz file
-RUN wget -q https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz && \
-    tar zxf vproxy-runtime-musl.tar.gz && \
-    rm -f vproxy-runtime-musl.tar.gz
-
-## download the latest vproxy
-RUN curl "https://raw.githubusercontent.com/wkgcass/vproxy/master/base/src/main/java/vproxy/base/util/Version.java" 2>/dev/null \
-    | grep '_THE_VERSION_' \
-    | awk '{print $7}' \
-    | cut -d '"' -f 2 \
-    1> /version
-RUN wget -q https://github.com/wkgcass/vproxy/releases/download/$(cat /version)/vproxy-$(cat /version).jar && \
-    mv vproxy-$(cat /version).jar vproxy.jar
-
-## entry-point
-ENTRYPOINT ["/vproxy-runtime-musl/bin/java", "-jar", "/vproxy.jar"]
+ENTRYPOINT ["/usr/bin/env", "--", "java", "--add-exports=java.base/jdk.internal.misc=ALL-UNNAMED", "-XX:+CriticalJNINatives", "-Djava.library.path=/usr/lib/`uname -m`-linux-gnu", "-jar", "/vproxy.jar"]
