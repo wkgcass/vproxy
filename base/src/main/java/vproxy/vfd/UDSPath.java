@@ -31,7 +31,7 @@ public class UDSPath extends IPPort {
 
     @Override
     public String toString() {
-        return "UDS:" + (
+        return "sock:" + (
             path.isBlank() ? "<unnamed>" : path
         );
     }

@@ -8,6 +8,7 @@ import vproxy.base.util.callback.BlockCallback;
 import vproxy.base.util.exception.XException;
 import vproxy.vfd.IP;
 import vproxy.vfd.IPPort;
+import vproxy.vfd.UDSPath;
 
 import java.net.UnknownHostException;
 
@@ -19,6 +20,13 @@ public class AddrHandle {
         boolean ipv4 = !cmd.flags.contains(Flag.noipv4);
         boolean ipv6 = !cmd.flags.contains(Flag.noipv6);
         String addrStr = cmd.args.get(Param.addr);
+        if (addrStr.startsWith("sock:")) {
+            var path = addrStr.substring("sock:".length()).trim();
+            if (path.isBlank()) {
+                throw new XException("invalid unix domain socket: path not specified");
+            }
+            return new UDSPath(path);
+        }
         return get(addrStr, ipv4, ipv6);
     }
 

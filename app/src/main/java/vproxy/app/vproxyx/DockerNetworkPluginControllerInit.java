@@ -19,7 +19,7 @@ public class DockerNetworkPluginControllerInit {
     private static String[] args;
 
     private static final String DEFAULT_TEMPORARY_CONFIG = "" +
-        "System: add resp-controller resp-controller address 127.0.0.1:16309 password docker\n";
+        "System: add resp-controller resp-controller address sock:/var/run/docker/vproxy.sock password docker\n";
     private static boolean isFirstLaunch = false;
 
     public static void main0(String[] args) throws Exception {
