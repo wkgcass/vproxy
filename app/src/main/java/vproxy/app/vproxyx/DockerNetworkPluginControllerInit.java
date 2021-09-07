@@ -90,32 +90,17 @@ public class DockerNetworkPluginControllerInit {
             throw new Exception("Current OS is not Linux, cannot run docker network plugin");
         }
 
-        String version = OS.version();
-        if (!version.contains(".")) {
-            Logger.warn(LogType.ALERT, "Unable to parse kernel version: " + version);
-            return;
-        }
-        String majorStr = version.substring(0, version.indexOf("."));
-        String rest = version.substring(version.indexOf(".") + 1);
-        if (!rest.contains(".")) {
-            Logger.warn(LogType.ALERT, "Unable to parse kernel version, missing minor version: " + version);
-            return;
-        }
-        String minorStr = rest.substring(0, rest.indexOf("."));
-        int major;
-        int minor;
-        try {
-            major = Integer.parseInt(majorStr);
-            minor = Integer.parseInt(minorStr);
-        } catch (NumberFormatException ignore) {
-            Logger.warn(LogType.ALERT, "Unable to parse kernel version, major/minor not integer: " + version);
+        int major = OS.major();
+        int minor = OS.minor();
+        if (major < 0 || minor < 0) {
+            Logger.warn(LogType.ALERT, "Unable to parse kernel version: " + OS.version());
             return;
         }
         if (major < 5) {
-            throw new Exception("Current kernel version is not supported: " + major + "." + minor + ", requires at least 5.10");
+            throw new Exception("Current kernel version is not supported: " + major + "." + minor + ", requires at least 5.4, 5.10 is recommended");
         }
-        if (minor < 10) {
-            throw new Exception("Current kernel version is not supported: " + major + "." + minor + ", requires at least 5.10");
+        if (major == 5 && minor < 4) {
+            throw new Exception("Current kernel version is not supported: " + major + "." + minor + ", requires at least 5.4, 5.10 is recommended");
         }
     }
 

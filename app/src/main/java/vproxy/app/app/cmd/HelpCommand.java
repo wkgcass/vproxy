@@ -1352,7 +1352,7 @@ public class HelpCommand {
             "Note: 1) the name of the xdp iface is the nic name where this xdp handles, " +
             "2) use list iface to see the xdp sockets/interfaces, " +
             "3) should set -Dvfd=posix and make sure libvpxdp.so/libbpf.so/libelf.so on java.library.path, see build.gradle XDPPoc for example locations, " +
-            "4) make sure your kernel supports xdp, recommend kernel version >= 5.10. " +
+            "4) make sure your kernel supports xdp, recommend kernel version >= 5.10 (or at least 5.4). " +
             "See also `umem`, `bpf-object`. Check doc for more info",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(

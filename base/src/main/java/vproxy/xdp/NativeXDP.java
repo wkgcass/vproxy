@@ -2,6 +2,7 @@ package vproxy.xdp;
 
 import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
+import vproxy.base.util.OS;
 import vproxy.base.util.Utils;
 import vproxy.base.util.anno.CriticalNative;
 import vproxy.base.util.thread.VProxyThread;
@@ -14,6 +15,8 @@ public class NativeXDP {
     public static final int VP_CSUM_IP = 1;
     public static final int VP_CSUM_UP = 2;
     public static final int VP_CSUM_ALL = VP_CSUM_IP | VP_CSUM_UP;
+
+    public static final boolean supportUMemReuse = OS.major() >= 5 && OS.minor() >= 10;
 
     private static NativeXDP instance;
 

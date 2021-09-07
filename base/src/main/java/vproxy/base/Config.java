@@ -148,22 +148,12 @@ public class Config {
         String os = OS.name();
         String version = OS.version();
         if (OS.isLinux()) {
-            if (version.contains(".")) {
-                String majorStr = version.substring(0, version.indexOf("."));
-                String reset = version.substring(version.indexOf(".") + 1);
-                if (reset.contains(".")) {
-                    String minorStr = reset.substring(0, reset.indexOf("."));
-                    try {
-                        int major = Integer.parseInt(majorStr);
-                        int minor = Integer.parseInt(minorStr);
-                        if (major > 3 || (major == 3 && minor >= 9)) { // version >= 3.9
-                            Logger.alert("reuseport load balancing across sockets supported on " + os + " " + major + "." + minor);
-                            supportReusePortLB = 1;
-                            return true;
-                        }
-                    } catch (NumberFormatException ignore) {
-                    }
-                }
+            int major = OS.major();
+            int minor = OS.minor();
+            if (major > 3 || (major == 3 && minor >= 9)) {
+                Logger.alert("reuseport load balancing across sockets supported on " + os + " " + major + "." + minor);
+                supportReusePortLB = 1;
+                return true;
             }
         }
         assert Logger.lowLevelDebug("reuseport load balancing NOT supported: " + os + " " + version);

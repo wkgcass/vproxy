@@ -10,8 +10,8 @@ clean:
 	cd libbpf/src && make
 	touch .libbpf
 
-linux-gnu-lib := $(shell echo /usr/lib/`uname -p`-linux-gnu)
-linux-gnu-include := $(shell echo /usr/include/`uname -p`-linux-gnu)
+linux-gnu-lib := $(shell echo /usr/lib/`uname -m`-linux-gnu)
+linux-gnu-include := $(shell echo /usr/include/`uname -m`-linux-gnu)
 
 .PHONY: libbpf
 libbpf: .libbpf

@@ -7,6 +7,8 @@ public class OS {
     private static final boolean osMac;
     private static final boolean osLinux;
     private static final String arch;
+    private static final int linuxMajorVersion;
+    private static final int linuxMinorVersion;
 
     static {
         osname = System.getProperty("os.name", "");
@@ -21,6 +23,24 @@ public class OS {
             arch0 = "x86_64";
         }
         arch = arch0;
+
+        int major = -1;
+        int minor = -1;
+        if (osLinux) {
+            String[] split = osversion.split("\\.");
+            if (split.length >= 2) {
+                try {
+                    major = Integer.parseInt(split[0]);
+                    minor = Integer.parseInt(split[1]);
+                } catch (NumberFormatException ignore) {
+                }
+            }
+            if (minor == -1) {
+                major = -1;
+            }
+        }
+        linuxMajorVersion = major;
+        linuxMinorVersion = minor;
     }
 
     private OS() {
@@ -32,6 +52,14 @@ public class OS {
 
     public static String version() {
         return osversion;
+    }
+
+    public static int major() {
+        return linuxMajorVersion;
+    }
+
+    public static int minor() {
+        return linuxMinorVersion;
     }
 
     public static boolean isWindows() {

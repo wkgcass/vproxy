@@ -15,13 +15,14 @@ import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import vproxy.vswitch.iface.XDPIface;
 import vproxy.xdp.BPFMode;
 import vproxy.xdp.BPFObject;
+import vproxy.xdp.NativeXDP;
 import vproxy.xdp.UMem;
 
 import java.util.*;
 
 public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String SWITCH_NAME = "sw-docker";
-    private static final String UMEM_NAME = "umem0";
+    private static final String UMEM_NAME_PREFIX = "umem";
     private static final String NETWORK_NETWORK_ID_ANNOTATION = AnnotationKeys.SWNetwork_DockerNetworkDriverNetworkId.name;
     private static final MacAddress GATEWAY_MAC_ADDRESS = new MacAddress("02:00:00:00:00:20");
     private static final String GATEWAY_IP_ANNOTATION = AnnotationKeys.SWIp_DockerNetworkDriverGatewayIp.name;
@@ -179,24 +180,24 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         // handle
         var sw = ensureSwitch();
         IntMap<VirtualNetwork> networks = sw.getNetworks();
-        int n = 0;
+        int selectedVni = 0;
         if (optionVNI == 0) {
             for (int i : networks.keySet()) {
-                if (n < i) {
-                    n = i;
+                if (selectedVni < i) {
+                    selectedVni = i;
                 }
             }
-            n += 1; // greater than the biggest recorded vni
-            if (n > VNI_MAX) {
-                throw new Exception("cannot use auto selected vni " + n + ", out of range: [1," + VNI_MAX + "]");
+            selectedVni += 1; // greater than the biggest recorded vni
+            if (selectedVni > VNI_MAX) {
+                throw new Exception("cannot use auto selected vni " + selectedVni + ", out of range: [1," + VNI_MAX + "]");
             }
         } else {
             try {
                 sw.getNetwork(optionVNI);
             } catch (NotFoundException ignore) {
-                n = optionVNI;
+                selectedVni = optionVNI;
             }
-            if (n == 0) {
+            if (selectedVni == 0) {
                 throw new Exception(VNI_OPTION + ": " + optionVNI + " already exists");
             }
         }
@@ -214,29 +215,29 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         } else {
             v6net = optionV6Net;
         }
-        sw.addNetwork(n, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
-        Logger.alert("network added: vni=" + n + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
-        VirtualNetwork net = sw.getNetwork(n);
+        sw.addNetwork(selectedVni, v4net, v6net, new Annotations(Collections.singletonMap(NETWORK_NETWORK_ID_ANNOTATION, req.networkId)));
+        Logger.alert("network added: vni=" + selectedVni + ", v4=" + v4net + ", v6=" + v6net + ", docker:networkId=" + req.networkId);
+        VirtualNetwork net = sw.getNetwork(selectedVni);
         if (!req.networkId.equals(net.getAnnotations().other.get(NETWORK_NETWORK_ID_ANNOTATION))) {
             Logger.shouldNotHappen("adding network failed, maybe concurrent modification");
             try {
-                sw.delNetwork(n);
+                sw.delNetwork(selectedVni);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback network " + n + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVni + " failed", e2);
             }
             throw new Exception("unexpected state");
         }
 
         // add entry veth
         try {
-            var umem = ensureUMem();
+            var umem = ensureUMem("" + selectedVni);
             createNetworkEntryVeth(sw, umem, net);
         } catch (Exception e) {
-            Logger.error(LogType.SYS_ERROR, "creating network entry veth for network " + n + " failed", e);
+            Logger.error(LogType.SYS_ERROR, "creating network entry veth for network " + selectedVni + " failed", e);
             try {
-                sw.delNetwork(n);
+                sw.delNetwork(selectedVni);
             } catch (Exception e2) {
-                Logger.error(LogType.SYS_ERROR, "rollback network " + n + " failed", e2);
+                Logger.error(LogType.SYS_ERROR, "rollback network " + selectedVni + " failed", e2);
             }
             throw e;
         }
@@ -249,7 +250,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 GATEWAY_IP_ANNOTATION, GATEWAY_IPv4_FLAG_VALUE,
                 GATEWAY_SUBNET_ANNOTATION, data.pool
             )));
-            Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
+            Logger.alert("ip added: vni=" + selectedVni + ", ip=" + gateway + ", mac=" + mac);
         }
 
         if (!req.ipv6Data.isEmpty()) {
@@ -261,7 +262,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                     GATEWAY_IP_ANNOTATION, GATEWAY_IPv6_FLAG_VALUE,
                     GATEWAY_SUBNET_ANNOTATION, data.pool
                 )));
-                Logger.alert("ip added: vni=" + n + ", ip=" + gateway + ", mac=" + mac);
+                Logger.alert("ip added: vni=" + selectedVni + ", ip=" + gateway + ", mac=" + mac);
             }
         }
 
@@ -295,29 +296,53 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         return sw;
     }
 
-    private UMem ensureUMem() throws Exception {
+    private UMem getUMem(String suffix0) throws Exception {
+        if (NativeXDP.supportUMemReuse) {
+            suffix0 = "0";
+        }
+        final var suffix = suffix0;
+
         var sw = ensureSwitch();
-        var umemOpt = sw.getUMems().stream().filter(n -> n.alias.equals(UMEM_NAME)).findAny();
-        UMem umem;
+        var umemOpt = sw.getUMems().stream().filter(n -> n.alias.equals(UMEM_NAME_PREFIX + suffix)).findAny();
         if (umemOpt.isEmpty()) {
-            // need to add umem
-            umem = sw.addUMem(UMEM_NAME, 4096, 32, 32, 2048);
+            return null;
         } else {
             return umemOpt.get();
         }
+    }
 
+    private UMem ensureUMem(String suffix) throws Exception {
+        if (NativeXDP.supportUMemReuse) {
+            suffix = "0";
+        }
+
+        var sw = ensureSwitch();
+        UMem umem = getUMem(suffix);
+        if (umem == null) {
+            // need to add umem
+            umem = sw.addUMem(UMEM_NAME_PREFIX + suffix, NativeXDP.supportUMemReuse ? 4096 : 64, 32, 32, 2048);
+        } else {
+            return umem;
+        }
+
+        if (NativeXDP.supportUMemReuse) {
+            createUMemHolderXDPIface(sw, umem);
+        }
+
+        return umem;
+    }
+
+    private void createUMemHolderXDPIface(Switch sw, UMem umem) throws Exception {
         try {
             createNetworkEntryVeth(sw, umem, null);
         } catch (Exception e) {
             try {
-                sw.delUMem(UMEM_NAME);
+                sw.delUMem(umem.alias);
             } catch (Exception e2) {
                 Logger.error(LogType.SYS_ERROR, "rollback umem failed", e2);
             }
             throw e;
         }
-
-        return umem;
     }
 
     private void createNetworkEntryVeth(Switch sw, UMem umem, VirtualNetwork net) throws Exception {
@@ -337,7 +362,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             createXDPIface(sw, umem, net, swNic);
         } catch (Exception e) {
             try {
-                deleteNic(sw, swNic);
+                deleteNic(sw, umem, swNic);
             } catch (Exception e2) {
                 Logger.error(LogType.SYS_ERROR, "rollback nic " + hostNic + " failed", e2);
             }
@@ -441,7 +466,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
 
     private void deleteNetworkEntryVeth(Switch sw, VirtualNetwork net) throws Exception {
         String swNic = NETWORK_ENTRY_VETH_PREFIX + net.vni + NETWORK_ENTRY_VETH_PEER_SUFFIX;
-        deleteNic(sw, swNic);
+        deleteNic(sw, getUMem("" + net.vni), swNic);
     }
 
     @Override
@@ -471,12 +496,14 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             anno.put(VETH_ENDPOINT_MAC_ANNOTATION, req.netInterface.macAddress);
         }
 
-        String swNic = "veth" + req.endpointId.substring(0, 8);
+        String shortEndpointId = formatShortEndpointId(req.endpointId);
+        String swNic = "veth" + shortEndpointId;
         String containerNic = swNic + CONTAINER_VETH_SUFFIX;
         createVethPair(swNic, containerNic, req.netInterface.macAddress);
 
+        UMem umem = null;
         try {
-            var umem = ensureUMem();
+            umem = ensureUMem(shortEndpointId);
 
             XDPIface xdpIface = createXDPIface(sw, umem, net, swNic);
             xdpIface.setAnnotations(new Annotations(anno));
@@ -489,7 +516,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             );
         } catch (Exception e) {
             try {
-                deleteNic(sw, swNic);
+                deleteNic(sw, umem, swNic);
             } catch (Exception e2) {
                 Logger.error(LogType.SOCKET_ERROR, "failed to rollback nic " + swNic, e2);
             }
@@ -499,6 +526,10 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var resp = new CreateEndpointResponse();
         resp.netInterface = null;
         return resp;
+    }
+
+    private String formatShortEndpointId(String endpointId) {
+        return endpointId.substring(0, 8);
     }
 
     private void createVethPair(String hostVeth, String containerVeth, String mac) throws Exception {
@@ -544,17 +575,18 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         var sw = ensureSwitch();
         findNetwork(sw, networkId);
         var xdp = findEndpoint(sw, endpointId);
+        var umem = getUMem(formatShortEndpointId(endpointId));
 
         // delete nic
         try {
-            deleteNic(sw, xdp.nic);
+            deleteNic(sw, umem, xdp.nic);
         } catch (Exception e) {
             Logger.warn(LogType.ALERT, "failed to delete nic " + xdp.nic, e);
         }
         Logger.alert("xdp deleted: " + xdp.nic + ", endpointId=" + endpointId);
     }
 
-    private void deleteNic(Switch sw, String swNic) throws Exception {
+    private void deleteNic(Switch sw, UMem umem, String swNic) throws Exception {
         try {
             Application.get().bpfObjectHolder.removeAndRelease(swNic, true);
         } catch (NotFoundException ignore) {
@@ -562,6 +594,11 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         try {
             sw.delIface("xdp:" + swNic);
         } catch (NotFoundException ignore) {
+        }
+        if (!NativeXDP.supportUMemReuse) {
+            if (umem != null) {
+                sw.delUMem(umem.alias);
+            }
         }
 
         Utils.execute("" +

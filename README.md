@@ -122,7 +122,7 @@ java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.
 
 <details><summary>xdp</summary>
 
-It's recommended to run a kernel with minimum version 5.10 in order to use xdp support in the switch module.  
+It's recommended to run a kernel with minimum version 5.10 (or at least 5.4) in order to use xdp support in the switch module.  
 If using a lower version, you cannot share the same umem with different xdp interfaces.
 
 To build the xdp support, you will need these packages: `apt-get install -y linux-headers-$(uname -r) build-essential libelf-dev clang llvm`, then:
