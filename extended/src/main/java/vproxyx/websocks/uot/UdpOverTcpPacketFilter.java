@@ -209,9 +209,9 @@ public class UdpOverTcpPacketFilter implements PacketFilter {
             ByteArray bytes = data;
             while (true) {
                 ByteArray arr;
-                if (bytes.length() > 255) {
-                    arr = bytes.sub(0, 255);
-                    bytes = bytes.sub(255, bytes.length() - 255);
+                if (bytes.length() > 253) {
+                    arr = bytes.sub(0, 253);
+                    bytes = bytes.sub(253, bytes.length() - 253);
                 } else {
                     arr = bytes;
                 }
