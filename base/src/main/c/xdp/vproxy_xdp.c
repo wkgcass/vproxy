@@ -428,8 +428,8 @@ void vp_xdp_complete_tx(struct vp_xsk_info* xsk) {
             // assert chunk != null
             chunk->xsk = NULL;
             vp_chunk_release(xsk->umem->chunks, chunk);
-            xsk_ring_cons__release(&xsk->umem->comp_ring, completed);
         }
+        xsk_ring_cons__release(&xsk->umem->comp_ring, completed);
         xsk->outstanding_tx -= completed;
     }
 }
