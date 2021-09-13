@@ -41,6 +41,7 @@ class TestNetServerClient {
   @Before
   fun setUp() {
     server = ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine(loop!!.ensureNetEventLoop())
+    Thread.sleep(500)
   }
 
   @After
