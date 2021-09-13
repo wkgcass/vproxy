@@ -169,7 +169,16 @@ public class L2 {
             IP ip = IP.from(senderIp.toJavaArray());
             if (!pkb.network.v4network.contains(ip)) {
                 assert Logger.lowLevelDebug("got arp packet not allowed in the network: " + ip + " not in " + pkb.network.v4network);
-                return;
+                // allow if it's response
+                if (arp.getOpcode() != Consts.ARP_PROTOCOL_OPCODE_RESP) {
+                    assert Logger.lowLevelDebug("this arp packet is not a response");
+                    return;
+                }
+                if (!pkb.pkt.getDst().isUnicast()) {
+                    assert Logger.lowLevelDebug("this arp packet is not unicast");
+                    return;
+                }
+                assert Logger.lowLevelDebug("this arp packet is a response, continue to handle");
             }
             pkb.network.arpTable.record(pkb.pkt.getSrc(), ip);
             // ============================================================
@@ -209,7 +218,16 @@ public class L2 {
             // check the target ip
             if (pkb.network.v6network == null || !pkb.network.v6network.contains(targetIp)) {
                 assert Logger.lowLevelDebug("got ndp packet not allowed in the network: " + targetIp + " not in " + pkb.network.v6network);
-                return;
+                // allow if it's response
+                if (icmp.getType() == Consts.ICMPv6_PROTOCOL_TYPE_Neighbor_Solicitation) {
+                    assert Logger.lowLevelDebug("this ndp packet is not neighbor advertisement");
+                    return;
+                }
+                if (!pkb.pkt.getDst().isUnicast()) {
+                    assert Logger.lowLevelDebug("this ndp packet is not unicast");
+                    return;
+                }
+                assert Logger.lowLevelDebug("this ndp packet is neighbor advertisement, continue to handle");
             }
 
             // try to build arp table
