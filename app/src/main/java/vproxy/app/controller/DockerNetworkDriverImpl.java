@@ -36,6 +36,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     private static final String CONTAINER_VETH_SUFFIX = "pod";
     private static final String NETWORK_ENTRY_VETH_PREFIX = "vproxy";
     private static final String NETWORK_ENTRY_VETH_PEER_SUFFIX = "sw";
+    private static final String POD_VETH_PREFIX = "veth";
     private static final int NETWORK_ENTRY_VNI = 15999999;
     private static final int VNI_MAX = 9999999;
 
@@ -417,14 +418,21 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         String currentConfig = Shutdown.currentConfig();
         String[] split = currentConfig.split("\n");
         for (String s : split) {
-            if (s.startsWith("add xdp ")) {
-                if (s.startsWith("add xdp " + NETWORK_ENTRY_VETH_PREFIX)) {
-                    netEntryIfaces.add(s.split(" ")[2]);
-                } else {
+            if (s.startsWith("add bpf-object ")) {
+                if (s.startsWith("add bpf-object " + POD_VETH_PREFIX)) {
                     continue;
                 }
-            }
-            if (s.startsWith("update iface xdp:") && !s.startsWith("update iface xdp:" + NETWORK_ENTRY_VETH_PREFIX)) {
+            } else if (s.startsWith("add umem ")) {
+                if (s.split(" ")[2].length() == ("umem".length() + 8)) {
+                    continue;
+                }
+            } else if (s.startsWith("add xdp ")) {
+                if (s.startsWith("add xdp " + POD_VETH_PREFIX)) {
+                    continue;
+                } else {
+                    netEntryIfaces.add(s.split(" ")[2]);
+                }
+            } else if (s.startsWith("update iface xdp:") && !s.startsWith("update iface xdp:" + NETWORK_ENTRY_VETH_PREFIX)) {
                 continue;
             }
             sb.append(s).append("\n");
@@ -497,7 +505,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
 
         String shortEndpointId = formatShortEndpointId(req.endpointId);
-        String swNic = "veth" + shortEndpointId;
+        String swNic = POD_VETH_PREFIX + shortEndpointId;
         String containerNic = swNic + CONTAINER_VETH_SUFFIX;
         createVethPair(swNic, containerNic, req.netInterface.macAddress);
 
