@@ -11,18 +11,38 @@ id=`docker run --rm "$image" uuid 2>/dev/null | cut -d '-' -f 1`
 echo "random id: \`$id'"
 name="vproxy-test-$id"
 
-docker run -d --rm -v `pwd`:/vproxy --name "$name" "$image" /bin/bash -c 'sleep 1200s'
+docker run -d -v `pwd`:/vproxy --name "$name" "$image" /bin/bash -c 'sleep 300s'
 
 docker exec "$name" ./gradlew clean
 
 for cls in $testclasses
 do
 	echo "running $cls"
+	docker kill "$name"
+	docker start "$name"
+	set +e
 	docker exec "$name" ./gradlew runSingleTest -Dcase="$cls"
+	exit_code="$?"
+	if [ "$exit_code" != "0" ]
+	then
+	  docker rm "$name"
+	  exit $exit_code
+	fi
+	set -e
 done
 
+docker kill "$name"
+docker start "$name"
+set +e
 docker exec "$name" ./gradlew runSingleTest -Dcase="CI"
+exit_code="$?"
+if [ "$exit_code" != "0" ]
+then
+	docker rm "$name"
+	exit $exit_code
+fi
 
 docker kill "$name"
+docker rm "$name"
 
 echo "done"
