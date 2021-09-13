@@ -178,16 +178,18 @@ public class XDPIface extends Iface {
         if (xsk == null) {
             return;
         }
-        this.xsk = null;
-        try {
-            loop.remove(xsk);
-        } catch (Throwable ignore) {
-        }
         try {
             xsk.close();
         } catch (IOException e) {
             Logger.error(LogType.SOCKET_ERROR, "closing xsk failed", e);
         }
+        loop.runOnLoop(() -> {
+            this.xsk = null;
+            try {
+                loop.remove(xsk);
+            } catch (Throwable ignore) {
+            }
+        });
     }
 
     @Override

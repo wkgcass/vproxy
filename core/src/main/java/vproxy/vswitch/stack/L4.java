@@ -15,6 +15,7 @@ import vproxy.vpacket.conntrack.udp.UdpUtils;
 import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.SwitchContext;
 import vproxy.vswitch.VirtualNetwork;
+import vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
 import vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 
 import java.util.Collections;
@@ -478,6 +479,7 @@ public class L4 {
         AbstractIpPacket respondIp = TcpUtils.buildIpResponse(tcp, respondTcp);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, respondIp);
+        pkb.tcp = tcp;
         outputL3(pkb);
     }
 
@@ -555,9 +557,10 @@ public class L4 {
 
     public void resetTcpConnection(VirtualNetwork network, TcpEntry tcp) {
         VProxyThread.current().newUuidDebugInfo();
-        assert Logger.lowLevelDebug("sendTcpRst(" + network + "," + tcp + "," + ")");
+        assert Logger.lowLevelDebug("resetTcpConnection(" + network + "," + tcp + "," + ")");
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, TcpUtils.buildIpResponse(tcp, TcpUtils.buildRstResponse(tcp)));
+        pkb.tcp = tcp;
         output(pkb);
 
         tcp.setState(TcpState.CLOSED);
@@ -574,6 +577,7 @@ public class L4 {
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
+        pkb.tcp = tcp;
         outputL3(pkb);
     }
 
@@ -586,6 +590,7 @@ public class L4 {
         AbstractIpPacket ipPkt = TcpUtils.buildIpResponse(tcp, tcpPkt);
 
         PacketBuffer pkb = PacketBuffer.fromPacket(network, ipPkt);
+        pkb.tcp = tcp;
         outputL3(pkb);
     }
 
@@ -631,6 +636,23 @@ public class L4 {
                     return;
                 } else {
                     assert Logger.lowLevelDebug("set recordFastPath for udp");
+                    pkb.fastpath = true;
+                }
+            }
+        } else if (pkb.tcp != null) {
+            assert Logger.lowLevelDebug("trying fastpath for tcp");
+            if (pkb.tcp instanceof EnhancedTCPEntry) {
+                var fastpath = ((EnhancedTCPEntry) pkb.tcp).fastpath;
+                if (fastpath != null && !fastpath.validateAndSetInto(swCtx, pkb)) {
+                    fastpath = null;
+                    ((EnhancedTCPEntry) pkb.tcp).fastpath = null;
+                }
+                if (fastpath != null) {
+                    assert Logger.lowLevelDebug("using fastpath for tcp: " + fastpath);
+                    swCtx.sendPacket(pkb, fastpath.output);
+                    return;
+                } else {
+                    assert Logger.lowLevelDebug("set recordFastPath for tcp");
                     pkb.fastpath = true;
                 }
             }

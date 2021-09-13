@@ -326,11 +326,13 @@ public class TcpPacket extends TransportPacket {
         ret.window = window;
         ret.checksum = checksum;
         ret.urgentPointer = urgentPointer;
-        ret.options = new ArrayList<>(options.size());
-        for (var o : options) {
-            var x = o.copy(ret);
-            ret.options.add(x);
-            x.recordParent(ret);
+        if (options != null) {
+            ret.options = new ArrayList<>(options.size());
+            for (var o : options) {
+                var x = o.copy(ret);
+                ret.options.add(x);
+                x.recordParent(ret);
+            }
         }
         ret.data = data;
         return ret;
@@ -339,8 +341,10 @@ public class TcpPacket extends TransportPacket {
     @Override
     public void clearAllRawPackets() {
         super.clearAllRawPackets();
-        for (var opt : options) {
-            opt.clearAllRawPackets();
+        if (options != null) {
+            for (var opt : options) {
+                opt.clearAllRawPackets();
+            }
         }
     }
 

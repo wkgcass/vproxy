@@ -77,6 +77,9 @@ public class PacketBuffer extends PacketDataBuffer {
     public Iface devredirect; // the dev to redirect to
     public boolean reinput; // set to true to input the packet again
 
+    // ignore iface disabled state
+    public boolean assumeIfaceEnabled = false;
+
     // ----- extra -----
     private Map<Object, Object> userdata;
 
@@ -178,7 +181,6 @@ public class PacketBuffer extends PacketDataBuffer {
 
     public void clearHelperFields() {
         matchedIps = null;
-        tcp = null;
         needTcpReset = false;
     }
 

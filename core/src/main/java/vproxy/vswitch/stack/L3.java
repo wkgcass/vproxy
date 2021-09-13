@@ -525,7 +525,7 @@ public class L3 {
     }
 
     private void broadcastArpOrNdp(VirtualNetwork network, IP dst) {
-        assert Logger.lowLevelDebug("getRoutedSrcMac(" + network + "," + dst + ")");
+        assert Logger.lowLevelDebug("broadcastArpOrNdp(" + network + "," + dst + ")");
         if (dst instanceof IPv4) {
             broadcastArp(network, dst);
         } else {

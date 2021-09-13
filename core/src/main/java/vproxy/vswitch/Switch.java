@@ -30,6 +30,7 @@ import vproxy.vswitch.iface.*;
 import vproxy.vswitch.plugin.FilterResult;
 import vproxy.vswitch.plugin.IfaceWatcher;
 import vproxy.vswitch.stack.NetworkStack;
+import vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
 import vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import vproxy.vswitch.stack.conntrack.Fastpath;
 import vproxy.vswitch.util.SwitchUtils;
@@ -555,16 +556,22 @@ public class Switch {
             }
         }
 
-        var iface = new XDPIface(nic, map, umem,
-            queueId, rxRingSize, txRingSize, mode, zeroCopy,
-            busyPollBudget, rxGenChecksum,
-            vni, keySelector);
-        try {
-            initIface(iface);
-        } catch (Exception e) {
-            iface.destroy();
-            throw new XException(Utils.formatErr(e));
-        }
+        var blockingCallback = new BlockCallback<XDPIface, XException>();
+        loop.runOnLoop(() -> {
+            var iface = new XDPIface(nic, map, umem,
+                queueId, rxRingSize, txRingSize, mode, zeroCopy,
+                busyPollBudget, rxGenChecksum,
+                vni, keySelector);
+            try {
+                initIface(iface);
+            } catch (Exception e) {
+                iface.destroy();
+                blockingCallback.failed(new XException(Utils.formatErr(e)));
+                return;
+            }
+            blockingCallback.succeeded(iface);
+        });
+        var iface = blockingCallback.block();
 
         blockAndAddPersistentIface(loop, iface);
 
@@ -619,12 +626,19 @@ public class Switch {
 
         // handle fastpath
         if (pkb.fastpath) {
+            assert Logger.lowLevelDebug("try to handle fastpath: " + pkb.tcp + " or " + pkb.udp);
             pkb.fastpath = false;
-            if (pkb.udp instanceof EnhancedUDPEntry) {
+            if (pkb.tcp instanceof EnhancedTCPEntry) {
+                var tcp = (EnhancedTCPEntry) pkb.tcp;
+                tcp.fastpath = new Fastpath(iface, pkb.vni, pkb.pkt.getSrc(), pkb.pkt.getDst());
+                assert Logger.lowLevelDebug("recording tcp fastpath on output: " + tcp.fastpath);
+            } else if (pkb.udp instanceof EnhancedUDPEntry) {
                 var udp = (EnhancedUDPEntry) pkb.udp;
                 udp.fastpath = new Fastpath(iface, pkb.vni, pkb.pkt.getSrc(), pkb.pkt.getDst());
-                assert Logger.lowLevelDebug("recording fastpath on output: " + udp.fastpath);
+                assert Logger.lowLevelDebug("recording udp fastpath on output: " + udp.fastpath);
             }
+        } else {
+            assert Logger.lowLevelDebug("fastpath flag not set, will not set info into fastpath");
         }
 
         // handle it by packet filter
@@ -657,10 +671,11 @@ public class Switch {
         }
 
         // check whether the iface is disabled
-        if (iface.isDisabled()) {
+        if (!pkb.assumeIfaceEnabled && iface.isDisabled()) {
             assert Logger.lowLevelDebug("iface " + iface.name() + " is disabled, drop the packet when sending");
             return;
         }
+        pkb.assumeIfaceEnabled = false; // clear the state
 
         if (Mirror.isEnabled("switch")) {
             Mirror.switchPacket(pkb.pkt);
@@ -749,14 +764,26 @@ public class Switch {
     }
 
     private boolean __preHandleInputPkb0(PacketBuffer pkb) {
+        // execute pre handlers
+        FilterResult preHandlersResult = SwitchUtils.applyFilters(pkb.devin.getPreHandlers(), UnsupportedPacketFilterHelper.instance, pkb);
+        if (preHandlersResult == FilterResult.DROP) {
+            assert Logger.lowLevelDebug("pre handlers return DROP");
+            return false;
+        }
+        if (preHandlersResult != FilterResult.PASS) {
+            Logger.error(LogType.IMPROPER_USE, "pre handlers can only return DROP or PASS");
+            return false;
+        }
+
         // ensure the dev is recorded
         recordIface(pkb.devin);
 
         // check whether the iface is disabled
-        if (pkb.devin.isDisabled()) {
-            assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled, drop the packet when receiving");
+        if (!pkb.assumeIfaceEnabled && pkb.devin.isDisabled()) {
+            assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled");
             return false;
         }
+        pkb.assumeIfaceEnabled = false; // clear the state
 
         // try to handle vlan
         if (pkb.pkt != null) { // note that tun dev will generate ip pkt only
@@ -767,14 +794,27 @@ public class Switch {
                     assert Logger.lowLevelDebug("unable to find proper vlan adaptor for " + pkb);
                     return false;
                 } else {
+                    assert Logger.lowLevelDebug("handled by vlan adaptor " + vif.remoteVLan);
                     vif.handle(pkb);
-                }
-            }
 
-            // check whether the iface is disabled
-            if (pkb.devin.isDisabled()) {
-                assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled");
-                return false;
+                    // execute pre handlers
+                    preHandlersResult = SwitchUtils.applyFilters(vif.getPreHandlers(), UnsupportedPacketFilterHelper.instance, pkb);
+                    if (preHandlersResult == FilterResult.DROP) {
+                        assert Logger.lowLevelDebug("pre handlers return DROP");
+                        return false;
+                    }
+                    if (preHandlersResult != FilterResult.PASS) {
+                        Logger.error(LogType.IMPROPER_USE, "pre handlers can only return DROP or PASS");
+                        return false;
+                    }
+
+                    // check whether the iface is disabled
+                    if (!pkb.assumeIfaceEnabled && pkb.devin.isDisabled()) {
+                        assert Logger.lowLevelDebug("iface " + pkb.devin.name() + " is disabled");
+                        return false;
+                    }
+                    pkb.assumeIfaceEnabled = false; // clear the state
+                }
             }
         }
 

@@ -10,6 +10,7 @@ import vproxy.base.util.exception.XException;
 import vproxy.vfd.*;
 import vproxy.vpacket.conntrack.Conntrack;
 import vproxy.vpacket.conntrack.udp.UdpListenEntry;
+import vproxy.vswitch.stack.conntrack.EnhancedConntrack;
 import vproxy.vswitch.stack.fd.VSwitchFDContext;
 import vproxy.vswitch.stack.fd.VSwitchFDs;
 
@@ -25,7 +26,7 @@ public class VirtualNetwork {
     public final RouteTable routeTable;
     private Annotations annotations;
 
-    public final Conntrack conntrack = new Conntrack();
+    public final Conntrack conntrack = new EnhancedConntrack();
 
     private final FDs fds;
 

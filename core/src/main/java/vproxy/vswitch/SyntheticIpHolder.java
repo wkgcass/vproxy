@@ -73,15 +73,19 @@ public class SyntheticIpHolder {
     }
 
     public IPMac add(IP ip, MacAddress mac, Annotations annotations) throws AlreadyExistException, XException {
+        return __add(ip, mac, false, annotations);
+    }
+
+    public IPMac __add(IP ip, MacAddress mac, boolean force, Annotations annotations) throws AlreadyExistException, XException {
         if (ip instanceof IPv4) {
-            if (!allowedV4Network.contains(ip)) {
+            if (!allowedV4Network.contains(ip) && !force) {
                 throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV4Network);
             }
         } else {
             if (allowedV6Network == null) {
                 throw new XException("ipv6 not allowed");
             }
-            if (!allowedV6Network.contains(ip)) {
+            if (!allowedV6Network.contains(ip) && !force) {
                 throw new XException("the ip to add (" + ip.formatToIPString() + ") is not in the allowed range " + allowedV6Network);
             }
         }

@@ -84,9 +84,13 @@ public class Conntrack {
         return map.get(remote);
     }
 
+    protected TcpEntry createTcpEntry(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
+        return new TcpEntry(listenEntry, src, dst, seq);
+    }
+
     public TcpEntry createTcp(TcpListenEntry listenEntry, IPPort src, IPPort dst, long seq) {
         var map = tcpEntries.computeIfAbsent(dst, x -> new HashMap<>());
-        TcpEntry entry = new TcpEntry(listenEntry, src, dst, seq);
+        TcpEntry entry = createTcpEntry(listenEntry, src, dst, seq);
         var old = map.put(src, entry);
         if (old != null) {
             Logger.error(LogType.IMPROPER_USE, "found old connection " + old + " but a new connection with the same tuple is created");

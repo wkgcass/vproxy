@@ -8,6 +8,8 @@ import vproxy.vswitch.PacketBuffer;
 import vproxy.vswitch.plugin.PacketFilter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.Map;
 
 public abstract class Iface {
     private boolean destroyed = false;
@@ -17,11 +19,15 @@ public abstract class Iface {
     public final IfaceStatistics statistics = new IfaceStatistics();
     protected IfaceInitParams.PacketCallback callback;
     private final RingQueue<PacketBuffer> rcvQ = new RingQueue<>(1);
+    private final ArrayList<PacketFilter> preHandlers = new ArrayList<>();
     private final ArrayList<PacketFilter> ingressFilters = new ArrayList<>();
     private final ArrayList<PacketFilter> egressFilters = new ArrayList<>();
     private Annotations annotations;
 
     private final IntMap<VLanAdaptorIface> vlanIfaces = new IntMap<>();
+
+    // ----- extra -----
+    private Map<Object, Object> userdata;
 
     protected Iface() {
     }
@@ -73,6 +79,22 @@ public abstract class Iface {
 
     public final PacketBuffer pollPacket() {
         return rcvQ.poll();
+    }
+
+    public final boolean addPreHandler(PacketFilter filter) {
+        if (ingressFilters.contains(filter)) {
+            return false;
+        }
+        ingressFilters.add(filter);
+        return true;
+    }
+
+    public final boolean removePreHandler(PacketFilter filter) {
+        return ingressFilters.remove(filter);
+    }
+
+    public final ArrayList<PacketFilter> getPreHandlers() {
+        return ingressFilters;
     }
 
     public final boolean addIngressFilter(PacketFilter filter) {
@@ -160,6 +182,27 @@ public abstract class Iface {
 
     public void setAnnotations(Annotations annotations) {
         this.annotations = annotations;
+    }
+
+    public Object getUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.get(key);
+    }
+
+    public Object putUserData(Object key, Object value) {
+        if (userdata == null) {
+            userdata = new HashMap<>();
+        }
+        return userdata.put(key, value);
+    }
+
+    public Object removeUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.remove(key);
     }
 
     public boolean isDestroyed() {
