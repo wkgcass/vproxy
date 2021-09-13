@@ -7,7 +7,8 @@ import java.util.Objects;
 
 public class MacAddress {
     public final ByteArray bytes;
-    private final int hashCode;
+    private final int value0;
+    private final int value1;
 
     public MacAddress(byte[] bytes) {
         this(ByteArray.from(bytes));
@@ -15,7 +16,8 @@ public class MacAddress {
 
     public MacAddress(ByteArray bytes) {
         this.bytes = bytes.copy().unmodifiable();
-        this.hashCode = Objects.hashCode(bytes);
+        this.value0 = bytes.int32(0);
+        this.value1 = bytes.uint16(4);
     }
 
     public MacAddress(String mac) { // example: 0a:00:27:00:00:00
@@ -40,7 +42,8 @@ public class MacAddress {
         }
 
         this.bytes = ByteArray.from(bytes).unmodifiable();
-        this.hashCode = Objects.hashCode(this.bytes);
+        this.value0 = this.bytes.int32(0);
+        this.value1 = this.bytes.uint16(4);
     }
 
     public boolean isBroadcast() {
@@ -110,11 +113,11 @@ public class MacAddress {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         MacAddress that = (MacAddress) o;
-        return Objects.equals(bytes, that.bytes);
+        return value0 == that.value0 && value1 == that.value1;
     }
 
     @Override
     public int hashCode() {
-        return hashCode;
+        return Objects.hash(value0, value1);
     }
 }

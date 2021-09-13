@@ -86,6 +86,14 @@ public abstract class IP {
         return true;
     }
 
+    public boolean isLinkLocalAddress() {
+        if (this instanceof IPv6) {
+            return bytes.get(0) == (byte) 0xfe && (bytes.get(1) & 0b11000000) == 0x80;
+        } else {
+            return false;
+        }
+    }
+
     public byte[] getAddress() {
         return bytes.toJavaArray();
     }
@@ -107,9 +115,7 @@ public abstract class IP {
     abstract public boolean equals(Object o);
 
     @Override
-    public int hashCode() {
-        return Arrays.hashCode(bytes.toJavaArray());
-    }
+    abstract public int hashCode();
 
     // BEGIN UTILS:
     // return null if not ip literal

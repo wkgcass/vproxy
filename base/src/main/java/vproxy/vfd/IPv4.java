@@ -3,11 +3,13 @@ package vproxy.vfd;
 import vproxy.base.util.ByteArray;
 
 import java.net.Inet4Address;
-import java.util.Arrays;
 
 public class IPv4 extends IP {
+    private final int value;
+
     IPv4(byte[] bytes) {
         super(ByteArray.from(bytes));
+        value = this.bytes.int32(0);
     }
 
     @Override
@@ -19,7 +21,12 @@ public class IPv4 extends IP {
     public boolean equals(Object that) {
         if (that == null) return false;
         if (!(that instanceof IPv4)) return false;
-        return Arrays.equals(getAddress(), ((IPv4) that).getAddress());
+        return value == ((IPv4) that).value;
+    }
+
+    @Override
+    public int hashCode() {
+        return value;
     }
 
     @Override
