@@ -1,6 +1,7 @@
 package vproxy.vswitch;
 
 import vproxy.base.selector.SelectorEventLoop;
+import vproxy.base.util.LogType;
 import vproxy.base.util.Logger;
 import vproxy.base.util.Timer;
 import vproxy.vfd.IP;
@@ -120,14 +121,14 @@ public class ArpTable {
             set.add(this);
             resetTimer();
 
-            Logger.alert("arp entry " + mac + " -> " + ip.formatToIPString() + " recorded");
+            Logger.trace(LogType.ALERT, "arp entry " + mac + " -> " + ip.formatToIPString() + " recorded");
         }
 
         @Override
         public void cancel() {
             super.cancel();
 
-            Logger.alert("arp entry " + mac + " -> " + ip.formatToIPString() + " removed");
+            Logger.trace(LogType.ALERT, "arp entry " + mac + " -> " + ip.formatToIPString() + " removed");
 
             entries.remove(this);
             var entry = ipMap.remove(ip);
