@@ -42,6 +42,8 @@ class CoroutineHttp1ServerConnection(val conn: CoroutineConnection) : HttpServer
       resp.reason = reason
       if (body != null && body.length() > 0) {
         headers.add(Header("content-length", "" + body.length()))
+      } else {
+        headers.add(Header("content-length", "0"))
       }
       resp.headers = headers
       resp.body = body

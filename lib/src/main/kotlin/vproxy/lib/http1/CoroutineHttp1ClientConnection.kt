@@ -79,6 +79,8 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       req.version = "HTTP/1.1"
       if (body != null && body.length() > 0) {
         headers.add(Header("content-length", "" + body.length()))
+      } else {
+        headers.add(Header("content-length", "0"))
       }
       req.headers = headers
       req.body = body
