@@ -22,7 +22,7 @@ public class Timer {
 
     public void resetTimer() {
         if (timeout == -1) {
-            throw new IllegalArgumentException("timeout is not valid");
+            return; // no timeout
         }
         lastStart = currentTimeMillis();
         if (timer == null) {
