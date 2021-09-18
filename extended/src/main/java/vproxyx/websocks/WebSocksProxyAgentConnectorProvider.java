@@ -361,7 +361,7 @@ public class WebSocksProxyAgentConnectorProvider implements Socks5ConnectorProvi
                     System.arraycopy(chars, 0, toSend, 5, chars.length);
                     break;
                 case ipv6:
-                    byte[] v6 = IP.parseIpv4StringConsiderV6Compatible(domain);
+                    byte[] v6 = IP.parseIpv6String(domain);
                     if (v6 == null) {
                         Logger.shouldNotHappen("the socks lib produces an invalid ipv6: " + domain);
                         utilAlertFail(ctx);

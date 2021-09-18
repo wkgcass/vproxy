@@ -254,6 +254,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     }
 
     suspend fun create(ipport: IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
+      engine.useClientMode = true
       val pair = SSLUtils.genbuf(
         engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
         SelectorEventLoop.current(), ipport
