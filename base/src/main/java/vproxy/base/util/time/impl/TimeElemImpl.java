@@ -18,7 +18,8 @@ public class TimeElemImpl<T> implements TimeElem<T> {
         return elem;
     }
 
+    @Override
     public void removeSelf() {
-        queue.queue.remove(this);
+        queue.remove(this);
     }
 }
