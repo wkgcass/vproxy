@@ -167,18 +167,41 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         }
 
         conn.conn.setTimeout(5_000)
-        conn.get(uri).send()
+        val req = conn.get(uri)
+        val host = getHostFromUrl(protocolAndHostAndPort)
+        if (host != null) {
+          req.header("Host", host)
+        }
+        req.send()
         val resp = conn.readResponse()
         val ret: ByteArray
         if (resp.statusCode != 200) {
           throw IOException("request failed: response status is " + resp.statusCode + " instead of 200")
-        } else if (resp.body == null) {
-          ret = ByteArray.allocate(0)
         } else {
-          ret = resp.body
+          ret = resp.getBody()
         }
         ret
       }
+    }
+
+    private fun getHostFromUrl(url: String): String? {
+      var x = url
+      if (x.contains("://")) {
+        x = x.substring(x.indexOf("://") + "://".length)
+      }
+      if (x.contains("/")) {
+        x = x.substring(0, x.indexOf("/"))
+      }
+      if (IP.isIpLiteral(x)) {
+        return null
+      }
+      if (x.contains(":")) {
+        x = x.substring(0, x.lastIndexOf(":"))
+      }
+      if (IP.isIpLiteral(x)) {
+        return null
+      }
+      return x
     }
 
     suspend fun create(protocolAndHostAndPort: String): CoroutineHttp1ClientConnection {
