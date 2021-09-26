@@ -1,10 +1,12 @@
 package vproxy.test.cases
 
 import org.junit.Assert.assertEquals
+import org.junit.Ignore
 import org.junit.Test
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 
 class TestHttpClient {
+  @Ignore
   @Test
   fun simpleClient() {
     assertEquals(
