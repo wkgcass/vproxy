@@ -38,6 +38,9 @@ public class FlowMatcher {
     public BitwiseIntMatcher tp_src;
     public BitwiseIntMatcher tp_dst;
 
+    // vni
+    public int vni;
+
     // customized
     public String predicate;
 
@@ -84,6 +87,9 @@ public class FlowMatcher {
         }
         if (tp_dst != null) {
             appendAnd(sb).append(ctx.fieldName(tp_dst)).append(".match(").append(castTransport(ctx)).append(".getDstPort()").append(")");
+        }
+        if (vni != 0) {
+            appendAnd(sb).append("pkb.network != null && pkb.network.vni == ").append(vni);
         }
         if (predicate != null) {
             ctx.registerPredicateMethod(predicate);
@@ -164,6 +170,9 @@ public class FlowMatcher {
         }
         if (tp_dst != null) {
             appendSplit(sb).append("tp_dst=").append(formatPort(tp_dst));
+        }
+        if (vni != 0) {
+            appendSplit(sb).append("vni=").append(vni);
         }
         if (predicate != null) {
             appendSplit(sb).append("predicate=").append(predicate);

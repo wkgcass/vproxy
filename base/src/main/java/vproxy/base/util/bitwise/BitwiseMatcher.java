@@ -63,7 +63,7 @@ public class BitwiseMatcher {
         int i;
         for (i = 1; matcherLength - i >= 0 && maskLength - i >= 0 && inputLength - i >= 0; ++i) {
             byte matcherByte = matcher.get(matcherLength - i);
-            byte maskByte = matcher.get(maskLength - i);
+            byte maskByte = mask.get(maskLength - i);
             byte inputByte = input.get(inputLength - i);
 
             if ((inputByte & maskByte) != matcherByte) {

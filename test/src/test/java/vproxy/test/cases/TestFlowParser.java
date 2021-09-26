@@ -171,6 +171,18 @@ public class TestFlowParser {
     }
 
     @Test
+    public void predicate() throws Exception {
+        testFlow("predicate=xxx,action=normal",
+            "table=0,priority=0,predicate=xxx,actions=normal");
+    }
+
+    @Test
+    public void vni() throws Exception {
+        testFlow("vni=1,action=normal",
+            "table=0,priority=0,vni=1,actions=normal");
+    }
+
+    @Test
     public void normal() throws Exception {
         testFlow("action=NORMAL",
             "table=0,priority=0,actions=normal");

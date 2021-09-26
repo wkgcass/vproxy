@@ -575,6 +575,17 @@ public class TestFlowGen {
     }
 
     @Test
+    public void vni() throws Exception {
+        fullname("vproxy.test.gen.packetfilters.Vni");
+        tables = genTable(0, "" +
+            "if (pkb.network != null && pkb.network.vni == 1) {\n" +
+            "    " + EXECUTE0 + "\n" +
+            "}\n" +
+            "return FilterResult.DROP;");
+        check("vni=1,action=normal");
+    }
+
+    @Test
     public void predicate() throws Exception {
         fullname("vproxy.test.gen.packetfilters.Predicate");
         tables = genTable(0, "" +

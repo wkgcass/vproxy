@@ -164,6 +164,9 @@ public class FlowParser {
                 isNotSet(flow.matcher.tp_dst, "tp_dst");
                 flow.matcher.tp_dst = portMatcher(value);
                 return;
+            case "vni":
+                flow.matcher.vni = parsePositiveInt(value);
+                return;
             case "predicate":
                 assertValidMethodName(value);
                 flow.matcher.predicate = value;
