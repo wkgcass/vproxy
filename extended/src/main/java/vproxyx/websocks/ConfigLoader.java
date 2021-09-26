@@ -39,7 +39,7 @@ public class ConfigLoader {
     private boolean directRelay = false;
     private Network directRelayIpRange = null;
     private IPPort directRelayListen = null;
-    private int directRelayIpBondTimeout = 10_000;
+    private int directRelayIpBondTimeout = 10 * 60_000;
     private String user;
     private String pass;
     private String cacertsPath;
@@ -333,7 +333,7 @@ public class ConfigLoader {
                     } catch (NumberFormatException e) {
                         throw new Exception("invalid value for agent.direct-relay.ip-bond-timeout, should be a number: " + val);
                     }
-                    directRelayIpBondTimeout = timeout * 1000;
+                    directRelayIpBondTimeout = timeout * 60 * 1000;
                 } else if (line.startsWith("proxy.server.auth ")) {
                     String auth = line.substring("proxy.server.auth ".length()).trim();
                     String[] userpass = auth.split(":");
