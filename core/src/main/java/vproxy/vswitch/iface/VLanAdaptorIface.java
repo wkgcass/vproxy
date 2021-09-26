@@ -3,8 +3,8 @@ package vproxy.vswitch.iface;
 import vproxy.vpacket.EthernetPacket;
 import vproxy.vswitch.PacketBuffer;
 
-public class VLanAdaptorIface extends Iface {
-    public final Iface parentIface;
+public class VLanAdaptorIface extends Iface implements SubIface {
+    private final Iface parentIface;
     public final int remoteVLan;
     public final int localVni;
     private boolean ready = false;
@@ -17,7 +17,15 @@ public class VLanAdaptorIface extends Iface {
     }
 
     @Override
+    public Iface getParentIface() {
+        return parentIface;
+    }
+
+    @Override
     public void destroy() {
+        if (isDestroyed()) {
+            return;
+        }
         super.destroy();
         parentIface.removeVLanAdaptor(this);
         callback.alertDeviceDown(this);

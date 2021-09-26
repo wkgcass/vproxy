@@ -818,10 +818,10 @@ public class Shutdown {
                         continue;
                     }
                     var vif = (VLanAdaptorIface) iface;
-                    if (!switchInterfaceRequiresSaving(vif.parentIface)) {
+                    if (!switchInterfaceRequiresSaving(vif.getParentIface())) {
                         continue;
                     }
-                    cmd = "add vlan " + vif.remoteVLan + "@" + vif.parentIface.name() + " to switch " + sw.alias + " vni " + vif.localVni;
+                    cmd = "add vlan " + vif.remoteVLan + "@" + vif.getParentIface().name() + " to switch " + sw.alias + " vni " + vif.localVni;
                     commands.add(cmd);
                 }
                 // set iface options
@@ -923,7 +923,7 @@ public class Shutdown {
             || iface instanceof XDPIface
             || iface instanceof TapIface
             || iface instanceof TunIface
-            || (iface instanceof VLanAdaptorIface && switchInterfaceRequiresSaving(((VLanAdaptorIface) iface).parentIface));
+            || (iface instanceof VLanAdaptorIface && switchInterfaceRequiresSaving(((VLanAdaptorIface) iface).getParentIface()));
     }
 
     @Blocking // the reading file process is blocking
