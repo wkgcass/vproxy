@@ -82,19 +82,19 @@ public abstract class Iface {
     }
 
     public final boolean addPreHandler(PacketFilter filter) {
-        if (ingressFilters.contains(filter)) {
+        if (preHandlers.contains(filter)) {
             return false;
         }
-        ingressFilters.add(filter);
+        preHandlers.add(filter);
         return true;
     }
 
     public final boolean removePreHandler(PacketFilter filter) {
-        return ingressFilters.remove(filter);
+        return preHandlers.remove(filter);
     }
 
     public final ArrayList<PacketFilter> getPreHandlers() {
-        return ingressFilters;
+        return preHandlers;
     }
 
     public final boolean addIngressFilter(PacketFilter filter) {
@@ -141,7 +141,7 @@ public abstract class Iface {
 
     public final void removeVLanAdaptor(VLanAdaptorIface vif) {
         var holding = vlanIfaces.remove(vif.remoteVLan);
-        if (holding != vif) {
+        if (holding != vif && holding != null) {
             vlanIfaces.put(holding.remoteVLan, holding);
         }
     }
