@@ -75,7 +75,15 @@ public class Application {
             || name.equals(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME);
     }
 
+    public static void createMinimum() throws IOException {
+        create(true);
+    }
+
     static void create() throws IOException {
+        create(false);
+    }
+
+    private static void create(boolean minimum) throws IOException {
         application = new Application();
 
         // create one thread for controlling
@@ -96,6 +104,9 @@ public class Application {
         if (VFDConfig.useFStack) {
             cores = 1; // f-stack applications have only one thread
         }
+        if (minimum) {
+            cores = 1;
+        }
         for (int i = 0; i < cores; ++i) {
             try {
                 application.eventLoopGroupHolder.get(DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME).add(
@@ -105,7 +116,7 @@ public class Application {
                 throw new IOException("create default worker event loop failed", e);
             }
         }
-        if (VFDConfig.useFStack || (ServerSock.supportReusePort() && Config.supportReusePortLB())) {
+        if (VFDConfig.useFStack || (ServerSock.supportReusePort() && Config.supportReusePortLB()) || minimum) {
             assert Logger.lowLevelDebug("use worker event loop as the acceptor event loop");
             application.eventLoopGroupHolder.map.put(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,
                 new DelegateEventLoopGroup(DEFAULT_ACCEPTOR_EVENT_LOOP_GROUP_NAME,
@@ -119,5 +130,7 @@ public class Application {
                 throw new IOException("create default acceptor event loop failed", e);
             }
         }
+        // start ControlEventLoop
+        Application.get().controlEventLoop.loop();
     }
 }

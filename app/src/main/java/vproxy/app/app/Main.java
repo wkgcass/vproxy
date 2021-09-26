@@ -229,8 +229,6 @@ public class Main {
         }
         // init the address updater (should be called after Application initiates)
         ServerAddressUpdater.init();
-        // start ControlEventLoop
-        Application.get().controlEventLoop.loop();
 
         // every other thing should start after the loop
 
