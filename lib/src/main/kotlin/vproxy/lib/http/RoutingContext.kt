@@ -130,7 +130,16 @@ class RoutingContext(
     }
     for (br in tree.branches()) {
       if (br.data.match(uri[idx])) {
-        br.data.fill(this, uri[idx])
+        val subRoute = if (idx == uri.size - 1) {
+          if (uri[idx].contains("?")) {
+            uri[idx].substring(0, uri[idx].indexOf("?"))
+          } else {
+            uri[idx]
+          }
+        } else {
+          uri[idx]
+        }
+        br.data.fill(this, subRoute)
         if (idx == uri.size - 1 || br.data is WildcardSubPath) {
           handleLeaves(br)
           if (handled) {

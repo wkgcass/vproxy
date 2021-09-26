@@ -1,6 +1,8 @@
 package vproxy.lib.http.route
 
 import vproxy.lib.http.RoutingContext
+import java.net.URLDecoder
+import java.nio.charset.StandardCharsets
 
 class VariableSubPath(private val next: SubPath?, private val variable: String) : SubPath {
   override fun next(): SubPath? {
@@ -16,7 +18,12 @@ class VariableSubPath(private val next: SubPath?, private val variable: String) 
   }
 
   override fun fill(ctx: RoutingContext, route: String) {
-    ctx.putParam(variable, route)
+    val res = try {
+      URLDecoder.decode(route, StandardCharsets.UTF_8)
+    } catch (ignore: RuntimeException) {
+      route
+    }
+    ctx.putParam(variable, res)
   }
 
   override fun toString(): String {
