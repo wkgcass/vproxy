@@ -536,7 +536,11 @@ public class Utils {
     }
 
     public static ExecuteResult execute(String script, int timeout, boolean getResult) throws Exception {
-        Logger.alert("trying to execute script:\n" + script);
+        if (script.contains("\n")) {
+            Logger.alert("trying to execute script:\n" + script);
+        } else {
+            Logger.alert("trying to execute script: " + script);
+        }
         File file = File.createTempFile("script", ".sh");
         try {
             Files.writeString(file.toPath(), script);
