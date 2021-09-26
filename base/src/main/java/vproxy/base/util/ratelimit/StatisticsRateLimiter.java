@@ -28,6 +28,10 @@ public class StatisticsRateLimiter extends RateLimiter {
     }
 
     public Tuple3<Long[], Long, Long> getStatistics(long beginTs, long endTs) {
+        return getStatistics(beginTs, endTs, 1);
+    }
+
+    public Tuple3<Long[], Long, Long> getStatistics(long beginTs, long endTs, int step) {
         if (beginTs > endTs) {
             throw new IllegalArgumentException("beginTs " + beginTs + " > endTs " + endTs);
         }
@@ -52,6 +56,28 @@ public class StatisticsRateLimiter extends RateLimiter {
             }
             ret[retIdx] = data[idx];
         }
+
+        if (step > 1) {
+            Long[] foo = new Long[ret.length / step + (ret.length % step == 0 ? 0 : 1)];
+            for (int i = 0; i < ret.length; i += step) {
+                long value = 0;
+                boolean hasValue = false;
+                for (int x = 0; x < step; ++x) {
+                    if (ret.length > i + x && ret[i + x] != null) {
+                        value += ret[i + x];
+                        hasValue = true;
+                    }
+                }
+                if (hasValue) {
+                    foo[i / step] = value;
+                } else {
+                    foo[i / step] = null;
+                }
+            }
+            ret = foo;
+            endTs = ((endTs - beginTs) / step) * step + beginTs;
+        }
+
         return new Tuple3<>(ret, beginTs, endTs);
     }
 
