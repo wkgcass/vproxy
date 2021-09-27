@@ -5,6 +5,7 @@ import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
+import io.vproxy.dep.vjson.simple.SimpleString;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
@@ -13,7 +14,6 @@ import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.plugin.FilterResult;
-import io.vproxy.dep.vjson.simple.SimpleString;
 
 import java.util.*;
 import java.util.function.Consumer;

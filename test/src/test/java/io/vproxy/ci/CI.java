@@ -20,11 +20,11 @@ import io.vproxy.base.util.AnnotationKeys;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 import io.vproxy.test.cases.TestSSL;
 import io.vproxy.vfd.IPPort;
 import org.junit.*;
-import io.vproxy.dep.vjson.JSON;
-import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;

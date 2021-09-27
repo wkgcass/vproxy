@@ -1,6 +1,5 @@
 package io.vproxy.vproxyx
 
-import io.vproxy.base.connection.*
 import io.vproxy.base.util.coll.Tuple
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch

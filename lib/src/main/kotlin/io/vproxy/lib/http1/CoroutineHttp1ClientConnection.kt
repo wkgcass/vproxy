@@ -1,11 +1,11 @@
 package io.vproxy.lib.http1
 
+import io.vproxy.dep.vjson.JSON
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.execute
 import io.vproxy.lib.common.unsafeIO
 import io.vproxy.lib.tcp.CoroutineConnection
 import kotlinx.coroutines.suspendCancellableCoroutine
-import io.vproxy.dep.vjson.JSON
 import java.io.IOException
 import java.net.UnknownHostException
 import javax.net.ssl.SSLEngine

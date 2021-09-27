@@ -5,12 +5,12 @@ import io.vproxy.base.util.*;
 import io.vproxy.base.util.direct.DirectByteBuffer;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.dep.vjson.JSON;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv6Packet;
 import io.vproxy.vpacket.PacketBytes;
-import io.vproxy.dep.vjson.JSON;
 
 import java.io.*;
 import java.util.*;

@@ -21,12 +21,12 @@ import io.vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
 import io.vproxy.base.util.ringbuffer.SSLUtils;
 import io.vproxy.base.util.web.ErrorPages;
 import io.vproxy.base.util.web.HttpStatusCodeReasonMap;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 import io.vproxy.socks.Socks5ProxyProtocolHandler;
 import io.vproxy.util.CoreUtils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.dep.vjson.JSON;
-import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;

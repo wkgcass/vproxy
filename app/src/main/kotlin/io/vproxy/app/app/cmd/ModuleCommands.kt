@@ -1,7 +1,5 @@
 package io.vproxy.app.app.cmd
 
-import io.vproxy.app.app.cmd.handle.param.*
-import io.vproxy.app.app.cmd.handle.resource.*
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")

@@ -3,11 +3,11 @@ package io.vproxy.base.util.thread;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.objectpool.PrototypeObjectList;
-import io.vproxy.xdp.Chunk;
 import io.vproxy.dep.vjson.parser.ArrayParser;
 import io.vproxy.dep.vjson.parser.ObjectParser;
 import io.vproxy.dep.vjson.parser.StringParser;
 import io.vproxy.dep.vjson.util.StringDictionary;
+import io.vproxy.xdp.Chunk;
 
 import java.util.UUID;
 import java.util.function.BooleanSupplier;
