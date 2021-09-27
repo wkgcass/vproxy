@@ -2,7 +2,7 @@
 
 set -e
 
-testclasses=`cat test/src/test/java/vproxy/test/VSuite.java | grep '\bTest' | cut -d '.' -f 1 | xargs`
+testclasses=`cat test/src/test/java/io/vproxy/test/VSuite.java | grep '\bTest' | cut -d '.' -f 1 | xargs`
 image="vproxyio/test:latest"
 
 docker pull "$image"

@@ -139,9 +139,9 @@ public class TestFlowGen {
         assertEquals(expected.toString(), output);
 
         // check run from idea or gradle
-        File dir = new File("./src/test/java/vproxy/test/gen/packetfilters");
+        File dir = new File("./src/test/java/io/vproxy/test/gen/packetfilters");
         if (!dir.exists()) {
-            dir = new File("./test/src/test/java/vproxy/test/gen/packetfilters");
+            dir = new File("./test/src/test/java/io/vproxy/test/gen/packetfilters");
         }
         if (!dir.exists()) { // skip file output
             return;
@@ -161,7 +161,7 @@ public class TestFlowGen {
 
     @Test
     public void empty() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Empty");
+        fullname("io.vproxy.test.gen.packetfilters.Empty");
         tables = genTable(0, "return FilterResult.DROP;\n");
         actions = List.of();
         check("");
@@ -169,7 +169,7 @@ public class TestFlowGen {
 
     @Test
     public void table() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Table");
+        fullname("io.vproxy.test.gen.packetfilters.Table");
         tables = genTable(0, "return table1(helper, pkb);")
             + genTable(1, EXECUTE0);
         actions = List.of("return FilterResult.DROP;");
@@ -183,7 +183,7 @@ public class TestFlowGen {
 
     @Test
     public void in_port() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.InPort");
+        fullname("io.vproxy.test.gen.packetfilters.InPort");
         imports = List.of(IfaceHolder.class);
         fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
             "    new IfaceHolder(\"xdp:veth0\", null)\n" +
@@ -201,7 +201,7 @@ public class TestFlowGen {
 
     @Test
     public void dl_dst() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.DLDst");
+        fullname("io.vproxy.test.gen.packetfilters.DLDst");
         imports = List.of(BitwiseMatcher.class, ByteArray.class);
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
             "new BitwiseMatcher(" +
@@ -217,7 +217,7 @@ public class TestFlowGen {
 
     @Test
     public void dl_src() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.DLSrc");
+        fullname("io.vproxy.test.gen.packetfilters.DLSrc");
         imports = List.of(BitwiseMatcher.class, ByteArray.class);
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
             "new BitwiseMatcher(" +
@@ -233,7 +233,7 @@ public class TestFlowGen {
 
     @Test
     public void dl_type() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.DLType");
+        fullname("io.vproxy.test.gen.packetfilters.DLType");
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == " + 0x1234 + ") {\n" +
             "    " + EXECUTE0 + "\n" +
@@ -244,7 +244,7 @@ public class TestFlowGen {
 
     @Test
     public void arp_op() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ArpOp");
+        fullname("io.vproxy.test.gen.packetfilters.ArpOp");
         imports = List.of(ArpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2054 && ((ArpPacket) pkb.pkt.getPacket()).getOpcode() == 1) {\n" +
@@ -256,7 +256,7 @@ public class TestFlowGen {
 
     @Test
     public void arp_spa() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ArpSpa");
+        fullname("io.vproxy.test.gen.packetfilters.ArpSpa");
         imports = List.of(
             ArpPacket.class,
             BitwiseMatcher.class,
@@ -276,7 +276,7 @@ public class TestFlowGen {
 
     @Test
     public void arp_tpa() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ArpTpa");
+        fullname("io.vproxy.test.gen.packetfilters.ArpTpa");
         imports = List.of(
             ArpPacket.class,
             BitwiseMatcher.class,
@@ -296,7 +296,7 @@ public class TestFlowGen {
 
     @Test
     public void arp_sha() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ArpSha");
+        fullname("io.vproxy.test.gen.packetfilters.ArpSha");
         imports = List.of(
             ArpPacket.class,
             BitwiseMatcher.class,
@@ -316,7 +316,7 @@ public class TestFlowGen {
 
     @Test
     public void arp_tha() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ArpTha");
+        fullname("io.vproxy.test.gen.packetfilters.ArpTha");
         imports = List.of(
             ArpPacket.class,
             BitwiseMatcher.class,
@@ -336,7 +336,7 @@ public class TestFlowGen {
 
     @Test
     public void nw_src() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.NwSrc");
+        fullname("io.vproxy.test.gen.packetfilters.NwSrc");
         imports = List.of(
             AbstractIpPacket.class,
             BitwiseMatcher.class,
@@ -356,7 +356,7 @@ public class TestFlowGen {
 
     @Test
     public void nw_dst() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.NwDst");
+        fullname("io.vproxy.test.gen.packetfilters.NwDst");
         imports = List.of(
             AbstractIpPacket.class,
             BitwiseMatcher.class,
@@ -376,7 +376,7 @@ public class TestFlowGen {
 
     @Test
     public void nw_proto_ipv4() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.NwProtoIpv4");
+        fullname("io.vproxy.test.gen.packetfilters.NwProtoIpv4");
         imports = List.of(AbstractIpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
@@ -388,7 +388,7 @@ public class TestFlowGen {
 
     @Test
     public void nw_proto_ipv6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.NwProtoIpv6");
+        fullname("io.vproxy.test.gen.packetfilters.NwProtoIpv6");
         imports = List.of(AbstractIpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
@@ -400,7 +400,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_src_tcp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpSrcTcp");
+        fullname("io.vproxy.test.gen.packetfilters.TpSrcTcp");
         imports = List.of(
             AbstractIpPacket.class,
             TcpPacket.class,
@@ -422,7 +422,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_dst_tcp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpDstTcp");
+        fullname("io.vproxy.test.gen.packetfilters.TpDstTcp");
         imports = List.of(
             AbstractIpPacket.class,
             TcpPacket.class,
@@ -444,7 +444,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_src_tcp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpSrcTcp6");
+        fullname("io.vproxy.test.gen.packetfilters.TpSrcTcp6");
         imports = List.of(
             AbstractIpPacket.class,
             TcpPacket.class,
@@ -466,7 +466,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_dst_tcp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpDstTcp6");
+        fullname("io.vproxy.test.gen.packetfilters.TpDstTcp6");
         imports = List.of(
             AbstractIpPacket.class,
             TcpPacket.class,
@@ -488,7 +488,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_src_udp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpSrcUdp");
+        fullname("io.vproxy.test.gen.packetfilters.TpSrcUdp");
         imports = List.of(
             AbstractIpPacket.class,
             UdpPacket.class,
@@ -510,7 +510,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_dst_udp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpDstUdp");
+        fullname("io.vproxy.test.gen.packetfilters.TpDstUdp");
         imports = List.of(
             AbstractIpPacket.class,
             UdpPacket.class,
@@ -532,7 +532,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_src_udp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpSrcUdp6");
+        fullname("io.vproxy.test.gen.packetfilters.TpSrcUdp6");
         imports = List.of(
             AbstractIpPacket.class,
             UdpPacket.class,
@@ -554,7 +554,7 @@ public class TestFlowGen {
 
     @Test
     public void tp_dst_udp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.TpDstUdp6");
+        fullname("io.vproxy.test.gen.packetfilters.TpDstUdp6");
         imports = List.of(
             AbstractIpPacket.class,
             UdpPacket.class,
@@ -576,7 +576,7 @@ public class TestFlowGen {
 
     @Test
     public void vni() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Vni");
+        fullname("io.vproxy.test.gen.packetfilters.Vni");
         tables = genTable(0, "" +
             "if (pkb.network != null && pkb.network.vni == 1) {\n" +
             "    " + EXECUTE0 + "\n" +
@@ -587,7 +587,7 @@ public class TestFlowGen {
 
     @Test
     public void predicate() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Predicate");
+        fullname("io.vproxy.test.gen.packetfilters.Predicate");
         tables = genTable(0, "" +
             "if (predicate_myMethod(helper, pkb)) {\n" +
             "    " + EXECUTE0 + "\n" +
@@ -602,7 +602,7 @@ public class TestFlowGen {
 
     @Test
     public void multiMatchers() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.MultiMatchers");
+        fullname("io.vproxy.test.gen.packetfilters.MultiMatchers");
         imports = List.of(
             BitwiseMatcher.class,
             ByteArray.class,
@@ -669,7 +669,7 @@ public class TestFlowGen {
 
     @Test
     public void normal() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Normal");
+        fullname("io.vproxy.test.gen.packetfilters.Normal");
         tables = genTable(0, EXECUTE0);
         actions = List.of("return FilterResult.PASS;");
         check("action=normal");
@@ -684,7 +684,7 @@ public class TestFlowGen {
 
     @Test
     public void drop() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Drop");
+        fullname("io.vproxy.test.gen.packetfilters.Drop");
         tables = genTable(0, EXECUTE0);
         actions = List.of("return FilterResult.DROP;");
         check("action=drop");
@@ -699,7 +699,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_dl_dst() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModDLDst");
+        fullname("io.vproxy.test.gen.packetfilters.ModDLDst");
         imports = List.of(MacAddress.class);
         fields = "private static final MacAddress MAC_HOLDER_ab_cd_ef_01_23_45 = new MacAddress(\"ab:cd:ef:01:23:45\");";
         tables = genTable(0, EXECUTE0);
@@ -725,7 +725,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_dl_src() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModDLSrc");
+        fullname("io.vproxy.test.gen.packetfilters.ModDLSrc");
         imports = List.of(MacAddress.class);
         fields = "private static final MacAddress MAC_HOLDER_ab_cd_ef_01_23_45 = new MacAddress(\"ab:cd:ef:01:23:45\");";
         tables = genTable(0, EXECUTE0);
@@ -751,7 +751,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_nw_src_v4() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModNwSrcV4");
+        fullname("io.vproxy.test.gen.packetfilters.ModNwSrcV4");
         imports = List.of(Ipv4Packet.class, IPv4.class, IP.class);
         fields = "private static final IPv4 IPv4_HOLDER_172_16_0_1 = (IPv4) IP.from(\"172.16.0.1\");";
         tables = genTable(0, "" +
@@ -769,7 +769,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_nw_dst_v4() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModNwDstV4");
+        fullname("io.vproxy.test.gen.packetfilters.ModNwDstV4");
         imports = List.of(Ipv4Packet.class, IPv4.class, IP.class);
         fields = "private static final IPv4 IPv4_HOLDER_172_16_0_1 = (IPv4) IP.from(\"172.16.0.1\");";
         tables = genTable(0, "" +
@@ -787,7 +787,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_nw_src_v6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModNwSrcV6");
+        fullname("io.vproxy.test.gen.packetfilters.ModNwSrcV6");
         imports = List.of(Ipv6Packet.class, IPv6.class, IP.class);
         fields = "private static final IPv6 IPv6_HOLDER_fd00_abcd__1 = (IPv6) IP.from(\"fd00:abcd::1\");";
         tables = genTable(0, "" +
@@ -805,7 +805,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_nw_dst_v6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModNwDstV6");
+        fullname("io.vproxy.test.gen.packetfilters.ModNwDstV6");
         imports = List.of(Ipv6Packet.class, IPv6.class, IP.class);
         fields = "private static final IPv6 IPv6_HOLDER_fd00_abcd__1 = (IPv6) IP.from(\"fd00:abcd::1\");";
         tables = genTable(0, "" +
@@ -823,7 +823,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_src_tcp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPSrcTcp");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPSrcTcp");
         imports = List.of(AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
@@ -840,7 +840,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_dst_tcp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPDstTcp");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPDstTcp");
         imports = List.of(AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
@@ -856,7 +856,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_src_tcp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPSrcTcp6");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPSrcTcp6");
         imports = List.of(AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
@@ -873,7 +873,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_dst_tcp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPDstTcp6");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPDstTcp6");
         imports = List.of(AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
@@ -890,7 +890,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_src_udp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPSrcUdp");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPSrcUdp");
         imports = List.of(AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
@@ -907,7 +907,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_dst_udp() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPDstUdp");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPDstUdp");
         imports = List.of(AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
@@ -923,7 +923,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_src_udp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPSrcUdp6");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPSrcUdp6");
         imports = List.of(AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
@@ -940,7 +940,7 @@ public class TestFlowGen {
 
     @Test
     public void mod_tp_dst_udp6() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.ModTPDstUdp6");
+        fullname("io.vproxy.test.gen.packetfilters.ModTPDstUdp6");
         imports = List.of(AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
@@ -957,7 +957,7 @@ public class TestFlowGen {
 
     @Test
     public void output() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Output");
+        fullname("io.vproxy.test.gen.packetfilters.Output");
         imports = List.of(IfaceHolder.class);
         fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
             "    new IfaceHolder(\"xdp:veth0\", null)\n" +
@@ -978,7 +978,7 @@ public class TestFlowGen {
 
     @Test
     public void multiOutput() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.MultiOutput");
+        fullname("io.vproxy.test.gen.packetfilters.MultiOutput");
         imports = List.of(IfaceHolder.class);
         fields = "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
             "    new IfaceHolder(\"xdp:veth0\", null),\n" +
@@ -1004,7 +1004,7 @@ public class TestFlowGen {
 
     @Test
     public void ratelimit() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.RateLimit");
+        fullname("io.vproxy.test.gen.packetfilters.RateLimit");
         imports = List.of(RateLimiter.class, SimpleRateLimiter.class);
         fields = "private final RateLimiter[] ratelimiters = new RateLimiter[]{\n" +
             "    new SimpleRateLimiter(1048576, 1049),\n" +
@@ -1025,7 +1025,7 @@ public class TestFlowGen {
 
     @Test
     public void run() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Run");
+        fullname("io.vproxy.test.gen.packetfilters.Run");
         actions = List.of("" +
             "run_myMethod(helper, pkb);\n" +
             "return FilterResult.DROP;");
@@ -1038,7 +1038,7 @@ public class TestFlowGen {
 
     @Test
     public void invoke() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.Invoke");
+        fullname("io.vproxy.test.gen.packetfilters.Invoke");
         actions = List.of("return invoke_myMethod(helper, pkb);");
         tables = genTable(0, EXECUTE0);
         extra = "" +
@@ -1050,7 +1050,7 @@ public class TestFlowGen {
 
     @Test
     public void realworld() throws Exception {
-        fullname("vproxy.test.gen.packetfilters.RealWorld");
+        fullname("io.vproxy.test.gen.packetfilters.RealWorld");
         imports = List.of(
             AbstractIpPacket.class,
             UdpPacket.class,

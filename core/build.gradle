@@ -3,8 +3,8 @@ compileJava {
         options.compilerArgs << '--module-path' << classpath.asPath
     }
     options.compilerArgs << '--add-modules' << [
-            'vproxy.base',
-            'vproxy.lib',
+            'io.vproxy.base',
+            'io.vproxy.lib',
     ].join(',')
 }
 

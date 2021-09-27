@@ -1,7 +1,7 @@
-module vproxy.lib {
+module io.vproxy.lib {
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;
-    requires vproxy.base;
+    requires io.vproxy.base;
 
     exports io.vproxy.lib.common;
     exports io.vproxy.lib.docker;

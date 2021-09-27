@@ -108,7 +108,7 @@ public class Flows {
     public String gen(String fullClassName) {
         GenContext ctx = new GenContext();
 
-        ctx.ensureImport("vproxy.app.plugin.impl.BasePacketFilter");
+        ctx.ensureImport("io.vproxy.app.plugin.impl.BasePacketFilter");
         ctx.ensureImport(FilterResult.class);
         ctx.ensureImport(PacketFilterHelper.class);
         ctx.ensureImport(PacketBuffer.class);

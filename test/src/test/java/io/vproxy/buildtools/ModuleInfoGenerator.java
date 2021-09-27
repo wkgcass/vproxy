@@ -27,7 +27,7 @@ public class ModuleInfoGenerator {
                 }
                 if (line.startsWith("requires ")) {
                     String mod = line.substring("requires ".length()).trim();
-                    if (mod.startsWith("vproxy")) {
+                    if (mod.startsWith("io.vproxy")) {
                         continue;
                     }
                     requires.add(mod);
@@ -41,8 +41,8 @@ public class ModuleInfoGenerator {
 
         ClassWriter writer = new ClassWriter(0);
         writer.visit(Opcodes.V11, Opcodes.ACC_MODULE, "module-info", null, null, null);
-        writer.newModule("vproxy");
-        ModuleVisitor module = writer.visitModule("vproxy", 0, Version.VERSION);
+        writer.newModule("io.vproxy");
+        ModuleVisitor module = writer.visitModule("io.vproxy", 0, Version.VERSION);
         for (var require : requires) {
             module.visitRequire(require, 0, null);
         }

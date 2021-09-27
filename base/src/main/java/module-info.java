@@ -1,7 +1,7 @@
 import io.vproxy.base.processor.ProcessorRegistry;
 import io.vproxy.vfd.FDs;
 
-module vproxy.base {
+module io.vproxy.base {
     requires jdk.unsupported;
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;

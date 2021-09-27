@@ -1,8 +1,8 @@
 test {
     useJUnit()
     filter {
-        includeTestsMatching 'vproxy.test.VSuite'
-        includeTestsMatching 'vproxy.ci.CI'
+        includeTestsMatching 'io.vproxy.test.VSuite'
+        includeTestsMatching 'io.vproxy.ci.CI'
     }
     testLogging.showStandardStreams(true)
     forkEvery = 1

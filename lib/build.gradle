@@ -3,7 +3,7 @@ compileJava {
         options.compilerArgs << '--module-path' << classpath.asPath
     }
     options.compilerArgs << '--add-modules' << [
-            'vproxy.base',
+            'io.vproxy.base',
             'kotlin.stdlib',
             'kotlinx.coroutines.core.jvm',
     ].join(',')
