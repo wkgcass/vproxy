@@ -53,6 +53,16 @@ repositories {
     mavenCentral()
 }
 
+project(':dep') {
+    compileKotlin {
+        destinationDir = compileJava.destinationDir
+    }
+    dependencies {
+        compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.4.31'
+        compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '1.4.3'
+    }
+}
+
 project(':base') {
     compileJava {
         options.compilerArgs += '--add-exports=java.base/jdk.internal.misc=io.vproxy.base'
@@ -63,8 +73,7 @@ project(':base') {
     }
 
     dependencies {
-        compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.4.31'
-        compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '1.4.3'
+        compile project(':dep')
     }
 }
 

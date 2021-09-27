@@ -3,12 +3,11 @@ compileJava {
         options.compilerArgs << '--module-path' << classpath.asPath
     }
     options.compilerArgs << '--add-modules' << [
-            'io.vproxy.dep',
-            'kotlin.stdlib',
-            'kotlinx.coroutines.core.jvm',
+        'kotlin.stdlib',
+        'kotlinx.coroutines.core.jvm',
     ].join(',')
 }
 
 jar {
-    archiveName "vproxy-base.jar"
+    archiveName "vproxy-dep.jar"
 }

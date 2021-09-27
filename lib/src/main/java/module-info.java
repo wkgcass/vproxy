@@ -1,6 +1,7 @@
 module io.vproxy.lib {
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;
+    requires io.vproxy.dep;
     requires io.vproxy.base;
 
     exports io.vproxy.lib.common;

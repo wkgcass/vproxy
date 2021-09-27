@@ -1,8 +1,9 @@
 rootProject.name = 'vproxy'
+include 'dep'
 include 'base'
+include 'lib'
 include 'core'
 include 'extended'
-include 'lib'
-include 'test'
 include 'app'
+include 'test'
 

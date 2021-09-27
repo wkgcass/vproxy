@@ -16,7 +16,6 @@
 package com.twitter.hpack;
 
 import com.twitter.hpack.HpackUtil.IndexType;
-import io.vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -516,7 +515,7 @@ public final class Decoder {
   }
 
   private byte[] readStringLiteral(InputStream in, int length) throws IOException {
-    byte[] buf = Utils.allocateByteArray(length);
+    byte[] buf = new byte[length];
     int x = in.read(buf);
     if (x != length) {
       throw DECOMPRESSION_EXCEPTION;
