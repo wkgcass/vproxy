@@ -1,19 +1,19 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Flag;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.handle.param.AddrHandle;
-import vproxy.app.app.cmd.handle.param.FloodHandle;
-import vproxy.app.app.cmd.handle.param.MTUHandle;
-import vproxy.app.app.cmd.handle.param.TimeoutHandle;
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.vfd.IPPort;
-import vproxy.vswitch.Switch;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Flag;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.handle.param.AddrHandle;
+import io.vproxy.app.app.cmd.handle.param.FloodHandle;
+import io.vproxy.app.app.cmd.handle.param.MTUHandle;
+import io.vproxy.app.app.cmd.handle.param.TimeoutHandle;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vswitch.Switch;
 
 import java.util.LinkedList;
 import java.util.List;

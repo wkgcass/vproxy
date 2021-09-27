@@ -1,8 +1,9 @@
-package vproxy.base.dhcp.options;
+package io.vproxy.base.dhcp.options;
 
-import vproxy.base.dhcp.DHCPOption;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.dhcp.DHCPOption;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
 
 import java.util.LinkedList;
 import java.util.List;

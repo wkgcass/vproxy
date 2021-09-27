@@ -1,4 +1,4 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
 public class ExceptionWithoutStackTrace extends Exception {
     public ExceptionWithoutStackTrace(String msg) {

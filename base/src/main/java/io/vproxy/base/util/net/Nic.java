@@ -1,6 +1,6 @@
-package vproxy.base.util.net;
+package io.vproxy.base.util.net;
 
-import vproxy.vfd.MacAddress;
+import io.vproxy.vfd.MacAddress;
 
 public class Nic {
     public final String name;

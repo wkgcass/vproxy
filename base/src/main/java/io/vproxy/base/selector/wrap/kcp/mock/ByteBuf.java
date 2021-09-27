@@ -1,7 +1,7 @@
-package vproxy.base.selector.wrap.kcp.mock;
+package io.vproxy.base.selector.wrap.kcp.mock;
 
-import vproxy.base.util.Utils;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.nio.ByteBuffer;
 

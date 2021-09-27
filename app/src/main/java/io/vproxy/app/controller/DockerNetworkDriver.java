@@ -1,4 +1,4 @@
-package vproxy.app.controller;
+package io.vproxy.app.controller;
 
 import vjson.JSON;
 

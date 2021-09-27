@@ -1,13 +1,14 @@
-package vproxy.base.socks;
+package io.vproxy.base.socks;
 
-import vproxy.base.connection.Connection;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.callback.Callback;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.IPv4;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
 
 import java.io.IOException;
 

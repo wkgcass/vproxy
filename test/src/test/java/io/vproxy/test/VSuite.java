@@ -1,5 +1,6 @@
-package vproxy.test;
+package io.vproxy.test;
 
+import io.vproxy.test.cases.*;
 import org.junit.runner.RunWith;
 import org.junit.runners.Suite;
 import vproxy.test.cases.*;

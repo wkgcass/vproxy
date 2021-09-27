@@ -1,13 +1,21 @@
-package vproxy.base.http;
+package io.vproxy.base.http;
 
-import vproxy.base.processor.DummyConnectionDelegate;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.ProcessorProvider;
-import vproxy.base.processor.http1.HttpSubContext;
-import vproxy.base.processor.http1.entity.Response;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.codec.AbstractParser;
+import io.vproxy.base.processor.DummyConnectionDelegate;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.ProcessorProvider;
+import io.vproxy.base.processor.http1.HttpSubContext;
+import io.vproxy.base.processor.http1.entity.Response;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.codec.AbstractParser;
+import io.vproxy.base.processor.DummyConnectionDelegate;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.ProcessorProvider;
+import io.vproxy.base.processor.http1.HttpSubContext;
+import io.vproxy.base.processor.http1.entity.Response;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.codec.AbstractParser;
 
 import java.util.Set;
 

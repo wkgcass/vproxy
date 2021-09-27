@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
 import java.util.concurrent.locks.ReentrantLock;
 

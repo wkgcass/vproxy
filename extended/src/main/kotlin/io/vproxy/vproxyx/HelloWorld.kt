@@ -1,27 +1,27 @@
-package vproxyx
+package io.vproxy.vproxyx
 
-import vproxy.base.Config
+import io.vproxy.base.Config
 import vproxy.base.connection.*
-import vproxy.base.dhcp.DHCPClientHelper
-import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.LogType
-import vproxy.base.util.Logger
-import vproxy.base.util.RingBuffer
-import vproxy.base.util.Version
-import vproxy.base.util.callback.BlockCallback
+import io.vproxy.base.dhcp.DHCPClientHelper
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
+import io.vproxy.base.util.RingBuffer
+import io.vproxy.base.util.Version
+import io.vproxy.base.util.callback.BlockCallback
 import vproxy.base.util.coll.Tuple
-import vproxy.base.util.nio.ByteArrayChannel
-import vproxy.base.util.thread.VProxyThread
+import io.vproxy.base.util.nio.ByteArrayChannel
+import io.vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.launch
 import vproxy.lib.common.sleep
 import vproxy.lib.common.unsafeIO
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1Server
-import vproxy.vfd.IP
-import vproxy.vfd.IPPort
-import vproxy.vfd.SocketFD
-import vproxy.vfd.VFDConfig
+import io.vproxy.vfd.IP
+import io.vproxy.vfd.IPPort
+import io.vproxy.vfd.SocketFD
+import io.vproxy.vfd.VFDConfig
 import java.io.IOException
 
 object HelloWorld {
@@ -29,172 +29,177 @@ object HelloWorld {
   @Throws(Exception::class)
   @Suppress("unused_parameter")
   fun main0(args: Array<String?>?) {
-    Logger.alert("You are using vproxy " + Version.VERSION)
-    val sLoop = SelectorEventLoop.open()
+    _root_ide_package_.io.vproxy.base.util.Logger.alert("You are using vproxy " + _root_ide_package_.io.vproxy.base.util.Version.VERSION)
+    val sLoop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
     val nLoop = sLoop.ensureNetEventLoop()
-    sLoop.loop { r -> VProxyThread.create(r, "hello-world-main") }
-    if (VFDConfig.useFStack) {
-      Logger.warn(LogType.ALERT, "DHCP will not run when using FStack")
-    } else if (!Config.dhcpGetDnsListEnabled) {
-      Logger.alert("Feature 'dhcp to get dns list' NOT enabled.")
-      Logger.alert("You may set -DhcpGetDnsListNics=all or eth0,eth1,... to enable the feature.")
+    sLoop.loop { r -> _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(r, "hello-world-main") }
+    if (_root_ide_package_.io.vproxy.vfd.VFDConfig.useFStack) {
+      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "DHCP will not run when using FStack")
+    } else if (!_root_ide_package_.io.vproxy.base.Config.dhcpGetDnsListEnabled) {
+      _root_ide_package_.io.vproxy.base.util.Logger.alert("Feature 'dhcp to get dns list' NOT enabled.")
+      _root_ide_package_.io.vproxy.base.util.Logger.alert("You may set -DhcpGetDnsListNics=all or eth0,eth1,... to enable the feature.")
     } else {
-      Logger.alert("Retrieving dns servers using DHCP ...")
-      val cb: BlockCallback<Set<IP>, IOException> =
-        BlockCallback<Set<IP>, IOException>()
-      DHCPClientHelper.getDomainNameServers(sLoop, Config.dhcpGetDnsListNics, 1, cb)
+      _root_ide_package_.io.vproxy.base.util.Logger.alert("Retrieving dns servers using DHCP ...")
+      val cb: _root_ide_package_.io.vproxy.base.util.callback.BlockCallback<Set<_root_ide_package_.io.vproxy.vfd.IP>, IOException> =
+        _root_ide_package_.io.vproxy.base.util.callback.BlockCallback<Set<_root_ide_package_.io.vproxy.vfd.IP>, IOException>()
+      _root_ide_package_.io.vproxy.base.dhcp.DHCPClientHelper.getDomainNameServers(sLoop, _root_ide_package_.io.vproxy.base.Config.dhcpGetDnsListNics, 1, cb)
       try {
-        val ips: Set<IP> = cb.block()
-        Logger.alert("dhcp returns with dns servers: $ips")
+        val ips: Set<_root_ide_package_.io.vproxy.vfd.IP> = cb.block()
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("dhcp returns with dns servers: $ips")
       } catch (e: IOException) {
-        Logger.warn(LogType.ALERT, "failed to retrieve dns servers from dhcp", e)
+        _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "failed to retrieve dns servers from dhcp", e)
       }
     }
     val listenPort = 8080
     sLoop.launch {
-      val httpServerSock = unsafeIO { ServerSock.create(IPPort("0.0.0.0", listenPort)).coroutine() }
+      val httpServerSock = unsafeIO { _root_ide_package_.io.vproxy.base.connection.ServerSock.create(
+        _root_ide_package_.io.vproxy.vfd.IPPort(
+          "0.0.0.0",
+          listenPort
+        )
+      ).coroutine() }
       val server = CoroutineHttp1Server(httpServerSock)
       server
-        .get("/") { it.conn.response(200).send("vproxy ${Version.VERSION}\r\n") }
+        .get("/") { it.conn.response(200).send("vproxy ${_root_ide_package_.io.vproxy.base.util.Version.VERSION}\r\n") }
         .get("/hello") {
           it.conn.response(200).send(
-            "Welcome to vproxy ${Version.VERSION}.\r\n" +
+            "Welcome to vproxy ${_root_ide_package_.io.vproxy.base.util.Version.VERSION}.\r\n" +
               "Your request address is ${it.conn.base().remote.formatToIPPortString()}.\r\n" +
               "Server address is ${it.conn.base().local.formatToIPPortString()}.\r\n"
           )
         }
       server.start()
     }
-    Logger.alert("HTTP server is listening on $listenPort")
-    if (VFDConfig.useFStack) {
-      Logger.warn(LogType.ALERT, "F-Stack does not support 127.0.0.1 nor to request self ip address.")
-      Logger.warn(LogType.ALERT, "You may run `curl \$ip:$listenPort/hello` to see if the TCP server is working.")
-      Logger.warn(LogType.ALERT, "Or you may run -Deploy=Simple to start a simple loadbalancer to verify the TCP client functions.")
+    _root_ide_package_.io.vproxy.base.util.Logger.alert("HTTP server is listening on $listenPort")
+    if (_root_ide_package_.io.vproxy.vfd.VFDConfig.useFStack) {
+      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "F-Stack does not support 127.0.0.1 nor to request self ip address.")
+      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "You may run `curl \$ip:$listenPort/hello` to see if the TCP server is working.")
+      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "Or you may run -Deploy=Simple to start a simple loadbalancer to verify the TCP client functions.")
     } else {
       sLoop.launch {
         sleep(1000)
-        Logger.alert("HTTP client now starts ...")
-        Logger.alert("Making request: GET /hello")
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("HTTP client now starts ...")
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("Making request: GET /hello")
 
-        val client = CoroutineHttp1ClientConnection.create(IPPort("127.0.0.1", listenPort))
+        val client = CoroutineHttp1ClientConnection.create(_root_ide_package_.io.vproxy.vfd.IPPort("127.0.0.1", listenPort))
         defer { client.close() }
         client.get("/hello").send()
         val resp = client.readResponse()
-        Logger.alert("Server responds:\n${resp.body}")
-        Logger.alert("TCP seems OK")
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("Server responds:\n${resp.body}")
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("TCP seems OK")
       }
     }
-    val listenAddress = IPPort(IP.from(byteArrayOf(0, 0, 0, 0)), listenPort)
-    val connectAddress = IPPort(IP.from(byteArrayOf(127, 0, 0, 1)), listenPort)
+    val listenAddress = _root_ide_package_.io.vproxy.vfd.IPPort(IP.from(byteArrayOf(0, 0, 0, 0)), listenPort)
+    val connectAddress = _root_ide_package_.io.vproxy.vfd.IPPort(IP.from(byteArrayOf(127, 0, 0, 1)), listenPort)
     val bufferSize = 1024
-    val sock: ServerSock = ServerSock.createUDP(listenAddress, sLoop)
-    nLoop.addServer(sock, null, object : ServerHandler {
-      override fun acceptFail(ctx: ServerHandlerContext, err: IOException) {
-        Logger.error(LogType.ALERT, "Accept($sock) failed", err)
+    val sock: _root_ide_package_.io.vproxy.base.connection.ServerSock = _root_ide_package_.io.vproxy.base.connection.ServerSock.createUDP(listenAddress, sLoop)
+    nLoop.addServer(sock, null, object : _root_ide_package_.io.vproxy.base.connection.ServerHandler {
+      override fun acceptFail(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext, err: IOException) {
+        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "Accept($sock) failed", err)
       }
 
-      override fun connection(ctx: ServerHandlerContext, connection: Connection) {
+      override fun connection(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext, connection: _root_ide_package_.io.vproxy.base.connection.Connection) {
         try {
-          nLoop.addConnection(connection, null, object : ConnectionHandler {
-            override fun readable(ctx: ConnectionHandlerContext) {
+          nLoop.addConnection(connection, null, object : _root_ide_package_.io.vproxy.base.connection.ConnectionHandler {
+            override fun readable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore, the buffers are piped
             }
 
-            override fun writable(ctx: ConnectionHandlerContext) {
+            override fun writable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore, the buffers are piped
             }
 
-            override fun exception(ctx: ConnectionHandlerContext, err: IOException) {
-              Logger.error(LogType.ALERT, "Connection $connection got exception ", err)
+            override fun exception(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext, err: IOException) {
+              _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "Connection $connection got exception ", err)
               ctx.connection.close()
             }
 
-            override fun remoteClosed(ctx: ConnectionHandlerContext) {
+            override fun remoteClosed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               ctx.connection.close()
             }
 
-            override fun closed(ctx: ConnectionHandlerContext) {
+            override fun closed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore
             }
 
-            override fun removed(ctx: ConnectionHandlerContext) {
+            override fun removed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore
             }
           })
         } catch (e: IOException) {
-          Logger.error(LogType.ALERT, "adding connection $connection from $sock to event loop failed", e)
+          _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "adding connection $connection from $sock to event loop failed", e)
         }
       }
 
-      override fun getIOBuffers(channel: SocketFD): Tuple<RingBuffer, RingBuffer> {
-        val buf = RingBuffer.allocateDirect(bufferSize)
-        return Tuple<RingBuffer, RingBuffer>(buf, buf) // pipe input to output
+      override fun getIOBuffers(channel: _root_ide_package_.io.vproxy.vfd.SocketFD): Tuple<_root_ide_package_.io.vproxy.base.util.RingBuffer, _root_ide_package_.io.vproxy.base.util.RingBuffer> {
+        val buf = _root_ide_package_.io.vproxy.base.util.RingBuffer.allocateDirect(bufferSize)
+        return Tuple<_root_ide_package_.io.vproxy.base.util.RingBuffer, _root_ide_package_.io.vproxy.base.util.RingBuffer>(buf, buf) // pipe input to output
       }
 
-      override fun removed(ctx: ServerHandlerContext) {
-        Logger.alert("server sock $sock removed from loop")
+      override fun removed(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext) {
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("server sock $sock removed from loop")
       }
     })
-    Logger.alert("UDP server is listening on $listenPort")
-    if (VFDConfig.useFStack) {
-      Logger.warn(
-        LogType.ALERT,
+    _root_ide_package_.io.vproxy.base.util.Logger.alert("UDP server is listening on $listenPort")
+    if (_root_ide_package_.io.vproxy.vfd.VFDConfig.useFStack) {
+      _root_ide_package_.io.vproxy.base.util.Logger.warn(
+        _root_ide_package_.io.vproxy.base.util.LogType.ALERT,
         "You may run `nc -u \$ip $listenPort` to see if the UDP server is working. It's an echo server, it will respond with anything you input."
       )
     } else {
       sLoop.delay(2000) {
-        Logger.alert("UDP client now starts ...")
+        _root_ide_package_.io.vproxy.base.util.Logger.alert("UDP client now starts ...")
         try {
-          val conn: ConnectableConnection = ConnectableConnection.createUDP(
+          val conn: _root_ide_package_.io.vproxy.base.connection.ConnectableConnection = _root_ide_package_.io.vproxy.base.connection.ConnectableConnection.createUDP(
             connectAddress,
-            ConnectionOpts(),
-            RingBuffer.allocateDirect(bufferSize),
-            RingBuffer.allocateDirect(bufferSize)
+            _root_ide_package_.io.vproxy.base.connection.ConnectionOpts(),
+            _root_ide_package_.io.vproxy.base.util.RingBuffer.allocateDirect(bufferSize),
+            _root_ide_package_.io.vproxy.base.util.RingBuffer.allocateDirect(bufferSize)
           )
-          nLoop.addConnectableConnection(conn, null, object : ConnectableConnectionHandler {
+          nLoop.addConnectableConnection(conn, null, object : _root_ide_package_.io.vproxy.base.connection.ConnectableConnectionHandler {
             private val message = "hello world"
-            override fun connected(ctx: ConnectableConnectionHandlerContext) {
+            override fun connected(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectableConnectionHandlerContext) {
               // send data when connected
               val str = message
-              Logger.alert("UDP client sends a message to server: $str")
-              ctx.connection.outBuffer.storeBytesFrom(ByteArrayChannel.fromFull(str.toByteArray()))
+              _root_ide_package_.io.vproxy.base.util.Logger.alert("UDP client sends a message to server: $str")
+              ctx.connection.outBuffer.storeBytesFrom(_root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel.fromFull(str.toByteArray()))
             }
 
-            override fun readable(ctx: ConnectionHandlerContext) {
-              val chnl = ByteArrayChannel.fromEmpty(bufferSize)
+            override fun readable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
+              val chnl = _root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel.fromEmpty(bufferSize)
               val len: Int = ctx.connection.inBuffer.writeTo(chnl)
               val str = String(chnl.bytes, 0, len)
-              Logger.alert("UDP client receives a message from server: $str")
+              _root_ide_package_.io.vproxy.base.util.Logger.alert("UDP client receives a message from server: $str")
               if (str == message) {
-                Logger.alert("UDP seems OK")
+                _root_ide_package_.io.vproxy.base.util.Logger.alert("UDP seems OK")
                 ctx.connection.close()
               } else {
-                Logger.error(LogType.ALERT, "received message is not complete")
+                _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "received message is not complete")
               }
             }
 
-            override fun writable(ctx: ConnectionHandlerContext) {
+            override fun writable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore
             }
 
-            override fun exception(ctx: ConnectionHandlerContext, err: IOException) {
-              Logger.error(LogType.ALERT, "Connection $conn got exception ", err)
+            override fun exception(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext, err: IOException) {
+              _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "Connection $conn got exception ", err)
             }
 
-            override fun remoteClosed(ctx: ConnectionHandlerContext) {
+            override fun remoteClosed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               ctx.connection.close()
             }
 
-            override fun closed(ctx: ConnectionHandlerContext) {
+            override fun closed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore
             }
 
-            override fun removed(ctx: ConnectionHandlerContext) {
+            override fun removed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
               // ignore
             }
           })
         } catch (e: IOException) {
-          Logger.error(LogType.ALERT, "Initiating UDP Client failed", e)
+          _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.ALERT, "Initiating UDP Client failed", e)
         }
       }
     }

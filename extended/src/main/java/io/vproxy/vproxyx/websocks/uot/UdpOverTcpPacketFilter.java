@@ -1,18 +1,18 @@
-package vproxyx.websocks.uot;
+package io.vproxy.vproxyx.websocks.uot;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.vfd.IPPort;
-import vproxy.vpacket.AbstractPacket;
-import vproxy.vpacket.PacketBytes;
-import vproxy.vpacket.TcpPacket;
-import vproxy.vpacket.UdpPacket;
-import vproxy.vswitch.PacketBuffer;
-import vproxy.vswitch.PacketFilterHelper;
-import vproxy.vswitch.plugin.FilterResult;
-import vproxy.vswitch.plugin.PacketFilter;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.AbstractPacket;
+import io.vproxy.vpacket.PacketBytes;
+import io.vproxy.vpacket.TcpPacket;
+import io.vproxy.vpacket.UdpPacket;
+import io.vproxy.vswitch.PacketBuffer;
+import io.vproxy.vswitch.PacketFilterHelper;
+import io.vproxy.vswitch.plugin.FilterResult;
+import io.vproxy.vswitch.plugin.PacketFilter;
 
 public class UdpOverTcpPacketFilter implements PacketFilter {
     private static final byte TCP_OPTION_VPROXY_UOT = (byte) 132;

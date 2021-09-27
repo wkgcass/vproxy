@@ -1,6 +1,6 @@
-package vproxy.base.util.bytearray;
+package io.vproxy.base.util.bytearray;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 public class PersistByteArray extends UnmodifiableByteArray {
     private final String toString;

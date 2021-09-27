@@ -1,11 +1,12 @@
-package vproxy.base.processor.httpbin.hpack;
+package io.vproxy.base.processor.httpbin.hpack;
 
 import com.twitter.hpack.Decoder;
 import com.twitter.hpack.Encoder;
-import vproxy.base.processor.httpbin.entity.Header;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;

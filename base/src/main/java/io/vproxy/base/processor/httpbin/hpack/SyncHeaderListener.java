@@ -1,7 +1,8 @@
-package vproxy.base.processor.httpbin.hpack;
+package io.vproxy.base.processor.httpbin.hpack;
 
 import com.twitter.hpack.HeaderListener;
-import vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
 
 import java.util.ArrayList;
 import java.util.List;

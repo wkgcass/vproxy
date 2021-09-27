@@ -1,10 +1,10 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.util.exception.XException;
-import vproxy.vswitch.Switch;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.vswitch.Switch;
 
 public class TapHandle {
     private TapHandle() {

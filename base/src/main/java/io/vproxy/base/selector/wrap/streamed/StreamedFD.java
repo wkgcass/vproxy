@@ -1,15 +1,16 @@
-package vproxy.base.selector.wrap.streamed;
+package io.vproxy.base.selector.wrap.streamed;
 
-import vproxy.base.selector.wrap.VirtualFD;
-import vproxy.base.selector.wrap.WrappedSelector;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.vfd.FD;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
-import vproxy.vmirror.MirrorDataFactory;
+import io.vproxy.vmirror.MirrorDataFactory;
+import io.vproxy.base.selector.wrap.VirtualFD;
+import io.vproxy.base.selector.wrap.WrappedSelector;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.FD;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
+import io.vproxy.vmirror.MirrorDataFactory;
 
 import java.io.IOException;
 import java.net.SocketOption;

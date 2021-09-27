@@ -1,7 +1,7 @@
-package vproxy.vfd.jdk;
+package io.vproxy.vfd.jdk;
 
-import vproxy.vfd.DatagramFD;
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.net.SocketOption;

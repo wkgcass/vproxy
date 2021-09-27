@@ -1,11 +1,12 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.processor.Hint;
-import vproxy.base.processor.OOContext;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.httpbin.frame.SettingsFrame;
-import vproxy.base.util.Logger;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.processor.httpbin.frame.SettingsFrame;
+import io.vproxy.base.processor.Hint;
+import io.vproxy.base.processor.OOContext;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.httpbin.frame.SettingsFrame;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IPPort;
 
 public class BinaryHttpContext extends OOContext<BinaryHttpSubContext> {
     final IPPort clientAddress;

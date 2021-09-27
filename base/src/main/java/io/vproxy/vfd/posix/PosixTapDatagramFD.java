@@ -1,9 +1,10 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.base.util.OS;
-import vproxy.vfd.NoSockAddr;
-import vproxy.vfd.TapDatagramFD;
-import vproxy.vfd.TapInfo;
+import io.vproxy.base.util.OS;
+import io.vproxy.base.util.OS;
+import io.vproxy.vfd.NoSockAddr;
+import io.vproxy.vfd.TapDatagramFD;
+import io.vproxy.vfd.TapInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

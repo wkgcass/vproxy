@@ -1,4 +1,4 @@
-package vproxy.base.util.exception;
+package io.vproxy.base.util.exception;
 
 public class AlreadyExistException extends Exception {
     public AlreadyExistException(String resourceType, String name) {

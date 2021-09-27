@@ -1,5 +1,6 @@
-package vproxy.vfd.jdk;
+package io.vproxy.vfd.jdk;
 
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 import java.io.IOException;

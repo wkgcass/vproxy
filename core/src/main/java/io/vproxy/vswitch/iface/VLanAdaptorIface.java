@@ -1,7 +1,7 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
-import vproxy.vpacket.EthernetPacket;
-import vproxy.vswitch.PacketBuffer;
+import io.vproxy.vpacket.EthernetPacket;
+import io.vproxy.vswitch.PacketBuffer;
 
 public class VLanAdaptorIface extends Iface implements SubIface {
     private final Iface parentIface;

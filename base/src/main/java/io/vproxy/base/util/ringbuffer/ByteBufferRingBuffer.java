@@ -1,7 +1,7 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
-import vproxy.base.util.ByteBufferEx;
-import vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.util.RingBuffer;
 
 import java.io.IOException;
 

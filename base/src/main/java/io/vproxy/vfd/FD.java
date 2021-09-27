@@ -1,6 +1,7 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
-import vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
 
 import java.io.Closeable;
 import java.io.IOException;

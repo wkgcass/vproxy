@@ -1,9 +1,9 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.IPPort;
-import vproxy.vfd.ServerSocketFD;
-import vproxy.vfd.SocketFD;
-import vproxy.vfd.UDSPath;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.ServerSocketFD;
+import io.vproxy.vfd.SocketFD;
+import io.vproxy.vfd.UDSPath;
 
 import java.io.File;
 import java.io.IOException;

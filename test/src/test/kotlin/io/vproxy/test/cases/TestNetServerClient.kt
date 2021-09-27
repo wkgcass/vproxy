@@ -1,32 +1,32 @@
-package vproxy.test.cases
+package io.vproxy.test.cases
 
 import kotlinx.coroutines.channels.Channel
 import org.junit.*
-import vproxy.base.connection.ConnectableConnection
-import vproxy.base.connection.ConnectionOpts
-import vproxy.base.connection.ServerSock
-import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.ByteArray
-import vproxy.base.util.RingBuffer
-import vproxy.base.util.thread.VProxyThread
+import io.vproxy.base.connection.ConnectableConnection
+import io.vproxy.base.connection.ConnectionOpts
+import io.vproxy.base.connection.ServerSock
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.util.ByteArray
+import io.vproxy.base.util.RingBuffer
+import io.vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.*
 import vproxy.lib.tcp.CoroutineServerSock
-import vproxy.test.tool.Client
-import vproxy.vfd.IPPort
+import io.vproxy.test.tool.Client
+import io.vproxy.vfd.IPPort
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 
 class TestNetServerClient {
   companion object {
     private const val listenPort = 30080
-    private var loop: SelectorEventLoop? = null
+    private var loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop? = null
 
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      val loop = SelectorEventLoop.open()
+      val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
       this.loop = loop
-      loop.loop { VProxyThread.create(it, "test-net-server-client") }
+      loop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "test-net-server-client") }
     }
 
     @JvmStatic
@@ -40,7 +40,12 @@ class TestNetServerClient {
 
   @Before
   fun setUp() {
-    server = ServerSock.create(IPPort("127.0.0.1", listenPort)).coroutine(loop!!.ensureNetEventLoop())
+    server = _root_ide_package_.io.vproxy.base.connection.ServerSock.create(
+      _root_ide_package_.io.vproxy.vfd.IPPort(
+        "127.0.0.1",
+        listenPort
+      )
+    ).coroutine(loop!!.ensureNetEventLoop())
     Thread.sleep(500)
   }
 
@@ -55,7 +60,7 @@ class TestNetServerClient {
     val promise = loop!!.execute {
       val conn = server!!.accept()
       vplib.coroutine.with(conn).launch {
-        val buf = ByteArray.allocate(1024)
+        val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
         while (true) {
           val n = conn.read(buf)
           val data = buf.sub(0, n)
@@ -78,7 +83,7 @@ class TestNetServerClient {
       sb.toString()
     }
 
-    val client = Client(listenPort)
+    val client = _root_ide_package_.io.vproxy.test.tool.Client(listenPort)
     client.connect()
     for (s in listOf("hello\r\n", "world\r\n", "foo\r\n", "bar\r\n")) {
       Assert.assertEquals(s, client.sendAndRecv(s, s.length))
@@ -94,7 +99,7 @@ class TestNetServerClient {
       while (true) {
         val conn = server!!.accept()
         vplib.coroutine.with(conn).launch {
-          val buf = ByteArray.allocate(1024)
+          val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
           while (true) {
             val n = conn.read(buf)
             if (n == 0) {
@@ -110,14 +115,14 @@ class TestNetServerClient {
     val dataQ = LinkedBlockingDeque<String>()
     loop!!.launch {
       val client = unsafeIO {
-        ConnectableConnection.create(
-          IPPort("127.0.0.1", listenPort), ConnectionOpts(),
-          RingBuffer.allocate(1024), RingBuffer.allocate(1024)
+        _root_ide_package_.io.vproxy.base.connection.ConnectableConnection.create(
+          _root_ide_package_.io.vproxy.vfd.IPPort("127.0.0.1", listenPort), _root_ide_package_.io.vproxy.base.connection.ConnectionOpts(),
+          _root_ide_package_.io.vproxy.base.util.RingBuffer.allocate(1024), _root_ide_package_.io.vproxy.base.util.RingBuffer.allocate(1024)
         ).coroutine(loop!!.ensureNetEventLoop())
       }
       defer { client.close() }
       client.connect()
-      val buf = ByteArray.allocate(1024)
+      val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
       for (s in listOf("hello", "world", "foo", "bar")) {
         client.write(s)
         val n = client.read(buf)

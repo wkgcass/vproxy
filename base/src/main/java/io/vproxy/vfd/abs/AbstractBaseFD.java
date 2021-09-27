@@ -1,9 +1,12 @@
-package vproxy.vfd.abs;
+package io.vproxy.vfd.abs;
 
-import vproxy.base.util.ByteBufferEx;
-import vproxy.base.util.direct.DirectByteBuffer;
-import vproxy.base.util.direct.DirectMemoryUtils;
-import vproxy.vfd.FD;
+import io.vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.util.direct.DirectByteBuffer;
+import io.vproxy.base.util.direct.DirectMemoryUtils;
+import io.vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.util.direct.DirectByteBuffer;
+import io.vproxy.base.util.direct.DirectMemoryUtils;
+import io.vproxy.vfd.FD;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

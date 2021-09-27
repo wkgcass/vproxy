@@ -3,11 +3,11 @@ module vproxy.lib {
     requires kotlinx.coroutines.core.jvm;
     requires vproxy.base;
 
-    exports vproxy.lib.common;
-    exports vproxy.lib.docker;
-    exports vproxy.lib.docker.entity;
-    exports vproxy.lib.http;
-    exports vproxy.lib.http.route;
-    exports vproxy.lib.http1;
-    exports vproxy.lib.tcp;
+    exports io.vproxy.lib.common;
+    exports io.vproxy.lib.docker;
+    exports io.vproxy.lib.docker.entity;
+    exports io.vproxy.lib.http;
+    exports io.vproxy.lib.http.route;
+    exports io.vproxy.lib.http1;
+    exports io.vproxy.lib.tcp;
 }

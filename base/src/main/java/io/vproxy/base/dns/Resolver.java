@@ -1,15 +1,20 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.base.Config;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.anno.Blocking;
-import vproxy.base.util.callback.BlockCallback;
-import vproxy.base.util.callback.Callback;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.anno.Blocking;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.anno.Blocking;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.io.*;
 import java.net.UnknownHostException;

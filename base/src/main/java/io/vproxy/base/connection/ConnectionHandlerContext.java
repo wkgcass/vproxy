@@ -1,4 +1,4 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
 public class ConnectionHandlerContext {
     public final NetEventLoop eventLoop;

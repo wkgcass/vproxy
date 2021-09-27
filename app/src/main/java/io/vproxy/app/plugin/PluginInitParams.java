@@ -1,6 +1,6 @@
-package vproxy.app.plugin;
+package io.vproxy.app.plugin;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 public class PluginInitParams {
     public final String[] arguments;

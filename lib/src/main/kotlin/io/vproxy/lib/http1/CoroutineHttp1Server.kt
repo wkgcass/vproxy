@@ -1,9 +1,9 @@
-package vproxy.lib.http1
+package io.vproxy.lib.http1
 
-import vproxy.base.processor.http1.entity.Request
-import vproxy.base.util.ByteArray
-import vproxy.base.util.LogType
-import vproxy.base.util.Logger
+import io.vproxy.base.processor.http1.entity.Request
+import io.vproxy.base.util.ByteArray
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
 import vproxy.lib.common.vplib
 import vproxy.lib.http.GeneralCoroutineHttpServer
 import vproxy.lib.http.HttpHeaders
@@ -25,7 +25,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
         try {
           handleConnection(conn)
         } catch (e: Throwable) {
-          Logger.error(LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
+          _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
         }
       }
     }
@@ -46,7 +46,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       try {
         handler(conn)
       } catch (e: Throwable) {
-        Logger.error(LogType.IMPROPER_USE, "connectionHandler thrown exception when handling $conn", e)
+        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "connectionHandler thrown exception when handling $conn", e)
         return
       }
     }
@@ -59,7 +59,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
     }
   }
 
-  private class ReqWrapper(val req: Request) : HttpServerRequest {
+  private class ReqWrapper(val req: _root_ide_package_.io.vproxy.base.processor.http1.entity.Request) : HttpServerRequest {
     private val headers = HeadersWrap(req)
 
     override fun method(): String {
@@ -70,21 +70,21 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       return req.uri
     }
 
-    private var bodyCache: ByteArray? = null
+    private var bodyCache: _root_ide_package_.io.vproxy.base.util.ByteArray? = null
     override fun headers(): HttpHeaders {
       return headers
     }
 
-    override fun body(): ByteArray {
+    override fun body(): _root_ide_package_.io.vproxy.base.util.ByteArray {
       if (bodyCache != null) {
         return bodyCache!!
       }
       if (req.body == null) {
         if (req.chunks == null) {
-          return ByteArray.allocate(0)
+          return _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(0)
         }
         // use chunks
-        var ret: ByteArray? = null
+        var ret: _root_ide_package_.io.vproxy.base.util.ByteArray? = null
         for (chunk in req.chunks) {
           if (ret == null) {
             ret = chunk.content
@@ -98,13 +98,13 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
         bodyCache = req.body
       }
       if (bodyCache == null) {
-        return ByteArray.allocate(0)
+        return _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(0)
       }
       return bodyCache!!
     }
   }
 
-  private class HeadersWrap(val req: Request) : HttpHeaders {
+  private class HeadersWrap(val req: _root_ide_package_.io.vproxy.base.processor.http1.entity.Request) : HttpHeaders {
     private val cache = HashMap<String, String>()
     private var travelIndex = 0
     override fun get(name: String): String? {

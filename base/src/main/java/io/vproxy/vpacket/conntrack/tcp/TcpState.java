@@ -1,4 +1,4 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
 public enum TcpState {
     LISTEN(false, false), // represents waiting for a connection request

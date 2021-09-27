@@ -1,4 +1,4 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
 public interface PartialPacket {
     int LEVEL_KEY_FIELDS = 0;

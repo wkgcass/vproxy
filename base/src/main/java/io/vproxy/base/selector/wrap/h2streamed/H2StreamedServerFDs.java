@@ -1,9 +1,9 @@
-package vproxy.base.selector.wrap.h2streamed;
+package io.vproxy.base.selector.wrap.h2streamed;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.arqudp.ArqUDPBasedFDs;
-import vproxy.base.selector.wrap.streamed.StreamedArqUDPServerFDs;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.arqudp.ArqUDPBasedFDs;
+import io.vproxy.base.selector.wrap.streamed.StreamedArqUDPServerFDs;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

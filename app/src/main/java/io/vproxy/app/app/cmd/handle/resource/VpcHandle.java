@@ -1,15 +1,15 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
-import vproxy.app.app.cmd.handle.param.NetworkHandle;
-import vproxy.base.util.Annotations;
-import vproxy.base.util.Network;
-import vproxy.vswitch.Switch;
-import vproxy.vswitch.VirtualNetwork;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.handle.param.AnnotationsHandle;
+import io.vproxy.app.app.cmd.handle.param.NetworkHandle;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.Network;
+import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.VirtualNetwork;
 
 import java.util.ArrayList;
 import java.util.Comparator;

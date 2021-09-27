@@ -1,7 +1,7 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.IPPort;
-import vproxy.vfd.UDSPath;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.UDSPath;
 
 public class SocketAddressUDS implements VSocketAddress {
     public final String path;

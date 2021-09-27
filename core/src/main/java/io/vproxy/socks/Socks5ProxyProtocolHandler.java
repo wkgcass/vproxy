@@ -1,16 +1,26 @@
-package vproxy.socks;
+package io.vproxy.socks;
 
-import vproxy.base.connection.Connector;
-import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.socks.AddressType;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.socks.AddressType;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.socks.AddressType;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.vfd.IP;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

@@ -1,6 +1,6 @@
-package vproxy.base.processor.dubbo;
+package io.vproxy.base.processor.dubbo;
 
-import vproxy.base.processor.HeadPayloadProcessor;
+import io.vproxy.base.processor.HeadPayloadProcessor;
 
 public class DubboProcessor extends HeadPayloadProcessor {
     public DubboProcessor() {

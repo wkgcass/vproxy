@@ -1,4 +1,4 @@
-package vproxy.base.util.coll
+package io.vproxy.base.util.coll
 
 data class Tuple3<A, B, C>(
   @JvmField

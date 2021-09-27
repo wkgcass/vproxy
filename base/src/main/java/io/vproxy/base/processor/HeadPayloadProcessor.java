@@ -1,7 +1,7 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.base.util.ByteArray;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.vfd.IPPort;
 
 public abstract class HeadPayloadProcessor extends OOProcessor<HeadPayloadProcessor.HeadPayloadContext, HeadPayloadProcessor.HeadPayloadSubContext> {
     private final String name;

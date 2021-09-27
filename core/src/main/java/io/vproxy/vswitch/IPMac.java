@@ -1,8 +1,9 @@
-package vproxy.vswitch;
+package io.vproxy.vswitch;
 
-import vproxy.base.util.Annotations;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 
 import java.util.Objects;
 

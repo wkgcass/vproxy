@@ -1,4 +1,4 @@
-package vproxy.base.prometheus;
+package io.vproxy.base.prometheus;
 
 import java.util.Map;
 import java.util.concurrent.atomic.LongAdder;

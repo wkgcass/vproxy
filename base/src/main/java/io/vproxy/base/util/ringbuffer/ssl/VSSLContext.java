@@ -1,4 +1,4 @@
-package vproxy.base.util.ringbuffer.ssl;
+package io.vproxy.base.util.ringbuffer.ssl;
 
 import javax.net.ssl.SSLContext;
 

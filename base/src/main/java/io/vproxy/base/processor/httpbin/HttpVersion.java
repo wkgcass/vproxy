@@ -1,4 +1,4 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
 public enum HttpVersion {
     HTTP2,

@@ -1,17 +1,23 @@
-package vproxy.base.processor.http1;
+package io.vproxy.base.processor.http1;
 
-import vproxy.base.processor.ConnectionDelegate;
-import vproxy.base.processor.OOSubContext;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.http1.builder.ChunkBuilder;
-import vproxy.base.processor.http1.builder.HeaderBuilder;
-import vproxy.base.processor.http1.builder.RequestBuilder;
-import vproxy.base.processor.http1.builder.ResponseBuilder;
-import vproxy.base.processor.http1.entity.Request;
-import vproxy.base.processor.http1.entity.Response;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.processor.http1.builder.ChunkBuilder;
+import io.vproxy.base.processor.http1.builder.HeaderBuilder;
+import io.vproxy.base.processor.http1.builder.RequestBuilder;
+import io.vproxy.base.processor.http1.builder.ResponseBuilder;
+import io.vproxy.base.processor.http1.entity.Request;
+import io.vproxy.base.processor.http1.entity.Response;
+import io.vproxy.base.processor.ConnectionDelegate;
+import io.vproxy.base.processor.OOSubContext;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.http1.builder.ChunkBuilder;
+import io.vproxy.base.processor.http1.builder.HeaderBuilder;
+import io.vproxy.base.processor.http1.builder.RequestBuilder;
+import io.vproxy.base.processor.http1.builder.ResponseBuilder;
+import io.vproxy.base.processor.http1.entity.Request;
+import io.vproxy.base.processor.http1.entity.Response;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import java.util.ArrayList;
 import java.util.Arrays;

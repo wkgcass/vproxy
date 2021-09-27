@@ -1,11 +1,12 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.handle.param.AddrHandle;
-import vproxy.app.controller.RESPController;
-import vproxy.vfd.IPPort;
+import io.vproxy.app.controller.RESPController;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.handle.param.AddrHandle;
+import io.vproxy.app.controller.RESPController;
+import io.vproxy.vfd.IPPort;
 
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;

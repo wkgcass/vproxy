@@ -1,4 +1,4 @@
-package vproxy.base.util.unsafe;
+package io.vproxy.base.util.unsafe;
 
 import jdk.internal.misc.Unsafe;
 

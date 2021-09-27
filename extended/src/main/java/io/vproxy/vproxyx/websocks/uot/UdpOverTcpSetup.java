@@ -1,21 +1,21 @@
-package vproxyx.websocks.uot;
+package io.vproxy.vproxyx.websocks.uot;
 
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Network;
-import vproxy.base.util.Utils;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.*;
 import vproxy.base.util.coll.Tuple;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.vfd.*;
-import vproxy.vswitch.RouteTable;
-import vproxy.vswitch.Switch;
-import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
-import vproxy.vswitch.iface.XDPIface;
-import vproxy.xdp.BPFMap;
-import vproxy.xdp.BPFMode;
-import vproxy.xdp.BPFObject;
-import vproxy.xdp.UMem;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.vswitch.RouteTable;
+import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
+import io.vproxy.vswitch.iface.XDPIface;
+import io.vproxy.xdp.BPFMap;
+import io.vproxy.xdp.BPFMode;
+import io.vproxy.xdp.BPFObject;
+import io.vproxy.xdp.UMem;
 
 import java.net.Inet4Address;
 import java.net.Inet6Address;

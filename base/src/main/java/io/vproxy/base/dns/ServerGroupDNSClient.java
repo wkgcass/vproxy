@@ -1,14 +1,20 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.base.component.svrgroup.ServerGroup;
-import vproxy.base.component.svrgroup.ServerListener;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.callback.Callback;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vfd.DatagramFD;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.component.svrgroup.ServerListener;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.component.svrgroup.ServerListener;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

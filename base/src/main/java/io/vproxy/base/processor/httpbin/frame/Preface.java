@@ -1,9 +1,9 @@
-package vproxy.base.processor.httpbin.frame;
+package io.vproxy.base.processor.httpbin.frame;
 
-import vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import vproxy.base.processor.httpbin.HttpFrame;
-import vproxy.base.processor.httpbin.HttpFrameType;
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.HttpFrame;
+import io.vproxy.base.processor.httpbin.HttpFrameType;
+import io.vproxy.base.util.ByteArray;
 
 public class Preface extends HttpFrame {
     private static final ByteArray PREFACE = ByteArray.from("PRI * HTTP/2.0\r\n\r\nSM\r\n\r\n");

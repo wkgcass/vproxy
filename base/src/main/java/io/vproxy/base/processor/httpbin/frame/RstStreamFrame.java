@@ -1,10 +1,10 @@
-package vproxy.base.processor.httpbin.frame;
+package io.vproxy.base.processor.httpbin.frame;
 
-import vproxy.base.processor.ExceptionWithoutStackTrace;
-import vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import vproxy.base.processor.httpbin.HttpFrame;
-import vproxy.base.processor.httpbin.HttpFrameType;
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.processor.ExceptionWithoutStackTrace;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.HttpFrame;
+import io.vproxy.base.processor.httpbin.HttpFrameType;
+import io.vproxy.base.util.ByteArray;
 
 public class RstStreamFrame extends HttpFrame {
     public int errorCode;

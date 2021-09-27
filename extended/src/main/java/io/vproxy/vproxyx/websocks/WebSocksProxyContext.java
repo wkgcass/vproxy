@@ -1,12 +1,12 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
-import vproxy.base.connection.Connector;
-import vproxy.base.http.HttpContext;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.http.HttpContext;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.socks.Socks5ProxyContext;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.socks.Socks5ProxyContext;
 
 import java.io.IOException;
 

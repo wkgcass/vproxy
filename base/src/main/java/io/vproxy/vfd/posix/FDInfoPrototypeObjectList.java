@@ -1,6 +1,7 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
 
 import java.util.function.Supplier;
 

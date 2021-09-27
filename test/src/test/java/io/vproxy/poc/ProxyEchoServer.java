@@ -1,14 +1,14 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
-import vproxy.base.connection.Connector;
-import vproxy.base.connection.NetEventLoop;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.thread.VProxyThread;
-import vproxy.component.proxy.Proxy;
-import vproxy.component.proxy.ProxyEventHandler;
-import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.component.proxy.Proxy;
+import io.vproxy.component.proxy.ProxyEventHandler;
+import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

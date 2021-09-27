@@ -1,6 +1,6 @@
-package vproxy.app.plugin;
+package io.vproxy.app.plugin;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;

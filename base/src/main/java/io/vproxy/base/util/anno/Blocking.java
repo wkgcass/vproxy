@@ -1,4 +1,4 @@
-package vproxy.base.util.anno;
+package io.vproxy.base.util.anno;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

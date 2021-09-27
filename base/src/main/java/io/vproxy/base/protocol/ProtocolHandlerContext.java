@@ -1,11 +1,13 @@
-package vproxy.base.protocol;
+package io.vproxy.base.protocol;
 
-import vproxy.base.connection.Connection;
-import vproxy.base.connection.NetEventLoop;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.util.concurrent.ConcurrentLinkedQueue;
 

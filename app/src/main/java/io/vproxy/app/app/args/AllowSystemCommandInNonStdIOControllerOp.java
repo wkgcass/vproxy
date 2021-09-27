@@ -1,8 +1,8 @@
-package vproxy.app.app.args;
+package io.vproxy.app.app.args;
 
-import vproxy.app.app.MainCtx;
-import vproxy.app.app.MainOp;
-import vproxy.app.app.cmd.SystemCommand;
+import io.vproxy.app.app.MainCtx;
+import io.vproxy.app.app.MainOp;
+import io.vproxy.app.app.cmd.SystemCommand;
 
 public class AllowSystemCommandInNonStdIOControllerOp implements MainOp {
     @Override

@@ -1,6 +1,6 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
-import vproxy.base.http.HttpContext;
+import io.vproxy.base.http.HttpContext;
 
 public class WebSocksHttpContext extends HttpContext {
     final WebSocksProxyContext webSocksProxyContext;

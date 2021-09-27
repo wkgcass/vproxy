@@ -1,4 +1,4 @@
 /**
  * components for the vporxy app
  */
-package vproxy.component;
+package io.vproxy.component;

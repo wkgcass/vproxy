@@ -1,23 +1,23 @@
-package vproxy.lib.tcp
+package io.vproxy.lib.tcp
 
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import vproxy.base.connection.ConnectableConnection
-import vproxy.base.connection.Connection
-import vproxy.base.connection.NetEventLoop
-import vproxy.base.util.ByteArray
-import vproxy.base.util.RingBuffer
-import vproxy.base.util.nio.ByteArrayChannel
+import io.vproxy.base.connection.ConnectableConnection
+import io.vproxy.base.connection.Connection
+import io.vproxy.base.connection.NetEventLoop
+import io.vproxy.base.util.ByteArray
+import io.vproxy.base.util.RingBuffer
+import io.vproxy.base.util.nio.ByteArrayChannel
 import vproxy.lib.common.vplib
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1ServerConnection
-import vproxy.vfd.IPPort
+import io.vproxy.vfd.IPPort
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class CoroutineConnection(
-  private val loop: NetEventLoop,
-  internal val conn: Connection,
+  private val loop: _root_ide_package_.io.vproxy.base.connection.NetEventLoop,
+  internal val conn: _root_ide_package_.io.vproxy.base.connection.Connection,
 ) : AutoCloseable {
   private var handlerAdded = false
   private val handler = CoroutineConnectionHandler()
@@ -25,15 +25,15 @@ class CoroutineConnection(
   private var reading = false
   private var writing = false
   private var detached = false
-  private var connected = conn !is ConnectableConnection
+  private var connected = conn !is _root_ide_package_.io.vproxy.base.connection.ConnectableConnection
 
-  fun base(): Connection {
+  fun base(): _root_ide_package_.io.vproxy.base.connection.Connection {
     return conn
   }
 
   suspend fun connect() {
-    val conn: ConnectableConnection
-    if (!connected && this.conn is ConnectableConnection) {
+    val conn: _root_ide_package_.io.vproxy.base.connection.ConnectableConnection
+    if (!connected && this.conn is _root_ide_package_.io.vproxy.base.connection.ConnectableConnection) {
       conn = this.conn
     } else {
       return // already connected
@@ -65,7 +65,7 @@ class CoroutineConnection(
   /**
    * @return null when eof
    */
-  suspend fun read(): RingBuffer? {
+  suspend fun read(): _root_ide_package_.io.vproxy.base.util.RingBuffer? {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }
@@ -100,18 +100,18 @@ class CoroutineConnection(
   /**
    * @return read bytes, 0 when eof
    */
-  suspend fun read(buf: ByteArray): Int {
+  suspend fun read(buf: _root_ide_package_.io.vproxy.base.util.ByteArray): Int {
     return read(buf, 0)
   }
 
   /**
    * @return read bytes, 0 when eof
    */
-  suspend fun read(buf: ByteArray, off: Int): Int {
+  suspend fun read(buf: _root_ide_package_.io.vproxy.base.util.ByteArray, off: Int): Int {
     if (off == buf.length()) {
       return 0
     }
-    val chnl = ByteArrayChannel.from(buf, off, off, buf.length() - off)
+    val chnl = _root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel.from(buf, off, off, buf.length() - off)
     val before = chnl.free()
     read(chnl)
     val after = chnl.free()
@@ -121,7 +121,7 @@ class CoroutineConnection(
   /**
    * @return read bytes, 0 when eof
    */
-  suspend fun read(chnl: ByteArrayChannel): Int {
+  suspend fun read(chnl: _root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel): Int {
     if (reading) {
       throw IllegalStateException("another coroutine is reading from this connection")
     }
@@ -149,10 +149,10 @@ class CoroutineConnection(
   }
 
   suspend fun write(str: String) {
-    write(ByteArray.from(str))
+    write(_root_ide_package_.io.vproxy.base.util.ByteArray.from(str))
   }
 
-  suspend fun write(buf: ByteArray) {
+  suspend fun write(buf: _root_ide_package_.io.vproxy.base.util.ByteArray) {
     if (writing) {
       throw IllegalStateException("another coroutine is writing to this connection")
     }
@@ -163,18 +163,18 @@ class CoroutineConnection(
       defer { writing = false }
 
       if (conn.outBuffer.free() >= buf.length()) {
-        conn.outBuffer.storeBytesFrom(ByteArrayChannel.from(buf, 0, buf.length(), 0))
+        conn.outBuffer.storeBytesFrom(_root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel.from(buf, 0, buf.length(), 0))
         return@run
       }
       ensureHandler()
-      val chnl = ByteArrayChannel.from(buf, 0, buf.length(), 0)
+      val chnl = _root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel.from(buf, 0, buf.length(), 0)
       return@run suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
         recursivelyWrite(cont, chnl)
       }
     }
   }
 
-  private fun recursivelyWrite(cont: CancellableContinuation<Unit>, chnl: ByteArrayChannel) {
+  private fun recursivelyWrite(cont: CancellableContinuation<Unit>, chnl: _root_ide_package_.io.vproxy.base.util.nio.ByteArrayChannel) {
     if (chnl.used() == 0) {
       cont.resume(Unit)
       return
@@ -193,11 +193,11 @@ class CoroutineConnection(
     conn.setTimeout(millis)
   }
 
-  fun remote(): IPPort {
+  fun remote(): _root_ide_package_.io.vproxy.vfd.IPPort {
     return conn.remote
   }
 
-  fun local(): IPPort {
+  fun local(): _root_ide_package_.io.vproxy.vfd.IPPort {
     return conn.local
   }
 

@@ -1,6 +1,6 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import java.util.*;
 

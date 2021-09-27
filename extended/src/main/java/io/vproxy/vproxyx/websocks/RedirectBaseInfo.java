@@ -1,4 +1,4 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
 public class RedirectBaseInfo {
     public final String protocol;

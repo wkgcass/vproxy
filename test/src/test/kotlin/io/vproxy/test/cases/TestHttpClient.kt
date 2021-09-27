@@ -1,4 +1,4 @@
-package vproxy.test.cases
+package io.vproxy.test.cases
 
 import org.junit.Assert.assertEquals
 import org.junit.Ignore

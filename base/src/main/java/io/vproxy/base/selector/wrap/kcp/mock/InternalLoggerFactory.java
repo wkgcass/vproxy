@@ -1,4 +1,4 @@
-package vproxy.base.selector.wrap.kcp.mock;
+package io.vproxy.base.selector.wrap.kcp.mock;
 
 public class InternalLoggerFactory {
     public static InternalLogger getInstance(@SuppressWarnings("unused") String x) {

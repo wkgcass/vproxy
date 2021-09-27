@@ -1,8 +1,8 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
-import vproxy.app.plugin.Plugin;
-import vproxy.app.plugin.PluginInitParams;
-import vproxy.base.util.Logger;
+import io.vproxy.app.plugin.Plugin;
+import io.vproxy.app.plugin.PluginInitParams;
+import io.vproxy.base.util.Logger;
 
 public class VProxyPluginPoc implements Plugin {
     @Override

@@ -1,6 +1,6 @@
-package vproxy.vfd.jdk;
+package io.vproxy.vfd.jdk;
 
-import vproxy.vfd.FD;
+import io.vproxy.vfd.FD;
 
 import java.io.IOException;
 import java.net.SocketOption;

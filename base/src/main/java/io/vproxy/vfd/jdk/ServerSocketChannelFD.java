@@ -1,8 +1,8 @@
-package vproxy.vfd.jdk;
+package io.vproxy.vfd.jdk;
 
-import vproxy.vfd.IPPort;
-import vproxy.vfd.ServerSocketFD;
-import vproxy.vfd.SocketFD;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.ServerSocketFD;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 import java.nio.channels.ServerSocketChannel;

@@ -1,4 +1,4 @@
-package vproxy.base.util.functional;
+package io.vproxy.base.util.functional;
 
 @FunctionalInterface
 public interface ConsumerEx<T, EX extends Throwable> {

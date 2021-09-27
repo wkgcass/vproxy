@@ -1,4 +1,4 @@
-package vproxy.base.util.display;
+package io.vproxy.base.util.display;
 
 import java.util.ArrayList;
 import java.util.List;

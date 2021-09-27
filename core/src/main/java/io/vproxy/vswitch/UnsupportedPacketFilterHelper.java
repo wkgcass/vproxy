@@ -1,8 +1,8 @@
-package vproxy.vswitch;
+package io.vproxy.vswitch;
 
-import vproxy.base.util.ratelimit.RateLimiter;
-import vproxy.vswitch.iface.Iface;
-import vproxy.vswitch.plugin.FilterResult;
+import io.vproxy.base.util.ratelimit.RateLimiter;
+import io.vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.plugin.FilterResult;
 
 public class UnsupportedPacketFilterHelper extends PacketFilterHelper {
     public static final UnsupportedPacketFilterHelper instance = new UnsupportedPacketFilterHelper();

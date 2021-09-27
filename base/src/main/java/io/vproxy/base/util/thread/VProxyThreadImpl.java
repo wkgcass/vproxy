@@ -1,6 +1,6 @@
-package vproxy.base.util.thread;
+package io.vproxy.base.util.thread;
 
-import vproxy.base.GlobalInspection;
+import io.vproxy.base.GlobalInspection;
 
 public class VProxyThreadImpl extends Thread implements VProxyThread {
     private final VProxyThreadVariable variable = new VProxyThreadVariable();

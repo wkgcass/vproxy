@@ -1,10 +1,10 @@
-package vproxy.base.selector.wrap.h2streamed;
+package io.vproxy.base.selector.wrap.h2streamed;
 
-import vproxy.base.selector.wrap.streamed.StreamedFDHandler;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.selector.wrap.streamed.StreamedFDHandler;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;

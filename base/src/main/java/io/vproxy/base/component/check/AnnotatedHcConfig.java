@@ -1,7 +1,7 @@
-package vproxy.base.component.check;
+package io.vproxy.base.component.check;
 
-import vproxy.base.Config;
-import vproxy.base.util.Annotations;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.Annotations;
 
 public class AnnotatedHcConfig {
     private static final boolean[] defaultHttpStatus = new boolean[]{false, // 0 not used

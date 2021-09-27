@@ -1,4 +1,4 @@
-package vproxy.base.processor.httpbin.frame;
+package io.vproxy.base.processor.httpbin.frame;
 
 public interface WithPriority {
     boolean priority();

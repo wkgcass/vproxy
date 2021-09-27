@@ -1,6 +1,8 @@
-package vproxy.base.util.ratelimit;
+package io.vproxy.base.util.ratelimit;
 
-import vproxy.base.Config;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.coll.Tuple3;
+import io.vproxy.base.Config;
 import vproxy.base.util.coll.Tuple3;
 
 import java.util.Arrays;

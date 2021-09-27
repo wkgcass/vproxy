@@ -1,4 +1,4 @@
-package vproxy.base.component.check;
+package io.vproxy.base.component.check;
 
 public class HealthCheckConfig {
     public final int timeout;

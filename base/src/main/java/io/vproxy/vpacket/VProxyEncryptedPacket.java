@@ -1,10 +1,10 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Utils;
-import vproxy.base.util.crypto.Aes256Key;
-import vproxy.base.util.crypto.StreamingCFBCipher;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.crypto.Aes256Key;
+import io.vproxy.base.util.crypto.StreamingCFBCipher;
 
 import java.util.Base64;
 import java.util.Random;

@@ -1,7 +1,7 @@
-package vproxy.base.util.bytearray;
+package io.vproxy.base.util.bytearray;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Utils;
 
 import java.nio.ByteBuffer;
 

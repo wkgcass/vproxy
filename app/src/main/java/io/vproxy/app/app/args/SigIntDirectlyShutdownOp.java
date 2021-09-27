@@ -1,8 +1,8 @@
-package vproxy.app.app.args;
+package io.vproxy.app.app.args;
 
-import vproxy.app.app.MainCtx;
-import vproxy.app.app.MainOp;
-import vproxy.app.process.Shutdown;
+import io.vproxy.app.app.MainCtx;
+import io.vproxy.app.app.MainOp;
+import io.vproxy.app.process.Shutdown;
 
 public class SigIntDirectlyShutdownOp implements MainOp {
     @Override

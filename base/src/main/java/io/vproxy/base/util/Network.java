@@ -1,7 +1,7 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
 
 import java.util.Arrays;
 

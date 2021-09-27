@@ -1,10 +1,10 @@
-package vproxyx.pktfiltergen.flow;
+package io.vproxy.vproxyx.pktfiltergen.flow;
 
-import vproxy.base.util.Consts;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv6;
-import vproxy.vfd.MacAddress;
-import vproxy.vpacket.*;
+import io.vproxy.base.util.Consts;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.MacAddress;
+import io.vproxy.vpacket.*;
 
 public class FlowAction {
     public boolean normal;

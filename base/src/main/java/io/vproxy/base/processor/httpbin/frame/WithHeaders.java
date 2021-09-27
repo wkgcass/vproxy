@@ -1,6 +1,7 @@
-package vproxy.base.processor.httpbin.frame;
+package io.vproxy.base.processor.httpbin.frame;
 
-import vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
 
 import java.util.HashMap;
 import java.util.List;

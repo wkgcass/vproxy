@@ -1,7 +1,7 @@
-package vproxy.test.tool;
+package io.vproxy.test.tool;
 
-import vproxy.base.util.Utils;
-import vproxy.vfd.IP;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.net.DatagramPacket;

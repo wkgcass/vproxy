@@ -1,16 +1,16 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Flag;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.app.app.cmd.handle.param.BPFModeHandle;
-import vproxy.base.util.Utils;
-import vproxy.base.util.exception.XException;
-import vproxy.vswitch.iface.XDPIface;
-import vproxy.xdp.BPFMode;
-import vproxy.xdp.BPFObject;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Flag;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.handle.param.BPFModeHandle;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.vswitch.iface.XDPIface;
+import io.vproxy.xdp.BPFMode;
+import io.vproxy.xdp.BPFObject;
 
 import java.util.ArrayList;
 import java.util.List;

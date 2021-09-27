@@ -1,8 +1,10 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.base.dns.rdata.RData;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Logger;
+import io.vproxy.base.dns.rdata.RData;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.dns.rdata.RData;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
 
 import java.util.LinkedList;
 import java.util.List;

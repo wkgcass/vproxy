@@ -1,11 +1,11 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vfd.IPPort;
-import vproxy.vpacket.conntrack.tcp.TcpListenEntry;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 
 import java.util.ArrayList;
 import java.util.LinkedList;

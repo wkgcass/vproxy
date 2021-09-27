@@ -1,18 +1,18 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.component.svrgroup.ServerGroup;
-import vproxy.base.dns.Cache;
-import vproxy.base.dns.ResolveListener;
-import vproxy.base.dns.Resolver;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.dns.Cache;
+import io.vproxy.base.dns.ResolveListener;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vfd.FDProvider;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.net.UnknownHostException;
 import java.util.HashSet;

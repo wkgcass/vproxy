@@ -1,6 +1,6 @@
-package vproxy.base.util.display;
+package io.vproxy.base.util.display;
 
-import vproxy.base.util.coll.Tree;
+import io.vproxy.base.util.coll.Tree;
 
 import java.util.Iterator;
 import java.util.LinkedList;

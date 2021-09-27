@@ -1,7 +1,7 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 public class DNSRecord {
     public final IP target;

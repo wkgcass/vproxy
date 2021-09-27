@@ -1,17 +1,17 @@
-package vproxy.app.app.cmd
+package io.vproxy.app.app.cmd
 
-import vproxy.base.Config
-import vproxy.base.util.LogType
-import vproxy.base.util.Logger
-import vproxy.base.util.exception.XException
-import vproxy.base.util.functional.ConsumerEx
+import io.vproxy.base.Config
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
+import io.vproxy.base.util.exception.XException
+import io.vproxy.base.util.functional.ConsumerEx
 import java.util.*
 
 abstract class Commands protected constructor() {
   protected val resources = ArrayList<Res>()
 
   @Throws(Exception::class)
-  fun execute(cmd: Command): CmdResult {
+  fun execute(cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command): _root_ide_package_.io.vproxy.app.app.cmd.CmdResult {
     var res: Res? = null
     for (resx in resources) {
       if (resx.type == cmd.resource.type) {
@@ -20,44 +20,44 @@ abstract class Commands protected constructor() {
       }
     }
     if (res == null) {
-      throw XException("unexpected resource " + cmd.resource.type.fullname)
+      throw _root_ide_package_.io.vproxy.base.util.exception.XException("unexpected resource " + cmd.resource.type.fullname)
     }
     var actType: ActType? = null
     if (cmd.preposition != null) {
-      if (cmd.action == Action.add) {
-        if (cmd.preposition == Preposition.to) {
+      if (cmd.action == _root_ide_package_.io.vproxy.app.app.cmd.Action.add) {
+        if (cmd.preposition == _root_ide_package_.io.vproxy.app.app.cmd.Preposition.to) {
           actType = ActType.addto
         }
-      } else if (cmd.action == Action.rm) {
-        if (cmd.preposition == Preposition.from) {
+      } else if (cmd.action == _root_ide_package_.io.vproxy.app.app.cmd.Action.rm) {
+        if (cmd.preposition == _root_ide_package_.io.vproxy.app.app.cmd.Preposition.from) {
           actType = ActType.removefrom
         }
       }
       if (actType == null) {
-        throw XException("unexpected action and preposition: " + cmd.action.fullname + " " + cmd.preposition.name)
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException("unexpected action and preposition: " + cmd.action.fullname + " " + cmd.preposition.name)
       }
     } else {
       actType = when (cmd.action) {
-        Action.ls -> ActType.list
-        Action.ll -> ActType.listdetail
-        Action.add -> ActType.add
-        Action.mod -> ActType.update
-        Action.rm -> ActType.remove
+        _root_ide_package_.io.vproxy.app.app.cmd.Action.ls -> ActType.list
+        _root_ide_package_.io.vproxy.app.app.cmd.Action.ll -> ActType.listdetail
+        _root_ide_package_.io.vproxy.app.app.cmd.Action.add -> ActType.add
+        _root_ide_package_.io.vproxy.app.app.cmd.Action.mod -> ActType.update
+        _root_ide_package_.io.vproxy.app.app.cmd.Action.rm -> ActType.remove
         else -> null
       }
       if (actType == null) {
-        throw XException("unexpected action: " + cmd.action.fullname)
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException("unexpected action: " + cmd.action.fullname)
       }
     }
-    val actLs = res.actions[actType] ?: throw XException("unsupported action " + actType.fullname + " for " + cmd.resource.type.fullname)
+    val actLs = res.actions[actType] ?: throw _root_ide_package_.io.vproxy.base.util.exception.XException("unsupported action " + actType.fullname + " for " + cmd.resource.type.fullname)
     var act: ResAct? = null
-    val errls = ArrayList<XException>()
+    val errls = ArrayList<_root_ide_package_.io.vproxy.base.util.exception.XException>()
     for (a in actLs) {
       // check resource
       try {
         checkParentRes(a, cmd)
         checkPreposition(a, cmd)
-      } catch (e: XException) {
+      } catch (e: _root_ide_package_.io.vproxy.base.util.exception.XException) {
         // skip
         errls.add(e)
         continue
@@ -67,18 +67,18 @@ abstract class Commands protected constructor() {
     }
 
     if (act == null) {
-      throw XException("no rules matched: $errls")
+      throw _root_ide_package_.io.vproxy.base.util.exception.XException("no rules matched: $errls")
     }
 
     if (act.action == ActType.list || act.action == ActType.listdetail) {
       // and obviously you cannot specify a name when retrieving a list
       if (cmd.resource.alias != null) {
-        throw XException("cannot specify preposition when action is " + Action.ls.fullname + " or " + Action.ll.fullname)
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException("cannot specify preposition when action is " + _root_ide_package_.io.vproxy.app.app.cmd.Action.ls.fullname + " or " + _root_ide_package_.io.vproxy.app.app.cmd.Action.ll.fullname)
       }
     } else {
       // for non list operations, i.e. modification operations
       // check whether config is allowed to be modified
-      if (Config.configModifyDisabled) {
+      if (_root_ide_package_.io.vproxy.base.Config.configModifyDisabled) {
         throw Exception("modifying is disabled")
       }
       // the name to operate is required
@@ -105,65 +105,65 @@ abstract class Commands protected constructor() {
     return act.exec(cmd)
   }
 
-  protected fun execUpdate(execute: (Command) -> Unit): (Command) -> CmdResult {
-    return { cmd: Command ->
+  protected fun execUpdate(execute: (_root_ide_package_.io.vproxy.app.app.cmd.Command) -> Unit): (_root_ide_package_.io.vproxy.app.app.cmd.Command) -> _root_ide_package_.io.vproxy.app.app.cmd.CmdResult {
+    return { cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command ->
       execute(cmd)
-      CmdResult()
+      _root_ide_package_.io.vproxy.app.app.cmd.CmdResult()
     }
   }
 
-  @Throws(XException::class)
-  private fun checkParentRes(act: ResAct, cmd: Command) {
+  @Throws(_root_ide_package_.io.vproxy.base.util.exception.XException::class)
+  private fun checkParentRes(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     if (act.relation.parent == null) {
       if (cmd.resource.parentResource != null) {
-        throw XException(
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException(
           "cannot execute " + act.action.fullname + " on "
-              + act.relation.resType.fullname + " inside " + cmd.resource.parentResource.type.fullname
+            + act.relation.resType.fullname + " inside " + cmd.resource.parentResource.type.fullname
         )
       }
       return
     }
     if (cmd.resource.parentResource == null) {
-      throw XException(
+      throw _root_ide_package_.io.vproxy.base.util.exception.XException(
         "cannot execute " + act.action.fullname + " on "
-            + act.relation.resType.fullname + " on top level"
+          + act.relation.resType.fullname + " on top level"
       )
     }
     val sb = StringBuilder()
     if (recursiveCheckParentRes(act.relation, cmd.resource, sb)) {
       return
     }
-    throw XException("cannot execute " + act.action.fullname + " because " + sb)
+    throw _root_ide_package_.io.vproxy.base.util.exception.XException("cannot execute " + act.action.fullname + " because " + sb)
   }
 
-  @Throws(XException::class)
-  private fun checkPreposition(act: ResAct, cmd: Command) {
+  @Throws(_root_ide_package_.io.vproxy.base.util.exception.XException::class)
+  private fun checkPreposition(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     if (act.targetRelation == null) {
       if (cmd.prepositionResource != null) {
-        throw XException(
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException(
           "cannot execute " + act.action.fullname + " on " + cmd.resource
-              + " while " + " " + cmd.prepositionResource.type.fullname + " is specified"
+            + " while " + " " + cmd.prepositionResource.type.fullname + " is specified"
         )
       }
       return
     }
     if (cmd.prepositionResource == null) {
-      throw XException(
+      throw _root_ide_package_.io.vproxy.base.util.exception.XException(
         "cannot execute " + act.action.fullname + " on " + act.relation.resType.fullname
-            + " without " + act.targetRelation.resType
+          + " without " + act.targetRelation.resType
       )
     }
     val sb = StringBuilder()
     if (recursiveCheckParentRes(act.targetRelation, cmd.prepositionResource, sb)) {
       return
     }
-    throw XException(
+    throw _root_ide_package_.io.vproxy.base.util.exception.XException(
       "cannot execute " + act.action.fullname + " because "
-          + "`" + cmd.preposition.name + "` " + sb
+        + "`" + cmd.preposition.name + "` " + sb
     )
   }
 
-  private fun recursiveCheckParentRes(expected: ResRelation?, actual: Resource?, recorder: StringBuilder): Boolean {
+  private fun recursiveCheckParentRes(expected: ResRelation?, actual: _root_ide_package_.io.vproxy.app.app.cmd.Resource?, recorder: StringBuilder): Boolean {
     if (expected == null && actual == null) return true
     if (expected == null) { // actual != null
       recorder.append(actual!!.type.fullname).append(" is redundant")
@@ -177,30 +177,30 @@ abstract class Commands protected constructor() {
     return recursiveCheckParentRes(expected.parent, actual.parentResource, recorder)
   }
 
-  @Throws(XException::class)
-  private fun checkRequiredParams(act: ResAct, cmd: Command) {
+  @Throws(_root_ide_package_.io.vproxy.base.util.exception.XException::class)
+  private fun checkRequiredParams(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     for (param in act.requiredParams) {
       if (!cmd.args.containsKey(param)) {
-        throw XException("missing parameter " + param.fullname)
+        throw _root_ide_package_.io.vproxy.base.util.exception.XException("missing parameter " + param.fullname)
       }
     }
   }
 
-  private fun checkRedundantParamsAndFlags(act: ResAct, cmd: Command) {
+  private fun checkRedundantParamsAndFlags(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     for (param in cmd.args.keys) {
       if (!act.params.containsKey(param)) {
-        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "unexpected parameter " + param.fullname)
+        _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "unexpected parameter " + param.fullname)
       }
     }
     for (flag in cmd.flags) {
       if (!act.flags.containsKey(flag)) {
-        Logger.warn(LogType.INVALID_EXTERNAL_DATA, "unexpected flag " + flag.fullname)
+        _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "unexpected flag " + flag.fullname)
       }
     }
   }
 
   @Throws(Exception::class)
-  private fun checkParameters(act: ResAct, cmd: Command) {
+  private fun checkParameters(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     for (param in cmd.args.keys) {
       val p = act.params[param] ?: /*extra param*/continue
       p.checkFunc(cmd)
@@ -209,32 +209,32 @@ abstract class Commands protected constructor() {
 
   @Throws(Exception::class)
   @Suppress("UNUSED_PARAMETER")
-  private fun checkFlags(act: ResAct, cmd: Command) {
+  private fun checkFlags(act: ResAct, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     // do nothing for now
   }
 
   @Suppress("EnumEntryName", "unused")
-  enum class ActType constructor(val action: Action, val fullname: String, val preposition: Boolean = false) {
-    list(Action.ls, Action.ls.fullname),
-    listdetail(Action.ll, Action.ll.fullname),
-    add(Action.add, Action.add.fullname),
-    update(Action.mod, Action.mod.fullname),
-    remove(Action.rm, Action.rm.fullname),
-    addto(Action.add, "add-to", true),
-    removefrom(Action.rm, "remove-from", true);
+  enum class ActType constructor(val action: _root_ide_package_.io.vproxy.app.app.cmd.Action, val fullname: String, val preposition: Boolean = false) {
+    list(_root_ide_package_.io.vproxy.app.app.cmd.Action.ls, _root_ide_package_.io.vproxy.app.app.cmd.Action.ls.fullname),
+    listdetail(_root_ide_package_.io.vproxy.app.app.cmd.Action.ll, _root_ide_package_.io.vproxy.app.app.cmd.Action.ll.fullname),
+    add(_root_ide_package_.io.vproxy.app.app.cmd.Action.add, _root_ide_package_.io.vproxy.app.app.cmd.Action.add.fullname),
+    update(_root_ide_package_.io.vproxy.app.app.cmd.Action.mod, _root_ide_package_.io.vproxy.app.app.cmd.Action.mod.fullname),
+    remove(_root_ide_package_.io.vproxy.app.app.cmd.Action.rm, _root_ide_package_.io.vproxy.app.app.cmd.Action.rm.fullname),
+    addto(_root_ide_package_.io.vproxy.app.app.cmd.Action.add, "add-to", true),
+    removefrom(_root_ide_package_.io.vproxy.app.app.cmd.Action.rm, "remove-from", true);
   }
 
-  class ResRelation(val resType: ResourceType, val parent: ResRelation? = null)
+  class ResRelation(val resType: _root_ide_package_.io.vproxy.app.app.cmd.ResourceType, val parent: ResRelation? = null)
 
   class Res constructor(
-    val type: ResourceType,
-    additionalCheck: ConsumerEx<Command, Exception>?,
+    val type: _root_ide_package_.io.vproxy.app.app.cmd.ResourceType,
+    additionalCheck: _root_ide_package_.io.vproxy.base.util.functional.ConsumerEx<_root_ide_package_.io.vproxy.app.app.cmd.Command, Exception>?,
     actions: (AddHelper<ResAct>) -> Unit,
   ) {
     val actions: MutableMap<ActType, List<ResAct>>
-    val additionalCheck: ConsumerEx<Command, Exception>?
+    val additionalCheck: _root_ide_package_.io.vproxy.base.util.functional.ConsumerEx<_root_ide_package_.io.vproxy.app.app.cmd.Command, Exception>?
 
-    constructor(type: ResourceType, actions: (AddHelper<ResAct>) -> Unit) :
+    constructor(type: _root_ide_package_.io.vproxy.app.app.cmd.ResourceType, actions: (AddHelper<ResAct>) -> Unit) :
         this(type, null, actions)
 
     init {
@@ -268,21 +268,21 @@ abstract class Commands protected constructor() {
     val targetRelation: ResRelation? = null,
     params: (AddHelper<ResActParam>) -> Unit = {},
     flags: (AddHelper<ResActFlag>) -> Unit = {},
-    val check: ((Command) -> Unit)? = null,
-    val exec: (Command) -> CmdResult,
+    val check: ((_root_ide_package_.io.vproxy.app.app.cmd.Command) -> Unit)? = null,
+    val exec: (_root_ide_package_.io.vproxy.app.app.cmd.Command) -> _root_ide_package_.io.vproxy.app.app.cmd.CmdResult,
   ) {
-    val params: MutableMap<Param, ResActParam>
-    val requiredParams: MutableList<Param>
-    val flags: MutableMap<Flag, ResActFlag>
+    val params: MutableMap<_root_ide_package_.io.vproxy.app.app.cmd.Param, ResActParam>
+    val requiredParams: MutableList<_root_ide_package_.io.vproxy.app.app.cmd.Param>
+    val flags: MutableMap<_root_ide_package_.io.vproxy.app.app.cmd.Flag, ResActFlag>
 
     constructor(
-      relation: ResourceType,
+      relation: _root_ide_package_.io.vproxy.app.app.cmd.ResourceType,
       action: ActType,
       targetRelation: ResRelation? = null,
       params: (AddHelper<ResActParam>) -> Unit = {},
       flags: (AddHelper<ResActFlag>) -> Unit = {},
-      check: ((Command) -> Unit)? = null,
-      exec: (Command) -> CmdResult,
+      check: ((_root_ide_package_.io.vproxy.app.app.cmd.Command) -> Unit)? = null,
+      exec: (_root_ide_package_.io.vproxy.app.app.cmd.Command) -> _root_ide_package_.io.vproxy.app.app.cmd.CmdResult,
     ) : this(ResRelation(relation), action, targetRelation, params, flags, check, exec)
 
     init {
@@ -297,7 +297,7 @@ abstract class Commands protected constructor() {
         }
       }
 
-      this.params = EnumMap(Param::class.java)
+      this.params = EnumMap(_root_ide_package_.io.vproxy.app.app.cmd.Param::class.java)
       requiredParams = ArrayList()
 
       val paramsLs = ArrayList<ResActParam>()
@@ -313,16 +313,16 @@ abstract class Commands protected constructor() {
       val flagsLs = ArrayList<ResActFlag>()
       val flagsHelper = AddHelper(flagsLs)
       flags(flagsHelper)
-      this.flags = EnumMap(Flag::class.java)
+      this.flags = EnumMap(_root_ide_package_.io.vproxy.app.app.cmd.Flag::class.java)
       for (flag in flagsLs) {
         this.flags[flag.flag] = flag
       }
     }
   }
 
-  class ResActParam(val param: Param, val required: Boolean = false, val checkFunc: (Command) -> Unit = {})
+  class ResActParam(val param: _root_ide_package_.io.vproxy.app.app.cmd.Param, val required: Boolean = false, val checkFunc: (_root_ide_package_.io.vproxy.app.app.cmd.Command) -> Unit = {})
 
-  class ResActFlag(val flag: Flag)
+  class ResActFlag(val flag: _root_ide_package_.io.vproxy.app.app.cmd.Flag)
 
   companion object {
     const val required: Boolean = true

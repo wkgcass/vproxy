@@ -1,6 +1,6 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 public interface VSocketAddress {
     IPPort toIPPort();

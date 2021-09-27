@@ -1,16 +1,16 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.base.component.elgroup.EventLoopWrapper;
-import vproxy.base.component.svrgroup.ServerGroup;
-import vproxy.base.connection.Connection;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.component.proxy.Session;
-import vproxy.vfd.IPPort;
-import vproxy.vpacket.conntrack.tcp.TcpEntry;
-import vproxy.vswitch.VirtualNetwork;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.base.component.elgroup.EventLoopWrapper;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.component.proxy.Session;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vswitch.VirtualNetwork;
 
 import java.util.ArrayList;
 import java.util.Collection;

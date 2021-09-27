@@ -1,10 +1,11 @@
-package vproxy.app.app.cmd;
+package io.vproxy.app.app.cmd;
 
-import vproxy.app.controller.StdIOController;
-import vproxy.app.process.Shutdown;
-import vproxy.base.util.Utils;
-import vproxy.base.util.callback.Callback;
-import vproxy.base.util.exception.XException;
+import io.vproxy.app.controller.StdIOController;
+import io.vproxy.app.controller.StdIOController;
+import io.vproxy.app.process.Shutdown;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.exception.XException;
 
 import java.util.Arrays;
 import java.util.List;

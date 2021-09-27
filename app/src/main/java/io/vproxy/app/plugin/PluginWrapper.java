@@ -1,7 +1,9 @@
-package vproxy.app.plugin;
+package io.vproxy.app.plugin;
 
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import java.net.URL;
 

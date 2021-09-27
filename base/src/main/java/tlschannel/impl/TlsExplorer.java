@@ -24,7 +24,7 @@ SOFTWARE.
 
 package tlschannel.impl;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SNIServerName;

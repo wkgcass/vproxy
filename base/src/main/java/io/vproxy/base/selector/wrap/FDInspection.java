@@ -1,5 +1,6 @@
-package vproxy.base.selector.wrap;
+package io.vproxy.base.selector.wrap;
 
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 public class FDInspection {

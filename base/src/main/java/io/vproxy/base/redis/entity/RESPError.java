@@ -1,6 +1,6 @@
-package vproxy.base.redis.entity;
+package io.vproxy.base.redis.entity;
 
-import vproxy.base.util.exception.XException;
+import io.vproxy.base.util.exception.XException;
 
 public class RESPError extends RESP {
     public final StringBuilder error = new StringBuilder();

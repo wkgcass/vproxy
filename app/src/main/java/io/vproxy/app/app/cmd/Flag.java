@@ -1,4 +1,4 @@
-package vproxy.app.app.cmd;
+package io.vproxy.app.app.cmd;
 
 public enum Flag {
     noipv4("no-ipv4"),

@@ -1,1 +1,1 @@
-package vproxy;
+package io.vproxy;

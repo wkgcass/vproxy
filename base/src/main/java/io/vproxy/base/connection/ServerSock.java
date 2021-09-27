@@ -1,12 +1,13 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.udp.ServerDatagramFD;
-import vproxy.base.selector.wrap.udp.UDPBasedFDs;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.udp.ServerDatagramFD;
+import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
-import vproxy.vfd.posix.PosixFDs;
+import io.vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;

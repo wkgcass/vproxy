@@ -1,4 +1,4 @@
-package vproxy.xdp;
+package io.vproxy.xdp;
 
 public enum BPFMode {
     SKB(1 << 1),

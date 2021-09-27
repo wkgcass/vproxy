@@ -1,8 +1,10 @@
-package vproxy.component.secure;
+package io.vproxy.component.secure;
 
-import vproxy.base.connection.Protocol;
-import vproxy.base.util.Network;
-import vproxy.vfd.IP;
+import io.vproxy.base.connection.Protocol;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.connection.Protocol;
+import io.vproxy.base.util.Network;
+import io.vproxy.vfd.IP;
 
 public class SecurityGroupRule {
     public final String alias;

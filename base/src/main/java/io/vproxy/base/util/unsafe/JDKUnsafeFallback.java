@@ -1,4 +1,4 @@
-package vproxy.base.util.unsafe;
+package io.vproxy.base.util.unsafe;
 
 public class JDKUnsafeFallback implements JDKUnsafe {
     @Override

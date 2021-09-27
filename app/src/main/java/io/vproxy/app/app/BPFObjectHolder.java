@@ -1,9 +1,9 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.xdp.BPFMode;
-import vproxy.xdp.BPFObject;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.xdp.BPFMode;
+import io.vproxy.xdp.BPFObject;
 
 import java.io.IOException;
 import java.util.ArrayList;

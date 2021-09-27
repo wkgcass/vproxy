@@ -1,8 +1,8 @@
-package vproxy.base.processor.http1;
+package io.vproxy.base.processor.http1;
 
-import vproxy.base.processor.ConnectionDelegate;
-import vproxy.base.processor.OOProcessor;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.processor.ConnectionDelegate;
+import io.vproxy.base.processor.OOProcessor;
+import io.vproxy.vfd.IPPort;
 
 public class HttpProcessor extends OOProcessor<HttpContext, HttpSubContext> {
     @Override

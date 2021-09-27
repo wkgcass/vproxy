@@ -1,4 +1,4 @@
-package vproxy.lib.http
+package io.vproxy.lib.http
 
 enum class HttpMethod {
   GET, POST, PUT, DELETE, HEAD, OPTIONS, PATCH, CONNECT, TRACE;

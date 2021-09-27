@@ -1,12 +1,12 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.selector.TimerEvent;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.RingBufferETHandler;
-import vproxy.vfd.EventSet;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.RingBufferETHandler;
+import io.vproxy.vfd.EventSet;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;

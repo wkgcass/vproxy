@@ -1,9 +1,9 @@
-package vproxy.app.app.args;
+package io.vproxy.app.app.args;
 
-import vproxy.app.app.MainCtx;
-import vproxy.app.app.MainOp;
-import vproxy.base.Config;
-import vproxy.base.util.Utils;
+import io.vproxy.app.app.MainCtx;
+import io.vproxy.app.app.MainOp;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.Utils;
 
 import java.io.File;
 import java.io.IOException;

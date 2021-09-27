@@ -1,6 +1,6 @@
-package vproxy.base.selector.wrap.kcp.mock;
+package io.vproxy.base.selector.wrap.kcp.mock;
 
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 public class ByteBufAllocator {
     public static final ByteBufAllocator DEFAULT = new ByteBufAllocator();

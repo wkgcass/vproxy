@@ -1,4 +1,4 @@
-package vproxy.base.component.elgroup;
+package io.vproxy.base.component.elgroup;
 
 public interface EventLoopGroupAttach {
     String id();

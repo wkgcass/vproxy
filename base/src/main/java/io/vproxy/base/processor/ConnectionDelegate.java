@@ -1,7 +1,7 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.base.util.anno.ThreadSafe;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.anno.ThreadSafe;
+import io.vproxy.vfd.IPPort;
 
 public abstract class ConnectionDelegate {
     /**

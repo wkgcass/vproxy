@@ -1,4 +1,4 @@
-package vproxy.base.protocol;
+package io.vproxy.base.protocol;
 
 public interface ProtocolHandler<T> {
     void init(ProtocolHandlerContext<T> ctx);

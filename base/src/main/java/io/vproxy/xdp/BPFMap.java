@@ -1,4 +1,4 @@
-package vproxy.xdp;
+package io.vproxy.xdp;
 
 import java.io.IOException;
 

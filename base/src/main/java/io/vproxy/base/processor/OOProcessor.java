@@ -1,4 +1,4 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
 public abstract class OOProcessor<CTX extends OOContext<SUB>, SUB extends OOSubContext> implements Processor<CTX, SUB> {
     @Override

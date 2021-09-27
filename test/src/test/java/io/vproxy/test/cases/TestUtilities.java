@@ -1,17 +1,26 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
+import io.vproxy.base.Config;
+import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.coll.RingQueue;
+import io.vproxy.base.util.display.TreeBuilder;
+import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
+import io.vproxy.base.util.objectpool.CursorList;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
+import org.junit.Assert;
 import org.junit.Test;
-import vproxy.base.Config;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.bitwise.BitwiseMatcher;
-import vproxy.base.util.coll.RingQueue;
-import vproxy.base.util.display.TreeBuilder;
-import vproxy.base.util.objectpool.ConcurrentObjectPool;
-import vproxy.base.util.objectpool.CursorList;
-import vproxy.base.util.objectpool.PrototypeObjectList;
-import vproxy.base.util.ratelimit.RateLimiter;
-import vproxy.base.util.ratelimit.SimpleRateLimiter;
-import vproxy.base.util.ratelimit.StatisticsRateLimiter;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.coll.RingQueue;
+import io.vproxy.base.util.display.TreeBuilder;
+import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
+import io.vproxy.base.util.objectpool.CursorList;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.ratelimit.RateLimiter;
+import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
+import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
 
 import java.util.LinkedList;
 import java.util.List;
@@ -269,14 +278,14 @@ public class TestUtilities {
         srl.acquire(1001);
         Config.currentTimestamp = 27_800;
         srl.acquire(8008);
-        assertArrayEquals(new Long[]{0L, 0L, 4203L, 1001L, 0L, 8008L}, srl.getStatistics(0, 25_000)._1);
-        assertArrayEquals(new Long[]{0L, 5204L, 8008L}, srl.getStatistics(0, 25_000, 2)._1);
-        assertArrayEquals(new Long[]{4203L, 9009L}, srl.getStatistics(0, 25_000, 3)._1);
+        Assert.assertArrayEquals(new Long[]{0L, 0L, 4203L, 1001L, 0L, 8008L}, srl.getStatistics(0, 25_000)._1);
+        Assert.assertArrayEquals(new Long[]{0L, 5204L, 8008L}, srl.getStatistics(0, 25_000, 2)._1);
+        Assert.assertArrayEquals(new Long[]{4203L, 9009L}, srl.getStatistics(0, 25_000, 3)._1);
         Config.currentTimestamp = 37_400;
         srl.acquire(7007);
-        assertArrayEquals(new Long[]{null, null, 4203L, 1001L, 0L, 8008L, 0L, 7007L}, srl.getStatistics(0, 35_000)._1);
-        assertArrayEquals(new Long[]{null, 5204L, 8008L, 7007L}, srl.getStatistics(0, 35_000, 2)._1);
-        assertArrayEquals(new Long[]{4203L, 9009L, 7007L}, srl.getStatistics(0, 35_000, 3)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, 4203L, 1001L, 0L, 8008L, 0L, 7007L}, srl.getStatistics(0, 35_000)._1);
+        Assert.assertArrayEquals(new Long[]{null, 5204L, 8008L, 7007L}, srl.getStatistics(0, 35_000, 2)._1);
+        Assert.assertArrayEquals(new Long[]{4203L, 9009L, 7007L}, srl.getStatistics(0, 35_000, 3)._1);
         Config.currentTimestamp = 42_500;
         srl.acquire(6006);
         Config.currentTimestamp = 47_600;
@@ -285,16 +294,16 @@ public class TestUtilities {
         srl.acquire(4004);
         Config.currentTimestamp = 52_800;
         srl.acquire(1122);
-        assertArrayEquals(new Long[]{null, null, null, null, null, 8008L, 0L, 7007L, 6006L, 9009L, 1122L, null, null}, srl.getStatistics(0, 60_000)._1);
-        assertArrayEquals(new Long[]{null, null, 8008L, 7007L, 15015L, 1122L, null}, srl.getStatistics(0, 60_000, 2)._1);
-        assertArrayEquals(new Long[]{null, 8008L, 13013L, 10131L, null}, srl.getStatistics(0, 60_000, 3)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, null, null, null, 8008L, 0L, 7007L, 6006L, 9009L, 1122L, null, null}, srl.getStatistics(0, 60_000)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, 8008L, 7007L, 15015L, 1122L, null}, srl.getStatistics(0, 60_000, 2)._1);
+        Assert.assertArrayEquals(new Long[]{null, 8008L, 13013L, 10131L, null}, srl.getStatistics(0, 60_000, 3)._1);
         Config.currentTimestamp = 57_900;
         srl.acquire(3003);
         Config.currentTimestamp = 59_000;
         srl.acquire(2002);
-        assertArrayEquals(new Long[]{null, null, null, null, null, null, 0L, 7007L, 6006L, 9009L, 1122L, 5005L, null}, srl.getStatistics(0, 60_000)._1);
-        assertArrayEquals(new Long[]{null, null, null, 7007L, 15015L, 6127L, null}, srl.getStatistics(0, 60_000, 2)._1);
-        assertArrayEquals(new Long[]{null, null, 13013L, 15136L, null}, srl.getStatistics(0, 60_000, 3)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, null, null, null, null, 0L, 7007L, 6006L, 9009L, 1122L, 5005L, null}, srl.getStatistics(0, 60_000)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, null, 7007L, 15015L, 6127L, null}, srl.getStatistics(0, 60_000, 2)._1);
+        Assert.assertArrayEquals(new Long[]{null, null, 13013L, 15136L, null}, srl.getStatistics(0, 60_000, 3)._1);
     }
 
     @Test

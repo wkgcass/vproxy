@@ -1,4 +1,4 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
 public class TapInfo {
     public final String dev;

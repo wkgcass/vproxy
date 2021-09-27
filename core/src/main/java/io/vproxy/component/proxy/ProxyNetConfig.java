@@ -1,9 +1,13 @@
-package vproxy.component.proxy;
+package io.vproxy.component.proxy;
 
-import vproxy.base.Config;
-import vproxy.base.connection.NetEventLoop;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.util.ringbuffer.ssl.VSSLContext;
+import io.vproxy.base.Config;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
+import io.vproxy.base.Config;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLParameters;

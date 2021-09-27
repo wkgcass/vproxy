@@ -1,6 +1,6 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
-import vproxy.vfd.TapDatagramFD;
+import io.vproxy.vfd.TapDatagramFD;
 
 public class MirrorConfig {
     public String tapName;

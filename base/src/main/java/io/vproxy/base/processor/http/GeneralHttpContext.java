@@ -1,8 +1,10 @@
-package vproxy.base.processor.http;
+package io.vproxy.base.processor.http;
 
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.http1.HttpContext;
-import vproxy.base.processor.httpbin.BinaryHttpContext;
+import io.vproxy.base.processor.http1.HttpContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpContext;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.http1.HttpContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpContext;
 
 public class GeneralHttpContext extends Processor.Context {
     final HttpContext httpContext;

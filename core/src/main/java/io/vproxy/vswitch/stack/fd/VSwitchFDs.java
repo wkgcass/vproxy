@@ -1,5 +1,6 @@
-package vproxy.vswitch.stack.fd;
+package io.vproxy.vswitch.stack.fd;
 
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 public class VSwitchFDs implements FDs {

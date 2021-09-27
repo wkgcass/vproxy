@@ -1,6 +1,6 @@
-package vproxy.base.selector;
+package io.vproxy.base.selector;
 
-import vproxy.vfd.FD;
+import io.vproxy.vfd.FD;
 
 public interface Handler<CHANNEL extends FD> {
     void accept(HandlerContext<CHANNEL> ctx);

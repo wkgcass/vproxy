@@ -1,6 +1,6 @@
-package vproxy.base.redis.application;
+package io.vproxy.base.redis.application;
 
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.Logger;
 
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;

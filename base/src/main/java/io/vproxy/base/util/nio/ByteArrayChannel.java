@@ -1,9 +1,9 @@
-package vproxy.base.util.nio;
+package io.vproxy.base.util.nio;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Utils;
-import vproxy.vfd.ReadableByteStream;
-import vproxy.vfd.WritableByteStream;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.ReadableByteStream;
+import io.vproxy.vfd.WritableByteStream;
 
 import java.nio.ByteBuffer;
 

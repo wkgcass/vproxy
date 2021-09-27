@@ -1,4 +1,4 @@
-package vproxy.base.util.crypto;
+package io.vproxy.base.util.crypto;
 
 import javax.crypto.spec.SecretKeySpec;
 

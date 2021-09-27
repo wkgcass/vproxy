@@ -1,11 +1,12 @@
-package vproxy.app.vproxyx;
+package io.vproxy.app.vproxyx;
 
-import vproxy.app.app.util.SignalHook;
-import vproxy.app.process.Shutdown;
-import vproxy.base.Config;
-import vproxy.base.connection.ServerSock;
+import io.vproxy.app.app.util.SignalHook;
+import io.vproxy.app.process.Shutdown;
+import io.vproxy.base.Config;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.util.*;
 import vproxy.base.util.*;
-import vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.thread.VProxyThread;
 
 import java.io.BufferedReader;
 import java.io.IOException;

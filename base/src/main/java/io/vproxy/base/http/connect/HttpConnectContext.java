@@ -1,8 +1,9 @@
-package vproxy.base.http.connect;
+package io.vproxy.base.http.connect;
 
-import vproxy.base.http.HttpContext;
-import vproxy.base.http.HttpProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.http.HttpContext;
+import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
 
 public class HttpConnectContext {
     HttpProtocolHandler handler;

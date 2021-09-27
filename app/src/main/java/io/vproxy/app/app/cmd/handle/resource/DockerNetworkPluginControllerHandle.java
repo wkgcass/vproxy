@@ -1,6 +1,7 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
+import io.vproxy.app.controller.DockerNetworkPluginController;
+import io.vproxy.app.app.Application;
 import vproxy.app.controller.DockerNetworkPluginController;
 
 import java.util.Collections;

@@ -1,16 +1,16 @@
-package vproxy.lib.common
+package io.vproxy.lib.common
 
 import kotlinx.coroutines.*
-import vproxy.base.connection.Connection
-import vproxy.base.connection.NetEventLoop
-import vproxy.base.connection.ServerSock
-import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.selector.TimerEvent
-import vproxy.base.util.LogType
-import vproxy.base.util.Logger
-import vproxy.base.util.callback.Callback
-import vproxy.base.util.promise.Promise
-import vproxy.base.util.thread.VProxyThread
+import io.vproxy.base.connection.Connection
+import io.vproxy.base.connection.NetEventLoop
+import io.vproxy.base.connection.ServerSock
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.selector.TimerEvent
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
+import io.vproxy.base.util.callback.Callback
+import io.vproxy.base.util.promise.Promise
+import io.vproxy.base.util.thread.VProxyThread
 import vproxy.lib.tcp.CoroutineConnection
 import vproxy.lib.tcp.CoroutineServerSock
 import java.time.Duration
@@ -20,26 +20,26 @@ import java.util.concurrent.atomic.AtomicReference
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
-private val defaultCoroutineEventLoop = SelectorEventLoop.open()
+private val defaultCoroutineEventLoop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
 
-fun defaultCoroutineEventLoop(): SelectorEventLoop {
+fun defaultCoroutineEventLoop(): _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop {
   if (defaultCoroutineEventLoop.runningThread == null) {
-    defaultCoroutineEventLoop.loop { VProxyThread.create(it, "default-coroutine-event-loop") }
+    defaultCoroutineEventLoop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "default-coroutine-event-loop") }
   }
   return defaultCoroutineEventLoop
 }
 
-fun SelectorEventLoop.dispatcher(): CoroutineDispatcher {
+fun _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.dispatcher(): CoroutineDispatcher {
   return VProxyCoroutineExecutor(this).asCoroutineDispatcher()
 }
 
 class VProxyScheduledFuture(
-  loop: SelectorEventLoop,
+  loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop,
   private val delayMs: Int,
   command: Runnable,
 ) : ScheduledFuture<Any> {
   val completion = AtomicReference<Boolean?>()
-  private val event: TimerEvent = loop.delay(delayMs) {
+  private val event: _root_ide_package_.io.vproxy.base.selector.TimerEvent = loop.delay(delayMs) {
     if (completion.compareAndSet(null, true)) {
       command.run()
     }
@@ -84,7 +84,7 @@ class VProxyScheduledFuture(
 }
 
 class VProxyCoroutineExecutor(
-  private val loop: SelectorEventLoop,
+  private val loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop,
 ) : AbstractExecutorService(), ScheduledExecutorService {
   override fun execute(command: Runnable) {
     loop.runOnLoop(command)
@@ -137,7 +137,7 @@ class VProxyCoroutineExecutor(
   }
 }
 
-suspend fun <T> Promise<T>.await(): T {
+suspend fun <T> _root_ide_package_.io.vproxy.base.util.promise.Promise<T>.await(): T {
   return suspendCancellableCoroutine { cont: CancellableContinuation<T> ->
     this.setHandler { res, err ->
       if (err != null) {
@@ -149,9 +149,9 @@ suspend fun <T> Promise<T>.await(): T {
   }
 }
 
-suspend fun <T, E : Throwable> awaitCallback(f: (Callback<T, E>) -> Unit): T {
+suspend fun <T, E : Throwable> awaitCallback(f: (_root_ide_package_.io.vproxy.base.util.callback.Callback<T, E>) -> Unit): T {
   return suspendCancellableCoroutine { cont: CancellableContinuation<T> ->
-    f(object : Callback<T, E>() {
+    f(object : _root_ide_package_.io.vproxy.base.util.callback.Callback<T, E>() {
       override fun onSucceeded(value: T) {
         cont.resume(value)
       }
@@ -165,7 +165,7 @@ suspend fun <T, E : Throwable> awaitCallback(f: (Callback<T, E>) -> Unit): T {
 
 suspend fun sleep(millis: Int) {
   return suspendCancellableCoroutine { cont: CancellableContinuation<Unit> ->
-    SelectorEventLoop.current().delay(millis) { cont.resume(Unit) }
+    _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current().delay(millis) { cont.resume(Unit) }
   }
 }
 
@@ -182,7 +182,7 @@ class VProxyCoroutineCodeBlock {
       try {
         f()
       } catch (e: Throwable) {
-        Logger.error(LogType.IMPROPER_USE, "exception thrown in deferred function", e)
+        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "exception thrown in deferred function", e)
       }
     }
   }
@@ -202,7 +202,7 @@ object vplib {
 
     fun with(vararg resources: AutoCloseable): VProxyCoroutineLauncher {
       val launcher = VProxyCoroutineLauncher(resources)
-      val loop = SelectorEventLoop.current()
+      val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current()
       if (loop == null) {
         launcher.release()
         throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
@@ -212,7 +212,7 @@ object vplib {
     }
 
     fun launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) {
-      val loop = SelectorEventLoop.current() ?: throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
+      val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current() ?: throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
       loop.launch(exec)
     }
   }
@@ -221,7 +221,7 @@ object vplib {
 class VProxyCoroutineLauncher internal constructor(
   private val resources: Array<out AutoCloseable>,
 ) {
-  internal var loop: SelectorEventLoop? = null
+  internal var loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop? = null
   private var started = false
 
   fun launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) {
@@ -248,7 +248,7 @@ class VProxyCoroutineLauncher internal constructor(
     }
   }
 
-  fun <T> execute(f: suspend VProxyCoroutineCodeBlock.() -> T): Promise<T> {
+  fun <T> execute(f: suspend VProxyCoroutineCodeBlock.() -> T): _root_ide_package_.io.vproxy.base.util.promise.Promise<T> {
     if (started) {
       throw IllegalStateException("already started")
     }
@@ -256,7 +256,7 @@ class VProxyCoroutineLauncher internal constructor(
 
     return loop!!.execute(f).then {
       release()
-      Promise.resolve(it)
+      _root_ide_package_.io.vproxy.base.util.promise.Promise.resolve(it)
     }
   }
 
@@ -265,19 +265,19 @@ class VProxyCoroutineLauncher internal constructor(
       try {
         res.close()
       } catch (e: Throwable) {
-        Logger.error(LogType.IMPROPER_USE, "exception thrown when releasing $res", e)
+        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "exception thrown when releasing $res", e)
       }
     }
   }
 }
 
-fun SelectorEventLoop.with(vararg resources: AutoCloseable): VProxyCoroutineLauncher {
+fun _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.with(vararg resources: AutoCloseable): VProxyCoroutineLauncher {
   val launcher = VProxyCoroutineLauncher(resources)
   launcher.loop = this
   return launcher
 }
 
-fun SelectorEventLoop.launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) {
+fun _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) {
   if (this.runningThread == null) {
     throw IllegalStateException("loop is not started")
   }
@@ -286,7 +286,7 @@ fun SelectorEventLoop.launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) 
     try {
       exec(block)
     } catch (e: Throwable) {
-      Logger.error(LogType.IMPROPER_USE, "coroutine thrown exception", e)
+      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "coroutine thrown exception", e)
       throw e
     }
   }.invokeOnCompletion {
@@ -294,11 +294,11 @@ fun SelectorEventLoop.launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) 
   }
 }
 
-fun <T> SelectorEventLoop.execute(f: suspend VProxyCoroutineCodeBlock.() -> T): Promise<T> {
+fun <T> _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.execute(f: suspend VProxyCoroutineCodeBlock.() -> T): _root_ide_package_.io.vproxy.base.util.promise.Promise<T> {
   if (this.runningThread == null) {
     throw IllegalStateException("loop is not started")
   }
-  val tup = Promise.todo<T>()
+  val tup = _root_ide_package_.io.vproxy.base.util.promise.Promise.todo<T>()
   this.launch {
     val value: T
     try {
@@ -313,10 +313,10 @@ fun <T> SelectorEventLoop.execute(f: suspend VProxyCoroutineCodeBlock.() -> T): 
 }
 
 @Suppress("FunctionName")
-fun __getCurrentNetEventLoopOrFail(): NetEventLoop {
-  val loop = NetEventLoop.current()
+fun __getCurrentNetEventLoopOrFail(): _root_ide_package_.io.vproxy.base.connection.NetEventLoop {
+  val loop = _root_ide_package_.io.vproxy.base.connection.NetEventLoop.current()
   if (loop == null) {
-    val sLoop = SelectorEventLoop.current()
+    val sLoop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current()
     if (sLoop == null) {
       throw IllegalStateException("currently not on any event loop: " + Thread.currentThread())
     } else {
@@ -326,22 +326,22 @@ fun __getCurrentNetEventLoopOrFail(): NetEventLoop {
   return loop
 }
 
-fun Connection.coroutine(): CoroutineConnection {
+fun _root_ide_package_.io.vproxy.base.connection.Connection.coroutine(): CoroutineConnection {
   val loop = __getCurrentNetEventLoopOrFail()
   return coroutine(loop)
 }
 
-fun Connection.coroutine(loop: NetEventLoop): CoroutineConnection {
+fun _root_ide_package_.io.vproxy.base.connection.Connection.coroutine(loop: _root_ide_package_.io.vproxy.base.connection.NetEventLoop): CoroutineConnection {
   return CoroutineConnection(loop, this)
 }
 
-fun ServerSock.coroutine(): CoroutineServerSock {
-  val loop = NetEventLoop.current()
+fun _root_ide_package_.io.vproxy.base.connection.ServerSock.coroutine(): CoroutineServerSock {
+  val loop = _root_ide_package_.io.vproxy.base.connection.NetEventLoop.current()
     ?: throw IllegalStateException("currently not on any event loop or net event loop not created yet: " + Thread.currentThread())
   return coroutine(loop)
 }
 
-fun ServerSock.coroutine(loop: NetEventLoop): CoroutineServerSock {
+fun _root_ide_package_.io.vproxy.base.connection.ServerSock.coroutine(loop: _root_ide_package_.io.vproxy.base.connection.NetEventLoop): CoroutineServerSock {
   return CoroutineServerSock(loop, this)
 }
 

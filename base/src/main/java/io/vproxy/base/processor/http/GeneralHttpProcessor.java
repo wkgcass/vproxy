@@ -1,13 +1,17 @@
-package vproxy.base.processor.http;
+package io.vproxy.base.processor.http;
 
-import vproxy.base.processor.ConnectionDelegate;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.http1.HttpProcessor;
-import vproxy.base.processor.httpbin.BinaryHttpProcessor;
-import vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import vproxy.base.processor.httpbin.HttpVersion;
-import vproxy.base.util.ByteArray;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.processor.http1.HttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.HttpVersion;
+import io.vproxy.base.processor.ConnectionDelegate;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.http1.HttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.HttpVersion;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.vfd.IPPort;
 
 public class GeneralHttpProcessor implements Processor<GeneralHttpContext, GeneralHttpSubContext> {
     private final HttpProcessor httpProcessor = new HttpProcessor();

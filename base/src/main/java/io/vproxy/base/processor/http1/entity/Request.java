@@ -1,6 +1,6 @@
-package vproxy.base.processor.http1.entity;
+package io.vproxy.base.processor.http1.entity;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 import java.util.List;
 

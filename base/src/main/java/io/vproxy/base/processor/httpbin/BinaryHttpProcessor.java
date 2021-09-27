@@ -1,11 +1,11 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.Config;
-import vproxy.base.processor.ConnectionDelegate;
-import vproxy.base.processor.OOProcessor;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.Config;
+import io.vproxy.base.processor.ConnectionDelegate;
+import io.vproxy.base.processor.OOProcessor;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IPPort;
 
 public class BinaryHttpProcessor extends OOProcessor<BinaryHttpContext, BinaryHttpSubContext> {
     private final HttpVersion httpVersion;

@@ -1,4 +1,4 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
 public interface ResolveListener {
     void onResolve(Cache cache);

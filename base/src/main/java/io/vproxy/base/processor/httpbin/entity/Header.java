@@ -1,4 +1,4 @@
-package vproxy.base.processor.httpbin.entity;
+package io.vproxy.base.processor.httpbin.entity;
 
 public class Header {
     public final String keyStr;

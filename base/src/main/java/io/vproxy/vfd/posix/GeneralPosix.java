@@ -1,6 +1,6 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.TapInfo;
+import io.vproxy.vfd.TapInfo;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

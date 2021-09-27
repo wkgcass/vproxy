@@ -1,16 +1,16 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.Config;
-import vproxy.base.component.elgroup.EventLoopWrapper;
-import vproxy.base.component.elgroup.dummy.DelegateEventLoopGroup;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Version;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.ClosedException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vfd.VFDConfig;
+import io.vproxy.base.Config;
+import io.vproxy.base.component.elgroup.EventLoopWrapper;
+import io.vproxy.base.component.elgroup.dummy.DelegateEventLoopGroup;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Version;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.ClosedException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vfd.VFDConfig;
 
 import java.io.IOException;
 

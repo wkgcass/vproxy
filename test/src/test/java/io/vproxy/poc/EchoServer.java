@@ -1,6 +1,6 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
-import vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
 
 import java.io.IOException;
 

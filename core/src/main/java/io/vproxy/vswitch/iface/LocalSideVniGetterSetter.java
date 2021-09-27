@@ -1,4 +1,4 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
 public interface LocalSideVniGetterSetter {
     int getLocalSideVni(int hint);

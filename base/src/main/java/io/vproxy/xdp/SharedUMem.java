@@ -1,4 +1,4 @@
-package vproxy.xdp;
+package io.vproxy.xdp;
 
 public class SharedUMem extends UMem {
     public final UMem target;

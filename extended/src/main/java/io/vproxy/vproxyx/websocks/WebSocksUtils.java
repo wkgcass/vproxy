@@ -1,15 +1,15 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
-import vproxy.base.connection.ConnectionOpts;
-import vproxy.base.processor.http1.entity.Header;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.base.util.ringbuffer.ssl.VSSLContext;
-import vproxy.component.ssl.CertKey;
-import vproxy.util.CoreUtils;
-import vproxyx.websocks.ssl.AutoSignSSLContextHolder;
+import io.vproxy.base.connection.ConnectionOpts;
+import io.vproxy.base.processor.http1.entity.Header;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
+import io.vproxy.component.ssl.CertKey;
+import io.vproxy.util.CoreUtils;
+import io.vproxy.vproxyx.websocks.ssl.AutoSignSSLContextHolder;
 
 import javax.net.ssl.*;
 import java.io.FileInputStream;

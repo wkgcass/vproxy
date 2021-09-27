@@ -1,10 +1,10 @@
-package vproxyx.websocks.relay;
+package io.vproxy.vproxyx.websocks.relay;
 
-import vproxy.base.connection.ConnectableConnection;
-import vproxy.base.connection.Connection;
-import vproxy.base.connection.NetEventLoop;
-import vproxy.vfd.IPPort;
-import vproxyx.websocks.AlreadyConnectedConnector;
+import io.vproxy.base.connection.ConnectableConnection;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vproxyx.websocks.AlreadyConnectedConnector;
 
 public class HttpsSniErasureForRawAcceptedConnector extends AlreadyConnectedConnector {
     private final String alpn;

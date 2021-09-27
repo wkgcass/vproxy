@@ -7,15 +7,15 @@ module vproxy.app {
     requires vproxy.extended;
     requires vproxy.lib;
 
-    exports vproxy.app.app;
-    exports vproxy.app.app.args;
-    exports vproxy.app.app.cmd;
-    exports vproxy.app.app.cmd.handle.param;
-    exports vproxy.app.app.cmd.handle.resource;
-    exports vproxy.app.app.util;
-    exports vproxy.app.controller;
-    exports vproxy.app.plugin;
-    exports vproxy.app.plugin.impl;
-    exports vproxy.app.process;
-    exports vproxy.app.vproxyx;
+    exports io.vproxy.app.app;
+    exports io.vproxy.app.app.args;
+    exports io.vproxy.app.app.cmd;
+    exports io.vproxy.app.app.cmd.handle.param;
+    exports io.vproxy.app.app.cmd.handle.resource;
+    exports io.vproxy.app.app.util;
+    exports io.vproxy.app.controller;
+    exports io.vproxy.app.plugin;
+    exports io.vproxy.app.plugin.impl;
+    exports io.vproxy.app.process;
+    exports io.vproxy.app.vproxyx;
 }

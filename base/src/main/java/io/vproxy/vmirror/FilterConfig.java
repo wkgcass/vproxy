@@ -1,8 +1,8 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
-import vproxy.base.util.Network;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.Network;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 
 public class FilterConfig {
     final OriginConfig originConfig;

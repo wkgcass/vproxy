@@ -1,7 +1,7 @@
-package vproxy.base.util.time.impl;
+package io.vproxy.base.util.time.impl;
 
-import vproxy.base.util.time.TimeElem;
-import vproxy.base.util.time.TimeQueue;
+import io.vproxy.base.util.time.TimeElem;
+import io.vproxy.base.util.time.TimeQueue;
 
 import java.util.PriorityQueue;
 

@@ -1,4 +1,4 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
 public class FDInfo {
     private int fd;

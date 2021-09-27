@@ -1,10 +1,11 @@
-package vproxyx.websocks.relay;
+package io.vproxy.vproxyx.websocks.relay;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.TimerEvent;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.*;
 import vproxy.base.util.*;
-import vproxy.base.util.crypto.CryptoUtils;
-import vproxy.vfd.IP;
+import io.vproxy.base.util.crypto.CryptoUtils;
+import io.vproxy.vfd.IP;
 
 import java.util.HashMap;
 import java.util.Map;

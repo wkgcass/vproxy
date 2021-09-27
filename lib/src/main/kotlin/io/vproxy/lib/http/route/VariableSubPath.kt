@@ -1,4 +1,4 @@
-package vproxy.lib.http.route
+package io.vproxy.lib.http.route
 
 import vproxy.lib.http.RoutingContext
 import java.net.URLDecoder

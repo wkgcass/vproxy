@@ -1,10 +1,10 @@
-package vproxyx.websocks.ssl;
+package io.vproxy.vproxyx.websocks.ssl;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.ringbuffer.ssl.SSLContextHolder;
-import vproxy.component.ssl.CertKey;
-import vproxy.util.CoreUtils;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.ringbuffer.ssl.SSLContextHolder;
+import io.vproxy.component.ssl.CertKey;
+import io.vproxy.util.CoreUtils;
 
 import javax.net.ssl.SSLContext;
 import java.io.File;

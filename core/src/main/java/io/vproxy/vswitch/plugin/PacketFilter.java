@@ -1,7 +1,7 @@
-package vproxy.vswitch.plugin;
+package io.vproxy.vswitch.plugin;
 
-import vproxy.vswitch.PacketBuffer;
-import vproxy.vswitch.PacketFilterHelper;
+import io.vproxy.vswitch.PacketBuffer;
+import io.vproxy.vswitch.PacketFilterHelper;
 
 public interface PacketFilter {
     FilterResult handle(PacketFilterHelper helper, PacketBuffer pkb);

@@ -1,22 +1,22 @@
-package vproxy.lib.tcp
+package io.vproxy.lib.tcp
 
-import vproxy.base.connection.Connection
-import vproxy.base.connection.ServerHandler
-import vproxy.base.connection.ServerHandlerContext
-import vproxy.base.util.RingBuffer
+import io.vproxy.base.connection.Connection
+import io.vproxy.base.connection.ServerHandler
+import io.vproxy.base.connection.ServerHandlerContext
+import io.vproxy.base.util.RingBuffer
 import vproxy.base.util.coll.Tuple
-import vproxy.vfd.SocketFD
+import io.vproxy.vfd.SocketFD
 import java.io.IOException
 import java.util.*
 
 class CoroutineServerHandler(
-  private val getIOBuffers: ((channel: SocketFD) -> Tuple<RingBuffer, RingBuffer>)?,
-) : ServerHandler {
-  internal val acceptQ = LinkedList<Connection>()
+  private val getIOBuffers: ((channel: _root_ide_package_.io.vproxy.vfd.SocketFD) -> Tuple<_root_ide_package_.io.vproxy.base.util.RingBuffer, _root_ide_package_.io.vproxy.base.util.RingBuffer>)?,
+) : _root_ide_package_.io.vproxy.base.connection.ServerHandler {
+  internal val acceptQ = LinkedList<_root_ide_package_.io.vproxy.base.connection.Connection>()
   internal var errQ = LinkedList<IOException>()
-  internal var connectionEvent: ((IOException?, Connection?) -> Unit)? = null
+  internal var connectionEvent: ((IOException?, _root_ide_package_.io.vproxy.base.connection.Connection?) -> Unit)? = null
 
-  override fun acceptFail(ctx: ServerHandlerContext?, err: IOException?) {
+  override fun acceptFail(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext?, err: IOException?) {
     val connectionEvent = this.connectionEvent
     this.connectionEvent = null
     if (connectionEvent != null) {
@@ -26,7 +26,7 @@ class CoroutineServerHandler(
     }
   }
 
-  override fun connection(ctx: ServerHandlerContext?, connection: Connection?) {
+  override fun connection(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext?, connection: _root_ide_package_.io.vproxy.base.connection.Connection?) {
     val connectionEvent = this.connectionEvent
     this.connectionEvent = null
     if (connectionEvent != null) {
@@ -36,14 +36,14 @@ class CoroutineServerHandler(
     }
   }
 
-  override fun getIOBuffers(channel: SocketFD): Tuple<RingBuffer, RingBuffer> {
+  override fun getIOBuffers(channel: _root_ide_package_.io.vproxy.vfd.SocketFD): Tuple<_root_ide_package_.io.vproxy.base.util.RingBuffer, _root_ide_package_.io.vproxy.base.util.RingBuffer> {
     if (getIOBuffers != null) {
       return getIOBuffers(channel)
     }
-    return Tuple(RingBuffer.allocateDirect(16384), RingBuffer.allocateDirect(16384))
+    return Tuple(_root_ide_package_.io.vproxy.base.util.RingBuffer.allocateDirect(16384), _root_ide_package_.io.vproxy.base.util.RingBuffer.allocateDirect(16384))
   }
 
-  override fun removed(ctx: ServerHandlerContext) {
+  override fun removed(ctx: _root_ide_package_.io.vproxy.base.connection.ServerHandlerContext) {
     if (ctx.server.isClosed) {
       return
     }

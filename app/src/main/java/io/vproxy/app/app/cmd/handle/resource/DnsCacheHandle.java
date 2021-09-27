@@ -1,8 +1,8 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.base.dns.Cache;
-import vproxy.base.dns.Resolver;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.base.dns.Cache;
+import io.vproxy.base.dns.Resolver;
 
 import java.util.LinkedList;
 import java.util.List;

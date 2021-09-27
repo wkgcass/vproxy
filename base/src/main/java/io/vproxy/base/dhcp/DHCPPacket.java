@@ -1,10 +1,12 @@
-package vproxy.base.dhcp;
+package io.vproxy.base.dhcp;
 
+import io.vproxy.base.dhcp.options.*;
+import io.vproxy.base.util.Consts;
 import vproxy.base.dhcp.options.*;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 
 import java.util.HashMap;
 import java.util.LinkedList;

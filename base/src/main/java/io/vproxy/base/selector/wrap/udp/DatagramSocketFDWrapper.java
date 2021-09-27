@@ -1,9 +1,9 @@
-package vproxy.base.selector.wrap.udp;
+package io.vproxy.base.selector.wrap.udp;
 
-import vproxy.vfd.DatagramFD;
-import vproxy.vfd.FD;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vfd.FD;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 import java.net.SocketOption;

@@ -1,10 +1,12 @@
-package vproxy.base.dns.dnsserverlistgetter;
+package io.vproxy.base.dns.dnsserverlistgetter;
 
-import vproxy.base.dns.DnsServerListGetter;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.dns.DnsServerListGetter;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.util.Arrays;
 import java.util.List;

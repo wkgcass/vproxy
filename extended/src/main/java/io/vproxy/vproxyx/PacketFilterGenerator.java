@@ -1,8 +1,8 @@
-package vproxyx;
+package io.vproxy.vproxyx;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxyx.pktfiltergen.flow.Flows;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vproxyx.pktfiltergen.flow.Flows;
 
 import java.io.File;
 import java.nio.file.Files;

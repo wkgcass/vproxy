@@ -1,7 +1,7 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.RingBufferETHandler;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.RingBufferETHandler;
 
 import java.util.HashSet;
 import java.util.Set;

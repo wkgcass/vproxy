@@ -1,6 +1,6 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.vfd.IP;
+import io.vproxy.vfd.IP;
 
 public abstract class AbstractIpPacket extends AbstractPacket implements PartialPacket {
     public abstract IP getSrc();

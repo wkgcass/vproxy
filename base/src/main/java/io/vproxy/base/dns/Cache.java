@@ -1,13 +1,17 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.base.selector.TimerEvent;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 import vproxy.base.util.coll.Tuple;
-import vproxy.vfd.FDProvider;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.util.Collections;
 import java.util.LinkedList;

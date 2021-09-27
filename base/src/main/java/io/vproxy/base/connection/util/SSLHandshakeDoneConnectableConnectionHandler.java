@@ -1,11 +1,11 @@
-package vproxy.base.connection.util;
+package io.vproxy.base.connection.util;
 
-import vproxy.base.connection.ConnectableConnectionHandler;
-import vproxy.base.connection.ConnectableConnectionHandlerContext;
-import vproxy.base.connection.ConnectionHandlerContext;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.connection.ConnectableConnectionHandler;
+import io.vproxy.base.connection.ConnectableConnectionHandlerContext;
+import io.vproxy.base.connection.ConnectionHandlerContext;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
 
 import javax.net.ssl.SSLEngine;
 import javax.net.ssl.SSLEngineResult;

@@ -13,9 +13,9 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package vproxy.base.util.crypto;
+package io.vproxy.base.util.crypto;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;

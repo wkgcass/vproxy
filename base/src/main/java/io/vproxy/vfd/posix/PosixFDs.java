@@ -1,6 +1,8 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 import java.io.IOException;

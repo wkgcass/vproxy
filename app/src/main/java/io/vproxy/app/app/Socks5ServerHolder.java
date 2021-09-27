@@ -1,13 +1,13 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.ClosedException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.component.app.Socks5Server;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.Upstream;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.ClosedException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.component.app.Socks5Server;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.component.svrgroup.Upstream;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.util.ArrayList;

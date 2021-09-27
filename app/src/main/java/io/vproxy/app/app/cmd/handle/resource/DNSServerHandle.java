@@ -1,17 +1,17 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.handle.param.AddrHandle;
-import vproxy.app.app.cmd.handle.param.TTLHandle;
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.Upstream;
-import vproxy.dns.DNSServer;
-import vproxy.vfd.IPPort;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.handle.param.AddrHandle;
+import io.vproxy.app.app.cmd.handle.param.TTLHandle;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.component.svrgroup.Upstream;
+import io.vproxy.dns.DNSServer;
+import io.vproxy.vfd.IPPort;
 
 import java.util.LinkedList;
 import java.util.List;

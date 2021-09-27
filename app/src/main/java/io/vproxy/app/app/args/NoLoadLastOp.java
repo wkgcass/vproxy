@@ -1,7 +1,7 @@
-package vproxy.app.app.args;
+package io.vproxy.app.app.args;
 
-import vproxy.app.app.MainCtx;
-import vproxy.app.app.MainOp;
+import io.vproxy.app.app.MainCtx;
+import io.vproxy.app.app.MainOp;
 
 public class NoLoadLastOp implements MainOp {
     @Override

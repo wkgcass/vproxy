@@ -1,10 +1,11 @@
-package vproxy.base.selector.wrap;
+package io.vproxy.base.selector.wrap;
 
-import vproxy.base.util.Lock;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.objectpool.GarbageFree;
-import vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.Lock;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.objectpool.GarbageFree;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 import java.io.IOException;

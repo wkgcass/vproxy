@@ -1,16 +1,16 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.SecurityGroupHolder;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.app.app.cmd.handle.param.SecGRDefaultHandle;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.base.util.exception.XException;
-import vproxy.component.secure.SecurityGroup;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.SecurityGroupHolder;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.component.secure.SecurityGroup;
 
 import java.util.ArrayList;
 import java.util.List;

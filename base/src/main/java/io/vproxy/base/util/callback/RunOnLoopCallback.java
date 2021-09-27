@@ -1,8 +1,9 @@
-package vproxy.base.util.callback;
+package io.vproxy.base.util.callback;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 public class RunOnLoopCallback<T, E extends Exception> extends Callback<T, E> {
     private final SelectorEventLoop callerLoop;

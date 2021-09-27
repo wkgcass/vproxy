@@ -1,10 +1,10 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.util.exception.XException;
-import vproxy.vswitch.dispatcher.BPFMapKeySelector;
-import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
+import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 
 public class BPFMapKeySelectorHandle {
     private BPFMapKeySelectorHandle() {

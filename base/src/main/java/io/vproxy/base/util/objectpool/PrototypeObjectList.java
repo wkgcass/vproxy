@@ -1,4 +1,4 @@
-package vproxy.base.util.objectpool;
+package io.vproxy.base.util.objectpool;
 
 import java.util.function.Supplier;
 

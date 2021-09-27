@@ -1,4 +1,4 @@
-package vproxy.base.protocol;
+package io.vproxy.base.protocol;
 
 public class ProtocolServerConfig {
     int inBufferSize = 16384;

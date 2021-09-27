@@ -1,4 +1,4 @@
-package vproxy.test.tool;
+package io.vproxy.test.tool;
 
 import java.net.Inet4Address;
 import java.net.InetAddress;

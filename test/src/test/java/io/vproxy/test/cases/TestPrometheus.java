@@ -1,9 +1,9 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
 import org.junit.Test;
-import vproxy.base.prometheus.Counter;
-import vproxy.base.prometheus.Gauge;
-import vproxy.base.prometheus.Metrics;
+import io.vproxy.base.prometheus.Counter;
+import io.vproxy.base.prometheus.Gauge;
+import io.vproxy.base.prometheus.Metrics;
 
 import java.util.Map;
 

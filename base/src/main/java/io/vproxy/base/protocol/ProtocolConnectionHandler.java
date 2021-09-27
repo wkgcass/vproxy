@@ -1,9 +1,11 @@
-package vproxy.base.protocol;
+package io.vproxy.base.protocol;
 
-import vproxy.base.connection.ConnectionHandler;
-import vproxy.base.connection.ConnectionHandlerContext;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.connection.ConnectionHandler;
+import io.vproxy.base.connection.ConnectionHandlerContext;
+import io.vproxy.base.connection.ConnectionHandler;
+import io.vproxy.base.connection.ConnectionHandlerContext;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import java.io.IOException;
 

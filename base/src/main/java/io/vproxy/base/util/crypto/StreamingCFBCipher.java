@@ -1,8 +1,8 @@
-package vproxy.base.util.crypto;
+package io.vproxy.base.util.crypto;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import javax.crypto.Cipher;
 import javax.crypto.NoSuchPaddingException;

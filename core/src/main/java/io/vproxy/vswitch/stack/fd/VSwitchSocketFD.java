@@ -1,11 +1,15 @@
-package vproxy.vswitch.stack.fd;
+package io.vproxy.vswitch.stack.fd;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Logger;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
-import vproxy.vpacket.conntrack.tcp.TcpEntry;
-import vproxy.vpacket.conntrack.tcp.TcpState;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vpacket.conntrack.tcp.ConnectionHandler;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vpacket.conntrack.tcp.TcpState;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vpacket.conntrack.tcp.TcpState;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;
@@ -237,7 +241,7 @@ public class VSwitchSocketFD extends VSwitchFD implements SocketFD {
         return "VSwitchSocketFD(" + entry.source + "->" + entry.destination + ")[" + (closed ? "CLOSED" : "OPEN") + "]";
     }
 
-    private class ConnectionHandler implements vproxy.vpacket.conntrack.tcp.ConnectionHandler {
+    private class ConnectionHandler implements io.vproxy.vpacket.conntrack.tcp.ConnectionHandler {
         @Override
         public void readable(TcpEntry entry) {
             if (closed) {

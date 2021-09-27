@@ -1,8 +1,8 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.RingBuffer;
 import vproxy.base.util.coll.Tuple;
-import vproxy.vfd.SocketFD;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

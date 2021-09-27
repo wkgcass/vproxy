@@ -1,22 +1,22 @@
-package vproxyx.websocks.relay;
+package io.vproxy.vproxyx.websocks.relay;
 
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.connection.Connection;
-import vproxy.base.connection.Connector;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.processor.Hint;
-import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.socks.AddressType;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.processor.Hint;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.socks.AddressType;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.component.proxy.ConnectorGen;
-import vproxy.component.proxy.Proxy;
-import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.vfd.IPPort;
-import vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
+import io.vproxy.component.proxy.ConnectorGen;
+import io.vproxy.component.proxy.Proxy;
+import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vproxyx.websocks.WebSocksProxyAgentConnectorProvider;
 
 import java.io.IOException;
 

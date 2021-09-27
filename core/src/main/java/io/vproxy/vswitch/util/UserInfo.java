@@ -1,6 +1,7 @@
-package vproxy.vswitch.util;
+package io.vproxy.vswitch.util;
 
-import vproxy.base.util.crypto.Aes256Key;
+import io.vproxy.base.util.crypto.Aes256Key;
+import io.vproxy.base.util.crypto.Aes256Key;
 
 public class UserInfo {
     public final String user;

@@ -1,14 +1,14 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Flag;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.dns.Resolver;
-import vproxy.base.util.callback.BlockCallback;
-import vproxy.base.util.exception.XException;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.UDSPath;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Flag;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.UDSPath;
 
 import java.net.UnknownHostException;
 

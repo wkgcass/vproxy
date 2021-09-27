@@ -1,8 +1,8 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.FD;
-import vproxy.vfd.SocketOptions;
-import vproxy.vfd.abs.AbstractBaseFD;
+import io.vproxy.vfd.FD;
+import io.vproxy.vfd.SocketOptions;
+import io.vproxy.vfd.abs.AbstractBaseFD;
 
 import java.io.IOException;
 import java.net.SocketOption;

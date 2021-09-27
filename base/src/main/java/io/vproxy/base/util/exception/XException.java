@@ -1,4 +1,4 @@
-package vproxy.base.util.exception;
+package io.vproxy.base.util.exception;
 
 public class XException extends Exception {
     public XException(String msg) {

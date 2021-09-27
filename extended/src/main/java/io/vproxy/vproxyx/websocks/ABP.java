@@ -1,7 +1,7 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 import java.util.*;
 import java.util.function.Function;

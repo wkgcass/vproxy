@@ -1,6 +1,6 @@
-package vproxy.base.prometheus;
+package io.vproxy.base.prometheus;
 
-import vproxy.base.util.coll.ConcurrentHashSet;
+import io.vproxy.base.util.coll.ConcurrentHashSet;
 
 import java.util.ArrayList;
 import java.util.List;

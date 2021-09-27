@@ -1,6 +1,6 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 public class PacketDataBuffer {
     public ByteArray fullbuf;

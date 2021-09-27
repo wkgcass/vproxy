@@ -1,4 +1,4 @@
-package vproxy.base.redis.entity;
+package io.vproxy.base.redis.entity;
 
 public abstract class RESP {
     public abstract Object getJavaObject();

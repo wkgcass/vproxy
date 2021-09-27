@@ -1,4 +1,4 @@
-package vproxy.base.util.coll;
+package io.vproxy.base.util.coll;
 
 import java.util.Collection;
 import java.util.HashSet;

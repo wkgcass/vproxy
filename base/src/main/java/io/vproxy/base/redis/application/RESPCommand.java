@@ -1,4 +1,4 @@
-package vproxy.base.redis.application;
+package io.vproxy.base.redis.application;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -1,9 +1,10 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vpacket.*;
 import vproxy.vpacket.*;
 
 import java.util.Collections;

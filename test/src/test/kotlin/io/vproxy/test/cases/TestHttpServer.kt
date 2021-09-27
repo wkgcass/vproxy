@@ -1,37 +1,42 @@
-package vproxy.test.cases
+package io.vproxy.test.cases
 
 import org.junit.AfterClass
 import org.junit.Assert.assertEquals
 import org.junit.BeforeClass
 import org.junit.Test
-import vproxy.base.connection.ServerSock
-import vproxy.base.processor.http1.entity.Response
-import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.thread.VProxyThread
+import io.vproxy.base.connection.ServerSock
+import io.vproxy.base.processor.http1.entity.Response
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.util.thread.VProxyThread
 import vproxy.lib.common.coroutine
 import vproxy.lib.common.execute
 import vproxy.lib.common.launch
 import vproxy.lib.http.RoutingHandlerFunc
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.http1.CoroutineHttp1Server
-import vproxy.vfd.IPPort
+import io.vproxy.vfd.IPPort
 import java.io.IOException
 
 class TestHttpServer {
   companion object {
     private const val port = 30080
     private var server: CoroutineHttp1Server? = null
-    private var loop: SelectorEventLoop? = null
+    private var loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop? = null
 
     @JvmStatic
     @BeforeClass
     @Throws(Exception::class)
     fun beforeClass() {
-      val serverSock = ServerSock.create(IPPort("127.0.0.1", port))
-      val loop = SelectorEventLoop.open()
+      val serverSock = _root_ide_package_.io.vproxy.base.connection.ServerSock.create(
+        _root_ide_package_.io.vproxy.vfd.IPPort(
+          "127.0.0.1",
+          port
+        )
+      )
+      val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
       this.loop = loop
       loop.ensureNetEventLoop()
-      loop.loop { VProxyThread.create(it, "test-http-server") }
+      loop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "test-http-server") }
       val server = CoroutineHttp1Server(serverSock.coroutine(loop.ensureNetEventLoop()))
       this.server = server
 
@@ -83,9 +88,9 @@ class TestHttpServer {
     }
   }
 
-  private fun requestRaw(uri: String): Response {
+  private fun requestRaw(uri: String): _root_ide_package_.io.vproxy.base.processor.http1.entity.Response {
     val response = loop!!.execute {
-      val client = CoroutineHttp1ClientConnection.create(IPPort("127.0.0.1", port))
+      val client = CoroutineHttp1ClientConnection.create(_root_ide_package_.io.vproxy.vfd.IPPort("127.0.0.1", port))
       client.get(uri).send()
       val resp = client.readResponse()
       client.conn.close()
@@ -96,7 +101,7 @@ class TestHttpServer {
 
   private fun request(uri: String): String {
     val body = loop!!.execute {
-      val client = CoroutineHttp1ClientConnection.create(IPPort("127.0.0.1", port))
+      val client = CoroutineHttp1ClientConnection.create(_root_ide_package_.io.vproxy.vfd.IPPort("127.0.0.1", port))
       defer { client.close() }
 
       client.get(uri).send()

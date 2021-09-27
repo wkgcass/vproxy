@@ -1,16 +1,17 @@
-package vproxy.base.selector.wrap.streamed;
+package io.vproxy.base.selector.wrap.streamed;
 
-import vproxy.base.GlobalInspection;
-import vproxy.base.prometheus.GaugeF;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.VirtualFD;
-import vproxy.base.selector.wrap.WrappedSelector;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.vfd.FD;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.ServerSocketFD;
-import vproxy.vfd.SocketFD;
+import io.vproxy.base.prometheus.GaugeF;
+import io.vproxy.base.GlobalInspection;
+import io.vproxy.base.prometheus.GaugeF;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.VirtualFD;
+import io.vproxy.base.selector.wrap.WrappedSelector;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.FD;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.ServerSocketFD;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 import java.net.SocketOption;

@@ -1,4 +1,4 @@
-package vproxy.base.util.thread;
+package io.vproxy.base.util.thread;
 
 import vjson.parser.ArrayParser;
 import vjson.parser.ObjectParser;

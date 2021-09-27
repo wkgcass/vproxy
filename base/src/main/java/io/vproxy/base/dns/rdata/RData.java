@@ -1,8 +1,8 @@
-package vproxy.base.dns.rdata;
+package io.vproxy.base.dns.rdata;
 
-import vproxy.base.dns.DNSType;
-import vproxy.base.dns.InvalidDNSPacketException;
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.dns.DNSType;
+import io.vproxy.base.dns.InvalidDNSPacketException;
+import io.vproxy.base.util.ByteArray;
 
 public interface RData {
     static RData newRData(DNSType type) {

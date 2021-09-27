@@ -1,6 +1,6 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import java.io.IOException;
 import java.io.InputStream;

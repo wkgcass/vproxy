@@ -1,7 +1,8 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Logger;
 
 public abstract class AbstractPacket {
     public static final int FLAG_CHECKSUM_UNNECESSARY = 0x01;

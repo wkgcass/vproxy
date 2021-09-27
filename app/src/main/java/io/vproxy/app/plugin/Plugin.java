@@ -1,4 +1,4 @@
-package vproxy.app.plugin;
+package io.vproxy.app.plugin;
 
 public interface Plugin {
     String id();

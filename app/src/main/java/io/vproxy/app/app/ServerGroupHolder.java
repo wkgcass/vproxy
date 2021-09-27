@@ -1,13 +1,13 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.component.check.HealthCheckConfig;
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.component.svrgroup.Method;
-import vproxy.base.component.svrgroup.ServerGroup;
-import vproxy.base.util.Annotations;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.ClosedException;
-import vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.component.check.HealthCheckConfig;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.component.svrgroup.Method;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.ClosedException;
+import io.vproxy.base.util.exception.NotFoundException;
 
 import java.util.ArrayList;
 import java.util.HashMap;

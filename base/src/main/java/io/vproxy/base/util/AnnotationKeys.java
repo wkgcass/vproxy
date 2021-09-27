@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
 public enum AnnotationKeys {
     ServerGroup_HintHost("vproxy/hint-host"),

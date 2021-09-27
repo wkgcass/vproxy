@@ -1,6 +1,6 @@
-package vproxyx.pktfiltergen;
+package io.vproxy.vproxyx.pktfiltergen;
 
-import vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.iface.Iface;
 
 public class IfaceHolder {
     public final String name;

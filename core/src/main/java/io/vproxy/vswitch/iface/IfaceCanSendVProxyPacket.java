@@ -1,6 +1,7 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
-import vproxy.vpacket.VProxyEncryptedPacket;
+import io.vproxy.vpacket.VProxyEncryptedPacket;
+import io.vproxy.vpacket.VProxyEncryptedPacket;
 
 public interface IfaceCanSendVProxyPacket {
     void sendVProxyPacket(VProxyEncryptedPacket pkt);

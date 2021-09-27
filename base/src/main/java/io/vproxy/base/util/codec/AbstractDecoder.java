@@ -1,6 +1,6 @@
-package vproxy.base.util.codec;
+package io.vproxy.base.util.codec;
 
-import vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.RingBuffer;
 
 import java.util.Set;
 

@@ -1,4 +1,4 @@
-package vproxy.base.processor.httpbin.entity;
+package io.vproxy.base.processor.httpbin.entity;
 
 public class Setting {
     public static final int SETTINGS_HEADER_TABLE_SIZE = 0x1;

@@ -1,10 +1,10 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Logger;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv6;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv6;
 
 import java.util.ArrayList;
 import java.util.Collections;

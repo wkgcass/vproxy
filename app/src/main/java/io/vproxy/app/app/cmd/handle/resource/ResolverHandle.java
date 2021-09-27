@@ -1,7 +1,7 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Resource;
-import vproxy.base.util.exception.XException;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.base.util.exception.XException;
 
 public class ResolverHandle {
     private ResolverHandle() {

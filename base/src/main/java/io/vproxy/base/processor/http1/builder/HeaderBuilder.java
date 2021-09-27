@@ -1,6 +1,6 @@
-package vproxy.base.processor.http1.builder;
+package io.vproxy.base.processor.http1.builder;
 
-import vproxy.base.processor.http1.entity.Header;
+import io.vproxy.base.processor.http1.entity.Header;
 
 public class HeaderBuilder {
     public StringBuilder key = new StringBuilder();

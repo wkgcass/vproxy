@@ -1,8 +1,9 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
+import io.vproxy.base.util.*;
 import vproxy.base.util.*;
-import vproxy.vfd.ReadableByteStream;
-import vproxy.vfd.WritableByteStream;
+import io.vproxy.vfd.ReadableByteStream;
+import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

@@ -1,12 +1,12 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Flag;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.handle.param.ArgsHandle;
-import vproxy.app.app.cmd.handle.param.URLHandle;
-import vproxy.app.plugin.PluginWrapper;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Flag;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.handle.param.ArgsHandle;
+import io.vproxy.app.app.cmd.handle.param.URLHandle;
+import io.vproxy.app.plugin.PluginWrapper;
 
 import java.net.URL;
 import java.util.ArrayList;

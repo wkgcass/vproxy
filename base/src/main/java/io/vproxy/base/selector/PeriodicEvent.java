@@ -1,4 +1,4 @@
-package vproxy.base.selector;
+package io.vproxy.base.selector;
 
 public class PeriodicEvent {
     private final Runnable runnable;

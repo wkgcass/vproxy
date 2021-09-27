@@ -1,17 +1,19 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
+import io.vproxy.base.dns.*;
+import io.vproxy.base.dns.rdata.*;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 import vproxy.base.dns.*;
 import vproxy.base.dns.rdata.*;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.callback.BlockCallback;
-import vproxy.vfd.FDProvider;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

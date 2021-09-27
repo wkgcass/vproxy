@@ -1,18 +1,18 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.app.app.cmd.handle.param.AnnotationsHandle;
-import vproxy.app.app.cmd.handle.param.RoutingHandle;
-import vproxy.base.util.Annotations;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.base.util.exception.XException;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
-import vproxy.vswitch.IPMac;
-import vproxy.vswitch.VirtualNetwork;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.handle.param.AnnotationsHandle;
+import io.vproxy.app.app.cmd.handle.param.RoutingHandle;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
+import io.vproxy.vswitch.IPMac;
+import io.vproxy.vswitch.VirtualNetwork;
 
 import java.util.Collection;
 

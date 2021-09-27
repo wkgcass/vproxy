@@ -1,6 +1,6 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 public class Segment {
     public final long seqBeginInclusive;

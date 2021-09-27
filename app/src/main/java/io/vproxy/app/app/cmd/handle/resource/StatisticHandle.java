@@ -1,7 +1,7 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
 
 public class StatisticHandle {
     private StatisticHandle() {

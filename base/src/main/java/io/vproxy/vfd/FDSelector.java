@@ -1,6 +1,7 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
-import vproxy.base.util.objectpool.GarbageFree;
+import io.vproxy.base.util.objectpool.GarbageFree;
+import io.vproxy.base.util.objectpool.GarbageFree;
 
 import java.io.Closeable;
 import java.io.IOException;

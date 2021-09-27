@@ -1,7 +1,7 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 import javax.net.ssl.X509TrustManager;
 import java.security.cert.X509Certificate;

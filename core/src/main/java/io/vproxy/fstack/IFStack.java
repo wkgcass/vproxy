@@ -1,4 +1,4 @@
-package vproxy.fstack;
+package io.vproxy.fstack;
 
 import java.util.List;
 

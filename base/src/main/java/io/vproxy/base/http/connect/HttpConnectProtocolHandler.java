@@ -1,20 +1,30 @@
-package vproxy.base.http.connect;
+package io.vproxy.base.http.connect;
 
-import vproxy.base.connection.Connector;
-import vproxy.base.connection.ConnectorProvider;
-import vproxy.base.http.HttpContext;
-import vproxy.base.http.HttpProtocolHandler;
-import vproxy.base.processor.http1.entity.Request;
-import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.ConnectorProvider;
+import io.vproxy.base.processor.http1.entity.Request;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.ConnectorProvider;
+import io.vproxy.base.http.HttpContext;
+import io.vproxy.base.http.HttpProtocolHandler;
+import io.vproxy.base.processor.http1.entity.Request;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

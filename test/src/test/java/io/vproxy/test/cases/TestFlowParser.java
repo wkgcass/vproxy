@@ -1,8 +1,8 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
 import org.junit.Test;
-import vproxyx.pktfiltergen.flow.FlowParser;
-import vproxyx.pktfiltergen.flow.Flows;
+import io.vproxy.vproxyx.pktfiltergen.flow.FlowParser;
+import io.vproxy.vproxyx.pktfiltergen.flow.Flows;
 
 import static org.junit.Assert.assertEquals;
 

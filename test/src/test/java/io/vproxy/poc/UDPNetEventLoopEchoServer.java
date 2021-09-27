@@ -1,10 +1,11 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
+import io.vproxy.base.connection.*;
 import vproxy.base.connection.*;
-import vproxy.base.selector.wrap.udp.UDPFDs;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.selector.wrap.udp.UDPFDs;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

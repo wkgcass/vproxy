@@ -1,12 +1,12 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.ByteBufferEx;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Utils;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.MacAddress;
 
 import java.nio.ByteBuffer;
 

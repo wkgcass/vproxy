@@ -1,4 +1,4 @@
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;
 
 import java.util.LinkedList;
 import java.util.List;

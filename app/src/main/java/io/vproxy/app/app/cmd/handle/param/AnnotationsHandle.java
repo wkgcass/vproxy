@@ -1,10 +1,10 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
 import vjson.JSON;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.util.Annotations;
-import vproxy.base.util.exception.XException;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.base.util.exception.XException;
 
 import java.util.Map;
 

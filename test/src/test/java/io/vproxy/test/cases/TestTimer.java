@@ -1,12 +1,12 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
-import vproxy.base.selector.PeriodicEvent;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.TimerEvent;
-import vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.selector.PeriodicEvent;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.thread.VProxyThread;
 
 import static org.junit.Assert.*;
 

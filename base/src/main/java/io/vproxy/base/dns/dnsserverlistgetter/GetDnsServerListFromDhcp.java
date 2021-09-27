@@ -1,15 +1,18 @@
-package vproxy.base.dns.dnsserverlistgetter;
+package io.vproxy.base.dns.dnsserverlistgetter;
 
-import vproxy.base.Config;
-import vproxy.base.dhcp.DHCPClientHelper;
-import vproxy.base.dns.AbstractResolver;
-import vproxy.base.dns.DnsServerListGetter;
-import vproxy.base.dns.Resolver;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.callback.Callback;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.Config;
+import io.vproxy.base.dhcp.DHCPClientHelper;
+import io.vproxy.base.dns.AbstractResolver;
+import io.vproxy.base.dns.DnsServerListGetter;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.util.List;

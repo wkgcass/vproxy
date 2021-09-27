@@ -1,25 +1,25 @@
-package vproxy.app.process
+package io.vproxy.app.process
 
-import vproxy.app.app.cmd.CmdResult
-import vproxy.app.app.cmd.Command
+import io.vproxy.app.app.cmd.CmdResult
+import io.vproxy.app.app.cmd.Command
 import vproxy.app.app.cmd.ModuleCommands
 import vproxy.app.app.cmd.SystemCommands
-import vproxy.base.selector.SelectorEventLoop
-import vproxy.base.util.LogType
-import vproxy.base.util.Logger
-import vproxy.base.util.Utils
-import vproxy.base.util.callback.Callback
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.util.LogType
+import io.vproxy.base.util.Logger
+import io.vproxy.base.util.Utils
+import io.vproxy.base.util.callback.Callback
 import vproxy.lib.common.awaitCallback
 import vproxy.lib.common.defaultCoroutineEventLoop
 import vproxy.lib.common.launch
 import java.io.*
 
 object Loader {
-  fun loadCommands(filepath: String, cb: Callback<String, Throwable>) {
-    val loop = if (SelectorEventLoop.current() == null) {
+  fun loadCommands(filepath: String, cb: _root_ide_package_.io.vproxy.base.util.callback.Callback<String, Throwable>) {
+    val loop = if (_root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current() == null) {
       defaultCoroutineEventLoop()
     } else {
-      SelectorEventLoop.current()
+      _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current()
     }
     loop.launch {
       try {
@@ -34,7 +34,7 @@ object Loader {
 
   @Suppress("BlockingMethodInNonBlockingContext")
   private suspend fun loadCommandsAsync(filepathx: String) {
-    val filepath = Utils.filename(filepathx)
+    val filepath = _root_ide_package_.io.vproxy.base.util.Utils.filename(filepathx)
     val f = File(filepath)
     val fis = FileInputStream(f)
     val br = BufferedReader(InputStreamReader(fis))
@@ -58,7 +58,7 @@ object Loader {
         val subline = line.substring("System: ".length).trim()
         if (subline.startsWith("load ")) {
           val file = subline.substring("load ".length).trim()
-          Logger.alert("loading more commands from $file")
+          _root_ide_package_.io.vproxy.base.util.Logger.alert("loading more commands from $file")
           loadCommandsAsync(file)
           continue
         } else if (subline.startsWith("exec ")) {
@@ -71,34 +71,34 @@ object Loader {
             throw Exception("failed setting executable on $filename")
           }
           val pb = ProcessBuilder(filename)
-          Utils.execute(pb, 5 * 1000)
+          _root_ide_package_.io.vproxy.base.util.Utils.execute(pb, 5 * 1000)
           continue
         }
       }
 
-      assert(Logger.lowLevelDebug(LogType.BEFORE_PARSING_CMD.toString() + " - " + line))
+      assert(_root_ide_package_.io.vproxy.base.util.Logger.lowLevelDebug(_root_ide_package_.io.vproxy.base.util.LogType.BEFORE_PARSING_CMD.toString() + " - " + line))
 
       if (isSystemCommand) {
         line = line.substring("System: ".length)
       }
       val cmd = try {
-        Command.parseStrCmd(line)
+        _root_ide_package_.io.vproxy.app.app.cmd.Command.parseStrCmd(line)
       } catch (e: Exception) {
-        Logger.warn(LogType.AFTER_PARSING_CMD, "parse command `$line` failed")
+        _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.AFTER_PARSING_CMD, "parse command `$line` failed")
         throw e
       }
-      assert(Logger.lowLevelDebug(LogType.AFTER_PARSING_CMD.toString() + " - " + cmd))
+      assert(_root_ide_package_.io.vproxy.base.util.Logger.lowLevelDebug(_root_ide_package_.io.vproxy.base.util.LogType.AFTER_PARSING_CMD.toString() + " - " + cmd))
       executeCommand(isSystemCommand, cmd)
     }
   }
 
-  private suspend fun executeCommand(isSystemCommand: Boolean, cmd: Command) {
+  private suspend fun executeCommand(isSystemCommand: Boolean, cmd: _root_ide_package_.io.vproxy.app.app.cmd.Command) {
     if (isSystemCommand) {
-      Logger.alert("loading command: System: $cmd")
+      _root_ide_package_.io.vproxy.base.util.Logger.alert("loading command: System: $cmd")
     } else {
-      Logger.alert("loading command: $cmd")
+      _root_ide_package_.io.vproxy.base.util.Logger.alert("loading command: $cmd")
     }
-    awaitCallback<CmdResult, Throwable> {
+    awaitCallback<_root_ide_package_.io.vproxy.app.app.cmd.CmdResult, Throwable> {
       val cmds = if (isSystemCommand) {
         SystemCommands.Instance
       } else {

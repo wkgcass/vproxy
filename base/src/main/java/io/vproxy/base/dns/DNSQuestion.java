@@ -1,4 +1,4 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
 /*
  *                                     1  1  1  1  1  1

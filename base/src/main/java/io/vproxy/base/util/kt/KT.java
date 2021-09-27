@@ -1,4 +1,4 @@
-package vproxy.base.util.kt;
+package io.vproxy.base.util.kt;
 
 import kotlin.jvm.internal.Reflection;
 import kotlin.reflect.KClass;

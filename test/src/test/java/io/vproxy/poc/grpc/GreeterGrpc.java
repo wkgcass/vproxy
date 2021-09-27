@@ -1,4 +1,4 @@
-package vproxy.poc.grpc;
+package io.vproxy.poc.grpc;
 
 import static io.grpc.MethodDescriptor.generateFullMethodName;
 import static io.grpc.stub.ClientCalls.asyncUnaryCall;
@@ -24,34 +24,34 @@ public final class GreeterGrpc {
     // Static method descriptors that strictly reflect the proto.
     @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
     @java.lang.Deprecated // Use {@link #getSayHelloMethod()} instead. 
-    public static final io.grpc.MethodDescriptor<vproxy.poc.grpc.HelloRequest,
-        vproxy.poc.grpc.HelloResponse> METHOD_SAY_HELLO = getSayHelloMethodHelper();
+    public static final io.grpc.MethodDescriptor<HelloRequest,
+        HelloResponse> METHOD_SAY_HELLO = getSayHelloMethodHelper();
 
-    private static volatile io.grpc.MethodDescriptor<vproxy.poc.grpc.HelloRequest,
-        vproxy.poc.grpc.HelloResponse> getSayHelloMethod;
+    private static volatile io.grpc.MethodDescriptor<HelloRequest,
+        HelloResponse> getSayHelloMethod;
 
     @io.grpc.ExperimentalApi("https://github.com/grpc/grpc-java/issues/1901")
-    public static io.grpc.MethodDescriptor<vproxy.poc.grpc.HelloRequest,
-        vproxy.poc.grpc.HelloResponse> getSayHelloMethod() {
+    public static io.grpc.MethodDescriptor<HelloRequest,
+        HelloResponse> getSayHelloMethod() {
         return getSayHelloMethodHelper();
     }
 
-    private static io.grpc.MethodDescriptor<vproxy.poc.grpc.HelloRequest,
-        vproxy.poc.grpc.HelloResponse> getSayHelloMethodHelper() {
-        io.grpc.MethodDescriptor<vproxy.poc.grpc.HelloRequest, vproxy.poc.grpc.HelloResponse> getSayHelloMethod;
+    private static io.grpc.MethodDescriptor<HelloRequest,
+        HelloResponse> getSayHelloMethodHelper() {
+        io.grpc.MethodDescriptor<HelloRequest, HelloResponse> getSayHelloMethod;
         if ((getSayHelloMethod = GreeterGrpc.getSayHelloMethod) == null) {
             synchronized (GreeterGrpc.class) {
                 if ((getSayHelloMethod = GreeterGrpc.getSayHelloMethod) == null) {
                     GreeterGrpc.getSayHelloMethod = getSayHelloMethod =
-                        io.grpc.MethodDescriptor.<vproxy.poc.grpc.HelloRequest, vproxy.poc.grpc.HelloResponse>newBuilder()
+                        io.grpc.MethodDescriptor.<HelloRequest, HelloResponse>newBuilder()
                             .setType(io.grpc.MethodDescriptor.MethodType.UNARY)
                             .setFullMethodName(generateFullMethodName(
                                 "helloworld.Greeter", "SayHello"))
                             .setSampledToLocalTracing(true)
                             .setRequestMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                                vproxy.poc.grpc.HelloRequest.getDefaultInstance()))
+                                HelloRequest.getDefaultInstance()))
                             .setResponseMarshaller(io.grpc.protobuf.ProtoUtils.marshaller(
-                                vproxy.poc.grpc.HelloResponse.getDefaultInstance()))
+                                HelloResponse.getDefaultInstance()))
                             .setSchemaDescriptor(new GreeterMethodDescriptorSupplier("SayHello"))
                             .build();
                 }
@@ -95,8 +95,8 @@ public final class GreeterGrpc {
          * Sends a greeting
          * </pre>
          */
-        public void sayHello(vproxy.poc.grpc.HelloRequest request,
-                             io.grpc.stub.StreamObserver<vproxy.poc.grpc.HelloResponse> responseObserver) {
+        public void sayHello(HelloRequest request,
+                             io.grpc.stub.StreamObserver<HelloResponse> responseObserver) {
             asyncUnimplementedUnaryCall(getSayHelloMethodHelper(), responseObserver);
         }
 
@@ -106,8 +106,8 @@ public final class GreeterGrpc {
                     getSayHelloMethodHelper(),
                     asyncUnaryCall(
                         new MethodHandlers<
-                            vproxy.poc.grpc.HelloRequest,
-                            vproxy.poc.grpc.HelloResponse>(
+                            HelloRequest,
+                            HelloResponse>(
                             this, METHODID_SAY_HELLO)))
                 .build();
         }
@@ -139,8 +139,8 @@ public final class GreeterGrpc {
          * Sends a greeting
          * </pre>
          */
-        public void sayHello(vproxy.poc.grpc.HelloRequest request,
-                             io.grpc.stub.StreamObserver<vproxy.poc.grpc.HelloResponse> responseObserver) {
+        public void sayHello(HelloRequest request,
+                             io.grpc.stub.StreamObserver<HelloResponse> responseObserver) {
             asyncUnaryCall(
                 getChannel().newCall(getSayHelloMethodHelper(), getCallOptions()), request, responseObserver);
         }
@@ -172,7 +172,7 @@ public final class GreeterGrpc {
          * Sends a greeting
          * </pre>
          */
-        public vproxy.poc.grpc.HelloResponse sayHello(vproxy.poc.grpc.HelloRequest request) {
+        public HelloResponse sayHello(HelloRequest request) {
             return blockingUnaryCall(
                 getChannel(), getSayHelloMethodHelper(), getCallOptions(), request);
         }
@@ -204,8 +204,8 @@ public final class GreeterGrpc {
          * Sends a greeting
          * </pre>
          */
-        public com.google.common.util.concurrent.ListenableFuture<vproxy.poc.grpc.HelloResponse> sayHello(
-            vproxy.poc.grpc.HelloRequest request) {
+        public com.google.common.util.concurrent.ListenableFuture<HelloResponse> sayHello(
+            HelloRequest request) {
             return futureUnaryCall(
                 getChannel().newCall(getSayHelloMethodHelper(), getCallOptions()), request);
         }
@@ -231,8 +231,8 @@ public final class GreeterGrpc {
         public void invoke(Req request, io.grpc.stub.StreamObserver<Resp> responseObserver) {
             switch (methodId) {
                 case METHODID_SAY_HELLO:
-                    serviceImpl.sayHello((vproxy.poc.grpc.HelloRequest) request,
-                        (io.grpc.stub.StreamObserver<vproxy.poc.grpc.HelloResponse>) responseObserver);
+                    serviceImpl.sayHello((HelloRequest) request,
+                        (io.grpc.stub.StreamObserver<HelloResponse>) responseObserver);
                     break;
                 default:
                     throw new AssertionError();
@@ -256,7 +256,7 @@ public final class GreeterGrpc {
 
         @java.lang.Override
         public com.google.protobuf.Descriptors.FileDescriptor getFileDescriptor() {
-            return vproxy.poc.grpc.HelloWorldProto.getDescriptor();
+            return HelloWorldProto.getDescriptor();
         }
 
         @java.lang.Override

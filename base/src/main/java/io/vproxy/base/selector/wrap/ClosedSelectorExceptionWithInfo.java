@@ -1,4 +1,4 @@
-package vproxy.base.selector.wrap;
+package io.vproxy.base.selector.wrap;
 
 import java.nio.channels.ClosedSelectorException;
 

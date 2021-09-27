@@ -1,4 +1,4 @@
-package vproxy.base.util.coll;
+package io.vproxy.base.util.coll;
 
 public class RingQueue<E> {
     private Object[] array;

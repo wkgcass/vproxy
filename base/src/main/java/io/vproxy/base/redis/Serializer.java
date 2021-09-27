@@ -1,4 +1,4 @@
-package vproxy.base.redis;
+package io.vproxy.base.redis;
 
 import java.util.Arrays;
 import java.util.List;

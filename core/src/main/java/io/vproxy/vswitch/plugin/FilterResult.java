@@ -1,4 +1,4 @@
-package vproxy.vswitch.plugin;
+package io.vproxy.vswitch.plugin;
 
 public enum FilterResult {
     PASS,

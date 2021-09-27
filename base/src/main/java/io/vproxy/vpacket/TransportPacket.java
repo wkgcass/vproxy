@@ -1,4 +1,4 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
 public abstract class TransportPacket extends AbstractPacket implements PartialPacket {
     public abstract int getSrcPort();

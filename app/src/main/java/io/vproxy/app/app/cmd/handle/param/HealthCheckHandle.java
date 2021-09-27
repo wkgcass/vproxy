@@ -1,10 +1,10 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.component.check.CheckProtocol;
-import vproxy.base.component.check.HealthCheckConfig;
-import vproxy.base.util.exception.XException;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.component.check.CheckProtocol;
+import io.vproxy.base.component.check.HealthCheckConfig;
+import io.vproxy.base.util.exception.XException;
 
 public class HealthCheckHandle {
     private HealthCheckHandle() {

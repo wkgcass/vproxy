@@ -1,7 +1,7 @@
-package vproxy.ci;
+package io.vproxy.ci;
 
 import vjson.JSON;
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;

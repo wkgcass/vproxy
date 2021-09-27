@@ -1,8 +1,8 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
 import org.junit.BeforeClass;
 import org.junit.Test;
-import vproxy.base.dns.Resolver;
+import io.vproxy.base.dns.Resolver;
 
 public class BeforeAll {
     @BeforeClass

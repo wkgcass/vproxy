@@ -1,7 +1,7 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.util.RingBuffer;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

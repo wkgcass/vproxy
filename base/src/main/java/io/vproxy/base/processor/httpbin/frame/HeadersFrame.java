@@ -1,10 +1,11 @@
-package vproxy.base.processor.httpbin.frame;
+package io.vproxy.base.processor.httpbin.frame;
 
-import vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import vproxy.base.processor.httpbin.HttpFrame;
-import vproxy.base.processor.httpbin.HttpFrameType;
-import vproxy.base.processor.httpbin.entity.Header;
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.HttpFrame;
+import io.vproxy.base.processor.httpbin.HttpFrameType;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.util.ByteArray;
 
 import java.util.ArrayList;
 import java.util.Arrays;

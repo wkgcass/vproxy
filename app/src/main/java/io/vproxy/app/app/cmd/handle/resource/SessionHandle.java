@@ -1,12 +1,12 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.component.app.Socks5Server;
-import vproxy.component.app.TcpLB;
-import vproxy.component.proxy.Session;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.component.app.Socks5Server;
+import io.vproxy.component.app.TcpLB;
+import io.vproxy.component.proxy.Session;
 
 import java.util.LinkedList;
 import java.util.List;

@@ -1,9 +1,9 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.io.IOException;
 

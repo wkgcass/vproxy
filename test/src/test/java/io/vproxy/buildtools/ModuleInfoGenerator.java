@@ -1,9 +1,10 @@
-package vproxy.buildtools;
+package io.vproxy.buildtools;
 
+import io.vproxy.base.util.Version;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.ModuleVisitor;
 import org.objectweb.asm.Opcodes;
-import vproxy.base.util.Version;
+import io.vproxy.base.util.Version;
 
 import java.nio.file.Files;
 import java.nio.file.Path;

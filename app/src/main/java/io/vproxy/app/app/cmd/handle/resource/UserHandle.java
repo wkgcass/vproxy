@@ -1,14 +1,15 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.app.app.cmd.handle.param.FloodHandle;
-import vproxy.app.app.cmd.handle.param.MTUHandle;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vswitch.Switch;
+import io.vproxy.vswitch.util.UserInfo;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.handle.param.FloodHandle;
+import io.vproxy.app.app.cmd.handle.param.MTUHandle;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vswitch.Switch;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -52,7 +53,7 @@ public class UserHandle {
         if (opt.isEmpty()) {
             throw new NotFoundException(ResourceType.user.fullname, cmd.resource.alias);
         }
-        vproxy.vswitch.util.UserInfo info = opt.get().getValue();
+        io.vproxy.vswitch.util.UserInfo info = opt.get().getValue();
 
         if (cmd.args.containsKey(Param.mtu)) {
             info.defaultMtu = MTUHandle.get(cmd);
@@ -70,9 +71,9 @@ public class UserHandle {
 
     public static class UserInfo {
         public final String name;
-        public final vproxy.vswitch.util.UserInfo info;
+        public final io.vproxy.vswitch.util.UserInfo info;
 
-        public UserInfo(String name, vproxy.vswitch.util.UserInfo info) {
+        public UserInfo(String name, io.vproxy.vswitch.util.UserInfo info) {
             this.name = name;
             this.info = info;
         }

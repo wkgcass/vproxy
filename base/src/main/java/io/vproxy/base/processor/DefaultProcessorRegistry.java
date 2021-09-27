@@ -1,11 +1,17 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.base.processor.common.CommonInt32FramedProcessor;
-import vproxy.base.processor.dubbo.DubboProcessor;
-import vproxy.base.processor.http.GeneralHttpProcessor;
-import vproxy.base.processor.http1.HttpProcessor;
-import vproxy.base.processor.httpbin.BinaryHttpProcessor;
-import vproxy.base.processor.httpbin.HttpVersion;
+import io.vproxy.base.processor.common.CommonInt32FramedProcessor;
+import io.vproxy.base.processor.dubbo.DubboProcessor;
+import io.vproxy.base.processor.http.GeneralHttpProcessor;
+import io.vproxy.base.processor.http1.HttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
+import io.vproxy.base.processor.httpbin.HttpVersion;
+import io.vproxy.base.processor.common.CommonInt32FramedProcessor;
+import io.vproxy.base.processor.dubbo.DubboProcessor;
+import io.vproxy.base.processor.http.GeneralHttpProcessor;
+import io.vproxy.base.processor.http1.HttpProcessor;
+import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
+import io.vproxy.base.processor.httpbin.HttpVersion;
 
 import java.util.HashMap;
 import java.util.Map;

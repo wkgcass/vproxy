@@ -1,12 +1,18 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.app.plugin.Plugin;
-import vproxy.app.plugin.PluginInitParams;
-import vproxy.app.plugin.PluginLoader;
-import vproxy.app.plugin.PluginWrapper;
-import vproxy.base.util.Logger;
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.NotFoundException;
+import io.vproxy.app.plugin.Plugin;
+import io.vproxy.app.plugin.PluginInitParams;
+import io.vproxy.app.plugin.PluginLoader;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.app.plugin.Plugin;
+import io.vproxy.app.plugin.PluginInitParams;
+import io.vproxy.app.plugin.PluginLoader;
+import io.vproxy.app.plugin.PluginWrapper;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
 
 import java.net.URL;
 import java.util.ArrayList;

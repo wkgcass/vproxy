@@ -1,19 +1,19 @@
-package vproxy.lib.tcp
+package io.vproxy.lib.tcp
 
 import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.suspendCancellableCoroutine
-import vproxy.base.connection.NetEventLoop
-import vproxy.base.connection.ServerSock
-import vproxy.base.util.RingBuffer
+import io.vproxy.base.connection.NetEventLoop
+import io.vproxy.base.connection.ServerSock
+import io.vproxy.base.util.RingBuffer
 import vproxy.base.util.coll.Tuple
-import vproxy.vfd.SocketFD
+import io.vproxy.vfd.SocketFD
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 class CoroutineServerSock @JvmOverloads constructor(
-  private val loop: NetEventLoop,
-  private val svr: ServerSock,
-  getIOBuffers: ((channel: SocketFD) -> Tuple<RingBuffer, RingBuffer>)? = null,
+  private val loop: _root_ide_package_.io.vproxy.base.connection.NetEventLoop,
+  private val svr: _root_ide_package_.io.vproxy.base.connection.ServerSock,
+  getIOBuffers: ((channel: _root_ide_package_.io.vproxy.vfd.SocketFD) -> Tuple<_root_ide_package_.io.vproxy.base.util.RingBuffer, _root_ide_package_.io.vproxy.base.util.RingBuffer>)? = null,
 ): AutoCloseable {
   private var handlerAdded = false
   private val handler = CoroutineServerHandler(getIOBuffers)

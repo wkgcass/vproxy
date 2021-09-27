@@ -1,7 +1,7 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
 
 public class RoutingHandle {
     private RoutingHandle() {

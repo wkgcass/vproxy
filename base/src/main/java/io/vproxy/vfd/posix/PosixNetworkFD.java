@@ -1,4 +1,4 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

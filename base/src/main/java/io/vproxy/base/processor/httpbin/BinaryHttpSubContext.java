@@ -1,17 +1,20 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.processor.ConnectionDelegate;
-import vproxy.base.processor.ExceptionWithoutStackTrace;
-import vproxy.base.processor.OOSubContext;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.entity.Header;
+import io.vproxy.base.processor.httpbin.frame.*;
+import io.vproxy.base.processor.httpbin.hpack.HPack;
+import io.vproxy.base.processor.ConnectionDelegate;
+import io.vproxy.base.processor.ExceptionWithoutStackTrace;
+import io.vproxy.base.processor.OOSubContext;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.httpbin.entity.Header;
 import vproxy.base.processor.httpbin.frame.*;
-import vproxy.base.processor.httpbin.hpack.HPack;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.processor.httpbin.hpack.HPack;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.util.HashMap;
 import java.util.Map;

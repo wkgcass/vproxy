@@ -1,4 +1,4 @@
-package vproxy.vfd.windows;
+package io.vproxy.vfd.windows;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

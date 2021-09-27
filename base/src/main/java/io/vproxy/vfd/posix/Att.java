@@ -1,7 +1,7 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.vfd.EventSet;
-import vproxy.vfd.FD;
+import io.vproxy.vfd.EventSet;
+import io.vproxy.vfd.FD;
 
 class Att {
     public FD fd;

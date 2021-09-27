@@ -1,6 +1,6 @@
-package vproxy.base.processor.common;
+package io.vproxy.base.processor.common;
 
-import vproxy.base.processor.HeadPayloadProcessor;
+import io.vproxy.base.processor.HeadPayloadProcessor;
 
 public class CommonInt32FramedProcessor extends HeadPayloadProcessor {
     public CommonInt32FramedProcessor() {

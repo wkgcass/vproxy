@@ -1,6 +1,7 @@
-package vproxy.base.util.time;
+package io.vproxy.base.util.time;
 
-import vproxy.base.util.time.impl.TimeQueueImpl;
+import io.vproxy.base.util.time.impl.TimeQueueImpl;
+import io.vproxy.base.util.time.impl.TimeQueueImpl;
 
 public interface TimeQueue<T> {
     static <T> TimeQueue<T> create() {

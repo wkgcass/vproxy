@@ -1,7 +1,7 @@
-package vproxy.base.selector.wrap.arqudp;
+package io.vproxy.base.selector.wrap.arqudp;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.io.IOException;
 import java.util.function.Consumer;

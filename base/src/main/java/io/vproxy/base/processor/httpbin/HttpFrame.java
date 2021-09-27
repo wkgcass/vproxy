@@ -1,6 +1,6 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 public abstract class HttpFrame {
     public int length;

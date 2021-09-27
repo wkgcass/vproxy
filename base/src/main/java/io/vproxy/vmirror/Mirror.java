@@ -1,11 +1,17 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
+import io.vproxy.base.util.*;
+import io.vproxy.vfd.*;
+import io.vproxy.vpacket.AbstractIpPacket;
+import io.vproxy.vpacket.EthernetPacket;
+import io.vproxy.vpacket.Ipv6Packet;
+import io.vproxy.vpacket.PacketBytes;
 import vjson.JSON;
-import vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.*;
-import vproxy.base.util.direct.DirectByteBuffer;
-import vproxy.base.util.direct.DirectMemoryUtils;
-import vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.direct.DirectByteBuffer;
+import io.vproxy.base.util.direct.DirectMemoryUtils;
+import io.vproxy.base.util.thread.VProxyThread;
 import vproxy.vfd.*;
 import vproxy.vpacket.*;
 

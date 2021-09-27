@@ -1,6 +1,7 @@
-package vproxy.vswitch.dispatcher;
+package io.vproxy.vswitch.dispatcher;
 
-import vproxy.vswitch.dispatcher.impl.KeySelectorUseQueueId;
+import io.vproxy.vswitch.dispatcher.impl.KeySelectorUseQueueId;
+import io.vproxy.vswitch.dispatcher.impl.KeySelectorUseQueueId;
 
 import java.util.function.Supplier;
 

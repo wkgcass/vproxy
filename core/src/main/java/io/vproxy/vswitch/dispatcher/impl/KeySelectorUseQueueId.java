@@ -1,7 +1,8 @@
-package vproxy.vswitch.dispatcher.impl;
+package io.vproxy.vswitch.dispatcher.impl;
 
-import vproxy.vswitch.dispatcher.BPFMapKeySelector;
-import vproxy.xdp.XDPSocket;
+import io.vproxy.xdp.XDPSocket;
+import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
+import io.vproxy.xdp.XDPSocket;
 
 public class KeySelectorUseQueueId implements BPFMapKeySelector {
     @Override

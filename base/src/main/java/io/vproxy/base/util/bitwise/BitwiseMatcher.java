@@ -1,6 +1,6 @@
-package vproxy.base.util.bitwise;
+package io.vproxy.base.util.bitwise;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 import java.util.Objects;
 

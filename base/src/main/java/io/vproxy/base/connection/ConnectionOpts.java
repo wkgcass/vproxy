@@ -1,6 +1,6 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.Config;
+import io.vproxy.base.Config;
 
 public class ConnectionOpts {
     int timeout = Config.tcpTimeout;

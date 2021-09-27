@@ -1,8 +1,8 @@
-package vproxy.base.selector.wrap.udp;
+package io.vproxy.base.selector.wrap.udp;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.vfd.ServerSocketFD;
-import vproxy.vfd.SocketFD;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.vfd.ServerSocketFD;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

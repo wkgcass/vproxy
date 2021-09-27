@@ -1,17 +1,17 @@
-package vproxy.lib.tcp
+package io.vproxy.lib.tcp
 
-import vproxy.base.connection.ConnectionHandler
-import vproxy.base.connection.ConnectionHandlerContext
+import io.vproxy.base.connection.ConnectionHandler
+import io.vproxy.base.connection.ConnectionHandlerContext
 import java.io.IOException
 
-class CoroutineConnectionHandler : ConnectionHandler {
+class CoroutineConnectionHandler : _root_ide_package_.io.vproxy.base.connection.ConnectionHandler {
   internal var willBeDetached = false
   internal var err: IOException? = null
   internal var eof: Boolean = false
   internal var readableEvent: ((err: IOException?) -> Unit)? = null
   internal var writableEvent: ((err: IOException?) -> Unit)? = null
 
-  override fun readable(ctx: ConnectionHandlerContext?) {
+  override fun readable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext?) {
     val readableEvent = this.readableEvent
     if (readableEvent != null) {
       this.readableEvent = null
@@ -19,7 +19,7 @@ class CoroutineConnectionHandler : ConnectionHandler {
     }
   }
 
-  override fun writable(ctx: ConnectionHandlerContext?) {
+  override fun writable(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext?) {
     val writableEvent = this.writableEvent
     if (writableEvent != null) {
       this.writableEvent = null
@@ -27,7 +27,7 @@ class CoroutineConnectionHandler : ConnectionHandler {
     }
   }
 
-  override fun exception(ctx: ConnectionHandlerContext?, err: IOException?) {
+  override fun exception(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext?, err: IOException?) {
     val readableEvent = this.readableEvent
     val writableEvent = this.writableEvent
     this.readableEvent = null
@@ -43,7 +43,7 @@ class CoroutineConnectionHandler : ConnectionHandler {
     }
   }
 
-  override fun remoteClosed(ctx: ConnectionHandlerContext?) {
+  override fun remoteClosed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext?) {
     eof = true
     val readableEvent = this.readableEvent
     this.readableEvent = null
@@ -52,11 +52,11 @@ class CoroutineConnectionHandler : ConnectionHandler {
     }
   }
 
-  override fun closed(ctx: ConnectionHandlerContext?) {
+  override fun closed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext?) {
     exception(ctx, IOException("closed"))
   }
 
-  override fun removed(ctx: ConnectionHandlerContext) {
+  override fun removed(ctx: _root_ide_package_.io.vproxy.base.connection.ConnectionHandlerContext) {
     if (willBeDetached) {
       return
     }

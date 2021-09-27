@@ -1,7 +1,7 @@
-package vproxy.vpacket;
+package io.vproxy.vpacket;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Utils;
 
 import java.util.Objects;
 

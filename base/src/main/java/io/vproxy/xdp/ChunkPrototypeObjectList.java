@@ -1,7 +1,9 @@
-package vproxy.xdp;
+package io.vproxy.xdp;
 
-import vproxy.base.util.objectpool.PrototypeObjectList;
-import vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.objectpool.PrototypeObjectList;
+import io.vproxy.base.util.thread.VProxyThread;
 
 public class ChunkPrototypeObjectList extends PrototypeObjectList<Chunk> {
     public ChunkPrototypeObjectList(int capacity) {

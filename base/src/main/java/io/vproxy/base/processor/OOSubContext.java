@@ -1,4 +1,4 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
 public abstract class OOSubContext<CTX extends OOContext> extends Processor.SubContext {
     public final CTX ctx;

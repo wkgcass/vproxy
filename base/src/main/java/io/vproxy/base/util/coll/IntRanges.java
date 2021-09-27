@@ -1,6 +1,6 @@
-package vproxy.base.util.coll;
+package io.vproxy.base.util.coll;
 
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Utils;
 
 import java.util.ArrayList;
 import java.util.List;

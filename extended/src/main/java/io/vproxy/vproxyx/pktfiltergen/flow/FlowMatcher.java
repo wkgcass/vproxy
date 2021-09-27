@@ -1,17 +1,17 @@
-package vproxyx.pktfiltergen.flow;
+package io.vproxy.vproxyx.pktfiltergen.flow;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Network;
-import vproxy.base.util.Utils;
-import vproxy.base.util.bitwise.BitwiseIntMatcher;
-import vproxy.base.util.bitwise.BitwiseMatcher;
-import vproxy.vfd.IP;
-import vproxy.vfd.MacAddress;
-import vproxy.vpacket.AbstractIpPacket;
-import vproxy.vpacket.ArpPacket;
-import vproxy.vpacket.TcpPacket;
-import vproxy.vpacket.UdpPacket;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
+import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
+import io.vproxy.vpacket.AbstractIpPacket;
+import io.vproxy.vpacket.ArpPacket;
+import io.vproxy.vpacket.TcpPacket;
+import io.vproxy.vpacket.UdpPacket;
 
 public class FlowMatcher {
     // dev

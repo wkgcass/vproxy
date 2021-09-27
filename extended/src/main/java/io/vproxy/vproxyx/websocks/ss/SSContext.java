@@ -1,9 +1,9 @@
-package vproxyx.websocks.ss;
+package io.vproxy.vproxyx.websocks.ss;
 
-import vproxy.base.socks.AddressType;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.Utils;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.socks.AddressType;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 public class SSContext {
     int state = 0;

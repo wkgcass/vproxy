@@ -1,12 +1,12 @@
-package vproxy.base.processor.http1;
+package io.vproxy.base.processor.http1;
 
-import vproxy.base.processor.Hint;
-import vproxy.base.processor.OOContext;
-import vproxy.base.processor.Processor;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.processor.Hint;
+import io.vproxy.base.processor.OOContext;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IPPort;
 
 public class HttpContext extends OOContext<HttpSubContext> {
     final String clientAddress;

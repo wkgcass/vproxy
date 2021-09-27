@@ -1,4 +1,4 @@
-package vproxy.app.app.cmd;
+package io.vproxy.app.app.cmd;
 
 public class Resource {
     public ResourceType type;

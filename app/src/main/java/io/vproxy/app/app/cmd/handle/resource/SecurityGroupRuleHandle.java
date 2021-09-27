@@ -1,16 +1,16 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.handle.param.NetworkHandle;
-import vproxy.app.app.cmd.handle.param.PortRangeHandle;
-import vproxy.app.app.cmd.handle.param.ProtocolHandle;
-import vproxy.app.app.cmd.handle.param.SecGRDefaultHandle;
-import vproxy.base.connection.Protocol;
-import vproxy.base.util.Network;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.handle.param.NetworkHandle;
+import io.vproxy.app.app.cmd.handle.param.PortRangeHandle;
+import io.vproxy.app.app.cmd.handle.param.ProtocolHandle;
+import io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle;
+import io.vproxy.base.connection.Protocol;
+import io.vproxy.base.util.Network;
 import vproxy.base.util.coll.Tuple;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.component.secure.SecurityGroupRule;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.component.secure.SecurityGroupRule;
 
 import java.util.List;
 import java.util.stream.Collectors;

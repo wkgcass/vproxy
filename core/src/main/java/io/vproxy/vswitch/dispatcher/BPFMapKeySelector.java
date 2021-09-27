@@ -1,6 +1,7 @@
-package vproxy.vswitch.dispatcher;
+package io.vproxy.vswitch.dispatcher;
 
-import vproxy.xdp.XDPSocket;
+import io.vproxy.xdp.XDPSocket;
+import io.vproxy.xdp.XDPSocket;
 
 public interface BPFMapKeySelector {
     String alias();

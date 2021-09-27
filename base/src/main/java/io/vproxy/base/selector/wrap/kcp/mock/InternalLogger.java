@@ -1,7 +1,7 @@
-package vproxy.base.selector.wrap.kcp.mock;
+package io.vproxy.base.selector.wrap.kcp.mock;
 
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 
 import java.util.Objects;
 

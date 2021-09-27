@@ -1,9 +1,9 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.thread.VProxyThread;
 
 public class OOMHandler {
     private static byte[] _512K;

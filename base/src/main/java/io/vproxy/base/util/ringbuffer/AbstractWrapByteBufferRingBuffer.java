@@ -1,4 +1,4 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
 import java.io.IOException;
 

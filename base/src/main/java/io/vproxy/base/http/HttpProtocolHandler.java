@@ -1,10 +1,15 @@
-package vproxy.base.http;
+package io.vproxy.base.http;
 
-import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.nio.ByteArrayChannel;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.nio.ByteArrayChannel;
 
 public abstract class HttpProtocolHandler implements ProtocolHandler<HttpContext> {
     private final boolean parseBody;

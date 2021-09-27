@@ -1,4 +1,4 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
 public interface RingBufferETHandler {
     void readableET(); // have data, edge trigger

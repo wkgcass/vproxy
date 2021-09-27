@@ -1,8 +1,10 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
-import vproxy.base.util.Consts;
-import vproxy.vfd.IPPort;
-import vproxy.vswitch.PacketBuffer;
+import io.vproxy.base.util.Consts;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.base.util.Consts;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;
 

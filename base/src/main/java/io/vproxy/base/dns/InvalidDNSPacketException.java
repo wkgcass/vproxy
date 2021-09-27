@@ -1,4 +1,4 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
 public class InvalidDNSPacketException extends Exception {
     public InvalidDNSPacketException(String message) {

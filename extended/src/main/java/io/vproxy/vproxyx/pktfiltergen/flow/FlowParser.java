@@ -1,15 +1,15 @@
-package vproxyx.pktfiltergen.flow;
+package io.vproxy.vproxyx.pktfiltergen.flow;
 
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Network;
-import vproxy.base.util.Utils;
-import vproxy.base.util.bitwise.BitwiseIntMatcher;
-import vproxy.base.util.bitwise.BitwiseMatcher;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
+import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.MacAddress;
 
 public class FlowParser {
     private final String input;

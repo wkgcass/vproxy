@@ -1,15 +1,16 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.Config;
-import vproxy.base.selector.Handler;
-import vproxy.base.selector.HandlerContext;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.VirtualFD;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.OS;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.anno.ThreadSafe;
+import io.vproxy.base.Config;
+import io.vproxy.base.selector.Handler;
+import io.vproxy.base.selector.HandlerContext;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.VirtualFD;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.OS;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.anno.ThreadSafe;
+import io.vproxy.vfd.*;
 import vproxy.base.util.coll.Tuple;
 import vproxy.vfd.*;
 

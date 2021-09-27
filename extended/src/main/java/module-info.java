@@ -5,13 +5,13 @@ module vproxy.extended {
     requires vproxy.core;
     requires vproxy.lib;
 
-    exports vproxyx;
-    exports vproxyx.pktfiltergen;
-    exports vproxyx.pktfiltergen.flow;
-    exports vproxyx.util;
-    exports vproxyx.websocks;
-    exports vproxyx.websocks.relay;
-    exports vproxyx.websocks.ss;
-    exports vproxyx.websocks.ssl;
-    exports vproxyx.websocks.uot;
+    exports io.vproxy.vproxyx;
+    exports io.vproxy.vproxyx.pktfiltergen;
+    exports io.vproxy.vproxyx.pktfiltergen.flow;
+    exports io.vproxy.vproxyx.util;
+    exports io.vproxy.vproxyx.websocks;
+    exports io.vproxy.vproxyx.websocks.relay;
+    exports io.vproxy.vproxyx.websocks.ss;
+    exports io.vproxy.vproxyx.websocks.ssl;
+    exports io.vproxy.vproxyx.websocks.uot;
 }

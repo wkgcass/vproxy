@@ -1,6 +1,6 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.Logger;
 
 public class StreamSession {
     public final Stream frontend;

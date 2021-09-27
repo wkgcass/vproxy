@@ -1,10 +1,10 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.RingBufferETHandler;
-import vproxy.vfd.ReadableByteStream;
-import vproxy.vfd.WritableByteStream;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.RingBufferETHandler;
+import io.vproxy.vfd.ReadableByteStream;
+import io.vproxy.vfd.WritableByteStream;
 
 import java.io.IOException;
 

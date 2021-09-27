@@ -1,4 +1,4 @@
-package vproxy.base.util.coll
+package io.vproxy.base.util.coll
 
 @Suppress("PropertyName", "PLATFORM_CLASS_MAPPED_TO_KOTLIN")
 open class Tuple<A, B>(

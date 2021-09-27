@@ -1,4 +1,4 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
 public class IfaceStatistics {
     private long rxPkts;

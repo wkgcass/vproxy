@@ -1,6 +1,6 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
-import vproxy.vfd.IP;
+import io.vproxy.vfd.IP;
 
 import java.util.Set;
 

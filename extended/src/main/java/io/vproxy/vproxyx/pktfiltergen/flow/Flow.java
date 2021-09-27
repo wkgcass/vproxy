@@ -1,4 +1,4 @@
-package vproxyx.pktfiltergen.flow;
+package io.vproxy.vproxyx.pktfiltergen.flow;
 
 import java.util.ArrayList;
 import java.util.List;

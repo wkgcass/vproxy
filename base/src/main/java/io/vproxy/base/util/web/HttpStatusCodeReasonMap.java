@@ -1,4 +1,4 @@
-package vproxy.base.util.web;
+package io.vproxy.base.util.web;
 
 import java.util.HashMap;
 import java.util.Map;

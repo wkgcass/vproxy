@@ -1,9 +1,9 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.component.svrgroup.Method;
-import vproxy.base.util.exception.XException;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.component.svrgroup.Method;
+import io.vproxy.base.util.exception.XException;
 
 public class MethHandle {
     private MethHandle() {

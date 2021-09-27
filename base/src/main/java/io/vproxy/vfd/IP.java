@@ -1,12 +1,18 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
-import vproxy.base.dns.Resolver;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.IPType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.callback.BlockCallback;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.IPType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.IPType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.BlockCallback;
+import io.vproxy.base.util.callback.Callback;
 
 import java.io.IOException;
 import java.net.*;

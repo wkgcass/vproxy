@@ -1,19 +1,19 @@
-package vproxy.lib.docker
+package io.vproxy.lib.docker
 
 import vjson.JSON
-import vproxy.base.connection.ConnectableConnection
-import vproxy.base.connection.NetEventLoop
+import io.vproxy.base.connection.ConnectableConnection
+import io.vproxy.base.connection.NetEventLoop
 import vproxy.lib.common.ByteArrayCharStream
 import vproxy.lib.common.vplib
 import vproxy.lib.docker.entity.Network
 import vproxy.lib.http1.CoroutineHttp1ClientConnection
 import vproxy.lib.tcp.CoroutineConnection
-import vproxy.vfd.UDSPath
+import io.vproxy.vfd.UDSPath
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 
-class DockerClient(val loop: NetEventLoop, val sock: String = "/var/run/docker.sock", val version: String = "") {
-  private val sockUds = UDSPath(sock)
+class DockerClient(val loop: _root_ide_package_.io.vproxy.base.connection.NetEventLoop, val sock: String = "/var/run/docker.sock", val version: String = "") {
+  private val sockUds = _root_ide_package_.io.vproxy.vfd.UDSPath(sock)
   var timeout = 5000
 
   @Suppress("SameParameterValue")
@@ -27,7 +27,7 @@ class DockerClient(val loop: NetEventLoop, val sock: String = "/var/run/docker.s
 
   suspend fun listNetworks(): List<Network> {
     @Suppress("BlockingMethodInNonBlockingContext")
-    val tcpConn = CoroutineConnection(loop, ConnectableConnection.create(sockUds))
+    val tcpConn = CoroutineConnection(loop, _root_ide_package_.io.vproxy.base.connection.ConnectableConnection.create(sockUds))
     return vplib.coroutine.with(tcpConn).run {
       tcpConn.setTimeout(timeout)
       tcpConn.connect()

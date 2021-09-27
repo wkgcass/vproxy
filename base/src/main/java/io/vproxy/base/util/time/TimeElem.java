@@ -1,4 +1,4 @@
-package vproxy.base.util.time;
+package io.vproxy.base.util.time;
 
 public interface TimeElem<T> {
     T get();

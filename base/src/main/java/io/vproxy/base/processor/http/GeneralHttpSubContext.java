@@ -1,9 +1,12 @@
-package vproxy.base.processor.http;
+package io.vproxy.base.processor.http;
 
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.http1.HttpSubContext;
-import vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import vproxy.base.processor.httpbin.BinaryHttpSubContextCaster;
+import io.vproxy.base.processor.http1.HttpSubContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContextCaster;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.http1.HttpSubContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
+import io.vproxy.base.processor.httpbin.BinaryHttpSubContextCaster;
 
 public class GeneralHttpSubContext extends Processor.SubContext implements BinaryHttpSubContextCaster {
     final HttpSubContext httpSubContext;

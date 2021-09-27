@@ -1,10 +1,14 @@
-package vproxy.base.component.svrgroup;
+package io.vproxy.base.component.svrgroup;
 
-import vproxy.base.connection.ConnectableConnection;
-import vproxy.base.connection.Connection;
-import vproxy.base.connection.ConnectionOpts;
-import vproxy.base.connection.Connector;
-import vproxy.base.util.RingBuffer;
+import io.vproxy.base.connection.ConnectableConnection;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.ConnectionOpts;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.ConnectableConnection;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.ConnectionOpts;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.util.RingBuffer;
 
 import java.io.IOException;
 

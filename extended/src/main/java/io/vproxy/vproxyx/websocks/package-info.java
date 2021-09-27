@@ -24,4 +24,4 @@
  * You can also build a security link between A and B, using nginx/haproxy:<br>
  * C &lt;--socks5--&gt; A &lt;--websocks--&gt; WrapTLS &lt;--tls--&gt; UnwrapTLS &lt;--websocks--&gt; B &lt;--tcp--&gt; S<br>
  */
-package vproxyx.websocks;
+package io.vproxy.vproxyx.websocks;

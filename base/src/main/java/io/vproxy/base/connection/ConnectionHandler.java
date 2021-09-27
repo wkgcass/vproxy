@@ -1,4 +1,4 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
 import java.io.IOException;
 

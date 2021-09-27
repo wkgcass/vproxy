@@ -1,4 +1,4 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
 public class OriginConfig {
     public final MirrorConfig mirror;

@@ -1,7 +1,7 @@
-package vproxy.base.selector.wrap.arqudp;
+package io.vproxy.base.selector.wrap.arqudp;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.udp.UDPBasedFDs;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
 
 import java.io.IOException;
 

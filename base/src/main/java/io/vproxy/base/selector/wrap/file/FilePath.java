@@ -1,6 +1,6 @@
-package vproxy.base.selector.wrap.file;
+package io.vproxy.base.selector.wrap.file;
 
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 import java.util.Objects;
 

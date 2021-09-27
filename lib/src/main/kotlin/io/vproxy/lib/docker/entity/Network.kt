@@ -1,4 +1,4 @@
-package vproxy.lib.docker.entity
+package io.vproxy.lib.docker.entity
 
 import vjson.deserializer.rule.ArrayRule
 import vjson.deserializer.rule.ObjectRule

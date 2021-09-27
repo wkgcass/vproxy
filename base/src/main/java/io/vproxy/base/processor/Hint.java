@@ -1,7 +1,7 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.base.util.Annotations;
-import vproxy.vfd.IP;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.vfd.IP;
 
 public class Hint {
     private final String host;

@@ -1,6 +1,6 @@
-package vproxy.base.dhcp;
+package io.vproxy.base.dhcp;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 public class DHCPOption {
     public byte type;

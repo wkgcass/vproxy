@@ -1,19 +1,19 @@
-package vproxyx.websocks.ss;
+package io.vproxy.vproxyx.websocks.ss;
 
-import vproxy.base.connection.Connector;
-import vproxy.base.protocol.ProtocolHandler;
-import vproxy.base.protocol.ProtocolHandlerContext;
-import vproxy.base.socks.AddressType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.protocol.ProtocolHandler;
+import io.vproxy.base.protocol.ProtocolHandlerContext;
+import io.vproxy.base.socks.AddressType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.callback.Callback;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.crypto.Aes256Key;
-import vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
-import vproxy.base.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
-import vproxy.base.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
-import vproxy.socks.Socks5ConnectorProvider;
-import vproxy.vfd.IP;
+import io.vproxy.base.util.crypto.Aes256Key;
+import io.vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
+import io.vproxy.base.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;
+import io.vproxy.base.util.ringbuffer.EncryptIVInDataWrapRingBuffer;
+import io.vproxy.socks.Socks5ConnectorProvider;
+import io.vproxy.vfd.IP;
 
 import java.io.IOException;
 import java.nio.charset.StandardCharsets;

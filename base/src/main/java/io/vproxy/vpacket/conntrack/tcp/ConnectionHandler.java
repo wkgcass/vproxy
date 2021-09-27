@@ -1,4 +1,4 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
 public interface ConnectionHandler {
     void readable(TcpEntry entry);

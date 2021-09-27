@@ -1,4 +1,4 @@
-package vproxy.base.selector.wrap.kcp.mock;
+package io.vproxy.base.selector.wrap.kcp.mock;
 
 public abstract class Recycler<E> {
     public static class Handle<E> {

@@ -1,4 +1,4 @@
-package vproxy.base.component.svrgroup;
+package io.vproxy.base.component.svrgroup;
 
 public interface ServerListener {
     void up(ServerGroup.ServerHandle server);

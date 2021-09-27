@@ -1,8 +1,8 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.Config;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 import java.util.HashMap;
 import java.util.LinkedList;

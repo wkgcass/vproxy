@@ -1,10 +1,12 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
-import vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.ringbuffer.ssl.SSL;
+import io.vproxy.base.selector.SelectorEventLoop;
 import vproxy.base.util.coll.Tuple;
-import vproxy.base.util.ringbuffer.ssl.SSL;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.NetworkFD;
+import io.vproxy.base.util.ringbuffer.ssl.SSL;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.NetworkFD;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.SSLContext;

@@ -1,13 +1,14 @@
-package vproxy.test.cases;
+package io.vproxy.test.cases;
 
+import io.vproxy.vpacket.*;
 import org.junit.Test;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.Consts;
-import vproxy.base.util.Utils;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPv4;
-import vproxy.vfd.IPv6;
-import vproxy.vfd.MacAddress;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
+import io.vproxy.vfd.MacAddress;
 import vproxy.vpacket.*;
 
 import java.util.Collections;

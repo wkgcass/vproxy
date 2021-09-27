@@ -1,6 +1,6 @@
-package vproxy.base.component.check;
+package io.vproxy.base.component.check;
 
-import vproxy.vfd.SockAddr;
+import io.vproxy.vfd.SockAddr;
 
 public interface HealthCheckHandler {
     void up(SockAddr remote);

@@ -1,11 +1,13 @@
-package vproxy.base.util.ringbuffer;
+package io.vproxy.base.util.ringbuffer;
 
+import io.vproxy.base.util.*;
+import io.vproxy.vmirror.MirrorDataFactory;
 import vproxy.base.util.*;
-import vproxy.base.util.crypto.BlockCipherKey;
-import vproxy.base.util.crypto.StreamingCFBCipher;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.NetworkFD;
-import vproxy.vmirror.MirrorDataFactory;
+import io.vproxy.base.util.crypto.BlockCipherKey;
+import io.vproxy.base.util.crypto.StreamingCFBCipher;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.NetworkFD;
+import io.vproxy.vmirror.MirrorDataFactory;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

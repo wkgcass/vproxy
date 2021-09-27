@@ -1,4 +1,4 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
 public abstract class OOContext<SUB extends OOSubContext> extends Processor.Context {
     protected SUB frontendSubCtx;

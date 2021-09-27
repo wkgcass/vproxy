@@ -1,6 +1,6 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 import java.util.LinkedList;
 

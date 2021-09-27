@@ -1,6 +1,6 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
-import vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ByteArray;
 
 import java.net.Inet4Address;
 

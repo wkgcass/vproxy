@@ -1,22 +1,22 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
 import io.vertx.core.Handler;
 import io.vertx.core.Vertx;
 import io.vertx.core.http.*;
-import vproxy.base.connection.Connection;
-import vproxy.base.connection.Connector;
-import vproxy.base.connection.NetEventLoop;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.processor.Hint;
-import vproxy.base.processor.Processor;
-import vproxy.base.processor.ProcessorProvider;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.thread.VProxyThread;
-import vproxy.component.proxy.ConnectorGen;
-import vproxy.component.proxy.Proxy;
-import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.connection.Connection;
+import io.vproxy.base.connection.Connector;
+import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.processor.Hint;
+import io.vproxy.base.processor.Processor;
+import io.vproxy.base.processor.ProcessorProvider;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.component.proxy.ConnectorGen;
+import io.vproxy.component.proxy.Proxy;
+import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

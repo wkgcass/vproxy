@@ -1,4 +1,4 @@
-package vproxy.ci;
+package io.vproxy.ci;
 
 import io.vertx.core.AsyncResult;
 import io.vertx.core.Handler;
@@ -12,18 +12,20 @@ import io.vertx.ext.web.client.HttpResponse;
 import io.vertx.ext.web.client.WebClient;
 import io.vertx.ext.web.client.WebClientOptions;
 import io.vertx.redis.client.*;
+import io.vproxy.app.app.Main;
+import io.vproxy.test.cases.TestSSL;
 import org.junit.*;
 import vjson.JSON;
 import vjson.util.ObjectBuilder;
-import vproxy.app.app.Application;
-import vproxy.base.Config;
-import vproxy.base.connection.ServerSock;
-import vproxy.base.util.AnnotationKeys;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
+import io.vproxy.app.app.Application;
+import io.vproxy.base.Config;
+import io.vproxy.base.connection.ServerSock;
+import io.vproxy.base.util.AnnotationKeys;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 import vproxy.base.util.coll.Tuple;
-import vproxy.test.cases.TestSSL;
-import vproxy.vfd.IPPort;
+import io.vproxy.test.cases.TestSSL;
+import io.vproxy.vfd.IPPort;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -174,7 +176,7 @@ public class CI {
             "System: add resp-controller resp-controller address localhost:" + vproxyRESPPort + " password " + password + "\n" +
             "System: add http-controller http-controller address localhost:" + vproxyHTTPPort);
         if (Utils.getSystemProperty("vproxy_exists") == null) {
-            vproxy.app.app.Main.main(new String[]{
+            Main.main(new String[]{
                 "allowSystemCommandInNonStdIOController",
                 "noStdIOController",
                 "load", confFile.getAbsolutePath(),

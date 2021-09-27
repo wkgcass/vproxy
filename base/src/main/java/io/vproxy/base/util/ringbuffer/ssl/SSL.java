@@ -1,4 +1,4 @@
-package vproxy.base.util.ringbuffer.ssl;
+package io.vproxy.base.util.ringbuffer.ssl;
 
 public class SSL {
     public final SSLContextHolder sslContextHolder;

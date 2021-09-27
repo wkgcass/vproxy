@@ -1,4 +1,4 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;

@@ -1,21 +1,21 @@
-package vproxyx;
+package io.vproxy.vproxyx;
 
-import vproxy.base.connection.*;
-import vproxy.base.dns.Resolver;
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
-import vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
-import vproxy.base.selector.wrap.kcp.KCPFDs;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.base.util.thread.VProxyThread;
-import vproxy.component.proxy.ConnectorGen;
-import vproxy.component.proxy.Proxy;
-import vproxy.component.proxy.ProxyNetConfig;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
-import vproxyx.websocks.AlreadyConnectedConnector;
+import io.vproxy.base.connection.*;
+import io.vproxy.vproxyx.websocks.AlreadyConnectedConnector;
+import io.vproxy.base.dns.Resolver;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
+import io.vproxy.base.selector.wrap.h2streamed.H2StreamedServerFDs;
+import io.vproxy.base.selector.wrap.kcp.KCPFDs;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.component.proxy.ConnectorGen;
+import io.vproxy.component.proxy.Proxy;
+import io.vproxy.component.proxy.ProxyNetConfig;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 

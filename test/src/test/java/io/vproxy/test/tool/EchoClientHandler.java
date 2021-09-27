@@ -1,11 +1,11 @@
-package vproxy.test.tool;
+package io.vproxy.test.tool;
 
-import vproxy.base.selector.Handler;
-import vproxy.base.selector.HandlerContext;
-import vproxy.base.util.RingBuffer;
-import vproxy.vfd.Event;
-import vproxy.vfd.EventSet;
-import vproxy.vfd.SocketFD;
+import io.vproxy.base.selector.Handler;
+import io.vproxy.base.selector.HandlerContext;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.vfd.Event;
+import io.vproxy.vfd.EventSet;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 

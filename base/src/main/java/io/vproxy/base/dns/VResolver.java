@@ -1,6 +1,8 @@
-package vproxy.base.dns;
+package io.vproxy.base.dns;
 
-import vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.callback.Callback;
+import io.vproxy.vfd.*;
 import vproxy.vfd.*;
 
 import java.io.IOException;

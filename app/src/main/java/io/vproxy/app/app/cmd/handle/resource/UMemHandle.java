@@ -1,16 +1,16 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.ResourceType;
-import vproxy.app.app.cmd.handle.param.FrameSizeHandle;
-import vproxy.app.app.cmd.handle.param.RingSizeHandle;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.vswitch.Switch;
-import vproxy.vswitch.util.SwitchUtils;
-import vproxy.xdp.UMem;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.ResourceType;
+import io.vproxy.app.app.cmd.handle.param.FrameSizeHandle;
+import io.vproxy.app.app.cmd.handle.param.RingSizeHandle;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.util.SwitchUtils;
+import io.vproxy.xdp.UMem;
 
 import java.util.List;
 import java.util.stream.Collectors;

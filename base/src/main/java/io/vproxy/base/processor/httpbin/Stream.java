@@ -1,7 +1,7 @@
-package vproxy.base.processor.httpbin;
+package io.vproxy.base.processor.httpbin;
 
-import vproxy.base.processor.Hint;
-import vproxy.base.util.Logger;
+import io.vproxy.base.processor.Hint;
+import io.vproxy.base.util.Logger;
 
 public class Stream {
     public final long streamId; // quic requires 'long'

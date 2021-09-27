@@ -1,15 +1,15 @@
-package vproxy.base.selector.wrap.file;
+package io.vproxy.base.selector.wrap.file;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.AbstractBaseVirtualSocketFD;
-import vproxy.base.selector.wrap.VirtualFD;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.direct.DirectByteBuffer;
-import vproxy.base.util.direct.DirectMemoryUtils;
-import vproxy.vfd.FD;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.AbstractBaseVirtualSocketFD;
+import io.vproxy.base.selector.wrap.VirtualFD;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.direct.DirectByteBuffer;
+import io.vproxy.base.util.direct.DirectMemoryUtils;
+import io.vproxy.vfd.FD;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

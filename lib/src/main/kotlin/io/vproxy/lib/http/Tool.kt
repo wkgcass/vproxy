@@ -1,4 +1,4 @@
-package vproxy.lib.http
+package io.vproxy.lib.http
 
 import vjson.JSON
 import vjson.JSON.parse

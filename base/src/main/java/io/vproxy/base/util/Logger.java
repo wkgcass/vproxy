@@ -1,10 +1,11 @@
-package vproxy.base.util;
+package io.vproxy.base.util;
 
-import vproxy.base.util.thread.VProxyThread;
-import vproxy.vfd.DatagramFD;
-import vproxy.vfd.FDProvider;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.base.util.thread.VProxyThread;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

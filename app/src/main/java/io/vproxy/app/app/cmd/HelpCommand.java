@@ -1,13 +1,14 @@
-package vproxy.app.app.cmd;
+package io.vproxy.app.app.cmd;
 
-import vproxy.app.app.Application;
-import vproxy.app.app.cmd.handle.resource.SwitchHandle;
-import vproxy.base.Config;
+import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
+import io.vproxy.app.app.Application;
+import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
+import io.vproxy.base.Config;
 import vproxy.base.util.coll.Tuple;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.vswitch.dispatcher.BPFMapKeySelectors;
-import vproxy.vswitch.util.SwitchUtils;
-import vproxy.xdp.BPFMode;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
+import io.vproxy.vswitch.util.SwitchUtils;
+import io.vproxy.xdp.BPFMode;
 
 import java.util.Arrays;
 import java.util.Collections;

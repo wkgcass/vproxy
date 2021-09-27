@@ -1,6 +1,6 @@
-package vproxy.vpacket.conntrack.udp;
+package io.vproxy.vpacket.conntrack.udp;
 
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 public class UdpEntry {
     public final UdpListenEntry listenEntry;

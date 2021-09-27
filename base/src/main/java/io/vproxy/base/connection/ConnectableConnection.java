@@ -1,16 +1,16 @@
-package vproxy.base.connection;
+package io.vproxy.base.connection;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.selector.wrap.udp.UDPBasedFDs;
-import vproxy.base.selector.wrap.udp.UDPFDs;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.RingBuffer;
-import vproxy.vfd.FDProvider;
-import vproxy.vfd.IPPort;
-import vproxy.vfd.SocketFD;
-import vproxy.vfd.UDSPath;
-import vproxy.vfd.posix.PosixFDs;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
+import io.vproxy.base.selector.wrap.udp.UDPFDs;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.RingBuffer;
+import io.vproxy.vfd.FDProvider;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vfd.SocketFD;
+import io.vproxy.vfd.UDSPath;
+import io.vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;
 import java.net.StandardSocketOptions;

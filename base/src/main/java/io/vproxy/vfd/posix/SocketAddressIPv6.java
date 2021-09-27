@@ -1,8 +1,9 @@
-package vproxy.vfd.posix;
+package io.vproxy.vfd.posix;
 
-import vproxy.base.util.Logger;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Logger;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 public class SocketAddressIPv6 implements VSocketAddress {
     public final String ip;

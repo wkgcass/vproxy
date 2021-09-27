@@ -1,6 +1,6 @@
-package vproxy.vswitch.plugin;
+package io.vproxy.vswitch.plugin;
 
-import vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.iface.Iface;
 
 public interface IfaceWatcher {
     void ifaceAdded(Iface iface);

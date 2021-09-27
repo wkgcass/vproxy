@@ -1,8 +1,8 @@
-package vproxy.vpacket.conntrack.udp;
+package io.vproxy.vpacket.conntrack.udp;
 
-import vproxy.base.util.ByteArray;
-import vproxy.vfd.IP;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPPort;
 
 public class Datagram {
     public final IP remoteIp;

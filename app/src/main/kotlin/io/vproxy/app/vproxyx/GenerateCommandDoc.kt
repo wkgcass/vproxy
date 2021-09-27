@@ -1,8 +1,8 @@
-package vproxy.app.vproxyx
+package io.vproxy.app.vproxyx
 
-import vproxy.app.app.cmd.HelpCommand
-import vproxy.app.app.cmd.HelpCommand.ActMan
-import vproxy.app.app.cmd.HelpCommand.ResMan
+import io.vproxy.app.app.cmd.HelpCommand
+import io.vproxy.app.app.cmd.HelpCommand.ActMan
+import io.vproxy.app.app.cmd.HelpCommand.ResMan
 import java.io.File
 import kotlin.system.exitProcess
 
@@ -112,7 +112,7 @@ class GenerateCommandDoc {
                     result.append("</details>\n\n")
                 }
             }
-            val params = HelpCommand.ParamMan.values().map {
+            val params = _root_ide_package_.io.vproxy.app.app.cmd.HelpCommand.ParamMan.values().map {
                 """
                     |### ${it.param}
                     |${if (it.shortVer != null) "\nshort version: `${it.shortVer}`\n" else ""}
@@ -127,7 +127,7 @@ class GenerateCommandDoc {
                 |$params
             """.trimMargin()
             )
-            val flags = HelpCommand.FlagMan.values().map {
+            val flags = _root_ide_package_.io.vproxy.app.app.cmd.HelpCommand.FlagMan.values().map {
                 """
                     |### ${it.flag}
                     |${if (it.shortVer != null) "\nshort version: `${it.shortVer}`\n" else ""}

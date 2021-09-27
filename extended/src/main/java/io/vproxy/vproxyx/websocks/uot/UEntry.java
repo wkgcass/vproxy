@@ -1,4 +1,4 @@
-package vproxyx.websocks.uot;
+package io.vproxy.vproxyx.websocks.uot;
 
 import java.util.concurrent.ThreadLocalRandom;
 

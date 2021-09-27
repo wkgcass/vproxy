@@ -1,6 +1,6 @@
-package vproxy.base.selector.wrap;
+package io.vproxy.base.selector.wrap;
 
-import vproxy.vfd.FD;
+import io.vproxy.vfd.FD;
 
 public interface VirtualFD extends FD {
     void onRegister();

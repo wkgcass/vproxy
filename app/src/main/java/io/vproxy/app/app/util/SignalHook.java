@@ -1,4 +1,4 @@
-package vproxy.app.app.util;
+package io.vproxy.app.app.util;
 
 import sun.misc.Signal;
 

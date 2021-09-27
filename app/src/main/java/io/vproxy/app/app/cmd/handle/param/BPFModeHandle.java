@@ -1,9 +1,9 @@
-package vproxy.app.app.cmd.handle.param;
+package io.vproxy.app.app.cmd.handle.param;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.base.util.exception.XException;
-import vproxy.xdp.BPFMode;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.base.util.exception.XException;
+import io.vproxy.xdp.BPFMode;
 
 public class BPFModeHandle {
     private BPFModeHandle() {

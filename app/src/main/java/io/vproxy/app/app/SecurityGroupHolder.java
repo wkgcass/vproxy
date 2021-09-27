@@ -1,8 +1,8 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
-import vproxy.base.util.exception.AlreadyExistException;
-import vproxy.base.util.exception.NotFoundException;
-import vproxy.component.secure.SecurityGroup;
+import io.vproxy.base.util.exception.AlreadyExistException;
+import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.component.secure.SecurityGroup;
 
 import java.util.ArrayList;
 import java.util.HashMap;

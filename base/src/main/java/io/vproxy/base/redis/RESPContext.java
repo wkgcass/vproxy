@@ -1,4 +1,4 @@
-package vproxy.base.redis;
+package io.vproxy.base.redis;
 
 public class RESPContext {
     RESPParser parser;

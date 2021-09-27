@@ -1,11 +1,11 @@
-package vproxy.vpacket.conntrack.tcp;
+package io.vproxy.vpacket.conntrack.tcp;
 
-import vproxy.base.selector.TimerEvent;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
-import vproxy.base.util.Utils;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.selector.TimerEvent;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IPPort;
 
 import java.nio.ByteBuffer;
 import java.util.Collections;

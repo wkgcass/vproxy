@@ -1,6 +1,6 @@
-package vproxy.base.util.ringbuffer.ssl;
+package io.vproxy.base.util.ringbuffer.ssl;
 
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.Logger;
 
 import javax.net.ssl.SSLContext;
 import java.security.cert.CertificateParsingException;

@@ -1,4 +1,4 @@
-package vproxy.vmirror;
+package io.vproxy.vmirror;
 
 import java.util.function.Consumer;
 

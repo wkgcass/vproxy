@@ -1,16 +1,16 @@
-package vproxy.poc;
+package io.vproxy.poc;
 
-import vproxy.base.component.check.CheckProtocol;
-import vproxy.base.component.check.HealthCheckConfig;
-import vproxy.base.component.elgroup.EventLoopGroup;
-import vproxy.base.component.svrgroup.Method;
-import vproxy.base.component.svrgroup.ServerGroup;
-import vproxy.base.util.AnnotationKeys;
-import vproxy.base.util.Annotations;
-import vproxy.component.secure.SecurityGroup;
-import vproxy.component.svrgroup.Upstream;
-import vproxy.dns.DNSServer;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.component.check.CheckProtocol;
+import io.vproxy.base.component.check.HealthCheckConfig;
+import io.vproxy.base.component.elgroup.EventLoopGroup;
+import io.vproxy.base.component.svrgroup.Method;
+import io.vproxy.base.component.svrgroup.ServerGroup;
+import io.vproxy.base.util.AnnotationKeys;
+import io.vproxy.base.util.Annotations;
+import io.vproxy.component.secure.SecurityGroup;
+import io.vproxy.component.svrgroup.Upstream;
+import io.vproxy.dns.DNSServer;
+import io.vproxy.vfd.IPPort;
 
 import java.util.Map;
 

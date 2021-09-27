@@ -1,14 +1,14 @@
-package vproxy.app.app.cmd.handle.resource;
+package io.vproxy.app.app.cmd.handle.resource;
 
-import vproxy.app.app.cmd.Command;
-import vproxy.app.app.cmd.Param;
-import vproxy.app.app.cmd.Resource;
-import vproxy.app.app.cmd.handle.param.NetworkHandle;
-import vproxy.base.util.Network;
-import vproxy.base.util.Utils;
-import vproxy.vfd.IP;
-import vproxy.vswitch.RouteTable;
-import vproxy.vswitch.VirtualNetwork;
+import io.vproxy.app.app.cmd.Command;
+import io.vproxy.app.app.cmd.Param;
+import io.vproxy.app.app.cmd.Resource;
+import io.vproxy.app.app.cmd.handle.param.NetworkHandle;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Utils;
+import io.vproxy.vfd.IP;
+import io.vproxy.vswitch.RouteTable;
+import io.vproxy.vswitch.VirtualNetwork;
 
 import java.util.List;
 import java.util.stream.Collectors;

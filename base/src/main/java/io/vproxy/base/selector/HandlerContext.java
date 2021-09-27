@@ -1,7 +1,7 @@
-package vproxy.base.selector;
+package io.vproxy.base.selector;
 
-import vproxy.vfd.EventSet;
-import vproxy.vfd.FD;
+import io.vproxy.vfd.EventSet;
+import io.vproxy.vfd.FD;
 
 public class HandlerContext<CHANNEL extends FD> {
     private final SelectorEventLoop eventLoop;

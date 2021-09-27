@@ -1,8 +1,11 @@
-package vproxy.vfd;
+package io.vproxy.vfd;
 
-import vproxy.vfd.jdk.ChannelFDs;
-import vproxy.vfd.posix.PosixFDs;
-import vproxy.vfd.windows.WindowsFDs;
+import io.vproxy.vfd.jdk.ChannelFDs;
+import io.vproxy.vfd.posix.PosixFDs;
+import io.vproxy.vfd.windows.WindowsFDs;
+import io.vproxy.vfd.jdk.ChannelFDs;
+import io.vproxy.vfd.posix.PosixFDs;
+import io.vproxy.vfd.windows.WindowsFDs;
 
 import java.io.IOException;
 import java.util.Arrays;

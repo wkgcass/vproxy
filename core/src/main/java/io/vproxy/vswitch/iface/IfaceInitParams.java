@@ -1,9 +1,13 @@
-package vproxy.vswitch.iface;
+package io.vproxy.vswitch.iface;
 
-import vproxy.base.selector.SelectorEventLoop;
-import vproxy.vfd.DatagramFD;
-import vproxy.vswitch.Switch;
-import vproxy.vswitch.util.UserInfo;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.util.UserInfo;
+import io.vproxy.base.selector.SelectorEventLoop;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.util.UserInfo;
 
 import java.util.Map;
 

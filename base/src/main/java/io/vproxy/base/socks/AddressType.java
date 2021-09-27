@@ -1,4 +1,4 @@
-package vproxy.base.socks;
+package io.vproxy.base.socks;
 
 public enum AddressType {
     ipv4((byte) 0x01),

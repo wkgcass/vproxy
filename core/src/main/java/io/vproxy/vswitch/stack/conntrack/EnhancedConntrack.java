@@ -1,9 +1,12 @@
-package vproxy.vswitch.stack.conntrack;
+package io.vproxy.vswitch.stack.conntrack;
 
-import vproxy.vfd.IPPort;
-import vproxy.vpacket.conntrack.Conntrack;
-import vproxy.vpacket.conntrack.tcp.TcpEntry;
-import vproxy.vpacket.conntrack.tcp.TcpListenEntry;
+import io.vproxy.vpacket.conntrack.Conntrack;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
+import io.vproxy.vfd.IPPort;
+import io.vproxy.vpacket.conntrack.Conntrack;
+import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
+import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 
 public class EnhancedConntrack extends Conntrack {
     @Override

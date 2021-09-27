@@ -1,7 +1,7 @@
-package vproxy.base.util.direct;
+package io.vproxy.base.util.direct;
 
-import vproxy.base.GlobalInspection;
-import vproxy.base.util.ByteBufferEx;
+import io.vproxy.base.GlobalInspection;
+import io.vproxy.base.util.ByteBufferEx;
 
 import java.nio.ByteBuffer;
 

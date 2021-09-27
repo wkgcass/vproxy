@@ -1,9 +1,9 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.base.Config;
-import vproxy.base.util.ByteArray;
-import vproxy.base.util.functional.FunctionEx;
-import vproxy.vfd.IPPort;
+import io.vproxy.base.Config;
+import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.functional.FunctionEx;
+import io.vproxy.vfd.IPPort;
 
 import java.util.function.Consumer;
 import java.util.function.Supplier;

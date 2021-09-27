@@ -1,4 +1,4 @@
-package vproxy.app.app.cmd;
+package io.vproxy.app.app.cmd;
 
 public enum ResourceType {
     tl("tcp-lb"),

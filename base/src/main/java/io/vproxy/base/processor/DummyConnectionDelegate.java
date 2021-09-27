@@ -1,6 +1,6 @@
-package vproxy.base.processor;
+package io.vproxy.base.processor;
 
-import vproxy.vfd.IPPort;
+import io.vproxy.vfd.IPPort;
 
 public class DummyConnectionDelegate extends ConnectionDelegate {
     private static final DummyConnectionDelegate INSTANCE = new DummyConnectionDelegate();

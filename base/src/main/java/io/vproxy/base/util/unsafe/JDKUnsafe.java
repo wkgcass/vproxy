@@ -1,7 +1,7 @@
-package vproxy.base.util.unsafe;
+package io.vproxy.base.util.unsafe;
 
-import vproxy.base.util.LogType;
-import vproxy.base.util.Logger;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
 
 public interface JDKUnsafe {
 
@@ -18,7 +18,7 @@ class JDKUnsafeHolder {
     static {
         JDKUnsafe unsafe;
         try {
-            unsafe = (JDKUnsafe) Class.forName("vproxy.base.util.unsafe.JDKUnsafeImpl")
+            unsafe = (JDKUnsafe) Class.forName("io.vproxy.base.util.unsafe.JDKUnsafeImpl")
                     .getDeclaredConstructor()
                     .newInstance();
         } catch (Throwable e) {

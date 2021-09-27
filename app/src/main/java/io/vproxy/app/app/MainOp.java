@@ -1,4 +1,4 @@
-package vproxy.app.app;
+package io.vproxy.app.app;
 
 public interface MainOp {
     String key();
