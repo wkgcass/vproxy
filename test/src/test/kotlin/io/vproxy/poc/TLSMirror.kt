@@ -1,8 +1,8 @@
 package io.vproxy.poc
 
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection
-import vjson.JSON
-import vjson.util.ObjectBuilder
+import io.vproxy.dep.vjson.JSON
+import io.vproxy.dep.vjson.util.ObjectBuilder
 import java.io.File
 import java.io.FileOutputStream
 

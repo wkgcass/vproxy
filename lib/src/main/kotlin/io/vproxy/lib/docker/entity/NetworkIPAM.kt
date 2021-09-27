@@ -1,8 +1,8 @@
 package io.vproxy.lib.docker.entity
 
-import vjson.deserializer.rule.ArrayRule
-import vjson.deserializer.rule.ObjectRule
-import vjson.deserializer.rule.Rule
+import io.vproxy.dep.vjson.deserializer.rule.ArrayRule
+import io.vproxy.dep.vjson.deserializer.rule.ObjectRule
+import io.vproxy.dep.vjson.deserializer.rule.Rule
 
 data class NetworkIPAM(
   var config: List<NetworkIPAMConfig>? = null,

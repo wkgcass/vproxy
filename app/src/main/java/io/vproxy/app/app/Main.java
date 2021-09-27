@@ -21,7 +21,7 @@ import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.VFDConfig;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vproxyx.*;
-import vjson.parser.ParserUtils;
+import io.vproxy.dep.vjson.parser.ParserUtils;
 
 import java.io.File;
 import java.io.IOException;

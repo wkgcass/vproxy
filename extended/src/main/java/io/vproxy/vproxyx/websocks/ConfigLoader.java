@@ -8,8 +8,8 @@ import io.vproxy.base.util.promise.Promise;
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
-import vjson.JSON;
-import vjson.util.ObjectBuilder;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import java.io.*;
 import java.nio.file.Files;

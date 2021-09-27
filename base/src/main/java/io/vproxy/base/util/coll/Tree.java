@@ -1,6 +1,6 @@
 package io.vproxy.base.util.coll;
 
-import vjson.util.ObjectBuilder;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import java.util.Iterator;
 import java.util.LinkedList;

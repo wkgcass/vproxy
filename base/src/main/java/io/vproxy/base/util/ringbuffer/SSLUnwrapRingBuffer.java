@@ -10,7 +10,7 @@ import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.NetworkFD;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vmirror.MirrorDataFactory;
-import tlschannel.impl.TlsExplorer;
+import io.vproxy.dep.tlschannel.impl.impl.TlsExplorer;
 
 import javax.net.ssl.*;
 import java.io.IOException;

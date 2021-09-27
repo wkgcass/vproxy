@@ -2,7 +2,7 @@ package io.vproxy.lib.http
 
 import io.vproxy.lib.http.route.SubPath
 import io.vproxy.lib.http.route.WildcardSubPath
-import vjson.JSON
+import io.vproxy.dep.vjson.JSON
 
 @Suppress("unused")
 interface StorageKey<T>

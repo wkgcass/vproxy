@@ -9,10 +9,10 @@ import io.vproxy.lib.http.Tool
 import io.vproxy.lib.http1.CoroutineHttp1Server
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.suspendCancellableCoroutine
-import vjson.JSON
-import vjson.simple.SimpleArray
-import vjson.util.ArrayBuilder
-import vjson.util.ObjectBuilder
+import io.vproxy.dep.vjson.JSON
+import io.vproxy.dep.vjson.simple.SimpleArray
+import io.vproxy.dep.vjson.util.ArrayBuilder
+import io.vproxy.dep.vjson.util.ObjectBuilder
 import java.util.*
 import java.util.function.Consumer
 import java.util.stream.Collectors

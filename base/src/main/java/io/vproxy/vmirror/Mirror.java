@@ -10,7 +10,7 @@ import io.vproxy.vpacket.AbstractIpPacket;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv6Packet;
 import io.vproxy.vpacket.PacketBytes;
-import vjson.JSON;
+import io.vproxy.dep.vjson.JSON;
 
 import java.io.*;
 import java.util.*;

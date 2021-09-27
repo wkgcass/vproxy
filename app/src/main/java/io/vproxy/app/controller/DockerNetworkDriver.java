@@ -1,6 +1,6 @@
 package io.vproxy.app.controller;
 
-import vjson.JSON;
+import io.vproxy.dep.vjson.JSON;
 
 import java.util.*;
 

@@ -23,8 +23,8 @@ import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.test.cases.TestSSL;
 import io.vproxy.vfd.IPPort;
 import org.junit.*;
-import vjson.JSON;
-import vjson.util.ObjectBuilder;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;

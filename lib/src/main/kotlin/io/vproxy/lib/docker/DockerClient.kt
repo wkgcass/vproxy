@@ -5,7 +5,7 @@ import io.vproxy.lib.common.vplib
 import io.vproxy.lib.docker.entity.Network
 import io.vproxy.lib.http1.CoroutineHttp1ClientConnection
 import io.vproxy.lib.tcp.CoroutineConnection
-import vjson.JSON
+import io.vproxy.dep.vjson.JSON
 import java.io.IOException
 import java.nio.charset.StandardCharsets
 

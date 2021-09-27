@@ -23,7 +23,7 @@ import io.vproxy.vfd.NetworkFD;
 import io.vproxy.vfd.ServerSocketFD;
 import io.vproxy.vfd.SockAddr;
 import io.vproxy.vfd.posix.PosixFD;
-import vjson.simple.SimpleString;
+import io.vproxy.dep.vjson.simple.SimpleString;
 
 import java.util.*;
 import java.util.function.BiFunction;

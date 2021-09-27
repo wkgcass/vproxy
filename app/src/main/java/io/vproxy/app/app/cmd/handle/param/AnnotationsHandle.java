@@ -4,7 +4,7 @@ import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.exception.XException;
-import vjson.JSON;
+import io.vproxy.dep.vjson.JSON;
 
 import java.util.Map;
 

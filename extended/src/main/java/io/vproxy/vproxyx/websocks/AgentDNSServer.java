@@ -19,7 +19,7 @@ import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
 import io.vproxy.vproxyx.websocks.relay.DomainBinder;
-import vjson.JSON;
+import io.vproxy.dep.vjson.JSON;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

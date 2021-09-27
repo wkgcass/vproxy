@@ -1,6 +1,6 @@
 package io.vproxy.lib.common
 
-import vjson.CharStream
+import io.vproxy.dep.vjson.CharStream
 import java.nio.charset.Charset
 
 class ByteArrayCharStream(data: io.vproxy.base.util.ByteArray, charset: Charset) : CharStream {

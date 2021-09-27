@@ -26,11 +26,11 @@ import io.vproxy.component.svrgroup.Upstream;
 import io.vproxy.dns.DNSServer;
 import io.vproxy.lib.http.RoutingContext;
 import io.vproxy.vfd.IPPort;
-import vjson.JSON;
-import vjson.simple.SimpleArray;
-import vjson.simple.SimpleNull;
-import vjson.util.ArrayBuilder;
-import vjson.util.ObjectBuilder;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.simple.SimpleArray;
+import io.vproxy.dep.vjson.simple.SimpleNull;
+import io.vproxy.dep.vjson.util.ArrayBuilder;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import java.io.File;
 import java.io.FileOutputStream;

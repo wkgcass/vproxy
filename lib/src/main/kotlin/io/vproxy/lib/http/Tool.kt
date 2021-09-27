@@ -1,10 +1,10 @@
 package io.vproxy.lib.http
 
-import vjson.JSON
-import vjson.JSON.parse
-import vjson.cs.UTF8ByteArrayCharStream
-import vjson.ex.JsonParseException
-import vjson.util.ObjectBuilder
+import io.vproxy.dep.vjson.JSON
+import io.vproxy.dep.vjson.JSON.parse
+import io.vproxy.dep.vjson.cs.UTF8ByteArrayCharStream
+import io.vproxy.dep.vjson.ex.JsonParseException
+import io.vproxy.dep.vjson.util.ObjectBuilder
 
 object Tool {
   @JvmStatic

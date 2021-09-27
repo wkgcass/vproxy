@@ -25,8 +25,8 @@ import io.vproxy.socks.Socks5ProxyProtocolHandler;
 import io.vproxy.util.CoreUtils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
-import vjson.JSON;
-import vjson.util.ObjectBuilder;
+import io.vproxy.dep.vjson.JSON;
+import io.vproxy.dep.vjson.util.ObjectBuilder;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;

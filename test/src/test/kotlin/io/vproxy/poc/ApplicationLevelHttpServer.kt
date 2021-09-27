@@ -6,9 +6,9 @@ import io.vproxy.lib.common.with
 import io.vproxy.lib.http.RoutingContext
 import io.vproxy.lib.http.Tool
 import io.vproxy.lib.http1.CoroutineHttp1Server
-import vjson.JSON
-import vjson.util.ObjectBuilder
-import vjson.util.Transformer
+import io.vproxy.dep.vjson.JSON
+import io.vproxy.dep.vjson.util.ObjectBuilder
+import io.vproxy.dep.vjson.util.Transformer
 import java.util.*
 
 class ApplicationLevelHttpServer {

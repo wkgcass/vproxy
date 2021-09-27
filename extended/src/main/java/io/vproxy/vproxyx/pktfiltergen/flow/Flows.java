@@ -13,7 +13,7 @@ import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.plugin.FilterResult;
-import vjson.simple.SimpleString;
+import io.vproxy.dep.vjson.simple.SimpleString;
 
 import java.util.*;
 import java.util.function.Consumer;

@@ -1,8 +1,8 @@
 package io.vproxy.lib.docker.entity
 
-import vjson.deserializer.rule.ObjectRule
-import vjson.deserializer.rule.Rule
-import vjson.deserializer.rule.StringRule
+import io.vproxy.dep.vjson.deserializer.rule.ObjectRule
+import io.vproxy.dep.vjson.deserializer.rule.Rule
+import io.vproxy.dep.vjson.deserializer.rule.StringRule
 
 data class NetworkIPAMConfig(
   var subnet: String? = null,

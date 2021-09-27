@@ -1,10 +1,10 @@
 package io.vproxy.base.util.thread;
 
-import vjson.parser.ArrayParser;
-import vjson.parser.ObjectParser;
-import vjson.parser.ParserCacheHolder;
-import vjson.parser.StringParser;
-import vjson.util.StringDictionary;
+import io.vproxy.dep.vjson.parser.ArrayParser;
+import io.vproxy.dep.vjson.parser.ObjectParser;
+import io.vproxy.dep.vjson.parser.ParserCacheHolder;
+import io.vproxy.dep.vjson.parser.StringParser;
+import io.vproxy.dep.vjson.util.StringDictionary;
 
 public class VProxyThreadJsonParserCacheHolder implements ParserCacheHolder {
     @Override

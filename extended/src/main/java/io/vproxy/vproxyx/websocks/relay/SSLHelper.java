@@ -11,7 +11,7 @@ import io.vproxy.base.util.ringbuffer.ssl.SSL;
 import io.vproxy.base.util.ringbuffer.ssl.SSLEngineBuilder;
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
 import io.vproxy.vproxyx.websocks.WebSocksUtils;
-import tlschannel.impl.TlsExplorer;
+import io.vproxy.dep.tlschannel.impl.impl.TlsExplorer;
 
 import javax.net.ssl.*;
 import java.io.IOException;
