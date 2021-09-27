@@ -12,7 +12,7 @@ import java.util.List;
 
 public class ModuleInfoGenerator {
     public static void main(String[] args) throws Exception {
-        var modules = List.of("base", "core", "lib", "extended", "app");
+        var modules = List.of("dep", "base", "core", "lib", "extended", "app");
         var requires = new LinkedHashSet<String>();
         requires.add("java.base");
         var exports = new LinkedHashSet<String>();
