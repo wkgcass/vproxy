@@ -1,7 +1,6 @@
 package io.vproxy.base.util;
 
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.IP;

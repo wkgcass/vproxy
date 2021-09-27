@@ -1,14 +1,11 @@
 package io.vproxy.app.app;
 
 import io.vproxy.app.controller.StdIOController;
+import io.vproxy.app.process.Shutdown;
 import io.vproxy.app.vproxyx.Daemon;
 import io.vproxy.app.vproxyx.DockerNetworkPluginControllerInit;
 import io.vproxy.app.vproxyx.GenerateCommandDoc;
 import io.vproxy.app.vproxyx.Simple;
-import io.vproxy.vproxyx.*;
-import vjson.parser.ParserUtils;
-import io.vproxy.app.process.Shutdown;
-import vproxy.app.vproxyx.GenerateCommandDoc;
 import io.vproxy.base.Config;
 import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.util.LogType;
@@ -23,7 +20,8 @@ import io.vproxy.fstack.FStackUtil;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.VFDConfig;
 import io.vproxy.vmirror.Mirror;
-import vproxyx.*;
+import io.vproxy.vproxyx.*;
+import vjson.parser.ParserUtils;
 
 import java.io.File;
 import java.io.IOException;

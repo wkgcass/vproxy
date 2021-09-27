@@ -1,32 +1,23 @@
 package io.vproxy.test.cases
 
+import io.vproxy.lib.common.*
+import io.vproxy.lib.tcp.CoroutineServerSock
 import kotlinx.coroutines.channels.Channel
 import org.junit.*
-import io.vproxy.base.connection.ConnectableConnection
-import io.vproxy.base.connection.ConnectionOpts
-import io.vproxy.base.connection.ServerSock
-import io.vproxy.base.selector.SelectorEventLoop
-import io.vproxy.base.util.ByteArray
-import io.vproxy.base.util.RingBuffer
-import io.vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.*
-import vproxy.lib.tcp.CoroutineServerSock
-import io.vproxy.test.tool.Client
-import io.vproxy.vfd.IPPort
 import java.util.concurrent.LinkedBlockingDeque
 import java.util.concurrent.TimeUnit
 
 class TestNetServerClient {
   companion object {
     private const val listenPort = 30080
-    private var loop: _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop? = null
+    private var loop: io.vproxy.base.selector.SelectorEventLoop? = null
 
     @JvmStatic
     @BeforeClass
     fun beforeClass() {
-      val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
+      val loop = io.vproxy.base.selector.SelectorEventLoop.open()
       this.loop = loop
-      loop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "test-net-server-client") }
+      loop.loop { io.vproxy.base.util.thread.VProxyThread.create(it, "test-net-server-client") }
     }
 
     @JvmStatic
@@ -40,8 +31,8 @@ class TestNetServerClient {
 
   @Before
   fun setUp() {
-    server = _root_ide_package_.io.vproxy.base.connection.ServerSock.create(
-      _root_ide_package_.io.vproxy.vfd.IPPort(
+    server = io.vproxy.base.connection.ServerSock.create(
+      io.vproxy.vfd.IPPort(
         "127.0.0.1",
         listenPort
       )
@@ -60,7 +51,7 @@ class TestNetServerClient {
     val promise = loop!!.execute {
       val conn = server!!.accept()
       vplib.coroutine.with(conn).launch {
-        val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
+        val buf = io.vproxy.base.util.ByteArray.allocate(1024)
         while (true) {
           val n = conn.read(buf)
           val data = buf.sub(0, n)
@@ -83,7 +74,7 @@ class TestNetServerClient {
       sb.toString()
     }
 
-    val client = _root_ide_package_.io.vproxy.test.tool.Client(listenPort)
+    val client = io.vproxy.test.tool.Client(listenPort)
     client.connect()
     for (s in listOf("hello\r\n", "world\r\n", "foo\r\n", "bar\r\n")) {
       Assert.assertEquals(s, client.sendAndRecv(s, s.length))
@@ -99,7 +90,7 @@ class TestNetServerClient {
       while (true) {
         val conn = server!!.accept()
         vplib.coroutine.with(conn).launch {
-          val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
+          val buf = io.vproxy.base.util.ByteArray.allocate(1024)
           while (true) {
             val n = conn.read(buf)
             if (n == 0) {
@@ -115,14 +106,14 @@ class TestNetServerClient {
     val dataQ = LinkedBlockingDeque<String>()
     loop!!.launch {
       val client = unsafeIO {
-        _root_ide_package_.io.vproxy.base.connection.ConnectableConnection.create(
-          _root_ide_package_.io.vproxy.vfd.IPPort("127.0.0.1", listenPort), _root_ide_package_.io.vproxy.base.connection.ConnectionOpts(),
-          _root_ide_package_.io.vproxy.base.util.RingBuffer.allocate(1024), _root_ide_package_.io.vproxy.base.util.RingBuffer.allocate(1024)
+        io.vproxy.base.connection.ConnectableConnection.create(
+          io.vproxy.vfd.IPPort("127.0.0.1", listenPort), io.vproxy.base.connection.ConnectionOpts(),
+          io.vproxy.base.util.RingBuffer.allocate(1024), io.vproxy.base.util.RingBuffer.allocate(1024)
         ).coroutine(loop!!.ensureNetEventLoop())
       }
       defer { client.close() }
       client.connect()
-      val buf = _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(1024)
+      val buf = io.vproxy.base.util.ByteArray.allocate(1024)
       for (s in listOf("hello", "world", "foo", "bar")) {
         client.write(s)
         val n = client.read(buf)

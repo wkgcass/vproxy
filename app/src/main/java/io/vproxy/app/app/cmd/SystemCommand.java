@@ -1,7 +1,6 @@
 package io.vproxy.app.app.cmd;
 
 import io.vproxy.app.controller.StdIOController;
-import io.vproxy.app.controller.StdIOController;
 import io.vproxy.app.process.Shutdown;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;

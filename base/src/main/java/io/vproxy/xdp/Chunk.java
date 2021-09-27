@@ -1,7 +1,6 @@
 package io.vproxy.xdp;
 
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.base.util.thread.VProxyThread;
 
 import java.nio.ByteBuffer;
 

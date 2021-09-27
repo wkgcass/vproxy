@@ -27,5 +27,5 @@ gcc -std=gnu99 -O2 \
     -L${FF_PATH}/lib -L${FF_DPDK}/lib -Wl,--no-as-needed,--whole-archive,-lfstack,-ldpdk,--no-whole-archive \
     -Wl,--as-needed,--no-whole-archive -lrt -lm -ldl -lcrypto -pthread -lnuma \
     -shared -Werror -lc -fPIC \
-    vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c vproxy_fstack_FStack.c \
+    io_vproxy_vfd_posix_GeneralPosix.c dep/ae/ae.c dep/ae/zmalloc.c io_vproxy_fstack_FStack.c \
     -o libvfdfstack.so

@@ -1,6 +1,6 @@
 package io.vproxy.lib.http.route
 
-import vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.RoutingContext
 
 class WildcardSubPath(private val next: SubPath?) : SubPath {
   override fun next(): SubPath? {

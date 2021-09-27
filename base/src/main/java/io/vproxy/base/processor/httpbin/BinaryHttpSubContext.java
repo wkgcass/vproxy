@@ -1,14 +1,11 @@
 package io.vproxy.base.processor.httpbin;
 
-import io.vproxy.base.processor.httpbin.entity.Header;
-import io.vproxy.base.processor.httpbin.frame.*;
-import io.vproxy.base.processor.httpbin.hpack.HPack;
 import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.ExceptionWithoutStackTrace;
 import io.vproxy.base.processor.OOSubContext;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.httpbin.entity.Header;
-import vproxy.base.processor.httpbin.frame.*;
+import io.vproxy.base.processor.httpbin.frame.*;
 import io.vproxy.base.processor.httpbin.hpack.HPack;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;

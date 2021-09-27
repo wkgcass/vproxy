@@ -1,8 +1,8 @@
 package io.vproxy.test.cases;
 
+import io.vproxy.base.dns.Resolver;
 import org.junit.AfterClass;
 import org.junit.Test;
-import io.vproxy.base.dns.Resolver;
 
 public class AfterAll {
     @AfterClass

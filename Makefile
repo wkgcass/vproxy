@@ -1,7 +1,7 @@
 SHELL := /bin/bash
 .DEFAULT_GOAL := jar
 
-VERSION := $(shell cat base/src/main/java/vproxy/base/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
+VERSION := $(shell cat base/src/main/java/io/vproxy/base/util/Version.java | grep '_THE_VERSION_' | awk '{print $7}' | cut -d '"' -f 2)
 OS := $(shell uname)
 ARCH := $(shell uname -m)
 ifeq ($(OS),Linux)

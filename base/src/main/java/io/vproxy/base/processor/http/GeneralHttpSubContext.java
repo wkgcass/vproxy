@@ -1,8 +1,5 @@
 package io.vproxy.base.processor.http;
 
-import io.vproxy.base.processor.http1.HttpSubContext;
-import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import io.vproxy.base.processor.httpbin.BinaryHttpSubContextCaster;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.http1.HttpSubContext;
 import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;

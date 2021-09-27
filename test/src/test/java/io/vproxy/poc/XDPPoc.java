@@ -11,8 +11,6 @@ import io.vproxy.base.util.unsafe.SunUnsafe;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vpacket.*;
 import io.vproxy.xdp.*;
-import vproxy.vpacket.*;
-import vproxy.xdp.*;
 
 import java.util.List;
 

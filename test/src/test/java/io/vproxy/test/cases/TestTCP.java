@@ -1,11 +1,11 @@
 package io.vproxy.test.cases;
 
-import org.junit.Test;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.conntrack.tcp.Segment;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.tcp.TcpState;
+import org.junit.Test;
 
 import java.nio.ByteBuffer;
 import java.util.Random;

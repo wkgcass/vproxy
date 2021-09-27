@@ -1,6 +1,5 @@
 package io.vproxy.base.http.connect;
 
-import io.vproxy.base.protocol.ProtocolHandlerContext;
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.http.HttpProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;

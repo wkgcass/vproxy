@@ -1,12 +1,10 @@
 package io.vproxy.base.util.promise;
 
-import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 
 import java.util.Objects;
 import java.util.function.BiConsumer;

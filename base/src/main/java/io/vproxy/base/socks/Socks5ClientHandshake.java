@@ -1,7 +1,6 @@
 package io.vproxy.base.socks;
 
 import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.Connection;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;

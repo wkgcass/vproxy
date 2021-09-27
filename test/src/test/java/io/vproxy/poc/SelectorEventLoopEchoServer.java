@@ -1,6 +1,5 @@
 package io.vproxy.poc;
 
-import io.vproxy.test.tool.EchoServerHandler;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.test.tool.EchoServerHandler;

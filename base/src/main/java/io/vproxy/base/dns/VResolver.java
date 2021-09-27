@@ -1,9 +1,7 @@
 package io.vproxy.base.dns;
 
 import io.vproxy.base.util.callback.Callback;
-import io.vproxy.base.util.callback.Callback;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

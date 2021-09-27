@@ -7,7 +7,7 @@ import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.IP;

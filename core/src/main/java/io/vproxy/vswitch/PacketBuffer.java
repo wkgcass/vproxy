@@ -1,17 +1,10 @@
 package io.vproxy.vswitch;
 
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.vpacket.*;
-import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
-import io.vproxy.vpacket.conntrack.udp.UdpEntry;
-import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
-import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.IP;
-import vproxy.vpacket.*;
+import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;

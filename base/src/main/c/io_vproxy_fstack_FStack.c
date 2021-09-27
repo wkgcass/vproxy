@@ -1,8 +1,8 @@
-#include "vproxy_fstack_FStack.h"
+#include "io_vproxy_fstack_FStack.h"
 #include <stdint.h>
 #include <ff_api.h>
 
-JNIEXPORT void JNICALL Java_vproxy_fstack_FStack_ff_1init0
+JNIEXPORT void JNICALL Java_io_vproxy_fstack_FStack_ff_1init0
   (JNIEnv* env, jobject self, jobjectArray args) {
     int i;
     int len = (*env)->GetArrayLength(env, args);
@@ -39,7 +39,7 @@ int loop(void* argsx) {
     return 0;
 }
 
-JNIEXPORT void JNICALL Java_vproxy_fstack_FStack_ff_1run0
+JNIEXPORT void JNICALL Java_io_vproxy_fstack_FStack_ff_1run0
   (JNIEnv* env, jobject self, jobject runnable) {
     jclass cls = (*env)->FindClass(env, "java/lang/Runnable");
     jmethodID meth = (*env)->GetMethodID(env, cls, "run", "()V");

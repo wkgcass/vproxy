@@ -1,6 +1,5 @@
 package io.vproxy.vproxyx.websocks.relay;
 
-import tlschannel.impl.TlsExplorer;
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
@@ -12,6 +11,7 @@ import io.vproxy.base.util.ringbuffer.ssl.SSL;
 import io.vproxy.base.util.ringbuffer.ssl.SSLEngineBuilder;
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
 import io.vproxy.vproxyx.websocks.WebSocksUtils;
+import tlschannel.impl.TlsExplorer;
 
 import javax.net.ssl.*;
 import java.io.IOException;

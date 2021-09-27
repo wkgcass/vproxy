@@ -9,7 +9,6 @@ import io.vproxy.base.selector.wrap.udp.ServerDatagramFD;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.net.SocketOption;

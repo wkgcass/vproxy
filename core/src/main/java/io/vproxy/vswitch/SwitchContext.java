@@ -5,11 +5,6 @@ import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.stack.NetworkStack;
 import io.vproxy.vswitch.util.UserInfo;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.coll.RingQueue;
-import io.vproxy.vswitch.iface.Iface;
-import io.vproxy.vswitch.stack.NetworkStack;
-import io.vproxy.vswitch.util.UserInfo;
 
 import java.util.Collection;
 import java.util.function.Supplier;

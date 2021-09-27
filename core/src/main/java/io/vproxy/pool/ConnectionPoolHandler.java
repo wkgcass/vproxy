@@ -2,8 +2,6 @@ package io.vproxy.pool;
 
 import io.vproxy.base.connection.ConnectableConnection;
 import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.connection.ConnectableConnection;
-import io.vproxy.base.connection.NetEventLoop;
 
 public interface ConnectionPoolHandler {
     // NOTE: the user code in ConnectableConnectionHandler

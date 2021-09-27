@@ -6,6 +6,7 @@ import io.vproxy.app.plugin.PluginInitParams;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.exception.NotFoundException;
+import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.PacketFilterHelper;
 import io.vproxy.vswitch.Switch;
@@ -13,7 +14,6 @@ import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.vswitch.plugin.IfaceWatcher;
 import io.vproxy.vswitch.plugin.PacketFilter;
-import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 
 import java.util.HashMap;
 import java.util.Map;

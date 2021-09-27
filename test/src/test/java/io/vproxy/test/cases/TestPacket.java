@@ -1,7 +1,5 @@
 package io.vproxy.test.cases;
 
-import io.vproxy.vpacket.*;
-import org.junit.Test;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Utils;
@@ -9,7 +7,8 @@ import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
 import io.vproxy.vfd.MacAddress;
-import vproxy.vpacket.*;
+import io.vproxy.vpacket.*;
+import org.junit.Test;
 
 import java.util.Collections;
 import java.util.Random;

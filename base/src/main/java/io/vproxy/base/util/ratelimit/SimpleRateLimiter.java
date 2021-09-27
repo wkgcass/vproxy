@@ -1,7 +1,6 @@
 package io.vproxy.base.util.ratelimit;
 
 import io.vproxy.base.Config;
-import io.vproxy.base.Config;
 
 public class SimpleRateLimiter extends RateLimiter {
     public final long capacity;

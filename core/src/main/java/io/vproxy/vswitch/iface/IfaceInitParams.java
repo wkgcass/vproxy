@@ -4,10 +4,6 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.util.UserInfo;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.vfd.DatagramFD;
-import io.vproxy.vswitch.Switch;
-import io.vproxy.vswitch.util.UserInfo;
 
 import java.util.Map;
 

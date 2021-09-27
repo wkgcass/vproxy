@@ -1,7 +1,5 @@
 package io.vproxy.base.dns.dnsserverlistgetter;
 
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.dns.DnsServerListGetter;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;

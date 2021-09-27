@@ -1,28 +1,15 @@
 package io.vproxy.app.controller
 
+import io.vproxy.lib.common.coroutine
+import io.vproxy.lib.common.launch
+import io.vproxy.lib.common.sleep
+import io.vproxy.lib.common.vplib
+import io.vproxy.lib.docker.DockerClient
+import io.vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.Tool
+import io.vproxy.lib.http1.CoroutineHttp1Server
 import vjson.JSON
 import vjson.util.ObjectBuilder
-import io.vproxy.app.app.Application
-import io.vproxy.app.process.Shutdown
-import io.vproxy.base.Config
-import io.vproxy.base.connection.ServerSock
-import io.vproxy.base.selector.SelectorEventLoop
-import io.vproxy.base.util.LogType
-import io.vproxy.base.util.Logger
-import io.vproxy.base.util.Network
-import io.vproxy.base.util.Utils
-import vproxy.lib.common.coroutine
-import vproxy.lib.common.launch
-import vproxy.lib.common.sleep
-import vproxy.lib.common.vplib
-import vproxy.lib.docker.DockerClient
-import vproxy.lib.http.RoutingContext
-import vproxy.lib.http.Tool
-import vproxy.lib.http1.CoroutineHttp1Server
-import io.vproxy.vfd.IP
-import io.vproxy.vfd.IPv4
-import io.vproxy.vfd.IPv6
-import io.vproxy.vfd.UDSPath
 import java.net.SocketTimeoutException
 import java.nio.file.Files
 import java.nio.file.Path
@@ -30,11 +17,11 @@ import java.util.*
 import kotlin.system.exitProcess
 
 @Suppress("DuplicatedCode")
-class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.UDSPath, requireSync: Boolean) {
+class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync: Boolean) {
   companion object {
     private const val dockerNetworkPluginBase = ""
-    private val driver: _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver =
-      _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriverImpl()
+    private val driver: io.vproxy.app.controller.DockerNetworkDriver =
+      io.vproxy.app.controller.DockerNetworkDriverImpl()
   }
 
   private val server: CoroutineHttp1Server
@@ -43,10 +30,10 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
   private var scheduled = false
 
   init {
-    val loop = _root_ide_package_.io.vproxy.app.app.Application.get().controlEventLoop
+    val loop = io.vproxy.app.app.Application.get().controlEventLoop
 
     // prepare
-    if (_root_ide_package_.io.vproxy.base.Config.checkBind) {
+    if (io.vproxy.base.Config.checkBind) {
       try {
         Thread.sleep(1000)
         // sleep for a while, maybe the old process would exit
@@ -54,7 +41,7 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       }
       // no need to check explicitly, because uds cannot enable reuse_port
     }
-    val sock = _root_ide_package_.io.vproxy.base.connection.ServerSock.create(path).coroutine(loop)
+    val sock = io.vproxy.base.connection.ServerSock.create(path).coroutine(loop)
     server = CoroutineHttp1Server(sock)
 
     // see https://github.com/moby/libnetwork/blob/master/docs/remote.md
@@ -85,7 +72,7 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
 
   private fun accessLog(rctx: RoutingContext) {
     val body = rctx.get(Tool.bodyJson)
-    _root_ide_package_.io.vproxy.base.util.Logger.access("received request: " + rctx.req.method() + " " + rctx.req.uri() + " " + body?.stringify())
+    io.vproxy.base.util.Logger.access("received request: " + rctx.req.method() + " " + rctx.req.uri() + " " + body?.stringify())
     rctx.allowNext()
   }
 
@@ -123,7 +110,7 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
   }
 
   private suspend fun createNetwork(rctx: RoutingContext) {
-    val req = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
+    val req = io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
     try {
       val body = rctx.get(Tool.bodyJson) as JSON.Object
       req.networkId = body.getString("NetworkID")
@@ -136,26 +123,26 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       req.options = body.getObject("Options")
       req.initGenericOptions()
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send(err("invalid request body"))
       return
     }
     try {
       driver.createNetwork(req)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to create network", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to create network", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
     return
   }
 
-  private fun parseIPData(ipv4Data: MutableList<_root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.IPData>, raw: JSON.Array) {
+  private fun parseIPData(ipv4Data: MutableList<io.vproxy.app.controller.DockerNetworkDriver.IPData>, raw: JSON.Array) {
     for (i in 0 until raw.length()) {
       val obj = raw.getObject(i)
-      val data = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.IPData()
+      val data = io.vproxy.app.controller.DockerNetworkDriver.IPData()
       data.addressSpace = obj.getString("AddressSpace")
       data.pool = obj.getString("Pool")
       data.gateway = obj.getString("Gateway")
@@ -175,48 +162,48 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
     try {
       networkId = (rctx.get(Tool.bodyJson) as JSON.Object).getString("NetworkID")
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send(err("invalid request body"))
       return
     }
     try {
       driver.deleteNetwork(networkId)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to delete network", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to delete network", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
   private suspend fun createEndpoint(rctx: RoutingContext) {
-    val req = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointRequest()
+    val req = io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointRequest()
     try {
       val body = rctx.get(Tool.bodyJson) as JSON.Object
       req.networkId = body.getString("NetworkID")
       req.endpointId = body.getString("EndpointID")
       if (body.containsKey("Interface")) {
         val interf = body.getObject("Interface")
-        req.netInterface = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.NetInterface()
+        req.netInterface = io.vproxy.app.controller.DockerNetworkDriver.NetInterface()
         req.netInterface.address = interf.getString("Address")
         req.netInterface.addressIPV6 = interf.getString("AddressIPv6")
         req.netInterface.macAddress = interf.getString("MacAddress")
       }
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send(err("invalid request body"))
       return
     }
-    val resp: _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointResponse
+    val resp: io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointResponse
     try {
       resp = driver.createEndpoint(req)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to create endpoint", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to create endpoint", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     if (resp.netInterface == null) {
       rctx.conn.response(200).send(ObjectBuilder().build())
     } else {
@@ -244,18 +231,18 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       networkId = body.getString("NetworkID")
       endpointId = body.getString("EndpointID")
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send("invalid request body")
       return
     }
     try {
       driver.deleteEndpoint(networkId, endpointId)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to delete endpoint", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to delete endpoint", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
@@ -269,19 +256,19 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       endpointId = body.getString("EndpointID")
       sandboxKey = body.getString("SandboxKey")
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send("invalid request body")
       return
     }
-    val resp: _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.JoinResponse
+    val resp: io.vproxy.app.controller.DockerNetworkDriver.JoinResponse
     try {
       resp = driver.join(networkId, endpointId, sandboxKey)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to join", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to join", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder()
       .putObject("InterfaceName") {
         put("SrcName", resp.interfaceName.srcName)
@@ -312,18 +299,18 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       networkId = body.getString("NetworkID")
       endpointId = body.getString("EndpointID")
     } catch (e: RuntimeException) {
-      _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
+      io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.INVALID_EXTERNAL_DATA, "invalid request body: ", e)
       rctx.conn.response(200).send("invalid request body")
       return
     }
     try {
       driver.leave(networkId, endpointId)
     } catch (e: Exception) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to leave", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to leave", e)
       rctx.conn.response(200).send(err(e.message))
       return
     }
-    _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+    io.vproxy.app.process.Shutdown.autoSave()
     rctx.conn.response(200).send(ObjectBuilder().build())
   }
 
@@ -357,21 +344,21 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
     }
     syncing = true
 
-    val client = DockerClient(_root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.current().ensureNetEventLoop())
+    val client = DockerClient(io.vproxy.base.selector.SelectorEventLoop.current().ensureNetEventLoop())
     client.timeout = 1500
     for (i in 0..retries) {
       if (i == 0) {
-        _root_ide_package_.io.vproxy.base.util.Logger.alert("sync networks from docker daemon")
+        io.vproxy.base.util.Logger.alert("sync networks from docker daemon")
       } else {
-        _root_ide_package_.io.vproxy.base.util.Logger.alert("sync networks from docker daemon, already tried count: $i")
+        io.vproxy.base.util.Logger.alert("sync networks from docker daemon, already tried count: $i")
       }
       try {
         syncNetworks(client)
       } catch (e: SocketTimeoutException) {
-        _root_ide_package_.io.vproxy.base.util.Logger.warn(_root_ide_package_.io.vproxy.base.util.LogType.CONN_ERROR, "requesting docker daemon timed-out: " + _root_ide_package_.io.vproxy.base.util.Utils.formatErr(e))
+        io.vproxy.base.util.Logger.warn(io.vproxy.base.util.LogType.CONN_ERROR, "requesting docker daemon timed-out: " + io.vproxy.base.util.Utils.formatErr(e))
         continue
       } catch (e: Throwable) {
-        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to sync networks from docker daemon")
+        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to sync networks from docker daemon")
         syncing = false
         throw e
       }
@@ -383,7 +370,7 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
       scheduled = true
       vplib.coroutine.launch {
         val time = 10
-        _root_ide_package_.io.vproxy.base.util.Logger.alert("re-sync $time seconds later ...")
+        io.vproxy.base.util.Logger.alert("re-sync $time seconds later ...")
         sleep(time * 1000)
         scheduled = false
         if (!syncing) {
@@ -402,31 +389,31 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
     var cnt = 0
     try {
       val networks = client.listNetworks()
-      _root_ide_package_.io.vproxy.base.util.Logger.alert("retrieved docker networks: $networks")
+      io.vproxy.base.util.Logger.alert("retrieved docker networks: $networks")
       for (network in networks) {
         if (network.driver == null || network.driver!!.startsWith("vproxyio/docker-plugin:").not()) {
           continue
         }
-        val createReq = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
+        val createReq = io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
         createReq.networkId = network.id
         createReq.ipv4Data = LinkedList()
         createReq.ipv6Data = LinkedList()
         for (conf in network.ipam!!.config!!) {
-          val net = _root_ide_package_.io.vproxy.base.util.Network(conf.subnet!!)
-          val data = _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.IPData()
+          val net = io.vproxy.base.util.Network(conf.subnet!!)
+          val data = io.vproxy.app.controller.DockerNetworkDriver.IPData()
           data.addressSpace = "" // not used
           data.pool = net.toString()
           data.gateway = conf.gateway ?: buildGateway(net)
           data.auxAddresses = null // not used
-          if (net.ip is _root_ide_package_.io.vproxy.vfd.IPv4) {
+          if (net.ip is io.vproxy.vfd.IPv4) {
             createReq.ipv4Data!!.add(data)
           } else {
-            assert(net.ip is _root_ide_package_.io.vproxy.vfd.IPv6)
+            assert(net.ip is io.vproxy.vfd.IPv6)
             createReq.ipv6Data!!.add(data)
           }
         }
         createReq.options = ObjectBuilder()
-          .putObject(_root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest.optionsDockerNetworkGenericKey) {
+          .putObject(io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest.optionsDockerNetworkGenericKey) {
             for ((k, v) in network.options!!) {
               put(k, v)
             }
@@ -434,22 +421,22 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
           .build()
         createReq.initGenericOptions()
 
-        _root_ide_package_.io.vproxy.base.util.Logger.alert("creating network: $createReq")
+        io.vproxy.base.util.Logger.alert("creating network: $createReq")
         driver.createNetwork(createReq)
         cnt += 1
       }
-      _root_ide_package_.io.vproxy.app.process.Shutdown.autoSave()
+      io.vproxy.app.process.Shutdown.autoSave()
 
-      _root_ide_package_.io.vproxy.base.util.Logger.alert("$cnt networks created")
+      io.vproxy.base.util.Logger.alert("$cnt networks created")
     } catch (e: SocketTimeoutException) {
       throw e
     } catch (e: Throwable) {
-      _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.SYS_ERROR, "failed to initiate networks ($cnt networks already created before error)", e)
+      io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to initiate networks ($cnt networks already created before error)", e)
       try {
         @Suppress("BlockingMethodInNonBlockingContext")
-        Files.delete(Path.of(_root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE))
+        Files.delete(Path.of(io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE))
       } catch (e2: Throwable) {
-        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.FILE_ERROR, "failed to rollback " + _root_ide_package_.io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE, e2)
+        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.FILE_ERROR, "failed to rollback " + io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE, e2)
       }
       exitProcess(1)
       @Suppress("UNREACHABLE_CODE")
@@ -457,9 +444,9 @@ class DockerNetworkPluginController(val path: _root_ide_package_.io.vproxy.vfd.U
     }
   }
 
-  private fun buildGateway(net: _root_ide_package_.io.vproxy.base.util.Network): String {
+  private fun buildGateway(net: io.vproxy.base.util.Network): String {
     val bytes = net.ip.address.copyOf()
     bytes[bytes.size - 1] = (bytes[bytes.size - 1] + 1).toByte()
-    return _root_ide_package_.io.vproxy.vfd.IP.from(bytes).formatToIPString() + "/" + net.mask
+    return io.vproxy.vfd.IP.from(bytes).formatToIPString() + "/" + net.mask
   }
 }

@@ -1,21 +1,18 @@
 package io.vproxy.lib.http1
 
-import io.vproxy.base.processor.http1.entity.Chunk
-import io.vproxy.base.processor.http1.entity.Header
-import io.vproxy.base.util.ByteArray
-import vproxy.lib.tcp.CoroutineConnection
+import io.vproxy.lib.tcp.CoroutineConnection
 
 abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
   private var headersSent = false
 
   protected abstract suspend fun sendHeadersBeforeChunks()
 
-  open suspend fun sendChunk(payload: _root_ide_package_.io.vproxy.base.util.ByteArray): CoroutineHttp1Common {
+  open suspend fun sendChunk(payload: io.vproxy.base.util.ByteArray): CoroutineHttp1Common {
     if (!headersSent) {
       headersSent = true
       sendHeadersBeforeChunks()
     }
-    val chunk = _root_ide_package_.io.vproxy.base.processor.http1.entity.Chunk()
+    val chunk = io.vproxy.base.processor.http1.entity.Chunk()
     chunk.size = payload.length()
     chunk.content = payload
     conn.write(chunk.toByteArray())
@@ -23,8 +20,8 @@ abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
     return this
   }
 
-  open suspend fun endChunks(trailers: List<_root_ide_package_.io.vproxy.base.processor.http1.entity.Header>) {
-    val chunk = _root_ide_package_.io.vproxy.base.processor.http1.entity.Chunk()
+  open suspend fun endChunks(trailers: List<io.vproxy.base.processor.http1.entity.Header>) {
+    val chunk = io.vproxy.base.processor.http1.entity.Chunk()
     chunk.size = 0
 
     val textPart = StringBuilder()
@@ -35,7 +32,7 @@ abstract class CoroutineHttp1Common(private val conn: CoroutineConnection) {
 
     conn.write(
       chunk.toByteArray()
-        .concat(_root_ide_package_.io.vproxy.base.util.ByteArray.from(textPart.toString()))
+        .concat(io.vproxy.base.util.ByteArray.from(textPart.toString()))
     )
   }
 }

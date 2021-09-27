@@ -1,6 +1,5 @@
 package io.vproxy.vfd;
 
-import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Utils;
 

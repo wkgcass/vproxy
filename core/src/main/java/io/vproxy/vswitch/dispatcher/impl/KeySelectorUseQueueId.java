@@ -1,6 +1,5 @@
 package io.vproxy.vswitch.dispatcher.impl;
 
-import io.vproxy.xdp.XDPSocket;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.xdp.XDPSocket;
 

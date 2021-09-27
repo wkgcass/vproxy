@@ -2,8 +2,6 @@ package io.vproxy.base.util;
 
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
-import io.vproxy.base.util.nio.ByteArrayChannel;
-import io.vproxy.base.util.ringbuffer.SimpleRingBuffer;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 

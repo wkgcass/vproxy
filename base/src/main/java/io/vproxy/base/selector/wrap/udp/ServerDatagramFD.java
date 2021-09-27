@@ -1,6 +1,5 @@
 package io.vproxy.base.selector.wrap.udp;
 
-import io.vproxy.base.prometheus.GaugeF;
 import io.vproxy.base.Config;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.prometheus.GaugeF;
@@ -11,7 +10,6 @@ import io.vproxy.base.selector.wrap.WritableAware;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.net.SocketOption;

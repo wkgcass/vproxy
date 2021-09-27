@@ -3,7 +3,6 @@ package io.vproxy.vproxyx.websocks.relay;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.*;
-import vproxy.base.util.*;
 import io.vproxy.base.util.crypto.CryptoUtils;
 import io.vproxy.vfd.IP;
 

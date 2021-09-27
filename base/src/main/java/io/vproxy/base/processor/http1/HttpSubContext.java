@@ -1,11 +1,5 @@
 package io.vproxy.base.processor.http1;
 
-import io.vproxy.base.processor.http1.builder.ChunkBuilder;
-import io.vproxy.base.processor.http1.builder.HeaderBuilder;
-import io.vproxy.base.processor.http1.builder.RequestBuilder;
-import io.vproxy.base.processor.http1.builder.ResponseBuilder;
-import io.vproxy.base.processor.http1.entity.Request;
-import io.vproxy.base.processor.http1.entity.Response;
 import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.OOSubContext;
 import io.vproxy.base.processor.Processor;

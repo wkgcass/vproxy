@@ -1,7 +1,6 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 

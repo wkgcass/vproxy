@@ -1,10 +1,6 @@
 package io.vproxy.base.component.check;
 
 import io.vproxy.base.connection.*;
-import io.vproxy.base.processor.http1.entity.Header;
-import io.vproxy.base.processor.http1.entity.Request;
-import io.vproxy.base.processor.http1.entity.Response;
-import vproxy.base.connection.*;
 import io.vproxy.base.dns.DNSClient;
 import io.vproxy.base.http.HttpRespParser;
 import io.vproxy.base.processor.http1.entity.Header;

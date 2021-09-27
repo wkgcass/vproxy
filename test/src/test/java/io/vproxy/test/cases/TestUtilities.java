@@ -1,16 +1,6 @@
 package io.vproxy.test.cases;
 
 import io.vproxy.base.Config;
-import io.vproxy.base.util.bitwise.BitwiseMatcher;
-import io.vproxy.base.util.coll.RingQueue;
-import io.vproxy.base.util.display.TreeBuilder;
-import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
-import io.vproxy.base.util.objectpool.CursorList;
-import io.vproxy.base.util.objectpool.PrototypeObjectList;
-import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
-import org.junit.Assert;
-import org.junit.Test;
-import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
 import io.vproxy.base.util.coll.RingQueue;
@@ -21,6 +11,8 @@ import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
+import org.junit.Assert;
+import org.junit.Test;
 
 import java.util.LinkedList;
 import java.util.List;

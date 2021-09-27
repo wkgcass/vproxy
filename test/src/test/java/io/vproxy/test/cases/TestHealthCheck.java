@@ -1,14 +1,14 @@
 package io.vproxy.test.cases;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import io.vproxy.base.component.check.CheckProtocol;
 import io.vproxy.base.component.check.HealthCheckConfig;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.svrgroup.Method;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.vfd.IPPort;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;

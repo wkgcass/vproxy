@@ -6,12 +6,6 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Timer;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vswitch.iface.Iface;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Timer;
-import io.vproxy.vfd.MacAddress;
-import io.vproxy.vswitch.iface.Iface;
 
 import java.util.HashMap;
 import java.util.HashSet;

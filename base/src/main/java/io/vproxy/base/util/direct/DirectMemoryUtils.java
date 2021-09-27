@@ -1,9 +1,5 @@
 package io.vproxy.base.util.direct;
 
-import io.vproxy.base.prometheus.Counter;
-import io.vproxy.base.prometheus.GaugeF;
-import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
-import io.vproxy.base.util.unsafe.SunUnsafe;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.prometheus.Counter;
 import io.vproxy.base.prometheus.GaugeF;

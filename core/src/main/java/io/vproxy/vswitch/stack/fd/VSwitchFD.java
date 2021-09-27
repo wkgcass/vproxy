@@ -1,7 +1,6 @@
 package io.vproxy.vswitch.stack.fd;
 
 import io.vproxy.base.selector.wrap.VirtualFD;
-import io.vproxy.base.selector.wrap.VirtualFD;
 import io.vproxy.vfd.FD;
 
 import java.io.IOException;

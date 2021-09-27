@@ -2,10 +2,7 @@ package io.vproxy.vfd.windows;
 
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 import io.vproxy.vfd.jdk.ChannelFDs;
 import io.vproxy.vfd.posix.Posix;
 

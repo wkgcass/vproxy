@@ -1,7 +1,7 @@
 package io.vproxy.base.util.unsafe;
 
-import sun.misc.Unsafe;
 import io.vproxy.base.util.Logger;
+import sun.misc.Unsafe;
 
 import java.lang.reflect.Field;
 import java.nio.ByteBuffer;

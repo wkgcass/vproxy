@@ -1,6 +1,6 @@
 package io.vproxy.lib.http.route
 
-import vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.RoutingContext
 
 class FixedSubPath(private val next: SubPath?, private val route: String) : SubPath {
   override fun next(): SubPath? {

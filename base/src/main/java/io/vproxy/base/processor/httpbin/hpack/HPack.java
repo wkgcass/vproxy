@@ -3,7 +3,6 @@ package io.vproxy.base.processor.httpbin.hpack;
 import com.twitter.hpack.Decoder;
 import com.twitter.hpack.Encoder;
 import io.vproxy.base.processor.httpbin.entity.Header;
-import io.vproxy.base.processor.httpbin.entity.Header;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;

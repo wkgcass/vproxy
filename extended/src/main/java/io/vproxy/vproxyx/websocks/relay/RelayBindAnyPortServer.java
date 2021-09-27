@@ -11,7 +11,7 @@ import io.vproxy.base.socks.AddressType;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;

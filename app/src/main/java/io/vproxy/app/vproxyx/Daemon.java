@@ -5,7 +5,6 @@ import io.vproxy.app.process.Shutdown;
 import io.vproxy.base.Config;
 import io.vproxy.base.connection.ServerSock;
 import io.vproxy.base.util.*;
-import vproxy.base.util.*;
 import io.vproxy.base.util.thread.VProxyThread;
 
 import java.io.BufferedReader;

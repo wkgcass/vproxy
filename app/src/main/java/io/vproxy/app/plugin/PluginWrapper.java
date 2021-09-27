@@ -2,8 +2,6 @@ package io.vproxy.app.plugin;
 
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
 
 import java.net.URL;
 

@@ -8,14 +8,6 @@ import io.vproxy.base.util.*;
 import io.vproxy.base.util.anno.ThreadSafe;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
-import vproxy.base.connection.*;
-import io.vproxy.base.processor.ConnectionDelegate;
-import io.vproxy.base.processor.Hint;
-import io.vproxy.base.processor.Processor;
-import vproxy.base.util.*;
-import io.vproxy.base.util.anno.ThreadSafe;
-import io.vproxy.base.util.nio.ByteArrayChannel;
-import io.vproxy.base.util.ringbuffer.ProxyOutputRingBuffer;
 
 import java.io.IOException;
 import java.util.*;

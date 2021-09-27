@@ -10,16 +10,6 @@ import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.*;
 import io.vproxy.vpacket.*;
 import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.base.selector.Handler;
-import io.vproxy.base.selector.HandlerContext;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.selector.wrap.blocking.BlockingDatagramFD;
-import vproxy.base.util.*;
-import io.vproxy.base.util.exception.XException;
-import io.vproxy.base.util.thread.VProxyThread;
-import vproxy.vfd.*;
-import vproxy.vpacket.*;
-import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.util.SwitchUtils;
 
 import java.io.IOException;

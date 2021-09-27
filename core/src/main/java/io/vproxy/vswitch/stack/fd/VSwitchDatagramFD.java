@@ -1,10 +1,6 @@
 package io.vproxy.vswitch.stack.fd;
 
 import io.vproxy.base.selector.wrap.VirtualFD;
-import io.vproxy.vpacket.conntrack.udp.Datagram;
-import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
-import io.vproxy.vpacket.conntrack.udp.UdpListenHandler;
-import io.vproxy.base.selector.wrap.VirtualFD;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.IPPort;

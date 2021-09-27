@@ -1,9 +1,5 @@
 package io.vproxy.base.processor.http;
 
-import io.vproxy.base.processor.http1.HttpProcessor;
-import io.vproxy.base.processor.httpbin.BinaryHttpProcessor;
-import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import io.vproxy.base.processor.httpbin.HttpVersion;
 import io.vproxy.base.processor.ConnectionDelegate;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.http1.HttpProcessor;

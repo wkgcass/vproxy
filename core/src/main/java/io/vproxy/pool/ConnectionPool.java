@@ -6,12 +6,6 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.anno.ThreadSafe;
-import vproxy.base.connection.*;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.anno.ThreadSafe;
 
 import java.io.IOException;
 import java.util.LinkedList;

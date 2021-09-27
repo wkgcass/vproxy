@@ -7,10 +7,10 @@ plugins {
     id 'maven' // for building maven repo
 }
 
-group 'vproxy'
+group 'io.vproxy'
 version loadVersion()
 
-mainClassName = 'vproxy.app.app.Main'
+mainClassName = 'io.vproxy.app.app.Main'
 
 jar {
     archiveName 'vproxy.jar'
@@ -79,6 +79,10 @@ project(':lib') {
 }
 
 project(':core') {
+    compileJava {
+        options.compilerArgs += ["-h", project.rootProject.projectDir.absolutePath + "/base/src/main/c"]
+    }
+
     compileKotlin {
         destinationDir = compileJava.destinationDir
     }
@@ -210,7 +214,7 @@ project(':test') {
         workingDir = project.rootProject.rootDir.getAbsolutePath()
         systemProperty("java.library.path", "/usr/lib/" + "uname -m".execute().text.trim() + "-linux-gnu:base/src/main/c:base/src/main/c/xdp/libbpf/src")
         systemProperty("vfd", "posix")
-        main = "vproxy.poc.XDPPoc"
+        main = "io.vproxy.poc.XDPPoc"
         if (System.getProperty("ver") != null) {
             main += System.getProperty("ver")
         }
@@ -223,7 +227,7 @@ project(':test') {
     task GenerateModuleInfo(type: JavaExec) {
         classpath = sourceSets.test.runtimeClasspath
         workingDir = project.rootProject.rootDir.getAbsolutePath()
-        main = "vproxy.buildtools.ModuleInfoGenerator"
+        main = "io.vproxy.buildtools.ModuleInfoGenerator"
     }
 }
 
@@ -235,7 +239,7 @@ dependencies {
 def loadVersion() {
     def PREFIX = "public static final String VERSION = \""
     def SUFFIX = "\"; // _THE_VERSION_"
-    def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/vproxy/base/util/Version.java")
+    def ver = file(projectDir.getAbsolutePath() + "/base/src/main/java/io/vproxy/base/util/Version.java")
     def lines = ver.getText().split("\n")
     for (def line : lines) {
         line = line.trim()

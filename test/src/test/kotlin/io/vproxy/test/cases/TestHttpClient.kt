@@ -1,9 +1,9 @@
 package io.vproxy.test.cases
 
+import io.vproxy.lib.http1.CoroutineHttp1ClientConnection
 import org.junit.Assert.assertEquals
 import org.junit.Ignore
 import org.junit.Test
-import vproxy.lib.http1.CoroutineHttp1ClientConnection
 
 class TestHttpClient {
   @Ignore

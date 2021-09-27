@@ -1,7 +1,6 @@
 package io.vproxy.vfd;
 
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.Utils;
 
 public class VFDConfig {
     private VFDConfig() {

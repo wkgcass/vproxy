@@ -4,11 +4,6 @@ import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.coll.IntMap;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.exception.AlreadyExistException;
-import io.vproxy.vswitch.plugin.PacketFilter;
-import io.vproxy.base.util.Annotations;
-import io.vproxy.base.util.coll.IntMap;
-import io.vproxy.base.util.coll.RingQueue;
-import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.plugin.PacketFilter;
 

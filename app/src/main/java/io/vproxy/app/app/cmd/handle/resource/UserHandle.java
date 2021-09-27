@@ -1,6 +1,5 @@
 package io.vproxy.app.app.cmd.handle.resource;
 
-import io.vproxy.vswitch.util.UserInfo;
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;

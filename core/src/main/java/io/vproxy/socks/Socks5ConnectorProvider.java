@@ -4,10 +4,6 @@ import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.Connector;
 import io.vproxy.base.connection.ConnectorProvider;
 import io.vproxy.base.socks.AddressType;
-import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.Connector;
-import io.vproxy.base.connection.ConnectorProvider;
-import io.vproxy.base.socks.AddressType;
 import io.vproxy.vfd.IP;
 
 import java.util.function.Consumer;

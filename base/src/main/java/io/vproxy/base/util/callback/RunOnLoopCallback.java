@@ -1,7 +1,6 @@
 package io.vproxy.base.util.callback;
 
 import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 

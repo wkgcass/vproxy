@@ -1,11 +1,9 @@
 package io.vproxy.vproxyx.websocks;
 
-import io.vproxy.base.dns.*;
-import io.vproxy.vproxyx.websocks.relay.DomainBinder;
-import vjson.JSON;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.connection.NetEventLoop;
+import io.vproxy.base.dns.*;
 import io.vproxy.base.dns.rdata.A;
 import io.vproxy.base.dns.rdata.AAAA;
 import io.vproxy.base.util.LogType;
@@ -15,11 +13,13 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.svrgroup.Upstream;
 import io.vproxy.dns.DNSServer;
-import vproxy.lib.http1.CoroutineHttp1ClientConnection;
+import io.vproxy.lib.http1.CoroutineHttp1ClientConnection;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
+import io.vproxy.vproxyx.websocks.relay.DomainBinder;
+import vjson.JSON;
 
 import java.io.IOException;
 import java.net.UnknownHostException;

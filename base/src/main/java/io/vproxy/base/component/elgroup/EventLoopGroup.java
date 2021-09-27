@@ -2,8 +2,6 @@ package io.vproxy.base.component.elgroup;
 
 import io.vproxy.base.component.elgroup.dummy.IEventLoopGroup;
 import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.component.elgroup.dummy.IEventLoopGroup;
-import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.LogType;

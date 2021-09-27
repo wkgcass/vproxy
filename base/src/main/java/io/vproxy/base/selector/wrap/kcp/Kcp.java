@@ -25,7 +25,6 @@ SOFTWARE.
 package io.vproxy.base.selector.wrap.kcp;
 
 import io.vproxy.base.selector.wrap.kcp.mock.*;
-import vproxy.base.selector.wrap.kcp.mock.*;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;

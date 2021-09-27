@@ -1,11 +1,11 @@
 package io.vproxy.test.cases;
 
-import org.junit.After;
-import org.junit.Before;
-import org.junit.Test;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.promise.Promise;
 import io.vproxy.base.util.thread.VProxyThread;
+import org.junit.After;
+import org.junit.Before;
+import org.junit.Test;
 
 import static org.junit.Assert.assertEquals;
 

@@ -2,7 +2,6 @@ package io.vproxy.app.app.cmd.handle.resource;
 
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.*;
-import vproxy.app.app.cmd.*;
 import io.vproxy.app.app.cmd.handle.param.AnnotationsHandle;
 import io.vproxy.app.app.cmd.handle.param.FloodHandle;
 import io.vproxy.app.app.cmd.handle.param.MTUHandle;

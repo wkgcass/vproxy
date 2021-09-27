@@ -1,7 +1,6 @@
 package io.vproxy.vfd.windows;
 
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.FD;
 import io.vproxy.vfd.NoSockAddr;
 import io.vproxy.vfd.TapDatagramFD;

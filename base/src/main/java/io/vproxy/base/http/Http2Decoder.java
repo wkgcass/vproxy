@@ -8,14 +8,6 @@ import io.vproxy.base.processor.httpbin.HttpFrame;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.codec.AbstractDecoder;
-import io.vproxy.base.processor.DummyConnectionDelegate;
-import io.vproxy.base.processor.Processor;
-import io.vproxy.base.processor.ProcessorProvider;
-import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
-import io.vproxy.base.processor.httpbin.HttpFrame;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.RingBuffer;
-import io.vproxy.base.util.codec.AbstractDecoder;
 
 import java.util.Set;
 

@@ -1,6 +1,5 @@
 package io.vproxy.base.selector.wrap.streamed;
 
-import io.vproxy.base.prometheus.GaugeF;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.prometheus.GaugeF;
 import io.vproxy.base.selector.SelectorEventLoop;

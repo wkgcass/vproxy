@@ -2,8 +2,6 @@ package io.vproxy.app.controller;
 
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.*;
-import io.vproxy.base.redis.application.*;
-import vproxy.app.app.cmd.*;
 import io.vproxy.base.Config;
 import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.connection.ServerSock;
@@ -11,7 +9,7 @@ import io.vproxy.base.protocol.ProtocolServerConfig;
 import io.vproxy.base.protocol.ProtocolServerHandler;
 import io.vproxy.base.redis.RESPConfig;
 import io.vproxy.base.redis.RESPProtocolHandler;
-import vproxy.base.redis.application.*;
+import io.vproxy.base.redis.application.*;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;

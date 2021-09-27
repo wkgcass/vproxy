@@ -1,7 +1,6 @@
 package io.vproxy.poc;
 
 import io.vproxy.base.connection.*;
-import vproxy.base.connection.*;
 import io.vproxy.base.selector.wrap.udp.UDPFDs;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.nio.ByteArrayChannel;

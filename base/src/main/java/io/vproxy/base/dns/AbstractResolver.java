@@ -1,5 +1,6 @@
 package io.vproxy.base.dns;
 
+import io.vproxy.base.Config;
 import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListDefault;
 import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListFromConfigFile;
@@ -12,21 +13,7 @@ import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.RunOnLoopCallback;
 import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.base.Config;
-import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListDefault;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListFromConfigFile;
-import io.vproxy.base.dns.dnsserverlistgetter.GetDnsServerListFromDhcp;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.anno.Blocking;
-import io.vproxy.base.util.callback.Callback;
-import io.vproxy.base.util.callback.RunOnLoopCallback;
 import io.vproxy.vfd.*;
-import vproxy.base.util.coll.Tuple;
-import io.vproxy.base.util.thread.VProxyThread;
-import vproxy.vfd.*;
 import io.vproxy.vfd.jdk.ChannelFDs;
 
 import java.io.IOException;

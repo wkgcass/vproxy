@@ -1,9 +1,5 @@
 package io.vproxy.vswitch.util;
 
-import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.bytearray.AbstractByteArray;
-import io.vproxy.base.util.unsafe.SunUnsafe;
-import io.vproxy.xdp.XDPSocket;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.bytearray.AbstractByteArray;

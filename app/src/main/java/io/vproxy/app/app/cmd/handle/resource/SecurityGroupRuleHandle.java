@@ -8,7 +8,7 @@ import io.vproxy.app.app.cmd.handle.param.ProtocolHandle;
 import io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle;
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.Network;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.component.secure.SecurityGroupRule;
 

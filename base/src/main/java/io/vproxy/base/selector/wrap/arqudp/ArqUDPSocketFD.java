@@ -1,6 +1,5 @@
 package io.vproxy.base.selector.wrap.arqudp;
 
-import io.vproxy.vmirror.MirrorDataFactory;
 import io.vproxy.base.Config;
 import io.vproxy.base.selector.Handler;
 import io.vproxy.base.selector.HandlerContext;

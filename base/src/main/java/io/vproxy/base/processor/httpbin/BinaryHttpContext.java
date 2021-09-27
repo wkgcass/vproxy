@@ -1,6 +1,5 @@
 package io.vproxy.base.processor.httpbin;
 
-import io.vproxy.base.processor.httpbin.frame.SettingsFrame;
 import io.vproxy.base.processor.Hint;
 import io.vproxy.base.processor.OOContext;
 import io.vproxy.base.processor.Processor;

@@ -2,8 +2,6 @@ package io.vproxy.component.secure;
 
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.Network;
-import io.vproxy.base.connection.Protocol;
-import io.vproxy.base.util.Network;
 import io.vproxy.vfd.IP;
 
 public class SecurityGroupRule {

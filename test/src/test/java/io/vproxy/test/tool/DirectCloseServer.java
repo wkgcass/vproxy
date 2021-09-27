@@ -1,9 +1,8 @@
 package io.vproxy.test.tool;
 
 import io.vproxy.base.connection.*;
-import vproxy.base.connection.*;
 import io.vproxy.base.util.RingBuffer;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;
 

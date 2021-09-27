@@ -1,9 +1,5 @@
 package io.vproxy.xdp;
 
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.net.Nic;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;

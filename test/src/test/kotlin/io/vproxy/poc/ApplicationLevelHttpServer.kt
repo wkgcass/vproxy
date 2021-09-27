@@ -1,24 +1,14 @@
 package io.vproxy.poc
 
+import io.vproxy.lib.common.coroutine
+import io.vproxy.lib.common.sleep
+import io.vproxy.lib.common.with
+import io.vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.Tool
+import io.vproxy.lib.http1.CoroutineHttp1Server
 import vjson.JSON
 import vjson.util.ObjectBuilder
 import vjson.util.Transformer
-import io.vproxy.base.connection.ConnectableConnection
-import io.vproxy.base.connection.ServerSock
-import io.vproxy.base.processor.http1.entity.Response
-import io.vproxy.base.selector.SelectorEventLoop
-import io.vproxy.base.util.ByteArray
-import io.vproxy.base.util.Logger
-import io.vproxy.base.util.kt.KT
-import io.vproxy.base.util.thread.VProxyThread
-import vproxy.lib.common.coroutine
-import vproxy.lib.common.sleep
-import vproxy.lib.common.with
-import vproxy.lib.http.RoutingContext
-import vproxy.lib.http.Tool
-import vproxy.lib.http1.CoroutineHttp1Server
-import io.vproxy.vfd.IP
-import io.vproxy.vfd.IPPort
 import java.util.*
 
 class ApplicationLevelHttpServer {
@@ -28,7 +18,7 @@ class ApplicationLevelHttpServer {
 
   private val services: MutableList<Service> = LinkedList<Service>()
   private val tf = Transformer()
-    .addRule(_root_ide_package_.io.vproxy.base.util.kt.KT.kclass(Service::class.java)) { s: Service ->
+    .addRule(io.vproxy.base.util.kt.KT.kclass(Service::class.java)) { s: Service ->
       ObjectBuilder()
         .put("id", s.id.toString())
         .put("name", s.name)
@@ -38,11 +28,11 @@ class ApplicationLevelHttpServer {
     }
 
   private fun runClient() {
-    val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
+    val loop = io.vproxy.base.selector.SelectorEventLoop.open()
     loop.ensureNetEventLoop()
-    loop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "app-level-http-run-client") }
-    val conn = _root_ide_package_.io.vproxy.base.connection.ConnectableConnection.create(
-      _root_ide_package_.io.vproxy.vfd.IPPort(
+    loop.loop { io.vproxy.base.util.thread.VProxyThread.create(it, "app-level-http-run-client") }
+    val conn = io.vproxy.base.connection.ConnectableConnection.create(
+      io.vproxy.vfd.IPPort(
         "127.0.0.1",
         8080
       )
@@ -73,14 +63,14 @@ class ApplicationLevelHttpServer {
       http.get("/api/v1/services").send()
       resp = http.readResponse()
       if (resp.body == null) {
-        resp.body = _root_ide_package_.io.vproxy.base.util.ByteArray.from("{}")
+        resp.body = io.vproxy.base.util.ByteArray.from("{}")
       }
       println("Fetch services result:")
       println(JSON.parse(resp.body.toString()))
     }
   }
 
-  private fun printResponse(name: String, resp: _root_ide_package_.io.vproxy.base.processor.http1.entity.Response) {
+  private fun printResponse(name: String, resp: io.vproxy.base.processor.http1.entity.Response) {
     if (resp.statusCode != 200) {
       println("Request failed for " + name + ": " + resp.body)
     } else {
@@ -89,10 +79,10 @@ class ApplicationLevelHttpServer {
   }
 
   private fun runServer() {
-    val loop = _root_ide_package_.io.vproxy.base.selector.SelectorEventLoop.open()
+    val loop = io.vproxy.base.selector.SelectorEventLoop.open()
     loop.ensureNetEventLoop()
-    loop.loop { _root_ide_package_.io.vproxy.base.util.thread.VProxyThread.create(it, "app-level-http-run-server") }
-    val svrsock = _root_ide_package_.io.vproxy.base.connection.ServerSock.create(_root_ide_package_.io.vproxy.vfd.IPPort("::", 8080))
+    loop.loop { io.vproxy.base.util.thread.VProxyThread.create(it, "app-level-http-run-server") }
+    val svrsock = io.vproxy.base.connection.ServerSock.create(io.vproxy.vfd.IPPort("::", 8080))
     val server = CoroutineHttp1Server(svrsock.coroutine(loop.ensureNetEventLoop()))
     server
       .all("/*") { log(it) }
@@ -109,7 +99,7 @@ class ApplicationLevelHttpServer {
   }
 
   private fun log(rctx: RoutingContext) {
-    _root_ide_package_.io.vproxy.base.util.Logger.alert(
+    io.vproxy.base.util.Logger.alert(
       "received request remote=" + rctx.conn.base().remote.formatToIPPortString()
         .toString() + " -> local=" + rctx.conn.base().local.formatToIPPortString()
         .toString() + " " + rctx.req.method() + " " + rctx.req.uri()
@@ -118,20 +108,20 @@ class ApplicationLevelHttpServer {
   }
 
   private suspend fun listServices(rctx: RoutingContext) {
-    _root_ide_package_.io.vproxy.base.util.Logger.alert("listServices called")
+    io.vproxy.base.util.Logger.alert("listServices called")
     rctx.conn.response(200).send(tf.transform(services))
   }
 
   private suspend fun createService(rctx: RoutingContext) {
     val body: JSON.Instance<*> = rctx.get(Tool.bodyJson)!!
-    _root_ide_package_.io.vproxy.base.util.Logger.alert("listServices called with $body")
+    io.vproxy.base.util.Logger.alert("listServices called with $body")
     val service: Service
     try {
       val o = body as JSON.Object
       val name = o.getString("name")
       val address = o.getString("address")
       val port = o.getInt("port")
-      require(_root_ide_package_.io.vproxy.vfd.IP.isIpLiteral(address))
+      require(io.vproxy.vfd.IP.isIpLiteral(address))
       require(!(port < 1 || port > 65535))
       service = Service(name, address, port)
       services.add(service)
@@ -149,7 +139,7 @@ class ApplicationLevelHttpServer {
 
   private suspend fun getService(rctx: RoutingContext) {
     val serviceId: String = rctx.param("serviceId")
-    _root_ide_package_.io.vproxy.base.util.Logger.alert("getService called with `$serviceId`")
+    io.vproxy.base.util.Logger.alert("getService called with `$serviceId`")
     val ret = services.stream().filter { s: Service -> s.id.toString() == serviceId }.findAny()
     if (ret.isPresent) {
       rctx.conn.response(200).send(tf.transform(ret.get()))
@@ -166,14 +156,14 @@ class ApplicationLevelHttpServer {
   private suspend fun updateService(rctx: RoutingContext) {
     val serviceId: String = rctx.param("serviceId")
     val body: JSON.Instance<*> = rctx.get(Tool.bodyJson)!!
-    _root_ide_package_.io.vproxy.base.util.Logger.alert("updateService called with `$serviceId` and $body")
+    io.vproxy.base.util.Logger.alert("updateService called with `$serviceId` and $body")
     var address: String? = null
     var port = -1
     try {
       val o = body as JSON.Object
       if (o.containsKey("address")) {
         address = o.getString("address")
-        require(_root_ide_package_.io.vproxy.vfd.IP.isIpLiteral(address))
+        require(io.vproxy.vfd.IP.isIpLiteral(address))
       }
       if (o.containsKey("port")) {
         port = o.getInt("port")
@@ -210,7 +200,7 @@ class ApplicationLevelHttpServer {
 
   private suspend fun deleteService(rctx: RoutingContext) {
     val serviceId: String = rctx.param("serviceId")
-    _root_ide_package_.io.vproxy.base.util.Logger.alert("deleteService called with `$serviceId`")
+    io.vproxy.base.util.Logger.alert("deleteService called with `$serviceId`")
     val ret = services.stream().filter { s: Service -> s.id.toString() == serviceId }.findAny()
     if (ret.isPresent) {
       services.remove(ret.get())

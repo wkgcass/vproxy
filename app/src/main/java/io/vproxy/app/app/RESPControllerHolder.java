@@ -1,7 +1,6 @@
 package io.vproxy.app.app;
 
 import io.vproxy.app.controller.RESPController;
-import io.vproxy.app.controller.RESPController;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.IPPort;

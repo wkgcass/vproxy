@@ -3,9 +3,6 @@ package io.vproxy.component.secure;
 import io.vproxy.base.connection.Protocol;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.base.connection.Protocol;
-import io.vproxy.base.util.exception.AlreadyExistException;
-import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.IP;
 
 import java.util.ArrayList;

@@ -1,6 +1,5 @@
 package io.vproxy.vpacket;
 
-import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 

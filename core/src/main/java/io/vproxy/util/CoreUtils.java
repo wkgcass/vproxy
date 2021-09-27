@@ -7,14 +7,6 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.component.ssl.CertKey;
-import io.vproxy.vfd.IPPort;
-import io.vproxy.base.connection.Connector;
-import io.vproxy.base.dns.Resolver;
-import io.vproxy.base.socks.AddressType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.callback.Callback;
-import io.vproxy.component.ssl.CertKey;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 

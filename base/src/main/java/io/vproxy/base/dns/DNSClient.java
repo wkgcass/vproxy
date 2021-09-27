@@ -1,24 +1,5 @@
 package io.vproxy.base.dns;
 
-import io.vproxy.base.component.check.CheckProtocol;
-import io.vproxy.base.component.check.HealthCheckConfig;
-import io.vproxy.base.component.elgroup.EventLoopGroup;
-import io.vproxy.base.component.svrgroup.Method;
-import io.vproxy.base.component.svrgroup.ServerGroup;
-import io.vproxy.base.dns.rdata.A;
-import io.vproxy.base.dns.rdata.AAAA;
-import io.vproxy.base.selector.Handler;
-import io.vproxy.base.selector.HandlerContext;
-import io.vproxy.base.selector.PeriodicEvent;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.callback.Callback;
-import io.vproxy.base.util.callback.RunOnLoopCallback;
-import io.vproxy.base.util.exception.AlreadyExistException;
-import io.vproxy.base.util.exception.ClosedException;
-import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.base.Config;
 import io.vproxy.base.component.check.CheckProtocol;
 import io.vproxy.base.component.check.HealthCheckConfig;
@@ -41,7 +22,6 @@ import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;

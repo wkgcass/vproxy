@@ -1,6 +1,5 @@
 package io.vproxy.base.selector.wrap.streamed;
 
-import io.vproxy.vmirror.MirrorDataFactory;
 import io.vproxy.base.selector.wrap.VirtualFD;
 import io.vproxy.base.selector.wrap.WrappedSelector;
 import io.vproxy.base.util.ByteArray;

@@ -1,8 +1,6 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
-import io.vproxy.vmirror.MirrorDataFactory;
-import vproxy.base.util.*;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.NetworkFD;
 import io.vproxy.vmirror.MirrorDataFactory;

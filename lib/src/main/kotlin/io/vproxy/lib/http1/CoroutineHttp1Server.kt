@@ -1,16 +1,12 @@
 package io.vproxy.lib.http1
 
-import io.vproxy.base.processor.http1.entity.Request
-import io.vproxy.base.util.ByteArray
-import io.vproxy.base.util.LogType
-import io.vproxy.base.util.Logger
-import vproxy.lib.common.vplib
-import vproxy.lib.http.GeneralCoroutineHttpServer
-import vproxy.lib.http.HttpHeaders
-import vproxy.lib.http.HttpServerRequest
-import vproxy.lib.http.RoutingContext
-import vproxy.lib.tcp.CoroutineConnection
-import vproxy.lib.tcp.CoroutineServerSock
+import io.vproxy.lib.common.vplib
+import io.vproxy.lib.http.GeneralCoroutineHttpServer
+import io.vproxy.lib.http.HttpHeaders
+import io.vproxy.lib.http.HttpServerRequest
+import io.vproxy.lib.http.RoutingContext
+import io.vproxy.lib.tcp.CoroutineConnection
+import io.vproxy.lib.tcp.CoroutineServerSock
 
 class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHttpServer<CoroutineHttp1Server>(), AutoCloseable {
   suspend fun start() {
@@ -25,7 +21,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
         try {
           handleConnection(conn)
         } catch (e: Throwable) {
-          _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
+          io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.CONN_ERROR, "failed handling connection as http1: $conn", e)
         }
       }
     }
@@ -46,7 +42,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       try {
         handler(conn)
       } catch (e: Throwable) {
-        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "connectionHandler thrown exception when handling $conn", e)
+        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.IMPROPER_USE, "connectionHandler thrown exception when handling $conn", e)
         return
       }
     }
@@ -59,7 +55,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
     }
   }
 
-  private class ReqWrapper(val req: _root_ide_package_.io.vproxy.base.processor.http1.entity.Request) : HttpServerRequest {
+  private class ReqWrapper(val req: io.vproxy.base.processor.http1.entity.Request) : HttpServerRequest {
     private val headers = HeadersWrap(req)
 
     override fun method(): String {
@@ -70,21 +66,21 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       return req.uri
     }
 
-    private var bodyCache: _root_ide_package_.io.vproxy.base.util.ByteArray? = null
+    private var bodyCache: io.vproxy.base.util.ByteArray? = null
     override fun headers(): HttpHeaders {
       return headers
     }
 
-    override fun body(): _root_ide_package_.io.vproxy.base.util.ByteArray {
+    override fun body(): io.vproxy.base.util.ByteArray {
       if (bodyCache != null) {
         return bodyCache!!
       }
       if (req.body == null) {
         if (req.chunks == null) {
-          return _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(0)
+          return io.vproxy.base.util.ByteArray.allocate(0)
         }
         // use chunks
-        var ret: _root_ide_package_.io.vproxy.base.util.ByteArray? = null
+        var ret: io.vproxy.base.util.ByteArray? = null
         for (chunk in req.chunks) {
           if (ret == null) {
             ret = chunk.content
@@ -98,13 +94,13 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
         bodyCache = req.body
       }
       if (bodyCache == null) {
-        return _root_ide_package_.io.vproxy.base.util.ByteArray.allocate(0)
+        return io.vproxy.base.util.ByteArray.allocate(0)
       }
       return bodyCache!!
     }
   }
 
-  private class HeadersWrap(val req: _root_ide_package_.io.vproxy.base.processor.http1.entity.Request) : HttpHeaders {
+  private class HeadersWrap(val req: io.vproxy.base.processor.http1.entity.Request) : HttpHeaders {
     private val cache = HashMap<String, String>()
     private var travelIndex = 0
     override fun get(name: String): String? {

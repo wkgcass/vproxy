@@ -1,10 +1,10 @@
 package io.vproxy.test.cases;
 
-import org.junit.Test;
 import io.vproxy.base.util.Network;
 import io.vproxy.base.util.Utils;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.IP;
+import org.junit.Test;
 
 import java.util.Arrays;
 import java.util.List;

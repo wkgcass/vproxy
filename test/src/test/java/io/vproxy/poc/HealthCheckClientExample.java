@@ -1,7 +1,6 @@
 package io.vproxy.poc;
 
 import io.vproxy.base.component.check.*;
-import vproxy.base.component.check.*;
 import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.thread.VProxyThread;

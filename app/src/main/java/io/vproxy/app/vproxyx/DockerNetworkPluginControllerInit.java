@@ -1,6 +1,5 @@
 package io.vproxy.app.vproxyx;
 
-import io.vproxy.app.controller.DockerNetworkDriver;
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.MainCtx;
 import io.vproxy.app.app.MainCtxHelper;

@@ -1,21 +1,12 @@
 package io.vproxy.vswitch.stack;
 
-import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.MacAddress;
-import io.vproxy.vpacket.*;
-import io.vproxy.vswitch.PacketBuffer;
-import io.vproxy.vswitch.SwitchContext;
-import io.vproxy.vswitch.iface.Iface;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.MacAddress;
-import vproxy.vpacket.*;
+import io.vproxy.vpacket.*;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.SwitchContext;
 import io.vproxy.vswitch.iface.Iface;

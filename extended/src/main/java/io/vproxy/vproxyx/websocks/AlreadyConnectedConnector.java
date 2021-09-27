@@ -1,7 +1,6 @@
 package io.vproxy.vproxyx.websocks;
 
 import io.vproxy.base.connection.*;
-import vproxy.base.connection.*;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.vfd.IPPort;
 

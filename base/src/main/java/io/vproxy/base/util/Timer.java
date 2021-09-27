@@ -4,10 +4,6 @@ import io.vproxy.base.Config;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.vfd.FDProvider;
-import io.vproxy.base.Config;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.selector.TimerEvent;
-import io.vproxy.vfd.FDProvider;
 
 public class Timer {
     public final SelectorEventLoop loop;

@@ -1,7 +1,5 @@
 package io.vproxy.base.selector.wrap.kcp;
 
-import io.vproxy.base.selector.wrap.arqudp.ArqUDPBasedFDs;
-import io.vproxy.base.selector.wrap.udp.UDPFDs;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.wrap.arqudp.ArqUDPBasedFDs;
 import io.vproxy.base.selector.wrap.udp.UDPFDs;

@@ -1,6 +1,5 @@
 package io.vproxy.base.processor.httpbin.frame;
 
-import io.vproxy.base.processor.httpbin.entity.Header;
 import io.vproxy.base.processor.httpbin.BinaryHttpSubContext;
 import io.vproxy.base.processor.httpbin.HttpFrame;
 import io.vproxy.base.processor.httpbin.HttpFrameType;

@@ -1,7 +1,6 @@
 package io.vproxy.vswitch;
 
 import io.vproxy.base.util.Annotations;
-import io.vproxy.base.util.Annotations;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.MacAddress;
 

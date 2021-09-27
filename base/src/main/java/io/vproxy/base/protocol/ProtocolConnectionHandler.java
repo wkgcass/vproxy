@@ -2,8 +2,6 @@ package io.vproxy.base.protocol;
 
 import io.vproxy.base.connection.ConnectionHandler;
 import io.vproxy.base.connection.ConnectionHandlerContext;
-import io.vproxy.base.connection.ConnectionHandler;
-import io.vproxy.base.connection.ConnectionHandlerContext;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 

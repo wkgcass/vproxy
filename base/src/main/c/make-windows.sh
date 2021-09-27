@@ -15,5 +15,5 @@ gcc -std=gnu99 -O2 \
     -I "$JAVA_HOME/include" \
     -I "$JAVA_HOME/include/$include_platform_dir" \
     -shared -Werror -fPIC \
-    vproxy_vfd_windows_GeneralWindows.c \
+    io_vproxy_vfd_windows_GeneralWindows.c \
     -o "$target"

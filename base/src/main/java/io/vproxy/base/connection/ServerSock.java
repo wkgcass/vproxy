@@ -6,7 +6,6 @@ import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 import io.vproxy.vfd.posix.PosixFDs;
 
 import java.io.IOException;

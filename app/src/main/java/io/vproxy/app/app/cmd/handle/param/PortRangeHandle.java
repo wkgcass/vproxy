@@ -2,7 +2,7 @@ package io.vproxy.app.app.cmd.handle.param;
 
 import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.exception.XException;
 
 public class PortRangeHandle {

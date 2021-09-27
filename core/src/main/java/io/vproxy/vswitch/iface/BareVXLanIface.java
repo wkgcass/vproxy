@@ -1,7 +1,6 @@
 package io.vproxy.vswitch.iface;
 
 import io.vproxy.vfd.IPPort;
-import io.vproxy.vfd.IPPort;
 import io.vproxy.vswitch.PacketBuffer;
 
 import java.util.Objects;

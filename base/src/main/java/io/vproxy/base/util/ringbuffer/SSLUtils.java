@@ -1,9 +1,7 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.ringbuffer.ssl.SSL;
-import io.vproxy.base.selector.SelectorEventLoop;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.ringbuffer.ssl.SSL;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.NetworkFD;

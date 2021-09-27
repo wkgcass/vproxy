@@ -2,8 +2,6 @@ package io.vproxy.vfd;
 
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
 
 import java.lang.reflect.Array;
 import java.lang.reflect.InvocationHandler;

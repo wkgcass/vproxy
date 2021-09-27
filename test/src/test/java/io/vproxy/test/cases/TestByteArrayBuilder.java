@@ -1,8 +1,8 @@
 package io.vproxy.test.cases;
 
-import org.junit.Test;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.bytearray.ByteArrayBuilder;
+import org.junit.Test;
 
 import static org.junit.Assert.*;
 

@@ -2,8 +2,6 @@ package io.vproxy.vpacket;
 
 import io.vproxy.base.util.*;
 import io.vproxy.vfd.MacAddress;
-import vproxy.base.util.*;
-import io.vproxy.vfd.MacAddress;
 
 import java.util.Objects;
 

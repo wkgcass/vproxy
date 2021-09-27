@@ -2,8 +2,6 @@ package io.vproxy.vswitch.iface;
 
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vswitch.PacketBuffer;

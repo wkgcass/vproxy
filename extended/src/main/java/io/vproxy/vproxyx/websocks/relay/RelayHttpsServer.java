@@ -11,7 +11,7 @@ import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.ringbuffer.SSLUnwrapRingBuffer;
 import io.vproxy.base.util.ringbuffer.SSLUtils;
 import io.vproxy.component.proxy.ConnectorGen;

@@ -1,11 +1,10 @@
 package io.vproxy.poc;
 
 import io.vproxy.base.connection.*;
-import vproxy.base.connection.*;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.wrap.udp.UDPBasedFDs;
 import io.vproxy.base.util.RingBuffer;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.SocketFD;

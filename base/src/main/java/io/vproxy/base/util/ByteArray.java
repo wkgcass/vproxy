@@ -2,8 +2,6 @@ package io.vproxy.base.util;
 
 import io.vproxy.base.util.bytearray.*;
 import io.vproxy.base.util.nio.ByteArrayChannel;
-import vproxy.base.util.bytearray.*;
-import io.vproxy.base.util.nio.ByteArrayChannel;
 
 import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;

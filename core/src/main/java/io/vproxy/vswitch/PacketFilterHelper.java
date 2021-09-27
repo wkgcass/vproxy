@@ -1,7 +1,5 @@
 package io.vproxy.vswitch;
 
-import io.vproxy.vswitch.iface.Iface;
-import io.vproxy.vswitch.plugin.FilterResult;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.vpacket.AbstractPacket;
 import io.vproxy.vswitch.iface.Iface;

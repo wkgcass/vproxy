@@ -1,20 +1,14 @@
 package io.vproxy.lib.http
 
+import io.vproxy.lib.http.route.SubPath
+import io.vproxy.lib.http.route.WildcardSubPath
 import vjson.JSON
-import io.vproxy.base.connection.Connection
-import io.vproxy.base.processor.http1.entity.Header
-import io.vproxy.base.util.ByteArray
-import io.vproxy.base.util.LogType
-import io.vproxy.base.util.Logger
-import io.vproxy.base.util.coll.Tree
-import vproxy.lib.http.route.SubPath
-import vproxy.lib.http.route.WildcardSubPath
 
 @Suppress("unused")
 interface StorageKey<T>
 
 interface HttpServerConnection {
-  fun base(): _root_ide_package_.io.vproxy.base.connection.Connection
+  fun base(): io.vproxy.base.connection.Connection
   fun response(status: Int): HttpServerResponse
 }
 
@@ -26,29 +20,29 @@ interface HttpServerRequest {
   fun method(): String
   fun uri(): String
   fun headers(): HttpHeaders
-  fun body(): _root_ide_package_.io.vproxy.base.util.ByteArray
+  fun body(): io.vproxy.base.util.ByteArray
 }
 
 interface HttpServerResponse {
   fun header(key: String, value: String): HttpServerResponse
-  suspend fun send(body: _root_ide_package_.io.vproxy.base.util.ByteArray?)
+  suspend fun send(body: io.vproxy.base.util.ByteArray?)
   suspend fun sendHeadersBeforeChunks()
-  suspend fun sendChunk(payload: _root_ide_package_.io.vproxy.base.util.ByteArray): HttpServerResponse
-  suspend fun endChunks(trailers: List<_root_ide_package_.io.vproxy.base.processor.http1.entity.Header>)
+  suspend fun sendChunk(payload: io.vproxy.base.util.ByteArray): HttpServerResponse
+  suspend fun endChunks(trailers: List<io.vproxy.base.processor.http1.entity.Header>)
 
   suspend fun send() = send(null)
-  suspend fun send(body: String) = send(_root_ide_package_.io.vproxy.base.util.ByteArray.from(body))
-  suspend fun send(json: JSON.Instance<*>) = send(_root_ide_package_.io.vproxy.base.util.ByteArray.from(json.stringify()))
-  suspend fun sendChunk(payload: String): HttpServerResponse = sendChunk(_root_ide_package_.io.vproxy.base.util.ByteArray.from(payload))
-  suspend fun sendChunk(json: JSON.Instance<*>): HttpServerResponse = sendChunk(_root_ide_package_.io.vproxy.base.util.ByteArray.from(json.stringify()))
+  suspend fun send(body: String) = send(io.vproxy.base.util.ByteArray.from(body))
+  suspend fun send(json: JSON.Instance<*>) = send(io.vproxy.base.util.ByteArray.from(json.stringify()))
+  suspend fun sendChunk(payload: String): HttpServerResponse = sendChunk(io.vproxy.base.util.ByteArray.from(payload))
+  suspend fun sendChunk(json: JSON.Instance<*>): HttpServerResponse = sendChunk(io.vproxy.base.util.ByteArray.from(json.stringify()))
 }
 
 class RoutingContext(
   val conn: HttpServerConnection,
   val req: HttpServerRequest,
-  routes: Map<HttpMethod, _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>>,
+  routes: Map<HttpMethod, io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>>,
 ) {
-  private var tree: _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>
+  private var tree: io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>
   private val uri = req.uri().split("/").map { it.trim() }.filter { it.isNotEmpty() }
   private var handled = false
 
@@ -104,12 +98,12 @@ class RoutingContext(
   }
 
   // return true if the handling must be stopped immediately
-  private suspend fun handleLeaves(tree: _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>) {
+  private suspend fun handleLeaves(tree: io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>) {
     for (handler in tree.leafData()) {
       try {
         handler.handle(this)
       } catch (e: Throwable) {
-        _root_ide_package_.io.vproxy.base.util.Logger.error(_root_ide_package_.io.vproxy.base.util.LogType.IMPROPER_USE, "handler thrown error when handling ${req.method()} ${req.uri()}", e)
+        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.IMPROPER_USE, "handler thrown error when handling ${req.method()} ${req.uri()}", e)
         handled = true
         send500(e)
         return
@@ -124,7 +118,7 @@ class RoutingContext(
   }
 
   // return true if the handling must be stopped immediately
-  private suspend fun executeDFS(tree: _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>, idx: Int) {
+  private suspend fun executeDFS(tree: io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>, idx: Int) {
     if (idx >= uri.size) {
       return
     }

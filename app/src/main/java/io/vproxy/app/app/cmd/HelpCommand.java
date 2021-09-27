@@ -1,10 +1,9 @@
 package io.vproxy.app.app.cmd;
 
-import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.handle.resource.SwitchHandle;
 import io.vproxy.base.Config;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import io.vproxy.vswitch.util.SwitchUtils;

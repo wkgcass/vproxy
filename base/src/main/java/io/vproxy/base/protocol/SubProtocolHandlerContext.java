@@ -2,8 +2,6 @@ package io.vproxy.base.protocol;
 
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.util.Logger;
 
 public class SubProtocolHandlerContext<T> extends ProtocolHandlerContext<T> {

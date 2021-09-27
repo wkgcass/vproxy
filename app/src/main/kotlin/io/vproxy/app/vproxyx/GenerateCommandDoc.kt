@@ -1,6 +1,5 @@
 package io.vproxy.app.vproxyx
 
-import io.vproxy.app.app.cmd.HelpCommand
 import io.vproxy.app.app.cmd.HelpCommand.ActMan
 import io.vproxy.app.app.cmd.HelpCommand.ResMan
 import java.io.File
@@ -112,7 +111,7 @@ class GenerateCommandDoc {
                     result.append("</details>\n\n")
                 }
             }
-            val params = _root_ide_package_.io.vproxy.app.app.cmd.HelpCommand.ParamMan.values().map {
+            val params = io.vproxy.app.app.cmd.HelpCommand.ParamMan.values().map {
                 """
                     |### ${it.param}
                     |${if (it.shortVer != null) "\nshort version: `${it.shortVer}`\n" else ""}
@@ -127,7 +126,7 @@ class GenerateCommandDoc {
                 |$params
             """.trimMargin()
             )
-            val flags = _root_ide_package_.io.vproxy.app.app.cmd.HelpCommand.FlagMan.values().map {
+            val flags = io.vproxy.app.app.cmd.HelpCommand.FlagMan.values().map {
                 """
                     |### ${it.flag}
                     |${if (it.shortVer != null) "\nshort version: `${it.shortVer}`\n" else ""}

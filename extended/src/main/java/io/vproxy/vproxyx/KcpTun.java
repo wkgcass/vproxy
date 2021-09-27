@@ -1,7 +1,6 @@
 package io.vproxy.vproxyx;
 
 import io.vproxy.base.connection.*;
-import io.vproxy.vproxyx.websocks.AlreadyConnectedConnector;
 import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.wrap.h2streamed.H2StreamedClientFDs;
@@ -16,6 +15,7 @@ import io.vproxy.component.proxy.Proxy;
 import io.vproxy.component.proxy.ProxyNetConfig;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import io.vproxy.vproxyx.websocks.AlreadyConnectedConnector;
 
 import java.io.IOException;
 

@@ -1,7 +1,6 @@
 package io.vproxy.component.ssl;
 
 import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
-import io.vproxy.base.util.ringbuffer.ssl.VSSLContext;
 
 import javax.net.ssl.KeyManager;
 import javax.net.ssl.KeyManagerFactory;

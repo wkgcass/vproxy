@@ -1,8 +1,5 @@
 package io.vproxy.base.selector.wrap.streamed;
 
-import io.vproxy.base.prometheus.GaugeF;
-import io.vproxy.base.util.*;
-import io.vproxy.vmirror.MirrorDataFactory;
 import io.vproxy.base.Config;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.prometheus.GaugeF;
@@ -11,7 +8,7 @@ import io.vproxy.base.selector.HandlerContext;
 import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.selector.wrap.arqudp.ArqUDPSocketFD;
-import vproxy.base.util.*;
+import io.vproxy.base.util.*;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.EventSet;
 import io.vproxy.vfd.IP;

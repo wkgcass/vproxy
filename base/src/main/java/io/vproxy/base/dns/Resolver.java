@@ -1,10 +1,5 @@
 package io.vproxy.base.dns;
 
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.anno.Blocking;
-import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.Config;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;

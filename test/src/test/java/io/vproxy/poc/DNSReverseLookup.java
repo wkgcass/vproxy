@@ -1,7 +1,6 @@
 package io.vproxy.poc;
 
 import io.vproxy.base.dns.*;
-import vproxy.base.dns.*;
 import io.vproxy.base.dns.rdata.PTR;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;

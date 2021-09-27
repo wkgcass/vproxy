@@ -2,8 +2,6 @@ package io.vproxy.vproxyx;
 
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.connection.*;
-import io.vproxy.vproxyx.websocks.*;
-import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
 import io.vproxy.base.processor.Hint;
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolServerConfig;
@@ -16,7 +14,7 @@ import io.vproxy.base.selector.wrap.udp.UDPFDs;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.component.proxy.ConnectorGen;
 import io.vproxy.component.proxy.NetEventLoopProvider;
 import io.vproxy.component.proxy.Proxy;
@@ -24,7 +22,8 @@ import io.vproxy.component.proxy.ProxyNetConfig;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.VFDConfig;
-import vproxyx.websocks.*;
+import io.vproxy.vproxyx.websocks.*;
+import io.vproxy.vproxyx.websocks.uot.UdpOverTcpSetup;
 
 import javax.net.ssl.SNIHostName;
 import javax.net.ssl.SSLEngine;

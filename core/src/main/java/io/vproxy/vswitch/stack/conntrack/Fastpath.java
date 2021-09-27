@@ -1,7 +1,6 @@
 package io.vproxy.vswitch.stack.conntrack;
 
 import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.Consts;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;

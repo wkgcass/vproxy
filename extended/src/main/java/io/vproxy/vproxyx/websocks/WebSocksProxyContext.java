@@ -4,7 +4,7 @@ import io.vproxy.base.connection.Connector;
 import io.vproxy.base.http.HttpContext;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.socks.Socks5ProxyContext;
 

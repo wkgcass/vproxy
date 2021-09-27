@@ -4,10 +4,6 @@ import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.crypto.Aes256Key;
 import io.vproxy.vfd.IPPort;
-import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.crypto.Aes256Key;
-import io.vproxy.vfd.IPPort;
 import io.vproxy.vswitch.PacketBuffer;
 import io.vproxy.vswitch.util.UserInfo;
 

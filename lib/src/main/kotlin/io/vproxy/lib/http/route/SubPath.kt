@@ -1,6 +1,6 @@
 package io.vproxy.lib.http.route
 
-import vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.RoutingContext
 import java.util.*
 import java.util.stream.Collectors
 

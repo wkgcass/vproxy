@@ -1,11 +1,10 @@
 package io.vproxy.base.protocol;
 
 import io.vproxy.base.connection.*;
-import vproxy.base.connection.*;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.SocketFD;
 
 import java.io.IOException;

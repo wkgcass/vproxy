@@ -10,9 +10,8 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.OS;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.anno.ThreadSafe;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.vfd.*;
-import vproxy.base.util.coll.Tuple;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.net.SocketTimeoutException;

@@ -2,8 +2,6 @@ package io.vproxy.xdp;
 
 import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.unsafe.SunUnsafe;
-import io.vproxy.base.util.coll.ConcurrentHashSet;
-import io.vproxy.base.util.unsafe.SunUnsafe;
 
 import java.io.IOException;
 import java.nio.ByteBuffer;

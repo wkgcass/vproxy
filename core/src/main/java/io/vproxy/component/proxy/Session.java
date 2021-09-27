@@ -1,7 +1,6 @@
 package io.vproxy.component.proxy;
 
 import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.Connection;
 
 public class Session {
     public final Connection active;

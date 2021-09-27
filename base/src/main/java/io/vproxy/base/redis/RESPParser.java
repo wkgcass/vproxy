@@ -1,7 +1,6 @@
 package io.vproxy.base.redis;
 
 import io.vproxy.base.redis.entity.*;
-import vproxy.base.redis.entity.*;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.Utils;

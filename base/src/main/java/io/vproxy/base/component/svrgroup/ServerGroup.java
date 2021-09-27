@@ -1,12 +1,7 @@
 package io.vproxy.base.component.svrgroup;
 
-import io.vproxy.base.component.check.*;
-import io.vproxy.base.connection.ConnCloseHandler;
-import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.NetFlowRecorder;
 import io.vproxy.base.GlobalEvents;
-import io.vproxy.vfd.*;
-import vproxy.base.component.check.*;
+import io.vproxy.base.component.check.*;
 import io.vproxy.base.component.elgroup.EventLoopAttach;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.elgroup.EventLoopGroupAttach;
@@ -21,7 +16,7 @@ import io.vproxy.base.util.coll.ConcurrentHashSet;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
-import vproxy.vfd.*;
+import io.vproxy.vfd.*;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArraySet;

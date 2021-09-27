@@ -1,6 +1,5 @@
 package io.vproxy.test.cases;
 
-import org.junit.*;
 import io.vproxy.base.Config;
 import io.vproxy.base.component.check.HealthCheckConfig;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
@@ -24,6 +23,7 @@ import io.vproxy.test.tool.EchoServer;
 import io.vproxy.test.tool.IdServer;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import org.junit.*;
 
 import java.io.IOException;
 import java.util.LinkedList;

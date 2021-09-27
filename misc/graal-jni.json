@@ -9,7 +9,7 @@
 		]
 	},
 	{
-		"name": "vproxy.vfd.posix.SocketAddressIPv4",
+		"name": "io.vproxy.vfd.posix.SocketAddressIPv4",
 		"methods": [
 			{
 				"name": "<init>",
@@ -18,7 +18,7 @@
 		]
 	},
 	{
-		"name": "vproxy.vfd.posix.SocketAddressIPv6",
+		"name": "io.vproxy.vfd.posix.SocketAddressIPv6",
 		"methods": [
 			{
 				"name": "<init>",
@@ -27,7 +27,7 @@
 		]
 	},
 	{
-		"name": "vproxy.vfd.posix.SocketAddressUDS",
+		"name": "io.vproxy.vfd.posix.SocketAddressUDS",
 		"methods": [
 			{
 				"name": "<init>",
@@ -36,16 +36,16 @@
 		]
 	},
 	{
-		"name": "vproxy.vfd.posix.UDPRecvResult",
+		"name": "io.vproxy.vfd.posix.UDPRecvResult",
 		"methods": [
 			{
 				"name": "<init>",
-				"parameterTypes": [ "vproxy.vfd.posix.VSocketAddress", "int" ]
+				"parameterTypes": [ "io.vproxy.vfd.posix.VSocketAddress", "int" ]
 			}
 		]
 	},
 	{
-		"name": "vproxy.vfd.TapInfo",
+		"name": "io.vproxy.vfd.TapInfo",
 		"methods": [
 			{
 				"name": "<init>",

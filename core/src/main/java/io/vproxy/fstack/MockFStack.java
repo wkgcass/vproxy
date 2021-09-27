@@ -2,8 +2,6 @@ package io.vproxy.fstack;
 
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
 
 import java.util.List;
 

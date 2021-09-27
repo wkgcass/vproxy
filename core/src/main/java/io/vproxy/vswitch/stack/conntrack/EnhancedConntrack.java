@@ -1,8 +1,5 @@
 package io.vproxy.vswitch.stack.conntrack;
 
-import io.vproxy.vpacket.conntrack.Conntrack;
-import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
-import io.vproxy.vpacket.conntrack.tcp.TcpListenEntry;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vpacket.conntrack.Conntrack;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;

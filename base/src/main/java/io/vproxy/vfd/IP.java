@@ -1,12 +1,6 @@
 package io.vproxy.vfd;
 
 import io.vproxy.base.dns.Resolver;
-import io.vproxy.base.util.IPType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.base.util.callback.BlockCallback;
-import io.vproxy.base.util.callback.Callback;
-import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.IPType;
 import io.vproxy.base.util.Logger;

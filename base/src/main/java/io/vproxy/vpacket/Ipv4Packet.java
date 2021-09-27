@@ -1,10 +1,5 @@
 package io.vproxy.vpacket;
 
-import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
-import io.vproxy.vfd.IP;
-import io.vproxy.vfd.IPv4;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;

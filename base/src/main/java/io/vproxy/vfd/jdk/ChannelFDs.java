@@ -1,7 +1,6 @@
 package io.vproxy.vfd.jdk;
 
 import io.vproxy.vfd.*;
-import vproxy.vfd.*;
 
 import java.io.IOException;
 import java.nio.channels.DatagramChannel;

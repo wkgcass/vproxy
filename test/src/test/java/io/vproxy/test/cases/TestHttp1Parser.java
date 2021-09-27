@@ -1,6 +1,5 @@
 package io.vproxy.test.cases;
 
-import org.junit.Test;
 import io.vproxy.base.processor.Processor;
 import io.vproxy.base.processor.http1.HttpContext;
 import io.vproxy.base.processor.http1.HttpProcessor;
@@ -11,6 +10,7 @@ import io.vproxy.base.processor.http1.entity.Response;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import org.junit.Test;
 
 import java.nio.charset.StandardCharsets;
 import java.util.LinkedHashMap;

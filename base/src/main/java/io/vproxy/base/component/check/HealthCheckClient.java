@@ -1,7 +1,6 @@
 package io.vproxy.base.component.check;
 
 import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.selector.TimerEvent;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.callback.Callback;

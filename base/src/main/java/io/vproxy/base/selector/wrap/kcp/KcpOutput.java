@@ -25,7 +25,6 @@ SOFTWARE.
 package io.vproxy.base.selector.wrap.kcp;
 
 import io.vproxy.base.selector.wrap.kcp.mock.ByteBuf;
-import io.vproxy.base.selector.wrap.kcp.mock.ByteBuf;
 
 /**
  * @author <a href="mailto:szhnet@gmail.com">szh</a>

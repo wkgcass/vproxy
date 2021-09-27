@@ -1,6 +1,5 @@
 package io.vproxy.base.component.elgroup.dummy;
 
-import io.vproxy.base.connection.NetEventLoop;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.component.elgroup.EventLoopGroupAttach;
 import io.vproxy.base.component.elgroup.EventLoopWrapper;

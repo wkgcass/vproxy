@@ -7,13 +7,6 @@ import io.vproxy.base.processor.Processor;
 import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.coll.Tuple;
-import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.Connector;
-import io.vproxy.base.processor.Hint;
-import io.vproxy.base.processor.Processor;
-import io.vproxy.base.protocol.ProtocolHandler;
-import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
 
 import java.io.IOException;
 

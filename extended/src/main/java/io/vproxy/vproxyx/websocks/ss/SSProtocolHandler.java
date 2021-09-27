@@ -7,7 +7,7 @@ import io.vproxy.base.socks.AddressType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.crypto.Aes256Key;
 import io.vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
 import io.vproxy.base.util.ringbuffer.DecryptIVInDataUnwrapRingBuffer;

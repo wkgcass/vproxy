@@ -1,7 +1,6 @@
 package io.vproxy.vfd.posix;
 
 import io.vproxy.base.util.OS;
-import io.vproxy.base.util.OS;
 import io.vproxy.vfd.NoSockAddr;
 import io.vproxy.vfd.TapDatagramFD;
 import io.vproxy.vfd.TapInfo;

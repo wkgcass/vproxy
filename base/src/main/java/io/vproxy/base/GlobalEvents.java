@@ -3,9 +3,6 @@ package io.vproxy.base;
 import io.vproxy.base.component.svrgroup.ServerGroup;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
-import io.vproxy.base.component.svrgroup.ServerGroup;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
 
 import java.util.HashMap;
 import java.util.HashSet;

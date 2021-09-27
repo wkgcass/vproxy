@@ -1,9 +1,5 @@
 package io.vproxy.vswitch.stack.fd;
 
-import io.vproxy.base.util.Logger;
-import io.vproxy.vpacket.conntrack.tcp.ConnectionHandler;
-import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
-import io.vproxy.vpacket.conntrack.tcp.TcpState;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.vfd.IPPort;

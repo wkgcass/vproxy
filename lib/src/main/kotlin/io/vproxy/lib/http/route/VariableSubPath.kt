@@ -1,6 +1,6 @@
 package io.vproxy.lib.http.route
 
-import vproxy.lib.http.RoutingContext
+import io.vproxy.lib.http.RoutingContext
 import java.net.URLDecoder
 import java.nio.charset.StandardCharsets
 

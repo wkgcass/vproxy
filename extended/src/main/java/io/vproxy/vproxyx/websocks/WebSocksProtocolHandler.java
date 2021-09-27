@@ -1,8 +1,5 @@
 package io.vproxy.vproxyx.websocks;
 
-import io.vproxy.base.util.*;
-import vjson.JSON;
-import vjson.util.ObjectBuilder;
 import io.vproxy.base.connection.ConnectableConnection;
 import io.vproxy.base.connection.ConnectionOpts;
 import io.vproxy.base.connection.Connector;
@@ -16,8 +13,9 @@ import io.vproxy.base.protocol.ProtocolHandler;
 import io.vproxy.base.protocol.ProtocolHandlerContext;
 import io.vproxy.base.protocol.SubProtocolHandlerContext;
 import io.vproxy.base.selector.wrap.file.FileFD;
+import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.Callback;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.base.util.ringbuffer.ByteBufferRingBuffer;
 import io.vproxy.base.util.ringbuffer.SSLUtils;
@@ -27,6 +25,8 @@ import io.vproxy.socks.Socks5ProxyProtocolHandler;
 import io.vproxy.util.CoreUtils;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
+import vjson.JSON;
+import vjson.util.ObjectBuilder;
 
 import javax.net.ssl.SSLEngine;
 import java.io.IOException;

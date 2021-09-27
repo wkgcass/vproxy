@@ -21,7 +21,7 @@ gcc -std=gnu99 -O2 \
     -L"./xdp/libbpf/src" -Wl,--no-as-needed,--whole-archive,-lelf,-lbpf,--no-whole-archive \
     -Wl,--as-needed,--no-whole-archive \
     -shared -Werror -lc -fPIC \
-    vproxy_xdp_NativeXDP.c ./xdp/vproxy_xdp.c ./xdp/vproxy_xdp_util.c ./xdp/vproxy_checksum.c \
+    io_vproxy_xdp_NativeXDP.c ./xdp/vproxy_xdp.c ./xdp/vproxy_xdp_util.c ./xdp/vproxy_checksum.c \
     -o libvpxdp.so
 
 echo "done"

@@ -1,16 +1,15 @@
 package io.vproxy.lib.http
 
-import io.vproxy.base.util.coll.Tree
-import vproxy.lib.http.route.SubPath
+import io.vproxy.lib.http.route.SubPath
 
 abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutineHttpServer<CoroutineHttpServer>> {
   protected var started = false
 
-  protected val routes: Map<HttpMethod, _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>> =
-    object : HashMap<HttpMethod, _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>>(HttpMethod.values().size) {
+  protected val routes: Map<HttpMethod, io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>> =
+    object : HashMap<HttpMethod, io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>>(HttpMethod.values().size) {
       init {
         for (m in HttpMethod.values()) {
-          put(m, _root_ide_package_.io.vproxy.base.util.coll.Tree())
+          put(m, io.vproxy.base.util.coll.Tree())
         }
       }
     }
@@ -78,7 +77,7 @@ abstract class GeneralCoroutineHttpServer<CoroutineHttpServer : GeneralCoroutine
     return this as CoroutineHttpServer
   }
 
-  private fun record(tree: _root_ide_package_.io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>, subpath: SubPath?, handler: RoutingHandler) {
+  private fun record(tree: io.vproxy.base.util.coll.Tree<SubPath, RoutingHandler>, subpath: SubPath?, handler: RoutingHandler) {
     // null means this sub-path is '/' which is the end of this route
     if (subpath == null) {
       tree.leaf(handler)

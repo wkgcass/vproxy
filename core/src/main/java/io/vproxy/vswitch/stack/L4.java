@@ -1,15 +1,5 @@
 package io.vproxy.vswitch.stack;
 
-import io.vproxy.base.util.Consts;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.thread.VProxyThread;
-import io.vproxy.vpacket.*;
-import io.vproxy.vpacket.conntrack.tcp.*;
-import io.vproxy.vpacket.conntrack.udp.Datagram;
-import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
-import io.vproxy.vpacket.conntrack.udp.UdpUtils;
-import io.vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
-import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
@@ -17,8 +7,8 @@ import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vfd.IPv4;
 import io.vproxy.vfd.IPv6;
-import vproxy.vpacket.*;
-import vproxy.vpacket.conntrack.tcp.*;
+import io.vproxy.vpacket.*;
+import io.vproxy.vpacket.conntrack.tcp.*;
 import io.vproxy.vpacket.conntrack.udp.Datagram;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpUtils;

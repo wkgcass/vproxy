@@ -2,8 +2,6 @@ package io.vproxy.vswitch.stack.fd;
 
 import io.vproxy.base.selector.wrap.WrappedSelector;
 import io.vproxy.vpacket.conntrack.Conntrack;
-import io.vproxy.base.selector.wrap.WrappedSelector;
-import io.vproxy.vpacket.conntrack.Conntrack;
 import io.vproxy.vswitch.SwitchContext;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.stack.L4;

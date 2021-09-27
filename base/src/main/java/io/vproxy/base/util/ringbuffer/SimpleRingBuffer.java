@@ -1,7 +1,6 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
-import vproxy.base.util.*;
 import io.vproxy.base.util.direct.DirectMemoryUtils;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.ReadableByteStream;

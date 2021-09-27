@@ -4,10 +4,6 @@ import io.vproxy.base.selector.SelectorEventLoop;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
-import io.vproxy.base.selector.SelectorEventLoop;
-import io.vproxy.base.util.LogType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.VFDConfig;
 
 import java.io.IOException;

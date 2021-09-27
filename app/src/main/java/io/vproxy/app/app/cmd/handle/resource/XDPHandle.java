@@ -5,7 +5,6 @@ import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Flag;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.handle.param.*;
-import vproxy.app.app.cmd.handle.param.*;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;

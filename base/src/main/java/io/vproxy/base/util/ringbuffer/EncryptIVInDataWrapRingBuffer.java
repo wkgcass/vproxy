@@ -1,8 +1,6 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
-import io.vproxy.vmirror.MirrorDataFactory;
-import vproxy.base.util.*;
 import io.vproxy.base.util.crypto.BlockCipherKey;
 import io.vproxy.base.util.crypto.CryptoUtils;
 import io.vproxy.base.util.crypto.StreamingCFBCipher;

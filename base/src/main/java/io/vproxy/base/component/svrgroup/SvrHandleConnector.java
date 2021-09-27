@@ -4,10 +4,6 @@ import io.vproxy.base.connection.ConnectableConnection;
 import io.vproxy.base.connection.Connection;
 import io.vproxy.base.connection.ConnectionOpts;
 import io.vproxy.base.connection.Connector;
-import io.vproxy.base.connection.ConnectableConnection;
-import io.vproxy.base.connection.Connection;
-import io.vproxy.base.connection.ConnectionOpts;
-import io.vproxy.base.connection.Connector;
 import io.vproxy.base.util.RingBuffer;
 
 import java.io.IOException;

@@ -1,7 +1,6 @@
 package io.vproxy.base.dns;
 
 import io.vproxy.base.util.callback.Callback;
-import io.vproxy.base.util.callback.Callback;
 import io.vproxy.vfd.IPPort;
 
 import java.util.List;

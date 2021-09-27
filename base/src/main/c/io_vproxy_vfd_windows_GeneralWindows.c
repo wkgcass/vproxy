@@ -1,13 +1,13 @@
-#include "vproxy_vfd_windows_GeneralWindows.h"
+#include "io_vproxy_vfd_windows_GeneralWindows.h"
 #include "vfd_windows.h"
 #include "exception.h"
 
-JNIEXPORT jboolean JNICALL Java_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
+JNIEXPORT jboolean JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_tapNonBlockingSupported
   (JNIEnv* env, jobject self) {
     return JNI_FALSE;
 }
 
-JNIEXPORT jlong JNICALL Java_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
+JNIEXPORT jlong JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_allocateOverlapped
   (JNIEnv* env, jobject self) {
     OVERLAPPED* ov = malloc(sizeof(OVERLAPPED));
     memset(ov, 0, sizeof(OVERLAPPED));
@@ -21,7 +21,7 @@ JNIEXPORT jlong JNICALL Java_vproxy_vfd_windows_GeneralWindows_allocateOverlappe
     return (jlong) ov;
 }
 
-JNIEXPORT void JNICALL Java_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_releaseOverlapped
   (JNIEnv* env, jobject self, jlong ovJ) {
     OVERLAPPED* ov = (OVERLAPPED*) ovJ;
     HANDLE event = ov->hEvent;
@@ -126,7 +126,7 @@ BOOL plugCableToTabDevice(JNIEnv* env, HANDLE handle) {
     }
 }
 
-JNIEXPORT jlong JNICALL Java_vproxy_vfd_windows_GeneralWindows_createTapHandle
+JNIEXPORT jlong JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_createTapHandle
   (JNIEnv* env, jobject self, jstring dev) {
     const char* devChars = (*env)->GetStringUTFChars(env, dev, NULL);
 
@@ -153,7 +153,7 @@ JNIEXPORT jlong JNICALL Java_vproxy_vfd_windows_GeneralWindows_createTapHandle
     return (jlong) handle;
 }
 
-JNIEXPORT void JNICALL Java_vproxy_vfd_windows_GeneralWindows_closeHandle
+JNIEXPORT void JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_closeHandle
   (JNIEnv* env, jobject self, jlong handleJ) {
     HANDLE handle = (HANDLE) handleJ;
     BOOL status = CloseHandle(handle);
@@ -162,7 +162,7 @@ JNIEXPORT void JNICALL Java_vproxy_vfd_windows_GeneralWindows_closeHandle
     }
 }
 
-JNIEXPORT jint JNICALL Java_vproxy_vfd_windows_GeneralWindows_read
+JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_read
   (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
         return 0;
@@ -203,7 +203,7 @@ JNIEXPORT jint JNICALL Java_vproxy_vfd_windows_GeneralWindows_read
     return (jint) n;
 }
 
-JNIEXPORT jint JNICALL Java_vproxy_vfd_windows_GeneralWindows_write
+JNIEXPORT jint JNICALL Java_io_vproxy_vfd_windows_GeneralWindows_write
   (JNIEnv* env, jobject self, jlong handleJ, jobject directBuffer, jint off, jint len, jlong ovJ) {
     if (len == 0) {
         return 0;

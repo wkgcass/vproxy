@@ -1,8 +1,5 @@
 package io.vproxy.base.selector;
 
-import io.vproxy.base.connection.NetEventLoop;
-import io.vproxy.base.selector.wrap.FDInspection;
-import io.vproxy.base.selector.wrap.WrappedSelector;
 import io.vproxy.base.Config;
 import io.vproxy.base.GlobalInspection;
 import io.vproxy.base.connection.NetEventLoop;
@@ -14,12 +11,11 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.anno.Blocking;
 import io.vproxy.base.util.anno.ThreadSafe;
 import io.vproxy.base.util.callback.Callback;
-import io.vproxy.vfd.*;
-import vproxy.base.util.coll.Tuple;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.promise.Promise;
 import io.vproxy.base.util.thread.VProxyThread;
 import io.vproxy.base.util.time.TimeQueue;
-import vproxy.vfd.*;
+import io.vproxy.vfd.*;
 
 import java.io.IOException;
 import java.nio.channels.CancelledKeyException;

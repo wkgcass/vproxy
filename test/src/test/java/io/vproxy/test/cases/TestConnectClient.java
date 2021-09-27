@@ -1,6 +1,5 @@
 package io.vproxy.test.cases;
 
-import org.junit.*;
 import io.vproxy.base.component.check.AnnotatedHcConfig;
 import io.vproxy.base.component.check.CheckProtocol;
 import io.vproxy.base.component.check.ConnectClient;
@@ -13,6 +12,7 @@ import io.vproxy.test.tool.DirectCloseServer;
 import io.vproxy.test.tool.IdServer;
 import io.vproxy.test.tool.SendOnConnectIdServer;
 import io.vproxy.vfd.IPPort;
+import org.junit.*;
 
 import java.io.IOException;
 import java.nio.channels.InterruptedByTimeoutException;

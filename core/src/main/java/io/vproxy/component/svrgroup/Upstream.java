@@ -6,12 +6,6 @@ import io.vproxy.base.processor.Hint;
 import io.vproxy.base.util.Annotations;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
-import io.vproxy.base.component.svrgroup.ServerGroup;
-import io.vproxy.base.connection.Connector;
-import io.vproxy.base.processor.Hint;
-import io.vproxy.base.util.Annotations;
-import io.vproxy.base.util.exception.AlreadyExistException;
-import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.IPPort;
 
 import java.util.ArrayList;

@@ -1,7 +1,6 @@
 package io.vproxy.base.util.ringbuffer;
 
 import io.vproxy.base.util.*;
-import vproxy.base.util.*;
 import io.vproxy.vfd.ReadableByteStream;
 import io.vproxy.vfd.WritableByteStream;
 
