@@ -93,7 +93,7 @@ public class Logger {
     }
 
     private static final Set<String> ADD_DEBUG_INFO_CLASS_PREFIX = Set.of(
-        "vproxy.vswitch."
+        "io.vproxy.vswitch."
     );
 
     // some message for debugging this project
