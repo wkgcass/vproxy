@@ -30,6 +30,7 @@ clean: clean-jar
 	rm -f ./docker-plugin/vproxy.jar
 	rm -f ./*.build_artifacts.txt
 	rm -f ./module-info.class
+	rm -rf ./io
 
 .PHONY: clean-docker-plugin-rootfs
 clean-docker-plugin-rootfs:
@@ -49,27 +50,28 @@ jar: generate-module-info
 
 .PHONY: _add_linux_so_to_zip
 _add_linux_so_to_zip:
-	cp ./base/src/main/c/libvfdposix.so ./libvfdposix-$(LINUX_ARCH).so
-	cp ./base/src/main/c/libvpxdp.so ./libvpxdp-$(LINUX_ARCH).so
-	cp base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./libbpf-$(LINUX_ARCH).so
-	zip build/libs/vproxy.jar ./libvfdposix-$(LINUX_ARCH).so ./libvpxdp-$(LINUX_ARCH).so ./libbpf-$(LINUX_ARCH).so
-	rm ./libvfdposix-$(LINUX_ARCH).so ./libvpxdp-$(LINUX_ARCH).so ./libbpf-$(LINUX_ARCH).so
+	mkdir -p ./io/vproxy/
+	cp ./base/src/main/c/libvfdposix.so ./io/vproxy/libvfdposix-$(LINUX_ARCH).so
+	cp ./base/src/main/c/libvpxdp.so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so
+	cp ./base/src/main/c/xdp/libbpf/src/libbpf.so.0.4.0 ./io/vproxy/libbpf-$(LINUX_ARCH).so
+	zip build/libs/vproxy.jar ./io/vproxy/libvfdposix-$(LINUX_ARCH).so ./io/vproxy/libvpxdp-$(LINUX_ARCH).so ./io/vproxy/libbpf-$(LINUX_ARCH).so
+	rm -r ./io
 
 .PHONY: jar-with-lib
 ifeq ($(OS),Linux)
 jar-with-lib: jar vfdposix vpxdp _add_linux_so_to_zip
 else
 jar-with-lib: jar vfdposix-linux vpxdp-linux vfdposix _add_linux_so_to_zip
-	cp ./base/src/main/c/libvfdposix.dylib ./libvfdposix-$(ARCH).dylib
-	zip build/libs/vproxy.jar ./libvfdposix-$(ARCH).dylib
-	rm ./libvfdposix-$(ARCH).dylib
+	mkdir -p ./io/vproxy/
+	cp ./base/src/main/c/libvfdposix.dylib ./io/vproxy/libvfdposix-$(ARCH).dylib
+	zip build/libs/vproxy.jar ./io/vproxy/libvfdposix-$(ARCH).dylib
+	rm -r ./io
 endif
 
 .PHONY: jar-no-kt-runtime
 jar-no-kt-runtime: jar-with-lib
 	cp build/libs/vproxy.jar build/libs/vproxy-no-kt-runtime.jar
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/intellij/*'
-	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/jetbrains/*'
+	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'org/*'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'kotlin*'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'DebugProbesKt.bin'
 	zip -d -q build/libs/vproxy-no-kt-runtime.jar 'META-INF/kotlin*'

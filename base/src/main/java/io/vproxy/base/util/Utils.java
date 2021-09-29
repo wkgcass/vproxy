@@ -982,7 +982,7 @@ public class Utils {
             suffix = ".so";
         }
 
-        InputStream is = Utils.class.getResourceAsStream("/" + filename + suffix);
+        InputStream is = Utils.class.getClassLoader().getResourceAsStream("io/vproxy/" + filename + suffix);
         if (is == null) {
             System.out.println("System.loadLibrary(" + name + ")");
             System.loadLibrary(name);

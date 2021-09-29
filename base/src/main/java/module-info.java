@@ -1,6 +1,3 @@
-import io.vproxy.base.processor.ProcessorRegistry;
-import io.vproxy.vfd.FDs;
-
 module io.vproxy.base {
     requires jdk.unsupported;
     requires kotlin.stdlib;
@@ -87,6 +84,6 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.conntrack.udp;
     exports io.vproxy.xdp;
 
-    uses FDs;
-    uses ProcessorRegistry;
+    uses io.vproxy.vfd.FDs;
+    uses io.vproxy.base.processor.ProcessorRegistry;
 }

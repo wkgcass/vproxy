@@ -1,5 +1,6 @@
 package io.vproxy.buildtools;
 
+import io.vproxy.app.app.Main;
 import io.vproxy.base.util.Version;
 import org.objectweb.asm.ClassWriter;
 import org.objectweb.asm.ModuleVisitor;
@@ -26,11 +27,13 @@ public class ModuleInfoGenerator {
                     line = line.substring(0, line.length() - 1);
                 }
                 if (line.startsWith("requires ")) {
-                    String mod = line.substring("requires ".length()).trim();
-                    if (mod.startsWith("io.vproxy")) {
-                        continue;
-                    }
-                    requires.add(mod);
+                    // String mod = line.substring("requires ".length()).trim();
+                    // if (mod.startsWith("io.vproxy")) {
+                    //     continue;
+                    // }
+                    // requires.add(mod);
+                    //noinspection UnnecessaryContinue
+                    continue;
                 } else if (line.startsWith("exports ")) {
                     exports.add(line.substring("exports ".length()).trim());
                 } else if (line.startsWith("uses ")) {
@@ -52,6 +55,9 @@ public class ModuleInfoGenerator {
         for (var use : uses) {
             module.visitUse(use.replace(".", "/"));
         }
+        module.visitMainClass(Main.class.getName().replace(".", "/"));
+
+        module.visitOpen("io/vproxy", 0);
 
         var output = writer.toByteArray();
         Files.write(Path.of("module-info.class"), output);
