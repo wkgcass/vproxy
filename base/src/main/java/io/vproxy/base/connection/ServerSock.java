@@ -119,8 +119,12 @@ public class ServerSock implements NetFlowRecorder {
         }
     }
 
-    private static void checkBindUDP(IPPort bindAddress) throws IOException {
-        try (DatagramFD foo = FDProvider.get().openDatagramFD()) {
+    public static void checkBindUDP(IPPort bindAddress) throws IOException {
+        checkBindUDP(bindAddress, FDProvider.get().getProvided());
+    }
+
+    public static void checkBindUDP(IPPort bindAddress, FDs fds) throws IOException {
+        try (DatagramFD foo = fds.openDatagramFD()) {
             foo.bind(bindAddress);
         }
     }

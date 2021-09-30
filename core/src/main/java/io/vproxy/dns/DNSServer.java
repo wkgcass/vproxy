@@ -403,7 +403,7 @@ public class DNSServer {
         if (sock == null) { // udp sock not created yet
             // need to check whether it's bond
             if (Config.checkBind) {
-                ServerSock.checkBind(bindAddress, getFDs());
+                ServerSock.checkBindUDP(bindAddress, getFDs());
             }
         }
         if (!needToStart) {
