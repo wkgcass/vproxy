@@ -2,10 +2,13 @@ package io.vproxy.app.app.cmd;
 
 import io.vproxy.app.controller.StdIOController;
 import io.vproxy.app.process.Shutdown;
+import io.vproxy.base.dns.Resolver;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.exception.XException;
+import io.vproxy.vfd.IP;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -45,7 +48,8 @@ public class SystemCommand {
         "\n        System: update plugin ${alias}             enable or disable a plugin" +
         "\n                              {enable|disable}" +
         "\n        System: remove plugin ${alias}             destroy a plugin" +
-        "\n        System: list config                        show current config";
+        "\n        System: list config                        show current config" +
+        "\n        System: dig ${domain}                      resolve v4/v6 ip for the domain";
 
     public static boolean allowNonStdIOController = false;
 
@@ -128,6 +132,9 @@ public class SystemCommand {
             }
             cb.succeeded(new CmdResult());
             return;
+        } else if (cmd.startsWith("dig ")) {
+            executeDig(cmd, cb);
+            return;
         }
 
         // run standard format commands
@@ -139,5 +146,35 @@ public class SystemCommand {
             return;
         }
         command.run(SystemCommands.Companion.getInstance(), cb);
+    }
+
+    private static void executeDig(String cmd, Callback<CmdResult, Throwable> cb) {
+        String[] split = cmd.split(" ");
+        if (split.length != 2) {
+            cb.failed(new Exception("invalid system cmd for `dig`: should specify one domain to resolve"));
+            return;
+        }
+        String domain = split[1].trim();
+        Resolver.getDefault().resolveV4(domain, Callback.ofFunction((err4, ipv4) ->
+            Resolver.getDefault().resolveV6(domain, Callback.ofFunction((err6, ipv6) -> {
+                if (ipv4 == null && ipv6 == null) {
+                    cb.failed(new Exception("neither v4 nor v6 resolved"));
+                } else {
+                    List<IP> result = new ArrayList<>();
+                    StringBuilder sb = new StringBuilder();
+                    if (ipv4 != null) {
+                        result.add(ipv4);
+                        sb.append(ipv4.formatToIPString());
+                    }
+                    if (ipv6 != null) {
+                        result.add(ipv6);
+                        if (sb.length() != 0) {
+                            sb.append("\n");
+                        }
+                        sb.append(ipv6.formatToIPStringWithoutBrackets());
+                    }
+                    cb.succeeded(new CmdResult(result, result, sb.toString()));
+                }
+            }))));
     }
 }

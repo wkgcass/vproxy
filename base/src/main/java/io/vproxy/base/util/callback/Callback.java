@@ -3,8 +3,9 @@ package io.vproxy.base.util.callback;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
 
-public abstract class
-Callback<T, E extends Throwable> {
+import java.util.function.BiConsumer;
+
+public abstract class Callback<T, E extends Throwable> {
     private boolean called = false;
 
     protected abstract void onSucceeded(T value);
@@ -53,5 +54,19 @@ Callback<T, E extends Throwable> {
         } else {
             succeeded(value);
         }
+    }
+
+    public static <T, E extends Throwable> Callback<T, E> ofFunction(BiConsumer<E, T> cb) {
+        return new Callback<T, E>() {
+            @Override
+            protected void onSucceeded(T value) {
+                cb.accept(null, value);
+            }
+
+            @Override
+            protected void onFailed(E err) {
+                cb.accept(err, null);
+            }
+        };
     }
 }
