@@ -33,4 +33,9 @@ public class VSwitchFDs implements FDs {
     public long currentTimeMillis() {
         return System.currentTimeMillis();
     }
+
+    @Override
+    public boolean isV4V6MultiStack() {
+        return false;
+    }
 }

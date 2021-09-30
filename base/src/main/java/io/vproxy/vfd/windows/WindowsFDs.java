@@ -69,6 +69,11 @@ public class WindowsFDs implements FDs, FDsWithTap {
     }
 
     @Override
+    public boolean isV4V6MultiStack() {
+        return true;
+    }
+
+    @Override
     public TapDatagramFD openTap(String dev) throws IOException {
         long handle = windows.createTapHandle(dev);
         long readOverlapped;

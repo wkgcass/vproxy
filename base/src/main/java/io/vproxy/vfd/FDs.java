@@ -12,4 +12,6 @@ public interface FDs {
     FDSelector openSelector() throws IOException;
 
     long currentTimeMillis();
+
+    boolean isV4V6MultiStack();
 }

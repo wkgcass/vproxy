@@ -87,6 +87,11 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffini
         return posix.currentTimeMillis();
     }
 
+    @Override
+    public boolean isV4V6MultiStack() {
+        return false;
+    }
+
     public UnixDomainServerSocketFD openUnixDomainServerSocketFD() throws IOException {
         return new UnixDomainServerSocketFD(posix);
     }
