@@ -97,7 +97,7 @@ public class DNSClient {
             sock.configureBlocking(false);
             sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0));
 
-            if (fds.isV4V6MultiStack()) {
+            if (fds.isV4V6DualStack()) {
                 sock6 = sock;
             } else {
                 sock6 = fds.openDatagramFD();

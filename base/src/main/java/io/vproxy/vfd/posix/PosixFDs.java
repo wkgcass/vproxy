@@ -88,7 +88,7 @@ public class PosixFDs implements FDs, FDsWithTap, FDsWithPoll, FDsWithCoreAffini
     }
 
     @Override
-    public boolean isV4V6MultiStack() {
+    public boolean isV4V6DualStack() {
         return false;
     }
 

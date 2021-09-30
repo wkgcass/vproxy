@@ -13,5 +13,5 @@ public interface FDs {
 
     long currentTimeMillis();
 
-    boolean isV4V6MultiStack();
+    boolean isV4V6DualStack();
 }

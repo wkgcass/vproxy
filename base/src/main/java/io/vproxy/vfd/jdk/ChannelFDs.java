@@ -44,7 +44,7 @@ public class ChannelFDs implements FDs {
     }
 
     @Override
-    public boolean isV4V6MultiStack() {
+    public boolean isV4V6DualStack() {
         return true;
     }
 }

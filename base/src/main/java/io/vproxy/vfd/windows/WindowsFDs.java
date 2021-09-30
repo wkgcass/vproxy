@@ -69,7 +69,7 @@ public class WindowsFDs implements FDs, FDsWithTap {
     }
 
     @Override
-    public boolean isV4V6MultiStack() {
+    public boolean isV4V6DualStack() {
         return true;
     }
 

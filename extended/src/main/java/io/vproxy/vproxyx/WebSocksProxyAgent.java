@@ -169,7 +169,7 @@ public class WebSocksProxyAgent {
                 WebSocksUtils.agentDNSServer.start();
                 Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
 
-                if (!FDProvider.get().getProvided().isV4V6MultiStack()) {
+                if (!FDProvider.get().getProvided().isV4V6DualStack()) {
                     try {
                         dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder);
                         dnsServer6.start();
