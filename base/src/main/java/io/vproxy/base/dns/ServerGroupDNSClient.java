@@ -20,8 +20,8 @@ public class ServerGroupDNSClient extends DNSClient {
     private final ServerGroup serverGroup;
     private final ServerListener serverListener;
 
-    public ServerGroupDNSClient(SelectorEventLoop loop, DatagramFD sock, ServerGroup serverGroup, int dnsReqTimeout, int maxRetry) throws IOException {
-        super(loop, sock, dnsReqTimeout, maxRetry);
+    public ServerGroupDNSClient(SelectorEventLoop loop, DatagramFD sock, DatagramFD sock6, ServerGroup serverGroup, int dnsReqTimeout, int maxRetry) throws IOException {
+        super(loop, sock, sock6, dnsReqTimeout, maxRetry);
         this.serverGroup = serverGroup;
         setHealthyServeList();
         serverListener = new ServerListener() {

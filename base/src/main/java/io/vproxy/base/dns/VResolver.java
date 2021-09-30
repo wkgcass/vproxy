@@ -1,7 +1,10 @@
 package io.vproxy.base.dns;
 
 import io.vproxy.base.util.callback.Callback;
-import io.vproxy.vfd.*;
+import io.vproxy.vfd.DatagramFD;
+import io.vproxy.vfd.FDs;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.IPv4;
 
 import java.io.IOException;
 import java.net.UnknownHostException;
@@ -32,14 +35,15 @@ public class VResolver extends AbstractResolver {
         this.hosts = Resolver.getHosts();
 
         DatagramFD sock = null;
+        DatagramFD sock6 = null;
         DNSClient client = null;
         try {
-            sock = fds.openDatagramFD();
-            sock.configureBlocking(false);
-            sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0)); // bind any port
+            var tuple = DNSClient.createSocketsForDNS(fds);
+            sock = tuple._1;
+            sock6 = tuple._2;
 
             // use empty nameserver list to construct the client, it will be filled later
-            client = new DNSClient(loop.getSelectorEventLoop(), sock, DNS_REQ_TIMEOUT, MAX_RETRY);
+            client = new DNSClient(loop.getSelectorEventLoop(), sock, sock6, DNS_REQ_TIMEOUT, MAX_RETRY);
         } catch (IOException e) {
             try {
                 loop.getSelectorEventLoop().close();
@@ -48,6 +52,12 @@ public class VResolver extends AbstractResolver {
             if (sock != null) {
                 try {
                     sock.close();
+                } catch (IOException ignore) {
+                }
+            }
+            if (sock6 != null) {
+                try {
+                    sock6.close();
                 } catch (IOException ignore) {
                 }
             }

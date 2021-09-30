@@ -18,6 +18,7 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.callback.Callback;
 import io.vproxy.base.util.callback.RunOnLoopCallback;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.ClosedException;
 import io.vproxy.base.util.exception.NotFoundException;
@@ -31,12 +32,14 @@ import java.util.*;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
+@SuppressWarnings("rawtypes")
 public class DNSClient {
     private static DNSClient DEFAULT_INSTANCE;
     private static EventLoopGroup DEFAULT_EVENT_LOOP_GROUP;
 
     private final SelectorEventLoop loop;
     private final DatagramFD sock;
+    private final DatagramFD sock6;
     private List<IPPort> nameServers;
     private final int dnsReqTimeout;
     private final int maxRetry;
@@ -45,18 +48,20 @@ public class DNSClient {
     private int nextId = 0;
     private final ByteBuffer buffer = Utils.allocateByteBuffer(Config.udpMtu);
 
-    public DNSClient(SelectorEventLoop loop, DatagramFD sock, int dnsReqTimeout, int maxRetry) throws IOException {
-        this(loop, sock, Collections.emptyList(), dnsReqTimeout, maxRetry);
+    public DNSClient(SelectorEventLoop loop, DatagramFD sock, DatagramFD sock6, int dnsReqTimeout, int maxRetry) throws IOException {
+        this(loop, sock, sock6, Collections.emptyList(), dnsReqTimeout, maxRetry);
     }
 
-    public DNSClient(SelectorEventLoop loop, DatagramFD sock, List<IPPort> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
+    public DNSClient(SelectorEventLoop loop, DatagramFD sock, DatagramFD sock6, List<IPPort> initialNameServers, int dnsReqTimeout, int maxRetry) throws IOException {
         this.loop = loop;
         this.sock = sock;
+        this.sock6 = sock6;
         this.nameServers = initialNameServers;
         this.dnsReqTimeout = dnsReqTimeout;
         this.maxRetry = maxRetry;
 
         loop.add(sock, EventSet.read(), null, new ResolverHandler());
+        loop.add(sock6, EventSet.read(), null, new ResolverHandler());
     }
 
     private static EventLoopGroup getDefaultEventLoopGroup() {
@@ -79,35 +84,49 @@ public class DNSClient {
         return DEFAULT_EVENT_LOOP_GROUP;
     }
 
-    public static DatagramFD getSocketForDNS() {
-        DatagramFD sock;
+    public static Tuple<DatagramFD, DatagramFD> createSocketsForDNS() {
+        return createSocketsForDNS(FDProvider.get().getProvided());
+    }
+
+    public static Tuple<DatagramFD, DatagramFD> createSocketsForDNS(FDs fds) {
+        DatagramFD sock = null;
+        DatagramFD sock6 = null;
+        boolean failed = true;
         try {
-            sock = FDProvider.get().openDatagramFD();
-        } catch (IOException e) {
-            Logger.shouldNotHappen("creating default DNSClient sock failed", e);
-            throw new RuntimeException(e);
-        }
-        try {
+            sock = fds.openDatagramFD();
             sock.configureBlocking(false);
-        } catch (IOException e) {
-            Logger.shouldNotHappen("configure non-blocking failed", e);
-            try {
-                sock.close();
-            } catch (IOException ignore) {
-            }
-            throw new RuntimeException(e);
-        }
-        try {
             sock.bind(new IPPort(IP.from(new byte[]{0, 0, 0, 0}), 0));
-        } catch (IOException e) {
-            Logger.shouldNotHappen("bind sock on random port failed", e);
-            try {
-                sock.close();
-            } catch (IOException ignore) {
+
+            if (fds.isV4V6MultiStack()) {
+                sock6 = sock;
+            } else {
+                sock6 = fds.openDatagramFD();
+                sock6.configureBlocking(false);
+                sock6.bind(new IPPort(IP.from("::"), 0));
             }
+
+            failed = false;
+        } catch (IOException e) {
+            Logger.shouldNotHappen("creating sockets for dns client failed", e);
             throw new RuntimeException(e);
+        } finally {
+            if (failed) {
+                if (sock != null) {
+                    try {
+                        sock.close();
+                    } catch (IOException ignore) {
+                    }
+                }
+                if (sock6 != null) {
+                    try {
+                        sock6.close();
+                    } catch (IOException ignore) {
+                    }
+                }
+            }
         }
-        return sock;
+
+        return new Tuple<>(sock, sock6);
     }
 
     public static DNSClient getDefault() {
@@ -115,7 +134,11 @@ public class DNSClient {
             return DEFAULT_INSTANCE;
         }
         synchronized (DNSClient.class) {
-            DatagramFD sock = getSocketForDNS();
+            if (DEFAULT_INSTANCE != null) {
+                return DEFAULT_INSTANCE;
+            }
+
+            Tuple<DatagramFD, DatagramFD> sockets = createSocketsForDNS();
             ServerGroup serverGroup;
             try {
                 serverGroup = new ServerGroup("default-dns-client", getDefaultEventLoopGroup(), new HealthCheckConfig(
@@ -134,11 +157,15 @@ public class DNSClient {
             }
             DNSClient client;
             try {
-                client = new ServerGroupDNSClient(loop, sock, serverGroup, 2_000, 2);
+                client = new ServerGroupDNSClient(loop, sockets._1, sockets._2, serverGroup, 2_000, 2);
             } catch (IOException e) {
                 Logger.shouldNotHappen("creating default dns client failed", e);
                 try {
-                    sock.close();
+                    sockets._1.close();
+                } catch (IOException ignore) {
+                }
+                try {
+                    sockets._2.close();
                 } catch (IOException ignore) {
                 }
                 throw new RuntimeException(e);
@@ -220,7 +247,11 @@ public class DNSClient {
             int len = byteBufferToSend.limit();
             int sent;
             try {
-                sent = sock.send(byteBufferToSend, l4addr);
+                if (l4addr.getAddress() instanceof IPv4) {
+                    sent = sock.send(byteBufferToSend, l4addr);
+                } else {
+                    sent = sock6.send(byteBufferToSend, l4addr);
+                }
             } catch (IOException e) {
                 if (!Utils.isHostIsDown(e) && !Utils.isNoRouteToHost(e)) {
                     Logger.error(LogType.CONN_ERROR, "send dns question packet to " + l4addr + " failed", e);
@@ -397,10 +428,18 @@ public class DNSClient {
             loop.remove(sock);
         } catch (Throwable ignore) {
         }
+        try {
+            loop.remove(sock6);
+        } catch (Throwable ignore) {
+        }
 
         if (this == DEFAULT_INSTANCE) { // should also remove the default instance ref
             try {
                 sock.close();
+            } catch (IOException ignore) {
+            }
+            try {
+                sock6.close();
             } catch (IOException ignore) {
             }
             if (DEFAULT_EVENT_LOOP_GROUP != null) {

@@ -11,6 +11,7 @@ import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.RingBuffer;
 import io.vproxy.base.util.callback.Callback;
+import io.vproxy.base.util.coll.Tuple;
 import io.vproxy.base.util.nio.ByteArrayChannel;
 import io.vproxy.vfd.DatagramFD;
 import io.vproxy.vfd.FDProvider;
@@ -181,7 +182,7 @@ public class ConnectClient {
                     return;
                 }
             } else if (status < 300) {
-                if (expectedStatus[2]){
+                if (expectedStatus[2]) {
                     closeAndCallSucc(ctx);
                     return;
                 }
@@ -216,7 +217,7 @@ public class ConnectClient {
     private boolean stopped = false;
     private final Consumer<Callback<Void, IOException>> handleFunc;
 
-    private DatagramFD dnsSocket = null;
+    private Tuple<DatagramFD, DatagramFD> dnsSockets = null;
     private DNSClient dnsClient = null;
 
     public ConnectClient(NetEventLoop eventLoop,
@@ -283,12 +284,13 @@ public class ConnectClient {
     }
 
     private void handleDns(Callback<Void, IOException> cb) {
-        if (dnsSocket == null) {
-            dnsSocket = DNSClient.getSocketForDNS();
+        if (dnsSockets == null) {
+            dnsSockets = DNSClient.createSocketsForDNS();
         }
         if (dnsClient == null) {
             try {
-                dnsClient = new DNSClient(eventLoop.getSelectorEventLoop(), dnsSocket, Collections.singletonList(remote), timeout, 1);
+                dnsClient = new DNSClient(eventLoop.getSelectorEventLoop(), dnsSockets._1, dnsSockets._2,
+                    Collections.singletonList(remote), timeout, 1);
             } catch (IOException e) {
                 Logger.shouldNotHappen("start dns client failed", e);
                 if (!stopped) cb.failed(e);
@@ -373,12 +375,16 @@ public class ConnectClient {
             dnsClient.close();
             dnsClient = null;
         }
-        if (dnsSocket != null) {
+        if (dnsSockets != null) {
             try {
-                dnsSocket.close();
+                dnsSockets._1.close();
             } catch (IOException ignore) {
             }
-            dnsSocket = null;
+            try {
+                dnsSockets._2.close();
+            } catch (IOException ignore) {
+            }
+            dnsSockets = null;
         }
     }
 }
