@@ -395,8 +395,10 @@ JNIEXPORT void JNICALL Java_io_vproxy_vfd_posix_GeneralPosix_bindIPv6
     }
     res = v_listen(fd, LISTEN_BACKLOG);
     if (res < 0) {
-        throwIOExceptionBasedOnErrno(env);
-        return;
+        if (errno != EOPNOTSUPP) { // maybe the fd is udp socket
+            throwIOExceptionBasedOnErrno(env);
+            return;
+        }
     }
 }
 

@@ -42,7 +42,7 @@ public class PosixServerSocketFD extends PosixFD implements ServerSocketFD {
         } else if (l4addr.getAddress() instanceof IPv6) {
             fd = posix.createIPv6TcpFD();
             finishConfigAfterFDCreated();
-            String ipv6 = l4addr.getAddress().formatToIPString();
+            String ipv6 = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
             posix.bindIPv6(fd, ipv6, port);
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());

@@ -56,7 +56,7 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
             fd = posix.createIPv6UdpFD();
             finishConfigAfterFDCreated();
             ipv4 = false;
-            String ipv6 = l4addr.getAddress().formatToIPString();
+            String ipv6 = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
             posix.bindIPv6(fd, ipv6, port);
         } else {
             throw new IOException("unknown l3addr " + l4addr.getAddress());
@@ -107,7 +107,7 @@ public class PosixDatagramFD extends PosixInetNetworkFD implements DatagramFD {
                 int ip = IP.ipv4Bytes2Int(remote.getAddress().getAddress());
                 n = posix.sendtoIPv4(fd, directBuffer, off, len, ip, port);
             } else {
-                String ip = remote.getAddress().formatToIPString();
+                String ip = ((IPv6) remote.getAddress()).formatToIPStringWithoutBrackets();
                 n = posix.sendtoIPv6(fd, directBuffer, off, len, ip, port);
             }
         } finally {

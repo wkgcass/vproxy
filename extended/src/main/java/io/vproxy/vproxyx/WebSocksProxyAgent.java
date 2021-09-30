@@ -21,6 +21,7 @@ import io.vproxy.component.proxy.ProxyNetConfig;
 import io.vproxy.dns.DNSServer;
 import io.vproxy.lib.http1.CoroutineHttp1Server;
 import io.vproxy.socks.Socks5ProxyProtocolHandler;
+import io.vproxy.vfd.FDProvider;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPPort;
 import io.vproxy.vproxyx.util.Browser;
@@ -53,6 +54,7 @@ public class WebSocksProxyAgent {
     private EventLoopGroup worker;
 
     private DNSServer dnsServer = null;
+    private DNSServer dnsServer6 = null;
     private Proxy socks5 = null;
     private Proxy httpConnect = null;
     private Proxy ss = null;
@@ -159,14 +161,27 @@ public class WebSocksProxyAgent {
             if (port == 0) {
                 port = 53; // just a hint. if not configured, the dns server won't start
             }
-            var l4addr = new IPPort(IP.from("0.0.0.0"), port);
-            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", l4addr, worker, configProcessor, domainBinder);
+            WebSocksUtils.agentDNSServer = new AgentDNSServer("dns", new IPPort("0.0.0.0", port), worker, configProcessor, domainBinder);
             dnsServer = WebSocksUtils.agentDNSServer;
             // may need to start dns server
             if (configProcessor.getDnsListenPort() != 0) {
                 assert Logger.lowLevelDebug("start dns server");
                 WebSocksUtils.agentDNSServer.start();
                 Logger.alert("dns server started on " + configProcessor.getDnsListenPort());
+
+                if (!FDProvider.get().getProvided().isV4V6MultiStack()) {
+                    try {
+                        dnsServer6 = new AgentDNSServer("dns6", new IPPort("::", port), worker, configProcessor, domainBinder);
+                        dnsServer6.start();
+                        Logger.alert("dns server for ipv6 started on " + configProcessor.getDnsListenPort());
+                    } catch (Exception e) {
+                        Logger.error(LogType.SYS_ERROR, "failed to launch dns on ipv6, skip and continue", e);
+                        if (dnsServer6 != null) {
+                            dnsServer6.stop();
+                        }
+                        dnsServer6 = null;
+                    }
+                }
             }
         }
 
@@ -292,6 +307,11 @@ public class WebSocksProxyAgent {
             dnsServer.stop();
             dnsServer = null;
         }
+        if (dnsServer6 != null) {
+            Logger.warn(LogType.ALERT, "stopping dnsServer6: " + dnsServer6.bindAddress);
+            dnsServer6.stop();
+            dnsServer6 = null;
+        }
         if (socks5 != null) {
             Logger.warn(LogType.ALERT, "stopping socks5: " + socks5.config.getServer().bind);
             socks5.stop();
@@ -373,6 +393,10 @@ public class WebSocksProxyAgent {
 
     public DNSServer getDnsServer() {
         return dnsServer;
+    }
+
+    public DNSServer getDnsServer6() {
+        return dnsServer6;
     }
 
     public Proxy getSocks5() {

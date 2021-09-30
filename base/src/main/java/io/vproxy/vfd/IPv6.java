@@ -37,6 +37,14 @@ public class IPv6 extends IP {
         return Objects.hash(value0, value1, value2, value3);
     }
 
+    public String formatToIPStringWithoutBrackets() {
+        String ipv6 = formatToIPString();
+        if (ipv6.startsWith("[")) {
+            ipv6 = ipv6.substring(1, ipv6.length() - 1);
+        }
+        return ipv6;
+    }
+
     @Override
     public boolean isBroadcast() {
         return false;

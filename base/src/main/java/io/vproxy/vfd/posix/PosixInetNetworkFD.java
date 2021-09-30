@@ -42,7 +42,7 @@ public class PosixInetNetworkFD extends PosixNetworkFD {
         } else if (l4addr.getAddress() instanceof IPv6) {
             fd = createIPv6FD();
             finishConfigAfterFDCreated();
-            String str = l4addr.getAddress().formatToIPString();
+            String str = ((IPv6) l4addr.getAddress()).formatToIPStringWithoutBrackets();
             posix.connectIPv6(fd, str, l4addr.getPort());
             ipv4 = false;
         } else {
