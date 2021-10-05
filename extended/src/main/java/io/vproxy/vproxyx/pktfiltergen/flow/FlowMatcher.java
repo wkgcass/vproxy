@@ -8,10 +8,7 @@ import io.vproxy.base.util.bitwise.BitwiseIntMatcher;
 import io.vproxy.base.util.bitwise.BitwiseMatcher;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.MacAddress;
-import io.vproxy.vpacket.AbstractIpPacket;
-import io.vproxy.vpacket.ArpPacket;
-import io.vproxy.vpacket.TcpPacket;
-import io.vproxy.vpacket.UdpPacket;
+import io.vproxy.vpacket.*;
 
 public class FlowMatcher {
     // dev
@@ -57,6 +54,13 @@ public class FlowMatcher {
         }
         if (dl_type != 0) {
             appendAnd(sb).append("pkb.pkt.getType() == ").append(dl_type);
+            if (dl_type == Consts.ETHER_TYPE_IPv4) {
+                appendAnd(sb).append("pkb.pkt.getPacket() instanceof Ipv4Packet");
+                ctx.ensureImport(Ipv4Packet.class);
+            } else if (dl_type == Consts.ETHER_TYPE_IPv6) {
+                appendAnd(sb).append("pkb.pkt.getPacket() instanceof Ipv6Packet");
+                ctx.ensureImport(Ipv6Packet.class);
+            }
         }
         if (arp_op != 0) {
             appendAnd(sb).append(castArp(ctx)).append(".getOpcode() == ").append(arp_op);
