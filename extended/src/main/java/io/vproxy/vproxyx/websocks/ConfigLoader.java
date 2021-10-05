@@ -692,7 +692,7 @@ public class ConfigLoader {
             String content;
             if (abpfile.contains("://")) {
                 Logger.alert("getting abp from " + abpfile);
-                Promise<ByteArray> contentPromise = CoroutineHttp1ClientConnection.simpleGet(abpfile);
+                Promise<ByteArray> contentPromise = CoroutineHttp1ClientConnection.simpleGet(abpfile, true);
                 ByteArray contentBytes;
                 try {
                     contentBytes = contentPromise.block();

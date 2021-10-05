@@ -1,10 +1,26 @@
 package io.vproxy.lib.http1
 
+import io.vproxy.base.connection.ConnectableConnection
+import io.vproxy.base.connection.ConnectionOpts
+import io.vproxy.base.dns.Resolver
+import io.vproxy.base.http.HttpRespParser
+import io.vproxy.base.processor.http1.entity.Header
+import io.vproxy.base.processor.http1.entity.Request
+import io.vproxy.base.processor.http1.entity.Response
+import io.vproxy.base.selector.SelectorEventLoop
+import io.vproxy.base.util.ByteArray
+import io.vproxy.base.util.RingBuffer
+import io.vproxy.base.util.callback.Callback
+import io.vproxy.base.util.promise.Promise
+import io.vproxy.base.util.ringbuffer.SSLUtils
+import io.vproxy.base.util.thread.VProxyThread
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.execute
 import io.vproxy.lib.common.unsafeIO
 import io.vproxy.lib.tcp.CoroutineConnection
+import io.vproxy.vfd.IP
+import io.vproxy.vfd.IPPort
 import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.IOException
 import java.net.UnknownHostException
@@ -36,10 +52,10 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
 
   inner class CoroutineHttp1Request(private val method: String, private val url: String) :
     CoroutineHttp1Common(conn) {
-    private val headers = ArrayList<io.vproxy.base.processor.http1.entity.Header>()
+    private val headers = ArrayList<Header>()
 
     fun header(key: String, value: String): CoroutineHttp1Request {
-      headers.add(io.vproxy.base.processor.http1.entity.Header(key, value))
+      headers.add(Header(key, value))
       return this
     }
 
@@ -48,7 +64,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     }
 
     suspend fun send(body: String) {
-      send(io.vproxy.base.util.ByteArray.from(body))
+      send(ByteArray.from(body))
     }
 
     suspend fun send(json: JSON.Instance<*>) {
@@ -56,15 +72,15 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     }
 
     @Suppress("DuplicatedCode")
-    suspend fun send(body: io.vproxy.base.util.ByteArray?) {
-      val req = io.vproxy.base.processor.http1.entity.Request()
+    suspend fun send(body: ByteArray?) {
+      val req = Request()
       req.method = method
       req.uri = url
       req.version = "HTTP/1.1"
       if (body != null && body.length() > 0) {
-        headers.add(io.vproxy.base.processor.http1.entity.Header("content-length", "" + body.length()))
+        headers.add(Header("content-length", "" + body.length()))
       } else {
-        headers.add(io.vproxy.base.processor.http1.entity.Header("content-length", "0"))
+        headers.add(Header("content-length", "0"))
       }
       req.headers = headers
       req.body = body
@@ -72,11 +88,11 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     }
 
     override suspend fun sendHeadersBeforeChunks() {
-      val req = io.vproxy.base.processor.http1.entity.Request()
+      val req = Request()
       req.method = method
       req.uri = url
       req.version = "HTTP/1.1"
-      headers.add(io.vproxy.base.processor.http1.entity.Header("transfer-encoding", "chunked"))
+      headers.add(Header("transfer-encoding", "chunked"))
       req.headers = headers
       conn.write(req.toByteArray())
     }
@@ -86,8 +102,8 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
    * @return a full response object including body or chunks/trailers.
    * If eof received, an IOException would be thrown instead of returning null Response
    */
-  suspend fun readResponse(): io.vproxy.base.processor.http1.entity.Response {
-    val parser = io.vproxy.base.http.HttpRespParser(true)
+  suspend fun readResponse(): Response {
+    val parser = HttpRespParser(true)
     while (true) {
       val rb = conn.read() ?: throw IOException("unexpected eof")
       val res = parser.feed(rb)
@@ -106,11 +122,16 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
     conn.close()
   }
 
-  @Suppress("HttpUrlsUsage", "CascadeIf")
   companion object {
     @JvmStatic
-    fun simpleGet(full: String): io.vproxy.base.util.promise.Promise<io.vproxy.base.util.ByteArray> {
-      val invokerLoop = io.vproxy.base.selector.SelectorEventLoop.current()
+    fun simpleGet(full: String): Promise<ByteArray> {
+      return simpleGet(full, false)
+    }
+
+    @Suppress("HttpUrlsUsage", "CascadeIf")
+    @JvmStatic
+    fun simpleGet(full: String, mustRunOnNewThread: Boolean): Promise<ByteArray> {
+      val invokerLoop = SelectorEventLoop.current()
 
       val protocolAndHostAndPort: String
       val uri: String
@@ -134,11 +155,11 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         uri = "/"
       }
 
-      val loop: io.vproxy.base.selector.SelectorEventLoop
-      if (invokerLoop == null) {
-        loop = io.vproxy.base.selector.SelectorEventLoop.open()
+      val loop: SelectorEventLoop
+      if (invokerLoop == null || mustRunOnNewThread) {
+        loop = SelectorEventLoop.open()
         loop.ensureNetEventLoop()
-        loop.loop { io.vproxy.base.util.thread.VProxyThread.create(it, "http1-simple-get") }
+        loop.loop { VProxyThread.create(it, "http1-simple-get") }
       } else {
         loop = invokerLoop
       }
@@ -146,7 +167,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       return loop.execute {
         val conn = create(protocolAndHostAndPort)
         defer { conn.close() }
-        if (invokerLoop == null) { // which means a new loop is created
+        if (invokerLoop != loop) { // which means a new loop is created
           defer { loop.close() }
         }
 
@@ -158,7 +179,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         }
         req.send()
         val resp = conn.readResponse()
-        val ret: io.vproxy.base.util.ByteArray
+        val ret: ByteArray
         if (resp.statusCode != 200) {
           throw IOException("request failed: response status is " + resp.statusCode + " instead of 200")
         } else {
@@ -176,18 +197,19 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       if (x.contains("/")) {
         x = x.substring(0, x.indexOf("/"))
       }
-      if (io.vproxy.vfd.IP.isIpLiteral(x)) {
+      if (IP.isIpLiteral(x)) {
         return null
       }
       if (x.contains(":")) {
         x = x.substring(0, x.lastIndexOf(":"))
       }
-      if (io.vproxy.vfd.IP.isIpLiteral(x)) {
+      if (IP.isIpLiteral(x)) {
         return null
       }
       return x
     }
 
+    @Suppress("HttpUrlsUsage")
     suspend fun create(protocolAndHostAndPort: String): CoroutineHttp1ClientConnection {
       val ssl: Boolean
       val hostAndPort: String
@@ -204,7 +226,7 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
         ssl = false
         hostAndPort = protocolAndHostAndPort
       }
-      if (io.vproxy.vfd.IP.isIpLiteral(hostAndPort)) {
+      if (IP.isIpLiteral(hostAndPort)) {
         host = hostAndPort
         port = if (ssl) {
           443
@@ -229,12 +251,12 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       }
 
       // resolve
-      val ip = if (io.vproxy.vfd.IP.isIpLiteral(host)) {
-        io.vproxy.vfd.IP.from(host)
+      val ip = if (IP.isIpLiteral(host)) {
+        IP.from(host)
       } else {
         suspendCancellableCoroutine { cont ->
-          io.vproxy.base.dns.Resolver.getDefault().resolve(host, object : io.vproxy.base.util.callback.Callback<io.vproxy.vfd.IP, UnknownHostException>() {
-            override fun onSucceeded(value: io.vproxy.vfd.IP) {
+          Resolver.getDefault().resolve(host, object : Callback<IP, UnknownHostException>() {
+            override fun onSucceeded(value: IP) {
               cont.resume(value)
             }
 
@@ -247,28 +269,28 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
 
       // now try to connect
       if (ssl) {
-        val sslContext = io.vproxy.base.util.ringbuffer.SSLUtils.getDefaultClientSSLContext()
+        val sslContext = SSLUtils.getDefaultClientSSLContext()
         val engine: SSLEngine
-        if (io.vproxy.vfd.IP.isIpLiteral(host)) {
+        if (IP.isIpLiteral(host)) {
           engine = sslContext.createSSLEngine()
         } else {
           engine = sslContext.createSSLEngine(host, port)
         }
-        return create(io.vproxy.vfd.IPPort(ip, port), engine)
+        return create(IPPort(ip, port), engine)
       } else {
-        return create(io.vproxy.vfd.IPPort(ip, port))
+        return create(IPPort(ip, port))
       }
     }
 
-    suspend fun create(ipport: io.vproxy.vfd.IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
+    suspend fun create(ipport: IPPort, engine: SSLEngine): CoroutineHttp1ClientConnection {
       engine.useClientMode = true
-      val pair = io.vproxy.base.util.ringbuffer.SSLUtils.genbuf(
-        engine, io.vproxy.base.util.RingBuffer.allocate(24576), io.vproxy.base.util.RingBuffer.allocate(24576),
-        io.vproxy.base.selector.SelectorEventLoop.current(), ipport
+      val pair = SSLUtils.genbuf(
+        engine, RingBuffer.allocate(24576), RingBuffer.allocate(24576),
+        SelectorEventLoop.current(), ipport
       )
       val conn = unsafeIO {
-        io.vproxy.base.connection.ConnectableConnection.create(
-          ipport, io.vproxy.base.connection.ConnectionOpts(),
+        ConnectableConnection.create(
+          ipport, ConnectionOpts(),
           pair.left, pair.right
         ).coroutine()
       }
@@ -276,11 +298,11 @@ class CoroutineHttp1ClientConnection(val conn: CoroutineConnection) : AutoClosea
       return conn.asHttp1ClientConnection()
     }
 
-    suspend fun create(ipport: io.vproxy.vfd.IPPort): CoroutineHttp1ClientConnection {
+    suspend fun create(ipport: IPPort): CoroutineHttp1ClientConnection {
       val conn = unsafeIO {
-        io.vproxy.base.connection.ConnectableConnection.create(
-          ipport, io.vproxy.base.connection.ConnectionOpts(),
-          io.vproxy.base.util.RingBuffer.allocate(16384), io.vproxy.base.util.RingBuffer.allocate(16384)
+        ConnectableConnection.create(
+          ipport, ConnectionOpts(),
+          RingBuffer.allocate(16384), RingBuffer.allocate(16384)
         ).coroutine()
       }
       conn.connect()
