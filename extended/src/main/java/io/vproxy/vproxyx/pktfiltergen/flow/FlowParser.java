@@ -297,9 +297,16 @@ public class FlowParser {
 
     private void assertValidMethodName(String value) throws Exception {
         char[] chars = value.toCharArray();
+        if (chars.length == 0) {
+            throw new Exception("no method name provided");
+        }
+        if ('0' <= chars[0] && chars[0] <= '9') {
+            throw new Exception(chars[0] + "(" + ((int) chars[0]) + ")" + " is not allowed to be the first char in method name: " + value);
+        }
         for (char c : chars) {
             if (('a' <= c && c <= 'z')
                 || ('A' <= c && c <= 'Z')
+                || ('0' <= c && c <= '9')
                 || c == '$'
                 || c == '_') {
                 continue;
