@@ -338,6 +338,7 @@ public class TestFlowGen {
     public void nw_src() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.NwSrc");
         imports = List.of(
+            Ipv4Packet.class,
             AbstractIpPacket.class,
             BitwiseMatcher.class,
             ByteArray.class
@@ -347,7 +348,7 @@ public class TestFlowGen {
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -358,6 +359,7 @@ public class TestFlowGen {
     public void nw_dst() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.NwDst");
         imports = List.of(
+            Ipv4Packet.class,
             AbstractIpPacket.class,
             BitwiseMatcher.class,
             ByteArray.class
@@ -367,7 +369,7 @@ public class TestFlowGen {
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -377,9 +379,9 @@ public class TestFlowGen {
     @Test
     public void nw_proto_ipv4() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.NwProtoIpv4");
-        imports = List.of(AbstractIpPacket.class);
+        imports = List.of(Ipv4Packet.class, AbstractIpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -389,9 +391,9 @@ public class TestFlowGen {
     @Test
     public void nw_proto_ipv6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.NwProtoIpv6");
-        imports = List.of(AbstractIpPacket.class);
+        imports = List.of(Ipv6Packet.class, AbstractIpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == " + 0x123 + ") {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -403,13 +405,14 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.TpSrcTcp");
         imports = List.of(
             AbstractIpPacket.class,
+            Ipv4Packet.class,
             TcpPacket.class,
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 " +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()" +
@@ -425,13 +428,14 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.TpDstTcp");
         imports = List.of(
             AbstractIpPacket.class,
+            Ipv4Packet.class,
             TcpPacket.class,
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 " +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort()" +
@@ -446,6 +450,7 @@ public class TestFlowGen {
     public void tp_src_tcp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.TpSrcTcp6");
         imports = List.of(
+            Ipv6Packet.class,
             AbstractIpPacket.class,
             TcpPacket.class,
             BitwiseIntMatcher.class
@@ -453,7 +458,7 @@ public class TestFlowGen {
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 " +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()" +
@@ -468,6 +473,7 @@ public class TestFlowGen {
     public void tp_dst_tcp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.TpDstTcp6");
         imports = List.of(
+            Ipv6Packet.class,
             AbstractIpPacket.class,
             TcpPacket.class,
             BitwiseIntMatcher.class
@@ -475,7 +481,7 @@ public class TestFlowGen {
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 " +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((TcpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort()" +
@@ -491,13 +497,14 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.TpSrcUdp");
         imports = List.of(
             AbstractIpPacket.class,
+            Ipv4Packet.class,
             UdpPacket.class,
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 " +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()" +
@@ -513,13 +520,14 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.TpDstUdp");
         imports = List.of(
             AbstractIpPacket.class,
+            Ipv4Packet.class,
             UdpPacket.class,
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 " +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort()" +
@@ -534,6 +542,7 @@ public class TestFlowGen {
     public void tp_src_udp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.TpSrcUdp6");
         imports = List.of(
+            Ipv6Packet.class,
             AbstractIpPacket.class,
             UdpPacket.class,
             BitwiseIntMatcher.class
@@ -541,7 +550,7 @@ public class TestFlowGen {
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 " +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()" +
@@ -556,6 +565,7 @@ public class TestFlowGen {
     public void tp_dst_udp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.TpDstUdp6");
         imports = List.of(
+            Ipv6Packet.class,
             AbstractIpPacket.class,
             UdpPacket.class,
             BitwiseIntMatcher.class
@@ -563,7 +573,7 @@ public class TestFlowGen {
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
             "new BitwiseIntMatcher(80, -1);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 " +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
             "&& BITWISE_INT_MATCHER_HOLDER_0.match(" +
             "((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort()" +
@@ -606,7 +616,8 @@ public class TestFlowGen {
         imports = List.of(
             BitwiseMatcher.class,
             ByteArray.class,
-            IfaceHolder.class
+            IfaceHolder.class,
+            Ipv4Packet.class
         );
         fields = "" +
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
@@ -641,7 +652,7 @@ public class TestFlowGen {
                 "}\n" +
                 "return table2(helper, pkb);") +
             genTable(2, "" +
-                "if (pkb.pkt.getType() == 2048) {\n" +
+                "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
                 "    " + EXECUTE + "3);\n" +
                 "}\n" +
                 "return table3(helper, pkb);\n") +
@@ -673,8 +684,9 @@ public class TestFlowGen {
         tables = genTable(0, EXECUTE0);
         actions = List.of("return FilterResult.PASS;");
         check("action=normal");
+        imports = List.of(Ipv4Packet.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -688,8 +700,9 @@ public class TestFlowGen {
         tables = genTable(0, EXECUTE0);
         actions = List.of("return FilterResult.DROP;");
         check("action=drop");
+        imports = List.of(Ipv4Packet.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -710,8 +723,9 @@ public class TestFlowGen {
         );
         check("actions=mod_dl_dst:ab:cd:ef:01:23:45,normal");
 
+        imports = List.of(MacAddress.class, Ipv4Packet.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;\n");
@@ -736,8 +750,9 @@ public class TestFlowGen {
         );
         check("actions=mod_dl_src:ab:cd:ef:01:23:45,normal");
 
+        imports = List.of(Ipv4Packet.class, MacAddress.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;\n");
@@ -755,7 +770,7 @@ public class TestFlowGen {
         imports = List.of(Ipv4Packet.class, IPv4.class, IP.class);
         fields = "private static final IPv4 IPv4_HOLDER_172_16_0_1 = (IPv4) IP.from(\"172.16.0.1\");";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -773,7 +788,7 @@ public class TestFlowGen {
         imports = List.of(Ipv4Packet.class, IPv4.class, IP.class);
         fields = "private static final IPv4 IPv4_HOLDER_172_16_0_1 = (IPv4) IP.from(\"172.16.0.1\");";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -791,7 +806,7 @@ public class TestFlowGen {
         imports = List.of(Ipv6Packet.class, IPv6.class, IP.class);
         fields = "private static final IPv6 IPv6_HOLDER_fd00_abcd__1 = (IPv6) IP.from(\"fd00:abcd::1\");";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -809,7 +824,7 @@ public class TestFlowGen {
         imports = List.of(Ipv6Packet.class, IPv6.class, IP.class);
         fields = "private static final IPv6 IPv6_HOLDER_fd00_abcd__1 = (IPv6) IP.from(\"fd00:abcd::1\");";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -824,9 +839,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_src_tcp() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPSrcTcp");
-        imports = List.of(AbstractIpPacket.class, TcpPacket.class);
+        imports = List.of(Ipv4Packet.class, AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -841,9 +856,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_dst_tcp() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPDstTcp");
-        imports = List.of(AbstractIpPacket.class, TcpPacket.class);
+        imports = List.of(Ipv4Packet.class, AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -857,9 +872,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_src_tcp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPSrcTcp6");
-        imports = List.of(AbstractIpPacket.class, TcpPacket.class);
+        imports = List.of(Ipv6Packet.class, AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -874,9 +889,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_dst_tcp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPDstTcp6");
-        imports = List.of(AbstractIpPacket.class, TcpPacket.class);
+        imports = List.of(Ipv6Packet.class, AbstractIpPacket.class, TcpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -891,9 +906,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_src_udp() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPSrcUdp");
-        imports = List.of(AbstractIpPacket.class, UdpPacket.class);
+        imports = List.of(Ipv4Packet.class, AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -908,9 +923,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_dst_udp() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPDstUdp");
-        imports = List.of(AbstractIpPacket.class, UdpPacket.class);
+        imports = List.of(Ipv4Packet.class, AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -924,9 +939,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_src_udp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPSrcUdp6");
-        imports = List.of(AbstractIpPacket.class, UdpPacket.class);
+        imports = List.of(Ipv6Packet.class, AbstractIpPacket.class, UdpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -941,9 +956,9 @@ public class TestFlowGen {
     @Test
     public void mod_tp_dst_udp6() throws Exception {
         fullname("io.vproxy.test.gen.packetfilters.ModTPDstUdp6");
-        imports = List.of(AbstractIpPacket.class, UdpPacket.class);
+        imports = List.of(AbstractIpPacket.class, Ipv6Packet.class, UdpPacket.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -968,8 +983,9 @@ public class TestFlowGen {
         actions = List.of("return helper.redirect(pkb, ifaces[0].iface);");
         check("action=output:xdp:veth0");
 
+        imports = List.of(IfaceHolder.class, Ipv4Packet.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -994,8 +1010,9 @@ public class TestFlowGen {
             "return FilterResult.DROP;");
         check("actions=output:xdp:veth0,output:xdp:veth1");
 
+        imports = List.of(IfaceHolder.class, Ipv4Packet.class);
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -1055,6 +1072,8 @@ public class TestFlowGen {
             AbstractIpPacket.class,
             UdpPacket.class,
             ArpPacket.class,
+            Ipv4Packet.class,
+            Ipv6Packet.class,
             MacAddress.class,
             BitwiseMatcher.class,
             ByteArray.class,
@@ -1090,34 +1109,34 @@ public class TestFlowGen {
             "registerIfaceHolder(this.ifaces[4]);\n" +
             "registerIfaceHolder(this.ifaces[5]);";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 34525) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet) {\n" +
             "    " + EXECUTE + "0);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 34525 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 58) {\n" +
+            "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 58) {\n" +
             "    " + EXECUTE + "1);\n" +
             "}\n" +
             "if (pkb.pkt.getType() == 2054) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 1) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 1) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
             "    return table2(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
             "    return table2(helper, pkb);\n" +
             "}\n" +
             "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getDst().bytes)) {\n" +
@@ -1128,10 +1147,10 @@ public class TestFlowGen {
             "}\n" +
             "return table1(helper, pkb);")
             + genTable(1, "" +
-            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getSrc().bytes) && pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getSrc().bytes) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
             "    " + EXECUTE + "4);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getDst().bytes) && pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getDst().bytes) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
             "    " + EXECUTE + "5);\n" +
             "}\n" +
             "return table2(helper, pkb);")
@@ -1145,16 +1164,16 @@ public class TestFlowGen {
             "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst().bytes) && pkb.pkt.getType() == 2054) {\n" +
             "    " + EXECUTE + "8);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "9);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "10);\n" +
             "}\n" +
-            "if (pkb.devin == ifaces[5].iface && pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.devin == ifaces[5].iface && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "11);\n" +
             "}\n" +
-            "if (pkb.devin == ifaces[5].iface && pkb.pkt.getType() == 2048 && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.devin == ifaces[5].iface && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "12);\n" +
             "}\n" +
             "if (pkb.devin == ifaces[2].iface && pkb.pkt.getType() == 2054 && BITWISE_MATCHER_HOLDER_6.match(((ArpPacket) pkb.pkt.getPacket()).getSenderIp())) {\n" +
@@ -1163,13 +1182,13 @@ public class TestFlowGen {
             "if (pkb.pkt.getType() == 2054 && BITWISE_MATCHER_HOLDER_6.match(((ArpPacket) pkb.pkt.getPacket()).getTargetIp())) {\n" +
             "    " + EXECUTE + "14);\n" +
             "}\n" +
-            "if (pkb.devin == ifaces[2].iface && pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.devin == ifaces[2].iface && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "15);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_7.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_7.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
             "    " + EXECUTE + "16);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "17);\n" +
             "}\n" +
             "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst().bytes)) {\n" +

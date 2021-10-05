@@ -10,7 +10,7 @@ class TestHttpClient {
   @Test
   fun simpleClient() {
     assertEquals(
-      191373,
+      197645,
       CoroutineHttp1ClientConnection.simpleGet("https://gitee.com/wkgcass/gfwlist/raw/master/gfwlist.txt").block().length()
     )
   }
