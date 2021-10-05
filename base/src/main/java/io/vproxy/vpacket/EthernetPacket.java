@@ -101,9 +101,13 @@ public class EthernetPacket extends AbstractPacket {
         ByteArray addrs = dst.bytes.copy() // dst
             .concat(src.bytes.copy()); // src
         if (vlan < 0) {
-            return addrs
+            var builtBytes = addrs
                 .concat(ByteArray.allocate(2).int16(0, type)) // type
                 .concat(packet.getRawPacket(flags)); // packet
+            if (vlan == PENDING_VLAN_CODE) {
+                vlan = NO_VLAN_CODE;
+            }
+            return builtBytes;
         }
         // consider 802.1q
         var tagAndType = ByteArray.allocate(6);
@@ -142,7 +146,11 @@ public class EthernetPacket extends AbstractPacket {
         var ret = new EthernetPacket();
         ret.dst = dst;
         ret.src = src;
-        ret.vlan = vlan;
+        if (vlan == PENDING_VLAN_CODE) {
+            ret.vlan = NO_VLAN_CODE;
+        } else {
+            ret.vlan = vlan;
+        }
         ret.type = type;
         ret.packet = packet.copy();
         ret.packet.recordParent(ret);
@@ -164,6 +172,7 @@ public class EthernetPacket extends AbstractPacket {
             "dst=" + dst +
             ", src=" + src +
             ", type=" + Utils.toHexString(type) +
+            (vlan >= 0 ? ", vlan=" + vlan : "") +
             ", packet=" + packet +
             '}';
     }
@@ -205,7 +214,6 @@ public class EthernetPacket extends AbstractPacket {
                     returnHeadroomAndMove(4, 12);
                     raw.pktBuf.int16(12, type);
                 }
-                this.vlan = vlan;
             } else {
                 if (this.vlan < 0 && this.vlan != PENDING_VLAN_CODE) {
                     if (consumeHeadroomAndMove(4, 12)) {
