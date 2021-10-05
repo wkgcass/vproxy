@@ -61,14 +61,8 @@ public class ArpPacket extends AbstractPacket {
 
         int expectedTotalLen = 8 + hardwareSize + protocolSize + hardwareSize + protocolSize;
         if (bytes.length() != expectedTotalLen) {
-            // check whether they are all zeros
-            if (Utils.allZerosAfter(bytes, expectedTotalLen)) {
-                assert Logger.lowLevelDebug("received arp packet has extra bytes, " +
-                    "but all bytes are 0, consider them as padding");
-                raw = raw.sub(0, expectedTotalLen);
-            } else {
-                return "input packet has extra bytes for an arp packet: " + (bytes.length() - expectedTotalLen) + " bytes";
-            }
+            assert Logger.lowLevelDebug("received arp packet has extra bytes: " + (bytes.length() - expectedTotalLen) + " bytes");
+            raw = raw.sub(0, expectedTotalLen);
         }
 
         this.raw = raw;
