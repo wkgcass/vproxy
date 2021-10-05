@@ -14,6 +14,8 @@ import io.vproxy.vswitch.stack.conntrack.EnhancedConntrack;
 import io.vproxy.vswitch.stack.fd.VSwitchFDContext;
 import io.vproxy.vswitch.stack.fd.VSwitchFDs;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.concurrent.ThreadLocalRandom;
 
 public class VirtualNetwork {
@@ -138,5 +140,28 @@ public class VirtualNetwork {
             ", ips=" + ips +
             ", routeTable=" + routeTable +
             '}';
+    }
+
+    private Map<Object, Object> userdata;
+
+    public Object getUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.get(key);
+    }
+
+    public Object putUserData(Object key, Object value) {
+        if (userdata == null) {
+            userdata = new HashMap<>();
+        }
+        return userdata.put(key, value);
+    }
+
+    public Object removeUserData(Object key) {
+        if (userdata == null) {
+            return null;
+        }
+        return userdata.remove(key);
     }
 }
