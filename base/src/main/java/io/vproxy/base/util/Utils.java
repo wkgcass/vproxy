@@ -949,12 +949,19 @@ public class Utils {
                 continue;
             }
             String name = line.substring(0, idx);
+            File virtualPath = new File("/sys/devices/virtual/net/" + name + "/");
+            boolean isVirtual = virtualPath.exists();
             String macStr = Files.readString(Path.of("/sys/class/net/" + name + "/address")).trim();
             MacAddress mac;
             try {
                 mac = new MacAddress(macStr);
             } catch (IllegalArgumentException e) {
-                throw new IOException(e);
+                if (isVirtual) {
+                    // might be tun dev
+                    mac = new MacAddress("00:00:00:00:00:00");
+                } else {
+                    throw new IOException("unable to parse mac for " + name + ": " + macStr, e);
+                }
             }
             int speed = -1;
             try {
@@ -962,8 +969,6 @@ public class Utils {
                 speed = Integer.parseInt(speedStr);
             } catch (Exception ignore) {
             }
-            File virtualPath = new File("/sys/devices/virtual/net/" + name + "/");
-            boolean isVirtual = virtualPath.exists();
             ret.add(new Nic(name, mac, speed, isVirtual));
         }
         return ret;
