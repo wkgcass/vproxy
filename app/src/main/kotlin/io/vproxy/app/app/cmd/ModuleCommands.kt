@@ -1,5 +1,7 @@
 package io.vproxy.app.app.cmd
 
+import io.vproxy.app.app.cmd.handle.param.*
+import io.vproxy.app.app.cmd.handle.resource.*
 import java.util.stream.Collectors
 
 @Suppress("NestedLambdaShadowedImplicitParameter")
@@ -10,526 +12,526 @@ class ModuleCommands private constructor() : Commands() {
 
   init {
     val it = AddHelper(resources)
-    it + Res(io.vproxy.app.app.cmd.ResourceType.tl) {
+    it + Res(ResourceType.tl) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tl,
+        relation = ResourceType.tl,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ups, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.aelg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.elg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.inbuffersize) { io.vproxy.app.app.cmd.handle.param.InBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.outbuffersize) { io.vproxy.app.app.cmd.handle.param.OutBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.protocol)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ck)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.ups, required)
+          it + ResActParam(Param.aelg)
+          it + ResActParam(Param.elg)
+          it + ResActParam(Param.inbuffersize) { InBufferSizeHandle.check(it) }
+          it + ResActParam(Param.outbuffersize) { OutBufferSizeHandle.check(it) }
+          it + ResActParam(Param.timeout) { TimeoutHandle.check(it) }
+          it + ResActParam(Param.protocol)
+          it + ResActParam(Param.ck)
+          it + ResActParam(Param.secg)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.TcpLBHandle.add(it) },
+        exec = execUpdate { TcpLBHandle.add(it) },
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tl,
+        relation = ResourceType.tl,
         ActType.list,
       ) {
-        val tlNames = io.vproxy.app.app.cmd.handle.resource.TcpLBHandle.names()
-        io.vproxy.app.app.cmd.CmdResult(tlNames, tlNames, utilJoinList(tlNames))
+        val tlNames = TcpLBHandle.names()
+        CmdResult(tlNames, tlNames, utilJoinList(tlNames))
       }
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tl,
+        relation = ResourceType.tl,
         action = ActType.listdetail,
       ) {
-        val tlRefList = io.vproxy.app.app.cmd.handle.resource.TcpLBHandle.details()
+        val tlRefList = TcpLBHandle.details()
         val tlRefStrList = tlRefList.stream().map { it.toString() }.collect(Collectors.toList())
-        io.vproxy.app.app.cmd.CmdResult(tlRefList, tlRefStrList, utilJoinList(tlRefList))
+        CmdResult(tlRefList, tlRefStrList, utilJoinList(tlRefList))
       }
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tl,
+        relation = ResourceType.tl,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.inbuffersize) { io.vproxy.app.app.cmd.handle.param.InBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.outbuffersize) { io.vproxy.app.app.cmd.handle.param.OutBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ck)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.inbuffersize) { InBufferSizeHandle.check(it) }
+          it + ResActParam(Param.outbuffersize) { OutBufferSizeHandle.check(it) }
+          it + ResActParam(Param.timeout) { TimeoutHandle.check(it) }
+          it + ResActParam(Param.ck)
+          it + ResActParam(Param.secg)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.TcpLBHandle.update(it) }
+        exec = execUpdate { TcpLBHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tl,
+        relation = ResourceType.tl,
         action = ActType.remove,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.TcpLBHandle.remove(it) }
+        exec = execUpdate { TcpLBHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.socks5) {
+    it + Res(ResourceType.socks5) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.socks5,
+        relation = ResourceType.socks5,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ups, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.aelg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.elg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.inbuffersize) { io.vproxy.app.app.cmd.handle.param.InBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.outbuffersize) { io.vproxy.app.app.cmd.handle.param.OutBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.ups, required)
+          it + ResActParam(Param.aelg)
+          it + ResActParam(Param.elg)
+          it + ResActParam(Param.inbuffersize) { InBufferSizeHandle.check(it) }
+          it + ResActParam(Param.outbuffersize) { OutBufferSizeHandle.check(it) }
+          it + ResActParam(Param.timeout) { TimeoutHandle.check(it) }
+          it + ResActParam(Param.secg)
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.allownonbackend)
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.denynonbackend)
+          it + ResActFlag(Flag.allownonbackend)
+          it + ResActFlag(Flag.denynonbackend)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.Socks5ServerHandle.add(it) }
+        exec = execUpdate { Socks5ServerHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.socks5,
+        relation = ResourceType.socks5,
         action = ActType.list
       ) {
-        val socks5Names = io.vproxy.app.app.cmd.handle.resource.Socks5ServerHandle.names()
-        io.vproxy.app.app.cmd.CmdResult(socks5Names, socks5Names, utilJoinList(socks5Names))
+        val socks5Names = Socks5ServerHandle.names()
+        CmdResult(socks5Names, socks5Names, utilJoinList(socks5Names))
       }
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.socks5,
+        relation = ResourceType.socks5,
         action = ActType.listdetail
       ) {
-        val socks5RefList = io.vproxy.app.app.cmd.handle.resource.Socks5ServerHandle.details()
+        val socks5RefList = Socks5ServerHandle.details()
         val socks5RefStrList = socks5RefList.stream().map { it.toString() }.collect(Collectors.toList())
-        io.vproxy.app.app.cmd.CmdResult(socks5RefList, socks5RefStrList, utilJoinList(socks5RefList))
+        CmdResult(socks5RefList, socks5RefStrList, utilJoinList(socks5RefList))
       }
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.socks5,
+        relation = ResourceType.socks5,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.inbuffersize) { io.vproxy.app.app.cmd.handle.param.InBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.outbuffersize) { io.vproxy.app.app.cmd.handle.param.OutBufferSizeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.inbuffersize) { InBufferSizeHandle.check(it) }
+          it + ResActParam(Param.outbuffersize) { OutBufferSizeHandle.check(it) }
+          it + ResActParam(Param.timeout) { TimeoutHandle.check(it) }
+          it + ResActParam(Param.secg)
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.allownonbackend)
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.denynonbackend)
+          it + ResActFlag(Flag.allownonbackend)
+          it + ResActFlag(Flag.denynonbackend)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.Socks5ServerHandle.update(it) }
+        exec = execUpdate { Socks5ServerHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.socks5,
+        relation = ResourceType.socks5,
         action = ActType.remove,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.Socks5ServerHandle.remove(it) }
+        exec = execUpdate { Socks5ServerHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.dns) {
+    it + Res(ResourceType.dns) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dns,
+        relation = ResourceType.dns,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ups, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.elg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ttl) { io.vproxy.app.app.cmd.handle.param.TTLHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.ups, required)
+          it + ResActParam(Param.elg)
+          it + ResActParam(Param.ttl) { TTLHandle.check(it) }
+          it + ResActParam(Param.secg)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.DNSServerHandle.add(it) }
+        exec = execUpdate { DNSServerHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dns,
+        relation = ResourceType.dns,
         action = ActType.list,
         exec = {
-          val dnsServerNames = io.vproxy.app.app.cmd.handle.resource.DNSServerHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(dnsServerNames, dnsServerNames, utilJoinList(dnsServerNames))
+          val dnsServerNames = DNSServerHandle.names()
+          CmdResult(dnsServerNames, dnsServerNames, utilJoinList(dnsServerNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dns,
+        relation = ResourceType.dns,
         action = ActType.listdetail,
         exec = {
-          val dnsServerRefList = io.vproxy.app.app.cmd.handle.resource.DNSServerHandle.details()
+          val dnsServerRefList = DNSServerHandle.details()
           val dnsServerRefStrList = dnsServerRefList.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(dnsServerRefStrList, dnsServerRefStrList, utilJoinList(dnsServerRefList))
+          CmdResult(dnsServerRefStrList, dnsServerRefStrList, utilJoinList(dnsServerRefList))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dns,
+        relation = ResourceType.dns,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ttl) { io.vproxy.app.app.cmd.handle.param.TTLHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
+          it + ResActParam(Param.ttl) { TTLHandle.check(it) }
+          it + ResActParam(Param.secg)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.DNSServerHandle.update(it) }
+        exec = execUpdate { DNSServerHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dns,
+        relation = ResourceType.dns,
         action = ActType.remove,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.DNSServerHandle.remove(it) }
+        exec = execUpdate { DNSServerHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.elg) {
+    it + Res(ResourceType.elg) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.elg,
+        relation = ResourceType.elg,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.EventLoopGroupHandle.add(it) }
+        exec = execUpdate { EventLoopGroupHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.elg,
+        relation = ResourceType.elg,
         action = ActType.list,
         exec = {
-          val elgNames = io.vproxy.app.app.cmd.handle.resource.EventLoopGroupHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(elgNames, elgNames, utilJoinList(elgNames))
+          val elgNames = EventLoopGroupHandle.names()
+          CmdResult(elgNames, elgNames, utilJoinList(elgNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.elg,
+        relation = ResourceType.elg,
         action = ActType.listdetail,
         exec = {
-          val elgs = io.vproxy.app.app.cmd.handle.resource.EventLoopGroupHandle.details()
+          val elgs = EventLoopGroupHandle.details()
           val elgStrs = elgs.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(elgs, elgStrs, utilJoinList(elgs))
+          CmdResult(elgs, elgStrs, utilJoinList(elgs))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.elg,
+        relation = ResourceType.elg,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.EventLoopGroupHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.EventLoopGroupHandle.remvoe(it) }
+        check = { EventLoopGroupHandle.preRemoveCheck(it) },
+        exec = execUpdate { EventLoopGroupHandle.remvoe(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.ups) {
+    it + Res(ResourceType.ups) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ups,
+        relation = ResourceType.ups,
         action = ActType.add,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UpstreamHandle.add(it) }
+        exec = execUpdate { UpstreamHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ups,
+        relation = ResourceType.ups,
         action = ActType.list,
         exec = {
-          val upsNames = io.vproxy.app.app.cmd.handle.resource.UpstreamHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(upsNames, upsNames, utilJoinList(upsNames))
+          val upsNames = UpstreamHandle.names()
+          CmdResult(upsNames, upsNames, utilJoinList(upsNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ups,
+        relation = ResourceType.ups,
         action = ActType.listdetail,
         exec = {
-          val upsNames = io.vproxy.app.app.cmd.handle.resource.UpstreamHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(upsNames, upsNames, utilJoinList(upsNames))
+          val upsNames = UpstreamHandle.names()
+          CmdResult(upsNames, upsNames, utilJoinList(upsNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ups,
+        relation = ResourceType.ups,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.UpstreamHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UpstreamHandle.remove(it) }
+        check = { UpstreamHandle.preRemoveCheck(it) },
+        exec = execUpdate { UpstreamHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.sg) {
+    it + Res(ResourceType.sg) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.period, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.up, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.down, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.protocol)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.meth) { io.vproxy.app.app.cmd.handle.param.MethHandle.get(it, "") }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.elg)
+          it + ResActParam(Param.timeout, required)
+          it + ResActParam(Param.period, required)
+          it + ResActParam(Param.up, required)
+          it + ResActParam(Param.down, required)
+          it + ResActParam(Param.protocol)
+          it + ResActParam(Param.meth) { MethHandle.get(it, "") }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
+          it + ResActParam(Param.elg)
         },
-        check = { io.vproxy.app.app.cmd.handle.param.HealthCheckHandle.getHealthCheckConfig(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.add(it) }
+        check = { HealthCheckHandle.getHealthCheckConfig(it) },
+        exec = execUpdate { ServerGroupHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.ups),
+        targetRelation = ResRelation(ResourceType.ups),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.weight) { io.vproxy.app.app.cmd.handle.param.WeightHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.weight) { WeightHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.attach(it) }
+        exec = execUpdate { ServerGroupHandle.attach(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.list,
         exec = {
-          val sgNames = io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(sgNames, sgNames, utilJoinList(sgNames))
+          val sgNames = ServerGroupHandle.names()
+          CmdResult(sgNames, sgNames, utilJoinList(sgNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.listdetail,
         exec = {
-          val refs = io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.details()
+          val refs = ServerGroupHandle.details()
           val refStrList = refs.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(refs, refStrList, utilJoinList(refStrList))
+          CmdResult(refs, refStrList, utilJoinList(refStrList))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sg, ResRelation(io.vproxy.app.app.cmd.ResourceType.ups)),
+        relation = ResRelation(ResourceType.sg, ResRelation(ResourceType.ups)),
         action = ActType.list,
         exec = {
-          val sgNames = io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(sgNames, sgNames, utilJoinList(sgNames))
+          val sgNames = ServerGroupHandle.names(it.resource.parentResource)
+          CmdResult(sgNames, sgNames, utilJoinList(sgNames))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sg, ResRelation(io.vproxy.app.app.cmd.ResourceType.ups)),
+        relation = ResRelation(ResourceType.sg, ResRelation(ResourceType.ups)),
         action = ActType.listdetail,
         exec = {
-          val refs = io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.details(it.resource.parentResource)
+          val refs = ServerGroupHandle.details(it.resource.parentResource)
           val refStrList = refs.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(refs, refStrList, utilJoinList(refStrList))
+          CmdResult(refs, refStrList, utilJoinList(refStrList))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.timeout) { io.vproxy.app.app.cmd.handle.param.HealthCheckHandle.getHealthCheckConfig(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.period) { io.vproxy.app.app.cmd.handle.param.HealthCheckHandle.getHealthCheckConfig(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.up) { io.vproxy.app.app.cmd.handle.param.HealthCheckHandle.getHealthCheckConfig(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.down) { io.vproxy.app.app.cmd.handle.param.HealthCheckHandle.getHealthCheckConfig(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.protocol)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.meth) { io.vproxy.app.app.cmd.handle.param.MethHandle.get(it, "") }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.timeout) { HealthCheckHandle.getHealthCheckConfig(it) }
+          it + ResActParam(Param.period) { HealthCheckHandle.getHealthCheckConfig(it) }
+          it + ResActParam(Param.up) { HealthCheckHandle.getHealthCheckConfig(it) }
+          it + ResActParam(Param.down) { HealthCheckHandle.getHealthCheckConfig(it) }
+          it + ResActParam(Param.protocol)
+          it + ResActParam(Param.meth) { MethHandle.get(it, "") }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.update(it) }
+        exec = execUpdate { ServerGroupHandle.update(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sg, ResRelation(io.vproxy.app.app.cmd.ResourceType.ups)),
+        relation = ResRelation(ResourceType.sg, ResRelation(ResourceType.ups)),
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.weight) { io.vproxy.app.app.cmd.handle.param.WeightHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.weight) { WeightHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.updateInUpstream(it) }
+        exec = execUpdate { ServerGroupHandle.updateInUpstream(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.remove(it) }
+        check = { ServerGroupHandle.preRemoveCheck(it) },
+        exec = execUpdate { ServerGroupHandle.remove(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sg,
+        relation = ResourceType.sg,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.ups),
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerGroupHandle.detach(it) }
+        targetRelation = ResRelation(ResourceType.ups),
+        exec = execUpdate { ServerGroupHandle.detach(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.el) {
+    it + Res(ResourceType.el) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.el,
+        relation = ResourceType.el,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.elg),
+        targetRelation = ResRelation(ResourceType.elg),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.EventLoopHandle.add(it) }
+        exec = execUpdate { EventLoopHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.el, ResRelation(io.vproxy.app.app.cmd.ResourceType.elg)),
+        relation = ResRelation(ResourceType.el, ResRelation(ResourceType.elg)),
         action = ActType.list,
         exec = {
-          val elNames = io.vproxy.app.app.cmd.handle.resource.EventLoopHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(elNames, elNames, utilJoinList(elNames))
+          val elNames = EventLoopHandle.names(it.resource.parentResource)
+          CmdResult(elNames, elNames, utilJoinList(elNames))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.el, ResRelation(io.vproxy.app.app.cmd.ResourceType.elg)),
+        relation = ResRelation(ResourceType.el, ResRelation(ResourceType.elg)),
         action = ActType.listdetail,
         exec = {
-          val els = io.vproxy.app.app.cmd.handle.resource.EventLoopHandle.detail(it.resource.parentResource)
+          val els = EventLoopHandle.detail(it.resource.parentResource)
           val elStrList = els.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(els, elStrList, utilJoinList(els))
+          CmdResult(els, elStrList, utilJoinList(els))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.el,
+        relation = ResourceType.el,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.elg),
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.EventLoopHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.elg),
+        exec = execUpdate { EventLoopHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.svr) {
+    it + Res(ResourceType.svr) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.svr,
+        relation = ResourceType.svr,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sg),
+        targetRelation = ResRelation(ResourceType.sg),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.weight) { io.vproxy.app.app.cmd.handle.param.WeightHandle.check(it) }
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.weight) { WeightHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerHandle.add(it) }
+        exec = execUpdate { ServerHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.svr, ResRelation(io.vproxy.app.app.cmd.ResourceType.sg)),
+        relation = ResRelation(ResourceType.svr, ResRelation(ResourceType.sg)),
         action = ActType.list,
         exec = {
-          val serverNames = io.vproxy.app.app.cmd.handle.resource.ServerHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(serverNames, serverNames, utilJoinList(serverNames))
+          val serverNames = ServerHandle.names(it.resource.parentResource)
+          CmdResult(serverNames, serverNames, utilJoinList(serverNames))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.svr, ResRelation(io.vproxy.app.app.cmd.ResourceType.sg)),
+        relation = ResRelation(ResourceType.svr, ResRelation(ResourceType.sg)),
         action = ActType.listdetail,
         exec = {
-          val svrRefList = io.vproxy.app.app.cmd.handle.resource.ServerHandle.detail(it.resource.parentResource)
+          val svrRefList = ServerHandle.detail(it.resource.parentResource)
           val svrRefStrList = svrRefList.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(svrRefList, svrRefStrList, utilJoinList(svrRefList))
+          CmdResult(svrRefList, svrRefStrList, utilJoinList(svrRefList))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.svr, ResRelation(io.vproxy.app.app.cmd.ResourceType.sg)),
+        relation = ResRelation(ResourceType.svr, ResRelation(ResourceType.sg)),
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.weight) { io.vproxy.app.app.cmd.handle.param.WeightHandle.check(it) }
+          it + ResActParam(Param.weight) { WeightHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerHandle.update(it) }
+        exec = execUpdate { ServerHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.svr,
+        relation = ResourceType.svr,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sg),
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.ServerHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.sg),
+        exec = execUpdate { ServerHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.secg) {
+    it + Res(ResourceType.secg) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secg,
+        relation = ResourceType.secg,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secgrdefault, required) { io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle.check(it) }
+          it + ResActParam(Param.secgrdefault, required) { SecGRDefaultHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.add(it) }
+        exec = execUpdate { SecurityGroupHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secg,
+        relation = ResourceType.secg,
         action = ActType.list,
         exec = {
-          val sgNames = io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(sgNames, sgNames, utilJoinList(sgNames))
+          val sgNames = SecurityGroupHandle.names()
+          CmdResult(sgNames, sgNames, utilJoinList(sgNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secg,
+        relation = ResourceType.secg,
         action = ActType.listdetail,
         exec = {
-          val secg = io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.detail()
+          val secg = SecurityGroupHandle.detail()
           val secgStrList = secg.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(secgStrList, secgStrList, utilJoinList(secg))
+          CmdResult(secgStrList, secgStrList, utilJoinList(secg))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secg,
+        relation = ResourceType.secg,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secgrdefault) { io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle.check(it) }
+          it + ResActParam(Param.secgrdefault) { SecGRDefaultHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.update(it) }
+        exec = execUpdate { SecurityGroupHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secg,
+        relation = ResourceType.secg,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SecurityGroupHandle.remove(it) }
+        check = { SecurityGroupHandle.preRemoveCheck(it) },
+        exec = execUpdate { SecurityGroupHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.secgr) {
+    it + Res(ResourceType.secgr) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secgr,
+        relation = ResourceType.secgr,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.secg),
+        targetRelation = ResRelation(ResourceType.secg),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.net, required) { io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.protocol, required) { io.vproxy.app.app.cmd.handle.param.ProtocolHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.portrange, required) { io.vproxy.app.app.cmd.handle.param.PortRangeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secgrdefault, required) { io.vproxy.app.app.cmd.handle.param.SecGRDefaultHandle.check(it) }
+          it + ResActParam(Param.net, required) { NetworkHandle.check(it) }
+          it + ResActParam(Param.protocol, required) { ProtocolHandle.check(it) }
+          it + ResActParam(Param.portrange, required) { PortRangeHandle.check(it) }
+          it + ResActParam(Param.secgrdefault, required) { SecGRDefaultHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SecurityGroupRuleHandle.add(it) }
+        exec = execUpdate { SecurityGroupRuleHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.secgr, ResRelation(io.vproxy.app.app.cmd.ResourceType.secg)),
+        relation = ResRelation(ResourceType.secgr, ResRelation(ResourceType.secg)),
         action = ActType.list,
         exec = {
-          val ruleNames = io.vproxy.app.app.cmd.handle.resource.SecurityGroupRuleHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(ruleNames, ruleNames, utilJoinList(ruleNames))
+          val ruleNames = SecurityGroupRuleHandle.names(it.resource.parentResource)
+          CmdResult(ruleNames, ruleNames, utilJoinList(ruleNames))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.secgr, ResRelation(io.vproxy.app.app.cmd.ResourceType.secg)),
+        relation = ResRelation(ResourceType.secgr, ResRelation(ResourceType.secg)),
         action = ActType.listdetail,
         exec = {
-          val rules = io.vproxy.app.app.cmd.handle.resource.SecurityGroupRuleHandle.detail(it.resource.parentResource)
+          val rules = SecurityGroupRuleHandle.detail(it.resource.parentResource)
           val ruleStrList = rules.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(rules, ruleStrList, utilJoinList(rules))
+          CmdResult(rules, ruleStrList, utilJoinList(rules))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.secgr,
+        relation = ResourceType.secgr,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.secg),
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SecurityGroupRuleHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.secg),
+        exec = execUpdate { SecurityGroupRuleHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.ck) {
+    it + Res(ResourceType.ck) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ck,
+        relation = ResourceType.ck,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.cert, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.key, required)
+          it + ResActParam(Param.cert, required)
+          it + ResActParam(Param.key, required)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.CertKeyHandle.add(it) }
+        exec = execUpdate { CertKeyHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ck,
+        relation = ResourceType.ck,
         action = ActType.list,
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.CertKeyHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(names, names, utilJoinList(names))
+          val names = CertKeyHandle.names()
+          CmdResult(names, names, utilJoinList(names))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ck,
+        relation = ResourceType.ck,
         action = ActType.listdetail,
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.CertKeyHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(names, names, utilJoinList(names))
+          val names = CertKeyHandle.names()
+          CmdResult(names, names, utilJoinList(names))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ck,
+        relation = ResourceType.ck,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.CertKeyHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.CertKeyHandle.remove(it) }
+        check = { CertKeyHandle.preRemoveCheck(it) },
+        exec = execUpdate { CertKeyHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.dnscache) {
+    it + Res(ResourceType.dnscache) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dnscache,
+        relation = ResourceType.dnscache,
         action = ActType.list,
-        check = { io.vproxy.app.app.cmd.handle.resource.ResolverHandle.checkResolver(it.resource.parentResource) },
+        check = { ResolverHandle.checkResolver(it.resource.parentResource) },
         exec = {
-          val cacheCnt = io.vproxy.app.app.cmd.handle.resource.DnsCacheHandle.count()
-          io.vproxy.app.app.cmd.CmdResult(cacheCnt, cacheCnt, "" + cacheCnt)
+          val cacheCnt = DnsCacheHandle.count()
+          CmdResult(cacheCnt, cacheCnt, "" + cacheCnt)
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.dnscache, ResRelation(io.vproxy.app.app.cmd.ResourceType.resolver)),
+        relation = ResRelation(ResourceType.dnscache, ResRelation(ResourceType.resolver)),
         action = ActType.listdetail,
-        check = { io.vproxy.app.app.cmd.handle.resource.ResolverHandle.checkResolver(it.resource.parentResource) },
+        check = { ResolverHandle.checkResolver(it.resource.parentResource) },
         exec = {
-          val caches = io.vproxy.app.app.cmd.handle.resource.DnsCacheHandle.detail()
+          val caches = DnsCacheHandle.detail()
           val cacheStrList = caches.stream().map { c: io.vproxy.base.dns.Cache ->
             listOf(
               c.host,
@@ -539,404 +541,416 @@ class ModuleCommands private constructor() : Commands() {
                 .collect(Collectors.toList())
             )
           }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(caches, cacheStrList, utilJoinList(caches))
+          CmdResult(caches, cacheStrList, utilJoinList(caches))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.dnscache,
+        relation = ResourceType.dnscache,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.ResolverHandle.checkResolver(it.resource.parentResource) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.DnsCacheHandle.remove(it) }
+        check = { ResolverHandle.checkResolver(it.resource.parentResource) },
+        exec = execUpdate { DnsCacheHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.sw) {
+    it + Res(ResourceType.sw) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mactabletimeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it, io.vproxy.app.app.cmd.Param.mactabletimeout) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.arptabletimeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it, io.vproxy.app.app.cmd.Param.arptabletimeout) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.elg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mtu) { io.vproxy.app.app.cmd.handle.param.MTUHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.flood) { io.vproxy.app.app.cmd.handle.param.FloodHandle.check(it) }
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
+          it + ResActParam(Param.mactabletimeout) { TimeoutHandle.check(it, Param.mactabletimeout) }
+          it + ResActParam(Param.arptabletimeout) { TimeoutHandle.check(it, Param.arptabletimeout) }
+          it + ResActParam(Param.elg)
+          it + ResActParam(Param.secg)
+          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
+          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SwitchHandle.add(it) }
+        exec = execUpdate { SwitchHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.list,
         exec = {
-          val swNames = io.vproxy.app.app.cmd.handle.resource.SwitchHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(swNames, swNames, utilJoinList(swNames))
+          val swNames = SwitchHandle.names()
+          CmdResult(swNames, swNames, utilJoinList(swNames))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.listdetail,
         exec = {
-          val swRefList = io.vproxy.app.app.cmd.handle.resource.SwitchHandle.details()
+          val swRefList = SwitchHandle.details()
           val swRefStrList = swRefList.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(swRefList, swRefStrList, utilJoinList(swRefList))
+          CmdResult(swRefList, swRefStrList, utilJoinList(swRefList))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mactabletimeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it, io.vproxy.app.app.cmd.Param.mactabletimeout) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.arptabletimeout) { io.vproxy.app.app.cmd.handle.param.TimeoutHandle.check(it, io.vproxy.app.app.cmd.Param.arptabletimeout) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.secg)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mtu) { io.vproxy.app.app.cmd.handle.param.MTUHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.flood) { io.vproxy.app.app.cmd.handle.param.FloodHandle.check(it) }
+          it + ResActParam(Param.mactabletimeout) { TimeoutHandle.check(it, Param.mactabletimeout) }
+          it + ResActParam(Param.arptabletimeout) { TimeoutHandle.check(it, Param.arptabletimeout) }
+          it + ResActParam(Param.secg)
+          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
+          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SwitchHandle.update(it) }
+        exec = execUpdate { SwitchHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.remove,
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SwitchHandle.remove(it) }
+        exec = execUpdate { SwitchHandle.remove(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.sw,
+        relation = ResourceType.sw,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
+          it + ResActParam(Param.addr) { AddrHandle.check(it) }
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.noswitchflag)
+          it + ResActFlag(Flag.noswitchflag)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.SwitchHandle.attach(it) }
+        exec = execUpdate { SwitchHandle.attach(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.vpc) {
+    it + Res(ResourceType.vpc) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.vpc,
+        relation = ResourceType.vpc,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.v4net, required) {
-            io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it, io.vproxy.app.app.cmd.Param.v4net)
-            val net = io.vproxy.app.app.cmd.handle.param.NetworkHandle.get(it, io.vproxy.app.app.cmd.Param.v4net)
+          it + ResActParam(Param.v4net, required) {
+            NetworkHandle.check(it, Param.v4net)
+            val net = NetworkHandle.get(it, Param.v4net)
             if (net.ip.address.size != 4) {
-              throw io.vproxy.base.util.exception.XException("invalid argument " + io.vproxy.app.app.cmd.Param.v4net + ": not ipv4 network: " + net)
+              throw io.vproxy.base.util.exception.XException("invalid argument " + Param.v4net + ": not ipv4 network: " + net)
             }
           }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.v6net) {
-            io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it, io.vproxy.app.app.cmd.Param.v6net)
-            val net = io.vproxy.app.app.cmd.handle.param.NetworkHandle.get(it, io.vproxy.app.app.cmd.Param.v6net)
+          it + ResActParam(Param.v6net) {
+            NetworkHandle.check(it, Param.v6net)
+            val net = NetworkHandle.get(it, Param.v6net)
             if (net.ip.address.size != 16) {
-              throw io.vproxy.base.util.exception.XException("invalid argument " + io.vproxy.app.app.cmd.Param.v6net + ": not ipv6 network: " + net)
+              throw io.vproxy.base.util.exception.XException("invalid argument " + Param.v6net + ": not ipv6 network: " + net)
             }
           }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.VpcHandle.add(it) }
+        check = { VpcHandle.checkVpcName(it.resource) },
+        exec = execUpdate { VpcHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         action = ActType.list,
         exec = {
-          val vpcLs = io.vproxy.app.app.cmd.handle.resource.VpcHandle.list(it.resource.parentResource)
+          val vpcLs = VpcHandle.list(it.resource.parentResource)
           val ls = vpcLs.stream().map { it.vpc }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(vpcLs, ls, utilJoinList(ls))
+          CmdResult(vpcLs, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
         exec = {
-          val vpcLs = io.vproxy.app.app.cmd.handle.resource.VpcHandle.list(it.resource.parentResource)
+          val vpcLs = VpcHandle.list(it.resource.parentResource)
           val ls = vpcLs.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(vpcLs, ls, utilJoinList(ls))
+          CmdResult(vpcLs, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.vpc,
+        relation = ResourceType.vpc,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.VpcHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.sw),
+        check = { VpcHandle.checkVpcName(it.resource) },
+        exec = execUpdate { VpcHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.iface) {
+    it + Res(ResourceType.iface) {
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.iface, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.iface, ResRelation(ResourceType.sw)),
         action = ActType.list,
         exec = {
-          val cnt = io.vproxy.app.app.cmd.handle.resource.IfaceHandle.count(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(cnt, cnt, "" + cnt)
+          val cnt = IfaceHandle.count(it.resource.parentResource)
+          CmdResult(cnt, cnt, "" + cnt)
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.iface, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.iface, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
         exec = {
-          val ifaces = io.vproxy.app.app.cmd.handle.resource.IfaceHandle.list(it.resource.parentResource)
+          val ifaces = IfaceHandle.list(it.resource.parentResource)
           val ls = ifaces.stream().map { it.name() + " -> " + it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(ifaces, ls, utilJoinList(ls))
+          CmdResult(ifaces, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.iface, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.iface, ResRelation(ResourceType.sw)),
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mtu) { io.vproxy.app.app.cmd.handle.param.MTUHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.flood) { io.vproxy.app.app.cmd.handle.param.FloodHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
+          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
+          it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.enable)
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.disable)
+          it + ResActFlag(Flag.enable)
+          it + ResActFlag(Flag.disable)
         },
         check = {
-          if (it.flags.contains(io.vproxy.app.app.cmd.Flag.enable) && it.flags.contains(io.vproxy.app.app.cmd.Flag.disable)) {
+          if (it.flags.contains(Flag.enable) && it.flags.contains(Flag.disable)) {
             throw io.vproxy.base.util.exception.XException("cannot specify enable and disable at the same time")
           }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.IfaceHandle.update(it) }
+        exec = execUpdate { IfaceHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.iface,
+        relation = ResourceType.iface,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         exec = {
-          io.vproxy.app.app.cmd.handle.resource.IfaceHandle.remove(it)
-          io.vproxy.app.app.cmd.CmdResult()
+          IfaceHandle.remove(it)
+          CmdResult()
         }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.arp) {
+    it + Res(ResourceType.arp) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.arp,
+        relation = ResourceType.arp,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.ip) { io.vproxy.app.app.cmd.handle.param.IpParamHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.iface)
+          it + ResActParam(Param.ip) { IpParamHandle.check(it) }
+          it + ResActParam(Param.iface)
         },
         check = {
-          io.vproxy.app.app.cmd.handle.resource.ArpHandle.checkMacName(it.resource)
-          if (!it.args.containsKey(io.vproxy.app.app.cmd.Param.ip) && !(it.args.containsKey(io.vproxy.app.app.cmd.Param.iface))) {
+          ArpHandle.checkMacName(it.resource)
+          if (!it.args.containsKey(Param.ip) && !(it.args.containsKey(Param.iface))) {
             throw io.vproxy.base.util.exception.XException("at lease one of ip|iface should be specified")
           }
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.prepositionResource)
+          VpcHandle.checkVpcName(it.prepositionResource)
         },
         exec = {
-          io.vproxy.app.app.cmd.handle.resource.ArpHandle.add(it)
-          io.vproxy.app.app.cmd.CmdResult()
+          ArpHandle.add(it)
+          CmdResult()
         }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.arp, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.arp, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.list,
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
         exec = {
-          val cnt = io.vproxy.app.app.cmd.handle.resource.ArpHandle.count(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(cnt, cnt, "" + cnt)
+          val cnt = ArpHandle.count(it.resource.parentResource)
+          CmdResult(cnt, cnt, "" + cnt)
         }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.arp, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.arp, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.listdetail,
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
         exec = {
-          val arpLs = io.vproxy.app.app.cmd.handle.resource.ArpHandle.list(it.resource.parentResource)
+          val arpLs = ArpHandle.list(it.resource.parentResource)
           val ls = arpLs.stream().map { it.toString(arpLs) }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(arpLs, ls, utilJoinList(ls))
+          CmdResult(arpLs, ls, utilJoinList(ls))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.arp,
+        relation = ResourceType.arp,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
-        check = { io.vproxy.app.app.cmd.handle.resource.ArpHandle.checkMacName(it.resource) },
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        check = { ArpHandle.checkMacName(it.resource) },
         exec = {
-          io.vproxy.app.app.cmd.handle.resource.ArpHandle.remove(it)
-          io.vproxy.app.app.cmd.CmdResult()
+          ArpHandle.remove(it)
+          CmdResult()
         }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.user) {
+    it + Res(ResourceType.user) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.user,
+        relation = ResourceType.user,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.pass, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mtu) { io.vproxy.app.app.cmd.handle.param.MTUHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.flood) { io.vproxy.app.app.cmd.handle.param.FloodHandle.check(it) }
+          it + ResActParam(Param.pass, required)
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
+          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UserHandle.add(it) }
+        exec = execUpdate { UserHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.user, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
         action = ActType.list,
         exec = {
-          val users = io.vproxy.app.app.cmd.handle.resource.UserHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(users, users, utilJoinList(users))
+          val users = UserHandle.names(it.resource.parentResource)
+          CmdResult(users, users, utilJoinList(users))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.user, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
         exec = {
-          val userInfoList = io.vproxy.app.app.cmd.handle.resource.UserHandle.list(it.resource.parentResource)
+          val userInfoList = UserHandle.list(it.resource.parentResource)
           val strList = userInfoList.stream().map { it.toString() }
             .collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(userInfoList, strList, utilJoinList(strList))
+          CmdResult(userInfoList, strList, utilJoinList(strList))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.user, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.user, ResRelation(ResourceType.sw)),
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mtu) { io.vproxy.app.app.cmd.handle.param.MTUHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.flood) { io.vproxy.app.app.cmd.handle.param.FloodHandle.check(it) }
+          it + ResActParam(Param.mtu) { MTUHandle.check(it) }
+          it + ResActParam(Param.flood) { FloodHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UserHandle.update(it) }
+        exec = execUpdate { UserHandle.update(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.user,
+        relation = ResourceType.user,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UserHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.sw),
+        exec = execUpdate { UserHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.tap) {
+    it + Res(ResourceType.tap) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tap,
+        relation = ResourceType.tap,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.postscript)
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.postscript)
         },
         check = {
           if (it.resource.alias.length > 15) {
             throw io.vproxy.base.util.exception.XException("tap dev name pattern too long: should <= 15")
           }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.TapHandle.add(it) }
+        exec = execUpdate { TapHandle.add(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.tun) {
+    it + Res(ResourceType.tun) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.tun,
+        relation = ResourceType.tun,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mac, required) { io.vproxy.app.app.cmd.handle.param.MacHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.postscript)
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.mac, required) { MacHandle.check(it) }
+          it + ResActParam(Param.postscript)
         },
         check = {
           if (it.resource.alias.length > 15) {
             throw io.vproxy.base.util.exception.XException("tun dev name pattern too long: should <= 15")
           }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.TunHandle.add(it) }
+        exec = execUpdate { TunHandle.add(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.ucli) {
+    it + Res(ResourceType.ucli) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ucli,
+        relation = ResourceType.ucli,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.pass, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.addr, required) { io.vproxy.app.app.cmd.handle.param.AddrHandle.check(it) }
+          it + ResActParam(Param.pass, required)
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.addr, required) { AddrHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UserClientHandle.add(it) }
+        exec = execUpdate { UserClientHandle.add(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.xdp) {
+    it + Res(ResourceType.xdp) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.xdp,
+        relation = ResourceType.xdp,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.bpfmap)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.umem, required)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.queue, required) { io.vproxy.app.app.cmd.handle.param.QueueHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.rxringsize) { io.vproxy.app.app.cmd.handle.param.RingSizeHandle.check(it, io.vproxy.app.app.cmd.Param.rxringsize) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.txringsize) { io.vproxy.app.app.cmd.handle.param.RingSizeHandle.check(it, io.vproxy.app.app.cmd.Param.txringsize) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mode) { io.vproxy.app.app.cmd.handle.param.BPFModeHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.busypoll) { io.vproxy.app.app.cmd.handle.param.BusyPollHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.bpfmapkeyselector) { io.vproxy.app.app.cmd.handle.param.BPFMapKeySelectorHandle.check(it) }
+          it + ResActParam(Param.bpfmap)
+          it + ResActParam(Param.umem, required)
+          it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
+          it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
+          it + ResActParam(Param.txringsize) { RingSizeHandle.check(it, Param.txringsize) }
+          it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
+          it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
+          it + ResActParam(Param.bpfmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.zerocopy)
+          it + ResActFlag(Flag.zerocopy)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.XDPHandle.add(it) }
+        exec = execUpdate { XDPHandle.add(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.vlan) {
+    it + Res(ResourceType.vlan) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.vlan,
+        relation = ResourceType.vlan,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni, required) { io.vproxy.app.app.cmd.handle.param.VniHandle.check(it) }
+          it + ResActParam(Param.vni, required) { VniHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.VLanAdaptorHandle.add(it) }
+        exec = execUpdate { VLanAdaptorHandle.add(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.ip) {
+    it + Res(ResourceType.ip) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ip,
+        relation = ResourceType.ip,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mac, required) { io.vproxy.app.app.cmd.handle.param.MacHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.anno) { io.vproxy.app.app.cmd.handle.param.AnnotationsHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.routing) { io.vproxy.app.app.cmd.handle.param.RoutingHandle.check(it) }
+          it + ResActParam(Param.mac, required) { MacHandle.check(it) }
+          it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
+          it + ResActParam(Param.routing) { RoutingHandle.check(it) }
         },
         check = {
-          io.vproxy.app.app.cmd.handle.resource.IpHandle.checkIpName(it.resource)
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.prepositionResource)
+          IpHandle.checkIpName(it.resource)
+          VpcHandle.checkVpcName(it.prepositionResource)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.IpHandle.add(it) }
+        exec = execUpdate { IpHandle.add(it) }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.ip, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.ip, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.list,
         check = {
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource)
+          VpcHandle.checkVpcName(it.resource.parentResource)
         },
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.IpHandle.names(it.resource.parentResource)
+          val names = IpHandle.names(it.resource.parentResource)
           val strNames = names.stream().map { it.formatToIPString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(names, strNames, utilJoinList(strNames))
+          CmdResult(names, strNames, utilJoinList(strNames))
         }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.ip, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.ip, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.listdetail,
         check = {
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource)
+          VpcHandle.checkVpcName(it.resource.parentResource)
         },
         exec = {
-          val tuples = io.vproxy.app.app.cmd.handle.resource.IpHandle.list(it.resource.parentResource)
+          val tuples = IpHandle.list(it.resource.parentResource)
           val strTuples = tuples.stream().map {
             it.ip.formatToIPString() + " -> mac " + it.mac + " routing " + if (it.routing) {
               "on"
@@ -945,161 +959,170 @@ class ModuleCommands private constructor() : Commands() {
             } +
                 if (it.annotations.isEmpty) "" else " annotations " + it.annotations
           }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(tuples, strTuples, utilJoinList(strTuples))
+          CmdResult(tuples, strTuples, utilJoinList(strTuples))
         }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.ip, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.ip, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.update,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.routing) { io.vproxy.app.app.cmd.handle.param.RoutingHandle.check(it) }
+          it + ResActParam(Param.routing) { RoutingHandle.check(it) }
         },
         check = {
-          io.vproxy.app.app.cmd.handle.resource.IpHandle.checkIpName(it.resource)
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource)
+          IpHandle.checkIpName(it.resource)
+          VpcHandle.checkVpcName(it.resource.parentResource)
         },
         exec = {
-          io.vproxy.app.app.cmd.handle.resource.IpHandle.update(it)
-          io.vproxy.app.app.cmd.CmdResult()
+          IpHandle.update(it)
+          CmdResult()
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.ip,
+        relation = ResourceType.ip,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         check = {
-          io.vproxy.app.app.cmd.handle.resource.IpHandle.checkIpName(it.resource)
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.prepositionResource)
+          IpHandle.checkIpName(it.resource)
+          VpcHandle.checkVpcName(it.prepositionResource)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.IpHandle.remove(it) }
+        exec = execUpdate { IpHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.route) {
+    it + Res(ResourceType.route) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.route,
+        relation = ResourceType.route,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.net, required) { io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.vni) { io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.via) { io.vproxy.app.app.cmd.handle.param.NetworkHandle.check(it) }
+          it + ResActParam(Param.net, required) { NetworkHandle.check(it) }
+          it + ResActParam(Param.vni) { NetworkHandle.check(it) }
+          it + ResActParam(Param.via) { NetworkHandle.check(it) }
         },
         check = {
-          io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.prepositionResource)
-          io.vproxy.app.app.cmd.handle.resource.RouteHandle.checkCreateRoute(it)
+          VpcHandle.checkVpcName(it.prepositionResource)
+          RouteHandle.checkCreateRoute(it)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.RouteHandle.add(it) }
+        exec = execUpdate { RouteHandle.add(it) }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.route, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.route, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.list,
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.RouteHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(names, names, utilJoinList(names))
+          val names = RouteHandle.names(it.resource.parentResource)
+          CmdResult(names, names, utilJoinList(names))
         }
       )
       it + ResAct(
         relation = ResRelation(
-          io.vproxy.app.app.cmd.ResourceType.route, ResRelation(
-            io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(
-              io.vproxy.app.app.cmd.ResourceType.sw))),
+          ResourceType.route, ResRelation(
+            ResourceType.vpc, ResRelation(
+              ResourceType.sw
+            )
+          )
+        ),
         action = ActType.listdetail,
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.resource.parentResource) },
+        check = { VpcHandle.checkVpcName(it.resource.parentResource) },
         exec = {
-          val routes = io.vproxy.app.app.cmd.handle.resource.RouteHandle.list(it.resource.parentResource)
+          val routes = RouteHandle.list(it.resource.parentResource)
           val strTuples = routes.stream().map { it.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(routes, strTuples, utilJoinList(strTuples))
+          CmdResult(routes, strTuples, utilJoinList(strTuples))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.route,
+        relation = ResourceType.route,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.vpc, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
-        check = { io.vproxy.app.app.cmd.handle.resource.VpcHandle.checkVpcName(it.prepositionResource) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.RouteHandle.remove(it) }
+        targetRelation = ResRelation(ResourceType.vpc, ResRelation(ResourceType.sw)),
+        check = { VpcHandle.checkVpcName(it.prepositionResource) },
+        exec = execUpdate { RouteHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.umem) {
+    it + Res(ResourceType.umem) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.umem,
+        relation = ResourceType.umem,
         action = ActType.addto,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.chunks) { io.vproxy.app.app.cmd.handle.param.RingSizeHandle.check(it, io.vproxy.app.app.cmd.Param.chunks) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.fillringsize) { io.vproxy.app.app.cmd.handle.param.RingSizeHandle.check(it, io.vproxy.app.app.cmd.Param.fillringsize) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.compringsize) { io.vproxy.app.app.cmd.handle.param.RingSizeHandle.check(it, io.vproxy.app.app.cmd.Param.compringsize) }
-          it + ResActParam(io.vproxy.app.app.cmd.Param.framesize) { io.vproxy.app.app.cmd.handle.param.FrameSizeHandle.check(it) }
+          it + ResActParam(Param.chunks) { RingSizeHandle.check(it, Param.chunks) }
+          it + ResActParam(Param.fillringsize) { RingSizeHandle.check(it, Param.fillringsize) }
+          it + ResActParam(Param.compringsize) { RingSizeHandle.check(it, Param.compringsize) }
+          it + ResActParam(Param.framesize) { FrameSizeHandle.check(it) }
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UMemHandle.add(it) }
+        exec = execUpdate { UMemHandle.add(it) }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.umem, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.umem, ResRelation(ResourceType.sw)),
         action = ActType.list,
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.UMemHandle.names(it.resource.parentResource)
-          io.vproxy.app.app.cmd.CmdResult(names, names, utilJoinList(names))
+          val names = UMemHandle.names(it.resource.parentResource)
+          CmdResult(names, names, utilJoinList(names))
         }
       )
       it + ResAct(
-        relation = ResRelation(io.vproxy.app.app.cmd.ResourceType.umem, ResRelation(io.vproxy.app.app.cmd.ResourceType.sw)),
+        relation = ResRelation(ResourceType.umem, ResRelation(ResourceType.sw)),
         action = ActType.listdetail,
         exec = {
-          val umems = io.vproxy.app.app.cmd.handle.resource.UMemHandle.list(it.resource.parentResource)
+          val umems = UMemHandle.list(it.resource.parentResource)
           val strLs = umems.stream().map { u -> u.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(umems, strLs, utilJoinList(strLs))
+          CmdResult(umems, strLs, utilJoinList(strLs))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.umem,
+        relation = ResourceType.umem,
         action = ActType.removefrom,
-        targetRelation = ResRelation(io.vproxy.app.app.cmd.ResourceType.sw),
+        targetRelation = ResRelation(ResourceType.sw),
         // will check when executing: check = { UMemHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.UMemHandle.remove(it) }
+        exec = execUpdate { UMemHandle.remove(it) }
       )
     }
-    it + Res(io.vproxy.app.app.cmd.ResourceType.bpfobj) {
+    it + Res(ResourceType.bpfobj) {
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.bpfobj,
+        relation = ResourceType.bpfobj,
         action = ActType.add,
         params = {
-          it + ResActParam(io.vproxy.app.app.cmd.Param.path)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.prog)
-          it + ResActParam(io.vproxy.app.app.cmd.Param.mode) { io.vproxy.app.app.cmd.handle.param.BPFModeHandle.check(it) }
+          it + ResActParam(Param.path)
+          it + ResActParam(Param.prog)
+          it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
         },
         flags = {
-          it + ResActFlag(io.vproxy.app.app.cmd.Flag.force)
+          it + ResActFlag(Flag.force)
         },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.BPFObjectHandle.add(it) }
+        exec = execUpdate { BPFObjectHandle.add(it) }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.bpfobj,
+        relation = ResourceType.bpfobj,
         action = ActType.list,
         exec = {
-          val names = io.vproxy.app.app.cmd.handle.resource.BPFObjectHandle.names()
-          io.vproxy.app.app.cmd.CmdResult(names, names, utilJoinList(names))
+          val names = BPFObjectHandle.names()
+          CmdResult(names, names, utilJoinList(names))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.bpfobj,
+        relation = ResourceType.bpfobj,
         action = ActType.listdetail,
         exec = {
-          val objects = io.vproxy.app.app.cmd.handle.resource.BPFObjectHandle.list()
+          val objects = BPFObjectHandle.list()
           val strLs = objects.stream().map { o -> o.toString() }.collect(Collectors.toList())
-          io.vproxy.app.app.cmd.CmdResult(objects, strLs, utilJoinList(strLs))
+          CmdResult(objects, strLs, utilJoinList(strLs))
         }
       )
       it + ResAct(
-        relation = io.vproxy.app.app.cmd.ResourceType.bpfobj,
+        relation = ResourceType.bpfobj,
         action = ActType.remove,
-        check = { io.vproxy.app.app.cmd.handle.resource.BPFObjectHandle.preRemoveCheck(it) },
-        exec = execUpdate { io.vproxy.app.app.cmd.handle.resource.BPFObjectHandle.remove(it) }
+        check = { BPFObjectHandle.preRemoveCheck(it) },
+        exec = execUpdate { BPFObjectHandle.remove(it) }
       )
     }
   } // end init
