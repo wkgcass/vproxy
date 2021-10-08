@@ -58,6 +58,14 @@ public class SyntheticIpHolder {
         return ipMap.values();
     }
 
+    public IPMac findAnyIPForRouting(boolean ipv6) {
+        if (ipv6) {
+            return findAnyIPv6ForRouting();
+        } else {
+            return findAnyIPv4ForRouting();
+        }
+    }
+
     public IPMac findAnyIPv4ForRouting() {
         var opt = ipMap.values().stream().filter(ipmac -> ipmac.routing && ipmac.ip instanceof IPv4).findAny();
         return opt.orElse(null);

@@ -24,6 +24,7 @@ import io.vproxy.vfd.posix.PosixDatagramFD;
 import io.vproxy.vmirror.Mirror;
 import io.vproxy.vpacket.EthernetPacket;
 import io.vproxy.vpacket.Ipv4Packet;
+import io.vproxy.vpacket.Ipv6Packet;
 import io.vproxy.vpacket.PartialPacket;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.iface.*;
@@ -833,11 +834,40 @@ public class Switch {
                 Logger.shouldNotHappen("only tun interfaces can input non-ethernet packets, but got " + pkb.devin);
                 return false; // drop
             }
-            var mac = network.arpTable.lookup(pkb.ipPkt.getDst());
-            if (mac != null) {
+            var route = network.routeTable.lookup(pkb.ipPkt.getDst());
+            if (route != null && route.isLocalDirect(network.vni)) {
+                assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " requires no routing");
+                var mac = network.arpTable.lookup(pkb.ipPkt.getDst());
+                if (mac != null) {
+                    buildEthernetHeaderForTunDev(pkb, mac);
+                } else {
+                    generateArpOrNdpRequestForTunDev(pkb);
+                }
+            } else if (route == null || route.ip == null) {
+                assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " " +
+                    "is not gateway routing, or route does not exist");
+                var mac = network.ips.lookup(pkb.ipPkt.getDst());
+                if (mac == null) {
+                    assert Logger.lowLevelDebug("the target address is not a synthetic ip");
+                    var ipmac = network.ips.findAnyIPForRouting(pkb.ipPkt instanceof Ipv6Packet);
+                    if (ipmac == null) {
+                        assert Logger.lowLevelDebug("no routable ip found");
+                        return false; // drop
+                    }
+                    mac = ipmac.mac;
+                }
                 buildEthernetHeaderForTunDev(pkb, mac);
             } else {
-                generateArpOrNdpRequestForTunDev(pkb);
+                assert Logger.lowLevelDebug("packet from " + pkb.devin + " to " + pkb.ipPkt.getDst() + " requires gateway routing to " + route.ip);
+                var mac = network.arpTable.lookup(route.ip);
+                if (mac == null) {
+                    mac = network.ips.lookup(route.ip);
+                }
+                if (mac != null) {
+                    buildEthernetHeaderForTunDev(pkb, mac);
+                } else {
+                    generateArpOrNdpRequestForTunDev(pkb, route.ip);
+                }
             }
         }
         assert pkb.pkt != null;
@@ -942,17 +972,21 @@ public class Switch {
     }
 
     private void generateArpOrNdpRequestForTunDev(PacketBuffer pkb) {
-        if (pkb.ipPkt instanceof Ipv4Packet) {
-            generateArpRequestForTunDev(pkb);
+        generateArpOrNdpRequestForTunDev(pkb, pkb.ipPkt.getDst());
+    }
+
+    private void generateArpOrNdpRequestForTunDev(PacketBuffer pkb, IP target) {
+        if (target instanceof IPv4) {
+            generateArpRequestForTunDev(pkb, (IPv4) target);
         } else {
-            generateNdpRequestForTunDev(pkb);
+            generateNdpRequestForTunDev(pkb, (IPv6) target);
         }
     }
 
-    private void generateArpRequestForTunDev(PacketBuffer pkb) {
+    private void generateArpRequestForTunDev(PacketBuffer pkb, IPv4 target) {
         var tun = (TunIface) pkb.devin;
         var arp = SwitchUtils.buildArpPacket(Consts.ARP_PROTOCOL_OPCODE_REQ,
-            SwitchUtils.ZERO_MAC, (IPv4) pkb.ipPkt.getDst(),
+            SwitchUtils.ZERO_MAC, target,
             tun.mac, (IPv4) pkb.ipPkt.getSrc());
         var ether = SwitchUtils.buildEtherArpPacket(SwitchUtils.BROADCAST_MAC, tun.mac, arp);
 
@@ -960,9 +994,9 @@ public class Switch {
         pkb.replacePacket(ether);
     }
 
-    private void generateNdpRequestForTunDev(PacketBuffer pkb) {
+    private void generateNdpRequestForTunDev(PacketBuffer pkb, IPv6 target) {
         var tun = (TunIface) pkb.devin;
-        var ipv6 = SwitchUtils.buildNeighborSolicitationPacket((IPv6) pkb.ipPkt.getDst(), tun.mac, (IPv6) pkb.ipPkt.getSrc());
+        var ipv6 = SwitchUtils.buildNeighborSolicitationPacket(target, tun.mac, (IPv6) pkb.ipPkt.getSrc());
         var ether = SwitchUtils.buildEtherIpPacket(SwitchUtils.BROADCAST_MAC, tun.mac, ipv6);
 
         assert Logger.lowLevelDebug("original input " + pkb + " is replaced with ndp request " + ether);
