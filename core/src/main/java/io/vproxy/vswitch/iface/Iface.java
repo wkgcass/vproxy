@@ -215,7 +215,6 @@ public abstract class Iface {
         return name()
             + (extra == null || extra.isEmpty() ? "" : extra)
             + " " + paramsToString()
-            + " " + statistics
             + (annotations == null ? "" : " annotations " + annotations);
     }
 }
