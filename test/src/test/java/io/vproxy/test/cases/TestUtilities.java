@@ -2,7 +2,8 @@ package io.vproxy.test.cases;
 
 import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.bitwise.BitwiseMatcher;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.bitwise.*;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.display.TreeBuilder;
 import io.vproxy.base.util.objectpool.ConcurrentObjectPool;
@@ -11,6 +12,8 @@ import io.vproxy.base.util.objectpool.PrototypeObjectList;
 import io.vproxy.base.util.ratelimit.RateLimiter;
 import io.vproxy.base.util.ratelimit.SimpleRateLimiter;
 import io.vproxy.base.util.ratelimit.StatisticsRateLimiter;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 import org.junit.Assert;
 import org.junit.Test;
 
@@ -300,7 +303,27 @@ public class TestUtilities {
 
     @Test
     public void bitwiseMatcher() throws Exception {
-        var matcher = new BitwiseMatcher(ByteArray.fromHexString("64766777"), ByteArray.fromHexString("ffffffff"));
+        var matcher = BitwiseMatcher.from(ByteArray.fromHexString("64766777"), ByteArray.fromHexString("ffffffff"));
         assertFalse(matcher.match(ByteArray.fromHexString("ffffffff")));
+
+        var ipv4 = IP.from("192.168.1.1");
+        assertTrue(BitwiseMatcher.from(ipv4.bytes).match(ipv4));
+        var ipv6 = IP.from("2000::1");
+        assertTrue(BitwiseMatcher.from(ipv6.bytes).match(ipv6));
+        var mac = new MacAddress("01:23:45:67:89:01");
+        assertTrue(BitwiseMatcher.from(mac.bytes).match(mac));
+        var net = new Network("192.168.1.0/24");
+        assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray()).match(ipv4));
+        assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray(), true).match(ipv4));
+    }
+
+    @Test
+    public void bitwiseMatcherType() {
+        assertTrue(BitwiseMatcher.from(IP.from("192.168.1.1").toByteArray()) instanceof BitwiseIPv4Matcher);
+        assertTrue(BitwiseMatcher.from(IP.from("2000::1").toByteArray()) instanceof BitwiseIPv6Matcher);
+        assertTrue(BitwiseMatcher.from(new MacAddress("01:23:45:67:89:01").toByteArray()) instanceof BitwiseMacAddressMatcher);
+        var net = new Network("192.168.1.0/24");
+        assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray()) instanceof BitwiseNetworkMatcher);
+        assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray(), true) instanceof BitwiseNetworkMatcher);
     }
 }

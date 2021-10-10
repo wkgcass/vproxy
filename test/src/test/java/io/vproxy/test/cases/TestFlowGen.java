@@ -204,11 +204,11 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.DLDst");
         imports = List.of(BitwiseMatcher.class, ByteArray.class);
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"abcdef012345\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));";
         tables = genTable(0, "" +
-            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getDst().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getDst())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -220,11 +220,11 @@ public class TestFlowGen {
         fullname("io.vproxy.test.gen.packetfilters.DLSrc");
         imports = List.of(BitwiseMatcher.class, ByteArray.class);
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"abcdef012345\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));";
         tables = genTable(0, "" +
-            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getSrc().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getSrc())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -263,7 +263,7 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
@@ -283,7 +283,7 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
@@ -303,7 +303,7 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"abcdef012345\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));";
         tables = genTable(0, "" +
@@ -323,7 +323,7 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"abcdef012345\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));";
         tables = genTable(0, "" +
@@ -344,11 +344,11 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -365,11 +365,11 @@ public class TestFlowGen {
             ByteArray.class
         );
         fields = "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"ac100001\"), " +
             "ByteArray.fromHexString(\"ffffffff\"));";
         tables = genTable(0, "" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst())) {\n" +
             "    " + EXECUTE0 + "\n" +
             "}\n" +
             "return FilterResult.DROP;");
@@ -410,7 +410,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -433,7 +433,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -456,7 +456,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -479,7 +479,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 6 " +
@@ -502,7 +502,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -525,7 +525,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -548,7 +548,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -571,7 +571,7 @@ public class TestFlowGen {
             BitwiseIntMatcher.class
         );
         fields = "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = " +
-            "new BitwiseIntMatcher(80, -1);";
+            "BitwiseIntMatcher.from(80, -1);";
         tables = genTable(0, "" +
             "if (pkb.pkt.getType() == 34525 && pkb.pkt.getPacket() instanceof Ipv6Packet " +
             "&& ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 " +
@@ -621,11 +621,11 @@ public class TestFlowGen {
         );
         fields = "" +
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"abcdef012345\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));\n" +
             "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_1 = " +
-            "new BitwiseMatcher(" +
+            "BitwiseMatcher.from(" +
             "ByteArray.fromHexString(\"fedcba098765\"), " +
             "ByteArray.fromHexString(\"ffffffffffff\"));\n" +
             "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
@@ -642,12 +642,12 @@ public class TestFlowGen {
             "if (pkb.devin == ifaces[1].iface) {\n" +
             "    " + EXECUTE + "1);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getDst().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_0.match(pkb.pkt.getDst())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
             EXECUTE + "2);\n") +
             genTable(1, "" +
-                "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getSrc().bytes)) {\n" +
+                "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getSrc())) {\n" +
                 "    return table3(helper, pkb);\n" +
                 "}\n" +
                 "return table2(helper, pkb);") +
@@ -1082,17 +1082,17 @@ public class TestFlowGen {
         );
         fields = "" +
             "private static final MacAddress MAC_HOLDER_d6_62_92_ee_ce_bf = new MacAddress(\"d6:62:92:ee:ce:bf\");\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = new BitwiseMatcher(ByteArray.fromHexString(\"c0a80108\"), ByteArray.fromHexString(\"ffffffff\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_1 = new BitwiseMatcher(ByteArray.fromHexString(\"ffffffffffff\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_2 = new BitwiseMatcher(ByteArray.fromHexString(\"01005e000000\"), ByteArray.fromHexString(\"ffffff800000\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_3 = new BitwiseMatcher(ByteArray.fromHexString(\"58b623ed6fbd\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_4 = new BitwiseMatcher(ByteArray.fromHexString(\"c0a80100\"), ByteArray.fromHexString(\"ffffff00\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_5 = new BitwiseMatcher(ByteArray.fromHexString(\"1875322e59e8\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_6 = new BitwiseMatcher(ByteArray.fromHexString(\"c0a80101\"), ByteArray.fromHexString(\"ffffffff\"));\n" +
-            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_7 = new BitwiseMatcher(ByteArray.fromHexString(\"64600000\"), ByteArray.fromHexString(\"ffe00000\"));\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = new BitwiseIntMatcher(68, -1);\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_1 = new BitwiseIntMatcher(67, -1);\n" +
-            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_2 = new BitwiseIntMatcher(53, -1);\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_0 = BitwiseMatcher.from(ByteArray.fromHexString(\"c0a80108\"), ByteArray.fromHexString(\"ffffffff\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_1 = BitwiseMatcher.from(ByteArray.fromHexString(\"ffffffffffff\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_2 = BitwiseMatcher.from(ByteArray.fromHexString(\"01005e000000\"), ByteArray.fromHexString(\"ffffff800000\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_3 = BitwiseMatcher.from(ByteArray.fromHexString(\"58b623ed6fbd\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_4 = BitwiseMatcher.from(ByteArray.fromHexString(\"c0a80100\"), ByteArray.fromHexString(\"ffffff00\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_5 = BitwiseMatcher.from(ByteArray.fromHexString(\"1875322e59e8\"), ByteArray.fromHexString(\"ffffffffffff\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_6 = BitwiseMatcher.from(ByteArray.fromHexString(\"c0a80101\"), ByteArray.fromHexString(\"ffffffff\"));\n" +
+            "private static final BitwiseMatcher BITWISE_MATCHER_HOLDER_7 = BitwiseMatcher.from(ByteArray.fromHexString(\"64600000\"), ByteArray.fromHexString(\"ffe00000\"));\n" +
+            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_0 = BitwiseIntMatcher.from(68, -1);\n" +
+            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_1 = BitwiseIntMatcher.from(67, -1);\n" +
+            "private static final BitwiseIntMatcher BITWISE_INT_MATCHER_HOLDER_2 = BitwiseIntMatcher.from(53, -1);\n" +
             "private final IfaceHolder[] ifaces = new IfaceHolder[]{\n" +
             "    new IfaceHolder(\"enp1s0\", null),\n" +
             "    new IfaceHolder(\"gw0-in-br\", null),\n" +
@@ -1133,35 +1133,35 @@ public class TestFlowGen {
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    return table1(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst())) {\n" +
             "    return table2(helper, pkb);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_0.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc())) {\n" +
             "    return table2(helper, pkb);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getDst().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getDst())) {\n" +
             "    " + EXECUTE + "2);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_2.match(pkb.pkt.getDst().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_2.match(pkb.pkt.getDst())) {\n" +
             "    " + EXECUTE + "3);\n" +
             "}\n" +
             "return table1(helper, pkb);")
             + genTable(1, "" +
-            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getSrc().bytes) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getSrc()) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst())) {\n" +
             "    " + EXECUTE + "4);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getDst().bytes) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc().getAddress())) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_3.match(pkb.pkt.getDst()) && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_4.match(((AbstractIpPacket) pkb.pkt.getPacket()).getSrc())) {\n" +
             "    " + EXECUTE + "5);\n" +
             "}\n" +
             "return table2(helper, pkb);")
             + genTable(2, "" +
-            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst().bytes) && BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getSrc().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst()) && BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getSrc())) {\n" +
             "    " + EXECUTE + "6);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getDst().bytes) && BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getSrc().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_1.match(pkb.pkt.getDst()) && BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getSrc())) {\n" +
             "    " + EXECUTE + "7);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst().bytes) && pkb.pkt.getType() == 2054) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst()) && pkb.pkt.getType() == 2054) {\n" +
             "    " + EXECUTE + "8);\n" +
             "}\n" +
             "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_0.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getSrcPort()) && BITWISE_INT_MATCHER_HOLDER_1.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
@@ -1182,16 +1182,16 @@ public class TestFlowGen {
             "if (pkb.pkt.getType() == 2054 && BITWISE_MATCHER_HOLDER_6.match(((ArpPacket) pkb.pkt.getPacket()).getTargetIp())) {\n" +
             "    " + EXECUTE + "14);\n" +
             "}\n" +
-            "if (pkb.devin == ifaces[2].iface && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.devin == ifaces[2].iface && pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "15);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_7.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_7.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst())) {\n" +
             "    " + EXECUTE + "16);\n" +
             "}\n" +
-            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst().getAddress()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
+            "if (pkb.pkt.getType() == 2048 && pkb.pkt.getPacket() instanceof Ipv4Packet && BITWISE_MATCHER_HOLDER_6.match(((AbstractIpPacket) pkb.pkt.getPacket()).getDst()) && ((AbstractIpPacket) pkb.pkt.getPacket()).getProtocol() == 17 && BITWISE_INT_MATCHER_HOLDER_2.match(((UdpPacket) ((AbstractIpPacket) pkb.pkt.getPacket()).getPacket()).getDstPort())) {\n" +
             "    " + EXECUTE + "17);\n" +
             "}\n" +
-            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst().bytes)) {\n" +
+            "if (BITWISE_MATCHER_HOLDER_5.match(pkb.pkt.getDst())) {\n" +
             "    " + EXECUTE + "18);\n" +
             "}\n" +
             EXECUTE + "19);");
