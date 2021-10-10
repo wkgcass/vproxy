@@ -3,13 +3,17 @@ package io.vproxy.base.util;
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
 
-import java.util.Arrays;
+import java.util.Objects;
 
 public class Network {
-    private final byte[] ip;
-    private final byte[] mask;
+    private final IP ip;
+    private final ByteArray mask;
 
     public Network(byte[] ip, byte[] mask) {
+        this(IP.from(ip), ByteArray.from(mask));
+    }
+
+    public Network(IP ip, ByteArray mask) {
         this.ip = ip;
         this.mask = mask;
     }
@@ -21,34 +25,38 @@ public class Network {
         String ip = net.substring(0, net.lastIndexOf("/"));
         int mask = Integer.parseInt(net.substring(net.indexOf("/") + 1));
 
-        this.ip = IP.parseIpString(ip);
-        this.mask = parseMask(mask);
+        this.ip = IP.from(ip);
+        this.mask = ByteArray.from(parseMask(mask));
     }
 
     public boolean contains(IP address) {
-        return maskMatch(address.getAddress(), ip, mask);
+        return maskMatch(address.getAddress(), ip.getAddress(), mask.toJavaArray());
     }
 
     public boolean contains(Network that) {
-        if (!contains(IP.from(that.ip))) {
+        if (!contains(that.ip)) {
             return false;
         }
         return getMask() < that.getMask();
     }
 
     public IP getIp() {
-        return IP.from(ip);
-    }
-
-    public int getMask() {
-        return maskInt(mask);
-    }
-
-    public byte[] getRawIpBytes() {
         return ip;
     }
 
+    public int getMask() {
+        return maskInt(mask.toJavaArray());
+    }
+
+    public byte[] getRawIpBytes() {
+        return ip.bytes.toJavaArray();
+    }
+
     public byte[] getRawMaskBytes() {
+        return mask.toJavaArray();
+    }
+
+    public ByteArray getRawMaskByteArray() {
         return mask;
     }
 
@@ -57,20 +65,20 @@ public class Network {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         Network network = (Network) o;
-        return Arrays.equals(ip, network.ip) &&
-            Arrays.equals(mask, network.mask);
+        return Objects.equals(ip, network.ip) &&
+            Objects.equals(mask, network.mask);
     }
 
     @Override
     public int hashCode() {
-        int result = Arrays.hashCode(ip);
-        result = 31 * result + Arrays.hashCode(mask);
+        int result = Objects.hashCode(ip);
+        result = 31 * result + Objects.hashCode(mask);
         return result;
     }
 
     @Override
     public String toString() {
-        return IP.ipStr(ip) + "/" + getMask();
+        return ip.formatToIPString() + "/" + getMask();
     }
 
     // BEGIN UTILS:
@@ -125,11 +133,7 @@ public class Network {
         // so we only need to set 1 into the bit sequence
         // start from the first bit
         for (int i = 0; i < masks.length; ++i) {
-            //noinspection ManualMinMaxCalculation
-            masks[i] = Utils.getByte(mask > 8
-                ? 8 // a byte can contain maximum 8 bits
-                : mask // it's ok if mask < 0, see comment in getByte()
-            );
+            masks[i] = Utils.genPrefixByte(mask /* it's ok if mask < 0 or > 8 */);
             // the `to-do` bit sequence moves 8 bits forward each round
             // so subtract 8 from the integer represented mask
             mask -= 8;

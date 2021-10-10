@@ -47,10 +47,10 @@ public class FlowMatcher {
             appendAnd(sb).append("pkb.devin == ifaces[").append(ctx.ifaceIndex(in_port)).append("].iface");
         }
         if (dl_dst != null) {
-            appendAnd(sb).append(ctx.fieldName(dl_dst)).append(".match(pkb.pkt.getDst().bytes)");
+            appendAnd(sb).append(ctx.fieldName(dl_dst)).append(".match(pkb.pkt.getDst())");
         }
         if (dl_src != null) {
-            appendAnd(sb).append(ctx.fieldName(dl_src)).append(".match(pkb.pkt.getSrc().bytes)");
+            appendAnd(sb).append(ctx.fieldName(dl_src)).append(".match(pkb.pkt.getSrc())");
         }
         if (dl_type != 0) {
             appendAnd(sb).append("pkb.pkt.getType() == ").append(dl_type);
@@ -78,10 +78,10 @@ public class FlowMatcher {
             appendAnd(sb).append(ctx.fieldName(arp_tha)).append(".match(").append(castArp(ctx)).append(".getTargetMac()").append(")");
         }
         if (nw_src != null) {
-            appendAnd(sb).append(ctx.fieldName(nw_src)).append(".match(").append(castIp(ctx)).append(".getSrc().getAddress()").append(")");
+            appendAnd(sb).append(ctx.fieldName(nw_src)).append(".match(").append(castIp(ctx)).append(".getSrc()").append(")");
         }
         if (nw_dst != null) {
-            appendAnd(sb).append(ctx.fieldName(nw_dst)).append(".match(").append(castIp(ctx)).append(".getDst().getAddress()").append(")");
+            appendAnd(sb).append(ctx.fieldName(nw_dst)).append(".match(").append(castIp(ctx)).append(".getDst()").append(")");
         }
         if (nw_proto != 0) {
             appendAnd(sb).append(castIp(ctx)).append(".getProtocol()").append(" == ").append(nw_proto);

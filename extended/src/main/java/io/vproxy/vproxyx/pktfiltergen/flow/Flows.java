@@ -353,7 +353,7 @@ public class Flows {
             genIndent(sb, 4);
             sb.append("private static final BitwiseMatcher ")
                 .append(ctx.fieldName(matcher)).append(" = ")
-                .append("new BitwiseMatcher(")
+                .append("BitwiseMatcher.from(")
                 .append("ByteArray.fromHexString(\"")
                 .append(matcher.getMatcher().toHexString()).append("\")")
                 .append(", ")
@@ -366,7 +366,7 @@ public class Flows {
             genIndent(sb, 4);
             sb.append("private static final BitwiseIntMatcher ")
                 .append(ctx.fieldName(matcher)).append(" = ")
-                .append("new BitwiseIntMatcher(")
+                .append("BitwiseIntMatcher.from(")
                 .append(matcher.getMatcher()).append(", ")
                 .append(matcher.getMask()).append(");\n");
         }

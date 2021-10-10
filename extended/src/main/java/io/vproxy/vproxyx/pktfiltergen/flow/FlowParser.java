@@ -350,7 +350,7 @@ public class FlowParser {
         } catch (IllegalArgumentException ignore) {
             return exactMatcher(value, 6);
         }
-        return new BitwiseMatcher(mac.bytes);
+        return BitwiseMatcher.from(mac.bytes);
     }
 
     private BitwiseMatcher macMaskMatcher(String value) throws Exception {
@@ -366,7 +366,7 @@ public class FlowParser {
         } catch (IllegalArgumentException e) {
             return matcher(value, 6);
         }
-        return new BitwiseMatcher(matcher.bytes, mask.bytes);
+        return BitwiseMatcher.from(matcher.bytes, mask.bytes);
     }
 
     private IP parseIP(String value) throws Exception {
@@ -420,7 +420,7 @@ public class FlowParser {
                     }
                 }
             }
-            return new BitwiseMatcher(ByteArray.from(net.getRawIpBytes()), ByteArray.from(net.getRawMaskBytes()), true);
+            return BitwiseMatcher.from(ByteArray.from(net.getRawIpBytes()), ByteArray.from(net.getRawMaskBytes()), true);
         }
         IP ip;
         try {
@@ -436,7 +436,7 @@ public class FlowParser {
             }
         }
         checkAndSetIPEtherType(value, assumeEtherType, ip);
-        return new BitwiseMatcher(ip.bytes);
+        return BitwiseMatcher.from(ip.bytes);
     }
 
     private void checkAndSetIPEtherType(String value, boolean assumeEtherType, IP ip) throws Exception {
@@ -475,13 +475,13 @@ public class FlowParser {
     private BitwiseIntMatcher portMatcher(String value) throws Exception {
         if (value.contains("/")) {
             BitwiseMatcher m = matcher(value, 2);
-            return new BitwiseIntMatcher(
+            return BitwiseIntMatcher.from(
                 (((m.getMatcher().get(0) << 8) & 0xff00) | (m.getMatcher().get(1) & 0xff)),
                 (((m.getMask().get(0) << 8) & 0xff00) | (m.getMask().get(1) & 0xff))
             );
         }
         int port = parsePort(value);
-        return new BitwiseIntMatcher(port);
+        return BitwiseIntMatcher.from(port);
     }
 
     private BitwiseMatcher matcher(String value, int bytesCount) throws Exception {
@@ -498,7 +498,7 @@ public class FlowParser {
             throw new Exception("invalid bit sequence length, expecting " + (bytesCount * 8) + ": " + value);
         }
         try {
-            return new BitwiseMatcher(matcher, mask);
+            return BitwiseMatcher.from(matcher, mask);
         } catch (IllegalArgumentException e) {
             throw new Exception(value + " is not a valid bitwise matcher: " + e.getMessage());
         }
@@ -509,7 +509,7 @@ public class FlowParser {
         if (array.length() != bytesCount) {
             throw new Exception("invalid bit sequence length, expecting " + (bytesCount * 8) + ": " + value);
         }
-        return new BitwiseMatcher(array);
+        return BitwiseMatcher.from(array);
     }
 
     private ByteArray parseIntoByteArray(String value) throws Exception {

@@ -1,69 +1,83 @@
 package io.vproxy.base.util.bitwise;
 
 import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Network;
+import io.vproxy.base.util.ToByteArray;
+import io.vproxy.vfd.IP;
+import io.vproxy.vfd.MacAddress;
 
 import java.util.Objects;
 
-public class BitwiseMatcher {
-    private final ByteArray matcher;
-    private final ByteArray mask;
-    private final boolean maskAll;
-
-    public BitwiseMatcher(ByteArray matcher) {
-        this.matcher = matcher;
-        this.mask = ByteArray.allocate(matcher.length());
-        for (int i = 0; i < mask.length(); ++i) {
-            mask.set(i, (byte) 0xff);
+abstract public class BitwiseMatcher {
+    public static BitwiseMatcher from(ByteArray matcher) {
+        if (matcher.length() == 6) {
+            return new BitwiseMacAddressMatcher(new MacAddress(matcher));
+        } else if (matcher.length() == 4) {
+            return new BitwiseIPv4Matcher(IP.fromIPv4(matcher.toJavaArray()));
+        } else if (matcher.length() == 16) {
+            return new BitwiseIPv6Matcher(IP.fromIPv6(matcher.toJavaArray()));
+        } else {
+            return new BitwiseGeneralMatcher(matcher);
         }
-        this.maskAll = true;
     }
 
-    public BitwiseMatcher(ByteArray matcher, ByteArray mask) {
-        this(matcher, mask, false);
+    public static BitwiseMatcher from(ByteArray matcher, ByteArray mask) {
+        return from(matcher, mask, false);
     }
 
-    public BitwiseMatcher(ByteArray matcher, ByteArray mask, boolean expandMask) {
-        this.matcher = matcher;
-
-        if (matcher.length() != mask.length()) {
-            if (matcher.length() < mask.length() || !expandMask) {
-                throw new IllegalArgumentException("matcher and mask length not the same: matcher: " + matcher.length() + ", mask: " + mask.length());
-            }
-            var mask2 = ByteArray.allocateInitZero(matcher.length());
-            int i;
-            for (i = 1; mask.length() - i >= 0; --i) {
-                mask2.set(mask2.length() - i, mask.get(mask.length() - i));
-            }
-            mask = mask2;
-        }
-        this.mask = mask;
-
+    public static BitwiseMatcher from(ByteArray matcher, ByteArray mask, boolean expandMask) {
         boolean maskAll = true;
-        for (int i = 0; i < matcher.length(); ++i) {
-            byte b = matcher.get(i);
-            byte m = mask.get(i);
-            if ((b & m) != b) {
-                throw new IllegalArgumentException("the matcher does not correspond to the mask");
-            }
-            if (m != ((byte) 0xff)) {
-                maskAll = false;
+        boolean maskPrefix = true;
+        for (int i = 0; i < mask.length(); ++i) {
+            byte b = mask.get(i);
+            if (maskAll) {
+                if (b != (byte) 0xff) {
+                    maskAll = false;
+                    if (b != (byte) 0b11111110 &&
+                        b != (byte) 0b11111100 &&
+                        b != (byte) 0b11111000 &&
+                        b != (byte) 0b11110000 &&
+                        b != (byte) 0b11100000 &&
+                        b != (byte) 0b11000000 &&
+                        b != (byte) 0b10000000 &&
+                        b != (byte) 0
+                    ) {
+                        maskPrefix = false;
+                    }
+                }
+            } else {
+                if (b != 0) {
+                    maskPrefix = false;
+                }
             }
         }
-        this.maskAll = maskAll;
+        if (maskAll && matcher.length() == mask.length()) {
+            return from(matcher);
+        } else if (maskPrefix && (matcher.length() == 4 || matcher.length() == 16) &&
+            ((matcher.length() == 4 && mask.length() == 4) || (matcher.length() == 16 && (mask.length() == 4 || mask.length() == 16)))
+        ) {
+            return new BitwiseNetworkMatcher(new Network(IP.from(matcher.toJavaArray()), mask));
+        } else {
+            return new BitwiseGeneralMatcher(matcher, mask, expandMask);
+        }
     }
 
     public boolean match(byte[] bytes) {
         return match(ByteArray.from(bytes));
     }
 
+    public boolean match(ToByteArray input) {
+        return match(input.toByteArray());
+    }
+
     public boolean match(ByteArray input) {
-        int matcherLength = matcher.length();
-        int maskLength = mask.length();
+        int matcherLength = getMatcher().length();
+        int maskLength = getMask().length();
         int inputLength = input.length();
         int i;
         for (i = 1; matcherLength - i >= 0 && maskLength - i >= 0 && inputLength - i >= 0; ++i) {
-            byte matcherByte = matcher.get(matcherLength - i);
-            byte maskByte = mask.get(maskLength - i);
+            byte matcherByte = getMatcher().get(matcherLength - i);
+            byte maskByte = getMask().get(maskLength - i);
             byte inputByte = input.get(inputLength - i);
 
             if ((inputByte & maskByte) != matcherByte) {
@@ -76,7 +90,7 @@ public class BitwiseMatcher {
         // input.length < matcher.length
         // need to check whether there are '1' bit in matcher
         for (; matcherLength - i >= 0 && maskLength - i >= 0; ++i) {
-            byte matcherByte = matcher.get(matcherLength - i);
+            byte matcherByte = getMatcher().get(matcherLength - i);
             if (matcherByte != 0) {
                 return false;
             }
@@ -84,24 +98,18 @@ public class BitwiseMatcher {
         return true;
     }
 
-    public ByteArray getMatcher() {
-        return matcher;
-    }
+    public abstract ByteArray getMatcher();
 
-    public ByteArray getMask() {
-        return mask;
-    }
+    public abstract ByteArray getMask();
 
-    public boolean maskAll() {
-        return maskAll;
-    }
+    public abstract boolean maskAll();
 
     @Override
     public String toString() {
-        if (maskAll) {
-            return "0x" + matcher.toHexString();
+        if (maskAll()) {
+            return "0x" + getMatcher().toHexString();
         } else {
-            return "0x" + matcher.toHexString() + "/0x" + mask.toHexString();
+            return "0x" + getMatcher().toHexString() + "/0x" + getMask().toHexString();
         }
     }
 
@@ -110,11 +118,11 @@ public class BitwiseMatcher {
         if (this == o) return true;
         if (o == null || getClass() != o.getClass()) return false;
         BitwiseMatcher matcher1 = (BitwiseMatcher) o;
-        return matcher.equals(matcher1.matcher) && mask.equals(matcher1.mask);
+        return getMatcher().equals(matcher1.getMatcher()) && getMask().equals(matcher1.getMask());
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(matcher, mask);
+        return Objects.hash(getMatcher(), getMask());
     }
 }

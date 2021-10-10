@@ -8,18 +8,26 @@ public class BitwiseIntMatcher {
     private final int matcher;
     private final int mask;
 
-    public BitwiseIntMatcher(int matcher) {
+    private BitwiseIntMatcher(int matcher) {
         this.matcher = matcher;
         this.mask = -1;
     }
 
-    public BitwiseIntMatcher(int matcher, int mask) {
+    private BitwiseIntMatcher(int matcher, int mask) {
         this.matcher = matcher;
         this.mask = mask;
 
         if ((matcher & mask) != matcher) {
             throw new IllegalArgumentException("the matcher does not correspond to the mask");
         }
+    }
+
+    public static BitwiseIntMatcher from(int matcher) {
+        return new BitwiseIntMatcher(matcher);
+    }
+
+    public static BitwiseIntMatcher from(int matcher, int mask) {
+        return new BitwiseIntMatcher(matcher, mask);
     }
 
     public boolean match(int n) {

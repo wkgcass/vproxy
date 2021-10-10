@@ -187,10 +187,8 @@ public class Utils {
 
     // specify the number of 1 in the head of bit sequence
     // and return a byte
-    public static byte getByte(int ones) {
+    public static byte genPrefixByte(int ones) {
         switch (ones) {
-            case 8:
-                return (byte) 0b11111111;
             case 7:
                 return (byte) 0b11111110;
             case 6:
@@ -206,9 +204,11 @@ public class Utils {
             case 1:
                 return (byte) 0b10000000;
             default:
-                // if <= 0, return 0
-                // the `getMask()` method can be more simple
-                return 0;
+                if (ones >= 8) {
+                    return (byte) 0b11111111;
+                } else {
+                    return 0;
+                }
         }
     }
 
