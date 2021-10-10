@@ -44,4 +44,12 @@ open class Tuple<A, B>(
     result = 31 * result + (value?.hashCode() ?: 0)
     return result
   }
+
+  operator fun component1(): A {
+    return _1
+  }
+
+  operator fun component2(): B {
+    return _2
+  }
 }
