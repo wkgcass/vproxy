@@ -24,6 +24,8 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     private final Map<String, IfaceHolder> ifaces = new HashMap<>();
     private Switch handledSwitch;
 
+    private final ActionCacheChain ingressCache = new ActionCacheChain();
+
     public BasePacketFilter() {
     }
 
@@ -132,7 +134,17 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
         PacketFilterHelper helper,
         PacketBuffer pkb,
         BiFunction<PacketFilterHelper, PacketBuffer, FilterResult> exec) {
+        if (pkb.devout == null) {
+            recordIngressCache(pkb, exec);
+        }
         return exec.apply(helper, pkb);
+    }
+
+    private void recordIngressCache(PacketBuffer pkb, BiFunction<PacketFilterHelper, PacketBuffer, FilterResult> exec) {
+        var tuple = pkb.getSevenTuple();
+        if (tuple != null) {
+            ingressCache.record(tuple, exec);
+        }
     }
 
     @SuppressWarnings("unused")
@@ -148,9 +160,22 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     @Override
     public final FilterResult handle(PacketFilterHelper helper, PacketBuffer pkb) {
         if (pkb.devout == null) {
+            var res = handleIngressByCache(helper, pkb);
+            if (res != null) {
+                return res;
+            }
             return handleIngress(helper, pkb);
         } else {
             return handleEgress(helper, pkb);
         }
+    }
+
+    private FilterResult handleIngressByCache(PacketFilterHelper helper, PacketBuffer pkb) {
+        var tuple = pkb.getSevenTuple();
+        if (tuple == null) return null;
+        var exec = ingressCache.lookup(tuple);
+        if (exec == null) return null;
+        assert Logger.lowLevelDebug("execute packet filter from flow cache: " + tuple);
+        return exec.apply(helper, pkb);
     }
 }

@@ -1,11 +1,12 @@
 package io.vproxy.vfd;
 
 import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.ToByteArray;
 import io.vproxy.base.util.Utils;
 
 import java.util.Objects;
 
-public class MacAddress {
+public class MacAddress implements ToByteArray {
     public final ByteArray bytes;
     private final int value0;
     private final int value1;
@@ -119,5 +120,10 @@ public class MacAddress {
     @Override
     public int hashCode() {
         return Objects.hash(value0, value1);
+    }
+
+    @Override
+    public ByteArray toByteArray() {
+        return bytes;
     }
 }

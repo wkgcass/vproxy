@@ -1,10 +1,7 @@
 package io.vproxy.vfd;
 
 import io.vproxy.base.dns.Resolver;
-import io.vproxy.base.util.ByteArray;
-import io.vproxy.base.util.IPType;
-import io.vproxy.base.util.Logger;
-import io.vproxy.base.util.Utils;
+import io.vproxy.base.util.*;
 import io.vproxy.base.util.callback.BlockCallback;
 import io.vproxy.base.util.callback.Callback;
 
@@ -13,7 +10,7 @@ import java.net.*;
 import java.util.Arrays;
 import java.util.Enumeration;
 
-public abstract class IP {
+public abstract class IP implements ToByteArray {
     public static IP from(InetAddress ip) {
         return from(ip.getAddress());
     }
@@ -74,6 +71,11 @@ public abstract class IP {
 
     IP(ByteArray bytes) {
         this.bytes = bytes.unmodifiable();
+    }
+
+    @Override
+    public ByteArray toByteArray() {
+        return bytes;
     }
 
     public boolean isAnyLocalAddress() {

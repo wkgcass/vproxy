@@ -1,6 +1,7 @@
 package io.vproxy.vswitch;
 
 import io.vproxy.base.util.ByteArray;
+import io.vproxy.base.util.Consts;
 import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Utils;
 import io.vproxy.vfd.IP;
@@ -8,6 +9,7 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
+import io.vproxy.vpacket.tuples.SevenTuple;
 import io.vproxy.vswitch.iface.Iface;
 
 import java.util.Collection;
@@ -56,6 +58,7 @@ public class PacketBuffer extends PacketDataBuffer {
     public AbstractIpPacket ipPkt;
     public TcpPacket tcpPkt;
     public UdpPacket udpPkt;
+    private SevenTuple sevenTuple;
 
     // ----- helper fields -----
     // l3
@@ -249,6 +252,21 @@ public class PacketBuffer extends PacketDataBuffer {
         } else {
             this.ipPkt = null;
         }
+        this.sevenTuple = null;
+    }
+
+    public SevenTuple getSevenTuple() {
+        if (tcpPkt == null && udpPkt == null) return null;
+        int ipProto = tcpPkt != null ? Consts.IP_PROTOCOL_TCP : Consts.IP_PROTOCOL_UDP;
+        int tpSrc = tcpPkt != null ? tcpPkt.getSrcPort() : udpPkt.getSrcPort();
+        int tpDst = tcpPkt != null ? tcpPkt.getDstPort() : udpPkt.getDstPort();
+        var ret = new SevenTuple(
+            pkt.getSrc(), pkt.getDst(),
+            ipPkt.getSrc(), ipPkt.getDst(),
+            ipProto, tpSrc, tpDst
+        );
+        this.sevenTuple = ret;
+        return ret;
     }
 
     public void setNetwork(VirtualNetwork network) {

@@ -7,7 +7,7 @@ import java.io.ByteArrayOutputStream;
 import java.nio.ByteBuffer;
 
 @SuppressWarnings("UnusedReturnValue")
-public interface ByteArray {
+public interface ByteArray extends ToByteArray {
     static ByteArray allocate(int len) {
         if (len == 0) {
             return AbstractByteArray.EMPTY;
@@ -77,6 +77,10 @@ public interface ByteArray {
 
     default ByteArray concat(ByteArray array) {
         return new CompositeByteArray(this, array);
+    }
+
+    default ByteArray toByteArray() {
+        return this;
     }
 
     default byte[] toJavaArray() {

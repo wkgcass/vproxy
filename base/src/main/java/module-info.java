@@ -82,6 +82,7 @@ module io.vproxy.base {
     exports io.vproxy.vpacket.conntrack;
     exports io.vproxy.vpacket.conntrack.tcp;
     exports io.vproxy.vpacket.conntrack.udp;
+    exports io.vproxy.vpacket.tuples;
     exports io.vproxy.xdp;
 
     uses io.vproxy.vfd.FDs;
