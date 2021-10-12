@@ -788,10 +788,15 @@ public class Utils {
 
     public static String getSystemProperty(String pattern, String defaultValue) {
         String[] split = pattern.split("_");
-        Set<String> results = new HashSet<>();
+        Set<String> results = new LinkedHashSet<>();
 
         String ret;
 
+        // -Dio.vproxy.AbcDef
+        ret = System.getProperty("io.vproxy." + namingConventionPascal(split));
+        if (ret != null) {
+            results.add(ret);
+        }
         // -Dvproxy.AbcDef
         ret = System.getProperty("vproxy." + namingConventionPascal(split));
         if (ret != null) {
@@ -868,13 +873,15 @@ public class Utils {
     }
 
     private static String exactlyOneProperty(Set<String> results) {
-        if (results.size() > 1)
-            throw new IllegalStateException(
-                "multiple keys with different patterns set for the same property");
         if (results.isEmpty()) {
             return null;
         }
-        return results.iterator().next();
+        var res = results.iterator().next();
+        if (results.size() > 1) {
+            Logger.warn(LogType.ALERT,
+                "multiple values of keys in different patterns set for the same property: " + results + ", using: " + res);
+        }
+        return res;
     }
 
     private static String namingConventionPascal(String[] split) {
