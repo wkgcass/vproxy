@@ -29,6 +29,7 @@ import java.net.SocketTimeoutException;
 import java.net.UnknownHostException;
 import java.nio.ByteBuffer;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
 
@@ -45,7 +46,7 @@ public class DNSClient {
     private final int maxRetry;
 
     private final Map<Integer, Request> requests = new HashMap<>();
-    private int nextId = 0;
+    private final AtomicInteger nextId = new AtomicInteger(0);
     private final ByteBuffer buffer = Utils.allocateByteBuffer(Config.udpMtu);
 
     public DNSClient(SelectorEventLoop loop, DatagramFD sock, DatagramFD sock6, int dnsReqTimeout, int maxRetry) throws IOException {
@@ -351,23 +352,15 @@ public class DNSClient {
     }
 
     private int getNextId() {
-        int id = ++nextId;
+        int id = nextId.incrementAndGet();
         if (id > 65535) {
-            nextId = 0;
+            nextId.set(0);
         }
         return id;
     }
 
     private void getAllByName0(String domain, boolean ipv4, Callback<List<IP>, UnknownHostException> cb) {
-        DNSPacket reqPacket = new DNSPacket();
-        reqPacket.id = getNextId();
-        reqPacket.isResponse = false;
-        reqPacket.opcode = DNSPacket.Opcode.QUERY;
-        reqPacket.aa = false;
-        reqPacket.tc = false;
-        reqPacket.rd = true;
-        reqPacket.ra = false;
-        reqPacket.rcode = DNSPacket.RCode.NoError;
+        DNSPacket reqPacket = buildDnsRequestCommonPart();
         DNSQuestion q = new DNSQuestion();
         q.qname = domain;
         q.qtype = ipv4 ? DNSType.A : DNSType.AAAA;
@@ -418,6 +411,47 @@ public class DNSClient {
 
     public void request(DNSPacket reqPacket, Callback<DNSPacket, IOException> cb) {
         new Request<>(reqPacket, (resp, holder) -> resp, SocketTimeoutException::new, new RunOnLoopCallback<>(cb));
+    }
+
+    public void request(String domain, DNSType qtype, DNSClass qclass, Callback<List<DNSResource>, IOException> cb) {
+        var req = buildDnsRequestCommonPart();
+        var q = new DNSQuestion();
+        q.qname = domain;
+        q.qtype = qtype;
+        q.qclass = qclass;
+        req.questions.add(q);
+        request(req, new Callback<>() {
+            @Override
+            protected void onSucceeded(DNSPacket value) {
+                if (value.answers.isEmpty()) {
+                    String err = domain;
+                    if (qtype != DNSType.A && qtype != DNSType.AAAA && qtype != DNSType.ANY) {
+                        err = qtype + ": " + domain;
+                    }
+                    cb.failed(new UnknownHostException(err));
+                    return;
+                }
+                cb.succeeded(value.answers);
+            }
+
+            @Override
+            protected void onFailed(IOException err) {
+                cb.failed(err);
+            }
+        });
+    }
+
+    private DNSPacket buildDnsRequestCommonPart() {
+        DNSPacket req = new DNSPacket();
+        req.id = getNextId();
+        req.isResponse = false;
+        req.opcode = DNSPacket.Opcode.QUERY;
+        req.aa = false;
+        req.tc = false;
+        req.rd = true;
+        req.ra = false;
+        req.rcode = DNSPacket.RCode.NoError;
+        return req;
     }
 
     public void close() {
