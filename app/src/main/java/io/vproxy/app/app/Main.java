@@ -156,7 +156,7 @@ public class Main {
         }
     }
 
-    private static String[] checkFlagDeployInArguments(String[] args) {
+    public static String[] checkFlagDeployInArguments(String[] args) {
         List<String> returnArgs = new ArrayList<>(args.length);
         for (final var arg : args) {
             if (!arg.startsWith("-D")) {
