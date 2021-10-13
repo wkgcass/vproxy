@@ -31,12 +31,14 @@ subprojects {
         kotlinOptions {
             jvmTarget = '11'
             freeCompilerArgs += '-Xjvm-default=enable'
+            freeCompilerArgs += '-Xassertions=jvm'
         }
     }
     compileTestKotlin {
         kotlinOptions {
             jvmTarget = '11'
             freeCompilerArgs += '-Xjvm-default=enable'
+            freeCompilerArgs += '-Xassertions=jvm'
         }
     }
     compileJava.options.encoding = "UTF-8"
