@@ -514,6 +514,26 @@ public class Utils {
         return true;
     }
 
+    public static boolean isNonNegativeInteger(String s) {
+        int n;
+        try {
+            n = Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return n >= 0;
+    }
+
+    public static boolean isPositiveInteger(String s) {
+        int n;
+        try {
+            n = Integer.parseInt(s);
+        } catch (NumberFormatException e) {
+            return false;
+        }
+        return n > 0;
+    }
+
     public static boolean isLong(String s) {
         try {
             Long.parseLong(s);
@@ -1026,5 +1046,109 @@ public class Utils {
         System.load(f.getAbsolutePath());
         //noinspection ResultOfMethodCallIgnored
         f.delete();
+    }
+
+    public static void validateVProxyVersion(String version) throws Exception {
+        // version can be:
+        // 1.2.3
+        // 1.2.3-BETA-4
+        // 1.2.3-BETA-4-DEV
+        String majorMinorPatch = version;
+        if (version.contains("-")) {
+            if (version.startsWith("-")) {
+                throw new Exception("invalid version, must not start with `-`: " + version);
+            }
+            if (version.endsWith("-")) {
+                throw new Exception("invalid version, must not end with `-`: " + version);
+            }
+            var splitBySlash = version.split("-");
+            if (splitBySlash.length != 3 && splitBySlash.length != 4) {
+                throw new Exception("invalid version, invalid slash count: " + version);
+            }
+            var versionCat = splitBySlash[1];
+            if (!versionCat.equals("ALPHA") && !versionCat.equals("BETA") && !versionCat.equals("RC")) {
+                throw new Exception("invalid version, expecting ALPHA|BETA|RC, but got: " + versionCat);
+            }
+            var unstableNumberStr = splitBySlash[2];
+            if (!Utils.isPositiveInteger(unstableNumberStr)) {
+                throw new Exception("invalid version, expecting unstable version to be positive integer, but got: " + unstableNumberStr);
+            }
+            if (splitBySlash.length == 4) {
+                if (!splitBySlash[3].equals("DEV")) {
+                    throw new Exception("invalid version, expecting DEV tag, but got: " + splitBySlash[3]);
+                }
+            }
+            majorMinorPatch = splitBySlash[0];
+        }
+        if (majorMinorPatch.startsWith(".")) {
+            throw new Exception("invalid version, major.minor.patch must not start with `.`: " + majorMinorPatch);
+        }
+        if (majorMinorPatch.endsWith(".")) {
+            throw new Exception("invalid version, major.minor.patch must not end with `.`: " + majorMinorPatch);
+        }
+        var split = majorMinorPatch.split("\\.");
+        if (split.length != 3) {
+            throw new Exception("invalid version, not major.minor.patch: " + majorMinorPatch);
+        }
+        var major = split[0];
+        if (!Utils.isNonNegativeInteger(major)) {
+            throw new Exception("invalid version, major version is not non-negative integer: " + major);
+        }
+        var minor = split[1];
+        if (!Utils.isNonNegativeInteger(minor)) {
+            throw new Exception("invalid version, minor version is not non-negative integer: " + minor);
+        }
+        var patch = split[2];
+        if (!Utils.isNonNegativeInteger(patch)) {
+            throw new Exception("invalid version, patch version is not non-negative integer: " + patch);
+        }
+    }
+
+    public static int compareVProxyVersions(String a, String b) {
+        if (a.equals(b)) {
+            return 0;
+        }
+
+        String[] mmpA = (a.contains("-") ? a.split("-")[0] : a).split("\\.");
+        String[] mmpB = (b.contains("-") ? b.split("-")[0] : b).split("\\.");
+        int[] mmpAN = new int[]{
+            Integer.parseInt(mmpA[0]), Integer.parseInt(mmpA[1]), Integer.parseInt(mmpA[2])
+        };
+        int[] mmpBN = new int[]{
+            Integer.parseInt(mmpB[0]), Integer.parseInt(mmpB[1]), Integer.parseInt(mmpB[2])
+        };
+        if (mmpAN[0] > mmpBN[0]) return 1;
+        if (mmpAN[0] < mmpBN[0]) return -1;
+        if (mmpAN[1] > mmpBN[1]) return 1;
+        if (mmpAN[1] < mmpBN[1]) return -1;
+        if (mmpAN[2] > mmpBN[2]) return 1;
+        if (mmpAN[2] < mmpBN[2]) return -1;
+
+        if (a.contains("-") && !b.contains("-")) return -1;
+        if (b.contains("-") && !a.contains("-")) return 1;
+
+        String[] splitA = a.split("-");
+        String[] splitB = b.split("-");
+
+        String catA = splitA[1];
+        String catB = splitB[1];
+
+        if (catA.equals("ALPHA") && !catB.equals("ALPHA")) return -1;
+        if (catB.equals("ALPHA") && !catA.equals("ALPHA")) return 1;
+        if (catA.equals("BETA") && catB.equals("RC")) return -1;
+        if (catB.equals("BETA") && catA.equals("RC")) return 1;
+        if (catA.equals("RC") && !catB.equals("RC")) return 1;
+        if (catB.equals("RC") && !catA.equals("RC")) return -1;
+
+        int unstableA = Integer.parseInt(splitA[2]);
+        int unstableB = Integer.parseInt(splitB[2]);
+
+        if (unstableA > unstableB) return 1;
+        if (unstableB > unstableA) return -1;
+
+        if (splitA.length == 3 && splitB.length == 4) return 1;
+        if (splitB.length == 3 && splitA.length == 4) return -1;
+
+        throw new Error("should not reach here: " + a + " <==> " + b);
     }
 }

@@ -3,6 +3,7 @@ package io.vproxy.test.cases;
 import io.vproxy.base.Config;
 import io.vproxy.base.util.ByteArray;
 import io.vproxy.base.util.Network;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.bitwise.*;
 import io.vproxy.base.util.coll.RingQueue;
 import io.vproxy.base.util.display.TreeBuilder;
@@ -325,5 +326,93 @@ public class TestUtilities {
         var net = new Network("192.168.1.0/24");
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray()) instanceof BitwiseNetworkMatcher);
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray(), true) instanceof BitwiseNetworkMatcher);
+    }
+
+    private void validateVersion(String v, String err) {
+        try {
+            Utils.validateVProxyVersion(v);
+        } catch (Exception e) {
+            assertEquals("invalid version, " + err, e.getMessage());
+            return;
+        }
+        if (err != null) {
+            fail();
+        }
+    }
+
+    @Test
+    public void validateVersion() {
+        validateVersion("", "not major.minor.patch: ");
+        validateVersion(".", "major.minor.patch must not start with `.`: .");
+        validateVersion(".1", "major.minor.patch must not start with `.`: .1");
+        validateVersion("1.", "major.minor.patch must not end with `.`: 1.");
+        validateVersion("1", "not major.minor.patch: 1");
+        validateVersion("1.2", "not major.minor.patch: 1.2");
+        validateVersion("1.2.z", "patch version is not non-negative integer: z");
+        validateVersion("1.y.3", "minor version is not non-negative integer: y");
+        validateVersion("x.2.3", "major version is not non-negative integer: x");
+        validateVersion("1.2.3-BETA", "invalid slash count: 1.2.3-BETA");
+        validateVersion("-1.2.3-BETA-4", "must not start with `-`: -1.2.3-BETA-4");
+        validateVersion("1.2.3-BETA-4-", "must not end with `-`: 1.2.3-BETA-4-");
+        validateVersion("1.2.3--4", "expecting ALPHA|BETA|RC, but got: ");
+        validateVersion("1.2.3-X-4", "expecting ALPHA|BETA|RC, but got: X");
+        validateVersion("1.2.3-BETA-x", "expecting unstable version to be positive integer, but got: x");
+        validateVersion("1.2.3-BETA-4-XX", "expecting DEV tag, but got: XX");
+
+        validateVersion("0.0.0", null);
+        validateVersion("0.0.0-RC-1", null);
+        validateVersion("0.0.0-BETA-1-DEV", null);
+    }
+
+    private void compareVersions(String a, String b, int expected) throws Exception {
+        Utils.validateVProxyVersion(a);
+        Utils.validateVProxyVersion(b);
+        assertEquals(expected, Utils.compareVProxyVersions(a, b));
+        assertEquals(-expected, Utils.compareVProxyVersions(b, a));
+    }
+
+    @Test
+    public void compareVersions() throws Exception {
+        compareVersions("1.0.0", "1.0.0-BETA-10-DEV", 1);
+
+        compareVersions("1.2.3", "1.2.3", 0);
+
+        compareVersions("1.2.3", "1.2.4", -1);
+        compareVersions("1.2.3", "1.3.1", -1);
+        compareVersions("1.2.3", "2.1.1", -1);
+
+        compareVersions("1.2.3-ALPHA-4", "1.2.3", -1);
+        compareVersions("1.2.3-BETA-4", "1.2.3", -1);
+        compareVersions("1.2.3-RC-4", "1.2.3", -1);
+        compareVersions("1.2.3-ALPHA-4-DEV", "1.2.3", -1);
+        compareVersions("1.2.3-BETA-4-DEV", "1.2.3", -1);
+        compareVersions("1.2.3-RC-4-DEV", "1.2.3", -1);
+
+        compareVersions("1.2.3-ALPHA-4", "1.3.1", -1);
+        compareVersions("1.2.3-BETA-4", "1.3.1", -1);
+        compareVersions("1.2.3-RC-4", "1.3.1", -1);
+        compareVersions("1.2.3-ALPHA-4-DEV", "1.3.1", -1);
+        compareVersions("1.2.3-BETA-4-DEV", "1.3.1", -1);
+        compareVersions("1.2.3-RC-4-DEV", "1.3.1", -1);
+
+        compareVersions("1.2.3-ALPHA-4", "2.1.1", -1);
+        compareVersions("1.2.3-BETA-4", "2.1.1", -1);
+        compareVersions("1.2.3-RC-4", "2.1.1", -1);
+        compareVersions("1.2.3-ALPHA-4-DEV", "2.1.1", -1);
+        compareVersions("1.2.3-BETA-4-DEV", "2.1.1", -1);
+        compareVersions("1.2.3-RC-4-DEV", "2.1.1", -1);
+
+        compareVersions("1.2.3-ALPHA-4", "1.2.3-ALPHA-4", 0);
+        compareVersions("1.2.3-ALPHA-4", "1.2.3-ALPHA-5", -1);
+        compareVersions("1.2.3-ALPHA-4-DEV", "1.2.3-ALPHA-4", -1);
+        compareVersions("1.2.3-ALPHA-4", "1.2.3-BETA-1", -1);
+        compareVersions("1.2.3-ALPHA-4", "1.2.3-RC-1", -1);
+        compareVersions("1.2.3-BETA-4", "1.2.3-BETA-4", 0);
+        compareVersions("1.2.3-BETA-4-DEV", "1.2.3-BETA-4", -1);
+        compareVersions("1.2.3-BETA-4", "1.2.3-BETA-5", -1);
+        compareVersions("1.2.3-BETA-4", "1.2.3-RC-1", -1);
+        compareVersions("1.2.3-RC-4-DEV", "1.2.3-RC-4", -1);
+        compareVersions("1.2.3-RC-4", "1.2.3-RC-4", 0);
+        compareVersions("1.2.3-RC-4", "1.2.3-RC-5", -1);
     }
 }
