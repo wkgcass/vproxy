@@ -47,6 +47,7 @@ public class PluginWrapper {
             " id " + plugin.id() +
             " class " + plugin.getClass().getName() +
             " arguments " + Utils.formatArrayToStringCompact(args) +
-            " " + (enabled ? "enabled" : "disabled");
+            " " + (enabled ? "enabled" : "disabled") +
+            " inspect-> " + plugin.inspect();
     }
 }

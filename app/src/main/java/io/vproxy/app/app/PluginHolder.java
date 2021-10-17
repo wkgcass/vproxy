@@ -38,6 +38,17 @@ public class PluginHolder {
         return wrapper;
     }
 
+    // plugin.init will not be called in this method
+    public PluginWrapper register(String alias, Plugin plugin) throws AlreadyExistException {
+        if (map.containsKey(alias)) {
+            throw new AlreadyExistException("plugin", alias);
+        }
+        PluginWrapper wrapper = new PluginWrapper(alias, new URL[0], new String[0], plugin);
+        map.put(wrapper.alias, wrapper);
+        Logger.alert("plugin " + wrapper.alias + " registered");
+        return wrapper;
+    }
+
     private PluginInitParams createPluginParams(String[] args) {
         return new PluginInitParams(args);
     }

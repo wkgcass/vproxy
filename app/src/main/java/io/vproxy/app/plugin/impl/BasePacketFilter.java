@@ -5,6 +5,7 @@ import io.vproxy.app.plugin.Plugin;
 import io.vproxy.app.plugin.PluginInitParams;
 import io.vproxy.base.util.LogType;
 import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.Utils;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vproxyx.pktfiltergen.IfaceHolder;
 import io.vproxy.vswitch.PacketBuffer;
@@ -18,13 +19,16 @@ import io.vproxy.vswitch.plugin.PacketFilter;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 
 public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     private static final String UUID = "079c39ac-ce97-4820-a014-0ed16ad639db";
     private final Map<String, IfaceHolder> ifaces = new HashMap<>();
     private Switch handledSwitch;
 
-    private final ActionCacheChain ingressCache = new ActionCacheChain();
+    private boolean enableIngressCache = false;
+    private Supplier<MicroFlow> ingressMicroFlowConstructor;
+    private MicroFlow ingressMicroFlow = null;
 
     public BasePacketFilter() {
     }
@@ -38,12 +42,19 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     public final void init(PluginInitParams params) throws Exception {
         // parse arguments
         String selectSwitch = null;
+        int cacheSize = 1048576;
         for (String s : params.arguments) {
             if (s.startsWith("switch=")) {
                 selectSwitch = s.substring("switch=".length()).trim();
                 if (selectSwitch.isEmpty()) {
                     throw new Exception("invalid value for switch: should not be an empty string");
                 }
+            } else if (s.startsWith("cacheSize=")) {
+                var value = s.substring("cacheSize=".length());
+                if (!Utils.isPositiveInteger(value)) {
+                    throw new Exception("invalid value for cacheSize: must be a positive integer");
+                }
+                cacheSize = Integer.parseInt(value);
             }
         }
         if (selectSwitch == null) {
@@ -75,6 +86,8 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
             throw new Exception("no switch to be handled");
         }
         Logger.alert("bind to switch " + handledSwitch.alias);
+        final int finalCacheSize = cacheSize;
+        ingressMicroFlowConstructor = () -> new MicroFlow(finalCacheSize);
     }
 
     @Override
@@ -141,9 +154,12 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     }
 
     private void recordIngressCache(PacketBuffer pkb, BiFunction<PacketFilterHelper, PacketBuffer, FilterResult> exec) {
-        var tuple = pkb.getSevenTuple();
+        if (!enableIngressCache) {
+            return;
+        }
+        var tuple = pkb.getFullTuple();
         if (tuple != null) {
-            ingressCache.record(tuple, exec);
+            ingressMicroFlow.record(tuple, exec);
         }
     }
 
@@ -171,11 +187,34 @@ public class BasePacketFilter implements PacketFilter, IfaceWatcher, Plugin {
     }
 
     private FilterResult handleIngressByCache(PacketFilterHelper helper, PacketBuffer pkb) {
-        var tuple = pkb.getSevenTuple();
+        if (!enableIngressCache) {
+            return null;
+        }
+        var tuple = pkb.getFullTuple();
         if (tuple == null) return null;
-        var exec = ingressCache.lookup(tuple);
+        var exec = ingressMicroFlow.lookup(tuple);
         if (exec == null) return null;
         assert Logger.lowLevelDebug("execute packet filter from flow cache: " + tuple);
         return exec.apply(helper, pkb);
+    }
+
+    protected void setEnableIngressCache(boolean enableIngressCache) {
+        if (enableIngressCache) {
+            if (ingressMicroFlow == null) {
+                ingressMicroFlow = ingressMicroFlowConstructor.get();
+            }
+        }
+        this.enableIngressCache = enableIngressCache;
+    }
+
+    @Override
+    public String inspect() {
+        //noinspection StringBufferReplaceableByString
+        StringBuilder sb = new StringBuilder();
+        sb.append("ingress.microflow{hit=").append(ingressMicroFlow.getHitCount())
+            .append(",miss=").append(ingressMicroFlow.getMissCount())
+            .append(",cache=").append(ingressMicroFlow.getCurrentCacheCount())
+            .append("}");
+        return sb.toString();
     }
 }

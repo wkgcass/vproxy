@@ -19,6 +19,7 @@ import java.util.*;
 import java.util.function.Consumer;
 
 public class Flows {
+    private static final int ENABLE_CACHE_FLOW_COUNT_THRESHOLD = 65536;
     private final List<Flow> flows = new ArrayList<>();
 
     public void add(String linesStr) throws Exception {
@@ -89,6 +90,7 @@ public class Flows {
         "{{Fields}}" +
         "    public {{ClassSimpleName}}() {\n" +
         "        super();" +
+        "{{EnableIngressCache}}" +
         "{{RegisterIfaceHolders}}" +
         "    }\n" +
         "\n" +
@@ -125,6 +127,7 @@ public class Flows {
         }
         String packageName = fullClassName.substring(0, fullClassName.lastIndexOf("."));
         String classSimpleName = fullClassName.substring(fullClassName.lastIndexOf(".") + 1);
+        String enableIngressCache = genEnableIngressCache();
         String registerIfaceHolders = genRegisterIfaceHolders(ctx);
         String flowTables = genFlowTables(ctx);
         String fields = genFields(ctx);
@@ -136,10 +139,21 @@ public class Flows {
             .replace("{{Imports}}", imports)
             .replace("{{ClassSimpleName}}", classSimpleName)
             .replace("{{Fields}}", fields)
+            .replace("{{EnableIngressCache}}", enableIngressCache)
             .replace("{{RegisterIfaceHolders}}", registerIfaceHolders)
             .replace("{{FlowTables}}", flowTables)
             .replace("{{Actions}}", actions)
             ;
+    }
+
+    private String genEnableIngressCache() {
+        if (flows.size() < ENABLE_CACHE_FLOW_COUNT_THRESHOLD) {
+            return "";
+        }
+        StringBuilder sb = new StringBuilder();
+        genNewLine(sb, 8);
+        sb.append("setEnableIngressCache(true);");
+        return sb.toString();
     }
 
     private String genRegisterIfaceHolders(GenContext ctx) {

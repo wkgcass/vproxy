@@ -10,4 +10,8 @@ public interface Plugin {
     void stop();
 
     void destroy();
+
+    default String inspect() {
+        return null;
+    }
 }

@@ -9,7 +9,7 @@ import io.vproxy.vpacket.*;
 import io.vproxy.vpacket.conntrack.tcp.TcpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpEntry;
 import io.vproxy.vpacket.conntrack.udp.UdpListenEntry;
-import io.vproxy.vpacket.tuples.SevenTuple;
+import io.vproxy.vpacket.tuples.PacketFullTuple;
 import io.vproxy.vswitch.iface.Iface;
 
 import java.util.Collection;
@@ -58,7 +58,7 @@ public class PacketBuffer extends PacketDataBuffer {
     public AbstractIpPacket ipPkt;
     public TcpPacket tcpPkt;
     public UdpPacket udpPkt;
-    private SevenTuple sevenTuple;
+    private PacketFullTuple fullTuple;
 
     // ----- helper fields -----
     // l3
@@ -252,20 +252,31 @@ public class PacketBuffer extends PacketDataBuffer {
         } else {
             this.ipPkt = null;
         }
-        this.sevenTuple = null;
+        this.fullTuple = null;
     }
 
-    public SevenTuple getSevenTuple() {
+    public PacketFullTuple getFullTuple() {
+        if (this.fullTuple != null) {
+            return this.fullTuple;
+        }
+        if (devin == null) {
+            return null; // no input dev
+        }
+        int devinIndex = devin.getIndex();
+        if (devinIndex == 0) {
+            return null; // the dev is not fully initialized yet
+        }
         if (tcpPkt == null && udpPkt == null) return null;
         int ipProto = tcpPkt != null ? Consts.IP_PROTOCOL_TCP : Consts.IP_PROTOCOL_UDP;
         int tpSrc = tcpPkt != null ? tcpPkt.getSrcPort() : udpPkt.getSrcPort();
         int tpDst = tcpPkt != null ? tcpPkt.getDstPort() : udpPkt.getDstPort();
-        var ret = new SevenTuple(
+        var ret = new PacketFullTuple(
+            devin.getIndex(),
             pkt.getSrc(), pkt.getDst(),
             ipPkt.getSrc(), ipPkt.getDst(),
             ipProto, tpSrc, tpDst
         );
-        this.sevenTuple = ret;
+        this.fullTuple = ret;
         return ret;
     }
 
