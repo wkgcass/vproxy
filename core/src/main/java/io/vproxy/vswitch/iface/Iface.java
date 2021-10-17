@@ -12,6 +12,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 public abstract class Iface {
+    private int index;
     private boolean destroyed = false;
     private int baseMTU;
     private boolean floodAllowed;
@@ -33,6 +34,7 @@ public abstract class Iface {
     }
 
     public void init(IfaceInitParams params) throws Exception {
+        this.index = params.ifaceIndex;
         this.callback = params.callback;
     }
 
@@ -47,6 +49,10 @@ public abstract class Iface {
         for (var vlan : new ArrayList<>(vlanIfaces.values())) {
             vlan.destroy();
         }
+    }
+
+    public int getIndex() {
+        return index;
     }
 
     public abstract int getLocalSideVni(int hint);
@@ -164,7 +170,7 @@ public abstract class Iface {
     public abstract String name();
 
     private String paramsToString() {
-        return "mtu " + baseMTU
+        return "index " + index + " mtu " + baseMTU
             + " flood " + (floodAllowed ? "allow" : "deny")
             + " " + (disabled ? "disabled" : "enabled");
     }

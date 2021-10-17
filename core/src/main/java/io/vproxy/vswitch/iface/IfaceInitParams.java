@@ -8,17 +8,20 @@ import io.vproxy.vswitch.util.UserInfo;
 import java.util.Map;
 
 public class IfaceInitParams {
+    public final int ifaceIndex;
     public final Switch sw;
     public final SelectorEventLoop loop;
     public final DatagramFD sock;
     public final PacketCallback callback;
     public final Map<String, UserInfo> users;
 
-    public IfaceInitParams(Switch sw,
+    public IfaceInitParams(int ifaceIndex,
+                           Switch sw,
                            SelectorEventLoop loop,
                            DatagramFD sock,
                            PacketCallback callback,
                            Map<String, UserInfo> users) {
+        this.ifaceIndex = ifaceIndex;
         this.sw = sw;
         this.loop = loop;
         this.sock = sock;

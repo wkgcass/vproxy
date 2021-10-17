@@ -43,6 +43,7 @@ import io.vproxy.xdp.UMem;
 
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class Switch {
     public final String alias;
@@ -352,8 +353,10 @@ public class Switch {
         iface.setFloodAllowed(defaultFloodAllowed);
     }
 
+    private final AtomicInteger ifaceIndexes = new AtomicInteger(0); // only increases, never decreases
+
     private IfaceInitParams buildIfaceInitParams() {
-        return new IfaceInitParams(this, eventLoop.getSelectorEventLoop(), sock, packetCallback, users);
+        return new IfaceInitParams(ifaceIndexes.incrementAndGet(), this, eventLoop.getSelectorEventLoop(), sock, packetCallback, users);
     }
 
     @Blocking
@@ -364,7 +367,9 @@ public class Switch {
             if (timer != null) {
                 timer.setTimeout(-1);
             } else {
-                ifaces.put(iface, new IfaceTimer(loop, -1, iface));
+                timer = new IfaceTimer(loop, -1, iface);
+                timer.resetTimer();
+                ifaces.put(iface, timer);
             }
             cb.succeeded();
 
