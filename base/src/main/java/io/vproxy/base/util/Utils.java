@@ -131,6 +131,9 @@ public class Utils {
     }
 
     public static <T> String formatArrayToStringCompact(T[] arr) {
+        if (arr.length == 0) {
+            return "[]";
+        }
         StringBuilder sb = new StringBuilder();
         boolean isFirst = true;
         for (T s : arr) {
