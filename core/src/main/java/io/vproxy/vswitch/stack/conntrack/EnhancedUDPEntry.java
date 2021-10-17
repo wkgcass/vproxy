@@ -27,6 +27,7 @@ public class EnhancedUDPEntry extends UdpEntry {
                 destroy();
             }
         };
+        this.timer.start();
     }
 
     @Override

@@ -16,6 +16,12 @@ public class Timer {
         this.timeout = timeout;
     }
 
+    public void start() {
+        if (lastStart == -1) {
+            resetTimer();
+        }
+    }
+
     protected long currentTimeMillis() {
         return Config.currentTimestamp;
     }
