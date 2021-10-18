@@ -25,8 +25,9 @@ do
 	exit_code="$?"
 	if [ "$exit_code" != "0" ]
 	then
-	  docker rm "$name"
-	  exit $exit_code
+		docker kill "$name"
+		docker rm "$name"
+		exit $exit_code
 	fi
 	set -e
 done
@@ -38,6 +39,7 @@ docker exec "$name" ./gradlew runSingleTest -Dcase="CI"
 exit_code="$?"
 if [ "$exit_code" != "0" ]
 then
+	docker kill "$name"
 	docker rm "$name"
 	exit $exit_code
 fi

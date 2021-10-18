@@ -392,7 +392,7 @@ public class FlowParser {
         if (value.contains("/")) {
             Network net;
             try {
-                net = new Network(value);
+                net = Network.from(value);
             } catch (IllegalArgumentException e) {
                 if (flow.matcher.dl_type == Consts.ETHER_TYPE_IPv6) {
                     return matcher(value, 16);

@@ -9,7 +9,7 @@ import org.junit.Test;
 import java.util.Arrays;
 import java.util.List;
 
-import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.*;
 
 public class TestNetMask {
     @Test
@@ -21,24 +21,16 @@ public class TestNetMask {
                 int positive = Utils.positive(b);
                 String bin = Integer.toBinaryString(positive);
                 int len = 8 - bin.length();
-                for (int j = 0; j < len; ++j) {
-                    sb.append("0");
-                }
+                sb.append("0".repeat(Math.max(0, len)));
                 sb.append(bin);
             }
             String binSeriesFromByte = sb.toString();
             sb.delete(0, sb.length());
-            for (int i = 0; i < m; ++i) {
-                sb.append("1");
-            }
+            sb.append("1".repeat(m));
             if (m <= 32) {
-                for (int i = m; i < 32; ++i) {
-                    sb.append("0");
-                }
+                sb.append("0".repeat(32 - m));
             } else {
-                for (int i = m; i < 128; ++i) {
-                    sb.append("0");
-                }
+                sb.append("0".repeat(128 - m));
             }
             String binSeriesFromMask = sb.toString();
 
@@ -110,5 +102,53 @@ public class TestNetMask {
             byte[] bmask = Network.parseMask(Integer.parseInt(net.split("/")[1]));
             assertEquals("match for " + tup, b, Network.maskMatch(binput, baddr, bmask));
         }
+    }
+
+    private void assertNetworkContains(String network, String ip) {
+        assertTrue(Network.from(network).contains(IP.from(ip)));
+    }
+
+    @Test
+    public void networkContains() {
+        assertNetworkContains("192.168.1.2/32", "192.168.1.2");
+        assertNetworkContains("192.168.1.2/32", "::ffff:192.168.1.2");
+        assertNetworkContains("192.168.1.2/32", "::192.168.1.2");
+        assertNetworkContains("192.168.1.0/24", "192.168.1.2");
+        assertNetworkContains("192.168.1.0/24", "::ffff:192.168.1.2");
+        assertNetworkContains("192.168.1.0/24", "::192.168.1.2");
+
+        assertNetworkContains("::ffff:192.168.1.0/120", "192.168.1.2");
+        assertNetworkContains("::192.168.1.0/120", "192.168.1.2");
+
+        assertNetworkContains("fd00::2/128", "fd00::2");
+        assertNetworkContains("fd00::1:0:0/97", "fd00::1:0:2");
+        assertNetworkContains("fd00::1:0:0/96", "fd00::1:0:2");
+        assertNetworkContains("fd00::1:0:0:0:0/65", "fd00::1:0:0:0:2");
+        assertNetworkContains("fd00::1:0:0:0:0/64", "fd00::1:0:0:0:2");
+        assertNetworkContains("fd00:1::/33", "fd00:1::2");
+        assertNetworkContains("fd00:1::/32", "fd00:1::2");
+        assertNetworkContains("fd00::/8", "fd00::2");
+        assertNetworkContains("::/0", "abcd:ef01:9988::1234");
+    }
+
+    private void assertNetworkNotContains(String network, String ip) {
+        assertFalse(Network.from(network).contains(IP.from(ip)));
+    }
+
+    @Test
+    public void networkNotContains() {
+        assertNetworkNotContains("192.168.1.0/24", "192.168.2.1");
+        assertNetworkNotContains("192.168.1.0/24", "::ffff:192.168.2.1");
+        assertNetworkNotContains("192.168.1.0/24", "::192.168.2.1");
+        assertNetworkNotContains("192.168.1.0/24", "2001::192.168.1.1");
+
+        assertNetworkNotContains("fd00::2/128", "fd00::1");
+        assertNetworkNotContains("fd00::1:0:0/97", "fd00::2:0:2");
+        assertNetworkNotContains("fd00::1:0:0/96", "fd00::2:0:2");
+        assertNetworkNotContains("fd00::1:0:0:0:0/65", "fd00::2:0:0:0:2");
+        assertNetworkNotContains("fd00::1:0:0:0:0/64", "fd00::2:0:0:0:2");
+        assertNetworkNotContains("fd00:1::/33", "fd00:2::2");
+        assertNetworkNotContains("fd00:1::/32", "fd00:2::2");
+        assertNetworkNotContains("fd00::/8", "fe00::2");
     }
 }

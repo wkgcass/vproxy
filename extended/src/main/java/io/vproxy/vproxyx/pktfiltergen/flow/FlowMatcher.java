@@ -247,7 +247,7 @@ public class FlowMatcher {
                 }
             }
             if (prefixAllOne) {
-                String netstr = new Network(ip.getMatcher().toJavaArray(), ip.getMask().toJavaArray()).toString();
+                String netstr = Network.from(ip.getMatcher().toJavaArray(), ip.getMask().toJavaArray()).toString();
                 if (netstr.startsWith("[")) {
                     netstr = netstr.substring(1);
                     netstr = netstr.replace("]", "");

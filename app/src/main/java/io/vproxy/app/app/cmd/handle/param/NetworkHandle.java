@@ -30,7 +30,7 @@ public class NetworkHandle {
         byte[] mask = Network.parseMask(Integer.parseInt(arr[1]));
         if (!Network.validNetwork(addr, mask))
             throw new IllegalArgumentException();
-        return new Network(addr, mask);
+        return Network.from(addr, mask);
     }
 
     public static Network get(Command cmd) {

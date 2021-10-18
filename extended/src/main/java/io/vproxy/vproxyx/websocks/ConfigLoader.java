@@ -316,7 +316,7 @@ public class ConfigLoader {
                     if (!Network.validNetworkStr(val)) {
                         throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
                     }
-                    directRelayIpRange = new Network(val);
+                    directRelayIpRange = Network.from(val);
                 } else if (line.startsWith("agent.direct-relay.listen ")) {
                     String val = line.substring("agent.direct-relay.listen ".length()).trim();
                     if (!IPPort.validL4AddrStr(val)) {

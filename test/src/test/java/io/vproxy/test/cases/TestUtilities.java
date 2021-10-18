@@ -313,7 +313,7 @@ public class TestUtilities {
         assertTrue(BitwiseMatcher.from(ipv6.bytes).match(ipv6));
         var mac = new MacAddress("01:23:45:67:89:01");
         assertTrue(BitwiseMatcher.from(mac.bytes).match(mac));
-        var net = new Network("192.168.1.0/24");
+        var net = Network.from("192.168.1.0/24");
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray()).match(ipv4));
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray(), true).match(ipv4));
     }
@@ -323,7 +323,7 @@ public class TestUtilities {
         assertTrue(BitwiseMatcher.from(IP.from("192.168.1.1").toByteArray()) instanceof BitwiseIPv4Matcher);
         assertTrue(BitwiseMatcher.from(IP.from("2000::1").toByteArray()) instanceof BitwiseIPv6Matcher);
         assertTrue(BitwiseMatcher.from(new MacAddress("01:23:45:67:89:01").toByteArray()) instanceof BitwiseMacAddressMatcher);
-        var net = new Network("192.168.1.0/24");
+        var net = Network.from("192.168.1.0/24");
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray()) instanceof BitwiseNetworkMatcher);
         assertTrue(BitwiseMatcher.from(net.getIp().bytes, net.getRawMaskByteArray(), true) instanceof BitwiseNetworkMatcher);
     }

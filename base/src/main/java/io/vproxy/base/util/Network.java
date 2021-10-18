@@ -2,36 +2,46 @@ package io.vproxy.base.util;
 
 import io.vproxy.vfd.IP;
 import io.vproxy.vfd.IPv4;
+import io.vproxy.vfd.IPv6;
 
 import java.util.Objects;
 
-public class Network {
-    private final IP ip;
-    private final ByteArray mask;
+public abstract class Network {
+    protected final IP ip;
+    protected final ByteArray mask;
+    protected final int maskNumber;
 
-    public Network(byte[] ip, byte[] mask) {
-        this(IP.from(ip), ByteArray.from(mask));
-    }
-
-    public Network(IP ip, ByteArray mask) {
+    protected Network(IP ip, ByteArray mask) {
         this.ip = ip;
         this.mask = mask;
+        this.maskNumber = maskInt(mask.toJavaArray());
     }
 
-    public Network(String net) {
+    public static Network from(byte[] ip, byte[] mask) {
+        return from(IP.from(ip), ByteArray.from(mask));
+    }
+
+    public static Network from(IP ip, ByteArray mask) {
+        if (ip instanceof IPv4) {
+            return new NetworkV4((IPv4) ip, mask);
+        } else if (ip instanceof IPv6) {
+            return new NetworkV6((IPv6) ip, mask);
+        } else {
+            throw new IllegalArgumentException("ip is not ipv4 nor ipv6: " + ip);
+        }
+    }
+
+    public static Network from(String net) {
         if (!validNetworkStr(net)) {
-            throw new IllegalArgumentException();
+            throw new IllegalArgumentException("not valid network " + net);
         }
         String ip = net.substring(0, net.lastIndexOf("/"));
         int mask = Integer.parseInt(net.substring(net.indexOf("/") + 1));
 
-        this.ip = IP.from(ip);
-        this.mask = ByteArray.from(parseMask(mask));
+        return from(IP.from(ip), ByteArray.from(parseMask(mask)));
     }
 
-    public boolean contains(IP address) {
-        return maskMatch(address.getAddress(), ip.getAddress(), mask.toJavaArray());
-    }
+    abstract public boolean contains(IP address);
 
     public boolean contains(Network that) {
         if (!contains(that.ip)) {
@@ -45,7 +55,7 @@ public class Network {
     }
 
     public int getMask() {
-        return maskInt(mask.toJavaArray());
+        return maskNumber;
     }
 
     public byte[] getRawIpBytes() {
@@ -165,7 +175,7 @@ public class Network {
         }
         getMask(maskbytes, mask);
         eraseToNetwork(ipbytes, maskbytes);
-        return new Network(ipbytes, maskbytes);
+        return Network.from(ipbytes, maskbytes);
     }
 
     public static void eraseToNetwork(byte[] addr, byte[] mask) {

@@ -1154,4 +1154,26 @@ public class Utils {
 
         throw new Error("should not reach here: " + a + " <==> " + b);
     }
+
+    private static final int[] maskValues = new int[33];
+
+    static {
+        for (var i = 1; i <= 32; ++i) {
+            var res = 0;
+            for (var j = 1; j <= i; ++j) {
+                res = (1 << (32 - j)) | res;
+            }
+            maskValues[i] = res;
+        }
+    }
+
+    public static int maskNumberToInt(int maskNumber) {
+        if (maskNumber > 32) {
+            throw new IllegalArgumentException("mask for ipv4 should be between [0,32], but got " + maskNumber);
+        }
+        if (maskNumber < 0) {
+            throw new IllegalArgumentException("mask for ipv4 should be between [0,32], but got " + maskNumber);
+        }
+        return maskValues[maskNumber];
+    }
 }

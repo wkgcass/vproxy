@@ -41,7 +41,7 @@ public class SwitchUDP {
         }
         //noinspection ResultOfMethodCallIgnored
         f.setExecutable(true);
-        sw.addNetwork(3, new Network("172.16.3.0/24"), new Network("[fd00::300]/120"), null);
+        sw.addNetwork(3, Network.from("172.16.3.0/24"), Network.from("[fd00::300]/120"), null);
         sw.addTap("tap1", 3, f.getAbsolutePath());
         var network = sw.getNetwork(3);
         network.addIp(IP.from("172.16.3.254"), new MacAddress("00:00:00:00:03:04"), null);

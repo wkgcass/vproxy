@@ -16,10 +16,10 @@ public class TestRouteTable {
         String[] ab = s.split("/");
         String a = ab[0];
         int b = Integer.parseInt(ab[1]);
-        return new Network(IP.parseIpString(a), Network.parseMask(b));
+        return Network.from(IP.parseIpString(a), Network.parseMask(b));
     }
 
-    private List<String> expect = Arrays.asList(
+    private final List<String> expect = Arrays.asList(
         "192.168.3.0/24",
         "192.168.0.0/16",
         "0.0.0.0/0"

@@ -1,8 +1,18 @@
 package io.vproxy.poc
 
+import io.vproxy.base.component.elgroup.EventLoopGroup
+import io.vproxy.base.connection.ServerSock
+import io.vproxy.base.util.ByteArray
+import io.vproxy.base.util.Network
+import io.vproxy.component.secure.SecurityGroup
 import io.vproxy.lib.common.coroutine
 import io.vproxy.lib.common.launch
 import io.vproxy.lib.http1.CoroutineHttp1Server
+import io.vproxy.test.tool.CommandServer
+import io.vproxy.vfd.IP
+import io.vproxy.vfd.IPPort
+import io.vproxy.vfd.MacAddress
+import io.vproxy.vswitch.Switch
 import java.io.File
 import java.io.FileOutputStream
 
@@ -10,14 +20,14 @@ object SwitchTCP {
   @Throws(Exception::class)
   @JvmStatic
   fun main(args: Array<String>) {
-    val elg = io.vproxy.base.component.elgroup.EventLoopGroup("elg0")
-    val sw = io.vproxy.vswitch.Switch(
+    val elg = EventLoopGroup("elg0")
+    val sw = Switch(
       "sw0",
-      io.vproxy.vfd.IPPort("127.0.0.1", 18472),
+      IPPort("127.0.0.1", 18472),
       elg,
       60000,
       60000,
-      io.vproxy.component.secure.SecurityGroup.allowAll(),
+      SecurityGroup.allowAll(),
       1500,
       true
     )
@@ -38,19 +48,19 @@ object SwitchTCP {
     }
     f.setExecutable(true)
     sw.addNetwork(3,
-      io.vproxy.base.util.Network("172.16.3.0/24"),
-      io.vproxy.base.util.Network("[fd00::300]/120"), null)
+      Network.from("172.16.3.0/24"),
+      Network.from("[fd00::300]/120"), null)
     sw.addTap("tap1", 3, f.absolutePath)
     val network = sw.getNetwork(3)
     network.addIp(
-      io.vproxy.vfd.IP.from("172.16.3.254"),
-      io.vproxy.vfd.MacAddress("00:00:00:00:03:04"), null)
+      IP.from("172.16.3.254"),
+      MacAddress("00:00:00:00:03:04"), null)
     val fds = network.fds()
-    val serverSock = io.vproxy.base.connection.ServerSock.create(io.vproxy.vfd.IPPort("0.0.0.0", 80), fds)
+    val serverSock = ServerSock.create(IPPort("0.0.0.0", 80), fds)
 
     val httpServer = CoroutineHttp1Server(serverSock.coroutine(el))
     httpServer.get("/hello") { it.conn.response(200).send("world\r\n") }
-    val largeBuffer = io.vproxy.base.util.ByteArray.allocate(1024 * 1024)
+    val largeBuffer = ByteArray.allocate(1024 * 1024)
     val chars = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789".toByteArray()
     for (i in 0 until largeBuffer.length()) {
       largeBuffer[i] = chars[i % chars.size]
@@ -79,8 +89,8 @@ object SwitchTCP {
     loop.launch {
       httpServer.start()
     }
-    val serverSock88: io.vproxy.base.connection.ServerSock = io.vproxy.base.connection.ServerSock.create(
-      io.vproxy.vfd.IPPort("0.0.0.0", 88), fds)
-    el.addServer(serverSock88, null, io.vproxy.test.tool.CommandServer())
+    val serverSock88: ServerSock = ServerSock.create(
+      IPPort("0.0.0.0", 88), fds)
+    el.addServer(serverSock88, null, CommandServer())
   }
 }

@@ -1,5 +1,6 @@
 package io.vproxy.app.controller
 
+import io.vproxy.base.util.Network
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.util.ObjectBuilder
 import io.vproxy.lib.common.coroutine
@@ -20,7 +21,7 @@ import kotlin.system.exitProcess
 class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync: Boolean) {
   companion object {
     private const val dockerNetworkPluginBase = ""
-    private val driver: io.vproxy.app.controller.DockerNetworkDriver =
+    private val driver: DockerNetworkDriver =
       io.vproxy.app.controller.DockerNetworkDriverImpl()
   }
 
@@ -110,7 +111,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
   }
 
   private suspend fun createNetwork(rctx: RoutingContext) {
-    val req = io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
+    val req = DockerNetworkDriver.CreateNetworkRequest()
     try {
       val body = rctx.get(Tool.bodyJson) as JSON.Object
       req.networkId = body.getString("NetworkID")
@@ -139,10 +140,10 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
     return
   }
 
-  private fun parseIPData(ipv4Data: MutableList<io.vproxy.app.controller.DockerNetworkDriver.IPData>, raw: JSON.Array) {
+  private fun parseIPData(ipv4Data: MutableList<DockerNetworkDriver.IPData>, raw: JSON.Array) {
     for (i in 0 until raw.length()) {
       val obj = raw.getObject(i)
-      val data = io.vproxy.app.controller.DockerNetworkDriver.IPData()
+      val data = DockerNetworkDriver.IPData()
       data.addressSpace = obj.getString("AddressSpace")
       data.pool = obj.getString("Pool")
       data.gateway = obj.getString("Gateway")
@@ -178,14 +179,14 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
   }
 
   private suspend fun createEndpoint(rctx: RoutingContext) {
-    val req = io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointRequest()
+    val req = DockerNetworkDriver.CreateEndpointRequest()
     try {
       val body = rctx.get(Tool.bodyJson) as JSON.Object
       req.networkId = body.getString("NetworkID")
       req.endpointId = body.getString("EndpointID")
       if (body.containsKey("Interface")) {
         val interf = body.getObject("Interface")
-        req.netInterface = io.vproxy.app.controller.DockerNetworkDriver.NetInterface()
+        req.netInterface = DockerNetworkDriver.NetInterface()
         req.netInterface.address = interf.getString("Address")
         req.netInterface.addressIPV6 = interf.getString("AddressIPv6")
         req.netInterface.macAddress = interf.getString("MacAddress")
@@ -195,7 +196,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
       rctx.conn.response(200).send(err("invalid request body"))
       return
     }
-    val resp: io.vproxy.app.controller.DockerNetworkDriver.CreateEndpointResponse
+    val resp: DockerNetworkDriver.CreateEndpointResponse
     try {
       resp = driver.createEndpoint(req)
     } catch (e: Exception) {
@@ -260,7 +261,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
       rctx.conn.response(200).send("invalid request body")
       return
     }
-    val resp: io.vproxy.app.controller.DockerNetworkDriver.JoinResponse
+    val resp: DockerNetworkDriver.JoinResponse
     try {
       resp = driver.join(networkId, endpointId, sandboxKey)
     } catch (e: Exception) {
@@ -394,13 +395,13 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
         if (network.driver == null || network.driver!!.startsWith("vproxyio/docker-plugin:").not()) {
           continue
         }
-        val createReq = io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest()
+        val createReq = DockerNetworkDriver.CreateNetworkRequest()
         createReq.networkId = network.id
         createReq.ipv4Data = LinkedList()
         createReq.ipv6Data = LinkedList()
         for (conf in network.ipam!!.config!!) {
-          val net = io.vproxy.base.util.Network(conf.subnet!!)
-          val data = io.vproxy.app.controller.DockerNetworkDriver.IPData()
+          val net = Network.from(conf.subnet!!)
+          val data = DockerNetworkDriver.IPData()
           data.addressSpace = "" // not used
           data.pool = net.toString()
           data.gateway = conf.gateway ?: buildGateway(net)
@@ -413,7 +414,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
           }
         }
         createReq.options = ObjectBuilder()
-          .putObject(io.vproxy.app.controller.DockerNetworkDriver.CreateNetworkRequest.optionsDockerNetworkGenericKey) {
+          .putObject(DockerNetworkDriver.CreateNetworkRequest.optionsDockerNetworkGenericKey) {
             for ((k, v) in network.options!!) {
               put(k, v)
             }
@@ -434,9 +435,9 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
       io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.SYS_ERROR, "failed to initiate networks ($cnt networks already created before error)", e)
       try {
         @Suppress("BlockingMethodInNonBlockingContext")
-        Files.delete(Path.of(io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE))
+        Files.delete(Path.of(DockerNetworkDriver.TEMPORARY_CONFIG_FILE))
       } catch (e2: Throwable) {
-        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.FILE_ERROR, "failed to rollback " + io.vproxy.app.controller.DockerNetworkDriver.TEMPORARY_CONFIG_FILE, e2)
+        io.vproxy.base.util.Logger.error(io.vproxy.base.util.LogType.FILE_ERROR, "failed to rollback " + DockerNetworkDriver.TEMPORARY_CONFIG_FILE, e2)
       }
       exitProcess(1)
       @Suppress("UNREACHABLE_CODE")
@@ -444,7 +445,7 @@ class DockerNetworkPluginController(val path: io.vproxy.vfd.UDSPath, requireSync
     }
   }
 
-  private fun buildGateway(net: io.vproxy.base.util.Network): String {
+  private fun buildGateway(net: Network): String {
     val bytes = net.ip.address.copyOf()
     bytes[bytes.size - 1] = (bytes[bytes.size - 1] + 1).toByte()
     return io.vproxy.vfd.IP.from(bytes).formatToIPString() + "/" + net.mask

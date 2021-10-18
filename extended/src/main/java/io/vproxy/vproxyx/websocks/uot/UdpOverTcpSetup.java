@@ -66,10 +66,10 @@ public class UdpOverTcpSetup {
             v6gw = getIPv6GW(v6net);
         }
 
-        network.routeTable.addRule(new RouteTable.RouteRule("gw", new Network("0.0.0.0/0"), v4gw.right));
+        network.routeTable.addRule(new RouteTable.RouteRule("gw", Network.from("0.0.0.0/0"), v4gw.right));
         Logger.alert("adding default route via " + v4gw.right.formatToIPString());
         if (v6gw != null) {
-            network.routeTable.addRule(new RouteTable.RouteRule("gw6", new Network("::/0"), v6gw.right));
+            network.routeTable.addRule(new RouteTable.RouteRule("gw6", Network.from("::/0"), v6gw.right));
             Logger.alert("adding default route via " + v6gw.right.formatToIPString());
         }
 

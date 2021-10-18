@@ -17,6 +17,10 @@ public class IPv4 extends IP {
         return (Inet4Address) super.toInetAddress();
     }
 
+    public int getIPv4Value() {
+        return value;
+    }
+
     @Override
     public boolean equals(Object that) {
         if (that == null) return false;

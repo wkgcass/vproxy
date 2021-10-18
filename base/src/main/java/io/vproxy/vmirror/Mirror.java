@@ -562,12 +562,12 @@ public class Mirror {
             handling[0] = "network";
             if (filter.containsKey("network")) {
                 String network = filter.getString("network");
-                filterConfig.netX = new Network(network);
+                filterConfig.netX = Network.from(network);
 
                 handling[0] = "network2";
                 if (filter.containsKey("network2")) {
                     network = filter.getString("network2");
-                    filterConfig.netY = new Network(network);
+                    filterConfig.netY = Network.from(network);
                 }
             }
 

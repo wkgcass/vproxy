@@ -60,7 +60,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             if (!Network.validNetworkStr(net)) {
                 throw new Exception(SUBNET4_OPTION + ": " + net + " is not a valid network");
             }
-            optionV4Net = new Network(net);
+            optionV4Net = Network.from(net);
             if (!(optionV4Net.getIp() instanceof IPv4)) {
                 throw new Exception(SUBNET4_OPTION + ": " + net + " is not v4 network");
             }
@@ -71,7 +71,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             if (!Network.validNetworkStr(net)) {
                 throw new Exception(SUBNET6_OPTION + ": " + net + " is not a valid network");
             }
-            optionV6Net = new Network(net);
+            optionV6Net = Network.from(net);
             if (!(optionV6Net.getIp() instanceof IPv6)) {
                 throw new Exception(SUBNET4_OPTION + ": " + net + " is not v6 network");
             }
@@ -101,7 +101,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
             Network net;
             try {
-                net = new Network(ipv4Data.pool);
+                net = Network.from(ipv4Data.pool);
             } catch (IllegalArgumentException e) {
                 throw new Exception("ipv4 network is not a valid cidr " + ipv4Data.pool);
             }
@@ -142,7 +142,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
             Network net;
             try {
-                net = new Network(ipv6Data.pool);
+                net = Network.from(ipv6Data.pool);
             } catch (IllegalArgumentException e) {
                 throw new Exception("ipv6 network is not a valid cidr " + ipv6Data.pool);
             }
@@ -206,13 +206,13 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         Network v4net;
         //noinspection ReplaceNullCheck
         if (optionV4Net == null) {
-            v4net = new Network(req.ipv4Data.get(0).pool);
+            v4net = Network.from(req.ipv4Data.get(0).pool);
         } else {
             v4net = optionV4Net;
         }
         Network v6net;
         if (optionV6Net == null && !req.ipv6Data.isEmpty()) {
-            v6net = new Network(req.ipv6Data.get(0).pool);
+            v6net = Network.from(req.ipv6Data.get(0).pool);
         } else {
             v6net = optionV6Net;
         }
@@ -666,7 +666,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             Network network;
             String subnet = info.annotations.other.get(GATEWAY_SUBNET_ANNOTATION);
             try {
-                network = new Network(subnet);
+                network = Network.from(subnet);
             } catch (RuntimeException e) {
                 throw new Exception("invalid value for " + GATEWAY_SUBNET_ANNOTATION + ": " + subnet, e);
             }

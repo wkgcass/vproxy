@@ -42,8 +42,8 @@ public class XDPPoc2 {
         sw.start();
 
         VirtualNetwork t = sw.addNetwork(1,
-            new Network("192.168.100.0/24"),
-            new Network("fc00:dead:cafe:1::/64"),
+            Network.from("192.168.100.0/24"),
+            Network.from("fc00:dead:cafe:1::/64"),
             new Annotations());
         t.addIp(IP.from("fc00:dead:cafe:1::ff01"),
             new MacAddress("00:00:00:00:ff:01"),

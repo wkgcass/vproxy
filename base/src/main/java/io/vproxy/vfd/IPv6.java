@@ -24,6 +24,22 @@ public class IPv6 extends IP {
         return (Inet6Address) super.toInetAddress();
     }
 
+    public int getIPv6Value0() {
+        return value0;
+    }
+
+    public int getIPv6Value1() {
+        return value1;
+    }
+
+    public int getIPv6Value2() {
+        return value2;
+    }
+
+    public int getIPv6Value3() {
+        return value3;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (o == null) return false;
@@ -53,5 +69,13 @@ public class IPv6 extends IP {
     @Override
     public boolean isMulticast() {
         return bytes.get(0) == (byte) 0xff;
+    }
+
+    public boolean isV4MappedV6Address() {
+        return value0 == 0 && value1 == 0 && value2 == 0xffff;
+    }
+
+    public boolean isV4CompatibleV6Address() {
+        return value0 == 0 && value1 == 0 && value2 == 0;
     }
 }

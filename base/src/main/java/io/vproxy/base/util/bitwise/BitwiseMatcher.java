@@ -56,7 +56,7 @@ abstract public class BitwiseMatcher {
         } else if (maskPrefix && (matcher.length() == 4 || matcher.length() == 16) &&
             ((matcher.length() == 4 && mask.length() == 4) || (matcher.length() == 16 && (mask.length() == 4 || mask.length() == 16)))
         ) {
-            return new BitwiseNetworkMatcher(new Network(IP.from(matcher.toJavaArray()), mask));
+            return new BitwiseNetworkMatcher(Network.from(IP.from(matcher.toJavaArray()), mask));
         } else {
             return new BitwiseGeneralMatcher(matcher, mask, expandMask);
         }
