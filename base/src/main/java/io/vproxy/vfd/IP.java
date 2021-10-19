@@ -108,6 +108,10 @@ public abstract class IP implements ToByteArray {
         return ipStr(bytes.toJavaArray());
     }
 
+    abstract public IPv4 to4();
+
+    abstract public IPv6 to6();
+
     @Override
     public String toString() {
         return "/" + formatToIPString(); // compatible with java InetAddress

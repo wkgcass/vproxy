@@ -1,14 +1,14 @@
 package io.vproxy.component.secure;
 
 import io.vproxy.base.connection.Protocol;
+import io.vproxy.base.util.Networks;
 import io.vproxy.base.util.exception.AlreadyExistException;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vfd.IP;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
-import java.util.Optional;
+import java.util.concurrent.CopyOnWriteArrayList;
 
 public class SecurityGroup {
     public static final String defaultName = "(allow-all)";
@@ -16,8 +16,8 @@ public class SecurityGroup {
 
     public final String alias;
     public boolean defaultAllow;
-    private LinkedList<SecurityGroupRule> tcpRules = new LinkedList<>();
-    private LinkedList<SecurityGroupRule> udpRules = new LinkedList<>();
+    private final Networks<SecurityGroupRules> tcpRules = new Networks<>();
+    private final Networks<SecurityGroupRules> udpRules = new Networks<>();
 
     public SecurityGroup(String alias, boolean defaultAllow) {
         this.alias = alias;
@@ -33,28 +33,27 @@ public class SecurityGroup {
     }
 
     public boolean allow(Protocol protocol, IP address, int port) {
-        LinkedList<SecurityGroupRule> rules;
+        Networks<SecurityGroupRules> rules;
         if (protocol == Protocol.TCP) {
             rules = tcpRules;
         } else {
             assert protocol == Protocol.UDP;
             rules = udpRules;
         }
-        if (rules.isEmpty())
-            return defaultAllow;
-        for (SecurityGroupRule rule : rules) {
-            if (rule.match(address, port))
+        var groups = rules.lookup(address);
+        if (groups != null) {
+            var rule = groups.lookupByPort(port);
+            if (rule != null) {
                 return rule.allow;
+            }
         }
         return defaultAllow;
     }
 
     public List<SecurityGroupRule> getRules() {
-        LinkedList<SecurityGroupRule> tcpRules = this.tcpRules;
-        LinkedList<SecurityGroupRule> udpRules = this.udpRules;
-        List<SecurityGroupRule> rules = new ArrayList<>(tcpRules.size() + udpRules.size());
-        rules.addAll(tcpRules);
-        rules.addAll(udpRules);
+        List<SecurityGroupRule> rules = new ArrayList<>();
+        this.tcpRules.forEach(rr -> rules.addAll(rr.rules));
+        this.udpRules.forEach(rr -> rules.addAll(rr.rules));
         return rules;
     }
 
@@ -62,12 +61,22 @@ public class SecurityGroup {
         if (getRules().stream().anyMatch(r -> r.alias.equals(rule.alias)))
             throw new AlreadyExistException("security-group-rule in security-group " + this.alias, rule.alias);
 
-        LinkedList<SecurityGroupRule> rules;
+        List<SecurityGroupRule> rules;
         if (rule.protocol == Protocol.TCP) {
-            rules = new LinkedList<>(tcpRules);
+            var rr = tcpRules.lookup(rule.network);
+            if (rr == null) {
+                rr = new SecurityGroupRules();
+                tcpRules.add(rule.network, rr);
+            }
+            rules = rr.rules;
         } else {
             assert rule.protocol == Protocol.UDP;
-            rules = new LinkedList<>(udpRules);
+            var rr = udpRules.lookup(rule.network);
+            if (rr == null) {
+                rr = new SecurityGroupRules();
+                udpRules.add(rule.network, rr);
+            }
+            rules = rr.rules;
         }
         // check ip mask
         for (SecurityGroupRule r : rules) {
@@ -78,37 +87,44 @@ public class SecurityGroup {
                 throw new AlreadyExistException("security-group-rule " + r + " already exists in security-group " + this.alias);
         }
         rules.add(rule);
-        if (rule.protocol == Protocol.TCP) {
-            this.tcpRules = rules;
-        } else {
-            //noinspection ConstantConditions
-            assert rule.protocol == Protocol.UDP;
-            this.udpRules = rules;
-        }
     }
 
     public void removeRule(String name) throws NotFoundException {
-        LinkedList<SecurityGroupRule> tcpRules = this.tcpRules;
-        LinkedList<SecurityGroupRule> udpRules = this.udpRules;
+        boolean[] removed = {false};
+        tcpRules.forEach(rr -> {
+            if (rr.rules.removeIf(r -> r.alias.equals(name))) {
+                removed[0] = true;
+            }
+        });
+        udpRules.forEach(rr -> {
+            if (rr.rules.removeIf(r -> r.alias.equals(name))) {
+                removed[0] = true;
+            }
+        });
+        tcpRules.removeBy(rr -> rr.rules.isEmpty());
+        udpRules.removeBy(rr -> rr.rules.isEmpty());
 
-        List<SecurityGroupRule> oldRules = new ArrayList<>(tcpRules.size() + udpRules.size());
-        oldRules.addAll(tcpRules);
-        oldRules.addAll(udpRules);
-        Optional<SecurityGroupRule> optRule = oldRules.stream().filter(r -> r.alias.equals(name)).findFirst();
-        if (optRule.isEmpty())
+        if (!removed[0])
             throw new NotFoundException("security-group-rule in security-group " + this.alias, name);
-        if (optRule.get().protocol == Protocol.TCP) {
-            tcpRules.remove(optRule.get());
-            this.tcpRules = tcpRules;
-        } else {
-            assert optRule.get().protocol == Protocol.UDP;
-            udpRules.remove(optRule.get());
-            this.udpRules = udpRules;
-        }
     }
 
     @Override
     public String toString() {
         return alias + " -> default " + (defaultAllow ? "allow" : "deny");
+    }
+
+    private static class SecurityGroupRules implements Networks.Rule {
+        public final List<SecurityGroupRule> rules = new CopyOnWriteArrayList<>();
+
+        public SecurityGroupRule lookupByPort(int port) {
+            //noinspection ForLoopReplaceableByForEach
+            for (int i = 0, size = rules.size(); i < size; ++i) {
+                var rule = rules.get(i);
+                if (rule.matchByPort(port)) {
+                    return rule;
+                }
+            }
+            return null;
+        }
     }
 }

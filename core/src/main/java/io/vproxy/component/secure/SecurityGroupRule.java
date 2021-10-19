@@ -25,7 +25,11 @@ public class SecurityGroupRule {
     }
 
     public boolean match(IP address, int port) {
-        return network.contains(address) && minPort <= port && port <= maxPort;
+        return network.contains(address) && matchByPort(port);
+    }
+
+    public boolean matchByPort(int port) {
+        return minPort <= port && port <= maxPort;
     }
 
     public boolean ipMaskMatch(SecurityGroupRule rule) {
