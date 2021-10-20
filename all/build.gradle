@@ -1,0 +1,17 @@
+compileJava {
+    doFirst {
+        options.compilerArgs << '--module-path' << classpath.asPath
+    }
+    options.compilerArgs << '--add-modules' << [
+        'io.vproxy.dep',
+        'io.vproxy.base',
+        'io.vproxy.lib',
+        'io.vproxy.core',
+        'io.vproxy.extended',
+        'io.vproxy.app',
+    ].join(',')
+}
+
+jar {
+    archiveName "vproxy-all.jar"
+}

@@ -209,6 +209,17 @@ project(':app') {
     }
 }
 
+project(':all') {
+    dependencies {
+        api project(':dep')
+        api project(':base')
+        api project(':lib')
+        api project(':core')
+        api project(':extended')
+        api project(':app')
+    }
+}
+
 project(':test') {
     compileTestKotlin {
         destinationDir = compileTestJava.destinationDir
@@ -323,7 +334,7 @@ project(':test') {
 }
 
 dependencies {
-    api project(':app')
+    api project(':all')
     testImplementation project(':test')
 }
 
