@@ -3,8 +3,14 @@ import org.gradle.api.tasks.testing.logging.TestLogEvent
 plugins {
     id 'application'
     id 'idea'
-    id 'org.jetbrains.kotlin.jvm' version '1.4.31'
-    id 'maven' // for building maven repo
+    id 'org.jetbrains.kotlin.jvm' version '1.5.31'
+    id 'org.jetbrains.dokka' version "1.5.30"
+    id 'maven-publish'
+    id 'signing'
+}
+
+ext {
+    versionTs = System.currentTimeMillis()
 }
 
 group 'io.vproxy'
@@ -19,11 +25,22 @@ jar {
     }
     exclude 'module-info.class'
     from { configurations.runtimeClasspath.collect { it.isDirectory() ? it : zipTree(it) } }
+    duplicatesStrategy 'exclude'
 }
 
 subprojects {
     apply plugin: 'java'
     apply plugin: 'org.jetbrains.kotlin.jvm'
+    apply plugin: 'org.jetbrains.dokka'
+    apply plugin: 'maven-publish'
+    apply plugin: 'signing'
+
+    group 'io.vproxy'
+    version loadVersion()
+
+    java {
+        withSourcesJar()
+    }
 
     sourceCompatibility = 11.0
     targetCompatibility = 11.0
@@ -48,6 +65,69 @@ subprojects {
         mavenLocal()
         mavenCentral()
     }
+
+    task buildJavaDoc(type: org.jetbrains.dokka.gradle.DokkaTask) {
+        outputDirectory = javadoc.destinationDir
+        dokkaSourceSets {
+            sourceSet {
+                sourceRoot(file("src/main/java"))
+                sourceRoot(file("src/main/kotlin"))
+            }
+        }
+    }
+    task javadocJar(type: Jar, dependsOn: buildJavaDoc) {
+        classifier = 'javadoc'
+        from "$buildDir/docs/javadoc"
+    }
+
+    if (!['test'].contains(project.name)) {
+    publishing {
+        publications {
+            maven(MavenPublication) {
+                from components.java
+                artifact(javadocJar)
+
+                pom {
+                    name = 'io.vproxy.' + artifactId
+                    description = 'vproxy component ' + artifactId
+                    url = 'http://vproxy.io'
+                    licenses {
+                        license {
+                            name = 'MIT License'
+                            url = 'https://github.com/wkgcass/vproxy/blob/master/LICENSE'
+                        }
+                    }
+                    developers {
+                        developer {
+                            id = 'wkgcass'
+                            name = 'K.G. Wang'
+                            email = 'wkgcass@hotmail.com'
+                        }
+                    }
+                    scm {
+                        connection = 'scm:git:git://github.com/wkgcass/vproxy.git'
+                        developerConnection = 'scm:git:git://github.com/wkgcass/vproxy.git'
+                        url = 'https://github.com/wkgcass/vproxy'
+                    }
+                }
+            }
+        }
+        repositories {
+            maven {
+                credentials {
+                    username 'wkgcass'
+                    password System.getProperty("MavenPublishPassword")
+                }
+                def releasesRepoUrl = 'https://s01.oss.sonatype.org/service/local/staging/deploy/maven2/'
+                def snapshotsRepoUrl = 'https://s01.oss.sonatype.org/content/repositories/snapshots/'
+                url = version.contains('-DEV') ? snapshotsRepoUrl : releasesRepoUrl
+            }
+        }
+    }
+    signing {
+        sign publishing.publications.maven
+    }
+    }
 }
 
 repositories {
@@ -60,8 +140,8 @@ project(':dep') {
         destinationDir = compileJava.destinationDir
     }
     dependencies {
-        compile group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.4.31'
-        compile group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core', version: '1.4.3'
+        api group: 'org.jetbrains.kotlin', name: 'kotlin-stdlib-jdk8', version: '1.5.31'
+        api group: 'org.jetbrains.kotlinx', name: 'kotlinx-coroutines-core-jvm', version: '1.5.2'
     }
 }
 
@@ -75,7 +155,7 @@ project(':base') {
     }
 
     dependencies {
-        compile project(':dep')
+        api project(':dep')
     }
 }
 
@@ -85,7 +165,7 @@ project(':lib') {
     }
 
     dependencies {
-        compile project(':base')
+        api project(':base')
     }
 }
 
@@ -99,8 +179,8 @@ project(':core') {
     }
 
     dependencies {
-        compile project(':base')
-        compile project(':lib')
+        api project(':base')
+        api project(':lib')
     }
 }
 
@@ -110,9 +190,9 @@ project(':extended') {
     }
 
     dependencies {
-        compile project(':base')
-        compile project(':core')
-        compile project(':lib')
+        api project(':base')
+        api project(':core')
+        api project(':lib')
     }
 }
 
@@ -122,10 +202,10 @@ project(':app') {
     }
 
     dependencies {
-        compile project(':base')
-        compile project(':core')
-        compile project(':lib')
-        compile project(':extended')
+        api project(':base')
+        api project(':core')
+        api project(':lib')
+        api project(':extended')
     }
 }
 
@@ -135,20 +215,20 @@ project(':test') {
     }
 
     dependencies {
-        compile project(':base')
-        compile project(':core')
-        compile project(':extended')
-        compile project(':lib')
-        compile project(':app')
+        api project(':base')
+        api project(':core')
+        api project(':extended')
+        api project(':lib')
+        api project(':app')
 
-        testCompile group: 'junit', name: 'junit', version: '4.12'
-        testCompile group: 'io.vertx', name: 'vertx-redis-client', version: '3.7.0'
-        testCompile group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
-        testCompile group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
-        testCompile group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
-        testCompile group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
-        testCompile group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
-        testCompile group: 'org.ow2.asm', name: 'asm', version: '9.2'
+        testImplementation group: 'junit', name: 'junit', version: '4.12'
+        testImplementation group: 'io.vertx', name: 'vertx-redis-client', version: '3.7.0'
+        testImplementation group: 'io.vertx', name: 'vertx-web-client', version: '3.7.0'
+        testImplementation group: 'io.grpc', name: 'grpc-all', version: '1.20.0'
+        testImplementation group: 'javax.annotation', name: 'javax.annotation-api', version: '1.3.2'
+        testImplementation group: 'org.apache.thrift', name: 'libthrift', version: '0.11.0'
+        testImplementation group: 'com.alibaba', name: 'dubbo', version: '2.6.6'
+        testImplementation group: 'org.ow2.asm', name: 'asm', version: '9.2'
     }
 
     task runSuite(type: Test) {
@@ -243,8 +323,8 @@ project(':test') {
 }
 
 dependencies {
-    compile project(':app')
-    testCompile project(':test')
+    api project(':app')
+    testImplementation project(':test')
 }
 
 def loadVersion() {
@@ -255,7 +335,11 @@ def loadVersion() {
     for (def line : lines) {
         line = line.trim()
         if (line.startsWith(PREFIX) && line.endsWith(SUFFIX)) {
-            return line.substring(PREFIX.length(), line.length() - SUFFIX.length())
+            def verstr = line.substring(PREFIX.length(), line.length() - SUFFIX.length())
+            if (verstr.endsWith('-DEV')) {
+                verstr = verstr + '-' + versionTs + '-SNAPSHOT'
+            }
+            return verstr
         }
     }
     return "unknown"
