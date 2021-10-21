@@ -104,7 +104,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
     private val cache = HashMap<String, String>()
     private var travelIndex = 0
     override fun get(name: String): String? {
-      val nameLower = name.toLowerCase()
+      val nameLower = name.lowercase()
       if (cache.containsKey(nameLower)) {
         return cache.get(nameLower)
       }
@@ -114,7 +114,7 @@ class CoroutineHttp1Server(val server: CoroutineServerSock) : GeneralCoroutineHt
       while (travelIndex < req.headers.size) {
         val header = req.headers[travelIndex]
         ++travelIndex
-        val key = header.key.toLowerCase()
+        val key = header.key.lowercase()
         cache[key] = header.value
         if (key == nameLower) {
           return header.value

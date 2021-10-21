@@ -267,6 +267,7 @@ fun io.vproxy.base.selector.SelectorEventLoop.with(vararg resources: AutoCloseab
   return launcher
 }
 
+@Suppress("EXPERIMENTAL_API_USAGE")
 fun io.vproxy.base.selector.SelectorEventLoop.launch(exec: suspend VProxyCoroutineCodeBlock.() -> Unit) {
   if (this.runningThread == null) {
     throw IllegalStateException("loop is not started")
