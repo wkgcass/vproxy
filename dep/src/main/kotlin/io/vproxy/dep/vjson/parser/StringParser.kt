@@ -53,11 +53,11 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
 
   private fun parseHex(c: Char): Int {
     if (c in '0'..'9') {
-      return c.toInt() - '0'.toInt()
+      return c.code - '0'.code
     } else if (c in 'A'..'F') {
-      return c.toInt() - ('A'.toInt() - 10)
+      return c.code - ('A'.code - 10)
     } else if (c in 'a'..'f') {
-      return c.toInt() - ('a'.toInt() - 10)
+      return c.code - ('a'.code - 10)
     } else {
       return -1
     }
@@ -97,12 +97,12 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           // end
           state = 7
           break
-        } else if (c.toInt() > 31) {
+        } else if (c.code > 31) {
           // normal
           append(c)
           continue
         } else {
-          err = "invalid character in string: code is: " + c.toInt()
+          err = "invalid character in string: code is: " + c.code
           throw ParserUtils.err(opts, err)
         }
       }

@@ -129,7 +129,7 @@ class UTF8ByteArrayCharStream(private val array: ByteArray) : CharStream {
     }
     val first = array[idx + offset]
     if (len == 1) {
-      return array[idx + offset].toChar()
+      return array[idx + offset].toInt().toChar()
     } else {
       val second = array[idx + offset + 1]
       if (len == 2) {

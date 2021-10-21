@@ -15,7 +15,9 @@ interface `Consumer$`<T> : Function1<T, Unit> {
   fun accept(t: T)
 
   override
-  /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
   fun invoke(t: T) {
     accept(t)
   }

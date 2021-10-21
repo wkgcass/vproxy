@@ -28,6 +28,7 @@ interface Parser<T : JSON.Instance<*>> {
 
   @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun feed(cs: CharStream): T? {
     return build(cs, false)
@@ -35,6 +36,7 @@ interface Parser<T : JSON.Instance<*>> {
 
   @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun feed(cs: String): T? {
     return feed(CharStream.from(cs))
@@ -42,6 +44,7 @@ interface Parser<T : JSON.Instance<*>> {
 
   @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun last(cs: CharStream): T? {
     return build(cs, true)
@@ -49,6 +52,7 @@ interface Parser<T : JSON.Instance<*>> {
 
   @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun last(cs: String): T? {
     return last(CharStream.from(cs))
@@ -56,6 +60,7 @@ interface Parser<T : JSON.Instance<*>> {
 
   @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun end(): T? {
     return last(CharArrayCharStream.EMPTY)

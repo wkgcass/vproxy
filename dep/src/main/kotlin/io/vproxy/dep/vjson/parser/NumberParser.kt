@@ -115,7 +115,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
 
   private fun parseDigit(c: Char): Int {
     if (c in '0'..'9') {
-      return c.toInt() - '0'.toInt()
+      return c.code - '0'.code
     } else {
       return -1
     }

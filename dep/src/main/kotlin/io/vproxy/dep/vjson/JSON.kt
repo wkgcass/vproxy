@@ -90,12 +90,16 @@ object JSON {
     @Throws(NoSuchElementException::class)
     fun getAll(key: kotlin.String): List<Instance<*>>
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getBool(key: kotlin.String): Boolean {
       return cast<Bool>(get(key)).booleanValue()
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getInt(key: kotlin.String): Int {
       val inst = get(key)
       if (inst is Integer) {
@@ -111,7 +115,9 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getDouble(key: kotlin.String): kotlin.Double {
       val inst = get(key)
       if (inst is Integer) {
@@ -127,7 +133,9 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getLong(key: kotlin.String): kotlin.Long {
       val inst = get(key)
       if (inst is Integer) {
@@ -143,12 +151,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getString(key: kotlin.String): kotlin.String {
       return cast<String>(get(key)).toJavaObject()
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableString(key: kotlin.String): kotlin.String? {
       val inst = get(key)
       if (inst is Null) {
@@ -158,12 +170,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getObject(key: kotlin.String): Object {
       return cast(get(key))
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableObject(key: kotlin.String): Object? {
       val inst = get(key)
       if (inst is Null) {
@@ -173,12 +189,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getArray(key: kotlin.String): Array {
       return cast(get(key))
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableArray(key: kotlin.String): Array? {
       val inst = get(key)
       if (inst is Null) {
@@ -196,12 +216,16 @@ object JSON {
     @Throws(IndexOutOfBoundsException::class)
     operator fun get(idx: Int): Instance<*>
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getBool(idx: Int): Boolean {
       return cast<Bool>(get(idx)).booleanValue()
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getInt(idx: Int): Int {
       val inst = get(idx)
       if (inst is Integer) {
@@ -217,7 +241,9 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getDouble(idx: Int): kotlin.Double {
       val inst = get(idx)
       if (inst is Integer) {
@@ -233,7 +259,9 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getLong(idx: Int): kotlin.Long {
       val inst = get(idx)
       if (inst is Integer) {
@@ -249,12 +277,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getString(idx: Int): kotlin.String {
       return cast<String>(get(idx)).toJavaObject()
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableString(idx: Int): kotlin.String? {
       val inst = get(idx)
       if (inst is Null) {
@@ -264,12 +296,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getObject(idx: Int): Object {
       return cast(get(idx))
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableObject(idx: Int): Object? {
       val inst = get(idx)
       if (inst is Null) {
@@ -279,12 +315,16 @@ object JSON {
       }
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getArray(idx: Int): Array {
       return cast(get(idx))
     }
 
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun getNullableArray(idx: Int): Array? {
       val inst = get(idx)
       if (inst is Null) {
@@ -299,7 +339,9 @@ object JSON {
     override fun toJavaObject(): kotlin.String
 
     companion object {
-      /*#ifndef KOTLIN_NATIVE {{ */@JvmStatic/*}}*/
+      /*#ifndef KOTLIN_NATIVE {{ */
+      @Suppress("DEPRECATION")
+      @JvmStatic/*}}*/
       fun stringify(s: kotlin.String): kotlin.String {
         val sb = StringBuilder()
         sb.append("\"")
@@ -372,7 +414,9 @@ object JSON {
 
   interface Null : Instance<Any?> {
     override
-    /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
     fun toJavaObject(): Any? {
       return null
     }

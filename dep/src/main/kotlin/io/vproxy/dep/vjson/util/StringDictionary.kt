@@ -13,28 +13,28 @@ class StringDictionary(val maxStorageStringLen: Int) {
     init {
       var n = 0
 
-      char2intMap['$'.toInt()] = ++n
-      int2charMap[n] = '$'.toInt()
+      char2intMap['$'.code] = ++n
+      int2charMap[n] = '$'.code
 
-      char2intMap['-'.toInt()] = ++n
-      int2charMap[n] = '-'.toInt()
+      char2intMap['-'.code] = ++n
+      int2charMap[n] = '-'.code
 
       for (i in 0..9) {
-        char2intMap[i + '0'.toInt()] = ++n
-        int2charMap[n] = i + '0'.toInt()
+        char2intMap[i + '0'.code] = ++n
+        int2charMap[n] = i + '0'.code
       }
 
       for (i in 0..25) {
-        char2intMap[i + 'A'.toInt()] = ++n
-        int2charMap[n] = i + 'A'.toInt()
+        char2intMap[i + 'A'.code] = ++n
+        int2charMap[n] = i + 'A'.code
       }
 
-      char2intMap['_'.toInt()] = ++n
-      int2charMap[n] = '_'.toInt()
+      char2intMap['_'.code] = ++n
+      int2charMap[n] = '_'.code
 
       for (i in 0..25) {
-        char2intMap[i + 'a'.toInt()] = ++n
-        int2charMap[n] = i + 'a'.toInt()
+        char2intMap[i + 'a'.code] = ++n
+        int2charMap[n] = i + 'a'.code
       }
 
       treeLeafOffset = n + 1
@@ -69,11 +69,11 @@ class StringDictionary(val maxStorageStringLen: Int) {
         cannotHandle = true
         return
       }
-      if (c.toInt() >= char2intMap.size) {
+      if (c.code >= char2intMap.size) {
         cannotHandle = true
         return
       }
-      val cInt = char2intMap[c.toInt()]
+      val cInt = char2intMap[c.code]
       if (cInt == 0) {
         cannotHandle = true
         return

@@ -15,7 +15,9 @@ interface `TriConsumer$`<T, U, V> : Function3<T, U, V, Unit> {
   fun accept(t: T, u: U, v: V)
 
   override
-  /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
   fun invoke(t: T, u: U, v: V) {
     accept(t, u, v)
   }

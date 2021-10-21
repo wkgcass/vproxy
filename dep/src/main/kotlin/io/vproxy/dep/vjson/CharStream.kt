@@ -31,13 +31,17 @@ interface CharStream : MutableIterator<Char>, Iterable<Char> {
   fun moveNextAndGet(): Char
   fun peekNext(i: Int): Char
 
-  /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
   fun peekNext(): Char {
     return peekNext(1)
   }
 
   override
-  /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
   fun hasNext(): Boolean {
     return hasNext(1)
   }
@@ -45,6 +49,7 @@ interface CharStream : MutableIterator<Char>, Iterable<Char> {
   @Deprecated("")
   override
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun next(): Char {
     return moveNextAndGet()
@@ -53,6 +58,7 @@ interface CharStream : MutableIterator<Char>, Iterable<Char> {
   @Deprecated("")
   override
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun remove() {
     throw UnsupportedOperationException()
@@ -61,12 +67,15 @@ interface CharStream : MutableIterator<Char>, Iterable<Char> {
   @Deprecated("")
   override
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun iterator(): MutableIterator<Char> {
     return this
   }
 
-  /*#ifndef KOTLIN_NATIVE {{ */@JvmDefault/*}}*/
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
   fun skipBlank() {
     while (hasNext()) {
       val c = peekNext()
