@@ -13,6 +13,7 @@ import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.VirtualNetwork;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import io.vproxy.vswitch.iface.XDPIface;
+import io.vproxy.vswitch.util.CSumRecalcType;
 import io.vproxy.xdp.BPFMode;
 import io.vproxy.xdp.BPFObject;
 import io.vproxy.xdp.NativeXDP;
@@ -289,9 +290,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 elg,
                 SwitchHandle.MAC_TABLE_TIMEOUT,
                 SwitchHandle.ARP_TABLE_TIMEOUT,
-                SecurityGroup.allowAll(),
-                1500,
-                true);
+                SecurityGroup.allowAll());
             Logger.alert("switch " + SWITCH_NAME + " created");
         }
         return sw;
@@ -372,12 +371,14 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
     }
 
     private XDPIface createXDPIface(Switch sw, UMem umem, VirtualNetwork net, String nicname) throws Exception {
+        boolean isPodNic = nicname.startsWith(POD_VETH_PREFIX);
         var bpfobj = Application.get().bpfObjectHolder.add(BPFObject.PREBUILT_HANDLE_ALL, BPFObject.DEFAULT_XDP_PROG_NAME, nicname, BPFMode.SKB, true);
+        XDPIface iface;
         try {
-            return sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), umem, 0,
+            iface = sw.addXDP(nicname, bpfobj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME), bpfobj.getMap(BPFObject.DEFAULT_MAC_MAP_NAME), umem, 0,
                 32, 32, BPFMode.SKB, false, 0, false,
                 net != null ? net.vni : NETWORK_ENTRY_VNI,
-                BPFMapKeySelectors.useQueueId.keySelector.get());
+                BPFMapKeySelectors.useQueueId.keySelector.get(), isPodNic);
         } catch (Exception e) {
             try {
                 Application.get().bpfObjectHolder.removeAndRelease(bpfobj.nic, true);
@@ -386,6 +387,11 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             }
             throw e;
         }
+        iface.getParams().setBaseMTU(-1);
+        if (isPodNic) {
+            iface.getParams().setCSumRecalc(CSumRecalcType.all);
+        }
+        return iface;
     }
 
     private VirtualNetwork findNetwork(Switch sw, String networkId) throws Exception {
@@ -455,7 +461,7 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
                 .append("\n");
             sb.append("for nic in \"").append(iface).append("\" \"").append(iface).append(NETWORK_ENTRY_VETH_PEER_SUFFIX).append("\"\n");
             sb.append("do\n");
-            sb.append("  ethtool -K \"$nic\" tx off\n");
+            // sb.append("  ethtool -K \"$nic\" tx off\n");
             sb.append("  set +e\n");
             sb.append("  ethtool -K \"$nic\" tso off\n");
             sb.append("  ethtool -K \"$nic\" ufo off\n");
@@ -505,15 +511,15 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
         }
 
         String shortEndpointId = formatShortEndpointId(req.endpointId);
-        String swNic = POD_VETH_PREFIX + shortEndpointId;
-        String containerNic = swNic + CONTAINER_VETH_SUFFIX;
-        createVethPair(swNic, containerNic, req.netInterface.macAddress);
+        String podNic = POD_VETH_PREFIX + shortEndpointId;
+        String containerNic = podNic + CONTAINER_VETH_SUFFIX;
+        createVethPair(podNic, containerNic, req.netInterface.macAddress);
 
         UMem umem = null;
         try {
             umem = ensureUMem(shortEndpointId);
 
-            XDPIface xdpIface = createXDPIface(sw, umem, net, swNic);
+            XDPIface xdpIface = createXDPIface(sw, umem, net, podNic);
             xdpIface.setAnnotations(new Annotations(anno));
             Logger.alert("xdp added: " + xdpIface.nic + ", vni=" + net.vni
                 + ", endpointId=" + req.endpointId
@@ -524,9 +530,9 @@ public class DockerNetworkDriverImpl implements DockerNetworkDriver {
             );
         } catch (Exception e) {
             try {
-                deleteNic(sw, umem, swNic);
+                deleteNic(sw, umem, podNic);
             } catch (Exception e2) {
-                Logger.error(LogType.SOCKET_ERROR, "failed to rollback nic " + swNic, e2);
+                Logger.error(LogType.SOCKET_ERROR, "failed to rollback nic " + podNic, e2);
             }
 
             throw e;

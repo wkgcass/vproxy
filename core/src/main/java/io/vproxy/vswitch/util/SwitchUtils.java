@@ -40,11 +40,11 @@ public class SwitchUtils {
     }
 
     public static void checkAndUpdateMss(PacketBuffer pkb, Iface iface) {
-        if (iface.getBaseMTU() < 0) {
+        if (iface.getParams().getBaseMTU() < 0) {
             assert Logger.lowLevelDebug("iface " + iface.name() + " has mtu < 0, skip mss updating");
             return;
         }
-        int maxMss = iface.getBaseMTU() - iface.getOverhead() - 20 /* tcp common */
+        int maxMss = iface.getParams().getBaseMTU() - iface.getOverhead() - 20 /* tcp common */
             - 20 /* possible options in normal tcp packets, and also ip headers/opts */;
         if (!(pkb.pkt.getPacket() instanceof AbstractIpPacket)) {
             return; // only tcp requires modification

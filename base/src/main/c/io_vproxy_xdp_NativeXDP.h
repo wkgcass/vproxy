@@ -89,6 +89,22 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap0
 
 /*
  * Class:     io_vproxy_xdp_NativeXDP
+ * Method:    addMacIntoMap0
+ * Signature: (J[BJ)V
+ */
+JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap0
+  (JNIEnv *, jclass, jlong, jbyteArray, jlong);
+
+/*
+ * Class:     io_vproxy_xdp_NativeXDP
+ * Method:    removeMacFromMap0
+ * Signature: (J[B)V
+ */
+JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap0
+  (JNIEnv *, jclass, jlong, jbyteArray);
+
+/*
+ * Class:     io_vproxy_xdp_NativeXDP
  * Method:    getFDFromXSK0
  * Signature: (J)I
  */

@@ -107,7 +107,8 @@ public class L2 {
             if (iface.getLocalSideVni(pkb.vni) != pkb.vni) {
                 continue;
             }
-            if (!iface.isFloodAllowed()) {
+            if (!iface.getParams().isFloodAllowed()) {
+                assert Logger.lowLevelDebug("flood not allowed");
                 continue;
             }
             if (pkb.ensurePartialPacketParsed()) return;

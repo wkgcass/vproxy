@@ -5,6 +5,9 @@ import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Flag;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.handle.param.*;
+import io.vproxy.base.util.LogType;
+import io.vproxy.base.util.Logger;
+import io.vproxy.base.util.exception.XException;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelector;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
@@ -14,6 +17,8 @@ import io.vproxy.xdp.BPFMode;
 import io.vproxy.xdp.BPFObject;
 import io.vproxy.xdp.UMem;
 
+import java.io.IOException;
+
 public class XDPHandle {
     private XDPHandle() {
     }
@@ -22,8 +27,20 @@ public class XDPHandle {
         String nic = cmd.resource.alias;
         BPFObject bpfobj = Application.get().bpfObjectHolder.get(nic);
 
-        String mapName = cmd.args.getOrDefault(Param.bpfmap, BPFObject.DEFAULT_XSKS_MAP_NAME);
-        BPFMap bpfMap = bpfobj.getMap(mapName);
+        String xskMapName = cmd.args.getOrDefault(Param.xskmap, BPFObject.DEFAULT_XSKS_MAP_NAME);
+        String macMapName = cmd.args.getOrDefault(Param.macmap, null);
+        BPFMap xskMap = bpfobj.getMap(xskMapName);
+        BPFMap macMap = null;
+        try {
+            macMap = bpfobj.getMap(macMapName == null ? BPFObject.DEFAULT_MAC_MAP_NAME : macMapName);
+        } catch (IOException e) {
+            if (macMapName == null) {
+                Logger.warn(LogType.ALERT, "bpfobj " + bpfobj.nic + "(" + bpfobj.filename + ")"
+                    + " does not have mac-map " + BPFObject.DEFAULT_MAC_MAP_NAME + ", ignoring ...");
+            } else {
+                throw e;
+            }
+        }
 
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
 
@@ -42,14 +59,26 @@ public class XDPHandle {
         boolean rxGenChecksum = cmd.flags.contains(Flag.rxgencsum);
         int vni = VniHandle.get(cmd);
         BPFMapKeySelector keySelector;
-        if (cmd.args.containsKey(Param.bpfmapkeyselector)) {
+        if (cmd.args.containsKey(Param.xskmapkeyselector)) {
             keySelector = BPFMapKeySelectorHandle.get(cmd);
         } else {
             keySelector = BPFMapKeySelectors.useQueueId.keySelector.get();
         }
+        boolean offload;
+        if (cmd.args.containsKey(Param.offload)) {
+            offload = OffloadHandle.get(cmd);
+        } else {
+            offload = false;
+        }
+        // check offload
+        if (offload) {
+            if (macMap == null) {
+                throw new XException("offload is true but mac-map is not provided");
+            }
+        }
 
-        sw.addXDP(nic, bpfMap, umem, queueId,
+        sw.addXDP(nic, xskMap, macMap, umem, queueId,
             rxRingSize, txRingSize, mode, zeroCopy, busyPollBudget, rxGenChecksum,
-            vni, keySelector);
+            vni, keySelector, offload);
     }
 }

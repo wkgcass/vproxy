@@ -14,8 +14,7 @@ import java.util.Map;
 public abstract class Iface {
     private int index;
     private boolean destroyed = false;
-    private int baseMTU;
-    private boolean floodAllowed;
+    private final IfaceParams params = new IfaceParams();
     private boolean disabled;
     public final IfaceStatistics statistics = new IfaceStatistics();
     protected IfaceInitParams.PacketCallback callback;
@@ -59,12 +58,8 @@ public abstract class Iface {
 
     public abstract int getOverhead();
 
-    public final int getBaseMTU() {
-        return baseMTU;
-    }
-
-    public final void setBaseMTU(int baseMTU) {
-        this.baseMTU = baseMTU;
+    public IfaceParams getParams() {
+        return params;
     }
 
     public boolean isDisabled() {
@@ -73,14 +68,6 @@ public abstract class Iface {
 
     public void setDisabled(boolean disabled) {
         this.disabled = disabled;
-    }
-
-    public final boolean isFloodAllowed() {
-        return floodAllowed;
-    }
-
-    public final void setFloodAllowed(boolean floodAllowed) {
-        this.floodAllowed = floodAllowed;
     }
 
     public final PacketBuffer pollPacket() {
@@ -170,8 +157,8 @@ public abstract class Iface {
     public abstract String name();
 
     private String paramsToString() {
-        return "index " + index + " mtu " + baseMTU
-            + " flood " + (floodAllowed ? "allow" : "deny")
+        return "index " + index
+            + " " + params
             + " " + (disabled ? "disabled" : "enabled");
     }
 

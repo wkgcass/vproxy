@@ -8,6 +8,7 @@ import io.vproxy.component.secure.SecurityGroup;
 import io.vproxy.vswitch.dispatcher.BPFMapKeySelectors;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.xdp.BPFMode;
+import io.vproxy.xdp.BPFObject;
 
 import java.util.Arrays;
 import java.util.Collections;
@@ -427,20 +428,23 @@ public class HelpCommand {
         postscript("post-script", null, "the script to run after added"),
         mtu("mtu", null, "max transmission unit"),
         flood("flood", null, "flooding traffic"),
+        csumrecalc("csum-recalc", null, "recalculate checksum of the received packet"),
+        offload("offload", null, "offload operations from java"),
         path("path", null, "file path"),
         program("program", "prog", "program name"),
         mode("mode", null, "mode"),
         umem("umem", null, "xdp umem"),
         nic("nic", null, "nic name"),
         queue("queue", null, "queue id"),
-        bpfmap("bpf-map", "bpfmap", "bpf map extracted from a bpfobject"),
+        xskmap("xsk-map", null, "queueId to xsk bpf map extracted from a bpfobject"),
+        macmap("mac-map", null, "mac to ifindex bpf map extracted from a bpfobject"),
         rxringsize("rx-ring-size", null, "receiving ring size"),
         txringsize("tx-ring-size", null, "transmitting ring size"),
         chunks("chunks", null, "chunks"),
         fillringsize("fill-ring-size", null, "xdp umem fill ring size"),
         compringsize("comp-ring-size", null, "xdp umem comp ring size"),
         framesize("frame-size", null, "size of a frame"),
-        bpfmapkeyselector("bpf-map-key", null, "the method of " +
+        xskmapkeyselector("xsk-map-key", null, "the method of " +
             "determining the key of the corresponding xsk when putting into a bpf map"),
         busypoll("busy-poll", null, "a number indicating whether to enable busy poll, " +
             "and may set the SO_BUSY_POLL_BUDGET as well"),
@@ -1080,7 +1084,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.eventloopgroup, "the event loop group used for handling packets", Application.DEFAULT_WORKER_EVENT_LOOP_GROUP_NAME),
                         new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", SecurityGroup.defaultName),
                         new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, or -1 to ignore this config", "1500"),
-                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports", "allow")
+                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports", "allow"),
+                        new ResActParamMan(ParamMan.csumrecalc, "default checksum recalculation type for new connected ports", "none")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1110,7 +1115,8 @@ public class HelpCommand {
                         new ResActParamMan(ParamMan.arptabletimeout, "timeout for arp table (ms)", "not changed"),
                         new ResActParamMan(ParamMan.securitygroup, "the security group for bare vxlan packets (note: vproxy wrapped encrypted packets won't be affected)", "not changed"),
                         new ResActParamMan(ParamMan.mtu, "default mtu setting for new connected ports, updating it will not affect the existing ones. set to -1 for ignoring this config", "not changed"),
-                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed")
+                        new ResActParamMan(ParamMan.flood, "default flood setting for new connected ports, updating it will not affect the existing ones", "not changed"),
+                        new ResActParamMan(ParamMan.csumrecalc, "default checksum recalculation type for new connected ports, updating it will not affect the existing ones", "not changed")
                     ),
                     Collections.singletonList(
                         new Tuple<>(
@@ -1185,8 +1191,9 @@ public class HelpCommand {
                     )
                 )),
                 new ResActMan(ActMan.update, "update interface config", Arrays.asList(
-                    new ResActParamMan(ParamMan.mtu, "mtu of this interface, or -1 to ignore this config", "1500"),
-                    new ResActParamMan(ParamMan.flood, "whether to allow flooding traffic through this interface, allow or deny", "allow")
+                    new ResActParamMan(ParamMan.mtu, "mtu of this interface, or -1 to ignore this config", "not changed"),
+                    new ResActParamMan(ParamMan.flood, "whether to allow flooding traffic through this interface, allow or deny", "not changed"),
+                    new ResActParamMan(ParamMan.csumrecalc, "whether to recalculate checksum for received packets of this interface", "not changed")
                 ), Arrays.asList(
                     new ResActFlagMan(FlagMan.enable, "enable the iface", false),
                     new ResActFlagMan(FlagMan.disable, "disable the iface", false)
@@ -1272,7 +1279,8 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.pass, "password of the user"),
                     new ResActParamMan(ParamMan.vni, "vni assigned for the user"),
                     new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, or -1 to ignore this config", "mtu setting of the switch"),
-                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch")
+                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic", "flood setting of the switch"),
+                    new ResActParamMan(ParamMan.csumrecalc, "whether the user interface needs to recalculate checksum for received packets", "csum-recalc setting of the switch")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "add user hello to switch sw0 vni 1314 password p@sSw0rD",
@@ -1293,7 +1301,8 @@ public class HelpCommand {
                 )),
                 new ResActMan(ActMan.update, "update user info in a switch", Arrays.asList(
                     new ResActParamMan(ParamMan.mtu, "mtu for the user interface when the user is connected, updating it will not affect connected ones. -1 means ignoring this config", "not changed"),
-                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed")
+                    new ResActParamMan(ParamMan.flood, "whether the user interface allows flooding traffic, updating it will not affect connected ones", "not changed"),
+                    new ResActParamMan(ParamMan.csumrecalc, "whether the user interface needs to recalculate checksum for received packets, updating it will not affect connected ones", "not changed")
                 ), Collections.singletonList(
                     new Tuple<>(
                         "update user hello in switch sw0 mtu 1500 flood allow",
@@ -1359,7 +1368,8 @@ public class HelpCommand {
             "See also `umem`, `bpf-object`. Check doc for more info",
             Collections.singletonList(
                 new ResActMan(ActMan.addto, "add xdp socket into the switch", Arrays.asList(
-                    new ResActParamMan(ParamMan.bpfmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP"),
+                    new ResActParamMan(ParamMan.xskmap, "name of the bpf map to put the xdp socket into. The map should be defined in the maps section and must be a map of type BPF_MAP_TYPE_XSKMAP", BPFObject.DEFAULT_XSKS_MAP_NAME),
+                    new ResActParamMan(ParamMan.macmap, "name of the bpf map to put the mac -> ifindex into. The map should be defined in the maps section and must be a map of {char[6] => int}", "automatically tries " + BPFObject.DEFAULT_MAC_MAP_NAME + " or ignore if failed to retrieve the map"),
                     new ResActParamMan(ParamMan.umem, "umem for the xdp socket to use. See `umem` for more info"),
                     new ResActParamMan(ParamMan.queue, "the queue index to bind to"),
                     new ResActParamMan(ParamMan.rxringsize, "rx ring size", "" + SwitchUtils.RX_TX_CHUNKS),
@@ -1367,18 +1377,19 @@ public class HelpCommand {
                     new ResActParamMan(ParamMan.mode, "mode of the xsk, enum: {SKB, DRIVER}, see doc for more info", "" + BPFMode.SKB),
                     new ResActParamMan(ParamMan.busypoll, "whether to enable busy poll, and set SO_BUSY_POLL_BUDGET. Set this option to 0 to disable busy poll", "0"),
                     new ResActParamMan(ParamMan.vni, "vni which the iface is assigned to"),
-                    new ResActParamMan(ParamMan.bpfmapkeyselector, "the method of " +
-                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name())
+                    new ResActParamMan(ParamMan.xskmapkeyselector, "the method of " +
+                        "determining the key of the corresponding xsk when putting into a bpf map", BPFMapKeySelectors.useQueueId.name()),
+                    new ResActParamMan(ParamMan.offload, "offload mac switching to xdp program, which requires mac-map", "false")
                 ), Arrays.asList(
                     new ResActFlagMan(FlagMan.zerocopy, "allow kernel to use zerocopy machanism", false),
                     new ResActFlagMan(FlagMan.rxgencsum, "generate checksum in native code before receiving the packet", false)
                 ), Arrays.asList(
                     new Tuple<>(
-                        "add xdp xdptut-4667 to switch sw0 bpf-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 bpf-map-key useQueueId zerocopy",
+                        "add xdp xdptut-4667 to switch sw0 xsk-map xsks_map umem umem0 queue 0 rx-ring-size 2048 tx-ring-size 2048 mode SKB vni 1 xsk-map-key useQueueId zerocopy",
                         "\"OK\""
                     ),
                     new Tuple<>(
-                        "add xdp xdptut-4667 to switch sw0 bpf-map xsk_map umem umem0 queue 0 vni 1",
+                        "add xdp xdptut-4667 to switch sw0 umem umem0 queue 0 vni 1",
                         "\"OK\""
                     )
                 ))

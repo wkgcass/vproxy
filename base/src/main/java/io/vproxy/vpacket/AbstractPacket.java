@@ -39,6 +39,10 @@ public abstract class AbstractPacket {
         return requireUpdatingChecksum;
     }
 
+    public void clearChecksum() {
+        checksumSkipped();
+    }
+
     protected final void checksumCalculated() {
         this.requireUpdatingChecksum = false;
     }

@@ -59,7 +59,7 @@ public class BPFObjectHandle {
                     continue;
                 }
                 var xdp = (XDPIface) iface;
-                if (xdp.bpfMap.bpfObject == bpfObject) {
+                if (xdp.xskMap.bpfObject == bpfObject) {
                     throw new XException(ResourceType.bpfobj.fullname + " " + bpfObject.nic
                         + " is used by " + ResourceType.xdp.fullname + " " + xdp.nic
                         + " in " + ResourceType.sw.fullname + " " + sw.alias);

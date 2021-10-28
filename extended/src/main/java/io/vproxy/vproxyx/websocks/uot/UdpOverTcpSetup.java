@@ -40,7 +40,9 @@ public class UdpOverTcpSetup {
         Switch sw = new Switch("uot",
             new IPPort("255.255.255.255:0"),
             elg, 300_000, 4 * 3600 * 1000,
-            SecurityGroup.denyAll(), -1, false);
+            SecurityGroup.denyAll());
+        sw.defaultIfaceParams.setBaseMTU(-1);
+        sw.defaultIfaceParams.setFloodAllowed(false);
         sw.start();
 
         IP ip4 = IP.from(localIp4.getAddress().getAddress());
@@ -91,7 +93,7 @@ public class UdpOverTcpSetup {
         BPFMap bpfMap = obj.getMap(BPFObject.DEFAULT_XSKS_MAP_NAME);
 
         UMem umem = sw.addUMem("umem0", 256, 128, 128, 2048);
-        XDPIface iface = sw.addXDP(nicname, bpfMap, umem, 0, 128, 128, BPFMode.SKB, false, 0, false, 1, BPFMapKeySelectors.useQueueId.keySelector.get());
+        XDPIface iface = sw.addXDP(nicname, bpfMap, null, umem, 0, 128, 128, BPFMode.SKB, false, 0, false, 1, BPFMapKeySelectors.useQueueId.keySelector.get(), false);
 
         UdpOverTcpPacketFilter filter = new UdpOverTcpPacketFilter(client);
         iface.addIngressFilter(filter);

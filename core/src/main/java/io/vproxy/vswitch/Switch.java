@@ -34,6 +34,7 @@ import io.vproxy.vswitch.stack.NetworkStack;
 import io.vproxy.vswitch.stack.conntrack.EnhancedTCPEntry;
 import io.vproxy.vswitch.stack.conntrack.EnhancedUDPEntry;
 import io.vproxy.vswitch.stack.conntrack.Fastpath;
+import io.vproxy.vswitch.util.CSumRecalcType;
 import io.vproxy.vswitch.util.SwitchUtils;
 import io.vproxy.vswitch.util.UMemChunkByteArray;
 import io.vproxy.vswitch.util.UserInfo;
@@ -54,8 +55,7 @@ public class Switch {
     private int macTableTimeout;
     private int arpTableTimeout;
     public SecurityGroup bareVXLanAccess;
-    public int defaultMtu;
-    public boolean defaultFloodAllowed;
+    public final IfaceParams defaultIfaceParams = new IfaceParams();
 
     private final List<IfaceWatcher> ifaceWatchers = new LinkedList<>();
 
@@ -93,16 +93,14 @@ public class Switch {
     private final NetworkStack netStack = new NetworkStack(swCtx);
 
     public Switch(String alias, IPPort vxlanBindingAddress, EventLoopGroup eventLoopGroup,
-                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess,
-                  int defaultMtu, boolean defaultFloodAllowed) throws AlreadyExistException, ClosedException {
+                  int macTableTimeout, int arpTableTimeout, SecurityGroup bareVXLanAccess)
+        throws AlreadyExistException, ClosedException {
         this.alias = alias;
         this.vxlanBindingAddress = vxlanBindingAddress;
         this.eventLoopGroup = eventLoopGroup;
         this.macTableTimeout = macTableTimeout;
         this.arpTableTimeout = arpTableTimeout;
         this.bareVXLanAccess = bareVXLanAccess;
-        this.defaultMtu = defaultMtu;
-        this.defaultFloodAllowed = defaultFloodAllowed;
 
         try {
             eventLoopGroup.attachResource(new SwitchEventLoopGroupAttach());
@@ -299,16 +297,11 @@ public class Switch {
     }
 
     public void addUser(String user, String password, int vni,
-                        Integer defaultMtu, Boolean defaultFloodAllowed) throws AlreadyExistException, XException {
+                        IfaceParams ifaceParams) throws AlreadyExistException, XException {
         user = formatUserName(user);
         Aes256Key key = new Aes256Key(password);
-        if (defaultMtu == null) {
-            defaultMtu = this.defaultMtu;
-        }
-        if (defaultFloodAllowed == null) {
-            defaultFloodAllowed = this.defaultFloodAllowed;
-        }
-        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni, defaultMtu, defaultFloodAllowed));
+        ifaceParams.fillNullFields(defaultIfaceParams);
+        UserInfo old = users.putIfAbsent(user, new UserInfo(user, key, password, vni, ifaceParams));
         if (old != null) {
             throw new AlreadyExistException("the user " + user + " already exists in switch " + alias);
         }
@@ -349,8 +342,7 @@ public class Switch {
 
     private void initIface(Iface iface) throws Exception {
         iface.init(buildIfaceInitParams());
-        iface.setBaseMTU(defaultMtu);
-        iface.setFloodAllowed(defaultFloodAllowed);
+        iface.getParams().set(defaultIfaceParams);
     }
 
     private final AtomicInteger ifaceIndexes = new AtomicInteger(0); // only increases, never decreases
@@ -443,7 +435,7 @@ public class Switch {
         SelectorEventLoop loop = eventLoop.getSelectorEventLoop();
 
         Aes256Key key = new Aes256Key(password);
-        UserInfo info = new UserInfo(user, key, password, vni, defaultMtu, defaultFloodAllowed);
+        UserInfo info = new UserInfo(user, key, password, vni, defaultIfaceParams);
 
         UserClientIface iface = new UserClientIface(info, key, remoteAddr);
 
@@ -538,10 +530,10 @@ public class Switch {
         return vif;
     }
 
-    public XDPIface addXDP(String nic, BPFMap map, UMem umem,
+    public XDPIface addXDP(String nic, BPFMap map, BPFMap macMap, UMem umem,
                            int queueId, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                            int busyPollBudget, boolean rxGenChecksum,
-                           int vni, BPFMapKeySelector keySelector) throws XException, AlreadyExistException {
+                           int vni, BPFMapKeySelector keySelector, boolean offload) throws XException, AlreadyExistException {
         NetEventLoop netEventLoop = eventLoop;
         if (netEventLoop == null) {
             throw new XException("the switch " + this.alias + " is not bond to any event loop, cannot add xdp");
@@ -564,10 +556,10 @@ public class Switch {
 
         var blockingCallback = new BlockCallback<XDPIface, XException>();
         loop.runOnLoop(() -> {
-            var iface = new XDPIface(nic, map, umem,
+            var iface = new XDPIface(nic, map, macMap, umem,
                 queueId, rxRingSize, txRingSize, mode, zeroCopy,
                 busyPollBudget, rxGenChecksum,
-                vni, keySelector);
+                vni, keySelector, offload);
             try {
                 initIface(iface);
             } catch (Exception e) {
@@ -1010,6 +1002,20 @@ public class Switch {
 
     private void handleInputPkb() {
         for (PacketBuffer pkb : packetBuffersToBeHandled) {
+            // clear csum if required
+            if (pkb.devin.getParams().getCSumRecalc() != CSumRecalcType.none) {
+                if (pkb.ipPkt != null) {
+                    if (pkb.ipPkt.getPacket() != null) {
+                        assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.getPacket().description());
+                        pkb.ipPkt.getPacket().clearChecksum();
+                    }
+                    if (pkb.devin.getParams().getCSumRecalc() == CSumRecalcType.all) {
+                        assert Logger.lowLevelDebug("checksum cleared for " + pkb.ipPkt.description());
+                        pkb.ipPkt.clearChecksum();
+                    }
+                }
+            }
+
             // the umem chunk need to be released after processing
             var fullbufBackup = pkb.fullbuf;
 

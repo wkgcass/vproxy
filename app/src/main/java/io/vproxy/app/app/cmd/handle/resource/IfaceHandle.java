@@ -3,8 +3,6 @@ package io.vproxy.app.app.cmd.handle.resource;
 import io.vproxy.app.app.Application;
 import io.vproxy.app.app.cmd.*;
 import io.vproxy.app.app.cmd.handle.param.AnnotationsHandle;
-import io.vproxy.app.app.cmd.handle.param.FloodHandle;
-import io.vproxy.app.app.cmd.handle.param.MTUHandle;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vswitch.Switch;
 import io.vproxy.vswitch.iface.Iface;
@@ -46,12 +44,7 @@ public class IfaceHandle {
 
     public static void update(Command cmd) throws Exception {
         Iface target = get(cmd.resource);
-        if (cmd.args.containsKey(Param.mtu)) {
-            target.setBaseMTU(MTUHandle.get(cmd));
-        }
-        if (cmd.args.containsKey(Param.flood)) {
-            target.setFloodAllowed(FloodHandle.get(cmd));
-        }
+        IfaceParamsHandleHelper.update(cmd, target.getParams());
         if (cmd.args.containsKey(Param.anno)) {
             target.setAnnotations(AnnotationsHandle.get(cmd));
         }

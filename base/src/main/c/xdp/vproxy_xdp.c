@@ -197,6 +197,7 @@ struct vp_xsk_info* vp_xsk_create(char* ifname, int queue_id, struct vp_umem_inf
     }
 
     xsk_info->umem = umem;
+    xsk_info->ifindex = ifindex;
 
     struct xsk_socket_config xsk_cfg;
     xsk_cfg.rx_size = rx_ring_size;
@@ -250,9 +251,39 @@ int vp_xsk_add_into_map(struct bpf_map* map, int key, struct vp_xsk_info* xsk) {
                 -fd, strerror(-fd));
         return -1;
     }
-    int ret = bpf_map_update_elem(xsks_map_fd, &key, &fd, 0);
+    int ret = bpf_map_update_elem(xsks_map_fd, &key, &fd, BPF_ANY);
     if (ret) {
         fprintf(stderr, "ERR: bpf_map_update_elem failed\n");
+        return -1;
+    }
+    return 0;
+}
+
+int vp_mac_add_into_map(struct bpf_map* map, char* mac, int ifindex) {
+    int map_fd = bpf_map__fd(map);
+    if (map_fd < 0) {
+        fprintf(stderr, "ERR: bfp_map__fd failed: %d %s\n",
+                -map_fd, strerror(-map_fd));
+        return -1;
+    }
+    int ret = bpf_map_update_elem(map_fd, mac, &ifindex, BPF_ANY);
+    if (ret) {
+        fprintf(stderr, "ERR: bpf_map_update_elem failed\n");
+        return -1;
+    }
+    return 0;
+}
+
+int vp_mac_remove_from_map(struct bpf_map* map, char* mac) {
+    int map_fd = bpf_map__fd(map);
+    if (map_fd < 0) {
+        fprintf(stderr, "ERR: bfp_map__fd failed: %d %s\n",
+                -map_fd, strerror(-map_fd));
+        return -1;
+    }
+    int ret = bpf_map_delete_elem(map_fd, &mac);
+    if (ret) {
+        fprintf(stderr, "ERR: bpf_map_delete_elem failed\n");
         return -1;
     }
     return 0;

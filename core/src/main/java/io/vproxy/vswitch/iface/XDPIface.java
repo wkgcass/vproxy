@@ -22,7 +22,8 @@ import java.util.List;
 
 public class XDPIface extends Iface {
     public final String nic;
-    public final BPFMap bpfMap;
+    public final BPFMap xskMap;
+    public final BPFMap macMap;
     public final UMem umem;
     public final int rxRingSize;
     public final int txRingSize;
@@ -35,14 +36,16 @@ public class XDPIface extends Iface {
     private XDPSocket xsk;
     public final int vni;
     public final BPFMapKeySelector keySelector;
+    public final boolean offload;
     private SelectorEventLoop loop;
 
-    public XDPIface(String nic, BPFMap bpfMap, UMem umem,
+    public XDPIface(String nic, BPFMap xskMap, BPFMap macMap, UMem umem,
                     int queue, int rxRingSize, int txRingSize, BPFMode mode, boolean zeroCopy,
                     int busyPollBudget, boolean rxGenChecksum,
-                    int vni, BPFMapKeySelector keySelector) {
+                    int vni, BPFMapKeySelector keySelector, boolean offload) {
         this.nic = nic;
-        this.bpfMap = bpfMap;
+        this.xskMap = xskMap;
+        this.macMap = macMap;
         this.umem = umem;
         this.rxRingSize = rxRingSize;
         this.txRingSize = txRingSize;
@@ -54,8 +57,16 @@ public class XDPIface extends Iface {
 
         this.vni = vni;
         this.keySelector = keySelector;
+        this.offload = offload;
 
         this.sendingChunkPointers = new long[txRingSize];
+
+        // check offload
+        if (offload) {
+            if (macMap == null) {
+                throw new IllegalArgumentException("offload is true, but macMap is not provided");
+            }
+        }
     }
 
     @Override
@@ -81,7 +92,7 @@ public class XDPIface extends Iface {
         }
 
         int key = keySelector.select(xsk);
-        bpfMap.put(key, xsk);
+        xskMap.put(key, xsk);
     }
 
     private int sendingChunkSize = 0;
@@ -192,6 +203,10 @@ public class XDPIface extends Iface {
         });
     }
 
+    public XDPSocket getXsk() {
+        return xsk;
+    }
+
     @Override
     public int getLocalSideVni(int hint) {
         return this.vni;
@@ -227,7 +242,7 @@ public class XDPIface extends Iface {
 
     @Override
     protected String toStringExtra() {
-        return "#q=" + queueId + ",umem=" + umem.alias + ",vni:" + vni;
+        return "#q=" + queueId + ",umem=" + umem.alias + ",vni:" + vni + (offload ? ",offload" : "");
     }
 
     private class XDPHandler implements Handler<XDPSocket> {

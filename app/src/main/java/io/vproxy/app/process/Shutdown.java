@@ -648,8 +648,7 @@ public class Shutdown {
                     + " mac-table-timeout " + sw.getMacTableTimeout()
                     + " arp-table-timeout " + sw.getArpTableTimeout()
                     + " event-loop-group " + sw.eventLoopGroup.alias
-                    + " mtu " + sw.defaultMtu
-                    + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
+                    + " " + sw.defaultIfaceParams.toCommand();
                 if (!sw.bareVXLanAccess.alias.equals(SecurityGroup.defaultName)) {
                     cmd += " security-group " + sw.bareVXLanAccess.alias;
                 }
@@ -729,8 +728,7 @@ public class Shutdown {
                     cmd = "add user " + entry.getKey() + " to switch " + sw.alias
                         + " password " + user.pass
                         + " vni " + user.vni
-                        + " mtu " + user.defaultMtu
-                        + " flood " + (user.defaultFloodAllowed ? "allow" : "deny");
+                        + " " + user.defaultIfaceParams.toCommand();
                     commands.add(cmd);
                 }
                 // create remote sw
@@ -786,8 +784,8 @@ public class Shutdown {
                         continue;
                     }
                     var xdp = (XDPIface) iface;
-                    if (!bpfobjectNames.contains(xdp.bpfMap.bpfObject.nic)) {
-                        Logger.warn(LogType.IMPROPER_USE, "the bpf-object " + xdp.bpfMap.bpfObject.nic + " already removed");
+                    if (!bpfobjectNames.contains(xdp.xskMap.bpfObject.nic)) {
+                        Logger.warn(LogType.IMPROPER_USE, "the bpf-object " + xdp.xskMap.bpfObject.nic + " already removed");
                         continue;
                     }
                     if (!umemNames.contains(xdp.umem.alias)) {
@@ -795,7 +793,8 @@ public class Shutdown {
                         continue;
                     }
                     cmd = "add xdp " + xdp.nic + " to switch " + sw.alias
-                        + " bpf-map " + xdp.bpfMap.name
+                        + " xsk-map " + xdp.xskMap.name
+                        + (xdp.macMap == null ? "" : " mac-map " + xdp.macMap.name)
                         + " umem " + xdp.umem.alias
                         + " queue " + xdp.queueId
                         + " rx-ring-size " + xdp.rxRingSize
@@ -803,7 +802,8 @@ public class Shutdown {
                         + " mode " + xdp.mode.name()
                         + " busy-poll " + xdp.busyPollBudget
                         + " vni " + xdp.vni
-                        + " bpf-map-key " + xdp.keySelector.alias();
+                        + " xsk-map-key " + xdp.keySelector.alias()
+                        + " offload " + (xdp.offload ? "true" : "false");
                     if (xdp.zeroCopy) {
                         cmd += " zerocopy";
                     }
@@ -830,8 +830,7 @@ public class Shutdown {
                         continue;
                     }
                     cmd = "update iface " + iface.name() + " in switch " + sw.alias
-                        + " mtu " + iface.getBaseMTU()
-                        + " flood " + (iface.isFloodAllowed() ? "allow" : "deny")
+                        + " " + iface.getParams().toCommand()
                         + " " + (iface.isDisabled() ? "disable" : "enable");
                     if (!iface.getAnnotations().isEmpty()) {
                         cmd += " annotations " + iface.getAnnotations();

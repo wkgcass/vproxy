@@ -83,18 +83,18 @@ public class ArpHandle {
             macInArpEntries.add(a.mac);
             var macEntry = macEntriesMap.get(a.mac);
             if (macEntry == null) {
-                result.add(new ArpEntry(a.mac, a.ip, null, a.getTTL(), -1));
+                result.add(new ArpEntry(a.mac, a.ip, null, a.getTTL(), -1, false));
             } else {
                 var iface = macEntry.iface;
                 var ttl = macEntry.getTTL();
-                result.add(new ArpEntry(a.mac, a.ip, iface, a.getTTL(), ttl));
+                result.add(new ArpEntry(a.mac, a.ip, iface, a.getTTL(), ttl, macEntry.isOffloaded()));
             }
         }
         for (var m : macEntries) {
             if (macInArpEntries.contains(m.mac)) {
                 continue;
             }
-            result.add(new ArpEntry(m.mac, null, m.iface, -1, m.getTTL()));
+            result.add(new ArpEntry(m.mac, null, m.iface, -1, m.getTTL(), m.isOffloaded()));
         }
         result.sort((a, b) -> {
             // sort by mac
@@ -150,13 +150,15 @@ public class ArpHandle {
         public final Iface iface;
         public final long arpTTL;
         public final long macTTL;
+        public final boolean offloaded;
 
-        public ArpEntry(MacAddress mac, IP ip, Iface iface, long arpTTL, long macTTL) {
+        public ArpEntry(MacAddress mac, IP ip, Iface iface, long arpTTL, long macTTL, boolean offloaded) {
             this.mac = mac;
             this.ip = ip;
             this.iface = iface;
             this.arpTTL = arpTTL;
             this.macTTL = macTTL;
+            this.offloaded = offloaded;
         }
 
         private String strForIp(ArpEntry e) {
@@ -233,6 +235,9 @@ public class ArpHandle {
             }
             String strMacTTL = strForMacTTL(this);
             sb.append(split).append("MAC-TTL:").append(strMacTTL);
+            if (offloaded) {
+                sb.append("/offload");
+            }
             return sb.toString();
         }
     }

@@ -5,10 +5,9 @@ import io.vproxy.app.app.cmd.Command;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.Resource;
 import io.vproxy.app.app.cmd.ResourceType;
-import io.vproxy.app.app.cmd.handle.param.FloodHandle;
-import io.vproxy.app.app.cmd.handle.param.MTUHandle;
 import io.vproxy.base.util.exception.NotFoundException;
 import io.vproxy.vswitch.Switch;
+import io.vproxy.vswitch.iface.IfaceParams;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -34,16 +33,10 @@ public class UserHandle {
         int vni = Integer.parseInt(cmd.args.get(Param.vni));
         Switch sw = Application.get().switchHolder.get(cmd.prepositionResource.alias);
 
-        Integer defaultMtu = null;
-        if (cmd.args.containsKey(Param.mtu)) {
-            defaultMtu = MTUHandle.get(cmd);
-        }
-        Boolean defaultFloodAllowed = null;
-        if (cmd.args.containsKey(Param.flood)) {
-            defaultFloodAllowed = FloodHandle.get(cmd);
-        }
+        IfaceParams defaultIfaceParams = new IfaceParams();
+        IfaceParamsHandleHelper.update(cmd, defaultIfaceParams);
 
-        sw.addUser(user, pass, vni, defaultMtu, defaultFloodAllowed);
+        sw.addUser(user, pass, vni, defaultIfaceParams);
     }
 
     public static void update(Command cmd) throws Exception {
@@ -54,12 +47,7 @@ public class UserHandle {
         }
         io.vproxy.vswitch.util.UserInfo info = opt.get().getValue();
 
-        if (cmd.args.containsKey(Param.mtu)) {
-            info.defaultMtu = MTUHandle.get(cmd);
-        }
-        if (cmd.args.containsKey(Param.flood)) {
-            info.defaultFloodAllowed = FloodHandle.get(cmd);
-        }
+        IfaceParamsHandleHelper.update(cmd, info.defaultIfaceParams);
     }
 
     public static void remove(Command cmd) throws Exception {
@@ -80,8 +68,7 @@ public class UserHandle {
         @Override
         public String toString() {
             return name + " -> vni " + info.vni
-                + " mtu " + info.defaultMtu
-                + " flood " + (info.defaultFloodAllowed ? "allow" : "deny");
+                + " " + info.defaultIfaceParams;
         }
     }
 }

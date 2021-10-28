@@ -12,13 +12,13 @@ public class BPFMapKeySelectorHandle {
 
     public static void check(Command cmd) throws XException {
         try {
-            BPFMapKeySelectors.valueOf(cmd.args.get(Param.bpfmapkeyselector));
+            BPFMapKeySelectors.valueOf(cmd.args.get(Param.xskmapkeyselector));
         } catch (IllegalArgumentException e) {
-            throw new XException("unknown " + Param.bpfmapkeyselector.fullname + ": " + cmd.args.get(Param.bpfmapkeyselector));
+            throw new XException("unknown " + Param.xskmapkeyselector.fullname + ": " + cmd.args.get(Param.xskmapkeyselector));
         }
     }
 
     public static BPFMapKeySelector get(Command cmd) {
-        return BPFMapKeySelectors.valueOf(cmd.args.get(Param.bpfmapkeyselector)).keySelector.get();
+        return BPFMapKeySelectors.valueOf(cmd.args.get(Param.xskmapkeyselector)).keySelector.get();
     }
 }

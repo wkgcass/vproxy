@@ -6,8 +6,6 @@ import io.vproxy.app.app.cmd.Flag;
 import io.vproxy.app.app.cmd.Param;
 import io.vproxy.app.app.cmd.Resource;
 import io.vproxy.app.app.cmd.handle.param.AddrHandle;
-import io.vproxy.app.app.cmd.handle.param.FloodHandle;
-import io.vproxy.app.app.cmd.handle.param.MTUHandle;
 import io.vproxy.app.app.cmd.handle.param.TimeoutHandle;
 import io.vproxy.base.component.elgroup.EventLoopGroup;
 import io.vproxy.base.util.exception.NotFoundException;
@@ -69,21 +67,9 @@ public class SwitchHandle {
         } else {
             bareVXLanAccess = SecurityGroup.allowAll();
         }
-        int mtu;
-        if (cmd.args.containsKey(Param.mtu)) {
-            mtu = MTUHandle.get(cmd);
-        } else {
-            mtu = 1500;
-        }
-        boolean flood;
-        if (cmd.args.containsKey(Param.flood)) {
-            flood = FloodHandle.get(cmd);
-        } else {
-            flood = true;
-        }
-        Application.get().switchHolder.add(alias, addr, eventLoopGroup,
-            macTableTimeout, arpTableTimeout, bareVXLanAccess,
-            mtu, flood);
+        var sw = Application.get().switchHolder.add(alias, addr, eventLoopGroup,
+            macTableTimeout, arpTableTimeout, bareVXLanAccess);
+        IfaceParamsHandleHelper.update(cmd, sw.defaultIfaceParams);
     }
 
     public static void attach(Command cmd) throws Exception {
@@ -109,12 +95,7 @@ public class SwitchHandle {
         if (cmd.args.containsKey(Param.secg)) {
             sw.bareVXLanAccess = SecurityGroupHandle.get(cmd.args.get(Param.secg));
         }
-        if (cmd.args.containsKey(Param.mtu)) {
-            sw.defaultMtu = MTUHandle.get(cmd);
-        }
-        if (cmd.args.containsKey(Param.flood)) {
-            sw.defaultFloodAllowed = FloodHandle.get(cmd);
-        }
+        IfaceParamsHandleHelper.update(cmd, sw.defaultIfaceParams);
     }
 
     public static void remove(Command cmd) throws Exception {
@@ -136,8 +117,7 @@ public class SwitchHandle {
                 + " mac-table-timeout " + sw.getMacTableTimeout()
                 + " arp-table-timeout " + sw.getArpTableTimeout()
                 + " bare-vxlan-access " + sw.bareVXLanAccess.alias
-                + " mtu " + sw.defaultMtu
-                + " flood " + (sw.defaultFloodAllowed ? "allow" : "deny");
+                + " " + sw.defaultIfaceParams;
         }
     }
 }

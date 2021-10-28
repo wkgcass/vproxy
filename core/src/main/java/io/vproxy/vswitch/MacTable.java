@@ -6,7 +6,10 @@ import io.vproxy.base.util.Logger;
 import io.vproxy.base.util.Timer;
 import io.vproxy.vfd.MacAddress;
 import io.vproxy.vswitch.iface.Iface;
+import io.vproxy.vswitch.iface.XDPIface;
+import io.vproxy.xdp.XDPSocket;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
@@ -15,15 +18,19 @@ import java.util.Set;
 public class MacTable {
     public static final int MAC_TRY_TO_REFRESH_CACHE_BEFORE_TTL_TIME = 60 * 1000;
 
+    private final SwitchContext swCtx;
     private SelectorEventLoop loop;
+    private final VirtualNetwork net;
     private int timeout;
 
     private final Set<MacEntry> entries = new HashSet<>();
     private final Map<MacAddress, MacEntry> macMap = new HashMap<>();
     private final Map<Iface, Set<MacEntry>> ifaceMap = new HashMap<>();
 
-    public MacTable(SelectorEventLoop loop, int timeout) {
+    public MacTable(SwitchContext swCtx, SelectorEventLoop loop, VirtualNetwork net, int timeout) {
+        this.swCtx = swCtx;
         this.loop = loop;
+        this.net = net;
         this.timeout = timeout;
     }
 
@@ -108,6 +115,7 @@ public class MacTable {
     public class MacEntry extends Timer {
         public final MacAddress mac;
         public final Iface iface;
+        private boolean offloaded = false;
 
         MacEntry(MacAddress mac, Iface iface, boolean persist) {
             super(MacTable.this.loop, persist ? -1 : timeout);
@@ -133,7 +141,42 @@ public class MacTable {
             set.add(this);
             resetTimer();
 
+            tryRecordMacMap();
+
             Logger.trace(LogType.ALERT, "mac entry " + iface.name() + " -> " + mac + " recorded");
+        }
+
+        private void tryRecordMacMap() {
+            if (!(iface instanceof XDPIface) || !((XDPIface) iface).offload) {
+                return;
+            }
+            XDPSocket xsk = ((XDPIface) iface).getXsk();
+            if (xsk == null) {
+                return;
+            }
+            for (Iface iface : swCtx.getIfaces()) {
+                if (iface.getLocalSideVni(net.vni) != net.vni) {
+                    continue;
+                }
+                if (!(iface instanceof XDPIface)) {
+                    continue;
+                }
+                XDPIface xdp = (XDPIface) iface;
+                if (xdp.macMap == null) {
+                    continue;
+                }
+                offloaded = true;
+                try {
+                    xdp.macMap.put(mac, xsk);
+                    Logger.trace(LogType.ALERT, "mac entry offloaded into " + xdp.name() + ": " + mac + " -> " + xsk.nic);
+                } catch (IOException e) {
+                    Logger.error(LogType.SYS_ERROR, "failed to record into " + xdp.name() + ": " + mac + " -> " + xsk.nic);
+                }
+            }
+
+            if (offloaded) { // make timeout longer
+                setTimeout(Math.max(3600_000, timeout));
+            }
         }
 
         @Override
@@ -151,6 +194,29 @@ public class MacTable {
                     ifaceMap.remove(iface);
                 }
             }
+
+            tryRemoveMacMap();
+        }
+
+        private void tryRemoveMacMap() {
+            if (!offloaded) {
+                return;
+            }
+            for (Iface iface : swCtx.getIfaces()) {
+                if (!(iface instanceof XDPIface)) {
+                    continue;
+                }
+                XDPIface xdp = (XDPIface) iface;
+                if (xdp.macMap == null) {
+                    continue;
+                }
+                try {
+                    xdp.macMap.remove(mac);
+                    Logger.trace(LogType.ALERT, "mac entry removed from " + xdp.name() + ": " + mac);
+                } catch (IOException e) {
+                    Logger.error(LogType.SYS_ERROR, "failed to removed from " + xdp.name() + ": " + mac);
+                }
+            }
         }
 
         @Override
@@ -161,11 +227,16 @@ public class MacTable {
             super.resetTimer();
         }
 
+        public boolean isOffloaded() {
+            return offloaded;
+        }
+
         @Override
         public String toString() {
             return "MacEntry{" +
                 "mac=" + mac +
                 ", iface=" + iface.name() +
+                ", offloaded=" + offloaded +
                 '}';
         }
     }

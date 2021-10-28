@@ -45,7 +45,7 @@ public class VirtualNetwork {
         }
         this.annotations = annotations;
 
-        macTable = new MacTable(loop.getSelectorEventLoop(), macTableTimeout);
+        macTable = new MacTable(swCtx, loop.getSelectorEventLoop(), this, macTableTimeout);
         arpTable = new ArpTable(loop.getSelectorEventLoop(), arpTableTimeout);
         ips = new SyntheticIpHolder(this);
         routeTable = new RouteTable(this);

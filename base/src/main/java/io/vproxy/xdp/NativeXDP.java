@@ -115,6 +115,18 @@ public class NativeXDP {
 
     private static native void addXSKIntoMap0(long map, int key, long xsk) throws IOException;
 
+    public void addMacIntoMap(long map, byte[] mac, long xsk) throws IOException {
+        addMacIntoMap0(map, mac, xsk);
+    }
+
+    private static native void addMacIntoMap0(long map, byte[] mac, long xsk) throws IOException;
+
+    public void removeMacFromMap(long map, byte[] mac) throws IOException {
+        removeMacFromMap0(map, mac);
+    }
+
+    private static native void removeMacFromMap0(long map, byte[] mac) throws IOException;
+
     public int getFDFromXSK(long xsk) {
         return getFDFromXSK0(xsk);
     }

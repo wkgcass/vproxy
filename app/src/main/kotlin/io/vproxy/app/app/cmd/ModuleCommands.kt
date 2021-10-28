@@ -563,6 +563,7 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.secg)
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
         },
         exec = execUpdate { SwitchHandle.add(it) }
       )
@@ -592,6 +593,7 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.secg)
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
         },
         exec = execUpdate { SwitchHandle.update(it) }
       )
@@ -689,6 +691,7 @@ class ModuleCommands private constructor() : Commands() {
         params = {
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
           it + ResActParam(Param.anno) { AnnotationsHandle.check(it) }
         },
         flags = {
@@ -785,6 +788,7 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
         },
         exec = execUpdate { UserHandle.add(it) }
       )
@@ -812,6 +816,7 @@ class ModuleCommands private constructor() : Commands() {
         params = {
           it + ResActParam(Param.mtu) { MTUHandle.check(it) }
           it + ResActParam(Param.flood) { FloodHandle.check(it) }
+          it + ResActParam(Param.csumrecalc) { CsumRecalcHandle.check(it) }
         },
         exec = execUpdate { UserHandle.update(it) }
       )
@@ -876,7 +881,8 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.addto,
         targetRelation = ResRelation(ResourceType.sw),
         params = {
-          it + ResActParam(Param.bpfmap)
+          it + ResActParam(Param.xskmap)
+          it + ResActParam(Param.macmap)
           it + ResActParam(Param.umem, required)
           it + ResActParam(Param.queue, required) { QueueHandle.check(it) }
           it + ResActParam(Param.rxringsize) { RingSizeHandle.check(it, Param.rxringsize) }
@@ -884,7 +890,8 @@ class ModuleCommands private constructor() : Commands() {
           it + ResActParam(Param.mode) { BPFModeHandle.check(it) }
           it + ResActParam(Param.busypoll) { BusyPollHandle.check(it) }
           it + ResActParam(Param.vni, required) { VniHandle.check(it) }
-          it + ResActParam(Param.bpfmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
+          it + ResActParam(Param.xskmapkeyselector) { BPFMapKeySelectorHandle.check(it) }
+          it + ResActParam(Param.offload) { OffloadHandle.check(it) }
         },
         flags = {
           it + ResActFlag(Flag.zerocopy)

@@ -27,9 +27,7 @@ object SwitchTCP {
       elg,
       60000,
       60000,
-      SecurityGroup.allowAll(),
-      1500,
-      true
+      SecurityGroup.allowAll()
     )
     sw.start()
     elg.add("el0")
@@ -79,7 +77,7 @@ object SwitchTCP {
       for (i in 0 until 1024 * 1024) {
         if (body.get(i) != chars[i % chars.size]) {
           it.conn.response(400).send(
-            "invalid char at index $i, expecting ${chars[i % chars.size].toChar()}, but got ${body.get(i).toChar()}"
+            "invalid char at index $i, expecting ${chars[i % chars.size].toInt().toChar()}, but got ${body.get(i).toInt().toChar()}"
           )
           return@post
         }

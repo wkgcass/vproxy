@@ -52,6 +52,8 @@ struct vp_xsk_info {
     struct vp_umem_info* umem;
     struct xsk_socket*   xsk;
 
+    int ifindex;
+
     int rx_ring_size;
     int tx_ring_size;
 
@@ -73,6 +75,8 @@ struct vp_xsk_info*  vp_xsk_create (char* ifname, int queue_id, struct vp_umem_i
                                     int busy_poll_budget, int vp_flags);
 
 int vp_xsk_add_into_map(struct bpf_map* map, int key, struct vp_xsk_info* xsk);
+int vp_mac_add_into_map(struct bpf_map* map, char* mac, int ifindex);
+int vp_mac_remove_from_map(struct bpf_map* map, char* mac);
 
 int vp_xsk_socket_fd(struct vp_xsk_info* xsk);
 

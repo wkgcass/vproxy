@@ -167,6 +167,31 @@ JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addXSKIntoMap0
     }
 }
 
+JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_addMacIntoMap0
+  (JNIEnv* env, jclass self, jlong map_o, jbyteArray mac, jlong xsk_o) {
+    struct bpf_map* map = (struct bpf_map*) map_o;
+    struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;
+    jbyte mac_bytes[6];
+    (*env)->GetByteArrayRegion(env, mac, 0, 6, mac_bytes);
+
+    int ret = vp_mac_add_into_map(map, mac_bytes, xsk->ifindex);
+    if (ret) {
+        throwIOException(env, "vp_mac_add_into_map failed");
+    }
+}
+
+JNIEXPORT void JNICALL Java_io_vproxy_xdp_NativeXDP_removeMacFromMap0
+  (JNIEnv* env, jclass self, jlong map_o, jbyteArray mac) {
+    struct bpf_map* map = (struct bpf_map*) map_o;
+    jbyte mac_bytes[6];
+    (*env)->GetByteArrayRegion(env, mac, 0, 6, mac_bytes);
+
+    int ret = vp_mac_remove_from_map(map, mac_bytes);
+    if (ret) {
+        throwIOException(env, "vp_mac_remove_from_map failed");
+    }
+}
+
 JNIEXPORT jint JNICALL Java_io_vproxy_xdp_NativeXDP_getFDFromXSK0
   (JNIEnv* env, jclass self, jlong xsk_o) {
     struct vp_xsk_info* xsk = (struct vp_xsk_info*) xsk_o;

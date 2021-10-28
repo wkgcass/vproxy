@@ -37,8 +37,7 @@ public class XDPPoc2 {
         elg.add("el");
         Switch sw = new Switch("sw0", new IPPort("127.30.30.30:30"), elg,
             1000, 1000,
-            SecurityGroup.allowAll(),
-            1500, true);
+            SecurityGroup.allowAll());
         sw.start();
 
         VirtualNetwork t = sw.addNetwork(1,
@@ -51,7 +50,7 @@ public class XDPPoc2 {
 
         UMem umem = sw.addUMem("poc-umem", 64, 32, 32, 4096);
         sw.addXDP(
-            ifname, bpfMap, umem, 0, 32, 32, BPFMode.SKB, false, 0, true,
-            1, BPFMapKeySelectors.useQueueId.keySelector.get());
+            ifname, bpfMap, null, umem, 0, 32, 32, BPFMode.SKB, false, 0, true,
+            1, BPFMapKeySelectors.useQueueId.keySelector.get(), false);
     }
 }

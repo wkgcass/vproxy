@@ -45,20 +45,24 @@ public enum Param {
 
     mtu("mtu"),
     flood("flood"),
+    csumrecalc("csum-recalc"),
+
+    offload("offload"),
 
     prog("program"),
     mode("mode"),
     umem("umem"),
     nic("nic"),
     queue("queue"),
-    bpfmap("bpf-map"),
+    xskmap("xsk-map"),
+    macmap("mac-map"),
     rxringsize("rx-ring-size"),
     txringsize("tx-ring-size"),
     chunks("chunks"),
     fillringsize("fill-ring-size"),
     compringsize("comp-ring-size"),
     framesize("frame-size"),
-    bpfmapkeyselector("bpf-map-key"),
+    xskmapkeyselector("xsk-map-key"),
     busypoll("busy-poll"),
 
     url("url"),

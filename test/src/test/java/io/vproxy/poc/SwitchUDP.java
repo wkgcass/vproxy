@@ -25,8 +25,7 @@ public class SwitchUDP {
     public static void main(String[] args) throws Exception {
         var elg = new EventLoopGroup("elg0");
         var sw = new Switch(
-            "sw0", new IPPort("127.0.0.1", 18472), elg, 60000, 60000, SecurityGroup.allowAll(),
-            1500, true
+            "sw0", new IPPort("127.0.0.1", 18472), elg, 60000, 60000, SecurityGroup.allowAll()
         );
         sw.start();
         elg.add("el0");

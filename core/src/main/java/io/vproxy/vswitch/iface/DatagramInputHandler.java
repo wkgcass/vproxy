@@ -128,8 +128,7 @@ public class DatagramInputHandler implements Handler<DatagramFD> {
                     Logger.error(LogType.SYS_ERROR, "init " + uiface.name() + " failed", e);
                     return null;
                 }
-                uiface.setBaseMTU(info.defaultMtu);
-                uiface.setFloodAllowed(info.defaultFloodAllowed);
+                uiface.getParams().set(info.defaultIfaceParams);
             }
             uiface.setLocalSideVni(info.vni);
 
