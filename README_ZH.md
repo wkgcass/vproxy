@@ -20,8 +20,6 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 ## 构建
 
-### 打包
-
 <details><summary>使用已构建的版本</summary>
 
 <br>
@@ -34,7 +32,7 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 或者
 
-使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-linux.tar.gz)下载。
+使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-12/vproxy-runtime-linux.tar.gz)下载。
 
 #### For macos
 
@@ -42,13 +40,11 @@ VProxy是一个零依赖的基于NIO的TCP负载均衡器。本项目仅需要Ja
 
 #### For windows
 
-Java运行时可以从[这里](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot)下载。
+Java运行时可以从[这里](https://adoptium.net/releases.html?variant=openjdk17&jvmVariant=hotspot)下载。
 
 #### For musl
 
-使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz)下载。
-
->注意：该运行时仍然处于beta阶段
+使用`jlink`打包的运行时文件：点[这里](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-12/vproxy-runtime-musl.tar.gz)下载。
 
 </details>
 
@@ -79,8 +75,8 @@ make jlink
 <br>
 
 ```
-make docker
-docker run --rm vproxyio/vproxy -Deploy=HelloWorld
+# make docker
+docker run -it --rm vproxyio/vproxy -Deploy=HelloWorld
 ```
 
 </details>
@@ -90,8 +86,7 @@ docker run --rm vproxyio/vproxy -Deploy=HelloWorld
 <br>
 
 ```
-./gradlew clean jar
-native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fallback --no-server vproxy
+make image
 ./vproxy -Deploy=HelloWorld
 ```
 
@@ -101,7 +96,7 @@ native-image -jar build/libs/vproxy.jar --enable-all-security-services --no-fall
 
 <br>
 
-仅支持macos(bsd)/linux。另外在编译前，你可能需要配置`JAVA_HOME`环境变量。
+仅支持macos(bsd)/linux。另外在编译前，你还需要配置`JAVA_HOME`环境变量。
 
 ```
 make vfdposix
@@ -115,6 +110,31 @@ java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.ja
 ```
 make vfdwindows
 java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
+```
+
+Windows TAP依赖OpenVPN TAP Driver。MacOS TAP依赖tuntaposx。
+
+MacOS TUN、Linux TAP和TUN均无特殊依赖。
+
+</details>
+
+<details><summary>xdp</summary>
+
+<br>
+
+推荐使用5.10（或者至少5.14）内核来启用switch模块的xdp支持。  
+如果使用比较低的版本，则无法在不同xdp网口之间共享umem。
+
+要编译xdp，你需要这些软件包：`apt-get install -y linux-headers-$(uname -r) build-essential libelf-dev clang llvm`，然后执行：
+
+```
+make vpxdp
+```
+
+在非Linux平台下，可在容器中编译：
+
+```
+make vpxdp-linux
 ```
 
 </details>
@@ -155,8 +175,37 @@ cd ./misc/auto-setup/
 * 高效：性能是首要目标之一。
 * TCP负载均衡：支持TCP以及一些基于TCP的协议，也允许你使用自己的协议。
 * Kubernetes：将vproxy资源整合到k8s中。
+* SDN：根据流表和路由规则修改、转发网络包。
 
 ## 如何使用
+
+<details><summary>作为库使用</summary>
+
+<br>
+
+**gradle**
+
+```
+implementation group: 'io.vproxy', name: 'vproxy-all', version: '1.0.0-BETA-12'
+```
+
+**maven**
+
+```
+<dependency>
+    <groupId>io.vproxy</groupId>
+    <artifactId>vproxy-all</artifactId>
+    <version>1.0.0-BETA-12</version>
+</dependency>
+```
+
+**module-info.java**
+
+```
+requires io.vproxy.all;
+```
+
+</details>
 
 <details><summary>在K8S中使用vproxy</summary>
 
@@ -199,8 +248,8 @@ kubectl apply -f https://github.com/vproxy-tools/vpctl/blob/master/misc/cr-examp
 java -Deploy=Simple -jar vproxy.jar \  
                 bind {port} \
                 backend {host1:port1,host2:port2} \
-                [ssl {path of cert1,cert2} {path of key} \]
-                [protocol {...} \]
+                [ssl {path of cert1,cert2} {path of key}] \
+                [protocol {...}] \
 ```
 
 可以输入`help`检查参数列表。
@@ -213,14 +262,13 @@ java -Deploy=Simple -jar vproxy.jar \
 
 使用`help`查看启动参数。
 
-在启动vproxy实例时，会默认开启一个监听18776端口的`http-controller`和一个监听16309端口的`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
+在启动vproxy后，你可以输入`System:`来运行系统指令，你可以创建`http-controller`和`resp-controller`。后续则可以使用`curl`或者`redis-cli`来操作该vproxy实例。当然你也可以直接通过标准输入(stdin)来操作vproxy实例。
 
-查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)以获取更多信息。  
-如果有任何关于实现细节的问题也欢迎在issue中提出。
+查看[command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md)和[api文档](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml)以获取更多信息。
 
 </details>
 
-### 文档
+## 文档
 
 * [how-to-use.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/how-to-use.md): 如何使用配置文件和controller。
 * [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): http-controller的api文档（swagger格式）。
@@ -235,10 +283,12 @@ java -Deploy=Simple -jar vproxy.jar \
 * [fstack-how-to.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): 如何在`F-Stack`上运行vproxy。
 * [vpws-direct-relay.md(中文)](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): 如何使用`vpws-agent`的`direct-relay`功能。
 
+## 产品
+
+* [VProxy软交换(vpss)](https://github.com/vproxy-tools/vpss): 一个家用的软路由（交换机）。
+
 ## 贡献
 
 目前只有`我`自己在维护这个项目。希望能有更多人加入 :)
 
-感谢[Jetbrains](https://www.jetbrains.com/?from=vproxy)制作的IDE，以及免费的开源许可证。
-
-![](https://raw.githubusercontent.com/wkgcass/vproxy/master/doc/jetbrains.png)
+感谢曾经提交过PR的贡献者，见[CONTRIB](https://github.com/wkgcass/vproxy/blob/master/CONTRIB.md)。

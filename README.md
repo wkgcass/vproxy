@@ -34,7 +34,7 @@ Use the latest `vproxy-linux` binary file in release page.
 
 Or
 
-Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-linux.tar.gz).
+Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-12/vproxy-runtime-linux.tar.gz).
 
 #### For macos
 
@@ -42,17 +42,15 @@ Use the latest `vproxy-macos` binary file in release page.
 
 #### For windows
 
-Java runtime can be found [here](https://adoptopenjdk.net/?variant=openjdk11&jvmVariant=hotspot).
+Java runtime can be found [here](https://adoptium.net/releases.html?variant=openjdk17&jvmVariant=hotspot).
 
 #### For musl
 
-Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-5/vproxy-runtime-musl.tar.gz).
-
->NOTE: the runtime is in beta state.
+Use the jlink built runtime [here](https://github.com/wkgcass/vproxy/releases/download/1.0.0-BETA-12/vproxy-runtime-musl.tar.gz).
 
 </details>
 
-<details><summary>pack</summary>
+<details><summary>jar package</summary>
 
 <br>
 
@@ -79,8 +77,8 @@ make jlink
 <br>
 
 ```
-make docker
-docker run --rm vproxyio/vproxy -Deploy=HelloWorld
+# make docker
+docker run -it --rm vproxyio/vproxy -Deploy=HelloWorld
 ```
 
 </details>
@@ -96,7 +94,7 @@ make image
 
 </details>
 
-<details><summary>use native fds impl</summary>
+<details><summary>native fds impl</summary>
 
 <br>
 
@@ -107,8 +105,6 @@ make vfdposix
 java -Dvfd=posix -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
-To build `vfdposix` in linux docker, run `make vfdposix-linux`.
-
 For info about `F-Stack`, check the doc [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md).
 
 And there's a special version for windows to support Tap devices: `-Dvfd=windows`, however the normal fds and event loop are stll based on jdk selector channel.
@@ -118,9 +114,15 @@ make vfdwindows
 java -Dvfd=windows -Djava.library.path=./base/src/main/c -jar build/libs/vproxy.jar -Deploy=HelloWorld
 ```
 
+Windows TAP depends on OpenVPN TAP Driver. MacOS TAP depends on tuntaposx.
+
+MacOS TUN, Linux TAP and TUN has no extra dependencies.
+
 </details>
 
 <details><summary>xdp</summary>
+
+<br>
 
 It's recommended to run a kernel with minimum version 5.10 (or at least 5.4) in order to use xdp support in the switch module.  
 If using a lower version, you cannot share the same umem with different xdp interfaces.
@@ -131,7 +133,7 @@ To build the xdp support, you will need these packages: `apt-get install -y linu
 make vpxdp
 ```
 
-Or compile it inside a docker container:
+Or compile it inside a docker container on a non-Linux platform:
 
 ```
 make vpxdp-linux
@@ -179,6 +181,34 @@ cd ./misc/auto-setup/
 
 ## How to use
 
+<details><summary>use as a library</summary>
+
+<br>
+
+**gradle**
+
+```
+implementation group: 'io.vproxy', name: 'vproxy-all', version: '1.0.0-BETA-12'
+```
+
+**maven**
+
+```
+<dependency>
+    <groupId>io.vproxy</groupId>
+    <artifactId>vproxy-all</artifactId>
+    <version>1.0.0-BETA-12</version>
+</dependency>
+```
+
+**module-info.java**
+
+```
+requires io.vproxy.all;
+```
+
+</details>
+
 <details><summary>use vproxy with kubernetes</summary>
 
 <br>
@@ -220,8 +250,8 @@ You can start a simple loadbalancer in one command:
 java -Deploy=Simple -jar vproxy.jar \  
                 bind {port} \
                 backend {host1:port1,host2:port2} \
-                [ssl {path of cert1,cert2} {path of key} \]
-                [protocol {...} \]
+                [ssl {path of cert1,cert2} {path of key}] \
+                [protocol {...}] \
 ```
 
 Use `help` to view the parameters.
@@ -234,14 +264,15 @@ Use `help` to view the parameters.
 
 Use `help` to view the launching parameters.
 
-When launching the vproxy instance, a `http-controller` on port 18776 and a `resp-controller` on port 16309 will be started. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
+After launching, you may use `help`, `man`, `man ${action}`, `man ${resource}`, `man ${resource} ${action}` to check the command manual. Also you can use `System: help` to check the system commands.
 
-See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml) for more info.  
-Questions about implementation detail are also welcome (in issues).
+After launching vproxy, you may use `System:` to run some system commands, You may create `http-controller`s and `resp-controller`s. Then you can operate the vproxy instance using `curl` or `redis-cli`. You may also operate the vproxy instance directly using standard input (stdin).
+
+See [command.md](https://github.com/wkgcass/vproxy/blob/master/doc/command.md) and [api doc](https://github.com/wkgcass/vproxy/blob/master/doc/api.yaml) for more info.
 
 </details>
 
-### Doc
+## Doc
 
 * [how-to-use.md](https://github.com/wkgcass/vproxy/blob/master/doc/how-to-use.md): How to use config file and controllers.
 * [api.yaml](https://github.com/wkgcass/vproxy/blob/dev/doc/api.yaml): api doc for http-controller in swagger format.
@@ -256,10 +287,12 @@ Questions about implementation detail are also welcome (in issues).
 * [fstack-how-to.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/fstack-how-to.md): How to run vproxy upon `F-Stack`. Chinese version only for now.
 * [vpws-direct-relay.md](https://github.com/wkgcass/vproxy/blob/master/doc_zh/vpws-direct-relay.md): How to use `direct-relay` in `vpws-agent`.
 
+## Products
+
+* [VProxy Soft Switch (vpss)](https://github.com/vproxy-tools/vpss): A soft router (switch) for your home.
+
 ## Contribute
 
 Currently only `I` myself is working on this project. I would be very happy if you want to join :)
 
-Thanks to [Jetbrains](https://www.jetbrains.com/?from=vproxy) for their great IDEs and the free open source license.
-
-![](https://raw.githubusercontent.com/wkgcass/vproxy/master/doc/jetbrains.png)
+Thanks to those who had committed PR, see [CONTRIB](https://github.com/wkgcass/vproxy/blob/master/CONTRIB.md).
