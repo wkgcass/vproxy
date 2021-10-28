@@ -1,10 +1,10 @@
 module io.vproxy.extended {
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;
-    requires io.vproxy.dep;
-    requires io.vproxy.base;
-    requires io.vproxy.core;
-    requires io.vproxy.lib;
+    requires transitive io.vproxy.dep;
+    requires transitive io.vproxy.base;
+    requires transitive io.vproxy.core;
+    requires transitive io.vproxy.lib;
 
     exports io.vproxy.vproxyx;
     exports io.vproxy.vproxyx.pktfiltergen;

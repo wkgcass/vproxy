@@ -3,7 +3,7 @@ module io.vproxy.base {
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;
 
-    requires io.vproxy.dep;
+    requires transitive io.vproxy.dep;
 
     exports io.vproxy.base;
     exports io.vproxy.base.component.check;

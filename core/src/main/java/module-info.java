@@ -2,9 +2,9 @@ module io.vproxy.core {
     requires jdk.crypto.ec;
     requires jdk.crypto.cryptoki;
 
-    requires io.vproxy.dep;
-    requires io.vproxy.base;
-    requires io.vproxy.lib;
+    requires transitive io.vproxy.dep;
+    requires transitive io.vproxy.base;
+    requires transitive io.vproxy.lib;
 
     exports io.vproxy.component.app;
     exports io.vproxy.component.proxy;

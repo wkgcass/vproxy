@@ -2,11 +2,11 @@ module io.vproxy.app {
     requires jdk.unsupported;
     requires kotlin.stdlib;
     requires kotlinx.coroutines.core.jvm;
-    requires io.vproxy.dep;
-    requires io.vproxy.base;
-    requires io.vproxy.core;
-    requires io.vproxy.extended;
-    requires io.vproxy.lib;
+    requires transitive io.vproxy.dep;
+    requires transitive io.vproxy.base;
+    requires transitive io.vproxy.core;
+    requires transitive io.vproxy.extended;
+    requires transitive io.vproxy.lib;
 
     exports io.vproxy.app.app;
     exports io.vproxy.app.app.args;
