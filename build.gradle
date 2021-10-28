@@ -85,11 +85,13 @@ subprojects {
         publications {
             maven(MavenPublication) {
                 from components.java
+                artifactId 'vproxy-' + project.name
+
                 artifact(javadocJar)
 
                 pom {
-                    name = 'io.vproxy.' + artifactId
-                    description = 'vproxy component ' + artifactId
+                    name = 'io.vproxy.' + project.name
+                    description = 'vproxy component ' + project.name
                     url = 'http://vproxy.io'
                     licenses {
                         license {
