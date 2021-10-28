@@ -112,11 +112,15 @@ public class HelpCommand {
 
         StringBuilder sb = new StringBuilder();
         sb.append("vproxy:")
-            .append("\n    System commands:")
+            .append("\n    commands:")
             .append("\n        ")
             .append(withSpaces("help", maxLenOfFullName))
             .append(withSpaces("h", maxLenOfShortName))
             .append(withMaxLen("show this message", descrMaxLen, descrSpaces))
+            .append("\n        ")
+            .append(withSpaces("System: help", maxLenOfFullName))
+            .append(withSpaces(null, maxLenOfShortName))
+            .append(withMaxLen("show system help message", descrMaxLen, descrSpaces))
             .append("\n        ")
             .append(withSpaces("man", maxLenOfFullName))
             .append(withSpaces(null, maxLenOfShortName))
@@ -127,7 +131,6 @@ public class HelpCommand {
             .append(withMaxLen("use `man action|resource|param_name` to get detailed doc." +
                     "use `man add-to|remove-from` to see info about `add-to` or `remove-from`",
                 descrMaxLen, descrSpaces))
-            .append(SystemCommand.systemCommandHelpStr)
             .append("\n    Available actions:");
         for (ActMan actMan : ActMan.values()) {
             sb.append("\n        ")

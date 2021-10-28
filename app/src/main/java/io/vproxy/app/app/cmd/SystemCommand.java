@@ -16,7 +16,7 @@ public class SystemCommand {
     private SystemCommand() {
     }
 
-    static final String systemCommandHelpStr = "" +
+    static final String systemCommandHelpStr = "vproxy system commands:" +
         "\n        System: help                               show this message" +
         "\n        System: shutdown                           shutdown the vproxy process" +
         "\n        System: load ${filepath}                   load config commands from a file" +
@@ -49,7 +49,7 @@ public class SystemCommand {
         "\n                              {enable|disable}" +
         "\n        System: remove plugin ${alias}             destroy a plugin" +
         "\n        System: list config                        show current config" +
-        "\n        System: dig ${domain}                      resolve v4/v6 ip for the domain";
+        "\n        System: lookup ${domain}                   resolve v4/v6 ip for the domain";
 
     public static boolean allowNonStdIOController = false;
 
@@ -62,18 +62,18 @@ public class SystemCommand {
         String cmd = line.substring("System:".length()).trim();
         switch (cmd) {
             case "help":
-                String helpStr = Command.helpString();
+                String helpStr = systemCommandHelpStr;
                 List<String> helpStrLines = Arrays.asList(helpStr.split("\n"));
                 cb.succeeded(new CmdResult(helpStr, helpStrLines, helpStr));
-                break;
+                return;
             case "shutdown":
                 if (!from.equals(StdIOController.class.getName())) {
                     cb.failed(new XException("you can only call shutdown via StdIOController"));
-                    break;
+                    return;
                 }
                 Shutdown.shutdown();
                 cb.succeeded(new CmdResult());
-                break;
+                return;
         }
         if (cmd.startsWith("load ")) {
             if (!from.equals(StdIOController.class.getName())) {
@@ -132,8 +132,8 @@ public class SystemCommand {
             }
             cb.succeeded(new CmdResult());
             return;
-        } else if (cmd.startsWith("dig ")) {
-            executeDig(cmd, cb);
+        } else if (cmd.startsWith("lookup ")) {
+            executeLookup(cmd, cb);
             return;
         }
 
@@ -148,10 +148,10 @@ public class SystemCommand {
         command.run(SystemCommands.Companion.getInstance(), cb);
     }
 
-    private static void executeDig(String cmd, Callback<CmdResult, Throwable> cb) {
+    private static void executeLookup(String cmd, Callback<CmdResult, Throwable> cb) {
         String[] split = cmd.split(" ");
         if (split.length != 2) {
-            cb.failed(new Exception("invalid system cmd for `dig`: should specify one domain to resolve"));
+            cb.failed(new Exception("invalid system cmd for `lookup`: should specify one domain to resolve"));
             return;
         }
         String domain = split[1].trim();
