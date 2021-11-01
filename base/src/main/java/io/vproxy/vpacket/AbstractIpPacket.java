@@ -27,4 +27,6 @@ public abstract class AbstractIpPacket extends AbstractPacket implements Partial
 
     @Override
     public abstract AbstractIpPacket copy();
+
+    public abstract void swapSrcDst();
 }

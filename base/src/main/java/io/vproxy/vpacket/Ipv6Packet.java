@@ -265,6 +265,13 @@ public class Ipv6Packet extends AbstractIpPacket {
     }
 
     @Override
+    public void swapSrcDst() {
+        var dst = this.getDst();
+        this.setDst(this.getSrc());
+        this.setSrc(dst);
+    }
+
+    @Override
     public void clearAllRawPackets() {
         super.clearAllRawPackets();
         for (var h : extHeaders) {

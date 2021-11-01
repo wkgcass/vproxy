@@ -264,6 +264,13 @@ public class Ipv4Packet extends AbstractIpPacket {
     }
 
     @Override
+    public void swapSrcDst() {
+        var dst = this.getDst();
+        this.setDst(this.getSrc());
+        this.setSrc(dst);
+    }
+
+    @Override
     public String description() {
         return "ip"
             + ",nw_src=" + (src == null ? "not-parsed-yet" : src.formatToIPString())

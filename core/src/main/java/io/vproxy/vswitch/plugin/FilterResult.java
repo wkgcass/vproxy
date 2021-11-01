@@ -5,5 +5,6 @@ public enum FilterResult {
     DROP,
     REDIRECT,
     TX,
+    L3_TX,
     ABORT,
 }

@@ -11,10 +11,12 @@ import io.vproxy.vswitch.VirtualNetwork;
 
 public class NetworkStack {
     private final L2 L2;
+    public final L3 L3;
     public final L4 L4;
 
     public NetworkStack(SwitchContext swCtx) {
         this.L2 = new L2(swCtx);
+        this.L3 = this.L2.L3;
         this.L4 = this.L2.L3.L4;
     }
 
