@@ -33,7 +33,7 @@ public class SSLUtils {
                                        ByteBufferRingBuffer output,
                                        SelectorEventLoop loop,
                                        IPPort remote) {
-        return genbuf(engine, input, output, loop::nextTick, remote);
+        return genbuf(engine, input, output, loop::runOnLoop, remote);
     }
 
     // use callback function as resumer
