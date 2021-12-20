@@ -680,7 +680,7 @@ class ModuleCommands private constructor() : Commands() {
         action = ActType.listdetail,
         exec = {
           val ifaces = IfaceHandle.list(it.resource.parentResource)
-          val ls = ifaces.stream().map { it.name() + " -> " + it.toString() }
+          val ls = ifaces.stream().map { it.name() + " -> " + it.toString() + " " + it.statistics.toString() }
             .collect(Collectors.toList())
           CmdResult(ifaces, ls, utilJoinList(ls))
         }

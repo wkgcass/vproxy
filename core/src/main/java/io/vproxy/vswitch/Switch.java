@@ -749,15 +749,23 @@ public class Switch {
     }
 
     private void preHandleInputPkb(PacketBuffer pkb) {
+        preHandleInputPkb(pkb, true);
+    }
+
+    private void preHandleInputPkb(PacketBuffer pkb, boolean autoReleaseChunk) {
         assert Logger.lowLevelDebug("received packet: " + pkb);
         var fullbufBackup = pkb.fullbuf;
         if (__preHandleInputPkb0(pkb)) {
             packetBuffersToBeHandled.add(pkb);
             if (pkb.fullbuf != fullbufBackup) {
-                releaseUMemChunkIfPossible(fullbufBackup);
+                if (autoReleaseChunk) {
+                    releaseUMemChunkIfPossible(fullbufBackup);
+                }
             }
         } else {
-            releaseUMemChunkIfPossible(fullbufBackup);
+            if (autoReleaseChunk) {
+                releaseUMemChunkIfPossible(fullbufBackup);
+            }
         }
     }
 
@@ -925,7 +933,8 @@ public class Switch {
                     assert Logger.lowLevelDebug("set devin to " + redirect);
                     pkb.devin = redirect;
                 }
-                preHandleInputPkb(pkb); // the packet is not actually handled yet, so run the preHandle would be enough
+                // the packet is not actually handled yet, so run the preHandle would be enough
+                preHandleInputPkb(pkb, false);
             } else {
                 sendPacket(pkb, redirect);
             }

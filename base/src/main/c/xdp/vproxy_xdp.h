@@ -130,7 +130,7 @@ static inline struct vp_chunk_info* vp_chunk_fetch(struct vp_chunk_array* chunks
 
 static inline void vp_chunk_release(struct vp_chunk_array* chunks, struct vp_chunk_info* chunk) {
     if (__builtin_expect(chunk->ref == 0, 0)) {
-        fprintf(stderr, "WARN: chunk ref count is 0 before trying to release it\n");
+        fprintf(stderr, "WARN: chunk %lu in array %lu ref count is 0 before trying to release it, chunks->used = %d, chunks->size = %d\n", (size_t) chunk, (size_t) chunks, chunks->used, chunks->size);
         return;
     }
     if (chunk->ref == 1) {

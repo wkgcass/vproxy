@@ -417,6 +417,13 @@ int vp_xdp_write_pkt(struct vp_xsk_info* xsk, struct vp_chunk_info* chunk) {
 }
 
 int vp_xdp_write_pkts(struct vp_xsk_info* xsk, int size, long* chunk_ptrs) {
+    int free_size = xsk_prod_nb_free(&xsk->tx, size);
+    if (free_size == 0) {
+        return 0;
+    }
+    if (free_size < size) {
+        size = free_size;
+    }
     uint32_t tx_idx = 0;
     int ret = xsk_ring_prod__reserve(&xsk->tx, size, &tx_idx);
     if (ret <= 0) {
