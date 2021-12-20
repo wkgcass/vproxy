@@ -357,5 +357,7 @@ class TestVPWSAgentConfig {
     assertTrue(loader.isStrictMode)
     // pool
     assertEquals(4, loader.poolSize)
+
+    assertEquals(0, loader.validate().size)
   }
 }

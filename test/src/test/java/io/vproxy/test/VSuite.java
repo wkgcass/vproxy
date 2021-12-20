@@ -32,6 +32,7 @@ import org.junit.runners.Suite;
     TestByteArrayBuilder.class,
     TestFlowParser.class,
     TestFlowGen.class,
+    TestVPWSAgentConfig.class,
 
     AfterAll.class
 })

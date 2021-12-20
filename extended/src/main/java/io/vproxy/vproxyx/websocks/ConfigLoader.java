@@ -266,24 +266,30 @@ public class ConfigLoader {
                     }
                 }
                 gateway = config.getAgent().getGateway();
-                directRelay = config.getAgent().getDirectRelay().getEnabled();
-                {
+                if (config.getAgent().getDirectRelay() != null) {
+                    directRelay = config.getAgent().getDirectRelay().getEnabled();
                     var val = config.getAgent().getDirectRelay().getIpRange();
-                    if (!Network.validNetworkStr(val)) {
-                        throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
+                    if (!val.isBlank()) {
+                        if (!Network.validNetworkStr(val)) {
+                            throw new Exception("invalid network in agent.direct-relay.ip-range: " + val);
+                        }
+                        directRelayIpRange = Network.from(val);
                     }
-                    directRelayIpRange = Network.from(val);
                 }
-                {
+                if (config.getAgent().getDirectRelay() != null) {
                     var val = config.getAgent().getDirectRelay().getListen();
                     if (!IPPort.validL4AddrStr(val)) {
                         throw new Exception("invalid binding address in agent.direct-relay.listen: " + val);
                     }
-                    String host = val.substring(0, val.lastIndexOf(":"));
-                    int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
-                    directRelayListen = new IPPort(IP.from(host), port);
+                    if (!val.isBlank()) {
+                        String host = val.substring(0, val.lastIndexOf(":"));
+                        int port = Integer.parseInt(val.substring(val.lastIndexOf(":") + 1));
+                        directRelayListen = new IPPort(IP.from(host), port);
+                    }
                 }
-                directRelayIpBondTimeout = config.getAgent().getDirectRelay().getIpBondTimeout() * 60 * 1000;
+                if (config.getAgent().getDirectRelay() != null) {
+                    directRelayIpBondTimeout = config.getAgent().getDirectRelay().getIpBondTimeout() * 60 * 1000;
+                }
                 {
                     var auth = config.getProxy().getAuth();
                     String[] userpass = auth.split(":");
@@ -297,23 +303,21 @@ public class ConfigLoader {
                         throw new Exception("invalid proxy.server.auth: pass is empty");
                 }
                 noHealthCheck = !config.getProxy().getHc();
-                {
+                if (!config.getAgent().getCacertsPath().isBlank()) {
                     cacertsPath = config.getAgent().getCacertsPath();
-                    if (cacertsPath.isBlank())
-                        throw new Exception("cacert path not specified");
                 }
-                {
+                if (!config.getAgent().getCacertsPswd().isBlank()) {
                     cacertsPswd = config.getAgent().getCacertsPswd();
-                    if (cacertsPswd.isBlank())
-                        throw new Exception("cacert path not specified");
                 }
                 verifyCert = config.getAgent().getCertVerify();
                 strictMode = config.getAgent().getStrict();
                 poolSize = config.getAgent().getPool();
                 pacServerPort = config.getAgent().getGatewayPacListen();
                 udpOverTcpEnabled = config.getAgent().getUot().getEnabled();
-                udpOverTcpNic = config.getAgent().getUot().getNic();
-                {
+                if (udpOverTcpEnabled) {
+                    udpOverTcpNic = config.getAgent().getUot().getNic();
+                }
+                if (config.getAgent().getTlsSniErasure() != null) {
                     var args = config.getAgent().getTlsSniErasure().getCertKeyAutoSign();
                     if (args.size() != 2 && args.size() != 3) {
                         throw new Exception("agent.tls-sni-erasure.cert-key.auto-sign should take exactly two arguments");
@@ -401,7 +405,7 @@ public class ConfigLoader {
                 getNoProxyDomainList(currentAlias).add(formatDomainChecker(line));
             }
         }
-        { // indent for git diff
+        if (config.getAgent().getTlsSniErasure() != null) {
             for (var line : config.getAgent().getTlsSniErasure().getDomains()) {
                 httpsSniErasureDomains.add(formatDomainChecker(line));
             }
@@ -410,7 +414,7 @@ public class ConfigLoader {
                     continue;
                 httpsSniErasureCertKeyFiles.add(ls);
             }
-        } // indent for git diff
+        }
     }
 
     public List<String> validate() {
