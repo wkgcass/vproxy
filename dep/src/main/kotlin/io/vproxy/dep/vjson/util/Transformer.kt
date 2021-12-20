@@ -54,7 +54,7 @@ class Transformer {
         return value(input)
       }
     }
-    throw IllegalArgumentException("unknown input type: " + input::class.qualifiedName)
+    throw IllegalArgumentException("unknown input type: " + input::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
   }
 
   init {

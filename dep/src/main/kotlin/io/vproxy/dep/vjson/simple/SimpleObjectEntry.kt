@@ -11,7 +11,13 @@
  */
 package io.vproxy.dep.vjson.simple
 
-class SimpleObjectEntry<T>(val key: String, val value: T) {
+import io.vproxy.dep.vjson.cs.LineCol
+
+class SimpleObjectEntry<T> /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
+  val key: String,
+  val value: T,
+  val lineCol: LineCol = LineCol.EMPTY
+) {
   override fun equals(other: Any?): Boolean {
     if (this === other) return true
     if (other == null || this::class != other::class) return false

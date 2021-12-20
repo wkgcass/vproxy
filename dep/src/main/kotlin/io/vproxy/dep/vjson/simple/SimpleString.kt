@@ -14,8 +14,12 @@ package io.vproxy.dep.vjson.simple
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.JSON.String.Companion.stringify
 import io.vproxy.dep.vjson.Stringifier
+import io.vproxy.dep.vjson.cs.LineCol
 
-class SimpleString(private val str: String) : JSON.String {
+class SimpleString /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
+  private val str: String,
+  private val lineCol: LineCol = LineCol.EMPTY
+) : JSON.String {
   private var stringified: String? = null
 
   override fun toJavaObject(): String {
@@ -35,6 +39,10 @@ class SimpleString(private val str: String) : JSON.String {
 
   override fun stringify(builder: StringBuilder, sfr: Stringifier) {
     builder.append(stringify())
+  }
+
+  override fun lineCol(): LineCol {
+    return lineCol
   }
 
   override fun toString(): String {

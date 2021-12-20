@@ -27,7 +27,7 @@ class TypeRule<T : Any> : Rule<T> {
     rules[defaultTypeName] = defaultRule
   }
 
-  constructor(kClass: KClass<*>, defaultRule: ObjectRule<out T>) : this(kClass.qualifiedName!!, defaultRule)
+  constructor(kClass: KClass<*>, defaultRule: ObjectRule<out T>) : this(kClass./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */!!, defaultRule)
 
   fun type(typeName: String, rule: ObjectRule<out T>): TypeRule<T> {
     rules[typeName] = rule
@@ -38,7 +38,7 @@ class TypeRule<T : Any> : Rule<T> {
   fun type(typeName: String, ruleFunc: () -> ObjectRule<out T>): TypeRule<T> = type(typeName, ruleFunc())
 
   fun type(kClass: KClass<out T>, rule: ObjectRule<out T>): TypeRule<T> {
-    return type(kClass.qualifiedName!!, rule)
+    return type(kClass./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */!!, rule)
   }
 
   // for kotlin

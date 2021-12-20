@@ -85,7 +85,7 @@ class ObjectBuilder {
   }
 
   fun type(aClass: KClass<*>): ObjectBuilder {
-    return type(aClass.qualifiedName!!)
+    return type(aClass./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */!!)
   }
 
   fun build(): JSON.Object {

@@ -14,6 +14,7 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
 import io.vproxy.dep.vjson.simple.SimpleArray
@@ -29,6 +30,7 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   var javaList: MutableList<Any?>? = null
     private set
   private var subParser: Parser<*>? = null
+  private var arrayLineCol = LineCol.EMPTY
 
   init {
     reset()
@@ -46,6 +48,7 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
       list = ArrayList()
     }
     subParser = null
+    arrayLineCol = LineCol.EMPTY
   }
 
   private fun handleSubParser(tryGetNewSubParser: Boolean, cs: CharStream, isComplete: Boolean) {
@@ -79,7 +82,7 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         // otherwise exception would be thrown or cs.hasNext() would return false
       }
     } catch (e: JsonParseException) {
-      throw JsonParseException("invalid json array: failed when parsing element: (" + e.message + ")", e)
+      throw JsonParseException("invalid json array: failed when parsing element: (" + e.message + ")", e, cs.lineCol())
     }
   }
 
@@ -91,11 +94,12 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
     if (state == 0) {
       cs.skipBlank()
       if (cs.hasNext()) {
+        arrayLineCol = cs.lineCol()
         opts.listener.onArrayBegin(this)
         c = cs.moveNextAndGet()
         if (c != '[') {
           err = "invalid character for json array: not starts with `[`: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -116,14 +120,18 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
       if (state == 2) {
         cs.skipBlank()
         if (cs.hasNext()) {
-          c = cs.moveNextAndGet()
+          c = cs.peekNext()
           if (c == ']') {
+            cs.moveNextAndGet()
             state = 4
-          } else if (c == ',') {
+          } else if (isComma(c)) {
+            cs.moveNextAndGet()
+            state = 3
+          } else if (opts.isAllowSkippingCommas) {
             state = 3
           } else {
             err = "invalid character for json array, expecting `]` or `,`, but got $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
         }
       }
@@ -151,19 +159,23 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
       return false
     } else if (isComplete) {
       err = "expecting more characters to build array"
-      throw ParserUtils.err(opts, err)
+      throw ParserUtils.err(cs, opts, err)
     } else {
       return false
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  private fun isComma(c: Char): Boolean {
+    return c == ',' || (opts.isSemicolonAsComma && c == ';')
+  }
+
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun build(cs: CharStream, isComplete: Boolean): JSON.Array? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onArrayEnd(this)
       val list: List<JSON.Instance<*>> =
         if (this.list == null) emptyList() else cast(this.list)
-      val ret: SimpleArray = object : SimpleArray(list, TrustedFlag.FLAG) {}
+      val ret: SimpleArray = object : SimpleArray(list, TrustedFlag.FLAG, arrayLineCol) {}
       opts.listener.onArray(ret)
 
       ParserUtils.checkEnd(cs, opts, "array")
@@ -173,7 +185,7 @@ class ArrayParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun buildJavaObject(cs: CharStream, isComplete: Boolean): List<Any?>? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onArrayEnd(this)

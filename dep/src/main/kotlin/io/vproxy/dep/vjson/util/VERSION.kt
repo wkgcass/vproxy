@@ -13,5 +13,5 @@ package io.vproxy.dep.vjson.util
 
 // #ifdef COVERAGE {{@lombok.Generated}}
 object VERSION {
-  const val VERSION = "1.3.3" // _THE_VERSION_
+  const val VERSION = "1.4.0-dev" // _THE_VERSION_
 }

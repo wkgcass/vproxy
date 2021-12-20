@@ -14,6 +14,7 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
 import io.vproxy.dep.vjson.simple.SimpleBool
@@ -26,9 +27,11 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
   // 0->[t|f],1->t[r]ue,2->tr[u]e,3->tru[e],4->f[a]lse,5->fa[l]se,6->fal[s]e,7->fals[e],8->finish,9->already_returned
   private var state = 0
   private var result = false
+  private var boolLineCol = LineCol.EMPTY
 
   override fun reset() {
     state = 0
+    boolLineCol = LineCol.EMPTY
   }
 
   private fun tryParse(cs: CharStream, isComplete: Boolean): Boolean {
@@ -37,6 +40,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
     if (state == 0) {
       cs.skipBlank()
       if (cs.hasNext()) {
+        boolLineCol = cs.lineCol()
         opts.listener.onBoolBegin(this)
         c = cs.moveNextAndGet()
         if (c == 't') {
@@ -47,7 +51,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
           state = 4
         } else {
           err = "invalid character for [t]rue|[f]alse: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
       }
     }
@@ -56,7 +60,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'r') {
           err = "invalid character for t[r]ue: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -66,7 +70,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'u') {
           err = "invalid character for tr[u]e: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -76,7 +80,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'e') {
           err = "invalid character for tru[e]: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         state = 8
       }
@@ -86,7 +90,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'a') {
           err = "invalid character for f[a]lse: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -96,7 +100,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'l') {
           err = "invalid character for fa[l]se: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -106,7 +110,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 's') {
           err = "invalid character for fal[s]e: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -116,7 +120,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
         c = cs.moveNextAndGet()
         if (c != 'e') {
           err = "invalid character for fals[e]: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -132,17 +136,17 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
       return false
     } else if (isComplete) {
       err = "expecting more characters to build `true` or `false`"
-      throw ParserUtils.err(opts, err)
+      throw ParserUtils.err(cs, opts, err)
     } else {
       return false
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun build(cs: CharStream, isComplete: Boolean): JSON.Bool? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onBoolEnd(this)
-      val ret = SimpleBool(result)
+      val ret = SimpleBool(result, boolLineCol)
       opts.listener.onBool(ret)
 
       ParserUtils.checkEnd(cs, opts, "`true|false`")
@@ -152,7 +156,7 @@ class BoolParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun buildJavaObject(cs: CharStream, isComplete: Boolean): Boolean? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onBoolEnd(this)

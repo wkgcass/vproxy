@@ -39,4 +39,10 @@ object CastUtils {
   inline fun newAnyArray(): Array<Any?> {
     return Array(0) { null }
   }
+
+  inline fun forIndex(startInclusive: Int, endExclusive: Int, f: (Int) -> Unit) {
+    for (i in startInclusive until endExclusive) {
+      f(i)
+    }
+  }
 }

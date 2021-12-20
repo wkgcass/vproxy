@@ -12,6 +12,7 @@
 package io.vproxy.dep.vjson
 
 import io.vproxy.dep.vjson.CharStream.Companion.from
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.deserializer.DeserializeParserListener
 import io.vproxy.dep.vjson.deserializer.rule.Rule
 import io.vproxy.dep.vjson.parser.ParserMode
@@ -22,29 +23,29 @@ import io.vproxy.dep.vjson.util.CastUtils.cast
 
 @Suppress("DuplicatedCode")
 object JSON {
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun parse(json: kotlin.String): Instance<*> {
     return parse(from(json))
   }
 
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun parse(cs: CharStream): Instance<*> {
     return buildFrom(cs)
   }
 
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun <T> deserialize(json: kotlin.String, rule: Rule<T>): T {
     return deserialize(from(json), rule)
   }
 
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun <T> deserialize(cs: CharStream, rule: Rule<T>): T {
     val listener = DeserializeParserListener(rule)
@@ -56,15 +57,15 @@ object JSON {
     return listener.get()!!
   }
 
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun parseToJavaObject(json: kotlin.String): Any? {
     return parseToJavaObject(from(json))
   }
 
-  @Throws(RuntimeException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(RuntimeException::class)
   @JvmStatic/*}}*/
   fun parseToJavaObject(cs: CharStream): Any? {
     return buildJavaObject(cs)
@@ -75,19 +76,37 @@ object JSON {
     fun stringify(): kotlin.String
     fun pretty(): kotlin.String
     fun stringify(builder: StringBuilder, sfr: Stringifier)
+
+    /*#ifndef KOTLIN_NATIVE {{ */
+    @Suppress("DEPRECATION")
+    @JvmDefault/*}}*/
+    fun lineCol(): LineCol {
+      return LineCol.EMPTY
+    }
+  }
+
+  data class ObjectEntry /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
+    val key: kotlin.String,
+    val value: Instance<*>,
+    val lineCol: LineCol = LineCol.EMPTY,
+  ) {
+    override fun toString(): kotlin.String {
+      return "($key: $value)"
+    }
   }
 
   interface Object : Instance<LinkedHashMap<kotlin.String, Any?>> {
     fun keySet(): LinkedHashSet<kotlin.String>
     fun keyList(): List<kotlin.String>
+    fun entryList(): List<ObjectEntry>
     fun size(): Int
     fun containsKey(key: kotlin.String): Boolean
     override fun toJavaObject(): LinkedHashMap<kotlin.String, Any?>
 
-    @Throws(NoSuchElementException::class)
+    /* #ifndef KOTLIN_NATIVE {{ */ @Throws(NoSuchElementException::class) // }}
     operator fun get(key: kotlin.String): Instance<*>
 
-    @Throws(NoSuchElementException::class)
+    /* #ifndef KOTLIN_NATIVE {{ */ @Throws(NoSuchElementException::class) // }}
     fun getAll(key: kotlin.String): List<Instance<*>>
 
     /*#ifndef KOTLIN_NATIVE {{ */
@@ -111,7 +130,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toInt()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 
@@ -129,7 +148,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toDouble()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 
@@ -147,7 +166,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toLong()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 
@@ -213,7 +232,7 @@ object JSON {
     fun length(): Int
     override fun toJavaObject(): List<Any?>
 
-    @Throws(IndexOutOfBoundsException::class)
+    /* #ifndef KOTLIN_NATIVE {{ */ @Throws(IndexOutOfBoundsException::class) // }}
     operator fun get(idx: Int): Instance<*>
 
     /*#ifndef KOTLIN_NATIVE {{ */
@@ -237,7 +256,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toInt()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 
@@ -255,7 +274,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toDouble()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 
@@ -273,7 +292,7 @@ object JSON {
       } else if (inst is Number<*>) {
         return inst.toJavaObject().toLong()
       } else {
-        throw ClassCastException(inst::class.qualifiedName + " cannot be cast to " + Number::class.qualifiedName)
+        throw ClassCastException(inst::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */ + " cannot be cast to " + Number::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */)
       }
     }
 

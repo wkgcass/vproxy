@@ -14,12 +14,14 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
 import io.vproxy.dep.vjson.simple.SimpleDouble
 import io.vproxy.dep.vjson.simple.SimpleExp
 import io.vproxy.dep.vjson.simple.SimpleInteger
 import io.vproxy.dep.vjson.simple.SimpleLong
+import io.vproxy.dep.vjson.util.CastUtils.forIndex
 import kotlin.math.pow
 
 class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
@@ -63,6 +65,8 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
   var exponent = 0
     private set
 
+  private var numberLineCol = LineCol.EMPTY
+
   init {
     reset()
   }
@@ -78,6 +82,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     hasExponent = false
     isExponentNegative = false
     exponent = 0
+    numberLineCol = LineCol.EMPTY
   }
 
   fun hasFraction(): Boolean {
@@ -136,7 +141,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
   private fun calcFraction(): Double {
     if (fractionDivisorZeros < MAX_DIVISOR_ZEROS) {
       var divisor: Long = 1
-      for (i in 0 until fractionDivisorZeros) {
+      forIndex(0, fractionDivisorZeros) {
         divisor *= 10
       }
       return fraction / divisor.toDouble()
@@ -191,6 +196,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     if (state == 0) {
       cs.skipBlank()
       if (cs.hasNext()) {
+        numberLineCol = cs.lineCol()
         opts.listener.onNumberBegin(this)
         c = cs.moveNextAndGet()
         if (c == '-') {
@@ -200,7 +206,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
           val d = parseDigit(c)
           if (d == -1) {
             err = "invalid digit in number: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           if (d == 0) {
             integer = 0
@@ -218,7 +224,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         val d = parseDigit(c)
         if (d == -1) {
           err = "invalid digit in number: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         if (d == 0) {
           integer = 0
@@ -257,7 +263,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
           val d = parseDigit(c)
           if (d == -1) {
             err = "invalid digit in fraction: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           // assert fraction = 0
           fraction = d.toLong()
@@ -302,7 +308,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
             val d = parseDigit(c)
             if (d == -1) {
               err = "invalid digit in exponent: $c"
-              throw ParserUtils.err(opts, err)
+              throw ParserUtils.err(cs, opts, err)
             }
             exponent *= 10
             exponent += d
@@ -316,7 +322,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
           val d = parseDigit(c)
           if (d == -1) {
             err = "invalid digit in exponent: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           exponent *= 10
           exponent += d
@@ -360,14 +366,14 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         return true
       } else {
         err = "expecting more characters to build number"
-        throw ParserUtils.err(opts, err)
+        throw ParserUtils.err(cs, opts, err)
       }
     } else {
       return false
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun build(cs: CharStream, isComplete: Boolean): JSON.Number<*>? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onNumberEnd(this)
@@ -376,26 +382,26 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         var num = integer + calcFraction()
         num = if (isNegative) -num else num
         if (hasExponent) {
-          ret = SimpleExp(num, if (isExponentNegative) -exponent else exponent)
+          ret = SimpleExp(num, if (isExponentNegative) -exponent else exponent, numberLineCol)
         } else {
-          ret = SimpleDouble(num)
+          ret = SimpleDouble(num, numberLineCol)
         }
       } else {
         val num = if (isNegative) -integer else integer
         if (hasExponent) {
-          ret = SimpleExp(num.toDouble(), if (isExponentNegative) -exponent else exponent)
+          ret = SimpleExp(num.toDouble(), if (isExponentNegative) -exponent else exponent, numberLineCol)
         } else {
           if (isNegative) {
             if (num < Int.MIN_VALUE) {
-              ret = SimpleLong(num)
+              ret = SimpleLong(num, numberLineCol)
             } else {
-              ret = SimpleInteger(num.toInt())
+              ret = SimpleInteger(num.toInt(), numberLineCol)
             }
           } else {
             if (num > Int.MAX_VALUE) {
-              ret = SimpleLong(num)
+              ret = SimpleLong(num, numberLineCol)
             } else {
-              ret = SimpleInteger(num.toInt())
+              ret = SimpleInteger(num.toInt(), numberLineCol)
             }
           }
         }
@@ -409,7 +415,7 @@ class NumberParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun buildJavaObject(cs: CharStream, isComplete: Boolean): Number? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onNumberEnd(this)

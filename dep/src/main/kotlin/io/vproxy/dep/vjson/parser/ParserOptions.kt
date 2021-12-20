@@ -37,6 +37,18 @@ class ParserOptions {
     fun ensureNotModifiedByOutside(opts: ParserOptions): ParserOptions {
       return if (isDefaultOptions(opts)) opts else ParserOptions(opts)
     }
+
+    /*#ifndef KOTLIN_NATIVE {{ */@JvmStatic/*}}*/
+    fun allFeatures(): ParserOptions = ParserOptions()
+      .setStringSingleQuotes(true)
+      .setKeyNoQuotes(true)
+      .setKeyNoQuotesAnyChar(true)
+      .setAllowSkippingCommas(true)
+      .setAllowObjectEntryWithoutValue(true)
+      .setAllowOmittingColonBeforeBraces(true)
+      .setEqualAsColon(true)
+      .setSemicolonAsComma(true)
+      .setStringValueNoQuotes(true)
   }
 
   var bufLen: Int
@@ -53,7 +65,21 @@ class ParserOptions {
     private set
   var isKeyNoQuotes: Boolean
     private set
+  var isKeyNoQuotesAnyChar: Boolean
+    private set
   var isNullArraysAndObjects: Boolean
+    private set
+  var isAllowSkippingCommas: Boolean
+    private set
+  var isAllowObjectEntryWithoutValue: Boolean
+    private set
+  var isAllowOmittingColonBeforeBraces: Boolean
+    private set
+  var isEqualAsColon: Boolean
+    private set
+  var isSemicolonAsComma: Boolean
+    private set
+  var isStringValueNoQuotes: Boolean
     private set
 
   constructor() {
@@ -65,7 +91,14 @@ class ParserOptions {
     // features
     isStringSingleQuotes = false
     isKeyNoQuotes = false
+    isKeyNoQuotesAnyChar = false
     isNullArraysAndObjects = false
+    isAllowSkippingCommas = false
+    isAllowObjectEntryWithoutValue = false
+    isAllowOmittingColonBeforeBraces = false
+    isEqualAsColon = false
+    isSemicolonAsComma = false
+    isStringValueNoQuotes = false
   }
 
   constructor(opts: ParserOptions) {
@@ -77,7 +110,14 @@ class ParserOptions {
     // features
     isStringSingleQuotes = opts.isStringSingleQuotes
     isKeyNoQuotes = opts.isKeyNoQuotes
+    isKeyNoQuotesAnyChar = opts.isKeyNoQuotesAnyChar
     isNullArraysAndObjects = opts.isNullArraysAndObjects
+    isAllowSkippingCommas = opts.isAllowSkippingCommas
+    isAllowObjectEntryWithoutValue = opts.isAllowObjectEntryWithoutValue
+    isAllowOmittingColonBeforeBraces = opts.isAllowOmittingColonBeforeBraces
+    isEqualAsColon = opts.isEqualAsColon
+    isSemicolonAsComma = opts.isSemicolonAsComma
+    isStringValueNoQuotes = opts.isStringValueNoQuotes
   }
 
   fun setBufLen(bufLen: Int): ParserOptions {
@@ -114,12 +154,53 @@ class ParserOptions {
   }
 
   fun setKeyNoQuotes(keyNoQuotes: Boolean): ParserOptions {
+    if (!keyNoQuotes) {
+      setKeyNoQuotesAnyChar(false)
+    }
     isKeyNoQuotes = keyNoQuotes
+    return this
+  }
+
+  fun setKeyNoQuotesAnyChar(keyNoQuotesAnyChar: Boolean): ParserOptions {
+    if (keyNoQuotesAnyChar) {
+      setKeyNoQuotes(true)
+    }
+    isKeyNoQuotesAnyChar = keyNoQuotesAnyChar
     return this
   }
 
   fun setNullArraysAndObjects(nullArraysAndObjects: Boolean): ParserOptions {
     isNullArraysAndObjects = nullArraysAndObjects
+    return this
+  }
+
+  fun setAllowSkippingCommas(allowSkippingCommas: Boolean): ParserOptions {
+    isAllowSkippingCommas = allowSkippingCommas
+    return this
+  }
+
+  fun setAllowObjectEntryWithoutValue(allowObjectEntryWithoutValue: Boolean): ParserOptions {
+    isAllowObjectEntryWithoutValue = allowObjectEntryWithoutValue
+    return this
+  }
+
+  fun setAllowOmittingColonBeforeBraces(allowOmittingColonBeforeBraces: Boolean): ParserOptions {
+    isAllowOmittingColonBeforeBraces = allowOmittingColonBeforeBraces
+    return this
+  }
+
+  fun setEqualAsColon(equalAsColon: Boolean): ParserOptions {
+    isEqualAsColon = equalAsColon
+    return this
+  }
+
+  fun setSemicolonAsComma(semicolonAsComma: Boolean): ParserOptions {
+    isSemicolonAsComma = semicolonAsComma
+    return this
+  }
+
+  fun setStringValueNoQuotes(stringValueNoQuotes: Boolean): ParserOptions {
+    isStringValueNoQuotes = stringValueNoQuotes
     return this
   }
 }

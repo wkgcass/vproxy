@@ -14,9 +14,11 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.PeekCharStream
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.util.CastUtils.cast
 import io.vproxy.dep.vjson.util.StringDictionary
+import io.vproxy.dep.vjson.util.collection.Stack
 
 object ParserUtils {
   /* #ifdef KOTLIN_NATIVE {{
@@ -68,16 +70,16 @@ object ParserUtils {
       if (cs.hasNext()) {
         val err = "input stream contain extra characters other than $type"
         opts.listener.onError(err)
-        throw JsonParseException(err)
+        throw JsonParseException(err, cs.lineCol())
       }
     }
   }
 
   internal
   /*#ifndef KOTLIN_NATIVE {{ */@JvmStatic/*}}*/
-  fun err(opts: ParserOptions, msg: String): JsonParseException {
+  fun err(cs: CharStream, opts: ParserOptions, msg: String): JsonParseException {
     opts.listener.onError(msg)
-    return JsonParseException(msg)
+    return JsonParseException(msg, cs.lineCol())
   }
 
   internal
@@ -95,14 +97,14 @@ object ParserUtils {
     return ParserOptions(opts).setEnd(false)
   }
 
-  @Throws(JsonParseException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class)
   @JvmStatic/*}}*/
   fun buildFrom(cs: CharStream): JSON.Instance<*> {
     val opts = ParserOptions.DEFAULT
     cs.skipBlank()
     if (!cs.hasNext()) {
-      throw JsonParseException("empty input string")
+      throw JsonParseException("empty input string", cs.lineCol())
     }
     when (cs.peekNext()) {
       '{' -> {
@@ -133,7 +135,7 @@ object ParserUtils {
         }
         return ret
       }
-      '\'' -> throw JsonParseException("not valid json string: stringSingleQuotes not enabled")
+      '\'' -> throw JsonParseException("not valid json string: stringSingleQuotes not enabled", cs.lineCol())
       '"' -> {
         var p = holder.threadLocalStringParser()
         if (p == null) {
@@ -154,21 +156,21 @@ object ParserUtils {
     }
   }
 
-  @Throws(JsonParseException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class)
   @JvmStatic/*}}*/
   fun buildFrom(cs: CharStream, opts: ParserOptions): JSON.Instance<*> {
     return build(cs, opts)
   }
 
-  @Throws(JsonParseException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class)
   @JvmStatic/*}}*/
   fun buildJavaObject(cs: CharStream): Any? {
     val opts = ParserOptions.DEFAULT_JAVA_OBJECT
     cs.skipBlank()
     if (!cs.hasNext()) {
-      throw JsonParseException("empty input string")
+      throw JsonParseException("empty input string", cs.lineCol())
     }
     when (cs.peekNext()) {
       '{' -> {
@@ -199,7 +201,7 @@ object ParserUtils {
         }
         return ret
       }
-      '\'' -> throw JsonParseException("not valid json string: stringSingleQuotes not enabled")
+      '\'' -> throw JsonParseException("not valid json string: stringSingleQuotes not enabled", cs.lineCol())
       '"' -> {
         var p = holder.threadLocalStringParserJavaObject()
         if (p == null) {
@@ -218,25 +220,31 @@ object ParserUtils {
     }
   }
 
-  @Throws(JsonParseException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class)
   @JvmStatic/*}}*/
   fun buildJavaObject(cs: CharStream, opts: ParserOptions): Any? {
     return buildJ(cs, opts)
   }
 
-  @Throws(JsonParseException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class) // }}
   private fun parser(cs: CharStream, opts: ParserOptions): Parser<*> {
     cs.skipBlank()
     if (!cs.hasNext()) {
-      throw JsonParseException("empty input string")
+      throw JsonParseException("empty input string", cs.lineCol())
+    }
+    if (opts.isStringValueNoQuotes) {
+      val first = cs.peekNext()
+      if (first != '{' && first != '[' && first != '\'' && first != '"') {
+        return parserForValueNoQuotes(cs, opts)
+      }
     }
     return when (val first = cs.peekNext()) {
       '{' -> ObjectParser(opts)
       '[' -> ArrayParser(opts)
       '\'' -> {
         if (!opts.isStringSingleQuotes) {
-          throw JsonParseException("not valid json string: stringSingleQuotes not enabled")
+          throw JsonParseException("not valid json string: stringSingleQuotes not enabled", cs.lineCol())
         }
         return StringParser(opts)
       }
@@ -249,19 +257,145 @@ object ParserUtils {
         if (first in '0'..'9') {
           return NumberParser(opts)
         }
-        throw JsonParseException("not valid json string")
+        throw JsonParseException("not valid json string", cs.lineCol())
       }
     }
   }
 
-  @Throws(IllegalArgumentException::class, JsonParseException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(IllegalArgumentException::class, JsonParseException::class) // }}
   private fun build(cs: CharStream, opts: ParserOptions): JSON.Instance<*> {
     return parser(cs, opts).build(cs, true)!!
   }
 
-  @Throws(IllegalArgumentException::class, JsonParseException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(IllegalArgumentException::class, JsonParseException::class) // }}
   private fun buildJ(cs: CharStream, opts: ParserOptions): Any? {
     opts.setMode(ParserMode.JAVA_OBJECT)
     return parser(cs, opts).buildJavaObject(cs, true)
+  }
+
+  fun extractNoQuotesString(cs: CharStream, opts: ParserOptions): Pair<String, Int> {
+    cs.skipBlank()
+    val beginLineCol = cs.lineCol()
+    val sb = StringBuilder()
+    val symbolStack = Stack<Char>()
+    var cursor = 0 // cursor is the character already read
+    loop@ while (cs.hasNext(cursor + 1)) {
+      ++cursor
+      when (val c = cs.peekNext(cursor)) {
+        ',', ';', '\n', '\r' -> {
+          if (c == ';') {
+            if (!opts.isSemicolonAsComma) {
+              // parser will hang on `;` if without this check
+              sb.append(c)
+              continue@loop
+            }
+          }
+          if (symbolStack.isEmpty()) {
+            --cursor // the char should not be read
+            break@loop
+          } else {
+            sb.append(c)
+          }
+        }
+        '(' -> {
+          sb.append(c)
+          symbolStack.push(')')
+        }
+        '[' -> {
+          sb.append(c)
+          symbolStack.push(']')
+        }
+        '{' -> {
+          sb.append(c)
+          symbolStack.push('}')
+        }
+        ')', ']', '}' ->
+          if (symbolStack.isEmpty()) {
+            --cursor
+            break@loop
+          } else {
+            val last = symbolStack.pop()
+            if (last == c) {
+              sb.append(c)
+            } else {
+              cs.skip(cursor)
+              throw JsonParseException(
+                "unexpected char code=${c.code}, expecting $last" +
+                  (if (beginLineCol.isEmpty()) "" else ", reading noQuotesString starting from $beginLineCol"),
+                cs.lineCol()
+              )
+            }
+          }
+        '\'', '\"' -> {
+          // use a string parser to read the content
+          val pcs = PeekCharStream(cs, cursor - 1)
+          val jsonStr = try {
+            StringParser(ParserOptions().setStringSingleQuotes(true).setEnd(false)).last(pcs)
+          } catch (e: JsonParseException) {
+            cs.skip(pcs.getCursor())
+            throw JsonParseException(
+              "" + e.message +
+                (if (beginLineCol.isEmpty()) "" else ", reading noQuotesString starting from $beginLineCol"),
+              e, cs.lineCol()
+            )
+          }
+          jsonStr!! // it should be non-empty because `last(...)` method is used
+          val _cursor = pcs.getCursor()
+          for (i in cursor.._cursor) {
+            sb.append(cs.peekNext(i))
+          }
+          cursor = _cursor
+        }
+        else -> sb.append(c)
+      }
+    }
+    if (!symbolStack.isEmpty()) { // only eof reaches here
+      throw JsonParseException(
+        "unexpected eof, expecting symbols: $symbolStack" +
+          (if (beginLineCol.isEmpty()) "" else ", reading noQuotesString starting from $beginLineCol")
+      )
+    }
+    return Pair(sb.toString(), cursor)
+  }
+
+  private fun parserForValueNoQuotes(cs: CharStream, opts: ParserOptions): Parser<*> {
+    val pair = extractNoQuotesString(cs, opts)
+    val str = pair.first
+    // try number, bool and null
+    try {
+      val numParser = NumberParser(opts)
+      val newCS = CharStream.from(str)
+      val res = numParser.last(newCS)
+      newCS.skipBlank()
+      if (res != null && !newCS.hasNext()) {
+        numParser.reset()
+        return numParser
+      }
+    } catch (ignore: JsonParseException) {
+    }
+    try {
+      val boolParser = BoolParser(opts)
+      val newCS = CharStream.from(str)
+      val res = boolParser.last(newCS)
+      newCS.skipBlank()
+      if (res != null && !newCS.hasNext()) {
+        boolParser.reset()
+        return boolParser
+      }
+    } catch (ignore: JsonParseException) {
+    }
+    try {
+      val nullParser = NullParser(opts)
+      val newCS = CharStream.from(str)
+      val res = nullParser.last(newCS)
+      newCS.skipBlank()
+      if (res != null && !newCS.hasNext()) {
+        nullParser.reset()
+        return nullParser
+      }
+    } catch (ignore: JsonParseException) {
+    }
+
+    return StringParser(opts)
   }
 }

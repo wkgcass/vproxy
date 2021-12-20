@@ -14,12 +14,14 @@ package io.vproxy.dep.vjson.simple
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.JSON.String.Companion.stringify
 import io.vproxy.dep.vjson.Stringifier
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.parser.TrustedFlag
 
 open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, JSON.Object {
   private val map: MutableList<SimpleObjectEntry<JSON.Instance<*>>>
   private var keySet: LinkedHashSet<String>? = null
   private var keyList: List<String>? = null
+  private var entryList: List<JSON.ObjectEntry>? = null
   private var fastSingleMap: MutableMap<String, JSON.Instance<*>>? = null
   private fun getFastSingleMap(): MutableMap<String, JSON.Instance<*>> {
     if (fastSingleMap == null) {
@@ -36,7 +38,10 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     return fastMultiMap!!
   }
 
-  constructor(initMap: Map<String, JSON.Instance<*>>) {
+  private val lineCol: LineCol
+
+  /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/
+  constructor(initMap: Map<String, JSON.Instance<*>>, lineCol: LineCol = LineCol.EMPTY) {
     for ((key, value) in initMap) {
       requireNotNull(key) { "key should not be null" }
       requireNotNull(value) { "value should not be null" }
@@ -45,9 +50,11 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     for ((key, value) in initMap) {
       map.add(SimpleObjectEntry(key, value))
     }
+    this.lineCol = lineCol
   }
 
-  constructor(initMap: List<SimpleObjectEntry<JSON.Instance<*>>>) {
+  /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/
+  constructor(initMap: List<SimpleObjectEntry<JSON.Instance<*>>>, lineCol: LineCol = LineCol.EMPTY) {
     for (entry in initMap) {
       requireNotNull(entry) { "entry should not be null" }
       // requireNotNull(entry.key) { "key should not be null" }
@@ -55,13 +62,15 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
       requireNotNull(entry.value) { "value should not be null" }
     }
     map = ArrayList(initMap)
+    this.lineCol = lineCol
   }
 
-  protected constructor(initMap: MutableList<SimpleObjectEntry<JSON.Instance<*>>>, flag: TrustedFlag?) {
+  protected constructor(initMap: MutableList<SimpleObjectEntry<JSON.Instance<*>>>, flag: TrustedFlag?, lineCol: LineCol) {
     if (flag == null) {
       throw UnsupportedOperationException()
     }
     map = initMap
+    this.lineCol = lineCol
   }
 
   protected constructor(initMap: MutableList<SimpleObjectEntry<JSON.Instance<*>>>, flag: io.vproxy.dep.vjson.util.TrustedFlag?) {
@@ -69,6 +78,7 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
       throw UnsupportedOperationException()
     }
     map = initMap
+    this.lineCol = LineCol.EMPTY
   }
 
   override fun toJavaObject(): LinkedHashMap<String, Any?> {
@@ -150,6 +160,17 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     return ArrayList(keyList!!)
   }
 
+  override fun entryList(): List<JSON.ObjectEntry> {
+    if (entryList == null) {
+      val list: MutableList<JSON.ObjectEntry> = ArrayList(map.size)
+      for (entry in map) {
+        list.add(JSON.ObjectEntry(entry.key, entry.value, entry.lineCol))
+      }
+      entryList = list
+    }
+    return ArrayList(entryList!!)
+  }
+
   override fun size(): Int {
     return map.size
   }
@@ -158,7 +179,7 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     return _keySet().contains(key)
   }
 
-  @Throws(NoSuchElementException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(NoSuchElementException::class) // }}
   override fun get(key: String): JSON.Instance<*> {
     val fastMap = getFastSingleMap()
     if (fastMap.containsKey(key)) {
@@ -194,6 +215,10 @@ open class SimpleObject : AbstractSimpleInstance<LinkedHashMap<String, Any?>>, J
     val immutableRet: List<JSON.Instance<*>> = ret
     fastMap[key] = immutableRet
     return immutableRet
+  }
+
+  override fun lineCol(): LineCol {
+    return lineCol
   }
 
   override fun equals(other: Any?): Boolean {

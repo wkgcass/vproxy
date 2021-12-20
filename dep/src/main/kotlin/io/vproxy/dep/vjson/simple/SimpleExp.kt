@@ -13,10 +13,12 @@ package io.vproxy.dep.vjson.simple
 
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Stringifier
+import io.vproxy.dep.vjson.cs.LineCol
 import kotlin.math.pow
 
-class SimpleExp(
-  private val base: Double, private val exponent: Int
+class SimpleExp /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
+  private val base: Double, private val exponent: Int,
+  private val lineCol: LineCol = LineCol.EMPTY
 ) : AbstractSimpleInstance<Double>(), JSON.Exp {
   private val value: Double = base * 10.0.pow(exponent.toDouble())
 
@@ -26,6 +28,10 @@ class SimpleExp(
 
   override fun stringify(builder: StringBuilder, sfr: Stringifier) {
     builder.append(base).append("e").append(exponent)
+  }
+
+  override fun lineCol(): LineCol {
+    return lineCol
   }
 
   override fun _toString(): String {

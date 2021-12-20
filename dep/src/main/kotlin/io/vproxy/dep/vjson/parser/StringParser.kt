@@ -14,6 +14,8 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.LineCol
+import io.vproxy.dep.vjson.cs.PeekCharStream
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
 import io.vproxy.dep.vjson.simple.SimpleString
@@ -41,6 +43,8 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
   private var u3 = -1
   // u4 can be local variable
 
+  private var stringLineCol = LineCol.EMPTY
+
   /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/
   constructor(opts: ParserOptions = ParserOptions.DEFAULT) : this(opts, null)
 
@@ -49,6 +53,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
     builder.clear()
     traveler?.done()
     // start/u1/2/3 can keep their values
+    stringLineCol = LineCol.EMPTY
   }
 
   private fun parseHex(c: Char): Int {
@@ -74,15 +79,26 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
     if (state == 0) {
       cs.skipBlank()
       if (cs.hasNext()) {
+        stringLineCol = LineCol(cs.lineCol(), innerOffsetIncrease = 1)
         opts.listener.onStringBegin(this)
-        c = cs.moveNextAndGet()
+        c = cs.peekNext()
         if (c == '\"') {
+          cs.moveNextAndGet()
           beginning = '\"'
         } else if (c == '\'' && opts.isStringSingleQuotes) {
+          cs.moveNextAndGet()
           beginning = '\''
+        } else if (opts.isStringValueNoQuotes) {
+          val (str, cursor) = ParserUtils.extractNoQuotesString(cs, opts)
+          cs.skip(cursor)
+          for (ch in str.trim().toCharArray()) {
+            append(ch)
+          }
+          state = 6 // will +1
+          stringLineCol = LineCol(stringLineCol, innerOffsetIncrease = -1)
         } else {
           err = "invalid character for string: not starts with \": $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
         ++state
       }
@@ -103,7 +119,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           continue
         } else {
           err = "invalid character in string: code is: " + c.code
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
       }
       if (state == 2) {
@@ -119,7 +135,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
               // so check if user enables stringSingleQuotes
               if (!opts.isStringSingleQuotes) {
                 err = "invalid escape character: $c"
-                throw ParserUtils.err(opts, err)
+                throw ParserUtils.err(cs, opts, err)
               }
               append('\'')
               state = 1
@@ -155,7 +171,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
             'u' -> state = 3
             else -> {
               err = "invalid escape character: $c"
-              throw ParserUtils.err(opts, err)
+              throw ParserUtils.err(cs, opts, err)
             }
           }
           if (state == 1) {
@@ -169,7 +185,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           u1 = parseHex(c)
           if (u1 == -1) {
             err = "invalid hex character in \\u[H]HHH: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           ++state
         }
@@ -180,7 +196,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           u2 = parseHex(c)
           if (u2 == -1) {
             err = "invalid hex character in \\u$u1[H]HH: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           ++state
         }
@@ -191,7 +207,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           u3 = parseHex(c)
           if (u3 == -1) {
             err = "invalid hex character in \\u$u1$u2[H]H: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           ++state
         }
@@ -202,13 +218,13 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
           val u4 = parseHex(c)
           if (u4 == -1) {
             err = "invalid hex character in \\u$u1$u2$u3[H]: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           append(((u1 shl 12) or (u2 shl 8) or (u3 shl 4) or u4).toChar())
           state = 1
         }
       }
-      if (state == 8) {
+      if (state == 7 || state == 8) {
         break
       }
     }
@@ -223,7 +239,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
       return false
     } else if (isComplete) {
       err = "expecting more characters to build string"
-      throw ParserUtils.err(opts, err)
+      throw ParserUtils.err(cs, opts, err)
     } else {
       return false
     }
@@ -234,12 +250,12 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
     return traveler?.done() ?: builder.toString()
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun build(cs: CharStream, isComplete: Boolean): JSON.String? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onStringEnd(this)
       val s = buildResultString()
-      val ret = SimpleString(s)
+      val ret = SimpleString(s, stringLineCol)
       opts.listener.onString(ret)
 
       ParserUtils.checkEnd(cs, opts, "string")
@@ -249,7 +265,7 @@ class StringParser constructor(opts: ParserOptions, dictionary: StringDictionary
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun buildJavaObject(cs: CharStream, isComplete: Boolean): String? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onStringEnd(this)

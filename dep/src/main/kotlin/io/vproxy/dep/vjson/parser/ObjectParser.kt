@@ -14,8 +14,10 @@ package io.vproxy.dep.vjson.parser
 import io.vproxy.dep.vjson.CharStream
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Parser
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
+import io.vproxy.dep.vjson.simple.SimpleNull
 import io.vproxy.dep.vjson.simple.SimpleObject
 import io.vproxy.dep.vjson.simple.SimpleObjectEntry
 import io.vproxy.dep.vjson.util.StringDictionary
@@ -45,6 +47,8 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
   var currentKey: String? = null
     private set
   private var valueParser: Parser<*>? = null
+  private var objectLineCol = LineCol.EMPTY
+  private var objectEntryLineCol = LineCol.EMPTY
 
   init {
     reset()
@@ -72,8 +76,11 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     _keyParser = null
     currentKey = null
     valueParser = null
+    objectLineCol = LineCol.EMPTY
+    objectEntryLineCol = LineCol.EMPTY
   }
 
+  // only used for test cases
   fun setCurrentKey(key: String) {
     currentKey = key
   }
@@ -82,6 +89,7 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     try {
       if (_keyParser == null) {
         if (tryGetNewParser) {
+          objectEntryLineCol = LineCol(cs.lineCol(), innerOffsetIncrease = 1)
           _keyParser = getKeyParser()
         } else {
           return
@@ -97,7 +105,7 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
       // otherwise exception would be thrown or cs.hasNext() would return false
     } catch (e: JsonParseException) {
       val err = "invalid json object: failed when parsing key: (" + e.message + ")"
-      throw ParserUtils.err(opts, err)
+      throw ParserUtils.err(cs, opts, err)
     }
   }
 
@@ -130,13 +138,13 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
           val key = currentKey!!
           valueParser = null
           currentKey = null
-          map!!.add(SimpleObjectEntry(key, inst))
+          map!!.add(SimpleObjectEntry(key, inst, objectEntryLineCol))
           opts.listener.onObjectValue(this, key, inst)
         }
         // otherwise exception would be thrown or cs.hasNext() would return false
       }
     } catch (e: JsonParseException) {
-      throw JsonParseException("invalid json object: failed when parsing value: (" + e.message + ")", e)
+      throw JsonParseException("invalid json object: failed when parsing value: (" + e.message + ")", e, cs.lineCol())
     }
   }
 
@@ -150,13 +158,14 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     if (state == 0) {
       cs.skipBlank()
       if (cs.hasNext()) {
+        objectLineCol = cs.lineCol()
         opts.listener.onObjectBegin(this)
         c = cs.moveNextAndGet()
         if (c == '{') {
           state = 1
         } else {
           err = "invalid character for json object: not starts with `{`: $c"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
       }
     }
@@ -167,13 +176,14 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         if (peek == '}') {
           cs.moveNextAndGet()
           state = 6
-        } else if (peek == '"' || peek == '\'') {
+        } else if (peek == '"' || peek == '\'' || peek == '(') {
           handleKeyParser(true, cs, isComplete)
         } else if (opts.isKeyNoQuotes) {
+          objectEntryLineCol = cs.lineCol()
           state = 8
         } else {
           err = "invalid character for json object key: $peek"
-          throw ParserUtils.err(opts, err)
+          throw ParserUtils.err(cs, opts, err)
         }
       }
     }
@@ -181,12 +191,19 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
       if (state == 2) {
         cs.skipBlank()
         if (cs.hasNext()) {
-          c = cs.moveNextAndGet()
-          if (c != ':') {
+          c = cs.peekNext()
+          if (!isColon(c) && opts.isAllowObjectEntryWithoutValue) {
+            fillEntryWithoutValue(cs)
+            state = 4
+          } else if (!isColon(c) && opts.isAllowOmittingColonBeforeBraces && c == '{') {
+            state = 3
+          } else if (!isColon(c)) {
             err = "invalid key-value separator for json object, expecting `:`, but got $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
+          } else {
+            cs.moveNextAndGet()
+            state = 3
           }
-          state = 3
         }
       }
       if (state == 3) {
@@ -198,14 +215,18 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
       if (state == 4) {
         cs.skipBlank()
         if (cs.hasNext()) {
-          c = cs.moveNextAndGet()
+          c = cs.peekNext()
           if (c == '}') {
+            cs.moveNextAndGet()
             state = 6
-          } else if (c == ',') {
+          } else if (isComma(c)) {
+            cs.moveNextAndGet()
+            state = 5
+          } else if (opts.isAllowSkippingCommas) {
             state = 5
           } else {
             err = "invalid character for json object, expecting `}` or `,`, but got $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
         }
       }
@@ -213,13 +234,14 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         cs.skipBlank()
         if (cs.hasNext()) {
           val peek = cs.peekNext()
-          if (peek == '\"' || peek == '\'') {
+          if (peek == '\"' || peek == '\'' || peek == '(') {
             handleKeyParser(true, cs, isComplete)
           } else if (opts.isKeyNoQuotes) {
+            objectEntryLineCol = cs.lineCol()
             state = 8
           } else {
             err = "invalid character for json object key: $peek"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
         }
       }
@@ -229,11 +251,11 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         // the character will be checked before entering state8
         // or would already be checked in the loop condition
         val peek = cs.peekNext()
-        if (peek == ':' || ParserUtils.isWhiteSpace(peek)) {
+        if ((isColon(peek) || peek == ',' || ParserUtils.isWhiteSpace(peek)) || (peek == '}' && opts.isAllowObjectEntryWithoutValue)) {
           val key = keyBuilder.toString()
           if (key.isEmpty()) {
             err = "empty key is not allowed when parsing object key without quotes"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
           state = 9
           currentKey = key
@@ -243,9 +265,11 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
           c = cs.moveNextAndGet()
           if (ParserUtils.isVarName(c)) {
             keyBuilder!!.next(c)
+          } else if (opts.isKeyNoQuotesAnyChar) {
+            keyBuilder!!.next(c)
           } else {
             err = "invalid character for json object key without quotes: $c"
-            throw ParserUtils.err(opts, err)
+            throw ParserUtils.err(cs, opts, err)
           }
         }
       }
@@ -253,11 +277,24 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
         cs.skipBlank()
         if (cs.hasNext()) {
           val peek = cs.peekNext()
-          if (peek == ':') {
+          if (isColon(peek)) {
             state = 2
           } else {
-            err = "invalid character after json object key without quotes: $peek"
-            throw ParserUtils.err(opts, err)
+            var ok = false
+            if (opts.isAllowOmittingColonBeforeBraces) {
+              if (peek == '{') {
+                state = 3
+                ok = true
+              }
+            }
+            if (!ok && opts.isAllowObjectEntryWithoutValue) {
+              state = 2
+              ok = true
+            }
+            if (!ok) {
+              err = "invalid character after json object key without quotes: $peek"
+              throw ParserUtils.err(cs, opts, err)
+            }
           }
         }
       }
@@ -279,19 +316,44 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
       return false
     } else if (isComplete) {
       err = "expecting more characters to build object"
-      throw ParserUtils.err(opts, err)
+      throw ParserUtils.err(cs, opts, err)
     } else {
       return false
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  private fun isColon(c: Char): Boolean {
+    return c == ':' || (opts.isEqualAsColon && c == '=')
+  }
+
+  private fun isComma(c: Char): Boolean {
+    return c == ',' || (opts.isSemicolonAsComma && c == ';')
+  }
+
+  private fun fillEntryWithoutValue(cs: CharStream) {
+    if (opts.mode == ParserMode.JAVA_OBJECT) {
+      val key: String = currentKey!!
+      currentKey = null
+      if (!opts.isNullArraysAndObjects) {
+        javaMap!![key] = null
+      }
+      opts.listener.onObjectValueJavaObject(this, key, null)
+    } else {
+      val key = currentKey!!
+      currentKey = null
+      val value = SimpleNull(cs.lineCol())
+      map!!.add(SimpleObjectEntry(key, value, objectEntryLineCol))
+      opts.listener.onObjectValue(this, key, value)
+    }
+  }
+
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun build(cs: CharStream, isComplete: Boolean): JSON.Object? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onObjectEnd(this)
       val map: MutableList<SimpleObjectEntry<JSON.Instance<*>>> =
         if (this.map == null) ArrayList(0) else this.map!!
-      val ret: SimpleObject = object : SimpleObject(map, TrustedFlag.FLAG) {}
+      val ret: SimpleObject = object : SimpleObject(map, TrustedFlag.FLAG, objectLineCol) {}
       opts.listener.onObject(ret)
 
       ParserUtils.checkEnd(cs, opts, "object")
@@ -301,7 +363,7 @@ class ObjectParser /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor
     }
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   override fun buildJavaObject(cs: CharStream, isComplete: Boolean): Map<String, Any?>? {
     if (tryParse(cs, isComplete)) {
       opts.listener.onObjectEnd(this)

@@ -29,4 +29,20 @@ class Stack<E> {
   fun isEmpty(): Boolean {
     return list.isEmpty()
   }
+
+  fun size(): Int {
+    return list.size()
+  }
+
+  fun clearAndReverse(): Stack<E> {
+    val stack = Stack<E>()
+    while (!isEmpty()) {
+      stack.push(this.pop())
+    }
+    return stack
+  }
+
+  override fun toString(): String {
+    return list.toString()
+  }
 }

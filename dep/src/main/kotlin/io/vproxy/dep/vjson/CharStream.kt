@@ -12,6 +12,7 @@
 package io.vproxy.dep.vjson
 
 import io.vproxy.dep.vjson.cs.CharArrayCharStream
+import io.vproxy.dep.vjson.cs.LineCol
 import io.vproxy.dep.vjson.parser.ParserUtils.isWhiteSpace
 
 interface CharStream : MutableIterator<Char>, Iterable<Char> {
@@ -77,13 +78,72 @@ interface CharStream : MutableIterator<Char>, Iterable<Char> {
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun skipBlank() {
+    skipBlank(true)
+  }
+
+  /*#ifndef KOTLIN_NATIVE {{ */
+  @Suppress("DEPRECATION")
+  @JvmDefault/*}}*/
+  fun skipBlank(skipComments: Boolean) {
     while (hasNext()) {
       val c = peekNext()
       if (isWhiteSpace(c)) {
         moveNextAndGet()
+      } else if (skipComments) {
+        if (c == '#') {
+          moveNextAndGet()
+          skipSingleLineComment()
+        } else if (c == '/' && hasNext(2)) {
+          val cc = peekNext(2)
+          if (cc == '/') {
+            moveNextAndGet()
+            moveNextAndGet()
+            skipSingleLineComment()
+          } else if (cc == '*') {
+            moveNextAndGet()
+            moveNextAndGet()
+            skipMultiLineComment()
+          } else {
+            break
+          }
+        } else {
+          break
+        }
       } else {
         break
       }
     }
+  }
+
+  private fun skipSingleLineComment() {
+    while (hasNext()) {
+      val c = moveNextAndGet()
+      if (c == '\n' || c == '\r') {
+        return
+      }
+    }
+  }
+
+  private fun skipMultiLineComment() {
+    while (hasNext()) {
+      val c = moveNextAndGet()
+      if (c == '*' && hasNext(2)) {
+        val cc = peekNext()
+        if (cc == '/') {
+          moveNextAndGet()
+          return
+        }
+      }
+    }
+  }
+
+  fun skip(n: Int) {
+    for (i in 1..n) {
+      moveNextAndGet()
+    }
+  }
+
+  fun lineCol(): LineCol {
+    return LineCol.EMPTY
   }
 }

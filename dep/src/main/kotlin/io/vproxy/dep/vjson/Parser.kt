@@ -16,50 +16,50 @@ import io.vproxy.dep.vjson.ex.JsonParseException
 import io.vproxy.dep.vjson.ex.ParserFinishedException
 
 interface Parser<T : JSON.Instance<*>> {
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   fun build(cs: CharStream, isComplete: Boolean): T?
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(JsonParseException::class, ParserFinishedException::class) // }}
   fun buildJavaObject(cs: CharStream, isComplete: Boolean): Any?
 
   fun completed(): Boolean
 
   fun reset()
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class, ParserFinishedException::class)
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun feed(cs: CharStream): T? {
     return build(cs, false)
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class, ParserFinishedException::class)
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun feed(cs: String): T? {
     return feed(CharStream.from(cs))
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class, ParserFinishedException::class)
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun last(cs: CharStream): T? {
     return build(cs, true)
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class, ParserFinishedException::class)
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun last(cs: String): T? {
     return last(CharStream.from(cs))
   }
 
-  @Throws(JsonParseException::class, ParserFinishedException::class)
   /*#ifndef KOTLIN_NATIVE {{ */
+  @Throws(JsonParseException::class, ParserFinishedException::class)
   @Suppress("DEPRECATION")
   @JvmDefault/*}}*/
   fun end(): T? {

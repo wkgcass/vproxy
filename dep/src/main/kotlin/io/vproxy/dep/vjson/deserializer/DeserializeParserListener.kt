@@ -25,6 +25,7 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   private val parseStack = Stack<ParseContext>()
   private val nextRuleStack = Stack<Rule<*>>()
   private var begin = false
+  private var skip: Int = 0 // this field is used to skip non-registered fields
   private var lastObject: Any? = null
 
   init {
@@ -35,6 +36,10 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onObjectBegin(obj: ObjectParser) {
+    if (skip != 0) {
+      return
+    }
+
     val rule = nextRuleStack.peek()
     if (rule is TypeRule<*>) {
       parseStack.push(ParseContext(rule, null))
@@ -54,6 +59,10 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onObjectKey(obj: ObjectParser, key: String) {
+    if (skip != 0) {
+      return
+    }
+
     var ctx = parseStack.peek()
 
     if (ctx.rule is TypeRule<*>) {
@@ -70,8 +79,11 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
 
     val rule = cast<ObjectRule<*>>(ctx.rule)
     val field = rule.getRule(key)
-      ?: return  // ignore if the field is not registered
-    nextRuleStack.push(field.rule)
+    if (field == null) {
+      nextRuleStack.push(NothingRule)
+    } else {
+      nextRuleStack.push(field.rule)
+    }
   }
 
   private operator fun set(rule: Rule<*>, holder: Any, set: (Any, Any?) -> Unit, value: Any?) {
@@ -109,11 +121,15 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
       return
     }
     throw JsonParseException(
-      "invalid type: expecting: " + rule + ", value=" + value + "(" + (if (value == null) "nil" else value::class.qualifiedName) + ")"
+      "invalid type: expecting: " + rule + ", value=" + value + "(" + (if (value == null) "nil" else value::class./* #ifdef KOTLIN_JS {{ simpleName }} else {{ */qualifiedName/* }} */) + ")"
     )
   }
 
   override fun onObjectValue(obj: ObjectParser, key: String, value: JSON.Instance<*>) {
+    if (skip != 0) {
+      return
+    }
+
     val ctx = parseStack.peek()
 
     if (ctx.rule is TypeRule<*>) {
@@ -136,6 +152,8 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
       for (f in rule.extraRules) {
         cast<(Any, String, Any?) -> Unit>(f)(ctx.`object`!!, key, lastObject)
       }
+      // pop NothingRule
+      nextRuleStack.pop()
       return
     }
     @Suppress("UNCHECKED_CAST")
@@ -148,6 +166,10 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onObjectEnd(obj: ObjectParser) {
+    if (skip != 0) {
+      return
+    }
+
     val ctx = parseStack.pop()
     if (ctx.rule is TypeRule<*>) {
       val orule = ctx.rule.defaultRule
@@ -162,7 +184,16 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onArrayBegin(array: ArrayParser) {
+    if (skip != 0) {
+      ++skip
+      return
+    }
+
     val rule = nextRuleStack.peek()
+    if (rule is NothingRule) {
+      skip = 1
+      return
+    }
     if (rule !is ArrayRule<*, *>) {
       throw JsonParseException("expect: object, actual: array")
     }
@@ -172,6 +203,10 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onArrayValue(array: ArrayParser, value: JSON.Instance<*>) {
+    if (skip != 0) {
+      return
+    }
+
     val ctx = parseStack.peek()
     val rule = cast<ArrayRule<Any, Any?>>(ctx.rule)
     set(rule.elementRule, ctx.`object`!!, rule.add, lastObject)
@@ -182,6 +217,11 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onArrayEnd(array: ArrayParser) {
+    if (skip != 0) {
+      skip -= 1
+      return
+    }
+
     val ctx = parseStack.pop()
     nextRuleStack.pop()
     val lastObject = ctx.`object`
@@ -189,34 +229,66 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
   }
 
   override fun onBool(bool: JSON.Bool) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = bool.toJavaObject()
   }
 
   override fun onBool(bool: Boolean) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = bool
   }
 
   override fun onNull(n: JSON.Null) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = null
   }
 
   override fun onNull(n: Unit?) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = null
   }
 
   override fun onNumber(number: JSON.Number<*>) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = number.toJavaObject()
   }
 
   override fun onNumber(number: Number) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = number
   }
 
   override fun onString(string: JSON.String) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = string.toJavaObject()
   }
 
   override fun onString(string: String) {
+    if (skip != 0) {
+      return
+    }
+
     lastObject = string
   }
 
@@ -224,7 +296,7 @@ class DeserializeParserListener<T>(rule: Rule<T>) : AbstractParserListener() {
     return begin && parseStack.isEmpty()
   }
 
-  @Throws(IllegalStateException::class)
+  /* #ifndef KOTLIN_NATIVE {{ */ @Throws(IllegalStateException::class) // }}
   fun get(): T? {
     check(completed()) { "not completed yet" }
     @Suppress("UNCHECKED_CAST")

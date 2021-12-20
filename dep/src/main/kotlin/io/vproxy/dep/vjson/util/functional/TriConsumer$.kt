@@ -11,7 +11,13 @@
  */
 package io.vproxy.dep.vjson.util.functional
 
-interface `TriConsumer$`<T, U, V> : Function3<T, U, V, Unit> {
+/* #ifdef KOTLIN_JS {{
+interface Func3<T, U, V, R> {
+  fun invoke(t: T, u: U, v: V): R
+}
+}} */
+
+interface `TriConsumer$`<T, U, V> : /* #ifdef KOTLIN_JS {{ Func3 }} else {{ */Function3/* }} */<T, U, V, Unit> {
   fun accept(t: T, u: U, v: V)
 
   override

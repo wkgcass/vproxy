@@ -13,9 +13,11 @@ package io.vproxy.dep.vjson.simple
 
 import io.vproxy.dep.vjson.JSON
 import io.vproxy.dep.vjson.Stringifier
+import io.vproxy.dep.vjson.cs.LineCol
 
-class SimpleBool(
-  private val value: Boolean
+class SimpleBool /*#ifndef KOTLIN_NATIVE {{ */ @JvmOverloads/*}}*/ constructor(
+  private val value: Boolean,
+  private val lineCol: LineCol = LineCol.EMPTY
 ) : AbstractSimpleInstance<Boolean>(), JSON.Bool {
   override fun booleanValue(): Boolean {
     return value
@@ -27,6 +29,10 @@ class SimpleBool(
 
   override fun stringify(builder: StringBuilder, sfr: Stringifier) {
     builder.append(value)
+  }
+
+  override fun lineCol(): LineCol {
+    return lineCol
   }
 
   override fun _toString(): String {
